@@ -15,10 +15,9 @@ use mailrs_domain::{Account, AccountId};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
 use mailrs_sync::now_millis;
-use mailrs_sync::route_move;
 use mailrs_sync::sign_in::goa_link;
 
-use super::{Core, MoveLeases, MovePort, Reach, start_again};
+use super::{Core, MoveLeases, Reach, start_again};
 use crate::goa_notice::{self, Notice};
 
 /// How long the watch waits before it opens Online Accounts' change stream
@@ -135,8 +134,13 @@ impl Core {
 
     /// Links `goa_account` to Penguin Mail. A new address becomes an
     /// account and starts; an address already held moves to Online
-    /// Accounts in place.
-    pub async fn link_goa(&self, goa_account: GoaAccount) -> Result<Account> {
+    /// Accounts in place, and `committed` hears when that move can no
+    /// longer be cancelled.
+    pub(super) async fn link_goa(
+        &self,
+        goa_account: GoaAccount,
+        committed: async_channel::Sender<()>,
+    ) -> Result<Account> {
         if self.demo {
             bail!(gettext("The demo cannot sign in through Online Accounts."));
         }
@@ -150,7 +154,8 @@ impl Core {
             })
             .await?;
         if let Some(held) = held.filter(|a| a.provider == mailrs_domain::Provider::Gmail) {
-            return self.move_goa(held, goa_account).await;
+            let route = super::route::ChosenRoute::OnlineAccounts(goa_account);
+            return self.move_through(route, held, committed).await;
         }
         let connector = self.connector();
         let (reach, engine, db) = (
@@ -174,62 +179,6 @@ impl Core {
             .await?;
         self.finish_google_setup();
         Ok(account)
-    }
-
-    /// Moves `account` to sign in through `goa_account`, which holds its
-    /// address.
-    pub async fn move_to_goa(&self, account: Account, goa_account: GoaAccount) -> Result<Account> {
-        self.move_goa(account, goa_account).await
-    }
-
-    async fn move_goa(&self, account: Account, goa_account: GoaAccount) -> Result<Account> {
-        if self.demo {
-            bail!(gettext("The demo cannot switch accounts."));
-        }
-        // Refused as adding an account through Online Accounts is, before
-        // anything stops.
-        goa_link::usable(&goa_account)?;
-        let lease = self.move_leases.lease(account.id).ok_or_else(|| {
-            anyhow!(gettext(
-                "This account is already moving to its new sign-in."
-            ))
-        })?;
-        let engine = self
-            .engine
-            .current()
-            .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, secrets, outbox) = (
-            self.db.clone(),
-            self.secrets.clone(),
-            std::sync::Arc::clone(&self.outbox),
-        );
-        let reach = Reach {
-            connector: self.connector(),
-            demo: self.demo_mail.clone(),
-        };
-        let goa = self.goa.clone();
-        let moved = self
-            .call(async move {
-                // Held until the move ends, even when the dialog has gone.
-                let _lease = lease;
-                goa_link::check_token(&goa, &goa_account).await?;
-                let port = MovePort {
-                    engine,
-                    reach,
-                    db: db.clone(),
-                };
-                let mover = route_move::Mover {
-                    engine: &port,
-                    db: &db,
-                    secrets: &secrets,
-                    outbox: &outbox,
-                };
-                let moved = mover.to_goa(&account, &goa_account, || ()).await?;
-                Ok::<_, anyhow::Error>(moved)
-            })
-            .await?;
-        self.finish_google_setup();
-        Ok(moved)
     }
 
     /// What the window should say about the accounts that read through

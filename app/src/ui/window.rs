@@ -1579,7 +1579,12 @@ impl MainWindow {
             let list = this.core.goa_accounts().await.unwrap_or_default();
             let found = mailrs_sync::goa::find(&list, None, &account.email).cloned();
             let moved = match found {
-                Some(found) => this.core.move_to_goa(account, found).await,
+                Some(found) => {
+                    let route = crate::core::ChosenRoute::OnlineAccounts(found);
+                    let (committed, _) = async_channel::unbounded();
+                    let taker = crate::core::Taker::Moving(account);
+                    this.core.take_route(route, taker, committed).await
+                }
                 None => Err(anyhow::anyhow!(gettext(
                     // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
                     "Can't reach Online Accounts on this computer."

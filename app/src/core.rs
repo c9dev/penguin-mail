@@ -25,15 +25,12 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
 use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
-use mailrs_sync::sign_in::app_password::{
-    NewGmailImap, check_gmail, gmail_imap_signed_in, read_pasted,
-};
 use mailrs_sync::sign_in::own_client::{OwnClient, saved_project};
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, KeptClient, NewCalDav,
     NewImap, NewJmap, NewPop3, Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent,
     check_pop3, google_sign_in, imap_signed_in, in_browser, jmap_in_browser, jmap_signed_in,
-    keep_chosen_project, kept_own_client, move_choice, pop3_signed_in,
+    kept_own_client, pop3_signed_in,
 };
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, Clients, Connector,
@@ -50,6 +47,9 @@ use crate::starting::{self, Connected, Starting};
 use mailrs_domain::translate::gettext;
 
 mod goa;
+mod route;
+
+pub use route::{ChosenRoute, Taker};
 
 /// The store could not be updated to this version, and the copy taken
 /// before the attempt was put back. Startup shows this with a way to
@@ -1791,190 +1791,12 @@ impl Core {
 }
 
 impl Core {
-    /// Moves `account`, a Gmail account on the built-in client, to the own
-    /// client the environment names, keeping its id and its mail. The
-    /// browser sign-in runs first, with `urls` getting the page to open,
-    /// and nothing is stored until it succeeds. Then the account's loop
-    /// stops, what is due goes out and the writes under way finish through
-    /// the old sign-in, and the account starts again on the new one. On any
-    /// error it starts again as it was.
-    ///
-    /// Closing the channel behind `cancel` ends the browser wait and
-    /// leaves the account as it was. A sign-in as another address ends the
-    /// move before the account stops. Once the sign-in returns as the
-    /// account, `committed` gets a message and the move can no longer be
-    /// cancelled. A second move of the same account is refused while one
-    /// runs.
-    pub async fn move_to_own_client(
-        &self,
-        account: Account,
-        chosen: Option<OwnClient>,
-        urls: async_channel::Sender<String>,
-        cancel: async_channel::Receiver<()>,
-        committed: async_channel::Sender<()>,
-    ) -> Result<Account> {
-        if self.demo {
-            bail!(gettext("The demo cannot switch accounts."));
-        }
-        let lease = self.move_leases.lease(account.id).ok_or_else(|| {
-            anyhow!(gettext(
-                "This account is already moving to its new sign-in."
-            ))
-        })?;
-        let engine = self
-            .engine
-            .current()
-            .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, secrets, outbox) = (
-            self.db.clone(),
-            self.secrets.clone(),
-            Arc::clone(&self.outbox),
-        );
-        let reach = Reach {
-            connector: self.connector(),
-            demo: self.demo_mail.clone(),
-        };
-        let moved = self
-            .call(async move {
-                // Held until the move ends, even when the dialog has gone.
-                let _lease = lease;
-                let choice = move_choice(&Clients::current().with_chosen(chosen))?;
-                let own = choice
-                    .own
-                    .clone()
-                    .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
-                let open = move |url: &str| {
-                    let _ = urls.try_send(url.to_string());
-                };
-                let authorized = authorize_until_canceled(&choice.oauth, open, cancel).await?;
-                let port = MovePort {
-                    engine,
-                    reach,
-                    db: db.clone(),
-                };
-                let mover = route_move::Mover {
-                    engine: &port,
-                    db: &db,
-                    secrets: &secrets,
-                    outbox: &outbox,
-                };
-                let moved = mover.to_own_client(&account, &own, authorized, || {
-                    let _ = committed.try_send(());
-                });
-                let moved = moved.await?;
-                keep_chosen_project(&secrets, &choice).await;
-                Ok::<_, anyhow::Error>(moved)
-            })
-            .await?;
-        self.finish_google_setup();
-        Ok(moved)
-    }
-}
-
-impl Core {
-    /// Signs in to a Gmail account with the app password `pasted` holds:
-    /// Gmail's servers take the login first, then the account, its servers
-    /// and its password are kept and the account starts. Nothing is kept
-    /// when the login fails.
-    pub async fn sign_in_gmail_password(&self, address: String, pasted: String) -> Result<Account> {
-        if self.demo {
-            bail!(gettext("Demo mode cannot add real accounts."));
-        }
-        let engine = self
-            .engine
-            .current()
-            .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, secrets) = (self.db.clone(), self.secrets.clone());
-        let reach = Reach {
-            connector: self.connector(),
-            demo: self.demo_mail.clone(),
-        };
-        self.call(async move {
-            let pasted = read_pasted(&pasted);
-            let checked = check_gmail(&address, pasted.secret()).await?;
-            let new = NewGmailImap {
-                address,
-                servers: checked.servers,
-                password: pasted.secret().to_string(),
-            };
-            let account = gmail_imap_signed_in(&db, &secrets, new, now_millis()).await?;
-            start_again(&reach, &engine, &db, &account, false).await?;
-            Ok::<_, anyhow::Error>(account)
-        })
-        .await
-    }
-
-    /// Moves `account`, a Gmail account on the API, to Gmail's IMAP with
-    /// the app password `pasted` holds, keeping its id and its mail. The
-    /// login is checked first and nothing changes until it works. The
-    /// calendar token stays. `committed` gets a message once the move can
-    /// no longer be cancelled.
-    pub async fn move_to_app_password(
-        &self,
-        account: Account,
-        pasted: String,
-        committed: async_channel::Sender<()>,
-    ) -> Result<Account> {
-        if self.demo {
-            bail!(gettext("The demo cannot switch accounts."));
-        }
-        let lease = self.move_leases.lease(account.id).ok_or_else(|| {
-            anyhow!(gettext(
-                "This account is already moving to its new sign-in."
-            ))
-        })?;
-        let engine = self
-            .engine
-            .current()
-            .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, secrets, outbox) = (
-            self.db.clone(),
-            self.secrets.clone(),
-            Arc::clone(&self.outbox),
-        );
-        let reach = Reach {
-            connector: self.connector(),
-            demo: self.demo_mail.clone(),
-        };
-        self.call(async move {
-            // Held until the move ends, even when the dialog has gone.
-            let _lease = lease;
-            let pasted = read_pasted(&pasted);
-            let checked = check_gmail(&account.email, pasted.secret()).await?;
-            let new = NewGmailImap {
-                address: account.email.clone(),
-                servers: checked.servers,
-                password: pasted.secret().to_string(),
-            };
-            let port = MovePort {
-                engine,
-                reach,
-                db: db.clone(),
-            };
-            let mover = route_move::Mover {
-                engine: &port,
-                db: &db,
-                secrets: &secrets,
-                outbox: &outbox,
-            };
-            let moved = mover
-                .to_imap(&account, new, || {
-                    let _ = committed.try_send(());
-                })
-                .await?;
-            Ok::<_, anyhow::Error>(moved)
-        })
-        .await
-    }
-}
-
-impl Core {
     /// Asks Google, through the built-in client, for the calendar,
     /// contacts and Drive access of `account`, a Gmail account whose mail
     /// comes over IMAP, and starts the account again with them. Its mail
-    /// route stays as it was. `urls` and `cancel` work as for
-    /// [`Core::move_to_own_client`]: closing the channel behind `cancel`
-    /// ends the wait and leaves the account as it was.
+    /// route stays as it was. `urls` gets Google's page, and closing the
+    /// channel behind `cancel` ends the wait and leaves the account as it
+    /// was.
     pub async fn connect_calendar(
         &self,
         account: Account,

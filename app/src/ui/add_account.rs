@@ -4155,10 +4155,13 @@ impl Dialog {
                             }
                         },
                     ));
-                    let moved = this
-                        .core
-                        .move_to_own_client(account, chosen.clone(), urls, canceled, committed)
-                        .await;
+                    let route = crate::core::ChosenRoute::OwnProject {
+                        chosen: chosen.clone(),
+                        urls,
+                        cancel: canceled,
+                    };
+                    let taker = crate::core::Taker::Moving(account);
+                    let moved = this.core.take_route(route, taker, committed).await;
                     ended.set(true);
                     moved.map(|a| (a, None))
                 }

@@ -2,6 +2,7 @@
 //! Accounts page and the app password page.
 
 use super::*;
+use crate::core::{ChosenRoute, Taker};
 
 impl Dialog {
     // ---- The routes --------------------------------------------------------------
@@ -401,8 +402,12 @@ impl Dialog {
             .and_then(|walk| walk.current().cloned());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if let Some(held) = moving {
-                match this.core.move_to_goa(held, account).await {
+            let is_move = moving.is_some();
+            let (route, taker) = (ChosenRoute::OnlineAccounts(account), taker_of(moving, ""));
+            let (committed, _) = async_channel::unbounded();
+            let signed = this.core.take_route(route, taker, committed).await;
+            if is_move {
+                match signed {
                     Ok(moved) if this.asking.wants(ticket) => this.moved(moved),
                     Ok(moved) => (this.done)(Done::SignedInAgain(moved)),
                     Err(err) if this.asking.wants(ticket) => this.goa.failed(&err.to_string()),
@@ -410,7 +415,7 @@ impl Dialog {
                 }
                 return;
             }
-            match this.core.link_goa(account).await {
+            match signed {
                 Ok(account) => {
                     // The account is kept whether or not the dialog is still
                     // open, so the window hears about it either way.
@@ -528,15 +533,10 @@ impl Dialog {
             .and_then(|walk| walk.current().cloned());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let signed = match moving.clone() {
-                Some(account) => {
-                    let (committed, _) = async_channel::unbounded();
-                    this.core
-                        .move_to_app_password(account, pasted, committed)
-                        .await
-                }
-                None => this.core.sign_in_gmail_password(address, pasted).await,
-            };
+            let route = ChosenRoute::AppPassword { pasted };
+            let (committed, _) = async_channel::unbounded();
+            let taker = taker_of(moving.clone(), &address);
+            let signed = this.core.take_route(route, taker, committed).await;
             // Every way out of the run ends here, so Sign In comes back
             // whether the run signed in, failed or lost its dialog.
             this.running.end();
@@ -596,5 +596,16 @@ impl Dialog {
     /// Opens `url` in the browser.
     pub(super) fn open_link(&self, url: &str) {
         gtk::UriLauncher::new(url).launch(gtk::Window::NONE, gio::Cancellable::NONE, |_| {});
+    }
+}
+
+/// Who takes a route: the account the move walk is at, else the address
+/// the person typed.
+fn taker_of(moving: Option<Account>, address: &str) -> Taker {
+    match moving {
+        Some(account) => Taker::Moving(account),
+        None => Taker::New {
+            address: address.to_string(),
+        },
     }
 }
