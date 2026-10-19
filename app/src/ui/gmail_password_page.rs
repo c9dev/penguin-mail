@@ -176,6 +176,7 @@ impl GmailPasswordPage {
             .selectable(false)
             .child(&other_way)
             .build();
+        crate::ui::name(&other_row, &gettext("Use another way to sign in"));
         help.add_row(&other_row);
         let help_list = boxed_list();
         help_list.append(&help);
@@ -330,11 +331,13 @@ fn step(number: u32, text: &str, link: Option<(String, &str)>) -> gtk::ListBoxRo
         .build();
     row.append(&badge);
     row.append(&column);
-    gtk::ListBoxRow::builder()
+    let item = gtk::ListBoxRow::builder()
         .activatable(false)
         .selectable(false)
         .child(&row)
-        .build()
+        .build();
+    crate::ui::name(&item, text);
+    item
 }
 
 #[cfg(test)]
