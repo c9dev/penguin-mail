@@ -9,6 +9,7 @@ mod api;
 pub(in crate::services) mod bodies;
 mod cadence;
 mod feed;
+mod gmail;
 mod keywords;
 mod mailboxes;
 mod outgoing;
@@ -20,6 +21,7 @@ mod window;
 mod writes;
 
 pub use api::{ImapApi, Submit};
+pub use gmail::Dialect;
 pub(crate) use outgoing::{envelope_of, submit_over, without_bcc};
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -55,6 +57,8 @@ pub struct ImapSettings {
     pub files_sent_mail: bool,
     /// Days of mail the account keeps besides the whole Inbox.
     pub window_days: i64,
+    /// How the server names and files mail.
+    pub dialect: Dialect,
 }
 
 /// The keywords every server stores: its system flags.
@@ -138,6 +142,9 @@ struct Known {
     /// guard dropped the last one. The drop itself wakes the engine at
     /// once; the wait comes before the next IDLE.
     idle_pause: Option<Duration>,
+    /// Gmail over IMAP: where the messages met this session were last
+    /// seen, by hex id.
+    places: gmail::Places,
 }
 
 /// The most messages [`Known::unreadable`] remembers.
@@ -336,6 +343,32 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     fn capabilities(&self) -> MailCapabilities {
+        if self.gmail() {
+            let all = self
+                .known()
+                .folders
+                .iter()
+                .find(|f| f.role == Some(Role::All))
+                .map(|f| f.id.clone())
+                .unwrap_or_default();
+            return MailCapabilities {
+                labels: true,
+                server_threads: true,
+                files_sent_mail: true,
+                categories: true,
+                delete_forever: true,
+                batch_limit: BATCH_LIMIT,
+                keywords: self.stored_keywords(&all),
+                native_search: true,
+                paged_mailboxes: true,
+                renames: true,
+                restates: false,
+                tags: false,
+                focus: false,
+                local_mailboxes: false,
+                files_muted_replies: false,
+            };
+        }
         MailCapabilities {
             labels: false,
             server_threads: false,
@@ -372,6 +405,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     /// Every mailbox but the Inbox, the role mailboxes and a flagged view
     /// is one a person made.
     fn made_by_person(&self, id: &str) -> bool {
+        if self.gmail() {
+            return !gmail::labels::is_system(id);
+        }
         if id.eq_ignore_ascii_case("INBOX") {
             return false;
         }
@@ -386,6 +422,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         use futures::{StreamExt, stream};
         use tokio::time::timeout;
 
+        if self.gmail() {
+            return self.gm_unread().await;
+        }
         let limit = Duration::from_secs(10);
         let Ok(listed) = timeout(limit, self.ensure_listed()).await else {
             return Ok(HashMap::new());
@@ -422,10 +461,16 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
+        if self.gmail() {
+            return self.gm_mailboxes().await;
+        }
         self.list_mailboxes().await
     }
 
     async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
+        if self.gmail() {
+            return self.gm_changes(since).await;
+        }
         self.feed(since).await
     }
 
@@ -465,12 +510,18 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     fn follow(&self, mailbox: &str) -> bool {
+        if self.gmail() {
+            return false;
+        }
         let mut known = self.known();
         known.followed.insert(mailbox.to_string());
         known.opened.insert(mailbox.to_string())
     }
 
     fn reset_follow(&self, mailbox: &str) {
+        if self.gmail() {
+            return;
+        }
         let mut known = self.known();
         known.followed.remove(mailbox);
         known.opened.remove(mailbox);
@@ -524,6 +575,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
+        if self.gmail() {
+            return self.gm_backfill(days, cursor).await;
+        }
         self.backfill_page(days, cursor).await
     }
 
@@ -532,10 +586,18 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         days: i64,
         mailbox: Option<&str>,
     ) -> Result<Vec<RemoteRef>, BackendError> {
+        if self.gmail() {
+            return self.gm_window(days, mailbox).await;
+        }
         self.window_refs(days, mailbox).await
     }
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        if self.gmail() {
+            return self
+                .gm_window(self.settings.window_days, Some("INBOX"))
+                .await;
+        }
         self.inbox_refs().await
     }
 
@@ -544,6 +606,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         query: &SearchQuery,
         limit: usize,
     ) -> Result<Vec<RemoteRef>, BackendError> {
+        if self.gmail() {
+            return self.gm_search(query, limit).await;
+        }
         self.search_server(query, limit).await
     }
 
@@ -553,18 +618,30 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         cursor: Option<&str>,
         limit: usize,
     ) -> Result<Backfill, BackendError> {
+        if self.gmail() {
+            return self.gm_label_page(mailbox, cursor, limit).await;
+        }
         self.browse_page(mailbox, cursor, limit).await
     }
 
     async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
+        if self.gmail() {
+            return self.gm_find_sent(message_id).await;
+        }
         self.sent_with(message_id).await
     }
 
     async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
+        if self.gmail() {
+            return self.gm_fetch(wants).await;
+        }
         self.fetch_metas(wants).await
     }
 
     async fn fetch_whole(&self, threads: Vec<String>) -> Result<Found, BackendError> {
+        if self.gmail() {
+            return self.gm_fetch_whole(threads).await;
+        }
         self.fetch_lone(threads).await
     }
 
@@ -587,6 +664,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     fn mailbox_for(&self, role: Role) -> Option<String> {
+        if self.gmail() {
+            return mailrs_gmail::labels::label_of_role(role).map(str::to_string);
+        }
         let listed = self
             .known()
             .folders
@@ -598,6 +678,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     fn set_of(&self, id: &str) -> MailSet {
+        if self.gmail() {
+            return mailrs_gmail::labels::set_of(id);
+        }
         let known = self.known();
         match known.folders.iter().find(|f| f.id == id) {
             Some(folder) if folder.flagged => MailSet::flagged(),

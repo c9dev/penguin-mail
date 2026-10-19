@@ -134,7 +134,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 
     /// Where `mailbox` stands now.
-    async fn kept_now(&self, mailbox: &str) -> Result<Kept, BackendError> {
+    pub(super) async fn kept_now(&self, mailbox: &str) -> Result<Kept, BackendError> {
         let selected = self.select(mailbox, None).await?;
         let top = self.top_uid(mailbox, &selected).await?;
         Ok(Kept::of(&selected, top))
@@ -416,7 +416,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// out of every list its owner sees. The UIDs arrive a window at a time
     /// and go into the set as runs, so a mailbox with few gaps costs a few
     /// ranges.
-    async fn held(&self, mailbox: &str, top: u32) -> Result<UidSet, BackendError> {
+    pub(super) async fn held(&self, mailbox: &str, top: u32) -> Result<UidSet, BackendError> {
         let mut ranges = Vec::new();
         self.search_windows(mailbox, (1, top), "UNDELETED", |found| {
             push_runs(&mut ranges, &found)

@@ -645,6 +645,7 @@ impl AccountServices {
             provider_name: "Fastmail".into(),
             files_sent_mail: false,
             window_days: crate::DEFAULT_WINDOW_DAYS,
+            dialect: Default::default(),
         };
         AccountServices::imap(imap, smtp, settings)
     }

@@ -21,7 +21,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// names. After a change the same UID can name another message, so the
     /// old location answers `NotFound` until the feed relists the mailbox.
     pub(super) async fn current(&self, name: &str) -> Result<Location, BackendError> {
-        let at = Location::parse(name).ok_or(BackendError::NotFound)?;
+        let at = match Location::parse(name) {
+            Some(at) => at,
+            None if self.gmail() => self.gm_place(name).await?,
+            None => return Err(BackendError::NotFound),
+        };
         let selected = self.select(&at.mailbox, None).await?;
         match selected.uidvalidity == at.uidvalidity {
             true => Ok(at),
@@ -178,6 +182,7 @@ mod tests {
                 provider_name: "Fastmail".into(),
                 files_sent_mail: false,
                 window_days: 30,
+                dialect: Default::default(),
             },
         );
         for n in 0..=UNREADABLE_KEPT {

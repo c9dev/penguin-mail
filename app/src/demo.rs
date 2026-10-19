@@ -2067,6 +2067,7 @@ fn fastmail_settings() -> ImapSettings {
         files_sent_mail: mailrs_discover::provider_named("Fastmail")
             .is_some_and(|provider| provider.files_sent_mail),
         window_days: DEFAULT_WINDOW_DAYS,
+        dialect: Default::default(),
     }
 }
 

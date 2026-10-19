@@ -62,6 +62,7 @@ fn imap_settings(address: &str) -> ImapSettings {
         provider_name: "Fernwood".into(),
         files_sent_mail: true,
         window_days: crate::DEFAULT_WINDOW_DAYS,
+        dialect: Default::default(),
     }
 }
 

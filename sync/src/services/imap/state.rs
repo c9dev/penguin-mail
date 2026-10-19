@@ -14,6 +14,10 @@ use crate::services::SyncState;
 #[serde(deny_unknown_fields)]
 pub(super) struct ImapState {
     pub mailboxes: BTreeMap<String, Kept>,
+    /// Gmail over IMAP: the first look has told the engine where the
+    /// window's messages sit.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub located: bool,
 }
 
 /// The most UIDs a mailbox's [`Kept::deleted`] remembers, the highest
@@ -86,6 +90,7 @@ mod tests {
     #[test]
     fn the_state_is_a_small_json_object_per_mailbox() {
         let state = ImapState {
+            located: false,
             mailboxes: BTreeMap::from([(
                 "INBOX".to_string(),
                 Kept {
@@ -105,6 +110,7 @@ mod tests {
     #[test]
     fn a_state_reads_back_what_it_wrote() {
         let state = ImapState {
+            located: false,
             mailboxes: BTreeMap::from([(
                 "Sent".to_string(),
                 Kept {

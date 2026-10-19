@@ -85,7 +85,11 @@ fn named(mailbox: &str, uidvalidity: u32, uid: u32) -> RemoteRef {
 /// A fetched message as the store keeps it, with the links its headers
 /// name. The server sends no preview text, and the adapter does not know
 /// the store's account id, which the engine fills in.
-fn meta_of(at: &Location, fetched: &Fetched, role: Option<Role>) -> (MessageMeta, Links) {
+pub(super) fn meta_of(
+    at: &Location,
+    fetched: &Fetched,
+    role: Option<Role>,
+) -> (MessageMeta, Links) {
     let id = at.to_string();
     let meta = MessageMeta {
         account_id: 0,
@@ -302,7 +306,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// under `top` and doubles it, up to a [`WINDOW`], while the page is
     /// short, so a mailbox without gaps fills a page with one search and
     /// one with few matches reaches its bottom in a few.
-    async fn newest_below(
+    pub(super) async fn newest_below(
         &self,
         mailbox: &str,
         keys: &str,

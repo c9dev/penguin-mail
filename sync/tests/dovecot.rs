@@ -121,6 +121,7 @@ fn services(dovecot: &Dovecot, sink: &Mailpit, password: &str) -> AccountService
             // each sent message to Sent itself.
             files_sent_mail: false,
             window_days: WINDOW_DAYS,
+            dialect: Default::default(),
         },
     )
 }
