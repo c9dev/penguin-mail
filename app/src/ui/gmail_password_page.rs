@@ -19,7 +19,6 @@ pub struct GmailPasswordPage {
     pub again_line: gtk::Label,
     pub sign_in: gtk::Button,
     pub spinner: adw::Spinner,
-    #[cfg_attr(not(test), expect(dead_code, reason = "only the checks read it"))]
     pub help: adw::ExpanderRow,
     pub other_way: gtk::Button,
     pub error: gtk::Label,

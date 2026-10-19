@@ -982,7 +982,14 @@ impl Sidebar {
                         icon.add_css_class(&class);
                     }
                     let moves = tree::moves(&rows, &label.id);
-                    label_menu(&row, account.id, label, Filing::of([account_offers]), moves);
+                    label_menu(
+                        &row,
+                        account.id,
+                        label,
+                        Filing::of([account_offers]),
+                        moves,
+                        account_offers.label_colors,
+                    );
                     self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
                 }
             };
@@ -1667,16 +1674,15 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
     }
 }
 
-/// A label row's menu, on a right click or long press and on the button
-/// at the row's end, which shows while the pointer or the keyboard is on
-/// the row.
-fn label_menu(
-    row: &gtk::ListBoxRow,
+/// The items of a label's menu. The Color submenu shows only for an account
+/// whose labels take a colour.
+fn label_menu_model(
     account_id: AccountId,
     label: &Label,
-    filing: Filing,
+    filing: &Filing,
     moves: tree::Moves,
-) {
+    label_colors: bool,
+) -> gio::Menu {
     let menu = gio::Menu::new();
     let target = (account_id, label.id.clone()).to_variant();
     let item = |text: &str, action: &str| {
@@ -1696,7 +1702,9 @@ fn label_menu(
         );
         colors.append_item(&entry);
     }
-    edit.append_submenu(Some(&gettext("Color")), &colors);
+    if label_colors {
+        edit.append_submenu(Some(&gettext("Color")), &colors);
+    }
     menu.append_section(None, &edit);
     // Move Up and Move Down show only where they would move the label:
     // not up for the first among its siblings, not down for the last.
@@ -1713,6 +1721,21 @@ fn label_menu(
     let danger = gio::Menu::new();
     danger.append_item(&item(&gettext("Delete…"), "win.label-delete"));
     menu.append_section(None, &danger);
+    menu
+}
+
+/// A label row's menu, on a right click or long press and on the button
+/// at the row's end, which shows while the pointer or the keyboard is on
+/// the row.
+fn label_menu(
+    row: &gtk::ListBoxRow,
+    account_id: AccountId,
+    label: &Label,
+    filing: Filing,
+    moves: tree::Moves,
+    label_colors: bool,
+) {
+    let menu = label_menu_model(account_id, label, &filing, moves, label_colors);
     context_menu(row, &menu);
 
     let Some(content) = row.child().and_downcast::<gtk::Box>() else {
@@ -2088,12 +2111,57 @@ fn status_of(account: &Account, stuck: bool) -> Option<(&'static str, String)> {
 
 #[cfg(test)]
 mod tests {
+    use gtk::gio;
+    use gtk::prelude::*;
     use mailrs_domain::{Account, AccountState, Provider};
 
     use super::{Mailbox, Standard, heading_row_name, label_icon, mailbox_row_name, takes_mail};
     use super::{access_items, status_of};
 
     use super::{Offers, account_settings};
+
+    /// The labels of the sections `menu` holds, flattened, with the
+    /// submenus' names.
+    fn submenu_names(menu: &gio::Menu) -> Vec<String> {
+        let mut names = Vec::new();
+        for section in 0..menu.n_items() {
+            let Some(inner) = menu
+                .item_link(section, "section")
+                .and_downcast::<gio::Menu>()
+            else {
+                continue;
+            };
+            for item in 0..inner.n_items() {
+                if inner.item_link(item, "submenu").is_some()
+                    && let Some(name) = inner.item_attribute_value(item, "label", None)
+                {
+                    names.push(name.get::<String>().unwrap_or_default());
+                }
+            }
+        }
+        names
+    }
+
+    #[test]
+    fn an_account_without_label_colors_gets_no_color_menu() {
+        let label = mailrs_domain::Label {
+            role: None,
+            account_id: 1,
+            id: "Work".into(),
+            name: "Work".into(),
+            kind: mailrs_domain::LabelKind::User,
+            color: None,
+        };
+        let moves = super::tree::Moves {
+            up: false,
+            down: false,
+        };
+        let filing = crate::offered::Filing::of([Offers::EVERYTHING]);
+        let with = super::label_menu_model(1, &label, &filing, moves, true);
+        let without = super::label_menu_model(1, &label, &filing, moves, false);
+        assert_eq!(submenu_names(&with), ["Color"]);
+        assert_eq!(submenu_names(&without), Vec::<String>::new());
+    }
 
     #[test]
     fn a_pop3_account_row_says_its_mail_is_on_this_computer() {

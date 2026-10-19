@@ -390,7 +390,11 @@ fn accounts_page(
             dialog,
             &row,
         ));
-        row.add_row(&super::sender_prefs::account_row(app, account));
+        row.add_row(&super::sender_prefs::account_row(
+            app,
+            account,
+            app.google_sign_in(account.id).map(|sign_in| sign_in.route),
+        ));
         let contacts = super::contacts_prefs::account_rows(
             app,
             &settings,
