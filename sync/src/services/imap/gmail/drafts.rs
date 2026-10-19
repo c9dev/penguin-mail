@@ -35,17 +35,23 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .append(&drafts, &[DRAFT.to_string(), SEEN.to_string()], raw)
             .await?
             .ok_or_else(|| BackendError::Refused("Gmail gave no place for the draft".into()))?;
-        let set = UidSet::from_uids([appended.uid]);
-        let id = self
-            .api
-            .gmail_flags(&drafts, &set, None)
-            .await?
-            .into_iter()
-            .find_map(|f| f.gmail)
-            .map(|g| g.id())
-            .ok_or(BackendError::NotFound)?;
+        // The draft is on the server from here on: a failure to name it
+        // must not make the composer save it again.
+        let id = match self.gm_hex_id(&drafts, appended.uid).await {
+            Ok(Some(id)) => id,
+            first => {
+                if let Err(err) = first {
+                    tracing::warn!(%err, "saved the draft, but could not read its id");
+                }
+                self.gm_draft_by_message_id(&drafts, raw)
+                    .await?
+                    .ok_or(BackendError::NotFound)?
+            }
+        };
         // Where the draft sits in All Mail, so opening it finds it.
-        self.gm_find(std::slice::from_ref(&id)).await?;
+        if let Err(err) = self.gm_find(std::slice::from_ref(&id)).await {
+            tracing::warn!(%err, "saved the draft, but could not find it in All Mail");
+        }
         // The new copy is on the server, so an old one left behind is a
         // second draft, never a lost one.
         if let Some(old) = draft_id
@@ -60,6 +66,38 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             message_id: id.clone(),
             thread_id: thread_id.map_or(id, str::to_string),
         })
+    }
+
+    /// The hex id of the message at `uid` of `mailbox`.
+    async fn gm_hex_id(&self, mailbox: &str, uid: u32) -> Result<Option<String>, BackendError> {
+        Ok(self
+            .api
+            .gmail_flags(mailbox, &UidSet::from_uids([uid]), None)
+            .await?
+            .into_iter()
+            .find_map(|f| f.gmail)
+            .map(|g| g.id()))
+    }
+
+    /// The hex id of the newest message in `drafts` with the Message-ID
+    /// `raw` carries, for a draft whose append gave no usable answer.
+    async fn gm_draft_by_message_id(
+        &self,
+        drafts: &str,
+        raw: &[u8],
+    ) -> Result<Option<String>, BackendError> {
+        let Some(message_id) = mailrs_mime::head::message_id(raw) else {
+            return Ok(None);
+        };
+        if message_id.contains(['"', '\r', '\n', '\\']) {
+            return Ok(None);
+        }
+        self.select(drafts, None).await?;
+        let keys = format!("HEADER Message-ID \"<{message_id}>\" UNDELETED");
+        let Some(uid) = self.api.search(drafts, &keys).await?.into_iter().max() else {
+            return Ok(None);
+        };
+        self.gm_hex_id(drafts, uid).await
     }
 
     /// Erases a draft: to Trash, then expunged there.
