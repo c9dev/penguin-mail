@@ -199,9 +199,8 @@ async fn a_gmail_account_on_the_imap_route_signs_in_again_when_its_grant_ends() 
     db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
         .await
         .unwrap();
-    // The IMAP adapter is built by the app-password plan; until then the
-    // route builds nothing, and the services it will build carry the
-    // default.
+    // No servers row and no app password are saved, so the route has no
+    // mail to build.
     let connected = connector(&db, both_clients()).connect(&me).await.unwrap();
     assert!(matches!(connected, Connected::NeedsSignIn(Lacks::Secret)));
 }

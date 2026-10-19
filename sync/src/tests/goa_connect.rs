@@ -309,6 +309,24 @@ async fn a_goa_imap_account_hands_the_seam_a_token_login() {
 }
 
 #[tokio::test]
+async fn a_goa_imap_account_connects_to_gmail_over_imap() {
+    let (db, _dir) = store().await;
+    let goa = FakeAccounts::new();
+    goa.add(dana());
+    let account = linked_account(&db, MailRoute::Imap).await;
+
+    let Connected::Ready(services) = reach(&db, &goa, Clients::default())
+        .connect(&account)
+        .await
+        .unwrap()
+    else {
+        panic!("the account should be ready");
+    };
+
+    assert!(matches!(services.mail, AnyMail::Imap(_)));
+}
+
+#[tokio::test]
 async fn an_imap_login_asked_again_after_a_refusal_renews_the_token_once() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
