@@ -16,7 +16,7 @@ use rusqlite::Connection;
 
 use crate::connect::{STEP_WAIT, read_secret};
 use crate::goa::GoaAccount;
-use crate::passwords::Secrets;
+use crate::passwords::{PasswordStore, Secrets};
 use crate::sign_in::app_password::NewGmailImap;
 use crate::sign_in::goa_link::Linked;
 use crate::sign_in::own_client::OwnClient;
@@ -122,6 +122,21 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
     ) -> Result<Account, MoveError> {
         same_address(account, &authorized)?;
         committed();
+        self.run_move(account, || {
+            to_own_client(self.db, self.secrets, account, own, authorized)
+        })
+        .await
+    }
+
+    /// Stops `account`, lets the old route send what is due and finish its
+    /// writes, holds the outbox while `write` changes the store, and
+    /// starts the account again: as `write` left it, or as the store
+    /// holds it when `write` failed.
+    async fn run_move<F, Fut>(&self, account: &Account, write: F) -> Result<Account, MoveError>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<Account, MoveError>>,
+    {
         let id = account.id;
         let kept = self.engine.running(id);
         self.engine.stop(id);
@@ -135,7 +150,7 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             }
         }
         let _held = self.outbox.hold(id).await;
-        let moved = to_own_client(self.db, self.secrets, account, own, authorized).await;
+        let moved = write().await;
         let now = match &moved {
             Ok(moved) => Some(moved.clone()),
             Err(_) => self
@@ -166,22 +181,15 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         rewrite: Option<RewriteMail>,
         committed: impl FnOnce(),
     ) -> Result<Account, MoveError> {
-        if !goa_account
-            .identity
-            .trim()
-            .eq_ignore_ascii_case(account.email.trim())
-        {
-            return Err(MoveError::OtherAddress {
-                signed_in: goa_account.identity.trim().to_string(),
-                wanted: account.email.clone(),
-            });
-        }
+        same_email(account, &goa_account.identity)?;
         let id = account.id;
-        let before = self
+        let (before, client) = self
             .db
-            .read(move |c| accounts::mail_route(c, id))
+            .read(move |c| Ok((accounts::mail_route(c, id)?, accounts::sign_in_client(c, id)?)))
             .await
             .map_err(SyncError::from)?;
+        // An app password the move leaves behind goes with its servers.
+        let drops_password = before == MailRoute::Imap && client != SignInClient::Goa;
         // An account already on IMAP stays there: Online Accounts' token
         // reads IMAP whatever the probe found, and nothing renames the
         // stored mail back for the API.
@@ -196,47 +204,38 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             )));
         }
         committed();
-        let kept = self.engine.running(id);
-        self.engine.stop(id);
-        if let Some(sync) = kept {
-            let draining = Outbox::new(Arc::new(Stopped(Arc::clone(&sync))), self.db.clone());
-            if !drain(&sync, &draining, now_millis(), DRAIN_WAIT).await {
-                tracing::warn!(
-                    account = id,
-                    "moving with work still under way on the old sign-in"
-                );
-            }
-        }
-        let _held = self.outbox.hold(id).await;
         let goa_id = goa_account.id.clone();
-        let moved = commit(
-            self.db,
-            id,
-            RouteCommit {
-                route,
-                client: SignInClient::Goa,
-                restart_sync: changes,
-            },
-            move |c| {
-                accounts::set_goa_id(c, id, Some(&goa_id))?;
-                match rewrite {
-                    Some(rewrite) if changes => rewrite(c),
-                    _ => Ok(()),
-                }
-            },
-        )
-        .await;
-        let now = self
-            .db
-            .read(move |c| accounts::account(c, id))
-            .await
-            .ok()
-            .flatten();
-        self.engine
-            .start_again(now.as_ref().unwrap_or(account))
-            .await;
-        moved?;
-        now.ok_or_else(|| MoveError::Sync(SyncError::UnknownAccount(id)))
+        self.run_move(account, || async move {
+            commit(
+                self.db,
+                id,
+                RouteCommit {
+                    route,
+                    client: SignInClient::Goa,
+                    restart_sync: changes,
+                },
+                move |c| {
+                    accounts::set_goa_id(c, id, Some(&goa_id))?;
+                    if drops_password {
+                        servers::forget(c, id)?;
+                    }
+                    match rewrite {
+                        Some(rewrite) if changes => rewrite(c),
+                        _ => Ok(()),
+                    }
+                },
+            )
+            .await?;
+            if drops_password {
+                self.forget_password(id).await;
+            }
+            self.db
+                .read(move |c| accounts::account(c, id))
+                .await
+                .map_err(SyncError::from)?
+                .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))
+        })
+        .await
     }
 }
 
@@ -256,33 +255,8 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
     ) -> Result<Account, MoveError> {
         same_email(account, &new.address)?;
         committed();
-        let id = account.id;
-        let kept = self.engine.running(id);
-        self.engine.stop(id);
-        if let Some(sync) = kept {
-            let draining = Outbox::new(Arc::new(Stopped(Arc::clone(&sync))), self.db.clone());
-            if !drain(&sync, &draining, now_millis(), DRAIN_WAIT).await {
-                tracing::warn!(
-                    account = id,
-                    "moving with work still under way on the old sign-in"
-                );
-            }
-        }
-        let _held = self.outbox.hold(id).await;
-        let moved = self.write_imap(id, new).await;
-        let now = match &moved {
-            Ok(moved) => Some(moved.clone()),
-            Err(_) => self
-                .db
-                .read(move |c| accounts::account(c, id))
-                .await
-                .ok()
-                .flatten(),
-        };
-        self.engine
-            .start_again(now.as_ref().unwrap_or(account))
-            .await;
-        moved
+        self.run_move(account, || self.write_imap(account.id, new))
+            .await
     }
 
     async fn write_imap(&self, id: AccountId, new: NewGmailImap) -> Result<Account, MoveError> {
@@ -333,6 +307,20 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
 }
 
 impl<E, A: Accounts> Mover<'_, E, A> {
+    /// Deletes the app password `id` kept, once nothing reads it. A
+    /// keyring that fails leaves it, unread, and says so in the log.
+    async fn forget_password(&self, id: AccountId) {
+        let kept = Arc::clone(&self.secrets.passwords);
+        let gone = tokio::task::spawn_blocking(move || {
+            kept.delete(id)?;
+            kept.delete_outgoing(id)
+        })
+        .await;
+        if !matches!(gone, Ok(Ok(()))) {
+            tracing::warn!(account = id, "could not delete the app password the move left behind");
+        }
+    }
+
     /// The client `id` signs in with once it leaves Online Accounts, and
     /// whether it is on Online Accounts now. An account on another client
     /// keeps it. One that leaves Online Accounts takes its own project
@@ -396,8 +384,11 @@ fn same_address(account: &Account, authorized: &Authorized) -> Result<(), MoveEr
     same_email(account, &authorized.email)
 }
 
+/// `OtherAddress` unless `signed_in` is `account`'s address, trimmed and
+/// whatever the case.
 fn same_email(account: &Account, signed_in: &str) -> Result<(), MoveError> {
-    if signed_in.eq_ignore_ascii_case(&account.email) {
+    let signed_in = signed_in.trim();
+    if signed_in.eq_ignore_ascii_case(account.email.trim()) {
         return Ok(());
     }
     Err(MoveError::OtherAddress {
