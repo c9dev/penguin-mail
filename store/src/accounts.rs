@@ -353,7 +353,22 @@ pub fn set_gmail_sign_in(conn: &Connection, id: AccountId, sign_in: &GmailSignIn
     commit_sign_in(conn, id, sign_in, false)
 }
 
-/// The sign-in of every Gmail account, read in one query.
+/// Points the Online Accounts account `id` links to at `new`, while it
+/// still links to `old`. A move off Online Accounts that committed since
+/// the caller read `old` keeps its sign-in.
+pub fn relink_goa(conn: &Connection, id: AccountId, old: &str, new: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET goa_id = ?3 \
+         WHERE id = ?1 AND oauth_client = ?4 AND goa_id = ?2",
+        params![id, old, new, ON_ONLINE_ACCOUNTS],
+    )?;
+    Ok(())
+}
+
+/// The sign-in of every Gmail account, read in one query. A row this
+/// build cannot read, such as one a newer build wrote, is left out and
+/// logged, as [`list_accounts`] leaves it out, so it stops no other
+/// account.
 pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GmailSignIn>> {
     let mut stmt = conn
         .prepare("SELECT id, oauth_client, mail_route, goa_id FROM accounts WHERE provider = ?1")?;
@@ -368,7 +383,20 @@ pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GmailSign
     let mut all = HashMap::new();
     for row in rows {
         let (id, client, route, goa_id) = row?;
-        all.insert(id, decode_sign_in(client, route, goa_id)?);
+        match decode_sign_in(client, route, goa_id) {
+            Ok(sign_in) => {
+                all.insert(id, sign_in);
+            }
+            Err(StoreError::Corrupt { column, value }) => {
+                tracing::warn!(
+                    account = id,
+                    column,
+                    value,
+                    "left out a sign-in this build cannot read"
+                );
+            }
+            Err(err) => return Err(err),
+        }
     }
     Ok(all)
 }
@@ -441,6 +469,10 @@ pub fn set_sync_state(conn: &Connection, id: AccountId, state: &str) -> Result<(
     Ok(())
 }
 
+/// How long a colour flag waits for its message after a route move, in
+/// milliseconds: 90 days.
+pub const KEEP_FLAGS_FOR: i64 = 90 * 24 * 60 * 60 * 1000;
+
 pub fn set_backfill(
     conn: &Connection,
     id: AccountId,
@@ -452,10 +484,16 @@ pub fn set_backfill(
          backfill_extends = backfill_extends AND NOT ?3 WHERE id = ?1",
         params![id, cursor, done],
     )?;
-    // A colour flag whose message the first full sync after a route move
-    // did not bring back has nothing left to go on.
+    // A colour flag waits for its message after a route move: mail older
+    // than the sync window comes back only when the person opens or finds
+    // it, and a pass of the old route can still end after the move. One
+    // kept longer than `KEEP_FLAGS_FOR` has nothing left to go on.
     if done {
-        conn.execute("DELETE FROM kept_flags WHERE account_id = ?1", params![id])?;
+        conn.execute(
+            "DELETE FROM kept_flags WHERE account_id = ?1 \
+             AND kept_at < CAST(strftime('%s', 'now') AS INTEGER) * 1000 - ?2",
+            params![id, KEEP_FLAGS_FOR],
+        )?;
     }
     Ok(())
 }

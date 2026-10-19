@@ -6,7 +6,7 @@
 use std::pin::Pin;
 use std::sync::Arc;
 
-use mailrs_domain::{Account, GmailSignIn};
+use mailrs_domain::Account;
 use mailrs_imap::{ImapError, Login, LoginSource};
 use mailrs_store::accounts;
 
@@ -199,12 +199,10 @@ pub(crate) async fn goa_services(
         return Ok(Ok(without_mail(connector, account).await?));
     };
     if goa_id != found.id {
-        let (id, new) = (account.id, found.id.clone());
+        let (id, old, new) = (account.id, goa_id.clone(), found.id.clone());
         connector
             .db
-            .write(move |c| {
-                accounts::set_gmail_sign_in(c, id, &GmailSignIn::OnlineAccounts { goa_id: new })
-            })
+            .write(move |c| accounts::relink_goa(c, id, &old, &new))
             .await?;
     }
     if found.mail_disabled || found.attention_needed {

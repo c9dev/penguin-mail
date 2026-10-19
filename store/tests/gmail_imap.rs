@@ -71,12 +71,33 @@ fn a_colour_flag_waits_through_the_emptied_mail_and_returns_by_message_id() {
 }
 
 #[test]
-fn kept_colour_flags_go_once_the_first_full_sync_ends() {
+fn a_kept_colour_flag_outlasts_the_first_full_sync() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "m1", "t1", 100, &["INBOX"])]);
     flags::set_color(&conn, id, "t1", Some("m1"), Some(FlagColor::Red)).unwrap();
 
     switch::empty_mail(&conn, id).unwrap();
+    accounts::set_backfill(&conn, id, None, true).unwrap();
+    store(&conn, &[listed_again(id, "m1", "INBOX/1/7")]);
+
+    assert_eq!(
+        flags::colors(&conn, id, "t-new", None).unwrap(),
+        [("INBOX/1/7".to_string(), Some(FlagColor::Red))]
+    );
+}
+
+#[test]
+fn a_kept_colour_flag_goes_once_it_is_too_old() {
+    let (conn, id) = db();
+    store(&conn, &[meta(id, "m1", "t1", 100, &["INBOX"])]);
+    flags::set_color(&conn, id, "t1", Some("m1"), Some(FlagColor::Red)).unwrap();
+
+    switch::empty_mail(&conn, id).unwrap();
+    conn.execute(
+        "UPDATE kept_flags SET kept_at = kept_at - ?1 - 1000",
+        [accounts::KEEP_FLAGS_FOR],
+    )
+    .unwrap();
     accounts::set_backfill(&conn, id, None, true).unwrap();
     store(&conn, &[listed_again(id, "m1", "INBOX/1/7")]);
 
