@@ -351,11 +351,32 @@ fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<(
         ],
     )?;
     replace_memberships(conn, m.account_id, &m.id, &m.held)?;
+    if let Some(msgid) = &m.rfc822_msgid {
+        restore_kept_flag(conn, m.account_id, &m.id, msgid)?;
+    }
     // For Gmail the server's id is the store's own.
     conn.prepare_cached(
         "INSERT OR IGNORE INTO remote_refs (account_id, message_id, remote) VALUES (?1, ?2, ?2)",
     )?
     .execute(params![m.account_id, m.id])?;
+    Ok(())
+}
+
+/// Puts back the colour flag a route move kept for `msgid` onto the
+/// message `id` that brought it back, and forgets the kept one.
+fn restore_kept_flag(conn: &Connection, account_id: AccountId, id: &str, msgid: &str) -> Result<()> {
+    let kept: Option<String> = conn
+        .prepare_cached(
+            "DELETE FROM kept_flags WHERE account_id = ?1 AND rfc822_msgid = ?2 RETURNING color",
+        )?
+        .query_row(params![account_id, msgid], |row| row.get(0))
+        .optional()?;
+    if let Some(color) = kept {
+        conn.prepare_cached(
+            "INSERT OR IGNORE INTO flags (account_id, message_id, color) VALUES (?1, ?2, ?3)",
+        )?
+        .execute(params![account_id, id, color])?;
+    }
     Ok(())
 }
 

@@ -365,7 +365,8 @@ pub fn adopt_jmap(
 /// Gmail's IMAP, which then lists it all again from the server: messages
 /// and threads with everything kept beside them, mailboxes, draft pairs
 /// and server names. The outbox, the local rules (which take each label's
-/// IMAP name, its full name) and the account's settings stay.
+/// IMAP name, its full name) and the account's settings stay. The colour
+/// flags wait in `kept_flags` for their messages to come back.
 pub fn empty_mail(conn: &Connection, account_id: AccountId) -> Result<()> {
     let names: HashMap<String, String> = crate::mailboxes::user_ids_and_names(conn, account_id)?
         .into_iter()
@@ -390,6 +391,15 @@ pub fn empty_mail(conn: &Connection, account_id: AccountId) -> Result<()> {
             local_rules::replace(conn, account_id, &id, &rule)?;
         }
     }
+    // The colour flags live only here, so they wait by Message-ID for the
+    // new route to list their messages again.
+    conn.execute(
+        "INSERT OR REPLACE INTO kept_flags (account_id, rfc822_msgid, color) \
+         SELECT f.account_id, m.rfc822_msgid, f.color FROM flags f \
+         JOIN messages m ON m.account_id = f.account_id AND m.id = f.message_id \
+         WHERE f.account_id = ?1 AND m.rfc822_msgid IS NOT NULL",
+        params![account_id],
+    )?;
     // Messages and threads take the rows that name them through their
     // foreign keys; the loose tables go by hand. `local_rules_ran` stays,
     // so a rule does not run again on mail it ran on.

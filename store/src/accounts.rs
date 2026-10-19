@@ -487,6 +487,11 @@ pub fn set_backfill(
          backfill_extends = backfill_extends AND NOT ?3 WHERE id = ?1",
         params![id, cursor, done],
     )?;
+    // A colour flag whose message the first full sync after a route move
+    // did not bring back has nothing left to go on.
+    if done {
+        conn.execute("DELETE FROM kept_flags WHERE account_id = ?1", params![id])?;
+    }
     Ok(())
 }
 

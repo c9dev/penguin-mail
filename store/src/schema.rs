@@ -1111,6 +1111,17 @@ END;
     // desktop reads its mail with. It is kept to find the account again;
     // the address finds it when Online Accounts gives it a new id.
     "ALTER TABLE accounts ADD COLUMN goa_id TEXT;",
+    // The colour flags of an account whose stored mail a route move
+    // emptied, by each message's Message-ID header, until the new route
+    // lists those messages again or its first full sync ends.
+    r#"
+CREATE TABLE kept_flags (
+    account_id   INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    rfc822_msgid TEXT NOT NULL,
+    color        TEXT NOT NULL,
+    PRIMARY KEY (account_id, rfc822_msgid)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
