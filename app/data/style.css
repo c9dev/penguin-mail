@@ -2145,6 +2145,7 @@ list.own-list > row { padding: 0; min-height: 0; }
 .app-dark .own-number { background-color: alpha(#ffa35c, 0.16); }
 .own-note { font-size: 12.5px; color: var(--post-dim); margin-top: 12px; }
 .own-foot { padding: 16px 24px 14px; border-spacing: 6px; }
+button.own-help, button.own-help:hover, button.own-help:active { background: none; }
 button.own-help { padding: 2px 4px; min-height: 0; font-size: 12.5px; font-weight: 600; color: var(--post-acc); }
 button.own-help buttoncontent image { -gtk-icon-size: 11px; }
 button.own-help buttoncontent > box { border-spacing: 5px; }

@@ -20,7 +20,7 @@ use mailrs_sync::{
     Withheld,
 };
 
-use super::add_account::{Done, Opening};
+use super::add_account::{Done, Opening, OwnStart};
 use super::calendar::{CalendarView, Hooks};
 use super::confirm::{Tone, confirm};
 use super::contact_card;
@@ -3067,6 +3067,14 @@ impl MainWindow {
             });
         if !self.core.demo && !self.core.built_with_sign_in(browser, own_account) {
             return match browser {
+                // The address signs in through a project of the person's
+                // own, which the setup makes.
+                Browser::Google if address.is_some() => {
+                    self.present_add_account(Opening::OwnProject {
+                        start: OwnStart::Resume,
+                        address,
+                    });
+                }
                 Browser::Google => self.no_google_sign_in(),
                 Browser::Microsoft => self.no_sign_in(&gettext(
                     "This copy of Penguin Mail was built without Microsoft sign-in.",
@@ -3087,6 +3095,7 @@ impl MainWindow {
         // The wait runs until the browser comes back or gives up; nothing
         // here cancels it, so the sender lives as long as the run.
         let (keep, cancel) = async_channel::bounded::<()>(1);
+        let again = address.clone();
         let wanted = address.map_or(Wanted::Anyone, Wanted::Only);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -3103,18 +3112,51 @@ impl MainWindow {
                     }
                     this.refresh_accounts(Reload::Yes);
                 }
+                // The account's own project is gone from this computer:
+                // the setup takes the key again, or the project kept from
+                // an earlier setup.
+                Err(err)
+                    if matches!(
+                        err.downcast_ref::<mailrs_sync::sign_in::BrowserSignInError>(),
+                        Some(mailrs_sync::sign_in::BrowserSignInError::OwnClientMissing)
+                    ) =>
+                {
+                    let start = match this.core.saved_project().await {
+                        Some(own) => OwnStart::Saved(own),
+                        None => OwnStart::At(crate::own_project::Step::File),
+                    };
+                    this.present_add_account(Opening::OwnProject {
+                        start,
+                        address: again,
+                    });
+                }
                 Err(err) => this.toast(&err.to_string()),
             }
             this.authorizing.set(false);
         });
     }
 
-    /// Says that this copy cannot sign in to Google, with a button to the
-    /// releases, whose builds can.
-    fn no_google_sign_in(&self) {
-        self.no_sign_in(&gettext(
-            "This copy of Penguin Mail was built without Google sign-in.",
-        ));
+    /// Says that this copy cannot sign in to Google itself, with a button
+    /// to the setup of the person's own Google project, which can.
+    fn no_google_sign_in(self: &Rc<Self>) {
+        let toast = adw::Toast::builder()
+            .title(toast_title(&gettext(
+                "This copy of Penguin Mail was built without Google sign-in.",
+            )))
+            // Translators: Google is a name; keep it as it is.
+            .button_label(gettext("Set up your own Google project"))
+            .timeout(10)
+            .build();
+        let this = Rc::downgrade(self);
+        toast.connect_button_clicked(move |_| {
+            if let Some(this) = this.upgrade() {
+                this.present_add_account(Opening::OwnProject {
+                    start: OwnStart::Resume,
+                    address: None,
+                });
+            }
+        });
+        self.toasts.add_toast(toast);
     }
 
     /// Says `reason`, with a button to the releases, whose builds can sign in.

@@ -9,7 +9,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, MailRoute, Provider};
+use mailrs_domain::{Account, AccountId, MailRoute, Provider, SignInClient};
 use mailrs_store::accounts::GoogleSignIn;
 use mailrs_sync::Offers;
 
@@ -30,6 +30,8 @@ pub enum Line {
     /// The account still has to choose how it signs in: the banner's words
     /// for one account.
     Move { title: String },
+    /// The account signs in through the person's own Google project.
+    OwnProject,
     /// Something the account does on gmail.com only, with the link.
     Gap {
         text: String,
@@ -68,6 +70,9 @@ pub fn lines(
             });
         }
     }
+    if sign_in.client == SignInClient::Own {
+        lines.push(Line::OwnProject);
+    }
     if routes_ready && sign_in.needs_move(account.provider) {
         let waiting = Waiting {
             account: account.clone(),
@@ -81,6 +86,10 @@ pub fn lines(
     }
     lines
 }
+
+/// Points an "Open Google Cloud" link at the project of the account with
+/// this address, once the keyring says which project that is.
+pub type FindProject = Rc<dyn Fn(&str, &gtk::LinkButton)>;
 
 /// How to build an account's Contacts control, and whether the account's
 /// page already holds one.
@@ -99,6 +108,7 @@ struct Shown {
     routes_ready: bool,
     connect: Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
+    find_project: FindProject,
 }
 
 /// A Calendar page row and its Connect button.
@@ -129,6 +139,16 @@ pub fn rows(
         return;
     }
     if let Some(sign_in) = app.google_sign_in(account.id) {
+        let core = Rc::clone(&app.core);
+        let find_project: FindProject = Rc::new(move |address, link| {
+            let (core, address, link) = (Rc::clone(&core), address.to_string(), link.downgrade());
+            glib::spawn_future_local(async move {
+                let page = core.own_project_page(address).await;
+                if let Some(link) = link.upgrade() {
+                    link.set_uri(&page);
+                }
+            });
+        });
         register(
             parent,
             account,
@@ -137,6 +157,7 @@ pub fn rows(
             offers,
             connect,
             contacts,
+            find_project,
         );
     }
 }
@@ -150,6 +171,7 @@ fn register(
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
+    find_project: FindProject,
 ) {
     let shown = Rc::new(Shown {
         parent: parent.downgrade(),
@@ -158,16 +180,9 @@ fn register(
         routes_ready,
         connect: Rc::clone(connect),
         contacts,
+        find_project,
     });
-    let added = fill_rows(
-        parent,
-        account,
-        sign_in,
-        routes_ready,
-        offers,
-        connect,
-        &shown.contacts,
-    );
+    let added = fill_rows(parent, account, offers, &shown);
     *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
     SHOWN.with(|all| all.borrow_mut().insert(account.id, shown));
 }
@@ -189,15 +204,7 @@ pub fn refill(id: AccountId, account: &Account, offers: Offers) -> bool {
     for row in old.iter().filter_map(|row| row.upgrade()) {
         parent.remove(&row);
     }
-    let added = fill_rows(
-        &parent,
-        account,
-        shown.sign_in,
-        shown.routes_ready,
-        offers,
-        &shown.connect,
-        &shown.contacts,
-    );
+    let added = fill_rows(&parent, account, offers, &shown);
     *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
     let calendar = CALENDAR_ROWS.with(|all| all.borrow().get(&id).cloned());
     if let Some((row, button)) = calendar
@@ -228,12 +235,11 @@ pub fn note_calendar_row(id: AccountId, row: &adw::ActionRow, button: &gtk::Butt
 fn fill_rows(
     parent: &adw::ExpanderRow,
     account: &Account,
-    sign_in: GoogleSignIn,
-    routes_ready: bool,
     offers: Offers,
-    connect: &Rc<dyn Fn(AccountId)>,
-    contacts: &Contacts,
+    shown: &Shown,
 ) -> Vec<gtk::Widget> {
+    let (sign_in, routes_ready) = (shown.sign_in, shown.routes_ready);
+    let (connect, contacts) = (&shown.connect, &shown.contacts);
     let mut added: Vec<gtk::Widget> = Vec::new();
     let mut put = |widget: &gtk::Widget| {
         parent.add_row(widget);
@@ -274,6 +280,24 @@ fn fill_rows(
                 // The GNOME Online Accounts plan replaces this with its
                 // one-click move for an address that GNOME already holds.
                 row.add_suffix(&route_button(&gettext("Choose…"), account.id));
+                put(row.upcast_ref());
+            }
+            Line::OwnProject => {
+                // Translators: Google is a name; keep it as it is.
+                let row = plain_row(&gettext("Signed in through your own Google project"), None);
+                let label = gettext("Open Google Cloud");
+                let inside = gtk::Box::builder().spacing(6).build();
+                inside.append(&gtk::Label::new(Some(&label)));
+                inside.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+                let link = gtk::LinkButton::builder()
+                    .uri(crate::own_project::PROJECT_PAGE)
+                    .child(&inside)
+                    .valign(gtk::Align::Center)
+                    .build();
+                link.add_css_class("gmail-link");
+                crate::ui::name(&link, &label);
+                (shown.find_project)(&account.email, &link);
+                row.add_suffix(&link);
                 put(row.upcast_ref());
             }
             Line::Gap { .. } => {}
@@ -454,7 +478,25 @@ mod tests {
             &account(AccountState::Ok),
             true,
         );
-        assert_eq!(found, [Line::Features { every: true }]);
+        assert_eq!(found, [Line::Features { every: true }, Line::OwnProject]);
+    }
+
+    #[test]
+    fn only_an_account_on_its_own_project_says_so() {
+        let built_in = lines(
+            sign_in(SignInClient::BuiltIn, MailRoute::Imap),
+            Platform::Linux,
+            &account(AccountState::Ok),
+            true,
+        );
+        assert!(!built_in.contains(&Line::OwnProject));
+        let unready = lines(
+            sign_in(SignInClient::Own, MailRoute::GmailApi),
+            Platform::Linux,
+            &account(AccountState::Ok),
+            false,
+        );
+        assert_eq!(unready, [Line::OwnProject]);
     }
 
     #[test]
@@ -513,16 +555,14 @@ mod tests {
     }
 
     #[test]
-    fn with_no_route_ready_an_api_account_shows_no_gmail_lines() {
-        for client in [SignInClient::BuiltIn, SignInClient::Own] {
-            let found = lines(
-                sign_in(client, MailRoute::GmailApi),
-                Platform::Linux,
-                &account(AccountState::MailPaused),
-                false,
-            );
-            assert_eq!(found, []);
-        }
+    fn with_no_route_ready_a_built_in_api_account_shows_no_gmail_lines() {
+        let found = lines(
+            sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
+            Platform::Linux,
+            &account(AccountState::MailPaused),
+            false,
+        );
+        assert_eq!(found, []);
     }
 
     #[test]
@@ -608,6 +648,7 @@ pub(crate) mod checks {
             offers,
             &connect,
             kept,
+            Rc::new(|_, _| {}),
         );
         (parent, pressed)
     }
@@ -745,7 +786,21 @@ pub(crate) mod checks {
             route: MailRoute::GmailApi,
         };
         let (parent, _) = filled(AccountState::Ok, own, Offers::EVERYTHING);
-        assert_eq!(titles(&parent), ["GMAIL", "Gmail features"]);
+        assert_eq!(
+            titles(&parent),
+            [
+                "GMAIL",
+                "Gmail features",
+                "Signed in through your own Google project"
+            ]
+        );
+        let mut buttons = Vec::new();
+        buttons_of(parent.upcast_ref(), &mut buttons);
+        let link = buttons
+            .into_iter()
+            .find_map(|b| b.downcast::<gtk::LinkButton>().ok())
+            .expect("the project row links to Google Cloud");
+        assert_eq!(link.uri(), crate::own_project::PROJECT_PAGE);
     }
 
     /// What the window does after the calendar consent: the rows are built

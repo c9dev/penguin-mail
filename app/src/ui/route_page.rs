@@ -241,6 +241,7 @@ pub(crate) mod checks {
             goa: Goa::Holds,
             app_password: true,
             own_project: true,
+            saved_project: false,
         }
     }
 
@@ -283,7 +284,8 @@ pub(crate) mod checks {
             assert!(row.is_activatable());
             assert!(row.is_focusable());
         }
-        assert!(!page.footer.get_visible());
+        // The own-project row is listed, so the line under the list shows.
+        assert!(page.footer.get_visible());
         ActionRowExt::activate(&row_at(&page, 1));
         assert_eq!(*picked.borrow(), [Route::AppPassword]);
     }

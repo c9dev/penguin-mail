@@ -27,10 +27,10 @@ use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::own_client::{OwnClient, saved_project};
 use mailrs_sync::sign_in::{
-    Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, NewCalDav, NewImap,
-    NewJmap, NewPop3, Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent,
+    Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, KeptClient, NewCalDav,
+    NewImap, NewJmap, NewPop3, Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent,
     check_pop3, google_sign_in, imap_signed_in, in_browser, jmap_in_browser, jmap_signed_in,
-    keep_chosen_project, move_choice, pop3_signed_in,
+    keep_chosen_project, kept_own_client, move_choice, pop3_signed_in,
 };
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, Clients, Connector,
@@ -435,6 +435,28 @@ impl Core {
         } else {
             ClientSource::BuiltIn
         }
+    }
+
+    /// Google Cloud's page of the project the Gmail account at `address`
+    /// signs in through, for Preferences' link.
+    pub async fn own_project_page(&self, address: String) -> String {
+        let connector = self.connector();
+        let kept = self
+            .call(async move {
+                let Connector {
+                    db,
+                    config,
+                    secrets,
+                    ..
+                } = &connector;
+                kept_own_client(db, config, secrets, &address).await
+            })
+            .await;
+        let project = match kept {
+            Ok(KeptClient::Found(own)) => own.project_id().map(str::to_string),
+            _ => None,
+        };
+        crate::own_project::project_page(project.as_deref())
     }
 
     /// The Google project kept from an earlier setup, if there is one.

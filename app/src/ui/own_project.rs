@@ -346,6 +346,13 @@ impl OwnProject {
     }
 
     fn found_key(&self, own: OwnClient) {
+        self.show_found(own);
+        self.file.sign_in.grab_focus();
+    }
+
+    /// Keeps `own` for the sign-in and says it is ready, with the drop
+    /// area folded to one line.
+    fn show_found(&self, own: OwnClient) {
         self.found.replace(Some(own));
         let page = &self.file;
         page.problem.set_visible(false);
@@ -356,7 +363,6 @@ impl OwnProject {
             .set_orientation(gtk::Orientation::Horizontal);
         page.choose.remove_css_class("suggested-action");
         self.update_sign_in();
-        page.sign_in.grab_focus();
     }
 
     /// Says why the file or the pasted pair made no key, and leaves the
@@ -376,10 +382,7 @@ impl OwnProject {
             return;
         }
         if let Ok(own) = from_pasted(&id, &secret) {
-            self.found.replace(Some(own));
-            self.file.problem.set_visible(false);
-            self.file.ready.set_visible(true);
-            self.update_sign_in();
+            self.show_found(own);
         }
     }
 

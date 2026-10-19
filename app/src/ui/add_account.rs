@@ -75,10 +75,6 @@ pub enum Opening {
     Consent(Account),
     /// The own Google project setup, for a new account or, with
     /// `address`, for that account signing in again.
-    #[expect(
-        dead_code,
-        reason = "the route choice and the window open it in the next change"
-    )]
     OwnProject {
         start: OwnStart,
         address: Option<String>,
@@ -90,7 +86,6 @@ pub enum Opening {
 /// Where the own Google project setup opens.
 pub enum OwnStart {
     /// At the step the person reached last time, or the intro.
-    #[expect(dead_code, reason = "the route choice opens it in the next change")]
     Resume,
     /// At the last page, with the project kept from an earlier setup.
     Saved(OwnClient),
@@ -159,6 +154,7 @@ pub fn present(
         this.consenting.replace(Some(account.clone()));
     }
     this.connect();
+    this.load_saved_project();
     let routes_first = match &opening {
         Opening::Move(_) => true,
         Opening::Browser(Browser::Google) => google_routes().1,
@@ -2017,6 +2013,8 @@ struct Dialog {
     /// Where the browser page's button back into the setup leads, after a
     /// sign-in through the person's project failed.
     own_back: RefCell<Option<OwnStart>>,
+    /// The project kept from an earlier setup, once the keyring answered.
+    saved: RefCell<Option<OwnClient>>,
     pick: PickPage,
     routes: RoutePage,
     consent: ConsentPage,
@@ -2105,6 +2103,7 @@ impl Dialog {
             own: own_setup(core, weak),
             browser_chosen: RefCell::new(None),
             own_back: RefCell::new(None),
+            saved: RefCell::new(None),
             core: Rc::clone(core),
             window,
             nav,
@@ -3837,6 +3836,11 @@ impl Dialog {
 
     /// Fills the route page without showing it.
     fn routes_for(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
+        let saved = self.saved.borrow().is_some();
+        let ready = Ready {
+            saved_project: ready.saved_project || saved,
+            ..ready
+        };
         self.route_expected.replace(expected);
         let weak = Rc::downgrade(self);
         self.routes.show(
@@ -3852,8 +3856,39 @@ impl Dialog {
         self.set_band(route_page::TAG, Step::Address, None, None);
     }
 
+    /// Reads the project kept from an earlier setup, and offers it on the
+    /// route page once the keyring answers. An entry that does not decode
+    /// counts as none, and nothing is said about it.
+    fn load_saved_project(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let Some(own) = this.core.saved_project().await else {
+                return;
+            };
+            this.saved.replace(Some(own));
+            let expected = this.route_expected.borrow().clone();
+            let platform = Platform::this();
+            this.routes_for(
+                platform,
+                ready_now(&mailrs_sync::Clients::current()),
+                expected,
+            );
+        });
+    }
+
     fn chose_route(self: &Rc<Self>, route: Route) {
         match route {
+            Route::SavedProject => {
+                let saved = self.saved.borrow().clone();
+                if let Some(own) = saved {
+                    self.open_own(OwnStart::Saved(own));
+                }
+            }
+            // The setup opens unless the environment names a client, which
+            // wins over any the setup would make.
+            Route::OwnProject if mailrs_sync::Clients::current().own_google.is_none() => {
+                self.open_own(OwnStart::Resume);
+            }
             Route::OwnProject => {
                 let account = self
                     .moving
@@ -5068,6 +5103,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 goa,
                 app_password: true,
                 own_project: true,
+                saved_project: false,
             };
             if stage == "routes" {
                 this.show_routes(Platform::Linux, everything(Goa::Holds), None);

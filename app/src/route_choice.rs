@@ -5,9 +5,8 @@
 use mailrs_domain::translate::gettext;
 use mailrs_sync::Clients;
 
-/// Whether the own-project setup flow exists in this build. The plan that
-/// builds it sets this; until then only an environment-named client counts.
-pub const OWN_PROJECT_SETUP: bool = false;
+/// Whether the own-project setup flow exists in this build.
+pub const OWN_PROJECT_SETUP: bool = true;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
@@ -47,6 +46,8 @@ pub struct Ready {
     pub goa: Goa,
     pub app_password: bool,
     pub own_project: bool,
+    /// A project from an earlier setup is kept on this computer.
+    pub saved_project: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,6 +55,8 @@ pub enum Route {
     Goa,
     AppPassword,
     OwnProject,
+    /// The project kept from an earlier setup.
+    SavedProject,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,12 +69,14 @@ pub struct RouteRow {
 }
 
 /// What this build can run now. The GNOME Online Accounts and password
-/// plans fill their fields.
+/// plans fill their fields; the caller says whether a project is kept,
+/// which takes the keyring.
 pub fn ready_now(clients: &Clients) -> Ready {
     Ready {
         goa: Goa::Absent,
         app_password: false,
         own_project: OWN_PROJECT_SETUP || matches!(clients.own_google, Some(Ok(_))),
+        saved_project: false,
     }
 }
 
@@ -84,18 +89,22 @@ pub fn title() -> String {
 /// The rows to show, in order.
 pub fn rows(platform: Platform, ready: Ready) -> Vec<RouteRow> {
     let goa_listed = platform == Platform::Linux && ready.goa != Goa::Absent;
+    let saved = ready.own_project && ready.saved_project;
     let mut rows = Vec::new();
+    if saved {
+        rows.push(saved_project_row(!goa_listed));
+    }
     if goa_listed {
         rows.push(goa_row(ready.goa));
         if ready.app_password {
             rows.push(password_row(true));
         }
         if ready.own_project {
-            rows.push(own_project_row(false));
+            rows.push(own_project_row(false, saved));
         }
     } else {
         if ready.own_project {
-            rows.push(own_project_row(true));
+            rows.push(own_project_row(!saved, saved));
         }
         if ready.app_password {
             rows.push(password_row(false));
@@ -109,10 +118,12 @@ pub fn any_route(platform: Platform, ready: Ready) -> bool {
     !rows(platform, ready).is_empty()
 }
 
-/// The line under the list, only when the own-project row comes first.
+/// The line under the list, whenever the own-project row is listed.
 pub fn footer(platform: Platform, ready: Ready) -> Option<String> {
-    let first = rows(platform, ready).into_iter().next()?;
-    (first.route == Route::OwnProject).then(|| {
+    let listed = rows(platform, ready)
+        .iter()
+        .any(|row| row.route == Route::OwnProject);
+    listed.then(|| {
         // Translators: Gmail and Google are names; keep them as they are.
         gettext("Want every Gmail feature? Your own Google project gives you all of them, free.")
     })
@@ -146,11 +157,26 @@ fn password_row(goa_listed: bool) -> RouteRow {
     }
 }
 
-fn own_project_row(recommended: bool) -> RouteRow {
+fn saved_project_row(recommended: bool) -> RouteRow {
+    RouteRow {
+        route: Route::SavedProject,
+        // Translators: Google is a name; keep it as it is.
+        title: gettext("Use your Google project again"),
+        // Translators: Gmail is a name; keep it as it is.
+        subtitle: gettext("Every Gmail feature, with the project you set up before."),
+        recommended,
+    }
+}
+
+fn own_project_row(recommended: bool, saved: bool) -> RouteRow {
     RouteRow {
         route: Route::OwnProject,
-        // Translators: Google is a name; keep it as it is.
-        title: gettext("Set up your own Google project"),
+        title: if saved {
+            gettext("Set up a different project")
+        } else {
+            // Translators: Google is a name; keep it as it is.
+            gettext("Set up your own Google project")
+        },
         // Translators: Gmail is a name; keep it as it is.
         subtitle: gettext("Every Gmail feature, on any computer. About 10 minutes, once."),
         recommended,
@@ -166,7 +192,41 @@ mod tests {
             goa,
             app_password: true,
             own_project: true,
+            saved_project: false,
         }
+    }
+
+    #[test]
+    fn a_saved_project_comes_first_and_the_setup_offers_a_different_one() {
+        for (platform, goa) in [
+            (Platform::MacOs, Goa::Absent),
+            (Platform::Linux, Goa::Holds),
+        ] {
+            let saved = Ready {
+                saved_project: true,
+                ..ready(goa)
+            };
+            let rows = rows(platform, saved);
+            assert_eq!(rows[0].route, Route::SavedProject);
+            assert_eq!(rows[0].title, "Use your Google project again");
+            let own = rows.iter().find(|r| r.route == Route::OwnProject).unwrap();
+            assert_eq!(own.title, "Set up a different project");
+            assert!(!own.recommended);
+        }
+    }
+
+    #[test]
+    fn a_saved_project_without_the_setup_lists_no_row_for_it() {
+        let saved = Ready {
+            own_project: false,
+            saved_project: true,
+            ..ready(Goa::Absent)
+        };
+        assert!(
+            rows(Platform::MacOs, saved)
+                .iter()
+                .all(|r| r.route != Route::SavedProject)
+        );
     }
 
     #[test]
@@ -217,6 +277,7 @@ mod tests {
             goa: Goa::Absent,
             app_password: false,
             own_project: true,
+            saved_project: false,
         };
         assert_eq!(rows(Platform::Linux, only_own).len(), 1);
         let none = Ready {
@@ -241,14 +302,14 @@ mod tests {
     }
 
     #[test]
-    fn the_footer_shows_only_when_the_own_project_comes_first() {
+    fn the_footer_shows_whenever_the_own_project_is_listed() {
         let wanted = Some(
             "Want every Gmail feature? Your own Google project gives you all of them, free."
                 .to_string(),
         );
         assert_eq!(footer(Platform::MacOs, ready(Goa::Absent)), wanted);
         assert_eq!(footer(Platform::Linux, ready(Goa::Absent)), wanted);
-        assert_eq!(footer(Platform::Linux, ready(Goa::Present)), None);
+        assert_eq!(footer(Platform::Linux, ready(Goa::Present)), wanted);
         let no_own = Ready {
             own_project: false,
             ..ready(Goa::Absent)
@@ -257,9 +318,10 @@ mod tests {
     }
 
     #[test]
-    fn this_build_offers_the_own_project_only_when_the_environment_names_a_client() {
+    fn this_build_offers_the_own_project_setup_without_any_client() {
         let none = mailrs_sync::Clients::default();
-        assert!(!ready_now(&none).own_project);
+        assert!(ready_now(&none).own_project);
+        assert!(!ready_now(&none).saved_project);
         let named = mailrs_sync::Clients {
             own_google: Some(Ok(mailrs_sync::sign_in::own_client::OwnClient::new(
                 "id", "secret",

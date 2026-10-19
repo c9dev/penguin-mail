@@ -186,6 +186,39 @@ mod tests {
         false
     }
 
+    /// Grant Access in the calendar sidebar, the Calendar and Contacts
+    /// Connect rows and the permission questions all go through
+    /// `App::sign_in_path`. In this build, with no client from the
+    /// environment, each leads a waiting account to the route choice,
+    /// whose own-project row opens the setup; none is left doing nothing.
+    #[test]
+    fn every_control_of_a_waiting_account_leads_to_the_route_choice() {
+        use crate::route_choice::{Platform, Route, any_route, ready_now, rows};
+        let clients = mailrs_sync::Clients::default();
+        for platform in [Platform::Linux, Platform::MacOs] {
+            let ready = ready_now(&clients);
+            assert!(
+                rows(platform, ready)
+                    .iter()
+                    .any(|row| row.route == Route::OwnProject)
+            );
+            let built_in_api = GoogleSignIn {
+                client: SignInClient::BuiltIn,
+                route: MailRoute::GmailApi,
+            };
+            for state in [AccountState::Ok, AccountState::MailPaused] {
+                assert_eq!(
+                    path(
+                        &account(1, "dana@gmail.com", state),
+                        Some(built_in_api),
+                        any_route(platform, ready)
+                    ),
+                    Path::Move
+                );
+            }
+        }
+    }
+
     #[test]
     fn one_waiting_account_is_named() {
         let banner = banner(&[waiting(1, "dana@gmail.com", false)], nobody).unwrap();

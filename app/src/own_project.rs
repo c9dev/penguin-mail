@@ -15,7 +15,6 @@ pub const HELP: &str = "https://penguin-mail.com/help/gmail-own-project";
 
 /// Google Cloud's page of the project's keys, for a project whose id is
 /// not known.
-#[expect(dead_code, reason = "Preferences links to it in the next change")]
 pub const PROJECT_PAGE: &str = "https://console.cloud.google.com/auth/clients";
 
 /// A page of the setup.
@@ -94,6 +93,23 @@ pub fn resume_at(saved: Option<u8>) -> Step {
     match saved {
         None | Some(0) => Step::Intro,
         Some(n) => Step::of_number(n).unwrap_or(Step::File),
+    }
+}
+
+/// Google Cloud's page of the keys in the project `project_id` names, or
+/// of whichever project Google last had open when the id is unknown or
+/// not one Google makes.
+pub fn project_page(project_id: Option<&str>) -> String {
+    match project_id {
+        Some(id)
+            if !id.is_empty()
+                && id
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') =>
+        {
+            format!("{PROJECT_PAGE}?project={id}")
+        }
+        _ => PROJECT_PAGE.to_string(),
     }
 }
 
@@ -726,6 +742,16 @@ mod tests {
         let file = gtk::gio::File::for_path("/nonexistent/penguin/key.json");
         let read = gtk::glib::MainContext::new().block_on(read_key_file(&file));
         assert_eq!(read.err(), Some(FileProblem::NotTheFile));
+    }
+
+    #[test]
+    fn the_project_link_opens_the_persons_own_project() {
+        assert_eq!(
+            project_page(Some("penguin-mail-4711")),
+            "https://console.cloud.google.com/auth/clients?project=penguin-mail-4711"
+        );
+        assert_eq!(project_page(None), PROJECT_PAGE);
+        assert_eq!(project_page(Some("a b&c")), PROJECT_PAGE);
     }
 
     #[test]

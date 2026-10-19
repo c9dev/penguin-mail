@@ -9,6 +9,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - New ways to sign in to Gmail. Gmail users: update, then choose one for each account.
 - Adding a Google account asks how it signs in, and lists only the ways this computer offers.
+- Set up your own Google project for Gmail: Penguin Mail opens each page and says what to click.
 - Choose reasoning separately for assistant chats and email translations in Preferences → AI.
 - Russian and Czech can be selected in Never Translate.
 - Choose Simplified Chinese, Russian, Italian, Japanese, Korean, Polish, Turkish, or Indonesian in Preferences.
