@@ -106,6 +106,9 @@ pub fn present(
             &crate::offered::filters_link_label(),
             crate::offered::FILTERS_LINK,
         ));
+        header.pack_end(&crate::ui::preferences::google_route::every_feature_button(
+            account.id,
+        ));
     }
     toolbar.set_content(Some(&stack));
     let nav = adw::NavigationView::new();

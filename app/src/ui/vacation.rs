@@ -81,10 +81,19 @@ pub fn present(
             &crate::offered::settings_link_label(),
         );
         link.set_halign(gtk::Align::Center);
+        let every = crate::ui::preferences::google_route::every_feature_button(account.id);
+        every.set_halign(gtk::Align::Center);
+        every.add_css_class("pill");
+        let choices = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .build();
+        choices.append(&link);
+        choices.append(&every);
         let page = adw::StatusPage::builder()
             .icon_name("mail-reply-sender-symbolic")
             .title(glib::markup_escape_text(&text).as_str())
-            .child(&link)
+            .child(&choices)
             .build();
         stack.add_named(&page, Some("elsewhere"));
         stack.set_visible_child_name("elsewhere");

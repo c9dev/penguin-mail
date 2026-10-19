@@ -22,6 +22,10 @@ use crate::route_choice::Platform;
 /// The window action that opens the route choice for one account, by id.
 pub const CHOOSE_ROUTE: &str = "win.account-choose-route";
 
+/// The window action behind "Get Every Feature": the own project setup, or
+/// the route choice where Online Accounts holds the address.
+pub const EVERY_FEATURE: &str = "win.account-every-feature";
+
 /// The window action that moves one account to Online Accounts, by id.
 pub const SWITCH_TO_GOA: &str = "win.account-switch-goa";
 
@@ -332,7 +336,7 @@ fn fill_rows(
                 // both the value and a button in its suffix.
                 if !every {
                     let holder = plain_row("", None);
-                    holder.add_suffix(&route_button(&gettext("Get Every Feature"), account.id));
+                    holder.add_suffix(&every_feature_button(account.id));
                     put(holder.upcast_ref());
                 }
             }
@@ -514,6 +518,12 @@ fn dim(text: &str) -> gtk::Label {
         .valign(gtk::Align::Center)
         .css_classes(["dim-label"])
         .build()
+}
+
+/// "Get Every Feature" for `account`, for the pages that name something an
+/// account on the IMAP route lacks.
+pub fn every_feature_button(account: AccountId) -> gtk::Button {
+    action_button(&gettext("Get Every Feature"), EVERY_FEATURE, account)
 }
 
 /// A button that opens the route choice for `account`.

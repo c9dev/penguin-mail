@@ -3543,6 +3543,21 @@ impl MainWindow {
             }),
         );
         with_account(
+            "account-every-feature",
+            Box::new(|win, account| {
+                let held = win.core.goa_holds(&account.email) == Some(true);
+                if cfg!(target_os = "linux") && held {
+                    win.present_add_account(Opening::Move(vec![account]));
+                } else {
+                    let address = Some(account.email);
+                    win.present_add_account(Opening::OwnProject {
+                        start: OwnStart::Resume,
+                        address,
+                    });
+                }
+            }),
+        );
+        with_account(
             "account-leave-own-project",
             Box::new(|win, account| {
                 win.present_add_account(Opening::LeaveOwn(account));
