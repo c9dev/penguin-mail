@@ -2120,7 +2120,7 @@ msgid "Could not save {count} person to contacts in {account}"
 msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "{count} 人を {account} の連絡先に保存できませんでした"
 
-#: app/src/core.rs:223
+#: app/src/core.rs:225
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2128,38 +2128,38 @@ msgstr ""
 "別の Penguin Mail または penguin-mail-cli sync がメールを同期しています。そち"
 "らを停止してから Penguin Mail を開き直してください。"
 
-#: app/src/core.rs:235
+#: app/src/core.rs:237
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "メールストアを更新できなかったため、以前のストアを残しました。"
 
-#: app/src/core.rs:899 app/src/core.rs:991 app/src/core.rs:1120
-#: app/src/core.rs:1134 app/src/core.rs:1199 app/src/core.rs:1295
+#: app/src/core.rs:952 app/src/core.rs:1045 app/src/core.rs:1174
+#: app/src/core.rs:1188 app/src/core.rs:1253 app/src/core.rs:1349
 msgid "Demo mode cannot add real accounts."
 msgstr "デモモードでは実際のアカウントを追加できません。"
 
-#: app/src/core.rs:916 app/src/core.rs:1814 app/src/core.rs:1876
+#: app/src/core.rs:970 app/src/core.rs:1868 app/src/core.rs:1930
 msgid "Canceled."
 msgstr "キャンセルしました。"
 
-#: app/src/core.rs:1467 app/src/core.rs:1492
+#: app/src/core.rs:1521 app/src/core.rs:1546
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "このアカウントには、カレンダーや連絡先のサーバーで使えるパスワードが保存され"
 "ていません。"
 
-#: app/src/core.rs:1673 app/src/core.rs:1723 app/src/core.rs:1840
+#: app/src/core.rs:1727 app/src/core.rs:1777 app/src/core.rs:1894
 msgid "The demo cannot switch accounts."
 msgstr "デモではアカウントを切り替えられません。"
 
-#: app/src/core.rs:1727
+#: app/src/core.rs:1781
 msgid "This account is already moving to its new sign-in."
 msgstr "このアカウントはすでに新しいログイン方法に移行しています。"
 
-#: app/src/core.rs:1794
+#: app/src/core.rs:1848
 msgid "The demo cannot connect a calendar."
 msgstr "デモではカレンダーを接続できません。"
 
-#: app/src/core.rs:1860
+#: app/src/core.rs:1914
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "5 分経過したため、ブラウザーでの操作を待つのをやめました。"
 
@@ -3259,7 +3259,8 @@ msgstr ""
 msgid "Give the file to Penguin Mail"
 msgstr "Penguin Mailにログインしました"
 
-#: app/src/own_project.rs:271 app/src/ui/own_project.rs:657
+#: app/src/own_project.rs:271 app/src/ui/own_project.rs:494
+#: app/src/ui/own_project.rs:734
 #, fuzzy
 #| msgid "Join with Google Meet"
 msgid "Sign in with Google"
@@ -4762,116 +4763,116 @@ msgstr "ログを表示"
 msgid "The update to {version} failed"
 msgstr "{version} への更新に失敗しました"
 
-#: app/src/ui/add_account.rs:481 app/src/ui/sandbox_setup.rs:129
+#: app/src/ui/add_account.rs:511 app/src/ui/sandbox_setup.rs:129
 #: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1415
 msgid "Copy Command"
 msgstr "コマンドをコピー"
 
-#: app/src/ui/add_account.rs:491 app/src/ui/sandbox_setup.rs:143
+#: app/src/ui/add_account.rs:521 app/src/ui/sandbox_setup.rs:143
 #: app/src/ui/window.rs:1420
 msgid "Command copied"
 msgstr "コマンドをコピーしました"
 
-#: app/src/ui/add_account.rs:622
+#: app/src/ui/add_account.rs:652
 msgid "Signs in through your browser"
 msgstr "ブラウザーでログインします"
 
-#: app/src/ui/add_account.rs:633
+#: app/src/ui/add_account.rs:663
 msgid "Enter server settings by hand"
 msgstr "サーバー設定を手動で入力"
 
-#: app/src/ui/add_account.rs:640
+#: app/src/ui/add_account.rs:670
 msgid "Add a calendar without mail"
 msgstr "メールなしでカレンダーを追加"
 
-#: app/src/ui/add_account.rs:655 app/src/ui/add_account.rs:2015
+#: app/src/ui/add_account.rs:685 app/src/ui/add_account.rs:2082
 msgid "Add Account"
 msgstr "アカウントを追加"
 
-#: app/src/ui/add_account.rs:658
+#: app/src/ui/add_account.rs:688
 msgid "Add an account"
 msgstr "アカウントを追加"
 
-#: app/src/ui/add_account.rs:660
+#: app/src/ui/add_account.rs:690
 msgid "Choose where your mail lives."
 msgstr "メールの提供元を選んでください。"
 
-#: app/src/ui/add_account.rs:693
+#: app/src/ui/add_account.rs:723
 msgid "Your Email Address"
 msgstr "メールアドレス"
 
-#: app/src/ui/add_account.rs:695 app/src/ui/add_account.rs:698
+#: app/src/ui/add_account.rs:725 app/src/ui/add_account.rs:728
 #: app/src/ui/sender_prefs.rs:103
 msgid "Email Address"
 msgstr "メールアドレス"
 
-#: app/src/ui/add_account.rs:709
+#: app/src/ui/add_account.rs:739
 msgid "Use This Address"
 msgstr "このアドレスを使う"
 
-#: app/src/ui/add_account.rs:726
+#: app/src/ui/add_account.rs:756
 msgid "Continue"
 msgstr "続行"
 
 #. The same full-width secondary button as on the address page.
-#: app/src/ui/add_account.rs:727 app/src/ui/add_account.rs:820
+#: app/src/ui/add_account.rs:757 app/src/ui/add_account.rs:850
 msgid "Enter Server Settings"
 msgstr "サーバー設定を入力"
 
-#: app/src/ui/add_account.rs:729
+#: app/src/ui/add_account.rs:759
 msgid "Your email address"
 msgstr "メールアドレス"
 
-#: app/src/ui/add_account.rs:731
+#: app/src/ui/add_account.rs:761
 msgid "Penguin Mail finds the servers for you."
 msgstr "Penguin Mail がサーバーを検索します。"
 
-#: app/src/ui/add_account.rs:764
+#: app/src/ui/add_account.rs:794
 msgid "Looking Up"
 msgstr "検索中"
 
-#: app/src/ui/add_account.rs:824
+#: app/src/ui/add_account.rs:854
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "ドメインのみを送信し、アドレス全体は送信しません。"
 
-#: app/src/ui/add_account.rs:879 app/src/ui/add_account.rs:3064
-#: app/src/ui/add_account.rs:3157 app/src/ui/add_account.rs:3677
-#: app/src/ui/add_account.rs:4651
+#: app/src/ui/add_account.rs:912 app/src/ui/add_account.rs:3166
+#: app/src/ui/add_account.rs:3259 app/src/ui/add_account.rs:3779
+#: app/src/ui/add_account.rs:4909
 msgid "Signing In…"
 msgstr "ログイン中…"
 
-#: app/src/ui/add_account.rs:881
+#: app/src/ui/add_account.rs:914
 msgid "Moving your account. This takes a moment."
 msgstr "アカウントを移行しています。しばらくお待ちください。"
 
-#: app/src/ui/add_account.rs:903
+#: app/src/ui/add_account.rs:936
 msgid "Sign In in Your Browser"
 msgstr "ブラウザーでログイン"
 
-#: app/src/ui/add_account.rs:930
+#: app/src/ui/add_account.rs:963
 msgid "Time left"
 msgstr "残り時間"
 
-#: app/src/ui/add_account.rs:939 app/src/ui/add_account.rs:3837
+#: app/src/ui/add_account.rs:972 app/src/ui/add_account.rs:4078
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "5 分後に待機を終了します。"
 
-#: app/src/ui/add_account.rs:945 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:978 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "ページを再度開く"
 
-#: app/src/ui/add_account.rs:950
+#: app/src/ui/add_account.rs:983
 msgid "Copy Link"
 msgstr "リンクをコピー"
 
-#: app/src/ui/add_account.rs:955 app/src/ui/add_account.rs:1177
+#: app/src/ui/add_account.rs:988 app/src/ui/add_account.rs:1215
 #: app/src/ui/hide_my_email.rs:376 app/src/ui/hide_my_email.rs:380
 #: app/src/ui/key_import.rs:213 app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
 msgstr "再試行"
 
-#: app/src/ui/add_account.rs:960 app/src/ui/add_account.rs:4173
-#: app/src/ui/add_account.rs:4242 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:997 app/src/ui/add_account.rs:4423
+#: app/src/ui/add_account.rs:4492 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4887,34 +4888,34 @@ msgstr "再試行"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: app/src/ui/add_account.rs:1103 app/src/ui/add_account.rs:1258
-#: app/src/ui/add_account.rs:3072 app/src/ui/add_account.rs:3162
-#: app/src/ui/add_account.rs:3619 app/src/ui/window.rs:1359
+#: app/src/ui/add_account.rs:1141 app/src/ui/add_account.rs:1296
+#: app/src/ui/add_account.rs:3174 app/src/ui/add_account.rs:3264
+#: app/src/ui/add_account.rs:3721 app/src/ui/window.rs:1359
 msgid "Sign In"
 msgstr "ログイン"
 
-#: app/src/ui/add_account.rs:1108 app/src/ui/add_account.rs:1111
+#: app/src/ui/add_account.rs:1146 app/src/ui/add_account.rs:1149
 msgid "Your Name"
 msgstr "名前"
 
-#: app/src/ui/add_account.rs:1128 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1166 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "ブラウザーでログイン"
 
-#: app/src/ui/add_account.rs:1146
+#: app/src/ui/add_account.rs:1184
 msgid "Use an API Token Instead"
 msgstr "代わりに API トークンを使う"
 
-#: app/src/ui/add_account.rs:1154 app/src/ui/add_account.rs:1157
+#: app/src/ui/add_account.rs:1192 app/src/ui/add_account.rs:1195
 msgid "Sign In With a Token"
 msgstr "トークンでログイン"
 
-#: app/src/ui/add_account.rs:1160 app/src/ui/add_account.rs:1166
+#: app/src/ui/add_account.rs:1198 app/src/ui/add_account.rs:1204
 msgid "App Password for Calendar"
 msgstr "カレンダー用アプリパスワード"
 
-#: app/src/ui/add_account.rs:1162
+#: app/src/ui/add_account.rs:1200
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
@@ -4922,28 +4923,28 @@ msgstr ""
 "任意。プロバイダーの設定で、カレンダーへのアクセスを許可したアプリパスワード"
 "を作成してください。"
 
-#: app/src/ui/add_account.rs:1172 app/src/ui/add_account.rs:1801
+#: app/src/ui/add_account.rs:1210 app/src/ui/add_account.rs:1839
 msgid "Server Settings"
 msgstr "サーバー設定"
 
-#: app/src/ui/add_account.rs:1196 app/src/ui/add_account.rs:3219
+#: app/src/ui/add_account.rs:1234 app/src/ui/add_account.rs:3321
 msgid "Outgoing"
 msgstr "送信"
 
-#: app/src/ui/add_account.rs:1201
+#: app/src/ui/add_account.rs:1239
 msgid "Keep this account's mail on this computer alone"
 msgstr "このアカウントのメールをこのコンピューターだけに保存"
 
-#: app/src/ui/add_account.rs:1206
+#: app/src/ui/add_account.rs:1244
 msgid "Servers"
 msgstr "サーバー"
 
-#: app/src/ui/add_account.rs:1211 app/src/ui/add_account.rs:1213
-#: app/src/ui/add_account.rs:2712 app/src/ui/add_account.rs:2716
+#: app/src/ui/add_account.rs:1249 app/src/ui/add_account.rs:1251
+#: app/src/ui/add_account.rs:2814 app/src/ui/add_account.rs:2818
 msgid "Use these servers"
 msgstr "これらのサーバーを使う"
 
-#: app/src/ui/add_account.rs:1215 app/src/ui/add_account.rs:2714
+#: app/src/ui/add_account.rs:1253 app/src/ui/add_account.rs:2816
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -4951,45 +4952,45 @@ msgstr ""
 "Penguin Mail が推測したサーバーです。チェックボックスを選択した場合にのみパス"
 "ワードを送信します。"
 
-#: app/src/ui/add_account.rs:1221 app/src/ui/add_account.rs:1522
-#: app/src/ui/add_account.rs:1757
+#: app/src/ui/add_account.rs:1259 app/src/ui/add_account.rs:1560
+#: app/src/ui/add_account.rs:1795
 msgid "Server"
 msgstr "サーバー"
 
-#: app/src/ui/add_account.rs:1225
+#: app/src/ui/add_account.rs:1263
 msgid "Use IMAP Instead"
 msgstr "代わりに IMAP を使う"
 
-#: app/src/ui/add_account.rs:1321
+#: app/src/ui/add_account.rs:1359
 msgid "No Other Mail Apps"
 msgstr "他のメールアプリは使用不可"
 
-#: app/src/ui/add_account.rs:1327
+#: app/src/ui/add_account.rs:1365
 msgid "Use another address"
 msgstr "別のアドレスを使う"
 
-#: app/src/ui/add_account.rs:1328
+#: app/src/ui/add_account.rs:1366
 msgid "Change the address and look it up again"
 msgstr "アドレスを変更して再検索"
 
-#: app/src/ui/add_account.rs:1334
+#: app/src/ui/add_account.rs:1372
 msgid "Choose another provider"
 msgstr "別のプロバイダーを選択"
 
-#: app/src/ui/add_account.rs:1335
+#: app/src/ui/add_account.rs:1373
 msgid "Back to the list"
 msgstr "一覧に戻る"
 
-#: app/src/ui/add_account.rs:1381
+#: app/src/ui/add_account.rs:1419
 msgid "Account Added"
 msgstr "アカウントを追加しました"
 
-#: app/src/ui/add_account.rs:1404
+#: app/src/ui/add_account.rs:1442
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "アーカイブ"
 
-#: app/src/ui/add_account.rs:1438
+#: app/src/ui/add_account.rs:1476
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
@@ -4997,52 +4998,52 @@ msgstr ""
 "「アクセスを許可」を押すと Google のページを再度開きます。後で設定から行うこ"
 "ともできます。"
 
-#: app/src/ui/add_account.rs:1442
+#: app/src/ui/add_account.rs:1480
 msgid "Open Inbox"
 msgstr "受信トレイを開く"
 
-#: app/src/ui/add_account.rs:1444
+#: app/src/ui/add_account.rs:1482
 msgid "Add Another Account"
 msgstr "別のアカウントを追加"
 
-#: app/src/ui/add_account.rs:1446 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1484 app/src/ui/confirm.rs:46
 #: app/src/ui/route_page.rs:141
 msgid "Not Now"
 msgstr "後で"
 
-#: app/src/ui/add_account.rs:1451 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/add_account.rs:1489 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:483
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1490
 msgid "Grant Access"
 msgstr "アクセスを許可"
 
-#: app/src/ui/add_account.rs:1525 app/src/ui/add_account.rs:1526
+#: app/src/ui/add_account.rs:1563 app/src/ui/add_account.rs:1564
 msgid "Port"
 msgstr "ポート"
 
-#: app/src/ui/add_account.rs:1536 app/src/ui/add_account.rs:1537
+#: app/src/ui/add_account.rs:1574 app/src/ui/add_account.rs:1575
 msgid "Security"
 msgstr "セキュリティ"
 
-#: app/src/ui/add_account.rs:1598
+#: app/src/ui/add_account.rs:1636
 msgid "Mail on the Server"
 msgstr "サーバー上のメール"
 
-#: app/src/ui/add_account.rs:1600
+#: app/src/ui/add_account.rs:1638
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "ダウンロードしたすべてのメッセージをこのコンピューターに保存します。"
 
-#: app/src/ui/add_account.rs:1605 app/src/ui/add_account.rs:1606
+#: app/src/ui/add_account.rs:1643 app/src/ui/add_account.rs:1644
 #: app/src/ui/preferences.rs:1385
 msgid "Days"
 msgstr "日数"
 
-#: app/src/ui/add_account.rs:1680 app/src/ui/add_account.rs:1758
+#: app/src/ui/add_account.rs:1718 app/src/ui/add_account.rs:1796
 msgid "Incoming User Name"
 msgstr "受信用ユーザー名"
 
-#: app/src/ui/add_account.rs:1681
+#: app/src/ui/add_account.rs:1719
 msgid "Outgoing User Name"
 msgstr "送信用ユーザー名"
 
@@ -5050,63 +5051,63 @@ msgstr "送信用ユーザー名"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1687
+#: app/src/ui/add_account.rs:1725
 msgid "Leave it empty to use the incoming user name."
 msgstr "空欄の場合は受信用ユーザー名を使います。"
 
-#: app/src/ui/add_account.rs:1690 app/src/ui/add_account.rs:1692
+#: app/src/ui/add_account.rs:1728 app/src/ui/add_account.rs:1730
 msgid "Outgoing Password"
 msgstr "送信用パスワード"
 
-#: app/src/ui/add_account.rs:1694
+#: app/src/ui/add_account.rs:1732
 msgid "Leave it empty to use the password you sign in with."
 msgstr "空欄の場合はログイン時のパスワードを使います。"
 
-#: app/src/ui/add_account.rs:1697
+#: app/src/ui/add_account.rs:1735
 msgid "Incoming Mail"
 msgstr "受信メール"
 
-#: app/src/ui/add_account.rs:1706 app/src/ui/add_account.rs:1707
+#: app/src/ui/add_account.rs:1744 app/src/ui/add_account.rs:1745
 msgid "Protocol"
 msgstr "プロトコル"
 
-#: app/src/ui/add_account.rs:1714
+#: app/src/ui/add_account.rs:1752
 msgid "Sign-In"
 msgstr "ログイン"
 
-#: app/src/ui/add_account.rs:1716 app/src/ui/add_account.rs:1759
+#: app/src/ui/add_account.rs:1754 app/src/ui/add_account.rs:1797
 msgid "Leave the user names empty to sign in with your address."
 msgstr "ユーザー名を空欄にすると、メールアドレスでログインします。"
 
-#: app/src/ui/add_account.rs:1720
+#: app/src/ui/add_account.rs:1758
 msgid "Outgoing Mail"
 msgstr "送信メール"
 
-#: app/src/ui/add_account.rs:1752
+#: app/src/ui/add_account.rs:1790
 msgid "Session URL"
 msgstr "セッション URL"
 
-#: app/src/ui/add_account.rs:1753 app/src/ui/add_account.rs:1832
+#: app/src/ui/add_account.rs:1791 app/src/ui/add_account.rs:1870
 msgid "User Name"
 msgstr "ユーザー名"
 
-#: app/src/ui/add_account.rs:1754
+#: app/src/ui/add_account.rs:1792
 msgid "Leave the user name empty to sign in with your address."
 msgstr "ユーザー名を空欄にすると、メールアドレスでログインします。"
 
-#: app/src/ui/add_account.rs:1790 app/src/ui/add_account.rs:3532
+#: app/src/ui/add_account.rs:1828 app/src/ui/add_account.rs:3634
 msgid "Use These Settings"
 msgstr "この設定を使う"
 
-#: app/src/ui/add_account.rs:1830 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1868 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "サーバーアドレス"
 
-#: app/src/ui/add_account.rs:1845
+#: app/src/ui/add_account.rs:1883
 msgid "Calendar Server"
 msgstr "カレンダーサーバー"
 
-#: app/src/ui/add_account.rs:1847
+#: app/src/ui/add_account.rs:1885
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -5114,24 +5115,24 @@ msgstr ""
 "Nextcloud などの CalDAV サーバー。2 段階認証を使用している場合は、Penguin "
 "Mail 用のアプリパスワードを作成してください。"
 
-#: app/src/ui/add_account.rs:1857 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/add_account.rs:1895 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "カレンダーを追加"
 
-#: app/src/ui/add_account.rs:1869
+#: app/src/ui/add_account.rs:1907
 msgid "Add a Calendar"
 msgstr "カレンダーを追加"
 
-#: app/src/ui/add_account.rs:2481 app/src/ui/add_account.rs:4580
+#: app/src/ui/add_account.rs:2583 app/src/ui/add_account.rs:4838
 msgid "Looking up {domain}"
 msgstr "{domain} を検索中"
 
-#: app/src/ui/add_account.rs:2743
+#: app/src/ui/add_account.rs:2845
 msgid "{domain} uses {provider}"
 msgstr "{domain} は {provider} を使っています"
 
-#: app/src/ui/add_account.rs:2767
+#: app/src/ui/add_account.rs:2869
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -5139,27 +5140,39 @@ msgstr ""
 "{provider} のウェブサイト用パスワードではありません。{provider} の設定でメー"
 "ルへのアクセスを許可したパスワードを作成し、ここに貼り付けてください。"
 
-#: app/src/ui/add_account.rs:3238
+#: app/src/ui/add_account.rs:3340
 msgid "Could not reach {host}"
 msgstr "{host} に接続できませんでした"
 
-#: app/src/ui/add_account.rs:3240
+#: app/src/ui/add_account.rs:3342
 msgid "Your password was not sent."
 msgstr "パスワードは送信していません。"
 
-#: app/src/ui/add_account.rs:3510
+#: app/src/ui/add_account.rs:3612
 msgid "Looking Up…"
 msgstr "検索中…"
 
-#: app/src/ui/add_account.rs:3618 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3720 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "再ログイン"
 
-#: app/src/ui/add_account.rs:3825 app/src/ui/add_account.rs:4223
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/add_account.rs:3988
+#, fuzzy
+#| msgid "Set up your own Google project"
+msgid "Use your Google project again"
+msgstr "自分の Google プロジェクトを設定する"
+
+#: app/src/ui/add_account.rs:4007 app/src/ui/own_project.rs:619
+#: app/src/ui/window.rs:2136
+msgid "Open Google Cloud"
+msgstr "Google Cloudを開く"
+
+#: app/src/ui/add_account.rs:4066 app/src/ui/add_account.rs:4473
 msgid "Sign in with {provider} in your browser"
 msgstr "ブラウザーで {provider} にログイン"
 
-#: app/src/ui/add_account.rs:3830 app/src/ui/add_account.rs:4228
+#: app/src/ui/add_account.rs:4071 app/src/ui/add_account.rs:4478
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -5167,15 +5180,7 @@ msgstr ""
 "ブラウザーで {provider} のログインページを開きました。そちらで完了すると、こ"
 "のウィンドウの処理が進みます。"
 
-#: app/src/ui/add_account.rs:3853
-msgid ""
-"This copy of Penguin Mail was built without Google sign-in. Get a release "
-"from github.com/c9dev/penguin-mail/releases."
-msgstr ""
-"この Penguin Mail は Google へのログインに対応せずにビルドされています。"
-"github.com/c9dev/penguin-mail/releases からリリースを入手してください。"
-
-#: app/src/ui/add_account.rs:3856
+#: app/src/ui/add_account.rs:4098
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5183,7 +5188,7 @@ msgstr ""
 "この Penguin Mail は Microsoft へのログインに対応せずにビルドされています。"
 "github.com/c9dev/penguin-mail/releases からリリースを入手してください。"
 
-#: app/src/ui/add_account.rs:3869
+#: app/src/ui/add_account.rs:4111
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -5191,27 +5196,32 @@ msgstr ""
 "独自の Google クライアントでログインします。ブラウザーで Google のログイン"
 "ページを開きました。そちらで完了すると、このウィンドウの処理が進みます。"
 
-#: app/src/ui/add_account.rs:4108
+#: app/src/ui/add_account.rs:4358
 msgid "Link copied"
 msgstr "リンクをコピーしました"
 
-#: app/src/ui/add_account.rs:4235
+#: app/src/ui/add_account.rs:4485
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "10 分後に待機を終了します。"
 
-#: app/src/ui/add_account.rs:4258
+#: app/src/ui/add_account.rs:4508
 msgid "Canceling…"
 msgstr "キャンセル中…"
 
-#: app/src/ui/add_account.rs:4322
+#: app/src/ui/add_account.rs:4572
 msgid "{account} is added"
 msgstr "{account} を追加しました"
 
-#: app/src/ui/add_account.rs:4342
+#: app/src/ui/add_account.rs:4592
 msgid "{account} is ready"
 msgstr "{account} の準備ができました"
 
-#: app/src/ui/add_account.rs:4654
+#. Translators: the button that goes back to a step of the Google project setup.
+#: app/src/ui/add_account.rs:4750
+msgid "Go to Step {number}"
+msgstr ""
+
+#: app/src/ui/add_account.rs:4912
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
@@ -8751,68 +8761,64 @@ msgstr "メールはすでに「すべてのメール」にあります"
 msgid "Mail cannot go there"
 msgstr "そこにはメールを移動できません"
 
-#: app/src/ui/own_project.rs:260
+#: app/src/ui/own_project.rs:314
 msgid "Key File"
 msgstr ""
 
-#: app/src/ui/own_project.rs:415
+#: app/src/ui/own_project.rs:469
 #, fuzzy
 #| msgid "Starts"
 msgid "Start"
 msgstr "開始"
 
-#: app/src/ui/own_project.rs:416
+#: app/src/ui/own_project.rs:470
 #, fuzzy
 #| msgid "Already here"
 msgid "I Already Have a Key"
 msgstr "登録済み"
 
-#: app/src/ui/own_project.rs:481
+#: app/src/ui/own_project.rs:558
 msgid "Steps look different?"
 msgstr ""
 
-#: app/src/ui/own_project.rs:542 app/src/ui/window.rs:2136
-msgid "Open Google Cloud"
-msgstr "Google Cloudを開く"
-
-#: app/src/ui/own_project.rs:559
+#: app/src/ui/own_project.rs:636
 #, fuzzy
 #| msgid "Next Day"
 msgid "Next"
 msgstr "翌日"
 
-#: app/src/ui/own_project.rs:564 app/src/ui/own_project.rs:663
+#: app/src/ui/own_project.rs:641 app/src/ui/own_project.rs:740
 #, fuzzy
 #| msgid "Start date"
 msgid "Start over"
 msgstr "開始日"
 
-#: app/src/ui/own_project.rs:587
+#: app/src/ui/own_project.rs:664
 msgid "Drop the file you downloaded here"
 msgstr ""
 
-#: app/src/ui/own_project.rs:594
+#: app/src/ui/own_project.rs:671
 #, fuzzy
 #| msgid "Choose a Time…"
 msgid "Choose File…"
 msgstr "日時を選択…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:622
+#: app/src/ui/own_project.rs:699
 msgid "Client ID"
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:626
+#: app/src/ui/own_project.rs:703
 msgid "Client secret"
 msgstr ""
 
-#: app/src/ui/own_project.rs:632
+#: app/src/ui/own_project.rs:709
 msgid "Copy and paste instead"
 msgstr ""
 
 #. The words are ours; nothing from the file reaches them.
-#: app/src/ui/own_project.rs:653
+#: app/src/ui/own_project.rs:730
 #, fuzzy
 #| msgid "Open Penguin Mail"
 msgid "Ready: Penguin Mail project"
@@ -12459,6 +12465,14 @@ msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
+
+#: sync/src/sign_in/browser.rs:151
+msgid ""
+"This copy of Penguin Mail was built without Google sign-in. Get a release "
+"from github.com/c9dev/penguin-mail/releases."
+msgstr ""
+"この Penguin Mail は Google へのログインに対応せずにビルドされています。"
+"github.com/c9dev/penguin-mail/releases からリリースを入手してください。"
 
 #: sync/src/sign_in/browser.rs:164
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."

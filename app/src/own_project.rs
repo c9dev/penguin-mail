@@ -1,5 +1,4 @@
 //! The setup that lets a person use their own Google project.
-#![allow(dead_code, reason = "The setup pages use these")]
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::GmailError;
@@ -16,6 +15,7 @@ pub const HELP: &str = "https://penguin-mail.com/help/gmail-own-project";
 
 /// Google Cloud's page of the project's keys, for a project whose id is
 /// not known.
+#[expect(dead_code, reason = "Preferences links to it in the next change")]
 pub const PROJECT_PAGE: &str = "https://console.cloud.google.com/auth/clients";
 
 /// A page of the setup.

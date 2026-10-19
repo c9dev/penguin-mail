@@ -13,7 +13,9 @@ use std::sync::{Mutex, PoisonError};
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, JmapFound, Net, RealNet, Security, SrvRecord};
-use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
+use mailrs_domain::{
+    Account, AccountId, AccountState, ChangeEvent, Provider, SignInClient, Target,
+};
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::services::{FoundService, Miss, ServiceKind};
@@ -23,7 +25,7 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
 use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
-use mailrs_sync::sign_in::own_client::OwnClient;
+use mailrs_sync::sign_in::own_client::{OwnClient, saved_project};
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, NewCalDav, NewImap,
     NewJmap, NewPop3, Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent,
@@ -397,8 +399,58 @@ impl Core {
         self.config.borrow().sync.clone()
     }
 
+    /// Where the client of a Google sign-in for `address` would come
+    /// from, with `chosen` the setup's client: as
+    /// [`Core::google_sign_in_client`], and the account's kept client when
+    /// `address` is an account that signed in through its own project.
+    /// Unlike that one it never fails: a sign-in that cannot start says
+    /// so itself.
+    pub async fn google_sign_in_source(
+        &self,
+        chosen: Option<&OwnClient>,
+        address: Option<String>,
+    ) -> ClientSource {
+        if let Ok(source @ (ClientSource::Environment | ClientSource::Setup)) =
+            self.google_sign_in_client(chosen)
+        {
+            return source;
+        }
+        let Some(address) = address else {
+            return ClientSource::BuiltIn;
+        };
+        let own = self
+            .db
+            .read(move |c| {
+                let Some(account) = accounts::account_by_email(c, &address)? else {
+                    return Ok(false);
+                };
+                Ok(accounts::google_sign_ins(c)?
+                    .get(&account.id)
+                    .is_some_and(|sign_in| sign_in.client == SignInClient::Own))
+            })
+            .await
+            .unwrap_or(false);
+        if own {
+            ClientSource::Kept
+        } else {
+            ClientSource::BuiltIn
+        }
+    }
+
+    /// The Google project kept from an earlier setup, if there is one.
+    /// The demo keeps none.
+    pub async fn saved_project(&self) -> Option<OwnClient> {
+        if self.demo {
+            return None;
+        }
+        let secrets = self.secrets.clone();
+        self.call(async move { Ok::<_, anyhow::Error>(saved_project(&secrets).await) })
+            .await
+            .ok()
+            .flatten()
+    }
+
     /// The step of the own Google project setup the person reached.
-    #[allow(dead_code, reason = "The setup dialog reads it")]
     pub fn google_setup_step(&self) -> Option<u8> {
         self.config.borrow().google_setup_step
     }
@@ -894,6 +946,7 @@ impl Core {
         urls: async_channel::Sender<String>,
         wanted: Wanted,
         cancel: async_channel::Receiver<()>,
+        chosen: Option<OwnClient>,
     ) -> Result<(Account, Option<String>)> {
         if self.demo {
             bail!(gettext("Demo mode cannot add real accounts."));
@@ -902,7 +955,8 @@ impl Core {
             .engine
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
-        let connector = self.connector();
+        let mut connector = self.connector();
+        connector.clients = connector.clients.with_chosen(chosen);
         let setup = connector.clients.chosen_google.is_some();
         let calendar_copy = self.calendar_copy();
         let db = self.db.clone();
@@ -2282,8 +2336,10 @@ mod tests {
     use std::sync::{Arc, Mutex, PoisonError};
 
     use super::Core;
-    use mailrs_domain::{AccountState, MailRoute, SignInClient};
+    use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
     use mailrs_store::{Db, accounts};
+    use mailrs_sync::sign_in::ClientSource;
+    use mailrs_sync::sign_in::own_client::OwnClient;
 
     #[tokio::test]
     async fn a_restart_without_a_token_pauses_an_account_that_needs_a_move() {
@@ -2451,6 +2507,46 @@ mod tests {
         assert_eq!(core.google_setup_step(), Some(3));
         core.finish_google_setup();
         assert_eq!(core.google_setup_step(), None);
+    }
+
+    #[test]
+    fn a_sign_in_again_of_an_own_account_goes_through_its_kept_client() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        let accounts = core
+            .runtime
+            .block_on(core.db.read(mailrs_store::accounts::list_accounts))
+            .expect("the demo lists its accounts");
+        let gmail = accounts
+            .into_iter()
+            .find(|a| a.provider == Provider::Gmail)
+            .expect("the demo has a Gmail account");
+        let (id, email) = (gmail.id, gmail.email.clone());
+        core.runtime
+            .block_on(core.db.write(move |c| {
+                accounts::set_sign_in_client(c, id, SignInClient::Own)?;
+                Ok(())
+            }))
+            .unwrap();
+        let source = |chosen: Option<&OwnClient>, address: Option<&str>| {
+            core.runtime
+                .block_on(core.google_sign_in_source(chosen, address.map(str::to_string)))
+        };
+        assert_eq!(source(None, Some(&email)), ClientSource::Kept);
+        let setup = OwnClient::new("123-abc.apps.googleusercontent.com", "x");
+        assert_eq!(source(Some(&setup), Some(&email)), ClientSource::Setup);
+        assert_eq!(
+            source(None, Some("nobody@gmail.example")),
+            ClientSource::BuiltIn
+        );
+        assert_eq!(source(None, None), ClientSource::BuiltIn);
+    }
+
+    #[test]
+    fn the_demo_keeps_no_google_project() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        assert!(core.runtime.block_on(core.saved_project()).is_none());
     }
 
     #[test]

@@ -3092,7 +3092,7 @@ impl MainWindow {
         glib::spawn_future_local(async move {
             let signed = this
                 .core
-                .sign_in_in_browser(browser, urls, wanted, cancel)
+                .sign_in_in_browser(browser, urls, wanted, cancel, None)
                 .await;
             drop(keep);
             match signed {

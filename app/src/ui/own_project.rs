@@ -1,6 +1,5 @@
 //! The pages that walk a person through making their own Google project,
 //! hosted in Add Account's navigation view.
-#![allow(dead_code, reason = "Add Account hosts these pages")]
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -54,6 +53,12 @@ struct FilePage {
     start_over: gtk::Button,
 }
 
+/// The page before Google's: what Google is about to say.
+struct WarningPage {
+    page: adw::NavigationPage,
+    sign_in: gtk::Button,
+}
+
 /// The setup's pages, built once.
 pub struct OwnProject {
     core: Rc<Core>,
@@ -67,6 +72,7 @@ pub struct OwnProject {
     intro: IntroPage,
     steps: Vec<StepPage>,
     file: FilePage,
+    warning: WarningPage,
     /// The client step 6 read, which the sign-in goes through.
     found: RefCell<Option<OwnClient>>,
 }
@@ -90,6 +96,7 @@ impl OwnProject {
             intro: intro_page(),
             steps: CLOUD_STEPS.into_iter().map(step_page).collect(),
             file: file_page(),
+            warning: warning_page(),
             found: RefCell::new(None),
         });
         this.connect();
@@ -106,6 +113,7 @@ impl OwnProject {
                 .map(|shown| (shown.step.tag(), shown.page.clone())),
         );
         pages.push((Step::File.tag(), self.file.page.clone()));
+        pages.push((Step::Warning.tag(), self.warning.page.clone()));
         pages
     }
 
@@ -122,6 +130,38 @@ impl OwnProject {
         self.resumed.set(resumed);
         self.show_start_over(resumed);
         self.go(at);
+    }
+
+    /// Takes `own` as the key the sign-in goes through, as a project kept
+    /// from an earlier setup is.
+    pub fn use_key(&self, own: OwnClient) {
+        self.found_key(own);
+    }
+
+    /// Fills the pasted pair and opens its rows, as a person would.
+    pub fn paste(&self, id: &str, secret: &str) {
+        self.file.paste.set_expanded(true);
+        self.file.id.set_text(id);
+        self.file.secret.set_text(secret);
+    }
+
+    /// The control that takes the focus when page `at` opens first in
+    /// the dialog, which would otherwise put it on its close button.
+    pub fn first_focus(&self, at: Step) -> gtk::Widget {
+        match at {
+            Step::Intro => self.intro.start.clone().upcast(),
+            Step::File if self.found.borrow().is_some() => self.file.sign_in.clone().upcast(),
+            Step::File => self.file.choose.clone().upcast(),
+            Step::Warning => self.warning.sign_in.clone().upcast(),
+            step => self
+                .steps
+                .iter()
+                .find(|shown| shown.step == step)
+                .map_or_else(
+                    || self.intro.start.clone().upcast(),
+                    |shown| shown.open.clone().upcast(),
+                ),
+        }
     }
 
     /// Pushes `step`'s page, or goes back to it when it is already under
@@ -162,6 +202,20 @@ impl OwnProject {
 
     fn connect(self: &Rc<Self>) {
         self.connect_file();
+        let sign_in = weakly(self, |this| {
+            let found = this.found.borrow().clone();
+            match found {
+                Some(own) => (this.hooks.sign_in)(own),
+                None => this.go(Step::File),
+            }
+        });
+        self.warning.sign_in.connect_clicked(move |_| sign_in());
+        let button = self.warning.sign_in.downgrade();
+        self.warning.page.connect_shown(move |_| {
+            if let Some(button) = button.upgrade() {
+                button.grab_focus();
+            }
+        });
         let start = weakly(self, |this| this.go(Step::Project));
         self.intro.start.connect_clicked(move |_| start());
         let have_key = weakly(self, |this| this.go(Step::File));
@@ -419,6 +473,29 @@ fn intro_page() -> IntroPage {
         page: banded.page,
         start,
         have_key,
+    }
+}
+
+fn warning_page() -> WarningPage {
+    let words = own_project::words(Step::Warning);
+    let banded = banded(Step::Warning.tag(), &words.heading);
+    let title = heading(&words.heading);
+    title.set_xalign(0.5);
+    title.set_justify(gtk::Justification::Center);
+    banded.body.append(&title);
+    for paragraph in &words.checklist {
+        // Markup of our own, translated: Google's words in bold.
+        let text = label("", &["post-lede", "own-intro-text"]);
+        text.set_markup(paragraph);
+        text.set_xalign(0.5);
+        text.set_justify(gtk::Justification::Center);
+        banded.body.append(&text);
+    }
+    let sign_in = button(&gettext("Sign in with Google"), true);
+    banded.body.append(&centred_buttons(&[&sign_in]));
+    WarningPage {
+        page: banded.page,
+        sign_in,
     }
 }
 
