@@ -75,12 +75,6 @@ pub enum GoaChange {
     Changed(GoaAccount),
 }
 
-/// The scopes GNOME's own sign-in grants a Google account, sorted the way
-/// `Granted::to_scope` sorts. No `drive`, and People answers
-/// `SERVICE_DISABLED` in GNOME's project, so calendar, contacts and Drive
-/// still come from the built-in client.
-pub const GNOME_GOOGLE_SCOPES: &str = "email https://mail.google.com/ https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/carddav https://www.googleapis.com/auth/contacts https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid profile";
-
 pub trait OnlineAccounts: Send + Sync {
     fn google_accounts(&self) -> BoxFuture<'_, Result<Vec<GoaAccount>, GoaError>>;
     fn access_token<'a>(&'a self, id: &'a str) -> BoxFuture<'a, Result<GoaToken, GoaError>>;

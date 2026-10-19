@@ -4,11 +4,9 @@
 //! Online Accounts hands out.
 
 use std::pin::Pin;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
-use futures::future::BoxFuture;
-use mailrs_domain::{Account, MailRoute};
-use mailrs_gmail::{AccessSource, GmailClient, GmailError, Granted, QuotaPool};
+use mailrs_domain::Account;
 use mailrs_imap::{ImapError, Login, LoginSource};
 use mailrs_store::accounts;
 
@@ -17,13 +15,13 @@ use mailrs_imap::{ImapClient, SmtpClient};
 use mailrs_store::servers;
 
 use super::{Connector, Lacks, STEP_WAIT, bounded, connect_account, read_secret, server_of};
-use crate::goa::{self, GNOME_GOOGLE_SCOPES, GoaAccount, GoaError, GoaTokens};
+use crate::goa::{self, GoaAccount, GoaError, GoaTokens};
 use crate::services::{
     AnyCalendar, AnyContacts, AnyGmail, AnyIdentities, AnyMail, GmailImap, Google, NoMail,
     gmail_over_imap,
 };
 use crate::sign_in::client_of;
-use crate::{AccountClient, AccountServices, AnyRules, BackendError, LocalRules, SyncError};
+use crate::{AccountServices, AnyRules, BackendError, LocalRules, SyncError};
 
 /// How a Gmail account on the IMAP route signs in to Gmail's servers.
 pub(crate) enum GmailImapSignIn {
@@ -117,29 +115,6 @@ async fn imap_services(
     })))
 }
 
-/// Google's quota for the accounts read through Online Accounts. GNOME's
-/// project is not the built-in client's, so it has a pool of its own.
-static GOA_QUOTA: LazyLock<QuotaPool> = LazyLock::new(QuotaPool::new);
-
-/// Online Accounts' access tokens for the Gmail API.
-pub(crate) struct GoaAccess(pub(crate) Arc<GoaTokens>);
-
-impl AccessSource for GoaAccess {
-    fn access(&self, renew: bool) -> BoxFuture<'_, Result<String, GmailError>> {
-        Box::pin(async move {
-            let token = if renew {
-                self.0.renew().await
-            } else {
-                self.0.token().await
-            };
-            token.map_err(|err| match err {
-                GoaError::NotAuthorized | GoaError::NoAccount => GmailError::NeedsReauth,
-                other => GmailError::Network(other.to_string()),
-            })
-        })
-    }
-}
-
 /// Online Accounts' access tokens as IMAP and SMTP logins.
 pub(crate) struct GoaLogin {
     tokens: Arc<GoaTokens>,
@@ -194,7 +169,8 @@ pub(crate) fn goa_imap_sign_in(
 }
 
 /// The services of a Gmail account linked through Online Accounts. The
-/// mail signs in with Online Accounts' token; the calendar and contacts
+/// mail goes over Gmail's IMAP and SMTP, signed in with Online Accounts'
+/// token (XOAUTH2); the calendar and contacts
 /// use the built-in client's own token, as for any account. An account
 /// Online Accounts no longer holds, or has switched off or wants signed in
 /// again, keeps its stored mail and its calendar and reads no new mail.
@@ -203,7 +179,6 @@ pub(crate) fn goa_imap_sign_in(
 pub(crate) async fn goa_services(
     connector: &Connector,
     account: &Account,
-    route: MailRoute,
     goa_id: Option<String>,
 ) -> Result<Result<AccountServices, Lacks>, SyncError> {
     let list = match connector.goa.google_accounts().await {
@@ -239,30 +214,8 @@ pub(crate) async fn goa_services(
         );
         return Ok(Ok(without_mail(connector, account).await?));
     }
-    match route {
-        MailRoute::GmailApi => {
-            let tokens = Arc::new(GoaTokens::new(Arc::clone(&connector.goa), found.id.clone()));
-            let client = GmailClient::with_source(
-                Arc::new(GoaAccess(tokens)),
-                mailrs_gmail::api_http_client(),
-                GOA_QUOTA.account(&account.email),
-            )
-            .with_granted(Some(Granted::parse(GNOME_GOOGLE_SCOPES)));
-            let mut services = AccountServices::google(AccountClient {
-                account_id: account.id,
-                address: account.email.clone(),
-                client,
-            });
-            let google = google_side(connector, account).await?;
-            services.calendar = google.clone().map(AnyCalendar::Google);
-            services.contacts = google.map(AnyContacts::Google);
-            Ok(Ok(services))
-        }
-        MailRoute::Imap => {
-            let sign_in = goa_imap_sign_in(connector, account, found);
-            imap_services(connector, account, sign_in).await
-        }
-    }
+    let sign_in = goa_imap_sign_in(connector, account, found);
+    imap_services(connector, account, sign_in).await
 }
 
 /// The calendar and contacts of `account` with no mail.

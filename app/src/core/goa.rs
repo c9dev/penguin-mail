@@ -11,13 +11,12 @@ use std::time::Duration;
 use anyhow::{Result, anyhow, bail};
 use futures::StreamExt;
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, AccountId, MailRoute, SignInClient};
-use mailrs_gmail::GMAIL_API_BASE;
+use mailrs_domain::{Account, AccountId, SignInClient};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
 use mailrs_sync::now_millis;
 use mailrs_sync::route_move;
-use mailrs_sync::sign_in::goa_link::{self, Linked};
+use mailrs_sync::sign_in::goa_link;
 
 use super::{Core, MovePort, Reach, start_again};
 use crate::goa_notice::{self, Notice};
@@ -123,7 +122,7 @@ impl Core {
     /// Links `goa_account` to Penguin Mail. A new address becomes an
     /// account and starts; an address already held moves to Online
     /// Accounts in place.
-    pub async fn link_goa(&self, goa_account: GoaAccount) -> Result<(Account, Linked)> {
+    pub async fn link_goa(&self, goa_account: GoaAccount) -> Result<Account> {
         if self.demo {
             bail!(gettext("The demo cannot sign in through Online Accounts."));
         }
@@ -150,31 +149,26 @@ impl Core {
                 .ok_or_else(|| anyhow!("sync is not running"))?,
             self.db.clone(),
         );
-        let linked = self
+        let account = self
             .call(async move {
-                let (account, linked) =
-                    goa_link::link(&connector, &goa_account, GMAIL_API_BASE, now_millis()).await?;
+                let account = goa_link::link(&connector, &goa_account, now_millis()).await?;
                 if let Err(err) = start_again(&reach, &engine, &db, &account, false).await {
                     tracing::warn!(account = account.id, error = %err, "could not start the linked account");
                 }
-                Ok::<_, anyhow::Error>((account, linked))
+                Ok::<_, anyhow::Error>(account)
             })
             .await?;
         self.finish_google_setup();
-        Ok(linked)
+        Ok(account)
     }
 
     /// Moves `account` to sign in through `goa_account`, which holds its
     /// address.
     pub async fn move_to_goa(&self, account: Account, goa_account: GoaAccount) -> Result<Account> {
-        Ok(self.move_goa(account, goa_account).await?.0)
+        self.move_goa(account, goa_account).await
     }
 
-    async fn move_goa(
-        &self,
-        account: Account,
-        goa_account: GoaAccount,
-    ) -> Result<(Account, Linked)> {
+    async fn move_goa(&self, account: Account, goa_account: GoaAccount) -> Result<Account> {
         if self.demo {
             bail!(gettext("The demo cannot switch accounts."));
         }
@@ -204,7 +198,7 @@ impl Core {
             .call(async move {
                 // Held until the move ends, even when the dialog has gone.
                 let _lease = lease;
-                let linked = goa_link::probe(&goa, &goa_account, GMAIL_API_BASE).await?;
+                goa_link::check_token(&goa, &goa_account).await?;
                 let port = MovePort {
                     engine,
                     reach,
@@ -223,14 +217,9 @@ impl Core {
                 let rewrite: route_move::RewriteMail =
                     Box::new(move |c| route_move::empty_for_imap(c, id));
                 let moved = mover
-                    .to_goa(&account, &goa_account, linked, Some(rewrite), || ())
+                    .to_goa(&account, &goa_account, Some(rewrite), || ())
                     .await?;
-                let route = db.read(move |c| accounts::mail_route(c, id)).await?;
-                let linked = match route {
-                    MailRoute::Imap => Linked::Imap,
-                    _ => Linked::Api,
-                };
-                Ok::<_, anyhow::Error>((moved, linked))
+                Ok::<_, anyhow::Error>(moved)
             })
             .await?;
         self.finish_google_setup();

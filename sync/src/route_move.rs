@@ -18,7 +18,6 @@ use crate::connect::{STEP_WAIT, read_secret};
 use crate::goa::GoaAccount;
 use crate::passwords::{PasswordStore, Secrets};
 use crate::sign_in::app_password::NewGmailImap;
-use crate::sign_in::goa_link::Linked;
 use crate::sign_in::own_client::OwnClient;
 use crate::sign_in::{
     BrowserSignInError, google_signed_in, keep_google_secrets, other_address, save_passwords,
@@ -126,7 +125,14 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         let from_imap = before == MailRoute::Imap;
         self.run_move(account, from_imap, || async move {
             match from_imap {
-                true => imap_to_own_client(self.db, self.secrets, account, own, authorized).await,
+                true => {
+                    let moved =
+                        imap_to_own_client(self.db, self.secrets, account, own, authorized).await?;
+                    if moved.1 {
+                        self.forget_password(id).await;
+                    }
+                    Ok(moved.0)
+                }
                 false => to_own_client(self.db, self.secrets, account, own, authorized).await,
             }
         })
@@ -182,18 +188,17 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         moved
     }
 
-    /// Moves `account` to the Online Accounts account `goa_account`, which
-    /// reads its mail `linked`. As [`Mover::to_own_client`], the move ends
-    /// before anything stops when the address differs, and the account
-    /// keeps its id and its stored mail. A change of route needs
-    /// `rewrite`, which renames the stored mail for the new route; with
-    /// none, the move is refused before anything stops. The sync starts
-    /// over only when the route changes.
+    /// Moves `account` to the Online Accounts account `goa_account`, whose
+    /// token reads Gmail's IMAP and SMTP. As [`Mover::to_own_client`], the
+    /// move ends before anything stops when the address differs, and the
+    /// account keeps its id. A move off the Gmail API needs `rewrite`,
+    /// which empties the stored mail for IMAP; with none, the move is
+    /// refused before anything stops. The sync starts over only when the
+    /// route changes.
     pub async fn to_goa(
         &self,
         account: &Account,
         goa_account: &GoaAccount,
-        linked: Linked,
         rewrite: Option<RewriteMail>,
         committed: impl FnOnce(),
     ) -> Result<Account, MoveError> {
@@ -206,13 +211,7 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             .map_err(SyncError::from)?;
         // An app password the move leaves behind goes with its servers.
         let drops_password = before == MailRoute::Imap && client != SignInClient::Goa;
-        // An account already on IMAP stays there: Online Accounts' token
-        // reads IMAP whatever the probe found, and nothing renames the
-        // stored mail back for the API.
-        let route = match before {
-            MailRoute::Imap => MailRoute::Imap,
-            _ => linked.route(),
-        };
+        let route = MailRoute::Imap;
         let changes = before != route;
         if changes && rewrite.is_none() {
             return Err(MoveError::Sync(SyncError::Backend(
@@ -294,9 +293,25 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             password,
             ..
         } = new;
+        // The password the account kept before, put back when the store
+        // refuses the move, so the account starts again as it was.
+        let earlier = self.saved_passwords(id).await?;
         save_passwords(Arc::clone(&self.secrets.passwords), id, password, None)
             .await
             .map_err(SyncError::from)?;
+        let written = self.commit_imap(id, before, saved).await;
+        if written.is_err() {
+            self.put_back_passwords(id, earlier).await;
+        }
+        written
+    }
+
+    async fn commit_imap(
+        &self,
+        id: AccountId,
+        before: MailRoute,
+        saved: servers::Servers,
+    ) -> Result<Account, MoveError> {
         let (client, leaves_goa) = self.client_off_goa(id).await?;
         let route = RouteCommit {
             route: MailRoute::Imap,
@@ -361,6 +376,40 @@ impl<E, A: Accounts> Mover<'_, E, A> {
         }
     }
 
+    /// The incoming and outgoing passwords the keyring keeps for `id`.
+    async fn saved_passwords(
+        &self,
+        id: AccountId,
+    ) -> Result<(Option<String>, Option<String>), MoveError> {
+        let kept = Arc::clone(&self.secrets.passwords);
+        let read = tokio::task::spawn_blocking(move || {
+            Ok::<_, crate::passwords::PasswordError>((kept.load(id)?, kept.load_outgoing(id)?))
+        })
+        .await
+        .map_err(|err| SyncError::from(crate::passwords::PasswordError::Keyring(err.to_string())))?;
+        Ok(read.map_err(SyncError::from)?)
+    }
+
+    /// Writes `earlier` back as `id`'s passwords, deleting the ones it
+    /// lacks. A keyring that fails says so in the log.
+    async fn put_back_passwords(&self, id: AccountId, earlier: (Option<String>, Option<String>)) {
+        let kept = Arc::clone(&self.secrets.passwords);
+        let back = tokio::task::spawn_blocking(move || {
+            match &earlier.0 {
+                Some(password) => kept.save(id, password)?,
+                None => kept.delete(id)?,
+            }
+            match &earlier.1 {
+                Some(password) => kept.save_outgoing(id, password),
+                None => kept.delete_outgoing(id),
+            }
+        })
+        .await;
+        if !matches!(back, Ok(Ok(()))) {
+            tracing::warn!(account = id, "could not put back the password a failed move replaced");
+        }
+    }
+
     /// Deletes the app password `id` kept, once nothing reads it. A
     /// keyring that fails leaves it, unread, and says so in the log.
     async fn forget_password(&self, id: AccountId) {
@@ -400,17 +449,24 @@ impl<E, A: Accounts> Mover<'_, E, A> {
 /// Moves `account`, on the IMAP route, to `own` and the Gmail API. The
 /// keyring takes the client and the token first; then one transaction
 /// switches the route to the API and the client to `own`, ends any Online
-/// Accounts link, and empties the stored mail, which the API lists again.
-/// The outbox, the local rules and the settings stay.
+/// Accounts link, drops an app password's servers row, and empties the
+/// stored mail, which the API lists again. The outbox, the local rules and
+/// the settings stay. True beside the account when it signed in with an
+/// app password, which the caller then deletes from the keyring.
 async fn imap_to_own_client(
     db: &Db,
     secrets: &Secrets,
     account: &Account,
     own: &OwnClient,
     authorized: Authorized,
-) -> Result<Account, MoveError> {
+) -> Result<(Account, bool), MoveError> {
     same_address(account, &authorized)?;
     let id = account.id;
+    let client = db
+        .read(move |c| accounts::sign_in_client(c, id))
+        .await
+        .map_err(SyncError::from)?;
+    let drops_password = client != SignInClient::Goa;
     keep_google_secrets(
         secrets,
         id,
@@ -433,13 +489,18 @@ async fn imap_to_own_client(
             accounts::set_granted(c, id, granted)?;
         }
         accounts::set_asked(c, id, &asked)?;
+        if drops_password {
+            servers::forget(c, id)?;
+        }
         switch::empty_mail(c, id)
     })
     .await?;
-    db.read(move |c| accounts::account(c, id))
+    let moved = db
+        .read(move |c| accounts::account(c, id))
         .await
         .map_err(SyncError::from)?
-        .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))
+        .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))?;
+    Ok((moved, drops_password))
 }
 
 /// Empties the account's stored mail for Gmail's IMAP, which lists it all

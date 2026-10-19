@@ -1,34 +1,14 @@
-//! Linking a Gmail account to the desktop's Online Accounts: finding out
-//! what its token can read, and keeping the account.
+//! Linking a Gmail account to the desktop's Online Accounts: checking
+//! that its token answers, and keeping the account.
 
 use std::sync::Arc;
 
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{Account, EpochMillis, MailRoute, Provider, SignInClient};
-use mailrs_gmail::{GmailClient, GmailError};
 use mailrs_store::{StoreError, accounts};
 
 use crate::Connector;
-use crate::connect::gmail_route::GoaAccess;
-use crate::goa::{GoaAccount, GoaTokens, OnlineAccounts};
-
-/// How an Online Accounts account reads its mail.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Linked {
-    /// Through the Gmail API: GNOME's project has it on.
-    Api,
-    /// Through Gmail's IMAP and SMTP.
-    Imap,
-}
-
-impl Linked {
-    pub fn route(self) -> MailRoute {
-        match self {
-            Linked::Api => MailRoute::GmailApi,
-            Linked::Imap => MailRoute::Imap,
-        }
-    }
-}
+use crate::goa::{GoaAccount, GoaError, GoaTokens, OnlineAccounts};
 
 #[derive(Debug, thiserror::Error)]
 pub enum LinkError {
@@ -44,7 +24,7 @@ pub enum LinkError {
     #[error("{}", super::taken(.address, .provider))]
     Taken { address: String, provider: String },
     #[error(transparent)]
-    Gmail(GmailError),
+    Goa(GoaError),
     #[error(transparent)]
     Store(#[from] StoreError),
 }
@@ -64,26 +44,19 @@ fn unreachable() -> String {
     gettext("Can't reach Online Accounts on this computer.")
 }
 
-/// Asks the Gmail API for the account's profile with Online Accounts'
-/// token. Answered: the API route. Switched off in GNOME's project: IMAP.
-pub async fn probe(
+/// Asks Online Accounts for the account's token, so a sign-in it lost
+/// shows before the account is kept. The mail itself goes over Gmail's
+/// IMAP and SMTP with that token.
+pub async fn check_token(
     goa: &Arc<dyn OnlineAccounts>,
     goa_account: &GoaAccount,
-    gmail_base: &str,
-) -> Result<Linked, LinkError> {
-    let tokens = Arc::new(GoaTokens::new(Arc::clone(goa), goa_account.id.clone()));
-    let client = GmailClient::with_source(
-        Arc::new(GoaAccess(tokens)),
-        mailrs_gmail::api_http_client(),
-        Arc::new(mailrs_gmail::AccountQuota::standalone()),
-    )
-    .with_base_url(gmail_base);
-    match client.profile().await {
-        Ok(_) => Ok(Linked::Api),
-        Err(GmailError::ApiDisabled { .. }) => Ok(Linked::Imap),
-        Err(GmailError::NeedsReauth) => Err(LinkError::SignInAgain),
-        Err(GmailError::Network(_)) => Err(LinkError::Unreachable),
-        Err(other) => Err(LinkError::Gmail(other)),
+) -> Result<(), LinkError> {
+    let tokens = GoaTokens::new(Arc::clone(goa), goa_account.id.clone());
+    match tokens.token().await {
+        Ok(_) => Ok(()),
+        Err(GoaError::NotAuthorized | GoaError::NoAccount) => Err(LinkError::SignInAgain),
+        Err(GoaError::Unreachable(_)) => Err(LinkError::Unreachable),
+        Err(other) => Err(LinkError::Goa(other)),
     }
 }
 
@@ -101,16 +74,15 @@ pub fn usable(goa_account: &GoaAccount) -> Result<(), LinkError> {
 
 /// Links `goa_account` to Penguin Mail. An account Online Accounts has
 /// switched off or wants signed in again is refused. A new address becomes
-/// an account on `Goa`; an address the store already holds is left as it
-/// is and answered with its probe, for the caller to move.
+/// an account on `Goa` and the IMAP route; an address the store already
+/// holds is left as it is, for the caller to move.
 pub async fn link(
     connector: &Connector,
     goa_account: &GoaAccount,
-    gmail_base: &str,
     now: EpochMillis,
-) -> Result<(Account, Linked), LinkError> {
+) -> Result<Account, LinkError> {
     usable(goa_account)?;
-    let linked = probe(&connector.goa, goa_account, gmail_base).await?;
+    check_token(&connector.goa, goa_account).await?;
     // Google reads an address without regard to case and the store keeps it
     // lower case, as every other sign-in does.
     let address = goa_account.identity.trim().to_lowercase();
@@ -126,7 +98,7 @@ pub async fn link(
             }
             let id = accounts::insert_account(c, &address, now)?;
             accounts::set_sign_in_client(c, id, SignInClient::Goa)?;
-            accounts::set_mail_route(c, id, linked.route())?;
+            accounts::set_mail_route(c, id, MailRoute::Imap)?;
             accounts::set_goa_id(c, id, Some(&goa_id))?;
             // The row was written a line above in the same transaction.
             let account = accounts::account(c, id)?
@@ -135,7 +107,7 @@ pub async fn link(
         })
         .await?;
     match kept {
-        Ok(account) => Ok((account, linked)),
+        Ok(account) => Ok(account),
         Err(provider) => Err(LinkError::Taken {
             address: goa_account.identity.trim().to_string(),
             provider,

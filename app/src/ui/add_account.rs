@@ -4253,7 +4253,7 @@ impl Dialog {
                 return;
             }
             match this.core.link_goa(account).await {
-                Ok((account, _)) => {
+                Ok(account) => {
                     // The account is kept whether or not the dialog is still
                     // open, so the window hears about it either way.
                     (this.done)(Done::BrowserAdded {
@@ -4267,7 +4267,7 @@ impl Dialog {
                                 this.core.account(account.id).as_ref().map(|s| s.services()),
                             ));
                         this.show_added(&account, Some(post::stamp_for("Google")), Some(&missing));
-                        this.note_limits(&account);
+                        this.note_limits();
                     }
                 }
                 Err(err) if this.asking.wants(ticket) => this.goa.failed(&err.to_string()),
@@ -4276,23 +4276,14 @@ impl Dialog {
         });
     }
 
-    /// An account that reads its mail over IMAP through Online Accounts
-    /// has no filters, aliases or automatic reply; the last page says so.
-    fn note_limits(self: &Rc<Self>, account: &Account) {
-        let (this, id) = (Rc::clone(self), account.id);
-        glib::spawn_future_local(async move {
-            let route = this
-                .core
-                .read(move |c| mailrs_store::accounts::mail_route(c, id))
-                .await;
-            if matches!(route, Ok(mailrs_domain::MailRoute::Imap)) {
-                let lede = this.finished.lede.text();
-                this.finished.lede.set_text(&format!(
-                    "{lede} {}",
-                    gettext("Filters, aliases and the automatic reply aren't available this way.")
-                ));
-            }
-        });
+    /// An account that reads its mail through Online Accounts has no
+    /// filters, aliases or automatic reply; the last page says so.
+    fn note_limits(&self) {
+        let lede = self.finished.lede.text();
+        self.finished.lede.set_text(&format!(
+            "{lede} {}",
+            gettext("Filters, aliases and the automatic reply aren't available this way.")
+        ));
     }
 
     /// Stops the countdown and the ways out while the move finishes.
