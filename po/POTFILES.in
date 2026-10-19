@@ -28,10 +28,11 @@ app/src/core.rs
 app/src/core/goa.rs
 app/src/event_reminders/notice.rs
 app/src/format.rs
+app/src/gmail_password.rs
+app/src/goa_notice.rs
 app/src/keyring_plug.rs
 app/src/language_names.rs
 app/src/main.rs
-app/src/goa_notice.rs
 app/src/move_banner.rs
 app/src/notify.rs
 app/src/offered.rs
@@ -55,7 +56,6 @@ app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs
 app/src/ui/add_account.rs
-app/src/ui/goa_page.rs
 app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
 app/src/ui/assistant.rs
@@ -94,6 +94,8 @@ app/src/ui/copied.rs
 app/src/ui/conversation.rs
 app/src/ui/link_preview.rs
 app/src/ui/find.rs
+app/src/ui/gmail_password_page.rs
+app/src/ui/goa_page.rs
 app/src/ui/hide_my_email.rs
 app/src/ui/ics_file.rs
 app/src/ui/invitation.rs
