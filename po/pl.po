@@ -242,7 +242,7 @@ msgstr "Utwórz je w ustawieniach dostawcy {provider}."
 msgid "App Password"
 msgstr "Hasło aplikacji"
 
-#: app/src/add_account.rs:527 app/src/add_account.rs:1663
+#: app/src/add_account.rs:527 app/src/add_account.rs:1679
 msgid "Password"
 msgstr "Hasło"
 
@@ -341,13 +341,13 @@ msgstr[0] "{count} rozmowa"
 msgstr[1] "{count} rozmowy"
 msgstr[2] "{count} rozmów"
 
-#: app/src/add_account.rs:799 app/src/add_account.rs:2002
-#: app/src/add_account.rs:2035 app/src/add_account.rs:2064
-#: app/src/add_account.rs:2131
+#: app/src/add_account.rs:799 app/src/add_account.rs:2018
+#: app/src/add_account.rs:2051 app/src/add_account.rs:2080
+#: app/src/add_account.rs:2147
 msgid "Could not sign in"
 msgstr "Nie udało się zalogować"
 
-#: app/src/add_account.rs:812 app/src/add_account.rs:1369
+#: app/src/add_account.rs:812 app/src/add_account.rs:1385
 msgid "Could not sign in: {reason}"
 msgstr "Nie udało się zalogować: {reason}"
 
@@ -466,7 +466,7 @@ msgstr ""
 msgid "Connect Your Keyring"
 msgstr "Połącz z pękiem kluczy"
 
-#: app/src/add_account.rs:990 app/src/add_account.rs:2077
+#: app/src/add_account.rs:990 app/src/add_account.rs:2093
 msgid "{provider} refused the password"
 msgstr "{provider} odrzucił hasło"
 
@@ -482,7 +482,7 @@ msgstr ""
 "{provider} wymaga tutaj hasła aplikacji, a nie hasła do witryny. Utwórz je, "
 "wklej powyżej i wybierz Zaloguj się."
 
-#: app/src/add_account.rs:1005 app/src/add_account.rs:2078
+#: app/src/add_account.rs:1005 app/src/add_account.rs:2094
 msgid "Check the password, then choose Sign In."
 msgstr "Sprawdź hasło, a następnie wybierz Zaloguj się."
 
@@ -510,11 +510,11 @@ msgstr "Wpisz nazwę serwera poczty przychodzącej."
 msgid "Type the outgoing server's name."
 msgstr "Wpisz nazwę serwera poczty wychodzącej."
 
-#: app/src/add_account.rs:1370
+#: app/src/add_account.rs:1386
 msgid "Could not add the calendar: {reason}"
 msgstr "Nie udało się dodać kalendarza: {reason}"
 
-#: app/src/add_account.rs:1385
+#: app/src/add_account.rs:1401
 msgid ""
 "To see this server's calendars there, open Preferences, then Accounts, open "
 "that account, and type this server's address under Calendar, Contacts and "
@@ -524,7 +524,7 @@ msgstr ""
 "Konta, otwórz to konto i wpisz adres serwera w sekcji Serwery kalendarza, "
 "kontaktów i reguł."
 
-#: app/src/add_account.rs:1398
+#: app/src/add_account.rs:1414
 msgid ""
 "The server did not take that user name and password. Where it uses two-step "
 "sign-in, it needs an app password."
@@ -532,7 +532,7 @@ msgstr ""
 "Serwer nie przyjął tej nazwy użytkownika i hasła. Jeśli korzysta z logowania "
 "dwuetapowego, wymaga hasła aplikacji."
 
-#: app/src/add_account.rs:1402
+#: app/src/add_account.rs:1418
 msgid ""
 "Penguin Mail could not reach that server. Check the address and your "
 "connection."
@@ -540,19 +540,19 @@ msgstr ""
 "Penguin Mail nie mógł połączyć się z tym serwerem. Sprawdź adres i "
 "połączenie."
 
-#: app/src/add_account.rs:1407
+#: app/src/add_account.rs:1423
 msgid "No calendar was found at that address."
 msgstr "Nie znaleziono kalendarza pod tym adresem."
 
-#: app/src/add_account.rs:1428
+#: app/src/add_account.rs:1444
 msgid "Mail is downloading. You can close this window."
 msgstr "Trwa pobieranie poczty. Możesz zamknąć to okno."
 
-#: app/src/add_account.rs:1429 app/src/add_account.rs:1458
+#: app/src/add_account.rs:1445 app/src/add_account.rs:1474
 msgid "Your mail is here."
 msgstr "Twoja poczta jest już tutaj."
 
-#: app/src/add_account.rs:1443
+#: app/src/add_account.rs:1459
 msgid ""
 "Your organization did not allow one of the permissions Penguin Mail asked "
 "for, so this feature stays off:"
@@ -569,7 +569,7 @@ msgstr[2] ""
 "Twoja organizacja nie udzieliła {count} uprawnień wymaganych przez Penguin "
 "Mail, więc te funkcje pozostają wyłączone:"
 
-#: app/src/add_account.rs:1450
+#: app/src/add_account.rs:1466
 msgid "You left one box unticked on Google's page, so this feature stays off:"
 msgid_plural ""
 "You left {count} boxes unticked on Google's page, so these features stay off:"
@@ -583,11 +583,11 @@ msgstr[2] ""
 "{count} pól na stronie Google pozostało niezaznaczonych, więc te funkcje "
 "pozostają wyłączone:"
 
-#: app/src/add_account.rs:1457
+#: app/src/add_account.rs:1473
 msgid "Mail is downloading."
 msgstr "Trwa pobieranie poczty."
 
-#: app/src/add_account.rs:1477
+#: app/src/add_account.rs:1493
 msgid ""
 "Newest mail comes first. Older mail keeps coming in the background, even "
 "with the window closed."
@@ -595,11 +595,11 @@ msgstr ""
 "Najpierw pojawią się najnowsze wiadomości. Starsze będą pobierane w tle, "
 "także po zamknięciu okna."
 
-#: app/src/add_account.rs:1480
+#: app/src/add_account.rs:1496
 msgid "Penguin Mail keeps checking for new mail, even with the window closed."
 msgstr "Penguin Mail sprawdza nową pocztę także po zamknięciu okna."
 
-#: app/src/add_account.rs:1491
+#: app/src/add_account.rs:1507
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. Mail stays on the server."
@@ -607,7 +607,7 @@ msgstr ""
 "Penguin Mail pobiera pocztę z serwera do skrzynki odbiorczej i sprawdza ją w "
 "tle, także po zamknięciu okna. Wiadomości pozostają na serwerze."
 
-#: app/src/add_account.rs:1494
+#: app/src/add_account.rs:1510
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -617,7 +617,7 @@ msgstr ""
 "tle, także po zamknięciu okna. Usuwa każdą wiadomość z serwera po jej "
 "pobraniu."
 
-#: app/src/add_account.rs:1497
+#: app/src/add_account.rs:1513
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -639,31 +639,31 @@ msgstr[2] ""
 "tle, także po zamknięciu okna. Usuwa każdą wiadomość z serwera po {days} "
 "dniach od pobrania."
 
-#: app/src/add_account.rs:1513
+#: app/src/add_account.rs:1529
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "Penguin Mail ponownie potrzebuje hasła dla {address}."
 
-#: app/src/add_account.rs:1522
+#: app/src/add_account.rs:1538
 msgid "Choose Sign In With Browser to sign in to {address} again."
 msgstr ""
 "Wybierz Zaloguj się przez przeglądarkę, aby ponownie zalogować się do "
 "{address}."
 
-#: app/src/add_account.rs:1531
+#: app/src/add_account.rs:1547
 msgid "Sign in again through the browser to keep {account} syncing"
 msgstr ""
 "Zaloguj się ponownie przez przeglądarkę, aby utrzymać synchronizację konta "
 "{account}"
 
-#: app/src/add_account.rs:1532
+#: app/src/add_account.rs:1548
 msgid "Sign in again to keep {account} syncing"
 msgstr "Zaloguj się ponownie, aby utrzymać synchronizację konta {account}"
 
-#: app/src/add_account.rs:1662
+#: app/src/add_account.rs:1678
 msgid "API Token"
 msgstr "Token API"
 
-#: app/src/add_account.rs:1681
+#: app/src/add_account.rs:1697
 msgid ""
 "Make an API token in {provider}'s settings with this access: {access}. Paste "
 "it here."
@@ -671,43 +671,43 @@ msgstr ""
 "Utwórz token API w ustawieniach dostawcy {provider} z następującym dostępem: "
 "{access}. Wklej go tutaj."
 
-#: app/src/add_account.rs:1686
+#: app/src/add_account.rs:1702
 msgid "Make an API token in {provider}'s settings and paste it here."
 msgstr "Utwórz token API w ustawieniach dostawcy {provider} i wklej go tutaj."
 
-#: app/src/add_account.rs:1693
+#: app/src/add_account.rs:1709
 msgid "Tokens need a plan above {plan}."
 msgstr "Tokeny wymagają planu wyższego niż {plan}."
 
-#: app/src/add_account.rs:1699 app/src/add_account/post.rs:447
+#: app/src/add_account.rs:1715 app/src/add_account/post.rs:447
 msgid "{provider} signs in with an API token"
 msgstr "{provider} używa tokenu API do logowania"
 
-#: app/src/add_account.rs:1709 app/src/add_account/post.rs:455
+#: app/src/add_account.rs:1725 app/src/add_account/post.rs:455
 msgid "How to Make a Token"
 msgstr "Jak utworzyć token"
 
-#: app/src/add_account.rs:1719
+#: app/src/add_account.rs:1735
 msgid "Sign in to {provider}"
 msgstr "Zaloguj się do {provider}"
 
-#: app/src/add_account.rs:1723
+#: app/src/add_account.rs:1739
 msgid "Sign in to {domain}"
 msgstr "Zaloguj się do {domain}"
 
-#: app/src/add_account.rs:1732
+#: app/src/add_account.rs:1748
 msgid "The JMAP server you gave."
 msgstr "Podany przez Ciebie serwer JMAP."
 
-#: app/src/add_account.rs:1736
+#: app/src/add_account.rs:1752
 msgid "Penguin Mail found {provider}'s JMAP server."
 msgstr "Penguin Mail znalazł serwer JMAP dostawcy {provider}."
 
-#: app/src/add_account.rs:1740
+#: app/src/add_account.rs:1756
 msgid "Penguin Mail found a JMAP server for {domain}."
 msgstr "Penguin Mail znalazł serwer JMAP dla {domain}."
 
-#: app/src/add_account.rs:1759
+#: app/src/add_account.rs:1775
 msgid ""
 "{host} is outside {domain}. Your token goes there only after you check the "
 "box."
@@ -715,7 +715,7 @@ msgstr ""
 "{host} jest poza domeną {domain}. Token zostanie tam wysłany dopiero po "
 "zaznaczeniu pola."
 
-#: app/src/add_account.rs:1762
+#: app/src/add_account.rs:1778
 msgid ""
 "{host} is outside {domain}. Your password goes there only after you check "
 "the box."
@@ -723,129 +723,129 @@ msgstr ""
 "{host} jest poza domeną {domain}. Hasło zostanie tam wysłane dopiero po "
 "zaznaczeniu pola."
 
-#: app/src/add_account.rs:1765
+#: app/src/add_account.rs:1781
 msgid "Use {host}"
 msgstr "Użyj {host}"
 
-#: app/src/add_account.rs:1774
+#: app/src/add_account.rs:1790
 msgid "Sign in with an app password over IMAP and SMTP"
 msgstr "Zaloguj się hasłem aplikacji przez IMAP i SMTP"
 
-#: app/src/add_account.rs:1776
+#: app/src/add_account.rs:1792
 msgid "Sign in with your password over IMAP and SMTP"
 msgstr "Zaloguj się swoim hasłem przez IMAP i SMTP"
 
-#: app/src/add_account.rs:1804
+#: app/src/add_account.rs:1820
 msgid "Enter the server's address or its JMAP session URL."
 msgstr "Wpisz adres serwera lub adres URL jego sesji JMAP."
 
-#: app/src/add_account.rs:1816
+#: app/src/add_account.rs:1832
 msgid "Penguin Mail reaches JMAP servers over HTTPS only."
 msgstr "Penguin Mail łączy się z serwerami JMAP tylko przez HTTPS."
 
-#: app/src/add_account.rs:1961
+#: app/src/add_account.rs:1977
 msgid "Sign in on {provider}'s own page instead of making a token."
 msgstr "Zaloguj się na stronie dostawcy {provider} zamiast tworzyć token."
 
-#: app/src/add_account.rs:1969
+#: app/src/add_account.rs:1985
 msgid "Masked Email needs an API token."
 msgstr "Maskowanie adresu e-mail wymaga tokenu API."
 
-#: app/src/add_account.rs:1986
+#: app/src/add_account.rs:2002
 msgid "Sign in to {provider} if it asks."
 msgstr "Zaloguj się do {provider}, jeśli pojawi się prośba."
 
-#: app/src/add_account.rs:1989
+#: app/src/add_account.rs:2005
 msgid "Read what Penguin Mail asks for and allow it."
 msgstr "Przeczytaj prośbę Penguin Mail i udziel dostępu."
 
-#: app/src/add_account.rs:2014
+#: app/src/add_account.rs:2030
 msgid "{provider} refused the sign-in"
 msgstr "{provider} odrzucił logowanie"
 
-#: app/src/add_account.rs:2015
+#: app/src/add_account.rs:2031
 msgid "Choose Sign In With Browser to try again."
 msgstr "Wybierz Zaloguj się przez przeglądarkę, aby spróbować ponownie."
 
-#: app/src/add_account.rs:2018
+#: app/src/add_account.rs:2034
 msgid "The sign-in was declined"
 msgstr "Odrzucono logowanie"
 
-#: app/src/add_account.rs:2020
+#: app/src/add_account.rs:2036
 msgid "Choose Sign In With Browser and allow access on {provider}'s page."
 msgstr ""
 "Wybierz Zaloguj się przez przeglądarkę i udziel dostępu na stronie dostawcy "
 "{provider}."
 
-#: app/src/add_account.rs:2025 app/src/add_account.rs:2121
+#: app/src/add_account.rs:2041 app/src/add_account.rs:2137
 msgid "{provider} does not answer"
 msgstr "{provider} nie odpowiada"
 
-#: app/src/add_account.rs:2026
+#: app/src/add_account.rs:2042
 msgid "Check your connection, then choose Sign In With Browser."
 msgstr ""
 "Sprawdź połączenie, a następnie wybierz Zaloguj się przez przeglądarkę."
 
-#: app/src/add_account.rs:2030
+#: app/src/add_account.rs:2046
 msgid "Wait a minute, then choose Sign In With Browser."
 msgstr "Poczekaj minutę, a następnie wybierz Zaloguj się przez przeglądarkę."
 
-#: app/src/add_account.rs:2037 app/src/add_account.rs:2138
+#: app/src/add_account.rs:2053 app/src/add_account.rs:2154
 msgid "{provider} gave an answer Penguin Mail cannot use. Try again later."
 msgstr ""
 "{provider} udzielił odpowiedzi, której Penguin Mail nie może użyć. Spróbuj "
 "ponownie później."
 
-#: app/src/add_account.rs:2073
+#: app/src/add_account.rs:2089
 msgid "{provider} refused the token"
 msgstr "{provider} odrzucił token"
 
-#: app/src/add_account.rs:2074
+#: app/src/add_account.rs:2090
 msgid "Check the token and the access it was made with, then choose Sign In."
 msgstr "Sprawdź token i przyznany mu dostęp, a następnie wybierz Zaloguj się."
 
-#: app/src/add_account.rs:2083
+#: app/src/add_account.rs:2099
 msgid "The token holds a character that cannot be sent"
 msgstr "Token zawiera znak, którego nie można wysłać"
 
-#: app/src/add_account.rs:2084
+#: app/src/add_account.rs:2100
 msgid "The password holds a character that cannot be sent"
 msgstr "Hasło zawiera znak, którego nie można wysłać"
 
-#: app/src/add_account.rs:2086
+#: app/src/add_account.rs:2102
 msgid "Paste it again without the line break, then choose Sign In."
 msgstr ""
 "Wklej ponownie bez znaku nowego wiersza, a następnie wybierz Zaloguj się."
 
-#: app/src/add_account.rs:2090
+#: app/src/add_account.rs:2106
 msgid "No JMAP server at {host}"
 msgstr "Brak serwera JMAP pod adresem {host}"
 
-#: app/src/add_account.rs:2094
+#: app/src/add_account.rs:2110
 msgid "Check the session URL in Server Settings, or use IMAP instead."
 msgstr "Sprawdź adres URL sesji w ustawieniach serwera lub użyj IMAP."
 
-#: app/src/add_account.rs:2095
+#: app/src/add_account.rs:2111
 msgid "Check the session URL in Server Settings."
 msgstr "Sprawdź adres URL sesji w ustawieniach serwera."
 
-#: app/src/add_account.rs:2099
+#: app/src/add_account.rs:2115
 msgid "{provider} offers no mail over JMAP"
 msgstr "{provider} nie udostępnia poczty przez JMAP"
 
-#: app/src/add_account.rs:2101
+#: app/src/add_account.rs:2117
 msgid "Use IMAP for this account instead."
 msgstr "Użyj IMAP dla tego konta."
 
-#: app/src/add_account.rs:2102
+#: app/src/add_account.rs:2118
 msgid "Choose IMAP in Server Settings to add this account."
 msgstr "Wybierz IMAP w ustawieniach serwera, aby dodać to konto."
 
-#: app/src/add_account.rs:2109
+#: app/src/add_account.rs:2125
 msgid "{host} sends the sign-in elsewhere"
 msgstr "{host} przekierowuje logowanie"
 
-#: app/src/add_account.rs:2114
+#: app/src/add_account.rs:2130
 msgid ""
 "It tried to pass your sign-in on to {other}, and Penguin Mail refused. If "
 "you trust {other}, enter its session URL in Server Settings."
@@ -853,15 +853,15 @@ msgstr ""
 "Próbował przekazać dane logowania do {other}, ale Penguin Mail odmówił. "
 "Jeśli ufasz {other}, wpisz jego adres URL sesji w ustawieniach serwera."
 
-#: app/src/add_account.rs:2122
+#: app/src/add_account.rs:2138
 msgid "Check your connection, then choose Sign In."
 msgstr "Sprawdź połączenie, a następnie wybierz Zaloguj się."
 
-#: app/src/add_account.rs:2126
+#: app/src/add_account.rs:2142
 msgid "Wait a minute, then choose Sign In."
 msgstr "Poczekaj minutę, a następnie wybierz Zaloguj się."
 
-#: app/src/add_account.rs:2135
+#: app/src/add_account.rs:2151
 msgid ""
 "{provider} gave an answer Penguin Mail cannot use. Try again later, or use "
 "IMAP instead."
@@ -2273,13 +2273,9 @@ msgstr "W trybie demonstracyjnym nie można połączyć kalendarza."
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Przerwano oczekiwanie na przeglądarkę po pięciu minutach."
 
-#: app/src/core/goa.rs:128
+#: app/src/core/goa.rs:146
 msgid "The demo cannot sign in through Online Accounts."
 msgstr "Demo nie może zalogować się przez Konta online."
-
-#: app/src/core/goa.rs:228
-msgid "This account can't switch to this computer's sign-in yet."
-msgstr "To konto nie może jeszcze przejść na logowanie tego komputera."
 
 #: app/src/event_reminders/notice.rs:31
 msgid "Join"
@@ -2507,8 +2503,8 @@ msgstr "Wstecz"
 msgid "Open Gmail Labels"
 msgstr "Otwórz Etykiety Gmaila"
 
-#: app/src/gmail_password.rs:59 app/src/ui/add_account.rs:997
-#: app/src/ui/add_account.rs:1224 app/src/ui/hide_my_email.rs:376
+#: app/src/gmail_password.rs:59 app/src/ui/add_account.rs:1026
+#: app/src/ui/add_account.rs:1253 app/src/ui/hide_my_email.rs:376
 #: app/src/ui/hide_my_email.rs:380 app/src/ui/key_import.rs:213
 #: app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
@@ -2695,7 +2691,7 @@ msgstr[2] "{count} kont Gmail potrzebuje nowego sposobu logowania"
 msgid "Use This Account"
 msgstr "Użyj tego konta"
 
-#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:322
+#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:316
 msgid "Choose…"
 msgstr "Wybierz…"
 
@@ -4448,7 +4444,7 @@ msgid "Quickest. About 2 minutes"
 msgstr "Najszybciej. Około 2 minut"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:183 app/src/ui/add_account.rs:4511
+#: app/src/route_choice.rs:183 app/src/ui/add_account.rs:4559
 msgid "Use your Google project again"
 msgstr "Użyj ponownie swojego projektu Google"
 
@@ -4462,7 +4458,7 @@ msgid "Set up a different project"
 msgstr "Skonfiguruj inny projekt"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:197 app/src/ui/preferences/google_route.rs:329
+#: app/src/route_choice.rs:197 app/src/ui/preferences/google_route.rs:323
 #: app/src/ui/window.rs:3244
 msgid "Set up your own Google project"
 msgstr "Skonfiguruj własny projekt Google"
@@ -4603,7 +4599,7 @@ msgstr "{host} odrzucił logowanie: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:369
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:363
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1505
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4611,7 +4607,7 @@ msgstr "Kalendarz"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:373
+#: app/src/ui/preferences/google_route.rs:367
 msgid "Contacts"
 msgstr "Kontakty"
 
@@ -5114,111 +5110,111 @@ msgstr "Pokaż dziennik"
 msgid "The update to {version} failed"
 msgstr "Aktualizacja do wersji {version} nie powiodła się"
 
-#: app/src/ui/add_account.rs:520 app/src/ui/sandbox_setup.rs:129
+#: app/src/ui/add_account.rs:549 app/src/ui/sandbox_setup.rs:129
 #: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1432
 msgid "Copy Command"
 msgstr "Kopiuj polecenie"
 
-#: app/src/ui/add_account.rs:530 app/src/ui/sandbox_setup.rs:143
+#: app/src/ui/add_account.rs:559 app/src/ui/sandbox_setup.rs:143
 #: app/src/ui/window.rs:1437
 msgid "Command copied"
 msgstr "Skopiowano polecenie"
 
-#: app/src/ui/add_account.rs:661
+#: app/src/ui/add_account.rs:690
 msgid "Signs in through your browser"
 msgstr "Logowanie przez przeglądarkę"
 
-#: app/src/ui/add_account.rs:672
+#: app/src/ui/add_account.rs:701
 msgid "Enter server settings by hand"
 msgstr "Wpisz ustawienia serwera ręcznie"
 
-#: app/src/ui/add_account.rs:679
+#: app/src/ui/add_account.rs:708
 msgid "Add a calendar without mail"
 msgstr "Dodaj kalendarz bez poczty"
 
-#: app/src/ui/add_account.rs:694 app/src/ui/add_account.rs:2105
+#: app/src/ui/add_account.rs:723 app/src/ui/add_account.rs:2134
 msgid "Add Account"
 msgstr "Dodaj konto"
 
-#: app/src/ui/add_account.rs:697
+#: app/src/ui/add_account.rs:726
 msgid "Add an account"
 msgstr "Dodaj konto"
 
-#: app/src/ui/add_account.rs:699
+#: app/src/ui/add_account.rs:728
 msgid "Choose where your mail lives."
 msgstr "Wybierz, gdzie znajduje się twoja poczta."
 
-#: app/src/ui/add_account.rs:732
+#: app/src/ui/add_account.rs:761
 msgid "Your Email Address"
 msgstr "Twój adres e-mail"
 
-#: app/src/ui/add_account.rs:734 app/src/ui/add_account.rs:737
+#: app/src/ui/add_account.rs:763 app/src/ui/add_account.rs:766
 #: app/src/ui/gmail_password_page.rs:96 app/src/ui/gmail_password_page.rs:99
 #: app/src/ui/sender_prefs.rs:143
 msgid "Email Address"
 msgstr "Adres e-mail"
 
-#: app/src/ui/add_account.rs:748
+#: app/src/ui/add_account.rs:777
 msgid "Use This Address"
 msgstr "Użyj tego adresu"
 
-#: app/src/ui/add_account.rs:765
+#: app/src/ui/add_account.rs:794
 msgid "Continue"
 msgstr "Kontynuuj"
 
 #. The same full-width secondary button as on the address page.
-#: app/src/ui/add_account.rs:766 app/src/ui/add_account.rs:859
+#: app/src/ui/add_account.rs:795 app/src/ui/add_account.rs:888
 msgid "Enter Server Settings"
 msgstr "Wpisz ustawienia serwera"
 
-#: app/src/ui/add_account.rs:768
+#: app/src/ui/add_account.rs:797
 msgid "Your email address"
 msgstr "Twój adres e-mail"
 
-#: app/src/ui/add_account.rs:770
+#: app/src/ui/add_account.rs:799
 msgid "Penguin Mail finds the servers for you."
 msgstr "Penguin Mail znajdzie serwery za ciebie."
 
-#: app/src/ui/add_account.rs:803
+#: app/src/ui/add_account.rs:832
 msgid "Looking Up"
 msgstr "Wyszukiwanie"
 
-#: app/src/ui/add_account.rs:863
+#: app/src/ui/add_account.rs:892
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "Komputer wysyła tylko domenę, nigdy pełny adres."
 
-#: app/src/ui/add_account.rs:921 app/src/ui/add_account.rs:3211
-#: app/src/ui/add_account.rs:3304 app/src/ui/add_account.rs:3824
-#: app/src/ui/add_account.rs:5432 app/src/ui/gmail_password_page.rs:254
+#: app/src/ui/add_account.rs:950 app/src/ui/add_account.rs:3240
+#: app/src/ui/add_account.rs:3333 app/src/ui/add_account.rs:3853
+#: app/src/ui/add_account.rs:5480 app/src/ui/gmail_password_page.rs:255
 msgid "Signing In…"
 msgstr "Logowanie…"
 
-#: app/src/ui/add_account.rs:923
+#: app/src/ui/add_account.rs:952
 msgid "Moving your account. This takes a moment."
 msgstr "Przenoszenie konta. To chwilę potrwa."
 
-#: app/src/ui/add_account.rs:945
+#: app/src/ui/add_account.rs:974
 msgid "Sign In in Your Browser"
 msgstr "Zaloguj się w przeglądarce"
 
-#: app/src/ui/add_account.rs:972
+#: app/src/ui/add_account.rs:1001
 msgid "Time left"
 msgstr "Pozostały czas"
 
-#: app/src/ui/add_account.rs:981 app/src/ui/add_account.rs:4601
+#: app/src/ui/add_account.rs:1010 app/src/ui/add_account.rs:4649
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail przestaje czekać po pięciu minutach."
 
-#: app/src/ui/add_account.rs:987 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:1016 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "Otwórz stronę ponownie"
 
-#: app/src/ui/add_account.rs:992
+#: app/src/ui/add_account.rs:1021
 msgid "Copy Link"
 msgstr "Kopiuj odnośnik"
 
-#: app/src/ui/add_account.rs:1006 app/src/ui/add_account.rs:4946
-#: app/src/ui/add_account.rs:5015 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:1035 app/src/ui/add_account.rs:4994
+#: app/src/ui/add_account.rs:5063 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -5234,36 +5230,36 @@ msgstr "Kopiuj odnośnik"
 msgid "Cancel"
 msgstr "Anuluj"
 
-#: app/src/ui/add_account.rs:1150 app/src/ui/add_account.rs:1305
-#: app/src/ui/add_account.rs:3219 app/src/ui/add_account.rs:3309
-#: app/src/ui/add_account.rs:3766 app/src/ui/gmail_password_page.rs:125
-#: app/src/ui/gmail_password_page.rs:130 app/src/ui/gmail_password_page.rs:255
+#: app/src/ui/add_account.rs:1179 app/src/ui/add_account.rs:1334
+#: app/src/ui/add_account.rs:3248 app/src/ui/add_account.rs:3338
+#: app/src/ui/add_account.rs:3795 app/src/ui/gmail_password_page.rs:125
+#: app/src/ui/gmail_password_page.rs:130 app/src/ui/gmail_password_page.rs:256
 #: app/src/ui/window.rs:1376
 msgid "Sign In"
 msgstr "Zaloguj się"
 
-#: app/src/ui/add_account.rs:1155 app/src/ui/add_account.rs:1158
+#: app/src/ui/add_account.rs:1184 app/src/ui/add_account.rs:1187
 msgid "Your Name"
 msgstr "Twoje imię i nazwisko"
 
-#: app/src/ui/add_account.rs:1175 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1204 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "Zaloguj się przez przeglądarkę"
 
-#: app/src/ui/add_account.rs:1193
+#: app/src/ui/add_account.rs:1222
 msgid "Use an API Token Instead"
 msgstr "Użyj tokena API"
 
-#: app/src/ui/add_account.rs:1201 app/src/ui/add_account.rs:1204
+#: app/src/ui/add_account.rs:1230 app/src/ui/add_account.rs:1233
 msgid "Sign In With a Token"
 msgstr "Zaloguj się tokenem"
 
-#: app/src/ui/add_account.rs:1207 app/src/ui/add_account.rs:1213
+#: app/src/ui/add_account.rs:1236 app/src/ui/add_account.rs:1242
 msgid "App Password for Calendar"
 msgstr "Hasło aplikacji do kalendarza"
 
-#: app/src/ui/add_account.rs:1209
+#: app/src/ui/add_account.rs:1238
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
@@ -5271,28 +5267,28 @@ msgstr ""
 "Opcjonalne. Utwórz hasło aplikacji z dostępem do kalendarza w ustawieniach "
 "dostawcy."
 
-#: app/src/ui/add_account.rs:1219 app/src/ui/add_account.rs:1848
+#: app/src/ui/add_account.rs:1248 app/src/ui/add_account.rs:1877
 msgid "Server Settings"
 msgstr "Ustawienia serwera"
 
-#: app/src/ui/add_account.rs:1243 app/src/ui/add_account.rs:3366
+#: app/src/ui/add_account.rs:1272 app/src/ui/add_account.rs:3395
 msgid "Outgoing"
 msgstr "Wychodząca"
 
-#: app/src/ui/add_account.rs:1248
+#: app/src/ui/add_account.rs:1277
 msgid "Keep this account's mail on this computer alone"
 msgstr "Przechowuj pocztę tego konta tylko na tym komputerze"
 
-#: app/src/ui/add_account.rs:1253
+#: app/src/ui/add_account.rs:1282
 msgid "Servers"
 msgstr "Serwery"
 
-#: app/src/ui/add_account.rs:1258 app/src/ui/add_account.rs:1260
-#: app/src/ui/add_account.rs:2859 app/src/ui/add_account.rs:2863
+#: app/src/ui/add_account.rs:1287 app/src/ui/add_account.rs:1289
+#: app/src/ui/add_account.rs:2888 app/src/ui/add_account.rs:2892
 msgid "Use these servers"
 msgstr "Użyj tych serwerów"
 
-#: app/src/ui/add_account.rs:1262 app/src/ui/add_account.rs:2861
+#: app/src/ui/add_account.rs:1291 app/src/ui/add_account.rs:2890
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -5300,45 +5296,45 @@ msgstr ""
 "Penguin Mail odgadł te serwery. Hasło zostanie do nich wysłane dopiero po "
 "zaznaczeniu pola."
 
-#: app/src/ui/add_account.rs:1268 app/src/ui/add_account.rs:1569
-#: app/src/ui/add_account.rs:1804
+#: app/src/ui/add_account.rs:1297 app/src/ui/add_account.rs:1598
+#: app/src/ui/add_account.rs:1833
 msgid "Server"
 msgstr "Serwer"
 
-#: app/src/ui/add_account.rs:1272
+#: app/src/ui/add_account.rs:1301
 msgid "Use IMAP Instead"
 msgstr "Użyj IMAP"
 
-#: app/src/ui/add_account.rs:1368
+#: app/src/ui/add_account.rs:1397
 msgid "No Other Mail Apps"
 msgstr "Brak obsługi innych aplikacji pocztowych"
 
-#: app/src/ui/add_account.rs:1374
+#: app/src/ui/add_account.rs:1403
 msgid "Use another address"
 msgstr "Użyj innego adresu"
 
-#: app/src/ui/add_account.rs:1375
+#: app/src/ui/add_account.rs:1404
 msgid "Change the address and look it up again"
 msgstr "Zmień adres i wyszukaj ponownie"
 
-#: app/src/ui/add_account.rs:1381
+#: app/src/ui/add_account.rs:1410
 msgid "Choose another provider"
 msgstr "Wybierz innego dostawcę"
 
-#: app/src/ui/add_account.rs:1382
+#: app/src/ui/add_account.rs:1411
 msgid "Back to the list"
 msgstr "Powrót do listy"
 
-#: app/src/ui/add_account.rs:1428
+#: app/src/ui/add_account.rs:1457
 msgid "Account Added"
 msgstr "Dodano konto"
 
-#: app/src/ui/add_account.rs:1451
+#: app/src/ui/add_account.rs:1480
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "Archiwum"
 
-#: app/src/ui/add_account.rs:1485
+#: app/src/ui/add_account.rs:1514
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
@@ -5346,52 +5342,52 @@ msgstr ""
 "Przycisk Udziel dostępu ponownie otwiera stronę Google. Możesz to też zrobić "
 "później w Preferencjach."
 
-#: app/src/ui/add_account.rs:1489
+#: app/src/ui/add_account.rs:1518
 msgid "Open Inbox"
 msgstr "Otwórz skrzynkę odbiorczą"
 
-#: app/src/ui/add_account.rs:1491
+#: app/src/ui/add_account.rs:1520
 msgid "Add Another Account"
 msgstr "Dodaj kolejne konto"
 
-#: app/src/ui/add_account.rs:1493 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1522 app/src/ui/confirm.rs:46
 #: app/src/ui/route_page.rs:141
 msgid "Not Now"
 msgstr "Nie teraz"
 
-#: app/src/ui/add_account.rs:1498 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/add_account.rs:1527 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:487
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1507
 msgid "Grant Access"
 msgstr "Udziel dostępu"
 
-#: app/src/ui/add_account.rs:1572 app/src/ui/add_account.rs:1573
+#: app/src/ui/add_account.rs:1601 app/src/ui/add_account.rs:1602
 msgid "Port"
 msgstr "Port"
 
-#: app/src/ui/add_account.rs:1583 app/src/ui/add_account.rs:1584
+#: app/src/ui/add_account.rs:1612 app/src/ui/add_account.rs:1613
 msgid "Security"
 msgstr "Zabezpieczenia"
 
-#: app/src/ui/add_account.rs:1645
+#: app/src/ui/add_account.rs:1674
 msgid "Mail on the Server"
 msgstr "Poczta na serwerze"
 
-#: app/src/ui/add_account.rs:1647
+#: app/src/ui/add_account.rs:1676
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail przechowuje na tym komputerze każdą pobraną wiadomość."
 
-#: app/src/ui/add_account.rs:1652 app/src/ui/add_account.rs:1653
+#: app/src/ui/add_account.rs:1681 app/src/ui/add_account.rs:1682
 #: app/src/ui/preferences.rs:1389
 msgid "Days"
 msgstr "Dni"
 
-#: app/src/ui/add_account.rs:1727 app/src/ui/add_account.rs:1805
+#: app/src/ui/add_account.rs:1756 app/src/ui/add_account.rs:1834
 msgid "Incoming User Name"
 msgstr "Nazwa użytkownika poczty przychodzącej"
 
-#: app/src/ui/add_account.rs:1728
+#: app/src/ui/add_account.rs:1757
 msgid "Outgoing User Name"
 msgstr "Nazwa użytkownika poczty wychodzącej"
 
@@ -5399,63 +5395,63 @@ msgstr "Nazwa użytkownika poczty wychodzącej"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1734
+#: app/src/ui/add_account.rs:1763
 msgid "Leave it empty to use the incoming user name."
 msgstr "Pozostaw puste, aby użyć nazwy użytkownika poczty przychodzącej."
 
-#: app/src/ui/add_account.rs:1737 app/src/ui/add_account.rs:1739
+#: app/src/ui/add_account.rs:1766 app/src/ui/add_account.rs:1768
 msgid "Outgoing Password"
 msgstr "Hasło poczty wychodzącej"
 
-#: app/src/ui/add_account.rs:1741
+#: app/src/ui/add_account.rs:1770
 msgid "Leave it empty to use the password you sign in with."
 msgstr "Pozostaw puste, aby użyć hasła do logowania."
 
-#: app/src/ui/add_account.rs:1744
+#: app/src/ui/add_account.rs:1773
 msgid "Incoming Mail"
 msgstr "Poczta przychodząca"
 
-#: app/src/ui/add_account.rs:1753 app/src/ui/add_account.rs:1754
+#: app/src/ui/add_account.rs:1782 app/src/ui/add_account.rs:1783
 msgid "Protocol"
 msgstr "Protokół"
 
-#: app/src/ui/add_account.rs:1761
+#: app/src/ui/add_account.rs:1790
 msgid "Sign-In"
 msgstr "Logowanie"
 
-#: app/src/ui/add_account.rs:1763 app/src/ui/add_account.rs:1806
+#: app/src/ui/add_account.rs:1792 app/src/ui/add_account.rs:1835
 msgid "Leave the user names empty to sign in with your address."
 msgstr "Pozostaw nazwy użytkowników puste, aby zalogować się adresem e-mail."
 
-#: app/src/ui/add_account.rs:1767
+#: app/src/ui/add_account.rs:1796
 msgid "Outgoing Mail"
 msgstr "Poczta wychodząca"
 
-#: app/src/ui/add_account.rs:1799
+#: app/src/ui/add_account.rs:1828
 msgid "Session URL"
 msgstr "Adres URL sesji"
 
-#: app/src/ui/add_account.rs:1800 app/src/ui/add_account.rs:1879
+#: app/src/ui/add_account.rs:1829 app/src/ui/add_account.rs:1908
 msgid "User Name"
 msgstr "Nazwa użytkownika"
 
-#: app/src/ui/add_account.rs:1801
+#: app/src/ui/add_account.rs:1830
 msgid "Leave the user name empty to sign in with your address."
 msgstr "Pozostaw nazwę użytkownika pustą, aby zalogować się adresem e-mail."
 
-#: app/src/ui/add_account.rs:1837 app/src/ui/add_account.rs:3679
+#: app/src/ui/add_account.rs:1866 app/src/ui/add_account.rs:3708
 msgid "Use These Settings"
 msgstr "Użyj tych ustawień"
 
-#: app/src/ui/add_account.rs:1877 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1906 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "Adres serwera"
 
-#: app/src/ui/add_account.rs:1892
+#: app/src/ui/add_account.rs:1921
 msgid "Calendar Server"
 msgstr "Serwer kalendarza"
 
-#: app/src/ui/add_account.rs:1894
+#: app/src/ui/add_account.rs:1923
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -5463,24 +5459,24 @@ msgstr ""
 "Serwer CalDAV, np. Nextcloud. Jeśli używa logowania dwuetapowego, utwórz "
 "hasło aplikacji dla Penguin Mail."
 
-#: app/src/ui/add_account.rs:1904 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/add_account.rs:1933 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "Dodaj kalendarz"
 
-#: app/src/ui/add_account.rs:1916
+#: app/src/ui/add_account.rs:1945
 msgid "Add a Calendar"
 msgstr "Dodaj kalendarz"
 
-#: app/src/ui/add_account.rs:2628 app/src/ui/add_account.rs:5361
+#: app/src/ui/add_account.rs:2657 app/src/ui/add_account.rs:5409
 msgid "Looking up {domain}"
 msgstr "Wyszukiwanie {domain}"
 
-#: app/src/ui/add_account.rs:2890
+#: app/src/ui/add_account.rs:2919
 msgid "{domain} uses {provider}"
 msgstr "{domain} korzysta z {provider}"
 
-#: app/src/ui/add_account.rs:2914
+#: app/src/ui/add_account.rs:2943
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -5488,36 +5484,36 @@ msgstr ""
 "To nie jest hasło do witryny {provider}. Utwórz hasło z dostępem do poczty w "
 "ustawieniach {provider} i wklej je tutaj."
 
-#: app/src/ui/add_account.rs:3385
+#: app/src/ui/add_account.rs:3414
 msgid "Could not reach {host}"
 msgstr "Nie udało się połączyć z {host}"
 
-#: app/src/ui/add_account.rs:3387
+#: app/src/ui/add_account.rs:3416
 msgid "Your password was not sent."
 msgstr "Twoje hasło nie zostało wysłane."
 
-#: app/src/ui/add_account.rs:3657
+#: app/src/ui/add_account.rs:3686
 msgid "Looking Up…"
 msgstr "Wyszukiwanie…"
 
-#: app/src/ui/add_account.rs:3765 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3794 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "Zaloguj się ponownie"
 
-#: app/src/ui/add_account.rs:4270
+#: app/src/ui/add_account.rs:4318
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr "Filtry, aliasy i automatyczna odpowiedź nie są dostępne w ten sposób."
 
-#: app/src/ui/add_account.rs:4530 app/src/ui/own_project.rs:627
-#: app/src/ui/preferences/google_route.rs:347 app/src/ui/window.rs:2223
+#: app/src/ui/add_account.rs:4578 app/src/ui/own_project.rs:627
+#: app/src/ui/preferences/google_route.rs:341 app/src/ui/window.rs:2223
 msgid "Open Google Cloud"
 msgstr "Otwórz Google Cloud"
 
-#: app/src/ui/add_account.rs:4589 app/src/ui/add_account.rs:4996
+#: app/src/ui/add_account.rs:4637 app/src/ui/add_account.rs:5044
 msgid "Sign in with {provider} in your browser"
 msgstr "Zaloguj się w {provider} przez przeglądarkę"
 
-#: app/src/ui/add_account.rs:4594 app/src/ui/add_account.rs:5001
+#: app/src/ui/add_account.rs:4642 app/src/ui/add_account.rs:5049
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -5525,7 +5521,7 @@ msgstr ""
 "Strona logowania {provider} jest otwarta w przeglądarce. Po zakończeniu "
 "logowania to okno przejdzie dalej."
 
-#: app/src/ui/add_account.rs:4621
+#: app/src/ui/add_account.rs:4669
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5533,7 +5529,7 @@ msgstr ""
 "Ta kopia Penguin Mail nie obsługuje logowania Microsoft. Pobierz wydanie z "
 "github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:4634
+#: app/src/ui/add_account.rs:4682
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -5541,32 +5537,32 @@ msgstr ""
 "Logowanie przy użyciu własnego klienta Google. Strona logowania Google jest "
 "otwarta w przeglądarce. Po zakończeniu logowania to okno przejdzie dalej."
 
-#: app/src/ui/add_account.rs:4881
+#: app/src/ui/add_account.rs:4929
 msgid "Link copied"
 msgstr "Skopiowano odnośnik"
 
-#: app/src/ui/add_account.rs:5008
+#: app/src/ui/add_account.rs:5056
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail przestaje czekać po dziesięciu minutach."
 
-#: app/src/ui/add_account.rs:5031
+#: app/src/ui/add_account.rs:5079
 msgid "Canceling…"
 msgstr "Anulowanie…"
 
-#: app/src/ui/add_account.rs:5095
+#: app/src/ui/add_account.rs:5143
 msgid "{account} is added"
 msgstr "Dodano konto {account}"
 
-#: app/src/ui/add_account.rs:5115
+#: app/src/ui/add_account.rs:5163
 msgid "{account} is ready"
 msgstr "Konto {account} jest gotowe"
 
 #. Translators: the button that goes back to a step of the Google project setup.
-#: app/src/ui/add_account.rs:5273
+#: app/src/ui/add_account.rs:5321
 msgid "Go to Step {number}"
 msgstr "Przejdź do kroku {number}"
 
-#: app/src/ui/add_account.rs:5435
+#: app/src/ui/add_account.rs:5483
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
@@ -7478,7 +7474,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail nie widzi kalendarzy tego konta"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:377
+#: app/src/ui/preferences/google_route.rs:371
 msgid "Not connected"
 msgstr "Niepołączone"
 
@@ -7495,12 +7491,12 @@ msgid "Options for {calendar}"
 msgstr "Opcje kalendarza {calendar}"
 
 #: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:507
+#: app/src/ui/preferences/google_route.rs:501
 msgid "Connect"
 msgstr "Połącz"
 
 #: app/src/ui/calendar/sidebar.rs:1240 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:370
+#: app/src/ui/preferences/google_route.rs:364
 msgid "Connect the calendar for {account}"
 msgstr "Połącz kalendarz dla {account}"
 
@@ -9324,11 +9320,8 @@ msgstr "Szary"
 msgid ""
 "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
 "account below to keep your mail arriving. Your mail and settings stay as "
-"they are, and nothing downloads again."
-msgstr ""
-"Penguin Mail ma nowe sposoby logowania do Google. Wybierz jeden dla każdego "
-"konta Gmail poniżej, aby poczta nadal docierała. Twoja poczta i ustawienia "
-"pozostają bez zmian, a nic nie jest pobierane ponownie."
+"they are."
+msgstr "Penguin Mail ma nowe sposoby logowania do Google. Wybierz jeden dla każdego konta Gmail poniżej, aby poczta nadal docierała. Twoja poczta i ustawienia pozostają bez zmian."
 
 #: app/src/ui/move_sheet.rs:88
 msgid "Later"
@@ -10032,30 +10025,26 @@ msgstr "Funkcje Gmail"
 msgid "Every feature"
 msgstr "Wszystkie funkcje"
 
-#: app/src/ui/preferences/google_route.rs:316
-msgid "Get Every Feature"
-msgstr "Uzyskaj wszystkie funkcje"
-
-#: app/src/ui/preferences/google_route.rs:338 app/src/ui/switch_jmap.rs:221
+#: app/src/ui/preferences/google_route.rs:332 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
 msgstr "Przełącz"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:346
+#: app/src/ui/preferences/google_route.rs:340
 msgid "Signed in through your own Google project"
 msgstr "Zalogowano przez własny projekt Google"
 
-#: app/src/ui/preferences/google_route.rs:366
+#: app/src/ui/preferences/google_route.rs:360
 msgid "Calendar and contacts"
 msgstr "Kalendarz i kontakty"
 
-#: app/src/ui/preferences/google_route.rs:374
+#: app/src/ui/preferences/google_route.rs:368
 msgid "Connect the contacts for {account}"
 msgstr "Połącz kontakty dla {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:392
+#: app/src/ui/preferences/google_route.rs:386
 msgid "On gmail.com"
 msgstr "Na gmail.com"
 
@@ -12766,7 +12755,7 @@ msgstr "{problem}. Ponowna próba: {when}"
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail przestał ponawiać próby"
 
-#: sync/src/outbox.rs:110
+#: sync/src/outbox.rs:120
 msgid ""
 "The server still holds this message and sends it at its hour. Try again "
 "later, or use Cancel Send."
@@ -12774,7 +12763,7 @@ msgstr ""
 "Serwer nadal przechowuje tę wiadomość i wyśle ją o zaplanowanej porze. "
 "Spróbuj później lub użyj opcji Anuluj wysyłanie."
 
-#: sync/src/outbox.rs:122
+#: sync/src/outbox.rs:132
 msgid ""
 "The server still holds this message and could not be asked to let it go. Try "
 "again later."
@@ -12782,7 +12771,7 @@ msgstr ""
 "Serwer nadal przechowuje tę wiadomość i nie udało się poprosić o jej "
 "zwolnienie. Spróbuj później."
 
-#: sync/src/outbox.rs:1729
+#: sync/src/outbox.rs:1742
 msgid "The server could not be asked to let go of the message."
 msgstr "Nie udało się poprosić serwera o zwolnienie wiadomości."
 
@@ -13128,16 +13117,16 @@ msgstr "Określ, jakiej poczty dotyczy reguła"
 msgid "Choose what the rule does"
 msgstr "Wybierz działanie reguły"
 
-#: sync/src/sign_in.rs:376
+#: sync/src/sign_in.rs:381
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr "Zalogowano się na inne konto niż {address}, więc nic się nie zmieniło."
 
-#: sync/src/sign_in.rs:391
+#: sync/src/sign_in.rs:396
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "Adres {address} jest już w Penguin Mail jako konto {provider}."
 
-#: sync/src/sign_in.rs:553
+#: sync/src/sign_in.rs:558
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -13145,7 +13134,7 @@ msgstr ""
 "Konto kalendarza o nazwie {name} już istnieje dla serwera {address}. Usuń "
 "je, aby dodać ten serwer pod tą nazwą."
 
-#: sync/src/sign_in.rs:562
+#: sync/src/sign_in.rs:567
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -13155,7 +13144,7 @@ msgstr ""
 "jako {user}. Wpisz {user}, aby zalogować je ponownie, lub usuń je, aby "
 "zalogować się jako ktoś inny."
 
-#: sync/src/sign_in.rs:571
+#: sync/src/sign_in.rs:576
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -13311,6 +13300,12 @@ msgstr "Oznacz jako pożądaną pocztę"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Przenieś do {folder}"
+
+#~ msgid "This account can't switch to this computer's sign-in yet."
+#~ msgstr "To konto nie może jeszcze przejść na logowanie tego komputera."
+
+#~ msgid "Get Every Feature"
+#~ msgstr "Uzyskaj wszystkie funkcje"
 
 #~ msgid "Use GNOME Online Accounts"
 #~ msgstr "Użyj Kont online GNOME"
