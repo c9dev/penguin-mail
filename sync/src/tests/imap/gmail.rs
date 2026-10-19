@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use mailrs_domain::Target;
-use mailrs_store::messages::{self, Change};
 use mailrs_store::mailboxes;
+use mailrs_store::messages::{self, Change};
 
 use super::{days_ago, message};
 use crate::fake::{FakeImap, FakeSmtp};
@@ -64,7 +64,10 @@ async fn a_message_with_three_labels_is_stored_once_with_three_labels() {
     h.bootstrap().await;
 
     assert_eq!(h.ids().await, [hex(id)]);
-    assert_eq!(mailboxes_of(&h, &hex(id)).await, ["INBOX", "Travel", "Work"]);
+    assert_eq!(
+        mailboxes_of(&h, &hex(id)).await,
+        ["INBOX", "Travel", "Work"]
+    );
 }
 
 #[tokio::test]
@@ -102,7 +105,11 @@ async fn a_message_trashed_elsewhere_keeps_its_id_and_moves_to_trash() {
     h.imap.remote_trash(id);
     h.sync.incremental().await.unwrap();
 
-    assert_eq!(h.ids().await, [hex(id)], "one message, never deleted and fetched again");
+    assert_eq!(
+        h.ids().await,
+        [hex(id)],
+        "one message, never deleted and fetched again"
+    );
     assert_eq!(mailboxes_of(&h, &hex(id)).await, ["TRASH"]);
     let at = h.location(&hex(id)).await.expect("it has a place");
     assert!(at.starts_with(TRASH), "{at}");
@@ -136,7 +143,10 @@ async fn a_nested_accented_label_round_trips() {
     let names: Vec<&str> = listed.iter().map(|m| m.name.as_str()).collect();
     assert!(names.contains(&"Família/Férias 2026"), "{names:?}");
     assert_eq!(
-        listed.iter().filter(|m| m.name == "Família/Férias 2026").count(),
+        listed
+            .iter()
+            .filter(|m| m.name == "Família/Férias 2026")
+            .count(),
         1,
         "listed once, by its full name"
     );
@@ -150,7 +160,10 @@ async fn a_nested_accented_label_round_trips() {
     let h = gmail_on(imap).await;
     h.bootstrap().await;
     let held = mailboxes_of(&h, &hex(id)).await;
-    assert!(held.contains(&"Família/Férias 2026".to_string()), "{held:?}");
+    assert!(
+        held.contains(&"Família/Férias 2026".to_string()),
+        "{held:?}"
+    );
 }
 
 #[tokio::test]
@@ -207,7 +220,10 @@ async fn native_search_returns_ids_the_store_holds() {
         .await
         .unwrap();
 
-    assert_eq!(found.iter().map(|r| r.id.clone()).collect::<Vec<_>>(), [hex(wanted)]);
+    assert_eq!(
+        found.iter().map(|r| r.id.clone()).collect::<Vec<_>>(),
+        [hex(wanted)]
+    );
     assert!(h.stored(&hex(wanted)).await.is_some());
 }
 
@@ -276,7 +292,10 @@ async fn a_moved_account_lists_its_mail_again_from_imap() {
     assert_eq!(h.ids().await, [hex(id)]);
     let held = mailboxes_of(&h, &hex(id)).await;
     assert!(held.contains(&"Work/Clients".to_string()), "{held:?}");
-    assert!(h.location(&hex(id)).await.is_some(), "the first look gave it a ref");
+    assert!(
+        h.location(&hex(id)).await.is_some(),
+        "the first look gave it a ref"
+    );
 }
 
 #[tokio::test]
@@ -305,14 +324,18 @@ fn labels_on(h: &ImapHarness, id: u64) -> Vec<String> {
 }
 
 fn mailbox_of(h: &ImapHarness, id: u64) -> String {
-    h.imap.with(|s| s.find_msgid(id).map(|(m, _, _)| m).unwrap_or_default())
+    h.imap
+        .with(|s| s.find_msgid(id).map(|(m, _, _)| m).unwrap_or_default())
 }
 
 #[tokio::test]
 async fn archive_removes_the_inbox_label_in_all_mail() {
     let (h, id, thread) = one_inbox_message().await;
 
-    h.sync.triage_thread(&thread, &TriageAction::Archive).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Archive)
+        .await
+        .unwrap();
 
     assert!(!labels_on(&h, id).contains(&"\\Inbox".to_string()));
     assert_eq!(mailbox_of(&h, id), ALL_MAIL);
@@ -322,7 +345,10 @@ async fn archive_removes_the_inbox_label_in_all_mail() {
 async fn trash_moves_to_trash_and_keeps_the_id() {
     let (h, id, thread) = one_inbox_message().await;
 
-    h.sync.triage_thread(&thread, &TriageAction::Trash).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Trash)
+        .await
+        .unwrap();
 
     assert_eq!(mailbox_of(&h, id), TRASH);
     assert_eq!(h.ids().await, [hex(id)]);
@@ -333,9 +359,15 @@ async fn trash_moves_to_trash_and_keeps_the_id() {
 #[tokio::test]
 async fn restore_moves_back_to_the_inbox() {
     let (h, id, thread) = one_inbox_message().await;
-    h.sync.triage_thread(&thread, &TriageAction::Trash).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Trash)
+        .await
+        .unwrap();
 
-    h.sync.triage_thread(&thread, &TriageAction::Untrash).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Untrash)
+        .await
+        .unwrap();
 
     assert_eq!(mailbox_of(&h, id), ALL_MAIL);
     assert!(labels_on(&h, id).contains(&"\\Inbox".to_string()));
@@ -344,7 +376,10 @@ async fn restore_moves_back_to_the_inbox() {
 #[tokio::test]
 async fn a_move_to_a_label_out_of_trash_keeps_the_label_and_skips_the_inbox() {
     let (h, id, thread) = one_inbox_message().await;
-    h.sync.triage_thread(&thread, &TriageAction::Trash).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Trash)
+        .await
+        .unwrap();
 
     let to_work = TriageAction::Relabel {
         add: vec![mailrs_domain::MailSet::Mailbox("Work".into())],
@@ -362,10 +397,16 @@ async fn a_move_to_a_label_out_of_trash_keeps_the_label_and_skips_the_inbox() {
 async fn spam_and_not_spam_move_between_mailboxes() {
     let (h, id, thread) = one_inbox_message().await;
 
-    h.sync.triage_thread(&thread, &TriageAction::Junk).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Junk)
+        .await
+        .unwrap();
     assert_eq!(mailbox_of(&h, id), "[Gmail]/Spam");
 
-    h.sync.triage_thread(&thread, &TriageAction::NotJunk).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::NotJunk)
+        .await
+        .unwrap();
     assert_eq!(mailbox_of(&h, id), ALL_MAIL);
 }
 
@@ -373,14 +414,23 @@ async fn spam_and_not_spam_move_between_mailboxes() {
 async fn star_and_read_set_flags_in_all_mail() {
     let (h, id, thread) = one_inbox_message().await;
 
-    h.sync.triage_thread(&thread, &TriageAction::Star).await.unwrap();
-    h.sync.triage_thread(&thread, &TriageAction::MarkRead).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Star)
+        .await
+        .unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::MarkRead)
+        .await
+        .unwrap();
 
     let flags = h.imap.with(|s| {
         let (mailbox, uid, _) = s.find_msgid(id).unwrap();
         s.mailbox_mut(&mailbox).messages[&uid].flags.clone()
     });
-    assert!(flags.contains("\\Flagged") && flags.contains("\\Seen"), "{flags:?}");
+    assert!(
+        flags.contains("\\Flagged") && flags.contains("\\Seen"),
+        "{flags:?}"
+    );
 }
 
 #[tokio::test]
@@ -405,7 +455,10 @@ async fn add_and_remove_a_user_label() {
 #[tokio::test]
 async fn delete_forever_expunges_only_in_trash() {
     let (h, id, thread) = one_inbox_message().await;
-    h.sync.triage_thread(&thread, &TriageAction::Trash).await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::Trash)
+        .await
+        .unwrap();
 
     let erased = h
         .sync
@@ -417,7 +470,9 @@ async fn delete_forever_expunges_only_in_trash() {
     assert_eq!(h.imap.with(|s| s.find_msgid(id)), None);
     let calls = h.imap.calls();
     assert!(
-        calls.iter().all(|c| !c.starts_with(&format!("expunge {ALL_MAIL}"))),
+        calls
+            .iter()
+            .all(|c| !c.starts_with(&format!("expunge {ALL_MAIL}"))),
         "nothing is expunged in All Mail: {calls:?}"
     );
 }
@@ -454,7 +509,11 @@ async fn a_draft_saved_then_replaced_leaves_one_draft_and_no_archived_copy() {
         .unwrap();
     let second = h
         .sync
-        .save_draft(message("d2", "Draft 2", ""), None, Some(first.draft_id.clone()))
+        .save_draft(
+            message("d2", "Draft 2", ""),
+            None,
+            Some(first.draft_id.clone()),
+        )
         .await
         .unwrap();
 

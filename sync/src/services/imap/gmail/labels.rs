@@ -6,7 +6,7 @@ use mailrs_imap::GmailMeta;
 /// The mailbox Gmail's IMAP shows a message in. A message lives in one of
 /// the three; its labels say the rest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::services::imap) enum Where {
+pub(in crate::services::imap) enum GmailPlace {
     AllMail,
     Trash,
     Spam,
@@ -45,7 +45,7 @@ pub(in crate::services::imap) fn is_system(id: &str) -> bool {
 pub(in crate::services::imap) fn store_labels(
     meta: &GmailMeta,
     flags: &[String],
-    at: Where,
+    at: GmailPlace,
     tab: Option<&str>,
 ) -> Vec<String> {
     let mut labels: Vec<String> = Vec::new();
@@ -55,9 +55,9 @@ pub(in crate::services::imap) fn store_labels(
         }
     };
     match at {
-        Where::Trash => add("TRASH"),
-        Where::Spam => add("SPAM"),
-        Where::AllMail => {
+        GmailPlace::Trash => add("TRASH"),
+        GmailPlace::Spam => add("SPAM"),
+        GmailPlace::AllMail => {
             for label in &meta.labels {
                 match label.as_str() {
                     "\\Inbox" => add("INBOX"),
@@ -147,7 +147,7 @@ mod tests {
         let got = store_labels(
             &meta(&["\\Inbox", "\\Important", "Work/Clients", "\\Muted"]),
             &flags(&["\\Flagged"]),
-            Where::AllMail,
+            GmailPlace::AllMail,
             Some("CATEGORY_UPDATES"),
         );
         assert_eq!(
@@ -168,7 +168,7 @@ mod tests {
         let got = store_labels(
             &meta(&["\\Inbox", "Work"]),
             &flags(&["\\Seen"]),
-            Where::Trash,
+            GmailPlace::Trash,
             None,
         );
         assert_eq!(got, ["TRASH"]);

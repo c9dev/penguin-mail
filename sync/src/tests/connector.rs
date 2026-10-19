@@ -224,7 +224,11 @@ async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
     .await
     .unwrap();
     let reach = connector(&db, both_clients());
-    reach.secrets.passwords.save(id, "abcdefghijklmnop").unwrap();
+    reach
+        .secrets
+        .passwords
+        .save(id, "abcdefghijklmnop")
+        .unwrap();
 
     let connected = reach.connect(&me).await.unwrap();
 

@@ -95,10 +95,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
         ids: &[String],
     ) -> Result<HashMap<String, Location>, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let mut left: Vec<String> = ids.to_vec();
         let mut found = HashMap::new();
-        for mailbox in [&trio.all, &trio.trash, &trio.spam] {
+        for mailbox in [&boxes.all, &boxes.trash, &boxes.spam] {
             if left.is_empty() {
                 break;
             }

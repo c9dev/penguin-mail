@@ -620,9 +620,8 @@ async fn the_imap_move_empties_the_mail_and_keeps_the_outbox_and_the_rules() {
         raw: None,
         ..due(&h, "later")
     };
-    let row_id = h
-        .db
-        .write(move |c| {
+    let row_id =
+        h.db.write(move |c| {
             mailrs_store::local_rules::add(c, id, &rule)?;
             outbox::put(c, &waiting)
         })
@@ -635,11 +634,10 @@ async fn the_imap_move_empties_the_mail_and_keeps_the_outbox_and_the_rules() {
         assert_eq!(count(&h.db, table).await, 0, "{table}");
     }
     assert_eq!(row(&h, row_id).await.draft_id.as_deref(), Some("a"));
-    let rules = h
-        .db
-        .read(move |c| mailrs_store::local_rules::list(c, id))
-        .await
-        .unwrap();
+    let rules =
+        h.db.read(move |c| mailrs_store::local_rules::list(c, id))
+            .await
+            .unwrap();
     assert_eq!(
         rules[0].action.add,
         [mailrs_domain::MailSet::Mailbox("Work/Clients".into())]
@@ -675,7 +673,9 @@ async fn a_move_to_imap_takes_send_later_bytes_out_of_the_draft() {
 
     let kept = row(&h, row_id).await;
     assert!(
-        kept.raw.as_deref().is_some_and(|raw| raw.starts_with(b"Subject: later")),
+        kept.raw
+            .as_deref()
+            .is_some_and(|raw| raw.starts_with(b"Subject: later")),
         "the bytes came home: {:?}",
         kept.raw.as_deref().map(String::from_utf8_lossy)
     );
@@ -1088,7 +1088,9 @@ async fn a_send_later_message_whose_draft_is_gone_stays_and_asks_to_check_sent()
     assert!(drained.sent.is_empty(), "a gone draft never counts as sent");
     let kept = row(&h, row_id).await;
     assert!(
-        kept.problem.as_deref().is_some_and(|p| p.contains("Check Sent")),
+        kept.problem
+            .as_deref()
+            .is_some_and(|p| p.contains("Check Sent")),
         "{:?}",
         kept.problem
     );
@@ -1114,7 +1116,12 @@ async fn an_online_accounts_account_moves_to_its_own_project_and_syncs_again_ove
     };
 
     mover
-        .to_own_client(&account(&h).await, &own(), signed_in_as("me@example.com"), || {})
+        .to_own_client(
+            &account(&h).await,
+            &own(),
+            signed_in_as("me@example.com"),
+            || {},
+        )
         .await
         .unwrap();
 

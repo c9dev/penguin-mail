@@ -18,7 +18,7 @@ use mailrs_domain::{MailSet, MailboxKind, RemoteMailbox, Role};
 
 use super::{Imap, ImapApi, Submit};
 use crate::BackendError;
-use labels::Where;
+use labels::GmailPlace;
 
 /// Which dialect of IMAP an account speaks.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -32,13 +32,13 @@ pub enum Dialect {
 
 /// The three mailboxes a Gmail account syncs, by the server's names.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct Trio {
+pub(super) struct GmailMailboxes {
     pub all: String,
     pub trash: String,
     pub spam: String,
 }
 
-impl Trio {
+impl GmailMailboxes {
     /// The order a listing reads them in.
     pub fn in_order(&self) -> Vec<String> {
         vec![self.all.clone(), self.trash.clone(), self.spam.clone()]
@@ -51,11 +51,11 @@ impl Trio {
     }
 
     /// Which of the three `mailbox` is. Anything else counts as All Mail.
-    pub fn place_of(&self, mailbox: &str) -> Where {
+    pub fn place_of(&self, mailbox: &str) -> GmailPlace {
         match mailbox {
-            m if m == self.trash => Where::Trash,
-            m if m == self.spam => Where::Spam,
-            _ => Where::AllMail,
+            m if m == self.trash => GmailPlace::Trash,
+            m if m == self.spam => GmailPlace::Spam,
+            _ => GmailPlace::AllMail,
         }
     }
 }
@@ -96,7 +96,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// All Mail, Trash and Spam as the server names them, found by their
     /// special use since the names follow the account's language. All Mail
     /// is missing when the person left it out of IMAP in Gmail's settings.
-    pub(super) async fn gm_trio(&self) -> Result<Trio, BackendError> {
+    pub(super) async fn gm_synced(&self) -> Result<GmailMailboxes, BackendError> {
         self.ensure_listed().await?;
         let known = self.known();
         let named = |role: Role| {
@@ -107,7 +107,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 .map(|f| f.id.clone())
         };
         match (named(Role::All), named(Role::Trash), named(Role::Junk)) {
-            (Some(all), Some(trash), Some(spam)) => Ok(Trio { all, trash, spam }),
+            (Some(all), Some(trash), Some(spam)) => Ok(GmailMailboxes { all, trash, spam }),
             (None, _, _) => Err(BackendError::Refused(
                 "Gmail leaves All Mail out of IMAP".into(),
             )),
@@ -121,10 +121,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// ids with the server's name for each: everything outside the
     /// `[Gmail]` parent that holds All Mail, and the Inbox.
     async fn gm_label_folders(&self) -> Result<Vec<(String, mailrs_imap::Listed)>, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let listed = self.api.list().await?;
         let delimiter = listed.iter().find_map(|l| l.delimiter).unwrap_or('/');
-        let parent = trio
+        let parent = boxes
             .all
             .rsplit_once(delimiter)
             .map(|(parent, _)| parent.to_string());
@@ -219,11 +219,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let Some(key) = labels::search_key(id) else {
             return Ok(0);
         };
-        let trio = self.gm_trio().await?;
-        let selected = self.select(&trio.all, None).await?;
-        let top = self.top_uid(&trio.all, &selected).await?;
+        let boxes = self.gm_synced().await?;
+        let selected = self.select(&boxes.all, None).await?;
+        let top = self.top_uid(&boxes.all, &selected).await?;
         let mut count = 0u64;
-        self.search_windows(&trio.all, (1, top), &format!("UNDELETED {key}"), |found| {
+        self.search_windows(&boxes.all, (1, top), &format!("UNDELETED {key}"), |found| {
             count += found.len() as u64
         })
         .await?;
@@ -240,10 +240,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         use tokio::time::timeout;
 
         let limit = Duration::from_secs(10);
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let mut folders: Vec<(String, String)> = vec![
             ("INBOX".into(), "INBOX".into()),
-            (trio.spam.clone(), "SPAM".into()),
+            (boxes.spam.clone(), "SPAM".into()),
         ];
         for (name, listed) in self.gm_label_folders().await? {
             if !listed.no_select {
@@ -280,19 +280,19 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
 
 #[cfg(test)]
 mod tests {
-    use super::Trio;
-    use super::labels::Where;
+    use super::GmailMailboxes;
+    use super::labels::GmailPlace;
 
     #[test]
     fn a_mailbox_that_is_neither_trash_nor_spam_counts_as_all_mail() {
-        let trio = Trio {
+        let boxes = GmailMailboxes {
             all: "[Gmail]/Todos".into(),
             trash: "[Gmail]/Lixo".into(),
             spam: "[Gmail]/Spam".into(),
         };
-        assert_eq!(trio.place_of("[Gmail]/Lixo"), Where::Trash);
-        assert_eq!(trio.place_of("[Gmail]/Spam"), Where::Spam);
-        assert_eq!(trio.place_of("[Gmail]/Todos"), Where::AllMail);
-        assert_eq!(trio.look_order()[2], "[Gmail]/Todos");
+        assert_eq!(boxes.place_of("[Gmail]/Lixo"), GmailPlace::Trash);
+        assert_eq!(boxes.place_of("[Gmail]/Spam"), GmailPlace::Spam);
+        assert_eq!(boxes.place_of("[Gmail]/Todos"), GmailPlace::AllMail);
+        assert_eq!(boxes.look_order()[2], "[Gmail]/Todos");
     }
 }

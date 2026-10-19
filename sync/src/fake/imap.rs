@@ -738,12 +738,7 @@ impl ImapState {
     /// An APPEND to a label's folder on Gmail: the message gets its ids and
     /// the folder's label, and sits in All Mail as well. The fake keeps the
     /// folder's own copy too, which a later change to All Mail leaves be.
-    fn gmail_append(
-        &mut self,
-        mailbox: &str,
-        flags: &[String],
-        raw: &[u8],
-    ) -> Option<AppendUid> {
+    fn gmail_append(&mut self, mailbox: &str, flags: &[String], raw: &[u8]) -> Option<AppendUid> {
         let msgid = self.next_msgid;
         self.next_msgid += 0x1001;
         let label = match mailbox {
@@ -1812,7 +1807,7 @@ fn gm_raw_matches(text: &str, message: &FakeMessage) -> bool {
         .all(|term| match term.split_once(':') {
             Some(("in", "inbox")) => g.labels.contains("\\Inbox"),
             Some(("category", tab)) => g.category.as_deref() == Some(tab),
-        Some(("-category", tab)) => g.category.as_deref() != Some(tab),
+            Some(("-category", tab)) => g.category.as_deref() != Some(tab),
             Some(("label", name)) => g.labels.iter().any(|l| spell(l) == spell(name)),
             Some(_) => true,
             None => subject.contains(&term.to_lowercase()),

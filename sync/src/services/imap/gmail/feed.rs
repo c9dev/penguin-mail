@@ -23,8 +23,8 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
         since: Option<&SyncState>,
     ) -> Result<Changes, BackendError> {
-        let trio = self.gm_trio().await?;
-        let order = trio.look_order();
+        let boxes = self.gm_synced().await?;
+        let order = boxes.look_order();
         let Some(since) = since else {
             let mut state = ImapState::default();
             for mailbox in &order {

@@ -67,12 +67,12 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
         id: &str,
     ) -> Result<(), BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let at = self.gm_place(id).await?;
         let uids = UidSet::from_uids([at.uid]);
-        let (mailbox, uids) = match trio.place_of(&at.mailbox) {
-            super::labels::Where::AllMail => {
-                let copied = self.api.move_to(&at.mailbox, &uids, &trio.trash).await?;
+        let (mailbox, uids) = match boxes.place_of(&at.mailbox) {
+            super::labels::GmailPlace::AllMail => {
+                let copied = self.api.move_to(&at.mailbox, &uids, &boxes.trash).await?;
                 self.known().places.forget(id);
                 let uid = match copied.and_then(|c| c.pairs.first().map(|p| p.1)) {
                     Some(uid) => uid,
@@ -83,7 +83,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                         .map(|at| at.uid)
                         .ok_or(BackendError::NotFound)?,
                 };
-                (trio.trash.clone(), UidSet::from_uids([uid]))
+                (boxes.trash.clone(), UidSet::from_uids([uid]))
             }
             _ => (at.mailbox.clone(), uids),
         };
@@ -118,12 +118,12 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     pub(in crate::services::imap) async fn gm_list_drafts(
         &self,
     ) -> Result<Vec<DraftRef>, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let keys = format!("{} UNDELETED", gm_labels(DRAFT));
-        let selected = self.select(&trio.all, None).await?;
-        let uids = self.api.search(&trio.all, &keys).await?;
+        let selected = self.select(&boxes.all, None).await?;
+        let uids = self.api.search(&boxes.all, &keys).await?;
         Ok(self
-            .gm_pair(&trio.all, selected.uidvalidity, &uids)
+            .gm_pair(&boxes.all, selected.uidvalidity, &uids)
             .await?
             .into_iter()
             .filter_map(|f| f.gmail)

@@ -206,7 +206,12 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         let id = account.id;
         let (before, client) = self
             .db
-            .read(move |c| Ok((accounts::mail_route(c, id)?, accounts::sign_in_client(c, id)?)))
+            .read(move |c| {
+                Ok((
+                    accounts::mail_route(c, id)?,
+                    accounts::sign_in_client(c, id)?,
+                ))
+            })
             .await
             .map_err(SyncError::from)?;
         // An app password the move leaves behind goes with its servers.
@@ -361,11 +366,7 @@ impl<E, A: Accounts> Mover<'_, E, A> {
         for (row, message_id) in waiting {
             match sync.raw(&message_id).await {
                 Ok(raw) => {
-                    if let Err(err) = self
-                        .db
-                        .write(move |c| outbox::set_raw(c, row, &raw))
-                        .await
-                    {
+                    if let Err(err) = self.db.write(move |c| outbox::set_raw(c, row, &raw)).await {
                         tracing::warn!(account = id, error = %err, "could not keep a waiting message's bytes");
                     }
                 }
@@ -386,7 +387,9 @@ impl<E, A: Accounts> Mover<'_, E, A> {
             Ok::<_, crate::passwords::PasswordError>((kept.load(id)?, kept.load_outgoing(id)?))
         })
         .await
-        .map_err(|err| SyncError::from(crate::passwords::PasswordError::Keyring(err.to_string())))?;
+        .map_err(|err| {
+            SyncError::from(crate::passwords::PasswordError::Keyring(err.to_string()))
+        })?;
         Ok(read.map_err(SyncError::from)?)
     }
 
@@ -406,7 +409,10 @@ impl<E, A: Accounts> Mover<'_, E, A> {
         })
         .await;
         if !matches!(back, Ok(Ok(()))) {
-            tracing::warn!(account = id, "could not put back the password a failed move replaced");
+            tracing::warn!(
+                account = id,
+                "could not put back the password a failed move replaced"
+            );
         }
     }
 
@@ -420,7 +426,10 @@ impl<E, A: Accounts> Mover<'_, E, A> {
         })
         .await;
         if !matches!(gone, Ok(Ok(()))) {
-            tracing::warn!(account = id, "could not delete the app password the move left behind");
+            tracing::warn!(
+                account = id,
+                "could not delete the app password the move left behind"
+            );
         }
     }
 

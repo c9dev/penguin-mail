@@ -116,8 +116,8 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             return std::future::pending().await;
         }
         let inbox = match self.gmail() {
-            true => match self.gm_trio().await {
-                Ok(trio) => trio.all,
+            true => match self.gm_synced().await {
+                Ok(boxes) => boxes.all,
                 Err(err) => {
                     tracing::warn!(%err, "could not find All Mail to watch");
                     tokio::time::sleep(WATCH_RETRY).await;

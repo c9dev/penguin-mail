@@ -8,14 +8,22 @@ use std::collections::HashMap;
 use mailrs_domain::Location;
 use mailrs_imap::UidSet;
 
-use super::labels::{Where, imap_label};
-use super::{Imap, ImapApi, Submit, Trio};
+use super::labels::{GmailPlace, imap_label};
+use super::{GmailMailboxes, Imap, ImapApi, Submit};
 use crate::services::google::writes::labels_for;
 use crate::services::imap::BATCH_LIMIT;
 use crate::services::{Relocated, Unapplied};
 use crate::{BackendError, MailOp};
 
 const DELETED: &str = "\\Deleted";
+
+/// The mailbox a run of messages sits in, which of the three it is, and
+/// the account's three mailboxes the run can move between.
+struct RunAt<'a> {
+    boxes: &'a GmailMailboxes,
+    mailbox: &'a str,
+    kind: GmailPlace,
+}
 
 /// `names` placed, in runs that share a mailbox and its UIDVALIDITY, at
 /// most `limit` each, in the order given.
@@ -43,7 +51,12 @@ fn runs(placed: Vec<(String, Location)>, limit: usize) -> Vec<Vec<(String, Locat
 fn inbox_on_restore(add: &[String], remove: &[String]) -> bool {
     let other_label = add
         .iter()
-        .filter(|l| !matches!(l.as_str(), "TRASH" | "SPAM" | "INBOX" | "IMPORTANT" | "MUTE"))
+        .filter(|l| {
+            !matches!(
+                l.as_str(),
+                "TRASH" | "SPAM" | "INBOX" | "IMPORTANT" | "MUTE"
+            )
+        })
         .any(|l| imap_label(l).is_some());
     add.iter().any(|l| l == "INBOX") || (!other_label && !remove.iter().any(|l| l == "INBOX"))
 }
@@ -88,7 +101,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             true => (Vec::new(), Vec::new()),
             false => labels_for(ops)?,
         };
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let mut placed = Vec::with_capacity(names.len());
         for name in names {
             placed.push((name.clone(), self.gm_place(name).await?));
@@ -103,11 +116,15 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 return Err(BackendError::NotFound);
             }
             let uids = UidSet::from_uids(run.iter().map(|(_, at)| at.uid));
-            let at = trio.place_of(&mailbox);
+            let at = RunAt {
+                boxes: &boxes,
+                mailbox: &mailbox,
+                kind: boxes.place_of(&mailbox),
+            };
             match destroy {
-                true => self.gm_destroy(&trio, &mailbox, at, &run, &uids).await?,
+                true => self.gm_destroy(&at, &run, &uids).await?,
                 false => {
-                    self.gm_run(&trio, &mailbox, at, &run, &uids, (&add, &remove), relocated)
+                    self.gm_run(&at, &run, &uids, (&add, &remove), relocated)
                         .await?
                 }
             }
@@ -116,13 +133,16 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         Ok(())
     }
 
-    /// One run's labels, flags and moves.
-    #[allow(clippy::too_many_arguments)]
+    /// One run's labels, flags and moves. Messages a move could not find
+    /// afterwards make the run fail with `NotFound`, after the ones that
+    /// landed are recorded.
     async fn gm_run(
         &self,
-        trio: &Trio,
-        mailbox: &str,
-        at: Where,
+        RunAt {
+            boxes,
+            mailbox,
+            kind: at,
+        }: &RunAt<'_>,
         run: &[(String, Location)],
         uids: &UidSet,
         (add, remove): (&[String], &[String]),
@@ -140,9 +160,22 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .filter(|l| moving(l))
             .filter_map(|l| imap_label(l))
             .collect();
+        let at = *at;
+        let restores =
+            at != GmailPlace::AllMail && (named(remove, "TRASH") || named(remove, "SPAM"));
         // Labels and flags first, where the message is now. In Trash or
-        // Spam the labels wait for the move back to All Mail.
-        if at == Where::AllMail {
+        // Spam the labels wait for the move back to All Mail; with no move
+        // back, Gmail has nowhere to keep a label of the person's own.
+        if at != GmailPlace::AllMail
+            && !restores
+            && adds
+                .iter()
+                .chain(&removes)
+                .any(|l| !matches!(l.as_str(), "\\Inbox" | "\\Important"))
+        {
+            return Err(BackendError::Unsupported);
+        }
+        if at == GmailPlace::AllMail {
             self.api.store_labels(mailbox, uids, true, &adds).await?;
             self.api
                 .store_labels(mailbox, uids, false, &removes)
@@ -173,18 +206,24 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if !clear.is_empty() {
             self.api.store(mailbox, uids, false, &clear).await?;
         }
-        let target = if named(add, "TRASH") && at != Where::Trash {
-            Some(trio.trash.as_str())
-        } else if named(add, "SPAM") && at != Where::Spam {
-            Some(trio.spam.as_str())
-        } else if at != Where::AllMail && (named(remove, "TRASH") || named(remove, "SPAM")) {
-            Some(trio.all.as_str())
+        let target = if named(add, "TRASH") && at != GmailPlace::Trash {
+            Some(boxes.trash.as_str())
+        } else if named(add, "SPAM") && at != GmailPlace::Spam {
+            Some(boxes.spam.as_str())
+        } else if restores {
+            Some(boxes.all.as_str())
         } else {
             None
         };
         if let Some(to) = target {
             let landed = self.gm_move(mailbox, run, uids, to).await?;
-            if to == trio.all {
+            // Recorded before anything else can fail: the messages have
+            // left `mailbox` whatever happens to their labels.
+            relocated.extend(landed.iter().map(|(from, to)| Relocated {
+                from: from.clone(),
+                to: to.clone(),
+            }));
+            if to == boxes.all {
                 // Back in All Mail, the message takes the labels the ops
                 // name. A restore that names no label of its own, and
                 // does not archive, puts it back in the Inbox.
@@ -196,7 +235,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 self.api.store_labels(to, &back, true, &adds).await?;
                 self.api.store_labels(to, &back, false, &removes).await?;
             }
-            relocated.extend(landed.into_iter().map(|(from, to)| Relocated { from, to }));
+            if landed.len() < run.len() {
+                return Err(BackendError::NotFound);
+            }
         }
         Ok(())
     }
@@ -255,23 +296,24 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// Erases a run for good: out of All Mail into Trash first, then
     /// `\Deleted` and a UID EXPUNGE there. Nothing is expunged in All Mail,
     /// where Gmail would only archive the message.
+    /// A message the move into Trash could not find afterwards stays, and
+    /// the run fails with `NotFound` once the rest are erased.
     async fn gm_destroy(
         &self,
-        trio: &Trio,
-        mailbox: &str,
-        at: Where,
+        at: &RunAt<'_>,
         run: &[(String, Location)],
         uids: &UidSet,
     ) -> Result<(), BackendError> {
-        let (in_trash, trash_uids) = match at {
-            Where::AllMail => {
-                let landed = self.gm_move(mailbox, run, uids, &trio.trash).await?;
+        let (in_trash, trash_uids, all_landed) = match at.kind {
+            GmailPlace::AllMail => {
+                let landed = self.gm_move(at.mailbox, run, uids, &at.boxes.trash).await?;
                 (
-                    trio.trash.clone(),
+                    at.boxes.trash.clone(),
                     UidSet::from_uids(landed.iter().map(|(_, at)| at.uid)),
+                    landed.len() == run.len(),
                 )
             }
-            _ => (mailbox.to_string(), uids.clone()),
+            _ => (at.mailbox.to_string(), uids.clone(), true),
         };
         self.api
             .store(&in_trash, &trash_uids, true, &[DELETED.to_string()])
@@ -280,7 +322,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         for (name, _) in run {
             self.known().places.forget(name);
         }
-        Ok(())
+        match all_landed {
+            true => Ok(()),
+            false => Err(BackendError::NotFound),
+        }
     }
 }
 

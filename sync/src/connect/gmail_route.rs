@@ -52,8 +52,7 @@ pub(crate) async fn gmail_imap_mail(
                 db.read(move |c| servers::load(c, id)),
             )
             .await?;
-            let kept =
-                read_secret(Arc::clone(&connector.secrets.passwords), id, STEP_WAIT).await?;
+            let kept = read_secret(Arc::clone(&connector.secrets.passwords), id, STEP_WAIT).await?;
             let (Some(saved), Some(kept)) = (saved, kept) else {
                 return Ok(None);
             };

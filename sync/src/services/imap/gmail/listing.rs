@@ -9,7 +9,7 @@ use mailrs_domain::{Location, MessageMeta};
 use mailrs_imap::{Fetched, UidSet, gm_raw, gm_thrid};
 use serde::{Deserialize, Serialize};
 
-use super::labels::{self, TABS, Where};
+use super::labels::{self, GmailPlace, TABS};
 use super::{Imap, ImapApi, Submit};
 use crate::BackendError;
 use crate::services::imap::syntax::imap_date;
@@ -18,7 +18,7 @@ use crate::services::imap::{BATCH_LIMIT, keywords};
 use crate::services::{Backfill, Found, LIST_PAGE_SIZE, RemoteRef, SearchQuery, Want};
 
 /// Where a backfill stands: the index of the mailbox in
-/// [`Trio::in_order`] and the UID it has listed down to.
+/// [`GmailMailboxes::in_order`] and the UID it has listed down to.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Cursor {
     at: usize,
@@ -95,24 +95,24 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         days: i64,
         label: Option<&str>,
     ) -> Result<Vec<RemoteRef>, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let today = chrono::Local::now().date_naive();
         let side = side_keys(days, today);
         let wanted: Vec<(String, String)> = match label {
             None => vec![
-                (trio.all.clone(), all_mail_keys(days, today)),
-                (trio.trash.clone(), side.clone()),
-                (trio.spam.clone(), side),
+                (boxes.all.clone(), all_mail_keys(days, today)),
+                (boxes.trash.clone(), side.clone()),
+                (boxes.spam.clone(), side),
             ],
-            Some("TRASH") => vec![(trio.trash.clone(), side)],
-            Some("SPAM") => vec![(trio.spam.clone(), side)],
+            Some("TRASH") => vec![(boxes.trash.clone(), side)],
+            Some("SPAM") => vec![(boxes.spam.clone(), side)],
             Some(id) => match labels::search_key(id) {
                 Some(key) => {
                     let since = match id {
                         "INBOX" => String::new(),
                         _ => all_mail_keys(days, today),
                     };
-                    vec![(trio.all.clone(), format!("{since} {key}"))]
+                    vec![(boxes.all.clone(), format!("{since} {key}"))]
                 }
                 None => Vec::new(),
             },
@@ -132,8 +132,8 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         days: i64,
         cursor: Option<&str>,
     ) -> Result<Backfill, BackendError> {
-        let trio = self.gm_trio().await?;
-        let order = trio.in_order();
+        let boxes = self.gm_synced().await?;
+        let order = boxes.in_order();
         let mut at = match cursor {
             None => Cursor { at: 0, below: None },
             Some(text) => serde_json::from_str(text).map_err(|_| BackendError::StateLost)?,
@@ -188,12 +188,12 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         cursor: Option<&str>,
         limit: usize,
     ) -> Result<Backfill, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let (mailbox, keys) = match id {
-            "TRASH" => (trio.trash.clone(), "UNDELETED".to_string()),
-            "SPAM" => (trio.spam.clone(), "UNDELETED".to_string()),
+            "TRASH" => (boxes.trash.clone(), "UNDELETED".to_string()),
+            "SPAM" => (boxes.spam.clone(), "UNDELETED".to_string()),
             other => match labels::search_key(other) {
-                Some(key) => (trio.all.clone(), format!("UNDELETED {key}")),
+                Some(key) => (boxes.all.clone(), format!("UNDELETED {key}")),
                 None => {
                     return Ok(Backfill {
                         refs: Vec::new(),
@@ -245,14 +245,14 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             SearchQuery::Native(text) => text.clone(),
             SearchQuery::Tree(tree) => mailrs_gmail::query::print(tree),
         };
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let lower = text.to_lowercase();
         let mailbox = if lower.contains("in:trash") {
-            &trio.trash
+            &boxes.trash
         } else if lower.contains("in:spam") {
-            &trio.spam
+            &boxes.spam
         } else {
-            &trio.all
+            &boxes.all
         };
         let keys = format!("{} UNDELETED", gm_raw(text)?);
         let selected = self.select(mailbox, None).await?;
@@ -266,7 +266,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
         message_id: &str,
     ) -> Result<Option<String>, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let wanted = message_id.trim_matches(['<', '>']);
         if wanted.contains(['"', '\r', '\n', '\\']) {
             return Ok(None);
@@ -275,9 +275,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             "HEADER Message-ID \"{wanted}\" {} UNDELETED",
             mailrs_imap::gm_labels("\\Sent")
         );
-        let (uidvalidity, uids) = self.gm_matching(&trio.all, &keys).await?;
+        let (uidvalidity, uids) = self.gm_matching(&boxes.all, &keys).await?;
         Ok(self
-            .gm_refs(&trio.all, uidvalidity, &uids)
+            .gm_refs(&boxes.all, uidvalidity, &uids)
             .await?
             .into_iter()
             .next()
@@ -319,14 +319,14 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
         wants: Vec<Want>,
     ) -> Result<Found, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let mut found = Found::default();
         let mut left: Vec<String> = Vec::new();
         for want in wants {
             // The engine names a message by where its ref says it sits, as
             // a location, or by its hex id before it has a ref.
-            let named = super::ids::msgid_of(&want.id).is_some()
-                || Location::parse(&want.id).is_some();
+            let named =
+                super::ids::msgid_of(&want.id).is_some() || Location::parse(&want.id).is_some();
             match named {
                 true if !left.contains(&want.id) => left.push(want.id),
                 true => {}
@@ -376,7 +376,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 for (id, _) in stale {
                     self.known().places.forget(&id);
                 }
-                let place = trio.place_of(&mailbox);
+                let place = boxes.place_of(&mailbox);
                 let mut metas: Vec<(String, Location, Fetched)> = Vec::new();
                 for chunk in current.chunks(BATCH_LIMIT) {
                     let uids = UidSet::from_uids(chunk.iter().map(|(_, at)| at.uid));
@@ -388,9 +388,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                             self.known().places.forget(id);
                             continue;
                         };
-                        let right = fetched.gmail.as_ref().is_some_and(|g| {
-                            Location::parse(id).is_some() || g.id() == *id
-                        });
+                        let right = fetched
+                            .gmail
+                            .as_ref()
+                            .is_some_and(|g| Location::parse(id).is_some() || g.id() == *id);
                         if !right || keywords::is_deleted(&fetched.flags) {
                             self.known().places.forget(id);
                             continue;
@@ -399,7 +400,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                     }
                 }
                 let inbox: Vec<u32> = match place {
-                    Where::AllMail => metas
+                    GmailPlace::AllMail => metas
                         .iter()
                         .filter(|(_, _, f)| {
                             f.gmail
@@ -440,13 +441,13 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
         threads: Vec<String>,
     ) -> Result<Found, BackendError> {
-        let trio = self.gm_trio().await?;
+        let boxes = self.gm_synced().await?;
         let mut wants = Vec::new();
         for thread in &threads {
             let Some(number) = super::ids::msgid_of(thread) else {
                 continue;
             };
-            for mailbox in trio.in_order() {
+            for mailbox in boxes.in_order() {
                 let (uidvalidity, uids) = self
                     .gm_matching(&mailbox, &format!("{} UNDELETED", gm_thrid(number)))
                     .await?;

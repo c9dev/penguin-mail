@@ -184,10 +184,7 @@ async fn a_401_after_one_renewal_asks_for_a_sign_in_in_online_accounts() {
     );
     assert_eq!(goa.ensure_calls(), 1);
     assert!(
-        db.read(accounts::list_accounts)
-            .await
-            .unwrap()
-            .is_empty(),
+        db.read(accounts::list_accounts).await.unwrap().is_empty(),
         "no account row"
     );
 }
@@ -211,12 +208,7 @@ async fn linking_refuses_an_account_with_mail_turned_off() {
     .await;
 
     assert!(matches!(refused, Err(LinkError::MailOff)), "{refused:?}");
-    assert!(
-        db.read(accounts::list_accounts)
-            .await
-            .unwrap()
-            .is_empty()
-    );
+    assert!(db.read(accounts::list_accounts).await.unwrap().is_empty());
 }
 
 #[tokio::test]
