@@ -12502,6 +12502,10 @@ msgstr "Calendário e contactos"
 msgid "On gmail.com"
 msgstr "No gmail.com"
 
+#: app/src/ui/preferences/google_route.rs
+msgid "Connected"
+msgstr "Ligado"
+
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Instalar o Bubblewrap"
 

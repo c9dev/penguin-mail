@@ -14,6 +14,7 @@ use mailrs_sync::{Missing, Offers, Withheld};
 use crate::app::App;
 use crate::offered::reason;
 use crate::settings::{Change, Settings};
+use crate::ui::preferences::google_route::Contacts;
 
 /// The calendar settings and the accounts GNOME can show beside them.
 pub fn calendar_page(
@@ -46,7 +47,7 @@ pub fn account_rows(
     withheld: Withheld,
     grant: impl Fn(AccountId) + 'static,
     parent: &adw::ExpanderRow,
-) {
+) -> Contacts {
     if matches!(
         account.provider,
         Provider::Imap | Provider::Pop3 | Provider::Jmap
@@ -60,13 +61,24 @@ pub fn account_rows(
         fill_servers(app, &row, account, &Rc::default());
     }
     // A Gmail account whose calendar is not connected says so in its own
-    // Contacts row (`preferences::google_route`), which Connect fills.
-    if crate::offered::calendar_link(account, offers).shows_connect() {
-        return;
+    // Contacts row (`preferences::google_route`), which Connect fills; the
+    // control joins that account's rows once the calendar connects.
+    let grant: Rc<dyn Fn(AccountId)> = Rc::new(grant);
+    let (weak_app, settings, owner) = (Rc::downgrade(app), settings.clone(), account.clone());
+    let build: Rc<dyn Fn(Offers) -> gtk::Widget> = Rc::new(move |offers| {
+        let Some(app) = weak_app.upgrade() else {
+            return gtk::Box::new(gtk::Orientation::Vertical, 0).upcast();
+        };
+        let grant = Rc::clone(&grant);
+        contact_control(&app, &settings, &owner, offers, withheld, move |id| {
+            grant(id)
+        })
+    });
+    let added = !crate::offered::calendar_link(account, offers).shows_connect();
+    if added {
+        parent.add_row(&build(offers));
     }
-    parent.add_row(&contact_control(
-        app, settings, account, offers, withheld, grant,
-    ));
+    Contacts { build, added }
 }
 
 /// The rows an earlier fill put in an account's row. They are held
@@ -374,6 +386,7 @@ fn calendar(
             let (account_id, connect) = (account.id, grant.clone());
             button.connect_clicked(move |_| connect(account_id));
             row.add_suffix(&button);
+            crate::ui::preferences::google_route::note_calendar_row(account.id, &row, &button);
             group.add(&row);
             continue;
         }

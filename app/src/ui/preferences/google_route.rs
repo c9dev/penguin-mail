@@ -2,9 +2,12 @@
 //! features it has, the move it still has to make, the things only
 //! gmail.com does for it, and a Connect row for a calendar it lacks.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use gtk::glib;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, MailRoute, Provider};
 use mailrs_store::accounts::GoogleSignIn;
@@ -69,6 +72,36 @@ pub fn lines(sign_in: GoogleSignIn, _platform: Platform, account: &Account) -> V
     lines
 }
 
+/// How to build an account's Contacts control, and whether the account's
+/// page already holds one.
+pub struct Contacts {
+    pub build: Rc<dyn Fn(Offers) -> gtk::Widget>,
+    /// The page was built with the control in it. When it was not, the
+    /// control joins the Gmail rows once the calendar connects.
+    pub added: bool,
+}
+
+/// An account's Gmail rows, kept so they can be filled again in place.
+struct Shown {
+    parent: glib::WeakRef<adw::ExpanderRow>,
+    rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
+    sign_in: GoogleSignIn,
+    connect: Rc<dyn Fn(AccountId)>,
+    contacts: Contacts,
+}
+
+/// A Calendar page row and its Connect button.
+type CalendarRow = (glib::WeakRef<adw::ActionRow>, glib::WeakRef<gtk::Button>);
+
+thread_local! {
+    /// The open Preferences' Gmail rows by account. Only one Preferences
+    /// is open; a new one replaces each entry. The rows are held weakly.
+    static SHOWN: RefCell<HashMap<AccountId, Rc<Shown>>> = RefCell::default();
+    /// The Calendar page's row for an account that is not connected, with
+    /// its Connect button.
+    static CALENDAR_ROWS: RefCell<HashMap<AccountId, CalendarRow>> = RefCell::default();
+}
+
 /// Adds `account`'s Gmail rows to its expander row: the features, the
 /// move, the calendar and contacts that are not connected, and what only
 /// gmail.com does. `connect` opens the calendar consent, or the route
@@ -79,31 +112,108 @@ pub fn rows(
     offers: Offers,
     parent: &adw::ExpanderRow,
     connect: &Rc<dyn Fn(AccountId)>,
+    contacts: Contacts,
 ) {
     if account.provider != Provider::Gmail {
         return;
     }
     if let Some(sign_in) = app.google_sign_in(account.id) {
-        fill_rows(parent, account, sign_in, offers, connect);
+        register(parent, account, sign_in, offers, connect, contacts);
     }
+}
+
+/// Fills `parent` and keeps the rows for [`refill`].
+fn register(
+    parent: &adw::ExpanderRow,
+    account: &Account,
+    sign_in: GoogleSignIn,
+    offers: Offers,
+    connect: &Rc<dyn Fn(AccountId)>,
+    contacts: Contacts,
+) {
+    let shown = Rc::new(Shown {
+        parent: parent.downgrade(),
+        rows: RefCell::default(),
+        sign_in,
+        connect: Rc::clone(connect),
+        contacts,
+    });
+    let added = fill_rows(parent, account, sign_in, offers, connect, &shown.contacts);
+    *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
+    SHOWN.with(|all| all.borrow_mut().insert(account.id, shown));
+}
+
+/// Fills `account`'s Gmail rows again from what it offers now, in the
+/// Preferences that is open, and touches nothing else in it: focus,
+/// scroll and the other accounts stay as they are. False when no open
+/// Preferences shows the account.
+pub fn refill(id: AccountId, account: &Account, offers: Offers) -> bool {
+    let shown = SHOWN.with(|all| all.borrow().get(&id).cloned());
+    let Some(shown) = shown else {
+        return false;
+    };
+    let Some(parent) = shown.parent.upgrade() else {
+        SHOWN.with(|all| all.borrow_mut().remove(&id));
+        return false;
+    };
+    let old = std::mem::take(&mut *shown.rows.borrow_mut());
+    for row in old.iter().filter_map(|row| row.upgrade()) {
+        parent.remove(&row);
+    }
+    let added = fill_rows(
+        &parent,
+        account,
+        shown.sign_in,
+        offers,
+        &shown.connect,
+        &shown.contacts,
+    );
+    *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
+    let calendar = CALENDAR_ROWS.with(|all| all.borrow().get(&id).cloned());
+    if let Some((row, button)) = calendar
+        && !calendar_link(account, offers).shows_connect()
+    {
+        if let Some(row) = row.upgrade() {
+            row.set_subtitle(&gettext("Connected"));
+        }
+        if let Some(button) = button.upgrade() {
+            button.set_visible(false);
+        }
+    }
+    true
+}
+
+/// Keeps the Calendar page's row for `id`, which says Not connected, so a
+/// connect can change it.
+pub fn note_calendar_row(id: AccountId, row: &adw::ActionRow, button: &gtk::Button) {
+    CALENDAR_ROWS.with(|all| {
+        all.borrow_mut()
+            .insert(id, (row.downgrade(), button.downgrade()));
+    });
 }
 
 /// [`rows`] for a sign-in already read, in the order the mockup draws:
 /// the features and the move, then calendar and contacts, then what only
-/// gmail.com does.
+/// gmail.com does. Returns the widgets it added.
 fn fill_rows(
     parent: &adw::ExpanderRow,
     account: &Account,
     sign_in: GoogleSignIn,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
-) {
+    contacts: &Contacts,
+) -> Vec<gtk::Widget> {
+    let mut added: Vec<gtk::Widget> = Vec::new();
+    let mut put = |widget: &gtk::Widget| {
+        parent.add_row(widget);
+        added.push(widget.clone());
+    };
     let (gaps, own): (Vec<Line>, Vec<Line>) = lines(sign_in, Platform::this(), account)
         .into_iter()
         .partition(|line| matches!(line, Line::Gap { .. }));
     // Translators: a small heading over the Gmail account's rows; Gmail is a
     // name, keep it as it is.
-    parent.add_row(&heading(&gettext("Gmail")));
+    put(heading(&gettext("Gmail")).upcast_ref());
     for line in own {
         match line {
             Line::Features { every } => {
@@ -115,14 +225,14 @@ fn fill_rows(
                     gettext("Mail, calendar and contacts")
                 };
                 row.add_suffix(&dim(&value));
-                parent.add_row(&row);
+                put(row.upcast_ref());
                 // The button sits in a row of its own under the line, as
                 // the mockup draws it: an expander's row has no room for
                 // both the value and a button in its suffix.
                 if !every {
                     let holder = plain_row("", None);
                     holder.add_suffix(&route_button(&gettext("Get Every Feature"), account.id));
-                    parent.add_row(&holder);
+                    put(holder.upcast_ref());
                 }
             }
             Line::Move { title } => {
@@ -130,13 +240,13 @@ fn fill_rows(
                 // The GNOME Online Accounts plan replaces this with its
                 // one-click move for an address that GNOME already holds.
                 row.add_suffix(&route_button(&gettext("Choose…"), account.id));
-                parent.add_row(&row);
+                put(row.upcast_ref());
             }
             Line::Gap { .. } => {}
         }
     }
     if calendar_link(account, offers).shows_connect() {
-        parent.add_row(&heading(&gettext("Calendar and contacts")));
+        put(heading(&gettext("Calendar and contacts")).upcast_ref());
         for (title, name) in [
             (
                 gettext("Calendar"),
@@ -153,19 +263,23 @@ fn fill_rows(
                 account.id,
                 connect,
             ));
-            parent.add_row(&row);
+            put(row.upcast_ref());
         }
+    } else if !contacts.added {
+        // The page was built without it, while Contacts said Not connected.
+        put(&(contacts.build)(offers));
     }
     if !gaps.is_empty() {
         // Translators: a small heading over what only gmail.com does for the
         // account; gmail.com is a name, keep it as it is.
-        parent.add_row(&heading(&gettext("On gmail.com")));
+        put(heading(&gettext("On gmail.com")).upcast_ref());
     }
     for gap in gaps {
         if let Line::Gap { text, link, label } = gap {
-            parent.add_row(&gap_row(&text, link, &label));
+            put(gap_row(&text, link, &label).upcast_ref());
         }
     }
+    added
 }
 
 /// A small heading over a group of the account's rows, in capitals as the
@@ -368,6 +482,7 @@ pub(crate) mod checks {
         connect_asks_for_the_account_and_a_paused_one_gets_it_too();
         an_api_account_shows_its_features_and_nothing_to_connect();
         rows_built_again_after_a_connect_read_as_connected();
+        refilling_one_accounts_rows_leaves_the_rest_alone();
     }
 
     fn account(state: AccountState) -> Account {
@@ -412,8 +527,26 @@ pub(crate) mod checks {
         let sink = Rc::clone(&pressed);
         let connect: Rc<dyn Fn(AccountId)> = Rc::new(move |id| sink.borrow_mut().push(id));
         let parent = adw::ExpanderRow::new();
-        fill_rows(&parent, &account(state), sign_in, offers, &connect);
+        // The page holds the control unless the account has no calendar.
+        let kept = Contacts {
+            added: offers.calendar,
+            ..contacts()
+        };
+        register(&parent, &account(state), sign_in, offers, &connect, kept);
         (parent, pressed)
+    }
+
+    /// What the Contacts control would be: a switch row.
+    fn contacts() -> Contacts {
+        Contacts {
+            build: Rc::new(|_| {
+                adw::SwitchRow::builder()
+                    .title("Contacts")
+                    .build()
+                    .upcast::<gtk::Widget>()
+            }),
+            added: false,
+        }
     }
 
     fn titles(parent: &adw::ExpanderRow) -> Vec<String> {
@@ -540,5 +673,62 @@ pub(crate) mod checks {
             !found.contains(&"CALENDAR AND CONTACTS".to_string()),
             "{found:?}"
         );
+    }
+
+    /// What the window does once the consent goes through: only this
+    /// account's Gmail rows change. Another account's expander keeps its
+    /// state, and a field being typed in keeps its text and its focus.
+    fn refilling_one_accounts_rows_leaves_the_rest_alone() {
+        let (mine, _) = filled(AccountState::Ok, imap(), no_calendar());
+        let other = adw::ExpanderRow::builder().expanded(true).build();
+        let typing = gtk::Entry::new();
+        let column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        column.append(&mine);
+        column.append(&other);
+        column.append(&typing);
+        let window = gtk::Window::builder().child(&column).build();
+        window.present();
+        typing.set_text("half a signature");
+        typing.grab_focus();
+        assert!(
+            GtkWindowExt::focus(&window).is_some_and(|f| f.is_ancestor(&typing)),
+            "the entry keeps the focus"
+        );
+        assert!(titles(&mine).contains(&"Contacts".to_string()));
+        let before = titles(&mine);
+        assert!(before.contains(&"CALENDAR AND CONTACTS".to_string()));
+        assert!(refill(3, &account(AccountState::Ok), Offers::EVERYTHING));
+        let mut rows = Vec::new();
+        rows_of(mine.upcast_ref(), &mut rows);
+        let said: Vec<String> = rows
+            .iter()
+            .filter_map(|row| row.downcast_ref::<adw::ActionRow>())
+            .filter_map(|row| row.subtitle())
+            .map(|subtitle| subtitle.to_string())
+            .collect();
+        assert!(!said.contains(&"Not connected".to_string()), "{said:?}");
+        let after = titles(&mine);
+        assert!(
+            !after.contains(&"CALENDAR AND CONTACTS".to_string()),
+            "{after:?}"
+        );
+        // The Contacts control takes the place of the Not connected row.
+        assert_eq!(
+            after.iter().filter(|t| *t == "Contacts").count(),
+            1,
+            "{after:?}"
+        );
+        assert!(after.contains(&"GMAIL".to_string()));
+        assert!(other.is_expanded());
+        assert_eq!(typing.text(), "half a signature");
+        // No window manager under the checks, so ask the window which widget
+        // it would focus rather than whether the window is active.
+        assert!(
+            GtkWindowExt::focus(&window).is_some_and(|f| f.is_ancestor(&typing)),
+            "the entry keeps the focus"
+        );
+        // Asked again for an account the dialog never showed, nothing happens.
+        assert!(!refill(99, &account(AccountState::Ok), Offers::EVERYTHING));
+        window.close();
     }
 }

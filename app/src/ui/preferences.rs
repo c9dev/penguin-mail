@@ -391,7 +391,7 @@ fn accounts_page(
             &row,
         ));
         row.add_row(&super::sender_prefs::account_row(app, account));
-        super::contacts_prefs::account_rows(
+        let contacts = super::contacts_prefs::account_rows(
             app,
             &settings,
             account,
@@ -413,7 +413,7 @@ fn accounts_page(
         );
         row.add_row(&space_row);
         space_rows.push((account.id, update));
-        google_route::rows(app, account, *offers, &row, &connect);
+        google_route::rows(app, account, *offers, &row, &connect, contacts);
         if let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email) {
             let unavailable = adw::ActionRow::builder()
                 .use_markup(false)

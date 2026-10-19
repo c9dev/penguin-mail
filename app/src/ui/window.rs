@@ -3897,21 +3897,11 @@ impl MainWindow {
             }
             return;
         }
-        let dialog = self.build_preferences(&app, focus);
-        self.keep_preferences(dialog);
-    }
-
-    /// A new Preferences dialog, presented.
-    fn build_preferences(
-        self: &Rc<Self>,
-        app: &Rc<App>,
-        focus: Option<super::preferences::Focus<'_>>,
-    ) -> Rc<super::preferences::dialog::Dialog> {
         // Preferences puts each account on the pages that apply to it.
         let accounts = app.accounts();
         let weak = Rc::downgrade(self);
-        super::preferences::present(
-            app,
+        let dialog = super::preferences::present(
+            &app,
             &accounts,
             |id| self.offers(id),
             |id| self.withheld(id),
@@ -3922,36 +3912,30 @@ impl MainWindow {
             },
             &self.window,
             focus,
-        )
+        );
+        self.keep_preferences(dialog);
     }
 
-    /// Says the calendar consent went through. Preferences holds rows built
-    /// before it, so an open one is built again on the same page, on this
-    /// account, and the toast goes on its own overlay where the person is
-    /// looking.
+    /// Says the calendar consent went through. An open Preferences fills
+    /// that account's Gmail rows again in place, so what the person is
+    /// typing, the scroll and the other accounts stay as they are, and the
+    /// toast goes on its own overlay where the person is looking.
     fn calendar_connected(self: &Rc<Self>, account: &Account) {
         let said = fill(
             // Translators: {account} is an email address.
             &gettext("The calendar and contacts of {account} are connected."),
             &[("account", &account.email)],
         );
-        let (Some(open), Some(app)) = (self.open_preferences(), self.app.upgrade()) else {
-            return self.toast(&said);
-        };
-        let page = open.visible_page_name();
-        // No borrow is held: closing runs the closed handler, which reads
-        // `preferences` itself.
-        open.window.force_close();
-        let focus = (page.as_deref() == Some("accounts"))
-            .then_some(super::preferences::Focus::Storage(account.email.as_str()));
-        let dialog = self.build_preferences(&app, focus);
-        if let Some(page) = page.filter(|page| page != "accounts") {
-            dialog.set_visible_page_name(&page);
+        let refilled =
+            super::preferences::google_route::refill(account.id, account, self.offers(account.id));
+        match self.open_preferences() {
+            Some(open) if refilled => {
+                let toast = adw::Toast::new(&said);
+                toast.set_use_markup(false);
+                open.toasts.add_toast(toast);
+            }
+            _ => self.toast(&said),
         }
-        let toast = adw::Toast::new(&said);
-        toast.set_use_markup(false);
-        dialog.toasts.add_toast(toast);
-        self.keep_preferences(dialog);
     }
 
     /// Preferences, when it is open.
