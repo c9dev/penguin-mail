@@ -24,6 +24,7 @@ impl RoutePage {
         let title = heading(&route_choice::title());
         title.set_xalign(0.5);
         title.set_justify(gtk::Justification::Center);
+        title.add_css_class("post-route-title");
         let list = boxed_list();
         list.add_css_class("post-routes");
         let footer = gtk::Label::builder()
@@ -115,12 +116,13 @@ impl ConsentPage {
         // Translators: Google is a name; keep it as it is.
         let title = heading(&gettext("Add your Google Calendar and contacts?"));
         centred(&title);
+        title.add_css_class("post-route-title");
         let body = label(
             // Translators: Google is a name; keep it as it is.
             &gettext(
                 "Penguin Mail asks Google for your calendar, your contacts and the files it adds to Drive. Google will show its own screen. Your mail is already set up.",
             ),
-            &["post-lede"],
+            &["post-lede", "post-consent-text"],
         );
         centred(&body);
         let note = label(
@@ -129,7 +131,7 @@ impl ConsentPage {
             &gettext(
                 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go to Penguin Mail (unsafe).",
             ),
-            &["post-lede"],
+            &["post-lede", "post-consent-text", "post-consent-note"],
         );
         centred(&note);
         note.set_visible(note_shown(
@@ -137,17 +139,17 @@ impl ConsentPage {
         ));
         let not_now = gtk::Button::builder()
             .label(gettext("Not Now"))
-            .css_classes(["pill", "post-mid-pill"])
+            .css_classes(["post-consent-button"])
             .build();
         let continue_button = gtk::Button::builder()
             // Translators: Google is a name; keep it as it is.
             .label(gettext("Continue to Google"))
-            .css_classes(["pill", "suggested-action", "post-mid-pill"])
+            .css_classes(["suggested-action", "post-consent-button"])
             .build();
         let buttons = gtk::Box::builder()
-            .spacing(12)
+            .spacing(10)
             .halign(gtk::Align::Center)
-            .margin_top(17)
+            .margin_top(20)
             .build();
         buttons.append(&not_now);
         buttons.append(&continue_button);

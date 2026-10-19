@@ -2393,7 +2393,7 @@ msgstr "Penguin Mail không thể khởi động"
 msgid "Report a Problem"
 msgstr "Báo cáo sự cố"
 
-#: app/src/move_banner.rs:66
+#: app/src/move_banner.rs:68
 msgid ""
 "Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
 "your mail back. Nothing on this computer was lost."
@@ -2401,12 +2401,12 @@ msgstr ""
 "Penguin Mail không thể nhận thư mới cho {address}. Hãy chọn cách đăng nhập "
 "để lấy lại thư. Không có gì trên máy tính này bị mất."
 
-#: app/src/move_banner.rs:73
+#: app/src/move_banner.rs:75
 msgid "Choose how {address} signs in to keep your mail arriving."
 msgstr "Hãy chọn cách {address} đăng nhập để thư tiếp tục được gửi đến."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/move_banner.rs:84
+#: app/src/move_banner.rs:86
 msgid ""
 "{count} Gmail account can't get new mail. Choose how each signs in to get "
 "your mail back. Nothing on this computer was lost."
@@ -2418,19 +2418,19 @@ msgstr[0] ""
 "từng tài khoản để lấy lại thư. Không có gì trên máy tính này bị mất."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/move_banner.rs:92
+#: app/src/move_banner.rs:94
 msgid "{count} Gmail account needs a new way to sign in"
 msgid_plural "{count} Gmail accounts need a new way to sign in"
 msgstr[0] "{count} tài khoản Gmail cần một cách đăng nhập mới"
 
 #. Translators: GNOME Online Accounts is a name; keep it as it is.
-#: app/src/move_banner.rs:103 app/src/route_choice.rs:125
+#: app/src/move_banner.rs:105 app/src/route_choice.rs:125
 msgid "Use GNOME Online Accounts"
 msgstr "Dùng Tài khoản trực tuyến GNOME"
 
 #. The GNOME Online Accounts plan replaces this with its
 #. one-click move for an address that GNOME already holds.
-#: app/src/move_banner.rs:105 app/src/ui/preferences/google_route.rs:242
+#: app/src/move_banner.rs:107 app/src/ui/preferences/google_route.rs:242
 msgid "Choose…"
 msgstr "Chọn…"
 
@@ -3813,7 +3813,7 @@ msgid "Deleted by {who} without being read"
 msgstr "{who} đã xóa mà chưa đọc"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:81 app/src/ui/move_sheet.rs:59
+#: app/src/route_choice.rs:81 app/src/ui/move_sheet.rs:63
 msgid "Choose how Penguin Mail signs in to Gmail"
 msgstr "Chọn cách Penguin Mail đăng nhập vào Gmail"
 
@@ -4501,7 +4501,7 @@ msgstr "Nhập cài đặt máy chủ thủ công"
 msgid "Add a calendar without mail"
 msgstr "Thêm lịch không có thư"
 
-#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:1973
+#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:1996
 msgid "Add Account"
 msgstr "Thêm tài khoản"
 
@@ -4551,38 +4551,44 @@ msgstr "Đang tra cứu"
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "Chỉ tên miền được gửi đi, không bao giờ gửi địa chỉ đầy đủ."
 
-#: app/src/ui/add_account.rs:868
+#: app/src/ui/add_account.rs:874 app/src/ui/add_account.rs:3045
+#: app/src/ui/add_account.rs:3138 app/src/ui/add_account.rs:3658
+#: app/src/ui/add_account.rs:4623
+msgid "Signing In…"
+msgstr "Đang đăng nhập…"
+
+#: app/src/ui/add_account.rs:876
 msgid "Moving your account. This takes a moment."
 msgstr "Đang chuyển tài khoản của bạn. Việc này mất một chút thời gian."
 
-#: app/src/ui/add_account.rs:873
+#: app/src/ui/add_account.rs:895
 msgid "Sign In in Your Browser"
 msgstr "Đăng nhập trong trình duyệt"
 
-#: app/src/ui/add_account.rs:890
+#: app/src/ui/add_account.rs:912
 msgid "Time left"
 msgstr "Thời gian còn lại"
 
-#: app/src/ui/add_account.rs:899 app/src/ui/add_account.rs:3793
+#: app/src/ui/add_account.rs:921 app/src/ui/add_account.rs:3817
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail ngừng chờ sau năm phút."
 
-#: app/src/ui/add_account.rs:905 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:927 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "Mở lại trang"
 
-#: app/src/ui/add_account.rs:910
+#: app/src/ui/add_account.rs:932
 msgid "Copy Link"
 msgstr "Sao chép liên kết"
 
-#: app/src/ui/add_account.rs:915 app/src/ui/add_account.rs:1135
+#: app/src/ui/add_account.rs:937 app/src/ui/add_account.rs:1158
 #: app/src/ui/hide_my_email.rs:376 app/src/ui/hide_my_email.rs:380
 #: app/src/ui/key_import.rs:213 app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
 msgstr "Thử lại"
 
-#: app/src/ui/add_account.rs:920 app/src/ui/add_account.rs:4120
-#: app/src/ui/add_account.rs:4189 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:942 app/src/ui/add_account.rs:4145
+#: app/src/ui/add_account.rs:4214 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4598,34 +4604,34 @@ msgstr "Thử lại"
 msgid "Cancel"
 msgstr "Hủy"
 
-#: app/src/ui/add_account.rs:1061 app/src/ui/add_account.rs:1216
-#: app/src/ui/add_account.rs:3030 app/src/ui/add_account.rs:3120
-#: app/src/ui/add_account.rs:3577 app/src/ui/window.rs:1359
+#: app/src/ui/add_account.rs:1084 app/src/ui/add_account.rs:1239
+#: app/src/ui/add_account.rs:3053 app/src/ui/add_account.rs:3143
+#: app/src/ui/add_account.rs:3600 app/src/ui/window.rs:1359
 msgid "Sign In"
 msgstr "Đăng nhập"
 
-#: app/src/ui/add_account.rs:1066 app/src/ui/add_account.rs:1069
+#: app/src/ui/add_account.rs:1089 app/src/ui/add_account.rs:1092
 msgid "Your Name"
 msgstr "Tên của bạn"
 
-#: app/src/ui/add_account.rs:1086 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1109 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "Đăng nhập bằng trình duyệt"
 
-#: app/src/ui/add_account.rs:1104
+#: app/src/ui/add_account.rs:1127
 msgid "Use an API Token Instead"
 msgstr "Dùng mã thông báo API thay thế"
 
-#: app/src/ui/add_account.rs:1112 app/src/ui/add_account.rs:1115
+#: app/src/ui/add_account.rs:1135 app/src/ui/add_account.rs:1138
 msgid "Sign In With a Token"
 msgstr "Đăng nhập bằng mã thông báo"
 
-#: app/src/ui/add_account.rs:1118 app/src/ui/add_account.rs:1124
+#: app/src/ui/add_account.rs:1141 app/src/ui/add_account.rs:1147
 msgid "App Password for Calendar"
 msgstr "Mật khẩu ứng dụng cho lịch"
 
-#: app/src/ui/add_account.rs:1120
+#: app/src/ui/add_account.rs:1143
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
@@ -4633,28 +4639,28 @@ msgstr ""
 "Không bắt buộc. Tạo mật khẩu ứng dụng có quyền truy cập lịch trong cài đặt "
 "nhà cung cấp."
 
-#: app/src/ui/add_account.rs:1130 app/src/ui/add_account.rs:1759
+#: app/src/ui/add_account.rs:1153 app/src/ui/add_account.rs:1782
 msgid "Server Settings"
 msgstr "Cài đặt máy chủ"
 
-#: app/src/ui/add_account.rs:1154 app/src/ui/add_account.rs:3177
+#: app/src/ui/add_account.rs:1177 app/src/ui/add_account.rs:3200
 msgid "Outgoing"
 msgstr "Thư đi"
 
-#: app/src/ui/add_account.rs:1159
+#: app/src/ui/add_account.rs:1182
 msgid "Keep this account's mail on this computer alone"
 msgstr "Chỉ giữ thư của tài khoản này trên máy tính"
 
-#: app/src/ui/add_account.rs:1164
+#: app/src/ui/add_account.rs:1187
 msgid "Servers"
 msgstr "Máy chủ"
 
-#: app/src/ui/add_account.rs:1169 app/src/ui/add_account.rs:1171
-#: app/src/ui/add_account.rs:2670 app/src/ui/add_account.rs:2674
+#: app/src/ui/add_account.rs:1192 app/src/ui/add_account.rs:1194
+#: app/src/ui/add_account.rs:2693 app/src/ui/add_account.rs:2697
 msgid "Use these servers"
 msgstr "Dùng các máy chủ này"
 
-#: app/src/ui/add_account.rs:1173 app/src/ui/add_account.rs:2672
+#: app/src/ui/add_account.rs:1196 app/src/ui/add_account.rs:2695
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -4662,45 +4668,45 @@ msgstr ""
 "Penguin Mail đã đoán các máy chủ này. Mật khẩu chỉ được gửi tới đó sau khi "
 "bạn chọn ô xác nhận."
 
-#: app/src/ui/add_account.rs:1179 app/src/ui/add_account.rs:1480
-#: app/src/ui/add_account.rs:1715
+#: app/src/ui/add_account.rs:1202 app/src/ui/add_account.rs:1503
+#: app/src/ui/add_account.rs:1738
 msgid "Server"
 msgstr "Máy chủ"
 
-#: app/src/ui/add_account.rs:1183
+#: app/src/ui/add_account.rs:1206
 msgid "Use IMAP Instead"
 msgstr "Dùng IMAP"
 
-#: app/src/ui/add_account.rs:1279
+#: app/src/ui/add_account.rs:1302
 msgid "No Other Mail Apps"
 msgstr "Không hỗ trợ ứng dụng thư khác"
 
-#: app/src/ui/add_account.rs:1285
+#: app/src/ui/add_account.rs:1308
 msgid "Use another address"
 msgstr "Dùng địa chỉ khác"
 
-#: app/src/ui/add_account.rs:1286
+#: app/src/ui/add_account.rs:1309
 msgid "Change the address and look it up again"
 msgstr "Đổi địa chỉ và tra cứu lại"
 
-#: app/src/ui/add_account.rs:1292
+#: app/src/ui/add_account.rs:1315
 msgid "Choose another provider"
 msgstr "Chọn nhà cung cấp khác"
 
-#: app/src/ui/add_account.rs:1293
+#: app/src/ui/add_account.rs:1316
 msgid "Back to the list"
 msgstr "Trở về danh sách"
 
-#: app/src/ui/add_account.rs:1339
+#: app/src/ui/add_account.rs:1362
 msgid "Account Added"
 msgstr "Đã thêm tài khoản"
 
-#: app/src/ui/add_account.rs:1362
+#: app/src/ui/add_account.rs:1385
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "Lưu trữ"
 
-#: app/src/ui/add_account.rs:1396
+#: app/src/ui/add_account.rs:1419
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
@@ -4708,52 +4714,52 @@ msgstr ""
 "Cấp quyền sẽ mở lại trang của Google. Bạn cũng có thể thực hiện sau trong "
 "Tùy chọn."
 
-#: app/src/ui/add_account.rs:1400
+#: app/src/ui/add_account.rs:1423
 msgid "Open Inbox"
 msgstr "Mở Hộp thư đến"
 
-#: app/src/ui/add_account.rs:1402
+#: app/src/ui/add_account.rs:1425
 msgid "Add Another Account"
 msgstr "Thêm tài khoản khác"
 
-#: app/src/ui/add_account.rs:1404 app/src/ui/confirm.rs:46
-#: app/src/ui/route_page.rs:139
+#: app/src/ui/add_account.rs:1427 app/src/ui/confirm.rs:46
+#: app/src/ui/route_page.rs:141
 msgid "Not Now"
 msgstr "Để sau"
 
-#: app/src/ui/add_account.rs:1409 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/add_account.rs:1432 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:483
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1491
 msgid "Grant Access"
 msgstr "Cấp quyền"
 
-#: app/src/ui/add_account.rs:1483 app/src/ui/add_account.rs:1484
+#: app/src/ui/add_account.rs:1506 app/src/ui/add_account.rs:1507
 msgid "Port"
 msgstr "Cổng"
 
-#: app/src/ui/add_account.rs:1494 app/src/ui/add_account.rs:1495
+#: app/src/ui/add_account.rs:1517 app/src/ui/add_account.rs:1518
 msgid "Security"
 msgstr "Bảo mật"
 
-#: app/src/ui/add_account.rs:1556
+#: app/src/ui/add_account.rs:1579
 msgid "Mail on the Server"
 msgstr "Thư trên máy chủ"
 
-#: app/src/ui/add_account.rs:1558
+#: app/src/ui/add_account.rs:1581
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail giữ mọi thư tải xuống trên máy tính này."
 
-#: app/src/ui/add_account.rs:1563 app/src/ui/add_account.rs:1564
+#: app/src/ui/add_account.rs:1586 app/src/ui/add_account.rs:1587
 #: app/src/ui/preferences.rs:1385
 msgid "Days"
 msgstr "Ngày"
 
-#: app/src/ui/add_account.rs:1638 app/src/ui/add_account.rs:1716
+#: app/src/ui/add_account.rs:1661 app/src/ui/add_account.rs:1739
 msgid "Incoming User Name"
 msgstr "Tên người dùng nhận thư"
 
-#: app/src/ui/add_account.rs:1639
+#: app/src/ui/add_account.rs:1662
 msgid "Outgoing User Name"
 msgstr "Tên người dùng gửi thư"
 
@@ -4761,63 +4767,63 @@ msgstr "Tên người dùng gửi thư"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1645
+#: app/src/ui/add_account.rs:1668
 msgid "Leave it empty to use the incoming user name."
 msgstr "Để trống để dùng tên người dùng nhận thư."
 
-#: app/src/ui/add_account.rs:1648 app/src/ui/add_account.rs:1650
+#: app/src/ui/add_account.rs:1671 app/src/ui/add_account.rs:1673
 msgid "Outgoing Password"
 msgstr "Mật khẩu gửi thư"
 
-#: app/src/ui/add_account.rs:1652
+#: app/src/ui/add_account.rs:1675
 msgid "Leave it empty to use the password you sign in with."
 msgstr "Để trống để dùng mật khẩu đăng nhập."
 
-#: app/src/ui/add_account.rs:1655
+#: app/src/ui/add_account.rs:1678
 msgid "Incoming Mail"
 msgstr "Thư đến"
 
-#: app/src/ui/add_account.rs:1664 app/src/ui/add_account.rs:1665
+#: app/src/ui/add_account.rs:1687 app/src/ui/add_account.rs:1688
 msgid "Protocol"
 msgstr "Giao thức"
 
-#: app/src/ui/add_account.rs:1672
+#: app/src/ui/add_account.rs:1695
 msgid "Sign-In"
 msgstr "Đăng nhập"
 
-#: app/src/ui/add_account.rs:1674 app/src/ui/add_account.rs:1717
+#: app/src/ui/add_account.rs:1697 app/src/ui/add_account.rs:1740
 msgid "Leave the user names empty to sign in with your address."
 msgstr "Để trống tên người dùng để đăng nhập bằng địa chỉ email."
 
-#: app/src/ui/add_account.rs:1678
+#: app/src/ui/add_account.rs:1701
 msgid "Outgoing Mail"
 msgstr "Thư đi"
 
-#: app/src/ui/add_account.rs:1710
+#: app/src/ui/add_account.rs:1733
 msgid "Session URL"
 msgstr "URL phiên"
 
-#: app/src/ui/add_account.rs:1711 app/src/ui/add_account.rs:1790
+#: app/src/ui/add_account.rs:1734 app/src/ui/add_account.rs:1813
 msgid "User Name"
 msgstr "Tên người dùng"
 
-#: app/src/ui/add_account.rs:1712
+#: app/src/ui/add_account.rs:1735
 msgid "Leave the user name empty to sign in with your address."
 msgstr "Để trống tên người dùng để đăng nhập bằng địa chỉ email."
 
-#: app/src/ui/add_account.rs:1748 app/src/ui/add_account.rs:3490
+#: app/src/ui/add_account.rs:1771 app/src/ui/add_account.rs:3513
 msgid "Use These Settings"
 msgstr "Dùng các cài đặt này"
 
-#: app/src/ui/add_account.rs:1788 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1811 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "Địa chỉ máy chủ"
 
-#: app/src/ui/add_account.rs:1803
+#: app/src/ui/add_account.rs:1826
 msgid "Calendar Server"
 msgstr "Máy chủ lịch"
 
-#: app/src/ui/add_account.rs:1805
+#: app/src/ui/add_account.rs:1828
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -4825,24 +4831,24 @@ msgstr ""
 "Một máy chủ CalDAV, chẳng hạn Nextcloud. Nếu máy chủ dùng đăng nhập hai "
 "bước, hãy tạo mật khẩu ứng dụng cho Penguin Mail."
 
-#: app/src/ui/add_account.rs:1815 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/add_account.rs:1838 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "Thêm lịch"
 
-#: app/src/ui/add_account.rs:1827
+#: app/src/ui/add_account.rs:1850
 msgid "Add a Calendar"
 msgstr "Thêm lịch"
 
-#: app/src/ui/add_account.rs:2439 app/src/ui/add_account.rs:4521
+#: app/src/ui/add_account.rs:2462 app/src/ui/add_account.rs:4552
 msgid "Looking up {domain}"
 msgstr "Đang tra cứu {domain}"
 
-#: app/src/ui/add_account.rs:2701
+#: app/src/ui/add_account.rs:2724
 msgid "{domain} uses {provider}"
 msgstr "{domain} dùng {provider}"
 
-#: app/src/ui/add_account.rs:2725
+#: app/src/ui/add_account.rs:2748
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -4850,32 +4856,27 @@ msgstr ""
 "Không phải mật khẩu trang web {provider}. Tạo mật khẩu có quyền truy cập thư "
 "trong cài đặt của {provider} và dán vào đây."
 
-#: app/src/ui/add_account.rs:3022 app/src/ui/add_account.rs:3115
-#: app/src/ui/add_account.rs:3635 app/src/ui/add_account.rs:4592
-msgid "Signing In…"
-msgstr "Đang đăng nhập…"
-
-#: app/src/ui/add_account.rs:3196
+#: app/src/ui/add_account.rs:3219
 msgid "Could not reach {host}"
 msgstr "Không thể kết nối tới {host}"
 
-#: app/src/ui/add_account.rs:3198
+#: app/src/ui/add_account.rs:3221
 msgid "Your password was not sent."
 msgstr "Mật khẩu của bạn chưa được gửi."
 
-#: app/src/ui/add_account.rs:3468
+#: app/src/ui/add_account.rs:3491
 msgid "Looking Up…"
 msgstr "Đang tra cứu…"
 
-#: app/src/ui/add_account.rs:3576 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3599 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "Đăng nhập lại"
 
-#: app/src/ui/add_account.rs:3781 app/src/ui/add_account.rs:4170
+#: app/src/ui/add_account.rs:3805 app/src/ui/add_account.rs:4195
 msgid "Sign in with {provider} in your browser"
 msgstr "Đăng nhập với {provider} trong trình duyệt"
 
-#: app/src/ui/add_account.rs:3786 app/src/ui/add_account.rs:4175
+#: app/src/ui/add_account.rs:3810 app/src/ui/add_account.rs:4200
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -4883,7 +4884,7 @@ msgstr ""
 "Trang đăng nhập của {provider} đang mở trong trình duyệt. Cửa sổ này sẽ tiếp "
 "tục khi bạn hoàn tất ở đó."
 
-#: app/src/ui/add_account.rs:3809
+#: app/src/ui/add_account.rs:3833
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -4891,7 +4892,7 @@ msgstr ""
 "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google. Tải "
 "bản phát hành từ github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3812
+#: app/src/ui/add_account.rs:3836
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -4899,7 +4900,7 @@ msgstr ""
 "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Microsoft. "
 "Tải bản phát hành từ github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3823
+#: app/src/ui/add_account.rs:3847
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -4907,27 +4908,27 @@ msgstr ""
 "Đang đăng nhập bằng ứng dụng khách Google của bạn. Trang đăng nhập Google "
 "đang mở trong trình duyệt. Cửa sổ này sẽ tiếp tục khi bạn hoàn tất ở đó."
 
-#: app/src/ui/add_account.rs:4055
+#: app/src/ui/add_account.rs:4080
 msgid "Link copied"
 msgstr "Đã sao chép liên kết"
 
-#: app/src/ui/add_account.rs:4182
+#: app/src/ui/add_account.rs:4207
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail ngừng chờ sau mười phút."
 
-#: app/src/ui/add_account.rs:4205
+#: app/src/ui/add_account.rs:4230
 msgid "Canceling…"
 msgstr "Đang hủy…"
 
-#: app/src/ui/add_account.rs:4269
+#: app/src/ui/add_account.rs:4294
 msgid "{account} is added"
 msgstr "Đã thêm {account}"
 
-#: app/src/ui/add_account.rs:4289
+#: app/src/ui/add_account.rs:4314
 msgid "{account} is ready"
 msgstr "{account} đã sẵn sàng"
 
-#: app/src/ui/add_account.rs:4595
+#: app/src/ui/add_account.rs:4626
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
@@ -6816,7 +6817,7 @@ msgid "Options for {calendar}"
 msgstr "Tùy chọn cho {calendar}"
 
 #: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:376
-#: app/src/ui/preferences/google_route.rs:380
+#: app/src/ui/preferences/google_route.rs:385
 msgid "Connect"
 msgstr "Kết nối"
 
@@ -8438,7 +8439,7 @@ msgid "Gray"
 msgstr "Xám"
 
 #. Translators: Google and Gmail are names; keep them as they are.
-#: app/src/ui/move_sheet.rs:62
+#: app/src/ui/move_sheet.rs:66
 msgid ""
 "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
 "account below to keep your mail arriving. Your mail and settings stay as "
@@ -8448,11 +8449,11 @@ msgstr ""
 "cho mỗi tài khoản Gmail bên dưới để thư tiếp tục được gửi đến. Thư và cài "
 "đặt của bạn vẫn giữ nguyên, và không có gì phải tải xuống lại."
 
-#: app/src/ui/move_sheet.rs:84
+#: app/src/ui/move_sheet.rs:88
 msgid "Later"
 msgstr "Để sau"
 
-#: app/src/ui/move_sheet.rs:88
+#: app/src/ui/move_sheet.rs:92
 msgid "Choose Now"
 msgstr "Chọn ngay"
 
@@ -9113,12 +9114,12 @@ msgid "This message is waiting to be sent"
 msgstr "Thư này đang chờ gửi"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:109 app/src/ui/route_page.rs:116
+#: app/src/ui/route_page.rs:110 app/src/ui/route_page.rs:117
 msgid "Add your Google Calendar and contacts?"
 msgstr "Thêm Google Lịch và danh bạ của bạn?"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:121
+#: app/src/ui/route_page.rs:123
 msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
@@ -9128,7 +9129,7 @@ msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
-#: app/src/ui/route_page.rs:130
+#: app/src/ui/route_page.rs:132
 msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
@@ -9137,11 +9138,11 @@ msgstr ""
 "cao, rồi Chuyển đến Penguin Mail (không an toàn)."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:144
+#: app/src/ui/route_page.rs:146
 msgid "Continue to Google"
 msgstr "Tiếp tục đến Google"
 
-#: app/src/ui/route_page.rs:188
+#: app/src/ui/route_page.rs:190
 msgid "Recommended"
 msgstr "Khuyên dùng"
 

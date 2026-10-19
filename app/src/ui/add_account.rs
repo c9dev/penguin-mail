@@ -854,6 +854,9 @@ struct BrowserPage {
     cancel: gtk::Button,
     /// The row of buttons under the wait, stacked on a narrow window.
     buttons: gtk::Box,
+    /// The title and lede a finishing move replaced, for a failure to
+    /// put back.
+    held: RefCell<Option<(glib::GString, glib::GString)>>,
 }
 
 impl BrowserPage {
@@ -864,8 +867,27 @@ impl BrowserPage {
         self.banded.page.set_can_pop(false);
         self.left.set_text("");
         self.progress.set_visible(false);
-        self.note
+        self.held
+            .replace(Some((self.title.text(), self.lede.text())));
+        // The browser has done its part, so nothing on the page points
+        // back to it.
+        self.title.set_text(&gettext("Signing In…"));
+        self.lede
             .set_text(&gettext("Moving your account. This takes a moment."));
+        self.steps.set_visible(false);
+        self.waiting.set_visible(false);
+        self.again.set_visible(false);
+        self.copy.set_visible(false);
+    }
+
+    /// A move that failed while finishing says again what it asked of the
+    /// browser, above the failure. A page that was not finishing keeps its
+    /// words.
+    fn unfinish(&self) {
+        if let Some((title, lede)) = self.held.take() {
+            self.title.set_text(&title);
+            self.lede.set_text(&lede);
+        }
     }
 }
 
@@ -952,6 +974,7 @@ fn browser_page() -> BrowserPage {
         retry,
         cancel,
         buttons,
+        held: RefCell::new(None),
     }
 }
 
@@ -3777,6 +3800,7 @@ impl Dialog {
         self.browser_provider.set(browser);
         let provider = browser.name();
         let page = &self.browser;
+        page.held.take();
         page.title.set_text(&fill(
             &gettext("Sign in with {provider} in your browser"),
             &[("provider", provider)],
@@ -3948,6 +3972,7 @@ impl Dialog {
     fn browser_failed_with(&self, failure: &Failure) {
         let page = &self.browser;
         // A move that failed while finishing gives its ways out back.
+        page.unfinish();
         page.cancel.set_sensitive(true);
         page.banded.page.set_can_pop(true);
         page.steps.set_visible(false);
@@ -4514,6 +4539,12 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 Some(provider),
             );
         }
+        // A move whose browser sign-in came back, while it finishes.
+        "browser-moving" => {
+            this.start_browser(Browser::Google, None);
+            this.asking.forget();
+            this.finishing_move();
+        }
         "lookup" => {
             this.typed.replace(Some(studio.clone()));
             this.checks.replace(Checks::default());
@@ -4820,6 +4851,7 @@ pub(crate) mod checks {
         a_page_without_the_calendar_password_folds_its_list_away();
         unfolding_brings_the_token_switch_back_as_it_was();
         a_move_cannot_be_left_once_its_sign_in_has_returned();
+        a_move_that_fails_while_finishing_gets_its_words_back();
     }
 
     fn a_move_cannot_be_left_once_its_sign_in_has_returned() {
@@ -4828,12 +4860,34 @@ pub(crate) mod checks {
         page.finishing();
         assert!(!page.cancel.is_sensitive());
         assert!(!page.banded.page.can_pop());
-        assert_eq!(page.left.text(), "");
-        assert!(!page.progress.get_visible());
+        // The browser is done with, so the page stops saying it is open.
+        assert_eq!(page.title.text(), "Signing In…");
         assert_eq!(
-            page.note.text(),
+            page.lede.text(),
             "Moving your account. This takes a moment."
         );
+        assert!(!page.steps.get_visible());
+        assert!(!page.waiting.get_visible());
+        assert!(!page.again.get_visible());
+        assert!(!page.copy.get_visible());
+    }
+
+    fn a_move_that_fails_while_finishing_gets_its_words_back() {
+        let page = browser_page();
+        page.title.set_text("Sign in with Google in your browser");
+        page.lede
+            .set_text("Google's sign-in page is open in your browser.");
+        page.finishing();
+        page.unfinish();
+        assert_eq!(page.title.text(), "Sign in with Google in your browser");
+        assert_eq!(
+            page.lede.text(),
+            "Google's sign-in page is open in your browser."
+        );
+        // A page that never reached the end keeps what it says.
+        page.title.set_text("Could not sign in");
+        page.unfinish();
+        assert_eq!(page.title.text(), "Could not sign in");
     }
 
     fn the_calendar_password_stays_while_the_browser_leads() {

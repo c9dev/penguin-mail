@@ -24,6 +24,8 @@ pub struct MoveBanner {
     pub accounts: Vec<AccountId>,
     /// The button signs the one account in through GNOME Online Accounts.
     pub goa_now: bool,
+    /// Some account's mail has stopped, which the banner's tint shows.
+    pub paused: bool,
 }
 
 /// The accounts that have to move, in the order given. None while no route
@@ -109,6 +111,7 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
         button,
         accounts,
         goa_now,
+        paused,
     })
 }
 

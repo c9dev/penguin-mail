@@ -1607,7 +1607,7 @@ headerbar.post-band-header windowcontrols > button > image {
 }
 headerbar.post-band-header windowcontrols > button:hover > image { background-color: #6b6057; }
 
-.post-dialog, .post-first {
+.post-dialog, .post-first, .move-sheet {
   --post-dim: #5f5f67;
   --post-faint: #8a8a93;
   --post-line: #e6e6ea;
@@ -1619,7 +1619,7 @@ headerbar.post-band-header windowcontrols > button:hover > image { background-co
   --dialog-bg-color: #fafafb;
   --card-bg-color: #ffffff;
 }
-.app-dark .post-dialog, .app-dark .post-first {
+.app-dark .post-dialog, .app-dark .post-first, .app-dark .move-sheet {
   --post-dim: #b9b9c2;
   --post-faint: #8e8e98;
   --post-line: #3d3d44;
@@ -1638,7 +1638,8 @@ headerbar.post-band-header windowcontrols > button:hover > image { background-co
 .post-body { background-color: var(--dialog-bg-color); }
 toolbarview.post-opaque { background-color: var(--dialog-bg-color); }
 .post-dialog button.suggested-action,
-.post-first button.suggested-action { background-color: var(--accent-fill); color: #ffffff; }
+.post-first button.suggested-action,
+.move-sheet button.suggested-action { background-color: var(--accent-fill); color: #ffffff; }
 
 .post-title { font-size: 20px; font-weight: 800; }
 .post-body.centered .post-title { font-size: 22px; }
@@ -1717,7 +1718,7 @@ list.post-field > row { min-height: 51px; }
 .post-fields > list.post-field:first-child { margin-top: 13px; }
 .post-fields > .post-card { margin-top: 12px; }
 .post-fields > list.post-list { margin-top: 19px; }
-.post-dialog list.boxed-list { box-shadow: 0 0 0 1px var(--post-line); }
+.post-dialog list.boxed-list, .move-sheet list.boxed-list { box-shadow: 0 0 0 1px var(--post-line); }
 
 .post-card { padding: 13px 16px 8px; border-radius: 12px; margin-top: 16px; }
 .post-fields > .post-card.post-first-card { margin-top: 17px; margin-bottom: 37px; }
@@ -2042,21 +2043,47 @@ row.expander:checked > box > list > row.header image.expander-row-arrow {
 
 /* The route page: the Recommended tag above a row's title, and the line
    under the list. */
+/* The mockup's rows: a 61 px pitch, the subtitle 18 px under the title,
+   and the list 16 px under the heading. */
 list.post-routes row label.title { font-weight: 700; }
-list.post-routes row label.subtitle { margin-top: 1px; }
-list.post-routes > row > box.header { margin-top: 5px; margin-bottom: 5px; }
+list.post-routes row label.subtitle { margin-top: -3px; }
+list.post-routes > row > box.header { margin-top: 3px; margin-bottom: 3px; }
+.post-body > list.post-list.post-routes { margin-top: 16px; }
 list.post-list row label.tag {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.01em;
   padding: 1px 8px;
-  margin-bottom: 2px;
+  margin-bottom: -1px;
   border-radius: 99px;
   color: var(--post-acc);
   background-color: alpha(#ed5b00, 0.10);
 }
 .app-dark list.post-list row label.tag { background-color: alpha(#ff7a1a, 0.16); }
+/* The route and consent headings: tracked in a little, with lines 24 px
+   apart when they wrap. */
+.post-route-title { letter-spacing: -0.01em; line-height: 0.86; }
+/* The consent page, as its mockup: 13.5 px lines 19 px apart, and two
+   rounded rectangles for buttons. */
+.post-lede.post-consent-text { font-size: 13.5px; line-height: 1.03; margin-top: 15px; }
+.post-lede.post-consent-note { margin-top: 12px; }
+button.post-consent-button {
+  min-height: 34px;
+  min-width: 80px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+button.post-consent-button:not(.suggested-action) { background-color: var(--post-pill); }
 .post-route-foot { font-size: 12.5px; color: var(--post-dim); margin-top: 14px; }
+
+/* The move banner for an account whose mail has stopped: the accent's
+   tint, kept while the window is in the background. */
+banner.move-banner-paused > revealer > widget,
+banner.move-banner-paused > revealer > widget:backdrop { background-color: alpha(#ed5b00, 0.10); }
+.app-dark banner.move-banner-paused > revealer > widget,
+.app-dark banner.move-banner-paused > revealer > widget:backdrop { background-color: alpha(#ff7a1a, 0.16); }
 
 /* The first-launch sheet: each address has the accent's dot before it,
    and the two buttons are rounded rectangles side by side. */
@@ -2067,12 +2094,19 @@ list.post-list row label.tag {
   background-color: #ed5b00;
 }
 .app-dark .move-sheet-dot { background-color: #ff7a1a; }
-.move-sheet-address { font-weight: 700; }
-.move-sheet-heading { font-size: 17px; font-weight: 700; }
-.move-sheet-body { opacity: 0.78; }
+dialog.move-sheet sheet { background-color: var(--dialog-bg-color); }
+.move-sheet list.boxed-list > row { min-height: 0; padding: 0; }
+.move-sheet-address { font-size: 14px; font-weight: 600; }
+.move-sheet-heading { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+/* A floating sheet narrower than 440 px (a window under about 510 px)
+   has no room for the heading on one line at 18 px. */
+.move-sheet-cramped .move-sheet-heading { font-size: 17px; font-weight: 700; letter-spacing: 0; }
+.move-sheet-body { font-size: 13.5px; color: var(--post-dim); }
+button.move-sheet-button:not(.suggested-action) { background-color: var(--post-pill); }
 .move-sheet-button {
+  font-size: 13.5px;
   font-weight: 700;
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 8px 16px;
   min-width: 80px;
   min-height: 18px;

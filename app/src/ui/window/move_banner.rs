@@ -39,7 +39,12 @@ pub struct Bar {
 impl Bar {
     pub fn new() -> Bar {
         // The title holds an address, which may carry an "&".
-        let banner = adw::Banner::builder().use_markup(false).build();
+        // The button is the banner's one way forward, so it takes the
+        // accent, as the mockup draws it.
+        let banner = adw::Banner::builder()
+            .use_markup(false)
+            .button_style(adw::BannerButtonStyle::Suggested)
+            .build();
         // The paused words say that nothing was lost; the banner's own
         // label cuts a long title short, which would hide them.
         show_whole_title(banner.upcast_ref());
@@ -74,6 +79,11 @@ impl Bar {
         if let Some(wanted) = &wanted {
             self.banner.set_title(&wanted.title);
             self.banner.set_button_label(Some(&wanted.button));
+            if wanted.paused {
+                self.banner.add_css_class("move-banner-paused");
+            } else {
+                self.banner.remove_css_class("move-banner-paused");
+            }
         }
         self.banner.set_revealed(wanted.is_some());
         self.shown.replace(wanted);
@@ -117,6 +127,25 @@ pub(crate) mod checks {
         a_press_carries_the_accounts_in_order();
         a_busy_banner_has_a_dead_button();
         a_move_account_gets_no_sign_in_or_grant_banner();
+        a_paused_banner_is_tinted_and_its_button_filled();
+    }
+
+    fn a_paused_banner_is_tinted_and_its_button_filled() {
+        let bar = Bar::new();
+        assert_eq!(
+            bar.widget().button_style(),
+            adw::BannerButtonStyle::Suggested
+        );
+        bar.show(banner(
+            &[waiting(1, "a@gmail.com", AccountState::MailPaused)],
+            none_held,
+        ));
+        assert!(bar.widget().has_css_class("move-banner-paused"));
+        bar.show(banner(
+            &[waiting(1, "a@gmail.com", AccountState::Ok)],
+            none_held,
+        ));
+        assert!(!bar.widget().has_css_class("move-banner-paused"));
     }
 
     fn waiting(id: i64, email: &str, state: AccountState) -> Waiting {

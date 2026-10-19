@@ -110,15 +110,29 @@ pub fn build(accounts: &[Account], choose: impl Fn() + 'static) -> Sheet {
     content.append(&list);
     content.append(&actions);
     // The gaps between the parts, which differ from line to line.
-    heading.set_margin_bottom(10);
-    body.set_margin_bottom(16);
-    list.set_margin_bottom(19);
+    heading.set_margin_bottom(7);
+    body.set_margin_bottom(17);
+    list.set_margin_bottom(20);
     let dialog = adw::Dialog::builder()
         .title(heading_text.as_str())
         .content_width(WIDTH)
         .child(&content)
         .default_widget(&choose_now)
         .build();
+    dialog.add_css_class("move-sheet");
+    // In a window too narrow for the full width, the heading drops to a
+    // size that still fits one line. Narrower still, it wraps anyway, at
+    // the mockup's size.
+    if let Ok(condition) = adw::BreakpointCondition::parse("min-width: 400px and max-width: 439px")
+    {
+        let cramped = adw::Breakpoint::new(condition);
+        cramped.add_setter(
+            &content,
+            "css-classes",
+            Some(&["move-sheet-cramped"].to_value()),
+        );
+        dialog.add_breakpoint(cramped);
+    }
     let closing = dialog.downgrade();
     later.connect_clicked(move |_| {
         if let Some(dialog) = closing.upgrade() {
