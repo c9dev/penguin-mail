@@ -2591,3 +2591,74 @@ async fn an_imap_route_account_in_a_build_without_a_client_has_no_google_side_an
     assert!(google_side(&reach, &me).await.unwrap().is_none());
     assert_eq!(state(&db, &me).await, before);
 }
+
+/// The page `calendar_consent` opens for `me`, read before anyone comes
+/// back from it.
+async fn consent_page_for(reach: &Connector, me: &Account) -> String {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let run = calendar_consent(reach, me, move |url: &str| {
+        let _ = tx.send(url.to_string());
+    });
+    tokio::select! {
+        ended = run => panic!("the consent ended before anyone came back: {:?}", ended.err()),
+        url = rx => url.unwrap(),
+    }
+}
+
+#[tokio::test]
+async fn the_calendar_consent_of_an_app_password_account_on_its_own_project_asks_that_project() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        };
+        accounts::set_gmail_sign_in(c, id, &own_imap)
+    })
+    .await
+    .unwrap();
+    let reach = connector(&db, both_clients());
+    reach
+        .secrets
+        .google_clients
+        .save(id, &OwnClient::new("kept-cid", "s").encode())
+        .unwrap();
+
+    let url = consent_page_for(&reach, &me).await;
+
+    assert!(url.contains("client_id=kept-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn the_calendar_consent_of_an_account_whose_project_went_asks_the_built_in_client() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        };
+        accounts::set_gmail_sign_in(c, id, &own_imap)
+    })
+    .await
+    .unwrap();
+
+    let url = consent_page_for(&connector(&db, both_clients()), &me).await;
+
+    assert!(url.contains("client_id=cid"), "{url}");
+}
+
+#[tokio::test]
+async fn signing_an_app_password_account_in_again_through_the_setup_asks_only_for_its_calendar() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let clients = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let reach = connector(&db, clients);
+
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only(me.email.clone())).await;
+
+    assert!(url.contains("client_id=cid"), "{url}");
+    assert!(!url.contains("setup-cid"), "{url}");
+}

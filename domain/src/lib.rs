@@ -866,8 +866,14 @@ pub(crate) mod tests {
         let client = |from: &GmailSignIn, keeps_own| from.with_app_password(keeps_own).client();
         assert_eq!(client(&goa, true), SignInClient::Own);
         assert_eq!(client(&goa, false), SignInClient::BuiltIn);
-        assert_eq!(client(&GmailSignIn::OwnProject, true), SignInClient::BuiltIn);
-        assert_eq!(client(&GmailSignIn::BuiltInApi, true), SignInClient::BuiltIn);
+        assert_eq!(
+            client(&GmailSignIn::OwnProject, true),
+            SignInClient::BuiltIn
+        );
+        assert_eq!(
+            client(&GmailSignIn::BuiltInApi, true),
+            SignInClient::BuiltIn
+        );
         assert_eq!(client(&own_imap, false), SignInClient::Own);
     }
 

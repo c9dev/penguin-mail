@@ -2108,4 +2108,49 @@ mod tests {
         assert_eq!(again.state, AccountState::Ok);
         assert_eq!(tokens.load(id).unwrap().as_deref(), Some("refresh-2"));
     }
+
+    #[tokio::test]
+    async fn a_setup_sign_in_as_an_account_on_an_app_password_leaves_it_on_imap() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let id = db
+            .write(|c| {
+                let id = accounts::insert_account(c, "me@gmail.com", 0)?;
+                let password = GmailSignIn::AppPassword {
+                    google: SignInClient::BuiltIn,
+                };
+                accounts::set_gmail_sign_in(c, id, &password)?;
+                Ok(id)
+            })
+            .await
+            .unwrap();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+
+        let refused = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@gmail.com"),
+        )
+        .await;
+
+        assert!(
+            matches!(refused, Err(BrowserSignInError::NeedsRoute)),
+            "{:?}",
+            refused.err()
+        );
+        let sign_in = db
+            .read(move |c| accounts::gmail_sign_in(c, id))
+            .await
+            .unwrap();
+        assert_eq!(
+            sign_in,
+            GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn
+            }
+        );
+        assert_eq!(kept_id(&secrets, id), None);
+        assert_eq!(secrets.google.load("me@gmail.com").unwrap(), None);
+    }
 }
