@@ -308,8 +308,14 @@ fn fill_rows(
                 };
                 row.add_suffix(&dim(&value));
                 put(row.upcast_ref());
-                // No "Get Every Feature" button: every feature needs the
-                // own project, which an account on IMAP is not offered.
+                // The button sits in a row of its own under the line, as
+                // the mockup draws it: an expander's row has no room for
+                // both the value and a button in its suffix.
+                if !every {
+                    let holder = plain_row("", None);
+                    holder.add_suffix(&route_button(&gettext("Get Every Feature"), account.id));
+                    put(holder.upcast_ref());
+                }
             }
             Line::Move { title } => {
                 let row = plain_row(&title, None);
@@ -758,6 +764,7 @@ pub(crate) mod checks {
             [
                 "GMAIL",
                 "Gmail features",
+                "",
                 "CALENDAR AND CONTACTS",
                 "Calendar",
                 "Contacts",
@@ -794,10 +801,8 @@ pub(crate) mod checks {
             .filter_map(|b| b.label())
             .map(|l| l.to_string())
             .collect();
-        // Every feature needs the own project, which an account on IMAP is
-        // not offered.
         assert!(
-            !labels.contains(&"Get Every Feature".to_string()),
+            labels.contains(&"Get Every Feature".to_string()),
             "{labels:?}"
         );
     }

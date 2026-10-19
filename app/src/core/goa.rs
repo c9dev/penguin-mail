@@ -91,24 +91,6 @@ async fn linked_accounts(
 }
 
 impl Core {
-    /// The Gmail accounts that read their mail over IMAP.
-    pub async fn accounts_on_imap(&self) -> HashSet<AccountId> {
-        let db = self.db.clone();
-        let read = self
-            .call(async move {
-                db.read(|c| {
-                    Ok(accounts::google_sign_ins(c)?
-                        .into_iter()
-                        .filter(|(_, sign_in)| sign_in.route == MailRoute::Imap)
-                        .map(|(id, _)| id)
-                        .collect::<HashSet<_>>())
-                })
-                .await
-            })
-            .await;
-        read.unwrap_or_default()
-    }
-
     /// The Google accounts Online Accounts holds, read now. Answers
     /// `Unreachable` after the daemon fails to answer in time.
     pub async fn goa_accounts(&self) -> Result<Vec<GoaAccount>, GoaError> {

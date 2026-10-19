@@ -20,7 +20,9 @@ use crate::passwords::{PasswordStore, Secrets};
 use crate::sign_in::app_password::NewGmailImap;
 use crate::sign_in::goa_link::Linked;
 use crate::sign_in::own_client::OwnClient;
-use crate::sign_in::{BrowserSignInError, google_signed_in, other_address, save_passwords};
+use crate::sign_in::{
+    BrowserSignInError, google_signed_in, keep_google_secrets, other_address, save_passwords,
+};
 use crate::{AccountSync, Accounts, BackendError, Outbox, SyncError, now_millis};
 
 /// How long a move waits for the old route to send what is due and to
@@ -114,9 +116,19 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         committed: impl FnOnce(),
     ) -> Result<Account, MoveError> {
         same_address(account, &authorized)?;
+        let id = account.id;
+        let before = self
+            .db
+            .read(move |c| accounts::mail_route(c, id))
+            .await
+            .map_err(SyncError::from)?;
         committed();
-        self.run_move(account, false, || {
-            to_own_client(self.db, self.secrets, account, own, authorized)
+        let from_imap = before == MailRoute::Imap;
+        self.run_move(account, from_imap, || async move {
+            match from_imap {
+                true => imap_to_own_client(self.db, self.secrets, account, own, authorized).await,
+                false => to_own_client(self.db, self.secrets, account, own, authorized).await,
+            }
         })
         .await
     }
@@ -383,6 +395,51 @@ impl<E, A: Accounts> Mover<'_, E, A> {
         };
         Ok((client, true))
     }
+}
+
+/// Moves `account`, on the IMAP route, to `own` and the Gmail API. The
+/// keyring takes the client and the token first; then one transaction
+/// switches the route to the API and the client to `own`, ends any Online
+/// Accounts link, and empties the stored mail, which the API lists again.
+/// The outbox, the local rules and the settings stay.
+async fn imap_to_own_client(
+    db: &Db,
+    secrets: &Secrets,
+    account: &Account,
+    own: &OwnClient,
+    authorized: Authorized,
+) -> Result<Account, MoveError> {
+    same_address(account, &authorized)?;
+    let id = account.id;
+    keep_google_secrets(
+        secrets,
+        id,
+        &account.email,
+        &authorized.refresh_token,
+        Some(own),
+    )
+    .await
+    .map_err(|err| MoveError::SignIn(err.into()))?;
+    let granted = authorized.granted.as_ref().map(Granted::to_scope);
+    let asked = own.oauth().scopes().join(" ");
+    let route = RouteCommit {
+        route: MailRoute::GmailApi,
+        client: SignInClient::Own,
+        restart_sync: true,
+    };
+    commit(db, id, route, move |c| {
+        accounts::set_goa_id(c, id, None)?;
+        if let Some(granted) = &granted {
+            accounts::set_granted(c, id, granted)?;
+        }
+        accounts::set_asked(c, id, &asked)?;
+        switch::empty_mail(c, id)
+    })
+    .await?;
+    db.read(move |c| accounts::account(c, id))
+        .await
+        .map_err(SyncError::from)?
+        .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))
 }
 
 /// Empties the account's stored mail for Gmail's IMAP, which lists it all

@@ -275,7 +275,7 @@ pub async fn google_signed_in_as(
 /// Keeps the own client (or drops a kept one for the built-in client)
 /// and then the refresh token. When the token fails, the client kept
 /// before is put back.
-async fn keep_google_secrets(
+pub(crate) async fn keep_google_secrets(
     secrets: &Secrets,
     id: AccountId,
     email: &str,
