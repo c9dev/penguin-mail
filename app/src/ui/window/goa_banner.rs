@@ -103,3 +103,62 @@ impl Bar {
         self.root.reveals_child()
     }
 }
+
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+    use crate::goa_notice::{Notice, shown};
+
+    pub fn run() {
+        a_removed_account_shows_two_buttons_and_keeps_one_widget();
+        the_banner_hides_when_no_notice_is_left();
+        a_press_carries_the_button_s_action();
+    }
+
+    fn removed() -> Shown {
+        shown(
+            &Notice::Removed {
+                address: "dana@example.com".into(),
+            },
+            Some(4),
+        )
+    }
+
+    fn a_removed_account_shows_two_buttons_and_keeps_one_widget() {
+        let bar = Bar::new();
+        let before = bar.widget().clone();
+        bar.show(Some(removed()));
+        assert_eq!(bar.labels(), ["Add It Again", "Sign In Another Way"]);
+        assert!(bar.is_shown());
+        bar.show(Some(shown(&Notice::Unreachable, None)));
+        assert!(bar.labels().is_empty());
+        assert_eq!(&before, bar.widget());
+    }
+
+    fn the_banner_hides_when_no_notice_is_left() {
+        let bar = Bar::new();
+        bar.show(Some(removed()));
+        bar.show(None);
+        assert!(!bar.is_shown());
+        assert!(bar.labels().is_empty());
+    }
+
+    fn a_press_carries_the_button_s_action() {
+        let pressed: Rc<RefCell<Vec<Action>>> = Rc::default();
+        let sink = Rc::clone(&pressed);
+        let bar = Bar::new();
+        bar.connect_press(move |action| sink.borrow_mut().push(action));
+        bar.show(Some(removed()));
+        let mut child = bar.buttons.last_child();
+        while let Some(widget) = child {
+            if let Some(button) = widget.downcast_ref::<gtk::Button>() {
+                button.emit_clicked();
+            }
+            child = widget.prev_sibling();
+        }
+        assert_eq!(
+            *pressed.borrow(),
+            [Action::SignInAnotherWay(4), Action::OpenOnlineAccounts]
+        );
+    }
+}

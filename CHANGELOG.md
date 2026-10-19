@@ -8,6 +8,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### New
 
 - New ways to sign in to Gmail. Gmail users: update, then choose one for each account.
+- Gmail can sign in through this computer's Online Accounts on Linux.
 - Adding a Google account asks how it signs in, and lists only the ways this computer offers.
 - Choose reasoning separately for assistant chats and email translations in Preferences → AI.
 - Russian and Czech can be selected in Never Translate.

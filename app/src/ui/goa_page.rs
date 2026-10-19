@@ -429,3 +429,127 @@ fn call(slot: &Plain) {
         handler();
     }
 }
+
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+
+    pub fn run() {
+        the_holds_page_names_the_address_in_bold();
+        an_address_with_markup_characters_shows_as_typed();
+        the_waiting_page_gives_way_to_holds();
+        another_new_account_asks_whether_to_use_it();
+        the_snap_page_shows_the_connect_command();
+        the_main_button_hands_over_the_account_it_names();
+    }
+
+    fn account(id: &str, address: &str) -> GoaAccount {
+        GoaAccount {
+            id: id.into(),
+            identity: address.into(),
+            presentation: address.into(),
+            mail_disabled: false,
+            attention_needed: false,
+        }
+    }
+
+    fn the_holds_page_names_the_address_in_bold() {
+        let page = GoaPage::new();
+        page.show(PageState::Holds {
+            account: account("account_1_0", "dana@example.com"),
+        });
+        assert_eq!(
+            page.title.label(),
+            "Use the Google account on this computer"
+        );
+        assert!(page.body.label().contains("<b>dana@example.com</b>"));
+        assert_eq!(page.main.label().as_deref(), Some("Use This Account"));
+        assert!(page.main.is_visible() && page.main.is_sensitive());
+        assert!(!page.waiting.is_visible());
+    }
+
+    fn an_address_with_markup_characters_shows_as_typed() {
+        let page = GoaPage::new();
+        page.show(PageState::Add {
+            address: "r&d@example.com".into(),
+            others: vec![account("account_2_0", "x&y@example.com")],
+        });
+        assert!(page.body.text().contains("r&d@example.com"));
+        assert!(page.body.label().contains("<b>r&amp;d@example.com</b>"));
+        let row = page
+            .others
+            .row_at_index(0)
+            .and_downcast::<adw::ActionRow>()
+            .expect("a row for the other account");
+        assert!(!row.uses_markup());
+        assert_eq!(row.title(), "Use x&y@example.com instead");
+    }
+
+    fn the_waiting_page_gives_way_to_holds() {
+        let page = GoaPage::new();
+        page.show(PageState::Waiting {
+            address: "dana@example.com".into(),
+            others: Vec::new(),
+        });
+        assert_eq!(page.waiting_label.label(), "Waiting for dana@example.com…");
+        assert!(page.waiting.is_visible() && !page.main.is_visible());
+        page.show(PageState::Holds {
+            account: account("account_1_0", "dana@example.com"),
+        });
+        assert!(!page.waiting.is_visible() && page.main.is_visible());
+        assert_eq!(
+            page.title.label(),
+            "Use the Google account on this computer"
+        );
+    }
+
+    fn another_new_account_asks_whether_to_use_it() {
+        let page = GoaPage::new();
+        page.show(PageState::OtherAdded {
+            address: "dana@example.com".into(),
+            added: account("account_2_0", "other@example.com"),
+            others: Vec::new(),
+        });
+        assert_eq!(
+            page.title.label(),
+            "You added other@example.com. Use it instead?"
+        );
+        assert_eq!(page.main.label().as_deref(), Some("Use It"));
+        assert_eq!(
+            page.wait.label().as_deref(),
+            Some("Wait for dana@example.com")
+        );
+    }
+
+    fn the_snap_page_shows_the_connect_command() {
+        let page = GoaPage::new();
+        page.show(PageState::SnapPlug {
+            address: "dana@example.com".into(),
+        });
+        assert_eq!(
+            page.body.text(),
+            "Penguin Mail needs permission to use Online Accounts."
+        );
+        assert!(page.command.is_visible());
+        assert_eq!(page.command_text.label(), ACCOUNTS_COMMAND);
+        assert_eq!(page.copy.label().as_deref(), Some("Copy"));
+    }
+
+    fn the_main_button_hands_over_the_account_it_names() {
+        let page = GoaPage::new();
+        let used: Rc<RefCell<Vec<String>>> = Rc::default();
+        let sink = Rc::clone(&used);
+        page.connect_use(move |a| sink.borrow_mut().push(a.id));
+        page.show(PageState::OtherAdded {
+            address: "dana@example.com".into(),
+            added: account("account_2_0", "other@example.com"),
+            others: Vec::new(),
+        });
+        page.main.emit_clicked();
+        assert_eq!(*used.borrow(), ["account_2_0"]);
+        assert!(!page.main.is_sensitive(), "the button waits for the link");
+        page.failed("Online Accounts couldn't sign in to Google. Sign in again there.");
+        assert!(page.main.is_sensitive());
+        assert!(page.problem.is_visible());
+    }
+}

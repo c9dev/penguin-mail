@@ -919,6 +919,8 @@ mod tests {
         crate::ui::link_preview::checks::run();
         crate::ui::add_account::checks::run();
         crate::ui::route_page::checks::run();
+        crate::ui::goa_page::checks::run();
+        crate::ui::window::goa_banner::checks::run();
         crate::ui::preferences::google_route::checks::run();
         crate::ui::window::move_banner::checks::run();
         crate::ui::move_sheet::checks::run();
