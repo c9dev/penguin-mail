@@ -11370,18 +11370,19 @@ msgstr[1] "{name}, {count} non lus"
 
 #: app/src/ui/window/column_width.rs:31
 msgid "Mailbox sidebar width"
-msgstr ""
+msgstr "Largeur de la barre latérale des boîtes aux lettres"
 
 #: app/src/ui/window/column_width.rs:32
-#, fuzzy
 msgid "Message list width"
-msgstr "Message envoyé"
+msgstr "Largeur de la liste des messages"
 
 #: app/src/ui/window/column_width.rs:38
 msgid ""
 "Drag to resize, or use Left and Right. Home and End choose the smallest and "
 "largest widths."
 msgstr ""
+"Faites glisser pour redimensionner, ou utilisez les touches Gauche et "
+"Droite. Début et Fin choisissent la largeur minimale et maximale."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124

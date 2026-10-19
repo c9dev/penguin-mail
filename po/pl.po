@@ -11358,18 +11358,19 @@ msgstr[2] "{name}, {count} nieprzeczytanych"
 
 #: app/src/ui/window/column_width.rs:31
 msgid "Mailbox sidebar width"
-msgstr ""
+msgstr "Szerokość paska bocznego skrzynek"
 
 #: app/src/ui/window/column_width.rs:32
-#, fuzzy
 msgid "Message list width"
-msgstr "Wysłano wiadomość"
+msgstr "Szerokość listy wiadomości"
 
 #: app/src/ui/window/column_width.rs:38
 msgid ""
 "Drag to resize, or use Left and Right. Home and End choose the smallest and "
 "largest widths."
 msgstr ""
+"Przeciągnij, aby zmienić rozmiar, lub użyj klawiszy strzałek w lewo i w "
+"prawo. Home i End wybierają najmniejszą i największą szerokość."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124

@@ -11243,18 +11243,19 @@ msgstr[1] "{name}, {count} belum dibaca"
 
 #: app/src/ui/window/column_width.rs:31
 msgid "Mailbox sidebar width"
-msgstr ""
+msgstr "Lebar bilah sisi kotak surat"
 
 #: app/src/ui/window/column_width.rs:32
-#, fuzzy
 msgid "Message list width"
-msgstr "Pesan terkirim"
+msgstr "Lebar daftar pesan"
 
 #: app/src/ui/window/column_width.rs:38
 msgid ""
 "Drag to resize, or use Left and Right. Home and End choose the smallest and "
 "largest widths."
 msgstr ""
+"Seret untuk mengubah ukuran, atau gunakan tombol Kiri dan Kanan. Home dan "
+"End memilih lebar terkecil dan terbesar."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124

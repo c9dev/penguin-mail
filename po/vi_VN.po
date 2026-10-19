@@ -10962,18 +10962,19 @@ msgstr[0] "{name}, {count} chưa đọc"
 
 #: app/src/ui/window/column_width.rs:31
 msgid "Mailbox sidebar width"
-msgstr ""
+msgstr "Độ rộng thanh bên hộp thư"
 
 #: app/src/ui/window/column_width.rs:32
-#, fuzzy
 msgid "Message list width"
-msgstr "Đã gửi thư"
+msgstr "Độ rộng danh sách thư"
 
 #: app/src/ui/window/column_width.rs:38
 msgid ""
 "Drag to resize, or use Left and Right. Home and End choose the smallest and "
 "largest widths."
 msgstr ""
+"Kéo để đổi kích thước, hoặc dùng phím Trái và Phải. Home và End chọn độ rộng "
+"nhỏ nhất và lớn nhất."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124

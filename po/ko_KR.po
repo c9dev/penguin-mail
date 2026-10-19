@@ -10940,18 +10940,19 @@ msgstr[0] "{name}, 읽지 않음 {count}개"
 
 #: app/src/ui/window/column_width.rs:31
 msgid "Mailbox sidebar width"
-msgstr ""
+msgstr "메일함 사이드바 너비"
 
 #: app/src/ui/window/column_width.rs:32
-#, fuzzy
 msgid "Message list width"
-msgstr "메시지를 보냈습니다"
+msgstr "메시지 목록 너비"
 
 #: app/src/ui/window/column_width.rs:38
 msgid ""
 "Drag to resize, or use Left and Right. Home and End choose the smallest and "
 "largest widths."
 msgstr ""
+"끌어서 크기를 조절하거나 왼쪽·오른쪽 키를 사용하세요. Home과 End는 각각 가장 "
+"좁은 너비와 가장 넓은 너비를 선택합니다."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124

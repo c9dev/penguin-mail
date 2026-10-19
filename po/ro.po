@@ -62,6 +62,8 @@ msgid ""
 "Gmail through the Google account your computer's Online Accounts already "
 "holds, on Linux"
 msgstr ""
+"Gmail prin contul Google pe care îl au deja Online Accounts ale computerului "
+"dvs., pe Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
 msgid "Contacts from Google, Outlook and any CardDAV server"
@@ -2266,7 +2268,7 @@ msgstr "Demonstrația nu poate schimba conturile."
 
 #: app/src/core.rs:1821
 msgid "The demo cannot connect a calendar."
-msgstr ""
+msgstr "Demonstrația nu poate conecta un calendar."
 
 #: app/src/core.rs:1887
 msgid "Gave up waiting for the browser after five minutes."
@@ -2274,11 +2276,11 @@ msgstr "S-a renunțat la așteptarea navigatorului după cinci minute."
 
 #: app/src/core/goa.rs:145
 msgid "The demo cannot sign in through Online Accounts."
-msgstr ""
+msgstr "Demonstrația nu se poate conecta prin Online Accounts."
 
 #: app/src/core/route.rs:140
 msgid "This account is already moving to its new sign-in."
-msgstr ""
+msgstr "Acest cont trece deja la noua metodă de conectare."
 
 #: app/src/event_reminders/notice.rs:31
 msgid "Join"
@@ -2493,11 +2495,11 @@ msgstr "Ardezie"
 #. own page shows in your language.
 #: app/src/gmail_password.rs:53
 msgid "Open App passwords"
-msgstr ""
+msgstr "Deschide Parole pentru aplicații"
 
 #: app/src/gmail_password.rs:54
 msgid "Sign In Another Way"
-msgstr ""
+msgstr "Conectare în alt mod"
 
 #: app/src/gmail_password.rs:55
 msgid "Back"
@@ -2507,7 +2509,7 @@ msgstr "Înapoi"
 #. in your language.
 #: app/src/gmail_password.rs:58
 msgid "Open Gmail Labels"
-msgstr ""
+msgstr "Deschide Etichetele Gmail"
 
 #: app/src/gmail_password.rs:59
 msgid "Try Again"
@@ -2515,23 +2517,27 @@ msgstr "Încearcă din nou"
 
 #: app/src/gmail_password.rs:102
 msgid "Google wants an app password here, not your Google password."
-msgstr ""
+msgstr "Google cere aici o parolă pentru aplicații, nu parola dvs. Google."
 
 #: app/src/gmail_password.rs:106
 msgid ""
 "Google didn't accept that app password. Make a new one and paste it here."
 msgstr ""
+"Google nu a acceptat această parolă pentru aplicații. Creați una nouă și "
+"lipiți-o aici."
 
 #: app/src/gmail_password.rs:109
 msgid ""
 "Your organization turned off this way of signing in. Ask them, or sign in "
 "another way."
 msgstr ""
+"Organizația dvs. a dezactivat această metodă de conectare. Întrebați-o sau "
+"conectați-vă în alt mod."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/gmail_password.rs:112
 msgid "This doesn't look like Gmail's server."
-msgstr ""
+msgstr "Acesta nu pare să fie serverul Gmail."
 
 #. Translators: Gmail and All Mail are names; use the words Gmail's own settings show
 #. in your language for Labels, Show in IMAP and All Mail.
@@ -2540,37 +2546,43 @@ msgid ""
 "Gmail hides All Mail from apps. In Gmail's settings, open Labels and tick "
 "Show in IMAP next to All Mail."
 msgstr ""
+"Gmail ascunde „Toate mesajele” de aplicații. În setările Gmail, deschideți "
+"Etichete și bifați „Afișează în IMAP” lângă „Toate mesajele”."
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/gmail_password.rs:144
 msgid "App passwords are 16 letters. This looks like a different password."
-msgstr ""
+msgstr "Parolele pentru aplicații au 16 litere. Aceasta pare altă parolă."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:99
 msgid "Sign in to {address} again in Online Accounts."
-msgstr ""
+msgstr "Conectați-vă din nou la {address} în Online Accounts."
 
 #: app/src/goa_notice.rs:107
 msgid ""
 "Your organization may not allow this. Ask your administrator, or sign in "
 "another way."
 msgstr ""
+"Organizația dvs. poate să nu permită asta. Întrebați administratorul sau "
+"conectați-vă în alt mod."
 
 #: app/src/goa_notice.rs:115
 msgid "Add It Again"
-msgstr ""
+msgstr "Adaugă din nou"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:119
 msgid "{address} was removed from Online Accounts. Your mail here is kept."
 msgstr ""
+"{address} a fost eliminat din Online Accounts. Mesajele dvs. de aici sunt "
+"păstrate."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:127
 msgid "Mail is turned off for {address} in Online Accounts."
-msgstr ""
+msgstr "Corespondența este oprită pentru {address} în Online Accounts."
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
@@ -2578,16 +2590,18 @@ msgid ""
 "Google refused this computer's sign-in for mail. Is IMAP turned on for this "
 "account?"
 msgstr ""
+"Google a refuzat conectarea acestui computer pentru corespondență. Este IMAP "
+"activat pentru acest cont?"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:139
 msgid "Can't reach Online Accounts on this computer."
-msgstr ""
+msgstr "Online Accounts nu pot fi accesate pe acest computer."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:146
 msgid "Open Online Accounts"
-msgstr ""
+msgstr "Deschide Online Accounts"
 
 #: app/src/keyring_plug.rs:160
 msgid ""
@@ -2644,10 +2658,15 @@ msgid ""
 "Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
 "your mail back. Nothing on this computer was lost."
 msgstr ""
+"Penguin Mail nu poate primi mesaje noi pentru {address}. Alegeți cum se "
+"conectează, ca să primiți din nou corespondența. Nimic nu s-a pierdut pe "
+"acest computer."
 
 #: app/src/move_banner.rs:65
 msgid "Choose how {address} signs in to keep your mail arriving."
 msgstr ""
+"Alegeți cum se conectează {address}, ca mesajele dvs. să continue să "
+"sosească."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:76
@@ -2658,24 +2677,32 @@ msgid_plural ""
 "{count} Gmail accounts can't get new mail. Choose how each signs in to get "
 "your mail back. Nothing on this computer was lost."
 msgstr[0] ""
+"{count} cont Gmail nu poate primi mesaje noi. Alegeți cum se conectează, ca "
+"să primiți din nou corespondența. Nimic nu s-a pierdut pe acest computer."
 msgstr[1] ""
+"{count} conturi Gmail nu pot primi mesaje noi. Alegeți cum se conectează "
+"fiecare, ca să primiți din nou corespondența. Nimic nu s-a pierdut pe acest "
+"computer."
 msgstr[2] ""
+"{count} de conturi Gmail nu pot primi mesaje noi. Alegeți cum se conectează "
+"fiecare, ca să primiți din nou corespondența. Nimic nu s-a pierdut pe acest "
+"computer."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:84
 msgid "{count} Gmail account needs a new way to sign in"
 msgid_plural "{count} Gmail accounts need a new way to sign in"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{count} cont Gmail are nevoie de o nouă metodă de conectare"
+msgstr[1] "{count} conturi Gmail au nevoie de o nouă metodă de conectare"
+msgstr[2] "{count} de conturi Gmail au nevoie de o nouă metodă de conectare"
 
 #: app/src/move_banner.rs:94 app/src/ui/goa_page.rs:297
 msgid "Use This Account"
-msgstr ""
+msgstr "Folosește acest cont"
 
 #: app/src/move_banner.rs:96 app/src/ui/preferences/google_route.rs:345
 msgid "Choose…"
-msgstr ""
+msgstr "Alege…"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:410
 #: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:1080
@@ -3028,22 +3055,22 @@ msgstr "{provider} nu sortează mesajele primite pe categorii."
 #. Translators: Gmail and gmail.com are names; keep them as they are.
 #: app/src/offered.rs:576
 msgid "Your Gmail filters still run. Change them on gmail.com."
-msgstr ""
+msgstr "Filtrele dvs. Gmail încă funcționează. Modificați-le pe gmail.com."
 
 #. Translators: gmail.com is a name; keep it as it is.
 #: app/src/offered.rs:582
 msgid "Set your automatic reply on gmail.com."
-msgstr ""
+msgstr "Setați răspunsul automat pe gmail.com."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/offered.rs:588
 msgid "Open Gmail Filters"
-msgstr ""
+msgstr "Deschide Filtrele Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/offered.rs:594
 msgid "Open Gmail Settings"
-msgstr ""
+msgstr "Deschide Setările Gmail"
 
 #: app/src/offered.rs:709
 msgid ""
@@ -3333,17 +3360,17 @@ msgstr "Modelul nu a putut traduce acest text: {reason}"
 
 #: app/src/own_project.rs:175
 msgid "Step {number} of 6"
-msgstr ""
+msgstr "Pasul {number} din 6"
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
 #: app/src/own_project.rs:182
 msgid "Open Google Cloud, then follow the list."
-msgstr ""
+msgstr "Deschideți Google Cloud, apoi urmați lista."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:188
 msgid "Your own Google project"
-msgstr ""
+msgstr "Propriul dvs. proiect Google"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:193
@@ -3351,6 +3378,8 @@ msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
 msgstr ""
+"Un proiect Google al dvs. oferă Penguin Mail toate funcțiile Gmail. Este "
+"gratuit, doar pentru dvs., durează cam 10 minute și îl faceți o singură dată."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:197
@@ -3358,45 +3387,50 @@ msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
 msgstr ""
+"Veți folosi contul Google din care vreți să citiți corespondența. Penguin "
+"Mail deschide fiecare pagină pentru dvs. și spune pe ce să faceți clic."
 
 #: app/src/own_project.rs:203
 msgid "Make a project"
-msgstr ""
+msgstr "Creați un proiect"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:206
 msgid "Google keeps what Penguin Mail needs in a project of its own."
-msgstr ""
+msgstr "Google păstrează ce are nevoie Penguin Mail într-un proiect separat."
 
 #: app/src/own_project.rs:210
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
 msgstr ""
+"Dacă Google vă cere mai întâi să acceptați termenii, alegeți țara și "
+"acceptați."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:213
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
-msgstr ""
+msgstr "În <b>Numele proiectului</b>, scrieți <tt>Penguin Mail</tt>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:215
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
-msgstr ""
+msgstr "Lăsați <b>Locație</b> așa cum este și faceți clic pe <b>Creează</b>."
 
 #: app/src/own_project.rs:216
 msgid "Wait for the bell icon to say the project is ready."
-msgstr ""
+msgstr "Așteptați până când clopoțelul arată că proiectul este gata."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:222
 msgid "Turn on Gmail, Calendar and Contacts"
-msgstr ""
+msgstr "Activați Gmail, Calendar și Contacte"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:225
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
 msgstr ""
+"Penguin Mail vă citește corespondența, calendarul și contactele prin acestea."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:230
@@ -3404,25 +3438,27 @@ msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
 msgstr ""
+"Verificați că proiectul din partea de sus spune <b>Penguin Mail</b>. Dacă "
+"nu, faceți clic pe el și alegeți Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:233
 msgid "Click <b>Next</b>, then <b>Enable</b>."
-msgstr ""
+msgstr "Faceți clic pe <b>Următorul</b>, apoi pe <b>Activează</b>."
 
 #: app/src/own_project.rs:238
 msgid "Name the sign-in screen"
-msgstr ""
+msgstr "Dați un nume ecranului de conectare"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:240
 msgid "Google shows this name when you sign in."
-msgstr ""
+msgstr "Google arată acest nume când vă conectați."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:243
 msgid "Click <b>Get started</b>."
-msgstr ""
+msgstr "Faceți clic pe <b>Începeți</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:246
@@ -3430,6 +3466,8 @@ msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
 msgstr ""
+"<b>Numele aplicației</b>: <tt>Penguin Mail</tt>. <b>E-mail de asistență "
+"pentru utilizatori</b>: adresa dvs."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:250
@@ -3438,24 +3476,27 @@ msgid ""
 "organization may see <b>Internal</b>; that also works and needs no warning "
 "screen later. Pick it if offered.)"
 msgstr ""
+"<b>Public</b>: alegeți <b>Extern</b>. (Un cont de serviciu sau de școală "
+"dintr-o organizație poate arăta <b>Intern</b>; și asta merge și nu cere mai "
+"târziu un ecran de avertizare. Alegeți-l dacă este oferit.)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
 msgid "<b>Contact information</b>: your address again."
-msgstr ""
+msgstr "<b>Date de contact</b>: din nou adresa dvs."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:255
 msgid "Tick the agreement and click <b>Create</b>."
-msgstr ""
+msgstr "Bifați acordul și faceți clic pe <b>Creează</b>."
 
 #: app/src/own_project.rs:260
 msgid "Publish it"
-msgstr ""
+msgstr "Publicați-l"
 
 #: app/src/own_project.rs:261
 msgid "Publishing keeps you signed in."
-msgstr ""
+msgstr "Publicarea vă ține conectat."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
@@ -3463,46 +3504,52 @@ msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
 msgstr ""
+"La <b>Stare publicare</b>, faceți clic pe <b>Publică aplicația</b>, apoi pe "
+"<b>Confirmă</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:268
 msgid "It should now say <b>In production</b>."
-msgstr ""
+msgstr "Acum ar trebui să spună <b>În producție</b>."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:272
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
+"Dacă săriți peste acest pas, Google vă deconectează de la Penguin Mail la "
+"fiecare 7 zile."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:274
 msgid "Chose Internal? Then there's nothing to do here."
-msgstr ""
+msgstr "Ați ales Intern? Atunci nu aveți nimic de făcut aici."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:279
 msgid "Make the key for Penguin Mail"
-msgstr ""
+msgstr "Creați cheia pentru Penguin Mail"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:282
 msgid "The key lets Penguin Mail sign in through your project."
-msgstr ""
+msgstr "Cheia îi permite lui Penguin Mail să se conecteze prin proiectul dvs."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:286
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
-msgstr ""
+msgstr "<b>Tip de aplicație</b>: alegeți <b>Aplicație pentru computer</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:288
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
-msgstr ""
+msgstr "<b>Nume</b>: <tt>Penguin Mail</tt>, apoi <b>Creează</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:290
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
 msgstr ""
+"Pe ecranul următor, faceți clic pe <b>Descarcă JSON</b> înainte să îl "
+"închideți."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:295
@@ -3510,16 +3557,18 @@ msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
 msgstr ""
+"Google arată asta o singură dată. Dacă ați închis deja ecranul, ștergeți "
+"cheia și creați una nouă."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:301
 msgid "Give the file to Penguin Mail"
-msgstr ""
+msgstr "Dați fișierul lui Penguin Mail"
 
 #: app/src/own_project.rs:308 app/src/ui/own_project.rs:521
 #: app/src/ui/own_project.rs:798
 msgid "Sign in with Google"
-msgstr ""
+msgstr "Conectare cu Google"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:313
@@ -3529,34 +3578,40 @@ msgid ""
 "<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
 "box so every feature works."
 msgstr ""
+"Google va spune <b>„Google nu a verificat această aplicație”</b>. E normal: "
+"aplicația este proiectul dvs. și doar dvs. o folosiți. Faceți clic pe "
+"<b>Avansat</b>, apoi pe <b>Accesați Penguin Mail (nesigur)</b>. Apoi bifați "
+"toate casetele, ca să funcționeze toate funcțiile."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:343
 msgid "Did you publish your project? If it still says Testing, go to step 4."
 msgstr ""
+"Ați publicat proiectul? Dacă încă spune În testare, treceți la pasul 4."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:366
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
 msgstr ""
+"Google nu recunoaște această cheie. Creați una nouă și descărcați-o din nou."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:391
 msgid "Gmail is turned off in your project."
-msgstr ""
+msgstr "Gmail este dezactivat în proiectul dvs."
 
 #: app/src/own_project.rs:393
 msgid "Calendar is turned off in your project."
-msgstr ""
+msgstr "Calendar este dezactivat în proiectul dvs."
 
 #: app/src/own_project.rs:395
 msgid "Contacts is turned off in your project."
-msgstr ""
+msgstr "Contacte este dezactivat în proiectul dvs."
 
 #: app/src/own_project.rs:397
 msgid "Drive is turned off in your project."
-msgstr ""
+msgstr "Drive este dezactivat în proiectul dvs."
 
 #: app/src/own_project.rs:448
 msgid ""
@@ -4378,7 +4433,7 @@ msgstr "Șters de {who} fără a fi citit"
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:90 app/src/ui/move_sheet.rs:63
 msgid "Choose how Penguin Mail signs in to Gmail"
-msgstr ""
+msgstr "Alegeți cum se conectează Penguin Mail la Gmail"
 
 #. Translators: Gmail and Google are names; keep them as they are.
 #: app/src/route_choice.rs:133
@@ -4386,62 +4441,65 @@ msgid ""
 "Want every Gmail feature? Your own Google project gives you all of them, "
 "free."
 msgstr ""
+"Vreți toate funcțiile Gmail? Un proiect Google al dvs. le oferă pe toate, "
+"gratuit."
 
 #: app/src/route_choice.rs:141 app/src/ui/goa_page.rs:289
 msgid "Use the Google account on this computer"
-msgstr ""
+msgstr "Folosiți contul Google de pe acest computer"
 
 #: app/src/route_choice.rs:143 app/src/ui/goa_page.rs:81
 #: app/src/ui/goa_page.rs:335 app/src/ui/goa_page.rs:351
 #: app/src/ui/goa_page.rs:362 app/src/ui/goa_page.rs:387
 msgid "Add your Google account to this computer"
-msgstr ""
+msgstr "Adăugați contul Google pe acest computer"
 
 #: app/src/route_choice.rs:146
 msgid "Already signed in on this computer"
-msgstr ""
+msgstr "Deja conectat pe acest computer"
 
 #: app/src/route_choice.rs:148 app/src/ui/preferences/google_route.rs:330
 msgid "Mail, calendar and contacts"
-msgstr ""
+msgstr "Corespondență, calendar și contacte"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:160
 msgid "Use a password from Google"
-msgstr ""
+msgstr "Folosiți o parolă de la Google"
 
 #: app/src/route_choice.rs:162
 msgid "Quick. Mail, calendar and contacts."
-msgstr ""
+msgstr "Rapid. Corespondență, calendar și contacte."
 
 #: app/src/route_choice.rs:164
 msgid "Quickest. About 2 minutes"
-msgstr ""
+msgstr "Cel mai rapid. Cam 2 minute"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:174 app/src/ui/add_account.rs:3972
 msgid "Use your Google project again"
-msgstr ""
+msgstr "Folosiți din nou proiectul dvs. Google"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:176
 msgid "Every Gmail feature, with the project you set up before."
-msgstr ""
+msgstr "Toate funcțiile Gmail, cu proiectul pe care l-ați configurat înainte."
 
 #: app/src/route_choice.rs:185
 msgid "Set up a different project"
-msgstr ""
+msgstr "Configurați un alt proiect"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:188 app/src/ui/preferences/google_route.rs:352
 #: app/src/ui/window.rs:3444
 msgid "Set up your own Google project"
-msgstr ""
+msgstr "Configurați propriul proiect Google"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:191
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
 msgstr ""
+"Toate funcțiile Gmail, pe orice computer. Cam 10 minute, o singură dată."
 
 #: app/src/rules.rs:13
 msgid "These rules run on this computer while Penguin Mail is open."
@@ -5174,7 +5232,7 @@ msgstr "Se conectează…"
 
 #: app/src/ui/add_account.rs:946
 msgid "Moving your account. This takes a moment."
-msgstr ""
+msgstr "Contul dvs. este mutat. Durează puțin."
 
 #: app/src/ui/add_account.rs:968
 msgid "Sign In in Your Browser"
@@ -5527,6 +5585,8 @@ msgid ""
 "Moving the account is taking too long. It goes on after you close this "
 "window."
 msgstr ""
+"Mutarea contului durează prea mult. Continuă și după ce închideți această "
+"fereastră."
 
 #: app/src/ui/add_account.rs:4367
 msgid "Link copied"
@@ -5551,7 +5611,7 @@ msgstr "{account} este gata"
 #. Translators: the button that goes back to a step of the Google project setup.
 #: app/src/ui/add_account.rs:4759
 msgid "Go to Step {number}"
-msgstr ""
+msgstr "Mergi la pasul {number}"
 
 #: app/src/ui/add_account.rs:4921
 msgid ""
@@ -5564,6 +5624,7 @@ msgstr ""
 #: app/src/ui/add_account/routes.rs:440
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr ""
+"Filtrele, aliasurile și răspunsul automat nu sunt disponibile în acest mod."
 
 #: app/src/ui/assistant.rs:35 app/src/ui/window.rs:4023
 msgid "Summarize this conversation"
@@ -7472,7 +7533,7 @@ msgstr "Penguin Mail nu poate vedea calendarele acestui cont"
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
 #: app/src/ui/preferences/google_route.rs:415
 msgid "Not connected"
-msgstr ""
+msgstr "Neconectat"
 
 #: app/src/ui/calendar/sidebar.rs:1110
 msgid "Show or hide this account's calendars"
@@ -7489,12 +7550,12 @@ msgstr "Opțiuni pentru {calendar}"
 #: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
 #: app/src/ui/preferences/google_route.rs:551
 msgid "Connect"
-msgstr ""
+msgstr "Conectează"
 
 #: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
 #: app/src/ui/preferences/google_route.rs:408
 msgid "Connect the calendar for {account}"
-msgstr ""
+msgstr "Conectează calendarul pentru {account}"
 
 #: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:494
 msgid "Grant Access for {account}"
@@ -8582,7 +8643,7 @@ msgstr "Potrivirea următoare"
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:32
 msgid "Sign in with an app password"
-msgstr ""
+msgstr "Conectare cu o parolă pentru aplicații"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:43
@@ -8590,24 +8651,26 @@ msgid ""
 "Google gives each app its own password. You make one in your Google account "
 "and paste it here. Your Google password stays with Google."
 msgstr ""
+"Google dă fiecărei aplicații propria parolă. O creați în contul dvs. Google "
+"și o lipiți aici. Parola dvs. Google rămâne la Google."
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:56
 msgid "Turn on 2-Step Verification, if it isn't on yet."
-msgstr ""
+msgstr "Activați Verificarea în doi pași, dacă nu este deja activă."
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:60
 msgid "Open 2-Step Verification"
-msgstr ""
+msgstr "Deschide Verificarea în doi pași"
 
 #. Translators: App password and Penguin Mail are names; use the words Google's own
 #. page shows in your language for App passwords.
 #: app/src/ui/gmail_password_page.rs:68
 msgid "Make an app password. Name it Penguin Mail."
-msgstr ""
+msgstr "Creați o parolă pentru aplicații. Numiți-o Penguin Mail."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:80
@@ -8615,6 +8678,8 @@ msgid ""
 "Copy the 16 letters Google shows and paste them below. Google shows them "
 "only once."
 msgstr ""
+"Copiați cele 16 litere afișate de Google și lipiți-le mai jos. Google le "
+"arată o singură dată."
 
 #. Translators: Google is a name; keep it as it is. App passwords is the name of
 #. Google's page; use the words Google's own page shows in your language.
@@ -8623,41 +8688,45 @@ msgid ""
 "Changing your Google password removes your app passwords. Make a new one to "
 "keep getting mail."
 msgstr ""
+"Dacă schimbați parola Google, parolele pentru aplicații sunt șterse. Creați "
+"una nouă ca să primiți în continuare corespondența."
 
 #. Translators: App password is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:102
 msgid "App password"
-msgstr ""
+msgstr "Parolă pentru aplicații"
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:143
 msgid "App passwords page says the setting isn't available?"
-msgstr ""
+msgstr "Pagina Parole pentru aplicații spune că setarea nu este disponibilă?"
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:150
 msgid "2-Step Verification is off for this account."
-msgstr ""
+msgstr "Verificarea în doi pași este dezactivată pentru acest cont."
 
 #. Translators: Advanced Protection is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:153
 msgid "The account uses Advanced Protection."
-msgstr ""
+msgstr "Contul folosește Protecția avansată."
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:156
 msgid "A work or school admin turned app passwords off."
 msgstr ""
+"Un administrator de serviciu sau de școală a dezactivat parolele pentru "
+"aplicații."
 
 #: app/src/ui/gmail_password_page.rs:166 app/src/ui/gmail_password_page.rs:173
 #: app/src/ui/gmail_password_page.rs:179
 msgid "Use another way to sign in"
-msgstr ""
+msgstr "Folosiți alt mod de conectare"
 
 #: app/src/ui/goa_page.rs:124 app/src/ui/goa_page.rs:371
 #: app/src/ui/hide_my_email.rs:828
@@ -8666,7 +8735,7 @@ msgstr "Copiază"
 
 #: app/src/ui/goa_page.rs:135
 msgid "Other ways to sign in"
-msgstr ""
+msgstr "Alte moduri de conectare"
 
 #. Translators: {address} is an email address.
 #: app/src/ui/goa_page.rs:293
@@ -8674,18 +8743,20 @@ msgid ""
 "This computer is already signed in to <b>{address}</b>. Penguin Mail can "
 "read your mail through it."
 msgstr ""
+"Acest computer este deja conectat la <b>{address}</b>. Penguin Mail vă poate "
+"citi corespondența prin el."
 
 #: app/src/ui/goa_page.rs:310 app/src/ui/goa_page.rs:345
 msgid "Waiting for {address}…"
-msgstr ""
+msgstr "Se așteaptă {address}…"
 
 #: app/src/ui/goa_page.rs:321
 msgid "You added {address}. Use it instead?"
-msgstr ""
+msgstr "Ați adăugat {address}. Îl folosiți pe acesta?"
 
 #: app/src/ui/goa_page.rs:327
 msgid "Wait for {address}"
-msgstr ""
+msgstr "Așteaptă {address}"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:339
@@ -8693,6 +8764,8 @@ msgid ""
 "Open <b>Online Accounts</b> from your applications menu, add your Google "
 "account, and come back."
 msgstr ""
+"Deschideți <b>Online Accounts</b> din meniul de aplicații, adăugați contul "
+"Google și reveniți."
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
 #: app/src/ui/goa_page.rs:356
@@ -8700,11 +8773,13 @@ msgid ""
 "Install Online Accounts from your software center, add your Google account "
 "there, and come back."
 msgstr ""
+"Instalați Online Accounts din centrul de programe, adăugați acolo contul "
+"Google și reveniți."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
 msgid "Penguin Mail needs permission to use Online Accounts."
-msgstr ""
+msgstr "Penguin Mail are nevoie de permisiune pentru a folosi Online Accounts."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
@@ -8712,10 +8787,12 @@ msgid ""
 "Penguin Mail reads Gmail through your computer's Online Accounts. Add "
 "<b>{address}</b> there, then come back."
 msgstr ""
+"Penguin Mail citește Gmail prin Online Accounts ale computerului dvs. "
+"Adăugați acolo <b>{address}</b>, apoi reveniți."
 
 #: app/src/ui/goa_page.rs:415
 msgid "Use {address} instead"
-msgstr ""
+msgstr "Folosește {address} în schimb"
 
 #: app/src/ui/hide_my_email.rs:24
 msgid ""
@@ -9326,14 +9403,17 @@ msgid ""
 "account below to keep your mail arriving. Your mail and settings stay as "
 "they are."
 msgstr ""
+"Penguin Mail are moduri noi de conectare la Google. Alegeți unul pentru "
+"fiecare cont Gmail de mai jos, ca mesajele dvs. să continue să sosească. "
+"Mesajele și setările dvs. rămân cum sunt."
 
 #: app/src/ui/move_sheet.rs:88
 msgid "Later"
-msgstr ""
+msgstr "Mai târziu"
 
 #: app/src/ui/move_sheet.rs:92
 msgid "Choose Now"
-msgstr ""
+msgstr "Alege acum"
 
 #: app/src/ui/moving.rs:40
 msgid "The mail is already there"
@@ -9353,59 +9433,59 @@ msgstr "Mesajele nu pot fi mutate acolo"
 
 #: app/src/ui/own_project.rs:318
 msgid "Key File"
-msgstr ""
+msgstr "Fișier cheie"
 
 #: app/src/ui/own_project.rs:496
 msgid "Start"
-msgstr ""
+msgstr "Începe"
 
 #: app/src/ui/own_project.rs:497
 msgid "I Already Have a Key"
-msgstr ""
+msgstr "Am deja o cheie"
 
 #. Translators: the services are Google's, switched on one at a time with the four links below, in place of the one button above.
 #: app/src/ui/own_project.rs:594
 msgid "Turn them on one at a time instead"
-msgstr ""
+msgstr "Activați-le pe rând"
 
 #: app/src/ui/own_project.rs:614
 msgid "Steps look different?"
-msgstr ""
+msgstr "Pașii arată diferit?"
 
 #: app/src/ui/own_project.rs:700
 msgid "Next"
-msgstr ""
+msgstr "Următorul"
 
 #: app/src/ui/own_project.rs:705 app/src/ui/own_project.rs:804
 msgid "Start over"
-msgstr ""
+msgstr "Reîncepe"
 
 #: app/src/ui/own_project.rs:728
 msgid "Drop the file you downloaded here"
-msgstr ""
+msgstr "Aruncați aici fișierul descărcat"
 
 #: app/src/ui/own_project.rs:735
 msgid "Choose File…"
-msgstr ""
+msgstr "Alege fișierul…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/ui/own_project.rs:763
 msgid "Client ID"
-msgstr ""
+msgstr "ID client"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/ui/own_project.rs:767
 msgid "Client secret"
-msgstr ""
+msgstr "Cod secret client"
 
 #: app/src/ui/own_project.rs:773
 msgid "Copy and paste instead"
-msgstr ""
+msgstr "Copiază și lipește"
 
 #. The words are ours; nothing from the file reaches them.
 #: app/src/ui/own_project.rs:794
 msgid "Ready: Penguin Mail project"
-msgstr ""
+msgstr "Gata: proiectul Penguin Mail"
 
 #: app/src/ui/pgp.rs:105
 msgid "Checked"
@@ -10014,29 +10094,31 @@ msgid ""
 "Filters, aliases and the automatic reply need Gmail's own connection, which "
 "this computer's Google sign-in doesn't offer."
 msgstr ""
+"Filtrele, aliasurile și răspunsul automat au nevoie de conexiunea proprie a "
+"Gmail, pe care conectarea Google a acestui computer nu o oferă."
 
 #: app/src/ui/preferences/google_route.rs:115
 msgid "Switch {address} to this computer's sign-in?"
-msgstr ""
+msgstr "Treceți {address} la conectarea acestui computer?"
 
 #: app/src/ui/preferences/google_route.rs:275
 msgid "Connected"
-msgstr ""
+msgstr "Conectat"
 
 #. Translators: a small heading over the Gmail account's rows; Gmail
 #. is a name, keep it as it is.
 #: app/src/ui/preferences/google_route.rs:320
 msgid "Gmail"
-msgstr ""
+msgstr "Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:326
 msgid "Gmail features"
-msgstr ""
+msgstr "Funcții Gmail"
 
 #: app/src/ui/preferences/google_route.rs:328
 msgid "Every feature"
-msgstr ""
+msgstr "Toate funcțiile"
 
 #: app/src/ui/preferences/google_route.rs:362 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
@@ -10045,30 +10127,30 @@ msgstr "Comută"
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:370
 msgid "Signed in through your own Google project"
-msgstr ""
+msgstr "Conectat prin propriul proiect Google"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:388
 msgid "Stop using your own Google project"
-msgstr ""
+msgstr "Nu mai folosi propriul proiect Google"
 
 #: app/src/ui/preferences/google_route.rs:404
 msgid "Calendar and contacts"
-msgstr ""
+msgstr "Calendar și contacte"
 
 #: app/src/ui/preferences/google_route.rs:412
 msgid "Connect the contacts for {account}"
-msgstr ""
+msgstr "Conectează contactele pentru {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
 #: app/src/ui/preferences/google_route.rs:430
 msgid "On gmail.com"
-msgstr ""
+msgstr "Pe gmail.com"
 
 #: app/src/ui/preferences/google_route.rs:527
 msgid "Get Every Feature"
-msgstr ""
+msgstr "Obține toate funcțiile"
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10089,7 +10171,7 @@ msgstr "Acest mesaj așteaptă să fie trimis"
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:117 app/src/ui/route_page.rs:124
 msgid "Add your Google Calendar and contacts?"
-msgstr ""
+msgstr "Adăugați Google Calendar și contactele?"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:130
@@ -10097,6 +10179,9 @@ msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
 msgstr ""
+"Penguin Mail cere de la Google calendarul, contactele și fișierele pe care "
+"le adaugă în Drive. Google va afișa propriul ecran. Corespondența dvs. este "
+"deja configurată."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
@@ -10105,15 +10190,17 @@ msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
 msgstr ""
+"Google poate spune „Google nu a verificat această aplicație”. Faceți clic pe "
+"Avansat, apoi pe Accesați Penguin Mail (nesigur)."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:153
 msgid "Continue to Google"
-msgstr ""
+msgstr "Continuă la Google"
 
 #: app/src/ui/route_page.rs:197
 msgid "Recommended"
-msgstr ""
+msgstr "Recomandat"
 
 #: app/src/ui/rules.rs:78 app/src/ui/rules.rs:91 app/src/ui/rules.rs:93
 #: app/src/ui/rules.rs:532
@@ -10333,6 +10420,8 @@ msgstr "Mediul izolat tot nu poate porni"
 msgid ""
 "Gmail sends only from addresses you added in Gmail's Send mail as setting."
 msgstr ""
+"Gmail trimite doar de la adresele pe care le-ați adăugat în setarea „Trimite "
+"mesaje ca” din Gmail."
 
 #: app/src/ui/sender_prefs.rs:39
 msgid "Addresses You Send From"
@@ -10515,7 +10604,7 @@ msgstr ""
 
 #: app/src/ui/sidebar.rs:2089
 msgid "Choose how this account signs in to get new mail"
-msgstr ""
+msgstr "Alegeți cum se conectează acest cont ca să primească mesaje noi"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
@@ -10524,6 +10613,8 @@ msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
 msgstr ""
+"Gmail limitează cât de multă corespondență poate descărca o aplicație pe zi. "
+"Penguin Mail va încerca din nou mai târziu."
 
 #: app/src/ui/sidebar/sections.rs:25
 msgid "Favorites"
@@ -11113,7 +11204,7 @@ msgstr "Conturile nu au putut fi citite: {reason}"
 
 #: app/src/ui/window.rs:1764
 msgid "Signed in with this computer's sign-in."
-msgstr ""
+msgstr "Conectat cu conectarea acestui computer."
 
 #: app/src/ui/window.rs:2274
 msgid "Could not delete the mail: {reason}"
@@ -11230,7 +11321,7 @@ msgstr "Adăugați mai întâi un cont de e-mail"
 #. Translators: {account} is an email address.
 #: app/src/ui/window.rs:4312
 msgid "The calendar and contacts of {account} are connected."
-msgstr ""
+msgstr "Calendarul și contactele pentru {account} sunt conectate."
 
 #: app/src/ui/window.rs:4428
 msgid "Open a message from the person first"
@@ -13246,6 +13337,8 @@ msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
+"Penguin Mail nu găsește proiectul dvs. Google pe acest computer. Dați-i din "
+"nou cheia ca să vă conectați."
 
 #: sync/src/sign_in/browser.rs:151
 msgid ""
@@ -13285,11 +13378,12 @@ msgstr ""
 #: sync/src/sign_in/goa_link.rs:37
 msgid "Online Accounts couldn't sign in to Google. Sign in again there."
 msgstr ""
+"Online Accounts nu s-au putut conecta la Google. Conectați-vă din nou acolo."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: sync/src/sign_in/goa_link.rs:42
 msgid "Mail is turned off for this account in Online Accounts."
-msgstr ""
+msgstr "Corespondența este oprită pentru acest cont în Online Accounts."
 
 #: sync/src/sign_in/own_client.rs:87
 msgid ""
@@ -13304,32 +13398,38 @@ msgstr ""
 #: sync/src/sign_in/own_client.rs:187
 msgid "This key is for a website. Go back to step 5 and choose Desktop app."
 msgstr ""
+"Această cheie este pentru un site web. Reveniți la pasul 5 și alegeți "
+"Aplicație pentru computer."
 
 #: sync/src/sign_in/own_client.rs:189
 msgid "This isn't the file from step 5."
-msgstr ""
+msgstr "Acesta nu este fișierul de la pasul 5."
 
 #: sync/src/sign_in/own_client.rs:191
 msgid ""
 "This file has no secret. Make a new key in step 5 and download it straight "
 "away."
 msgstr ""
+"Acest fișier nu are cod secret. Creați o cheie nouă la pasul 5 și descărcați-"
+"o imediat."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:195
 msgid "Paste both the Client ID and the Client secret"
-msgstr ""
+msgstr "Lipiți atât ID client, cât și Cod secret client"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:199
 msgid ""
 "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
 msgstr ""
+"Copiați din nou ID client de la pasul 5. Se termină "
+"cu .apps.googleusercontent.com."
 
 #. Translators: said under the key file a person chose in the Google project setup.
 #: sync/src/sign_in/own_client.rs:202
 msgid "Penguin Mail can't open this file. Choose another."
-msgstr ""
+msgstr "Penguin Mail nu poate deschide acest fișier. Alegeți altul."
 
 #: sync/src/triage.rs:53
 msgid "Mark read"

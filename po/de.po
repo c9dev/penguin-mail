@@ -11402,18 +11402,19 @@ msgstr[1] "{name}, {count} ungelesen"
 
 #: app/src/ui/window/column_width.rs:31
 msgid "Mailbox sidebar width"
-msgstr ""
+msgstr "Breite der Postfachleiste"
 
 #: app/src/ui/window/column_width.rs:32
-#, fuzzy
 msgid "Message list width"
-msgstr "Nachricht gesendet"
+msgstr "Breite der Nachrichtenliste"
 
 #: app/src/ui/window/column_width.rs:38
 msgid ""
 "Drag to resize, or use Left and Right. Home and End choose the smallest and "
 "largest widths."
 msgstr ""
+"Zum Ändern der Größe ziehen oder die Tasten Links und Rechts verwenden. Pos1 "
+"und Ende wählen die kleinste und die größte Breite."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124

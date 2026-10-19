@@ -62,6 +62,8 @@ msgid ""
 "Gmail through the Google account your computer's Online Accounts already "
 "holds, on Linux"
 msgstr ""
+"Gmail через обліковий запис Google, який уже є в Online Accounts вашого "
+"комп’ютера, у Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
 msgid "Contacts from Google, Outlook and any CardDAV server"
@@ -2258,7 +2260,7 @@ msgstr "Демонстраційний режим не може перемика
 
 #: app/src/core.rs:1821
 msgid "The demo cannot connect a calendar."
-msgstr ""
+msgstr "Демонстрація не може підключити календар."
 
 #: app/src/core.rs:1887
 msgid "Gave up waiting for the browser after five minutes."
@@ -2266,11 +2268,11 @@ msgstr "Очікування браузера припинено через п'�
 
 #: app/src/core/goa.rs:145
 msgid "The demo cannot sign in through Online Accounts."
-msgstr ""
+msgstr "Демонстрація не може увійти через Online Accounts."
 
 #: app/src/core/route.rs:140
 msgid "This account is already moving to its new sign-in."
-msgstr ""
+msgstr "Цей обліковий запис уже переходить на новий спосіб входу."
 
 #: app/src/event_reminders/notice.rs:31
 msgid "Join"
@@ -2485,11 +2487,11 @@ msgstr "Сланцевий"
 #. own page shows in your language.
 #: app/src/gmail_password.rs:53
 msgid "Open App passwords"
-msgstr ""
+msgstr "Відкрити Паролі програм"
 
 #: app/src/gmail_password.rs:54
 msgid "Sign In Another Way"
-msgstr ""
+msgstr "Увійти іншим способом"
 
 #: app/src/gmail_password.rs:55
 msgid "Back"
@@ -2499,7 +2501,7 @@ msgstr "Назад"
 #. in your language.
 #: app/src/gmail_password.rs:58
 msgid "Open Gmail Labels"
-msgstr ""
+msgstr "Відкрити мітки Gmail"
 
 #: app/src/gmail_password.rs:59
 msgid "Try Again"
@@ -2507,23 +2509,26 @@ msgstr "Повторити спробу"
 
 #: app/src/gmail_password.rs:102
 msgid "Google wants an app password here, not your Google password."
-msgstr ""
+msgstr "Google просить тут пароль програми, а не ваш пароль Google."
 
 #: app/src/gmail_password.rs:106
 msgid ""
 "Google didn't accept that app password. Make a new one and paste it here."
 msgstr ""
+"Google не прийняла цей пароль програми. Створіть новий і вставте його сюди."
 
 #: app/src/gmail_password.rs:109
 msgid ""
 "Your organization turned off this way of signing in. Ask them, or sign in "
 "another way."
 msgstr ""
+"Ваша організація вимкнула цей спосіб входу. Запитайте в неї або увійдіть "
+"іншим способом."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/gmail_password.rs:112
 msgid "This doesn't look like Gmail's server."
-msgstr ""
+msgstr "Це не схоже на сервер Gmail."
 
 #. Translators: Gmail and All Mail are names; use the words Gmail's own settings show
 #. in your language for Labels, Show in IMAP and All Mail.
@@ -2532,37 +2537,41 @@ msgid ""
 "Gmail hides All Mail from apps. In Gmail's settings, open Labels and tick "
 "Show in IMAP next to All Mail."
 msgstr ""
+"Gmail приховує «Усі листи» від програм. У налаштуваннях Gmail відкрийте "
+"«Мітки» і позначте «Показувати в IMAP» біля «Усі листи»."
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/gmail_password.rs:144
 msgid "App passwords are 16 letters. This looks like a different password."
-msgstr ""
+msgstr "Паролі програм складаються з 16 літер. Це схоже на інший пароль."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:99
 msgid "Sign in to {address} again in Online Accounts."
-msgstr ""
+msgstr "Увійдіть до {address} знову в Online Accounts."
 
 #: app/src/goa_notice.rs:107
 msgid ""
 "Your organization may not allow this. Ask your administrator, or sign in "
 "another way."
 msgstr ""
+"Ваша організація, можливо, цього не дозволяє. Запитайте адміністратора або "
+"увійдіть іншим способом."
 
 #: app/src/goa_notice.rs:115
 msgid "Add It Again"
-msgstr ""
+msgstr "Додати знову"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:119
 msgid "{address} was removed from Online Accounts. Your mail here is kept."
-msgstr ""
+msgstr "{address} видалено з Online Accounts. Ваші листи тут збережено."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:127
 msgid "Mail is turned off for {address} in Online Accounts."
-msgstr ""
+msgstr "Пошту вимкнено для {address} в Online Accounts."
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
@@ -2570,16 +2579,18 @@ msgid ""
 "Google refused this computer's sign-in for mail. Is IMAP turned on for this "
 "account?"
 msgstr ""
+"Google відхилила вхід цього комп’ютера для пошти. Чи ввімкнено IMAP для "
+"цього облікового запису?"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:139
 msgid "Can't reach Online Accounts on this computer."
-msgstr ""
+msgstr "Не вдається звернутися до Online Accounts на цьому комп’ютері."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:146
 msgid "Open Online Accounts"
-msgstr ""
+msgstr "Відкрити Online Accounts"
 
 #: app/src/keyring_plug.rs:160
 msgid ""
@@ -2635,10 +2646,13 @@ msgid ""
 "Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
 "your mail back. Nothing on this computer was lost."
 msgstr ""
+"Penguin Mail не може отримати нові листи для {address}. Оберіть, як цей "
+"запис входить, щоб знову отримувати пошту. На цьому комп’ютері нічого не "
+"втрачено."
 
 #: app/src/move_banner.rs:65
 msgid "Choose how {address} signs in to keep your mail arriving."
-msgstr ""
+msgstr "Оберіть, як {address} входить, щоб листи й надалі надходили."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:76
@@ -2649,24 +2663,32 @@ msgid_plural ""
 "{count} Gmail accounts can't get new mail. Choose how each signs in to get "
 "your mail back. Nothing on this computer was lost."
 msgstr[0] ""
+"{count} обліковий запис Gmail не може отримати нові листи. Оберіть, як він "
+"входить, щоб знову отримувати пошту. На цьому комп’ютері нічого не втрачено."
 msgstr[1] ""
+"{count} облікові записи Gmail не можуть отримати нові листи. Оберіть, як "
+"кожен із них входить, щоб знову отримувати пошту. На цьому комп’ютері нічого "
+"не втрачено."
 msgstr[2] ""
+"{count} облікових записів Gmail не можуть отримати нові листи. Оберіть, як "
+"кожен із них входить, щоб знову отримувати пошту. На цьому комп’ютері нічого "
+"не втрачено."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:84
 msgid "{count} Gmail account needs a new way to sign in"
 msgid_plural "{count} Gmail accounts need a new way to sign in"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{count} обліковому запису Gmail потрібен новий спосіб входу"
+msgstr[1] "{count} обліковим записам Gmail потрібен новий спосіб входу"
+msgstr[2] "{count} обліковим записам Gmail потрібен новий спосіб входу"
 
 #: app/src/move_banner.rs:94 app/src/ui/goa_page.rs:297
 msgid "Use This Account"
-msgstr ""
+msgstr "Використати цей обліковий запис"
 
 #: app/src/move_banner.rs:96 app/src/ui/preferences/google_route.rs:345
 msgid "Choose…"
-msgstr ""
+msgstr "Обрати…"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:410
 #: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:1080
@@ -3001,22 +3023,22 @@ msgstr "{provider} не розподіляє вхідні за категорі�
 #. Translators: Gmail and gmail.com are names; keep them as they are.
 #: app/src/offered.rs:576
 msgid "Your Gmail filters still run. Change them on gmail.com."
-msgstr ""
+msgstr "Ваші фільтри Gmail і далі працюють. Змінюйте їх на gmail.com."
 
 #. Translators: gmail.com is a name; keep it as it is.
 #: app/src/offered.rs:582
 msgid "Set your automatic reply on gmail.com."
-msgstr ""
+msgstr "Налаштуйте автовідповідь на gmail.com."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/offered.rs:588
 msgid "Open Gmail Filters"
-msgstr ""
+msgstr "Відкрити фільтри Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/offered.rs:594
 msgid "Open Gmail Settings"
-msgstr ""
+msgstr "Відкрити налаштування Gmail"
 
 #: app/src/offered.rs:709
 msgid ""
@@ -3305,17 +3327,17 @@ msgstr "Моделі не вдалося це перекласти: {reason}"
 
 #: app/src/own_project.rs:175
 msgid "Step {number} of 6"
-msgstr ""
+msgstr "Крок {number} із 6"
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
 #: app/src/own_project.rs:182
 msgid "Open Google Cloud, then follow the list."
-msgstr ""
+msgstr "Відкрийте Google Cloud і виконайте кроки зі списку."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:188
 msgid "Your own Google project"
-msgstr ""
+msgstr "Ваш власний проєкт Google"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:193
@@ -3323,6 +3345,9 @@ msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
 msgstr ""
+"Власний проєкт Google дає Penguin Mail усі можливості Gmail. Він "
+"безкоштовний, лише для вас, займає близько 10 хвилин, і зробити це потрібно "
+"один раз."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:197
@@ -3330,45 +3355,49 @@ msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
 msgstr ""
+"Ви користуватиметеся обліковим записом Google, з якого хочете читати пошту. "
+"Penguin Mail відкриває кожну сторінку за вас і підказує, що натиснути."
 
 #: app/src/own_project.rs:203
 msgid "Make a project"
-msgstr ""
+msgstr "Створіть проєкт"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:206
 msgid "Google keeps what Penguin Mail needs in a project of its own."
-msgstr ""
+msgstr "Google зберігає потрібне для Penguin Mail в окремому проєкті."
 
 #: app/src/own_project.rs:210
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
 msgstr ""
+"Якщо Google спершу попросить прийняти її умови, оберіть свою країну й "
+"погодьтеся."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:213
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
-msgstr ""
+msgstr "У полі <b>Назва проєкту</b> введіть <tt>Penguin Mail</tt>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:215
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
-msgstr ""
+msgstr "Залиште <b>Розташування</b> як є й натисніть <b>Створити</b>."
 
 #: app/src/own_project.rs:216
 msgid "Wait for the bell icon to say the project is ready."
-msgstr ""
+msgstr "Зачекайте, поки значок дзвінка повідомить, що проєкт готовий."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:222
 msgid "Turn on Gmail, Calendar and Contacts"
-msgstr ""
+msgstr "Увімкніть Gmail, Календар і Контакти"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:225
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
-msgstr ""
+msgstr "Penguin Mail читає вашу пошту, календар і контакти через ці служби."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:230
@@ -3376,25 +3405,27 @@ msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
 msgstr ""
+"Переконайтеся, що вгорі вказано проєкт <b>Penguin Mail</b>. Якщо ні, "
+"натисніть на нього й оберіть Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:233
 msgid "Click <b>Next</b>, then <b>Enable</b>."
-msgstr ""
+msgstr "Натисніть <b>Далі</b>, потім <b>Увімкнути</b>."
 
 #: app/src/own_project.rs:238
 msgid "Name the sign-in screen"
-msgstr ""
+msgstr "Назвіть екран входу"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:240
 msgid "Google shows this name when you sign in."
-msgstr ""
+msgstr "Google показує цю назву, коли ви входите."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:243
 msgid "Click <b>Get started</b>."
-msgstr ""
+msgstr "Натисніть <b>Почати</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:246
@@ -3402,6 +3433,8 @@ msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
 msgstr ""
+"<b>Назва програми</b>: <tt>Penguin Mail</tt>. <b>Електронна адреса служби "
+"підтримки користувачів</b>: ваша адреса."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:250
@@ -3410,24 +3443,28 @@ msgid ""
 "organization may see <b>Internal</b>; that also works and needs no warning "
 "screen later. Pick it if offered.)"
 msgstr ""
+"<b>Аудиторія</b>: оберіть <b>Зовнішній</b>. (Робочий або навчальний "
+"обліковий запис в організації може показувати <b>Внутрішній</b>. Це теж "
+"підходить, і згодом не потрібен екран із попередженням. Оберіть його, якщо "
+"він є.)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
 msgid "<b>Contact information</b>: your address again."
-msgstr ""
+msgstr "<b>Контактна інформація</b>: знову ваша адреса."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:255
 msgid "Tick the agreement and click <b>Create</b>."
-msgstr ""
+msgstr "Позначте згоду й натисніть <b>Створити</b>."
 
 #: app/src/own_project.rs:260
 msgid "Publish it"
-msgstr ""
+msgstr "Опублікуйте його"
 
 #: app/src/own_project.rs:261
 msgid "Publishing keeps you signed in."
-msgstr ""
+msgstr "Публікація зберігає ваш вхід."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
@@ -3435,46 +3472,51 @@ msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
 msgstr ""
+"У розділі <b>Стан публікації</b> натисніть <b>Опублікувати програму</b>, "
+"потім <b>Підтвердити</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:268
 msgid "It should now say <b>In production</b>."
-msgstr ""
+msgstr "Тепер має бути написано <b>У виробництві</b>."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:272
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
+"Якщо пропустити цей крок, Google виходитиме з Penguin Mail кожні 7 днів."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:274
 msgid "Chose Internal? Then there's nothing to do here."
-msgstr ""
+msgstr "Обрали «Внутрішній»? Тоді тут нічого робити не потрібно."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:279
 msgid "Make the key for Penguin Mail"
-msgstr ""
+msgstr "Створіть ключ для Penguin Mail"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:282
 msgid "The key lets Penguin Mail sign in through your project."
-msgstr ""
+msgstr "Ключ дозволяє Penguin Mail входити через ваш проєкт."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:286
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
-msgstr ""
+msgstr "<b>Тип програми</b>: оберіть <b>Комп’ютерна програма</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:288
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
-msgstr ""
+msgstr "<b>Назва</b>: <tt>Penguin Mail</tt>, потім <b>Створити</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:290
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
 msgstr ""
+"На наступному екрані натисніть <b>Завантажити JSON</b>, перш ніж закрити "
+"його."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:295
@@ -3482,16 +3524,18 @@ msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
 msgstr ""
+"Google показує це лише раз. Якщо ви вже закрили екран, видаліть цей ключ і "
+"створіть новий."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:301
 msgid "Give the file to Penguin Mail"
-msgstr ""
+msgstr "Передайте файл Penguin Mail"
 
 #: app/src/own_project.rs:308 app/src/ui/own_project.rs:521
 #: app/src/ui/own_project.rs:798
 msgid "Sign in with Google"
-msgstr ""
+msgstr "Увійти через Google"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:313
@@ -3501,34 +3545,40 @@ msgid ""
 "<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
 "box so every feature works."
 msgstr ""
+"Google напише <b>«Google не підтвердила цю програму»</b>. Це очікувано: "
+"програма є вашим власним проєктом, і користуєтеся нею лише ви. Натисніть "
+"<b>Додатково</b>, потім <b>Перейти на сторінку Penguin Mail (небезпечно)</"
+"b>. Потім позначте всі пункти, щоб працювали всі можливості."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:343
 msgid "Did you publish your project? If it still says Testing, go to step 4."
 msgstr ""
+"Ви опублікували проєкт? Якщо досі написано «Тестування», перейдіть до кроку "
+"4."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:366
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
-msgstr ""
+msgstr "Google не розпізнає цей ключ. Створіть новий і завантажте його знову."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:391
 msgid "Gmail is turned off in your project."
-msgstr ""
+msgstr "Gmail вимкнено у вашому проєкті."
 
 #: app/src/own_project.rs:393
 msgid "Calendar is turned off in your project."
-msgstr ""
+msgstr "Календар вимкнено у вашому проєкті."
 
 #: app/src/own_project.rs:395
 msgid "Contacts is turned off in your project."
-msgstr ""
+msgstr "Контакти вимкнено у вашому проєкті."
 
 #: app/src/own_project.rs:397
 msgid "Drive is turned off in your project."
-msgstr ""
+msgstr "Drive вимкнено у вашому проєкті."
 
 #: app/src/own_project.rs:448
 msgid ""
@@ -4349,7 +4399,7 @@ msgstr "{who} вилучив(-ла) без прочитання"
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:90 app/src/ui/move_sheet.rs:63
 msgid "Choose how Penguin Mail signs in to Gmail"
-msgstr ""
+msgstr "Оберіть, як Penguin Mail входить до Gmail"
 
 #. Translators: Gmail and Google are names; keep them as they are.
 #: app/src/route_choice.rs:133
@@ -4357,62 +4407,64 @@ msgid ""
 "Want every Gmail feature? Your own Google project gives you all of them, "
 "free."
 msgstr ""
+"Хочете всі можливості Gmail? Власний проєкт Google дає їх усі, безкоштовно."
 
 #: app/src/route_choice.rs:141 app/src/ui/goa_page.rs:289
 msgid "Use the Google account on this computer"
-msgstr ""
+msgstr "Використати обліковий запис Google на цьому комп’ютері"
 
 #: app/src/route_choice.rs:143 app/src/ui/goa_page.rs:81
 #: app/src/ui/goa_page.rs:335 app/src/ui/goa_page.rs:351
 #: app/src/ui/goa_page.rs:362 app/src/ui/goa_page.rs:387
 msgid "Add your Google account to this computer"
-msgstr ""
+msgstr "Додати обліковий запис Google на цей комп’ютер"
 
 #: app/src/route_choice.rs:146
 msgid "Already signed in on this computer"
-msgstr ""
+msgstr "Уже виконано вхід на цьому комп’ютері"
 
 #: app/src/route_choice.rs:148 app/src/ui/preferences/google_route.rs:330
 msgid "Mail, calendar and contacts"
-msgstr ""
+msgstr "Пошта, календар і контакти"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:160
 msgid "Use a password from Google"
-msgstr ""
+msgstr "Використати пароль від Google"
 
 #: app/src/route_choice.rs:162
 msgid "Quick. Mail, calendar and contacts."
-msgstr ""
+msgstr "Швидко. Пошта, календар і контакти."
 
 #: app/src/route_choice.rs:164
 msgid "Quickest. About 2 minutes"
-msgstr ""
+msgstr "Найшвидше. Близько 2 хвилин"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:174 app/src/ui/add_account.rs:3972
 msgid "Use your Google project again"
-msgstr ""
+msgstr "Знову використати ваш проєкт Google"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:176
 msgid "Every Gmail feature, with the project you set up before."
-msgstr ""
+msgstr "Усі можливості Gmail із проєктом, який ви налаштували раніше."
 
 #: app/src/route_choice.rs:185
 msgid "Set up a different project"
-msgstr ""
+msgstr "Налаштувати інший проєкт"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:188 app/src/ui/preferences/google_route.rs:352
 #: app/src/ui/window.rs:3444
 msgid "Set up your own Google project"
-msgstr ""
+msgstr "Налаштувати власний проєкт Google"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:191
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
 msgstr ""
+"Усі можливості Gmail на будь-якому комп’ютері. Близько 10 хвилин, один раз."
 
 #: app/src/rules.rs:13
 msgid "These rules run on this computer while Penguin Mail is open."
@@ -5140,7 +5192,7 @@ msgstr "Вхід…"
 
 #: app/src/ui/add_account.rs:946
 msgid "Moving your account. This takes a moment."
-msgstr ""
+msgstr "Переносимо ваш обліковий запис. Це займе мить."
 
 #: app/src/ui/add_account.rs:968
 msgid "Sign In in Your Browser"
@@ -5490,6 +5542,8 @@ msgid ""
 "Moving the account is taking too long. It goes on after you close this "
 "window."
 msgstr ""
+"Перенесення облікового запису триває надто довго. Воно триватиме й після "
+"закриття цього вікна."
 
 #: app/src/ui/add_account.rs:4367
 msgid "Link copied"
@@ -5514,7 +5568,7 @@ msgstr "Обліковий запис {account} готовий"
 #. Translators: the button that goes back to a step of the Google project setup.
 #: app/src/ui/add_account.rs:4759
 msgid "Go to Step {number}"
-msgstr ""
+msgstr "Перейти до кроку {number}"
 
 #: app/src/ui/add_account.rs:4921
 msgid ""
@@ -5526,7 +5580,7 @@ msgstr ""
 
 #: app/src/ui/add_account/routes.rs:440
 msgid "Filters, aliases and the automatic reply aren't available this way."
-msgstr ""
+msgstr "Фільтри, псевдоніми й автовідповідь цим способом недоступні."
 
 #: app/src/ui/assistant.rs:35 app/src/ui/window.rs:4023
 msgid "Summarize this conversation"
@@ -7433,7 +7487,7 @@ msgstr "Penguin Mail не бачить календарів цього облі�
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
 #: app/src/ui/preferences/google_route.rs:415
 msgid "Not connected"
-msgstr ""
+msgstr "Не підключено"
 
 #: app/src/ui/calendar/sidebar.rs:1110
 msgid "Show or hide this account's calendars"
@@ -7450,12 +7504,12 @@ msgstr "Параметри для {calendar}"
 #: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
 #: app/src/ui/preferences/google_route.rs:551
 msgid "Connect"
-msgstr ""
+msgstr "Підключити"
 
 #: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
 #: app/src/ui/preferences/google_route.rs:408
 msgid "Connect the calendar for {account}"
-msgstr ""
+msgstr "Підключити календар для {account}"
 
 #: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:494
 msgid "Grant Access for {account}"
@@ -8542,7 +8596,7 @@ msgstr "Наступний збіг"
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:32
 msgid "Sign in with an app password"
-msgstr ""
+msgstr "Увійти з паролем програми"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:43
@@ -8550,24 +8604,27 @@ msgid ""
 "Google gives each app its own password. You make one in your Google account "
 "and paste it here. Your Google password stays with Google."
 msgstr ""
+"Google дає кожній програмі власний пароль. Ви створюєте його у своєму "
+"обліковому записі Google і вставляєте сюди. Ваш пароль Google залишається в "
+"Google."
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:56
 msgid "Turn on 2-Step Verification, if it isn't on yet."
-msgstr ""
+msgstr "Увімкніть двоетапну перевірку, якщо вона ще не ввімкнена."
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:60
 msgid "Open 2-Step Verification"
-msgstr ""
+msgstr "Відкрити двоетапну перевірку"
 
 #. Translators: App password and Penguin Mail are names; use the words Google's own
 #. page shows in your language for App passwords.
 #: app/src/ui/gmail_password_page.rs:68
 msgid "Make an app password. Name it Penguin Mail."
-msgstr ""
+msgstr "Створіть пароль програми. Назвіть його Penguin Mail."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:80
@@ -8575,6 +8632,8 @@ msgid ""
 "Copy the 16 letters Google shows and paste them below. Google shows them "
 "only once."
 msgstr ""
+"Скопіюйте 16 літер, які показує Google, і вставте їх нижче. Google показує "
+"їх лише раз."
 
 #. Translators: Google is a name; keep it as it is. App passwords is the name of
 #. Google's page; use the words Google's own page shows in your language.
@@ -8583,41 +8642,43 @@ msgid ""
 "Changing your Google password removes your app passwords. Make a new one to "
 "keep getting mail."
 msgstr ""
+"Якщо змінити пароль Google, паролі програм буде видалено. Створіть новий, "
+"щоб і далі отримувати пошту."
 
 #. Translators: App password is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:102
 msgid "App password"
-msgstr ""
+msgstr "Пароль програми"
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:143
 msgid "App passwords page says the setting isn't available?"
-msgstr ""
+msgstr "На сторінці «Паролі програм» написано, що налаштування недоступне?"
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:150
 msgid "2-Step Verification is off for this account."
-msgstr ""
+msgstr "Для цього облікового запису вимкнено двоетапну перевірку."
 
 #. Translators: Advanced Protection is Google's name for it; use the words Google's
 #. own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:153
 msgid "The account uses Advanced Protection."
-msgstr ""
+msgstr "Обліковий запис використовує програму додаткового захисту."
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
 #: app/src/ui/gmail_password_page.rs:156
 msgid "A work or school admin turned app passwords off."
-msgstr ""
+msgstr "Адміністратор роботи чи навчального закладу вимкнув паролі програм."
 
 #: app/src/ui/gmail_password_page.rs:166 app/src/ui/gmail_password_page.rs:173
 #: app/src/ui/gmail_password_page.rs:179
 msgid "Use another way to sign in"
-msgstr ""
+msgstr "Увійти іншим способом"
 
 #: app/src/ui/goa_page.rs:124 app/src/ui/goa_page.rs:371
 #: app/src/ui/hide_my_email.rs:828
@@ -8626,7 +8687,7 @@ msgstr "Копіювати"
 
 #: app/src/ui/goa_page.rs:135
 msgid "Other ways to sign in"
-msgstr ""
+msgstr "Інші способи входу"
 
 #. Translators: {address} is an email address.
 #: app/src/ui/goa_page.rs:293
@@ -8634,18 +8695,20 @@ msgid ""
 "This computer is already signed in to <b>{address}</b>. Penguin Mail can "
 "read your mail through it."
 msgstr ""
+"Цей комп’ютер уже ввійшов до <b>{address}</b>. Penguin Mail може читати вашу "
+"пошту через нього."
 
 #: app/src/ui/goa_page.rs:310 app/src/ui/goa_page.rs:345
 msgid "Waiting for {address}…"
-msgstr ""
+msgstr "Очікуємо {address}…"
 
 #: app/src/ui/goa_page.rs:321
 msgid "You added {address}. Use it instead?"
-msgstr ""
+msgstr "Ви додали {address}. Використати його натомість?"
 
 #: app/src/ui/goa_page.rs:327
 msgid "Wait for {address}"
-msgstr ""
+msgstr "Зачекати на {address}"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:339
@@ -8653,6 +8716,8 @@ msgid ""
 "Open <b>Online Accounts</b> from your applications menu, add your Google "
 "account, and come back."
 msgstr ""
+"Відкрийте <b>Online Accounts</b> у меню програм, додайте свій обліковий "
+"запис Google й поверніться."
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
 #: app/src/ui/goa_page.rs:356
@@ -8660,11 +8725,13 @@ msgid ""
 "Install Online Accounts from your software center, add your Google account "
 "there, and come back."
 msgstr ""
+"Встановіть Online Accounts із центру програм, додайте там свій обліковий "
+"запис Google й поверніться."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
 msgid "Penguin Mail needs permission to use Online Accounts."
-msgstr ""
+msgstr "Penguin Mail потрібен дозвіл на використання Online Accounts."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
@@ -8672,10 +8739,12 @@ msgid ""
 "Penguin Mail reads Gmail through your computer's Online Accounts. Add "
 "<b>{address}</b> there, then come back."
 msgstr ""
+"Penguin Mail читає Gmail через Online Accounts вашого комп’ютера. Додайте "
+"там <b>{address}</b> і поверніться."
 
 #: app/src/ui/goa_page.rs:415
 msgid "Use {address} instead"
-msgstr ""
+msgstr "Використати {address} натомість"
 
 #: app/src/ui/hide_my_email.rs:24
 msgid ""
@@ -9279,14 +9348,17 @@ msgid ""
 "account below to keep your mail arriving. Your mail and settings stay as "
 "they are."
 msgstr ""
+"У Penguin Mail з’явилися нові способи входу до Google. Оберіть один для "
+"кожного облікового запису Gmail нижче, щоб листи й надалі надходили. Ваші "
+"листи й налаштування залишаються без змін."
 
 #: app/src/ui/move_sheet.rs:88
 msgid "Later"
-msgstr ""
+msgstr "Пізніше"
 
 #: app/src/ui/move_sheet.rs:92
 msgid "Choose Now"
-msgstr ""
+msgstr "Обрати зараз"
 
 #: app/src/ui/moving.rs:40
 msgid "The mail is already there"
@@ -9306,59 +9378,59 @@ msgstr "Пошту не можна туди перемістити"
 
 #: app/src/ui/own_project.rs:318
 msgid "Key File"
-msgstr ""
+msgstr "Файл ключа"
 
 #: app/src/ui/own_project.rs:496
 msgid "Start"
-msgstr ""
+msgstr "Почати"
 
 #: app/src/ui/own_project.rs:497
 msgid "I Already Have a Key"
-msgstr ""
+msgstr "У мене вже є ключ"
 
 #. Translators: the services are Google's, switched on one at a time with the four links below, in place of the one button above.
 #: app/src/ui/own_project.rs:594
 msgid "Turn them on one at a time instead"
-msgstr ""
+msgstr "Увімкнути їх по одній"
 
 #: app/src/ui/own_project.rs:614
 msgid "Steps look different?"
-msgstr ""
+msgstr "Кроки виглядають інакше?"
 
 #: app/src/ui/own_project.rs:700
 msgid "Next"
-msgstr ""
+msgstr "Далі"
 
 #: app/src/ui/own_project.rs:705 app/src/ui/own_project.rs:804
 msgid "Start over"
-msgstr ""
+msgstr "Почати спочатку"
 
 #: app/src/ui/own_project.rs:728
 msgid "Drop the file you downloaded here"
-msgstr ""
+msgstr "Перетягніть сюди завантажений файл"
 
 #: app/src/ui/own_project.rs:735
 msgid "Choose File…"
-msgstr ""
+msgstr "Обрати файл…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/ui/own_project.rs:763
 msgid "Client ID"
-msgstr ""
+msgstr "Ідентифікатор клієнта"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/ui/own_project.rs:767
 msgid "Client secret"
-msgstr ""
+msgstr "Секрет клієнта"
 
 #: app/src/ui/own_project.rs:773
 msgid "Copy and paste instead"
-msgstr ""
+msgstr "Скопіювати й вставити"
 
 #. The words are ours; nothing from the file reaches them.
 #: app/src/ui/own_project.rs:794
 msgid "Ready: Penguin Mail project"
-msgstr ""
+msgstr "Готово: проєкт Penguin Mail"
 
 #: app/src/ui/pgp.rs:105
 msgid "Checked"
@@ -9961,29 +10033,31 @@ msgid ""
 "Filters, aliases and the automatic reply need Gmail's own connection, which "
 "this computer's Google sign-in doesn't offer."
 msgstr ""
+"Фільтри, псевдоніми й автовідповідь потребують власного підключення Gmail, "
+"якого вхід Google на цьому комп’ютері не пропонує."
 
 #: app/src/ui/preferences/google_route.rs:115
 msgid "Switch {address} to this computer's sign-in?"
-msgstr ""
+msgstr "Перевести {address} на вхід цього комп’ютера?"
 
 #: app/src/ui/preferences/google_route.rs:275
 msgid "Connected"
-msgstr ""
+msgstr "Підключено"
 
 #. Translators: a small heading over the Gmail account's rows; Gmail
 #. is a name, keep it as it is.
 #: app/src/ui/preferences/google_route.rs:320
 msgid "Gmail"
-msgstr ""
+msgstr "Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:326
 msgid "Gmail features"
-msgstr ""
+msgstr "Можливості Gmail"
 
 #: app/src/ui/preferences/google_route.rs:328
 msgid "Every feature"
-msgstr ""
+msgstr "Усі можливості"
 
 #: app/src/ui/preferences/google_route.rs:362 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
@@ -9992,30 +10066,30 @@ msgstr "Перейти"
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:370
 msgid "Signed in through your own Google project"
-msgstr ""
+msgstr "Вхід через ваш власний проєкт Google"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:388
 msgid "Stop using your own Google project"
-msgstr ""
+msgstr "Більше не використовувати власний проєкт Google"
 
 #: app/src/ui/preferences/google_route.rs:404
 msgid "Calendar and contacts"
-msgstr ""
+msgstr "Календар і контакти"
 
 #: app/src/ui/preferences/google_route.rs:412
 msgid "Connect the contacts for {account}"
-msgstr ""
+msgstr "Підключити контакти для {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
 #: app/src/ui/preferences/google_route.rs:430
 msgid "On gmail.com"
-msgstr ""
+msgstr "На gmail.com"
 
 #: app/src/ui/preferences/google_route.rs:527
 msgid "Get Every Feature"
-msgstr ""
+msgstr "Отримати всі можливості"
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10036,7 +10110,7 @@ msgstr "Це повідомлення очікує надсилання"
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:117 app/src/ui/route_page.rs:124
 msgid "Add your Google Calendar and contacts?"
-msgstr ""
+msgstr "Додати ваш Календар Google і контакти?"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:130
@@ -10044,6 +10118,8 @@ msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
 msgstr ""
+"Penguin Mail просить у Google ваш календар, контакти й файли, які додає до "
+"Drive. Google покаже власний екран. Вашу пошту вже налаштовано."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
@@ -10052,15 +10128,17 @@ msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
 msgstr ""
+"Google може написати «Google не підтвердила цю програму». Натисніть "
+"«Додатково», потім «Перейти на сторінку Penguin Mail (небезпечно)»."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:153
 msgid "Continue to Google"
-msgstr ""
+msgstr "Продовжити в Google"
 
 #: app/src/ui/route_page.rs:197
 msgid "Recommended"
-msgstr ""
+msgstr "Рекомендовано"
 
 #: app/src/ui/rules.rs:78 app/src/ui/rules.rs:91 app/src/ui/rules.rs:93
 #: app/src/ui/rules.rs:532
@@ -10276,6 +10354,8 @@ msgstr "Пісочниця досі не може запуститися"
 msgid ""
 "Gmail sends only from addresses you added in Gmail's Send mail as setting."
 msgstr ""
+"Gmail надсилає лише з адрес, які ви додали в налаштуванні Gmail «Надсилати "
+"листи як»."
 
 #: app/src/ui/sender_prefs.rs:39
 msgid "Addresses You Send From"
@@ -10459,7 +10539,7 @@ msgstr ""
 
 #: app/src/ui/sidebar.rs:2089
 msgid "Choose how this account signs in to get new mail"
-msgstr ""
+msgstr "Оберіть, як цей обліковий запис входить, щоб отримувати нові листи"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
@@ -10468,6 +10548,8 @@ msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
 msgstr ""
+"Gmail обмежує, скільки листів програма може завантажити за день. Penguin "
+"Mail спробує ще раз пізніше."
 
 #: app/src/ui/sidebar/sections.rs:25
 msgid "Favorites"
@@ -11056,7 +11138,7 @@ msgstr "Не вдалося прочитати облікові записи: {r
 
 #: app/src/ui/window.rs:1764
 msgid "Signed in with this computer's sign-in."
-msgstr ""
+msgstr "Вхід через цей комп’ютер."
 
 #: app/src/ui/window.rs:2274
 msgid "Could not delete the mail: {reason}"
@@ -11175,7 +11257,7 @@ msgstr "Спочатку додайте поштовий обліковий за
 #. Translators: {account} is an email address.
 #: app/src/ui/window.rs:4312
 msgid "The calendar and contacts of {account} are connected."
-msgstr ""
+msgstr "Календар і контакти {account} підключено."
 
 #: app/src/ui/window.rs:4428
 msgid "Open a message from the person first"
@@ -13167,6 +13249,8 @@ msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
+"Penguin Mail не знаходить ваш проєкт Google на цьому комп’ютері. Передайте "
+"ключ знову, щоб увійти."
 
 #: sync/src/sign_in/browser.rs:151
 msgid ""
@@ -13205,12 +13289,12 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. Google is a name.
 #: sync/src/sign_in/goa_link.rs:37
 msgid "Online Accounts couldn't sign in to Google. Sign in again there."
-msgstr ""
+msgstr "Online Accounts не вдалося увійти до Google. Увійдіть там знову."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: sync/src/sign_in/goa_link.rs:42
 msgid "Mail is turned off for this account in Online Accounts."
-msgstr ""
+msgstr "Пошту вимкнено для цього облікового запису в Online Accounts."
 
 #: sync/src/sign_in/own_client.rs:87
 msgid ""
@@ -13224,32 +13308,38 @@ msgstr ""
 #: sync/src/sign_in/own_client.rs:187
 msgid "This key is for a website. Go back to step 5 and choose Desktop app."
 msgstr ""
+"Цей ключ призначено для вебсайту. Поверніться до кроку 5 й оберіть "
+"«Комп’ютерна програма»."
 
 #: sync/src/sign_in/own_client.rs:189
 msgid "This isn't the file from step 5."
-msgstr ""
+msgstr "Це не файл із кроку 5."
 
 #: sync/src/sign_in/own_client.rs:191
 msgid ""
 "This file has no secret. Make a new key in step 5 and download it straight "
 "away."
 msgstr ""
+"У цьому файлі немає секрету. Створіть новий ключ на кроці 5 і завантажте "
+"його одразу."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:195
 msgid "Paste both the Client ID and the Client secret"
-msgstr ""
+msgstr "Вставте і ідентифікатор клієнта, і секрет клієнта"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:199
 msgid ""
 "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
 msgstr ""
+"Знову скопіюйте ідентифікатор клієнта з кроку 5. Він закінчується "
+"на .apps.googleusercontent.com."
 
 #. Translators: said under the key file a person chose in the Google project setup.
 #: sync/src/sign_in/own_client.rs:202
 msgid "Penguin Mail can't open this file. Choose another."
-msgstr ""
+msgstr "Penguin Mail не може відкрити цей файл. Оберіть інший."
 
 #: sync/src/triage.rs:53
 msgid "Mark read"
