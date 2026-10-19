@@ -292,7 +292,7 @@ fn heading(text: &str) -> adw::PreferencesRow {
         .css_classes(["gmail-heading"])
         .build();
     label.set_accessible_role(gtk::AccessibleRole::Heading);
-    adw::PreferencesRow::builder()
+    let row = adw::PreferencesRow::builder()
         .title(&words)
         .use_markup(false)
         .activatable(false)
@@ -301,7 +301,12 @@ fn heading(text: &str) -> adw::PreferencesRow {
         .can_target(false)
         .child(&label)
         .css_classes(["gmail-heading-row"])
-        .build()
+        .build();
+    // The row is a list item, and a list item takes no name from the
+    // label inside it.
+    row.upcast_ref::<gtk::Widget>()
+        .update_property(&[gtk::accessible::Property::Label(&words)]);
+    row
 }
 
 /// A sentence with its link under it, the link bold and followed by the
@@ -601,6 +606,17 @@ pub(crate) mod checks {
             .map(|subtitle| subtitle.to_string())
             .collect();
         assert_eq!(subtitles, ["Not connected", "Not connected"]);
+        let headings: Vec<&adw::PreferencesRow> = rows
+            .iter()
+            .filter(|row| row.has_css_class("gmail-heading-row"))
+            .collect();
+        assert_eq!(headings.len(), 3);
+        for row in headings {
+            assert!(gtk::test_accessible_has_property(
+                row.upcast_ref::<gtk::Widget>(),
+                gtk::AccessibleProperty::Label
+            ));
+        }
         let mut buttons = Vec::new();
         buttons_of(parent.upcast_ref(), &mut buttons);
         let labels: Vec<String> = buttons

@@ -15,8 +15,9 @@
 # reply and a forward in the composer with their history shown, opens Add
 # Account on its tiles and its Other page, opens Switch to JMAP from the
 # Fastmail account's menu, and walks the calendar. Then it starts the demo
-# once more, on Add Account's page for a calendar without mail, and reads
-# that.
+# again for the Add Account page for a calendar without mail, the Gmail
+# route and consent pages, the first-launch sheet, the move banner and the
+# Gmail rows in Preferences, and reads each.
 #
 # The hidden display needs Xvfb, dbus-run-session, at-spi2-core, python3
 # with the GObject bindings, and the XTest library to click and type:
@@ -1128,6 +1129,19 @@ if sys.argv[1:] == ["--calendar-page"]:
 
     if not wait_until(page_read, 20):
         sys.exit("Add Account did not open on its calendar page.")
+if sys.argv[1:2] == ["--shown"]:
+    # A stage the demo opens on its own: a page, a sheet or a banner. The
+    # walk waits for the control named in the arguments (role, then
+    # name), and fails aloud when it never comes, since a stage that did
+    # not open has no unnamed control either.
+    want_role, want_name = sys.argv[2], sys.argv[3]
+
+    def stage_read():
+        controls()
+        return any(row[0] == want_role and row[1] == want_name for row in found)
+
+    if not wait_until(stage_read, 30):
+        sys.exit("The demo did not show %s %r." % (want_role, want_name))
 if sys.argv[1:] == ["--menus"]:
     open_menus()
     switch_unnamed = walk_switch_jmap(Input())
@@ -1223,18 +1237,20 @@ fi
 # New events start on the demo's Google Workspace calendar, whose editor
 # has the Type row the walk opens. The demo's first account plays a
 # personal Gmail one, which makes events alone.
-printf 'last_calendar_account = "dana@fernwood.example"\n' >"$sandbox/settings.toml"
 export MAILRS_SETTINGS="$sandbox/settings.toml"
 inside="
 $launcher --launch-immediately &
 sleep 1
 $registry &
 sleep 1
-# Starts the demo with \$1 in its environment and walks it as \$2 says.
+# Starts the demo with \$1 in its environment and walks it as the other arguments say.
 walk_demo() {
+    # Each start gets fresh settings: the calendar walk leaves the app in
+    # the calendar space, where the mail window and its banner do not show.
+    printf 'last_calendar_account = \"dana@fernwood.example\"\n' >$sandbox/settings.toml
     env $webkit \$1 $app --demo >$sandbox/app.log 2>&1 &
     window=\$!
-    python3 $walk \$2
+    python3 $walk \"\${@:2}\"
     status=\$?
     kill \$window 2>/dev/null
     wait \$window 2>/dev/null
@@ -1245,7 +1261,14 @@ walk_demo() {
 # rest. The page that adds a calendar without mail sits behind a row, and
 # a row answers no AT-SPI action; the demo opens Add Account on that page
 # when asked, as it does for the screenshots, so a second start reads it.
-walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page
+walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=routes --shown 'list item' 'Use GNOME Online Accounts' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=consent --shown 'button' 'Continue to Google' \
+    && walk_demo MAILRS_DEMO_GOOGLE_MOVE=sheet --shown 'button' 'Choose Now' \
+    && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-several --shown 'button' 'Choose…' \
+    && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-paused --shown 'button' 'Choose…' \
+    && walk_demo 'MAILRS_DEMO_ACTION=preferences MAILRS_DEMO_GOOGLE_MOVE=prefs-imap' --shown 'button' 'Get Every Feature' \
+    && walk_demo 'MAILRS_DEMO_ACTION=preferences MAILRS_DEMO_GOOGLE_MOVE=banner' --shown 'button' 'Choose…'
 status=\$?
 # A failed run says why the app did what it did: a crash or a warning in
 # its log is often the whole answer, and CI keeps nothing else.

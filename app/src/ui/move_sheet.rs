@@ -45,10 +45,14 @@ fn row(address: &str) -> gtk::ListBoxRow {
         .build();
     line.append(&dot);
     line.append(&label);
-    gtk::ListBoxRow::builder()
+    let row = gtk::ListBoxRow::builder()
         .child(&line)
         .activatable(false)
-        .build()
+        .build();
+    // A list item takes no name from the label inside it, so a screen
+    // reader would say "list item" for each address.
+    row.update_property(&[gtk::accessible::Property::Label(address)]);
+    row
 }
 
 /// The sheet for `accounts`. `choose` runs, after the sheet closes, when
@@ -155,6 +159,7 @@ pub(crate) mod checks {
 
     pub fn run() {
         the_sheet_lists_each_address_plainly();
+        each_address_row_has_a_name();
         choose_now_is_the_default_and_the_dialog_is_440_wide();
         choose_now_walks_and_later_and_escape_do_not();
     }
@@ -190,6 +195,31 @@ pub(crate) mod checks {
         assert_eq!(found[2..4], ["r&d@example.com", "b@gmail.com"]);
         assert_eq!(sheet.later.label().as_deref(), Some("Later"));
         assert_eq!(sheet.choose.label().as_deref(), Some("Choose Now"));
+    }
+
+    fn each_address_row_has_a_name() {
+        let accounts = [gmail(1, "r&d@example.com"), gmail(2, "b@gmail.com")];
+        let sheet = build(&accounts, || {});
+        let mut rows = Vec::new();
+        list_rows(&sheet.dialog.child().expect("the content"), &mut rows);
+        assert_eq!(rows.len(), 2);
+        for row in rows {
+            assert!(gtk::test_accessible_has_property(
+                &row,
+                gtk::AccessibleProperty::Label
+            ));
+        }
+    }
+
+    fn list_rows(widget: &gtk::Widget, found: &mut Vec<gtk::ListBoxRow>) {
+        if let Some(row) = widget.downcast_ref::<gtk::ListBoxRow>() {
+            found.push(row.clone());
+        }
+        let mut child = widget.first_child();
+        while let Some(w) = child {
+            list_rows(&w, found);
+            child = w.next_sibling();
+        }
     }
 
     fn choose_now_is_the_default_and_the_dialog_is_440_wide() {
