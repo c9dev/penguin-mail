@@ -1093,3 +1093,38 @@ async fn a_send_later_message_whose_draft_is_gone_stays_and_asks_to_check_sent()
         kept.problem
     );
 }
+
+#[tokio::test]
+async fn an_online_accounts_account_moves_to_its_own_project_and_syncs_again_over_the_api() {
+    let h = built_in_account().await;
+    on_goa_imap(&h).await;
+    let later = Queued {
+        send_at: now_millis() + 3_600_000,
+        ..due(&h, "later")
+    };
+    let row_id = h.db.write(move |c| outbox::put(c, &later)).await.unwrap();
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_own_client(&account(&h).await, &own(), signed_in_as("me@example.com"), || {})
+        .await
+        .unwrap();
+
+    let id = h.account_id;
+    assert_eq!(route(&h.db, id).await, MailRoute::GmailApi);
+    assert_eq!(client(&h.db, id).await, SignInClient::Own);
+    assert_eq!(goa_id(&h.db, id).await, None);
+    assert_eq!(sync_state(&h.db, id).await, None);
+    for table in ["messages", "threads", "mailboxes"] {
+        assert_eq!(count(&h.db, table).await, 0, "{table}");
+    }
+    let _ = row(&h, row_id).await;
+}
