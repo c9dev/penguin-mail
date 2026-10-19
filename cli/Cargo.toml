@@ -18,6 +18,7 @@ path = "src/main.rs"
 packaging-flatpak = ["mailrs-gmail/packaging-flatpak", "mailrs-sync/packaging-flatpak"]
 
 [dependencies]
+mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
 mailrs-graph.workspace = true
