@@ -11,21 +11,27 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Gmail can sign in through this computer's Online Accounts on Linux.
 - Adding a Google account asks how it signs in, and lists only the ways this computer offers.
 - Add a Gmail account with every feature through a Google project of your own, set up step by step inside Penguin Mail.
+- Drag the mailbox and message-list dividers to resize their columns; widths are remembered between starts.
 - Choose reasoning separately for assistant chats and email translations in Preferences → AI.
 - Russian and Czech can be selected in Never Translate.
 - Choose Simplified Chinese, Russian, Italian, Japanese, Korean, Polish, Turkish, or Indonesian in Preferences.
 - Show or hide the mailbox sidebar with Ctrl+B, or Cmd+B on macOS.
 - An AppImage bundles the current runtime for Ubuntu 22.04 and newer, and Debian 13.
+- Choose Greek, Romanian or Ukrainian in Preferences.
 - Build and install Penguin Mail with Nix, or enter its development environment with `nix develop`.
 
 ### Fixed
 
+- The tray shows one orange unread dot, including on hosts that recolor symbolic icons ([#41](https://github.com/c9dev/penguin-mail/issues/41)).
+
+- Gmail Sent, Drafts, and custom labels show older server mail as you scroll, even outside the sync period.
 - Mail translations ask compatible local models to skip reasoning by default for faster replies.
 - IMAP folders, including nested folders, Sent, and Drafts, show older server mail as you scroll. Failed first loads can be retried without restarting ([#60](https://github.com/c9dev/penguin-mail/issues/60)). Thanks to [zwnk](https://github.com/zwnk) for the reproductions and patches.
 - Upgrading an Outlook account keeps pending deletions and moves, without notifications for old mail found during repair ([#66](https://github.com/c9dev/penguin-mail/issues/66)).
 - Outlook unread counts update when older inbox messages are read in another app ([#66](https://github.com/c9dev/penguin-mail/issues/66)).
 - The Snap can access the graphics devices it needs at startup ([#62](https://github.com/c9dev/penguin-mail/issues/62)).
 - macOS notifications use temporary banners by default, offer all selected buttons, and keep mail actions in the background.
+- Setting Language back to Follow System and pressing Restart shows your system's language again, instead of the language you had picked before.
 - Assistant skill scripts can run with the Nix package, including on NixOS.
 - Microsoft messages with attachments open without the contentId request error.
 - IMAP Junk and Trash show messages on the server even when they have not synced to this computer.

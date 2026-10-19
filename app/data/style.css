@@ -2206,3 +2206,9 @@ list.own-paste { margin-top: 12px; }
 }
 .app-dark .post-body.app-password label.app-password-again { background-color: alpha(#ff7a1a, 0.16); }
 .post-body.app-password row.app-password-locked { background-color: alpha(currentColor, 0.05); }
+
+/* A wide hit area with a focus cue for the column dividers. */
+.column-resizer { background: transparent; }
+.column-resizer:hover, .column-resizer:focus-visible {
+  background: alpha(@accent_color, 0.35);
+}

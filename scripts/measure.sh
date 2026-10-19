@@ -56,8 +56,18 @@
 # (libsecret-tools), openssl, python3 with PyGObject and AT-SPI, the X
 # DAMAGE and XTest libraries, and Docker with the Dovecot image from
 # scripts/test-images.sh for the large mailbox:
-#   sudo apt install xvfb dbus-daemon at-spi2-core gnome-keyring \
-#     libsecret-tools openssl python3-gi gir1.2-atspi-2.0 libxdamage1 libxtst6
+#   Debian, Ubuntu  sudo apt install xvfb dbus-daemon at-spi2-core \
+#                       gnome-keyring libsecret-tools openssl python3-gi \
+#                       gir1.2-atspi-2.0 libxdamage1 libxtst6
+#   Fedora          sudo dnf install xorg-x11-server-Xvfb dbus-daemon \
+#                       at-spi2-core gnome-keyring libsecret openssl \
+#                       python3-gobject gobject-introspection libXdamage libXtst
+#   Arch            sudo pacman -S xorg-server-xvfb dbus at-spi2-core \
+#                       gnome-keyring libsecret openssl python-gobject \
+#                       libxdamage libxtst
+#   openSUSE        sudo zypper install xorg-x11-server-Xvfb dbus-1-daemon \
+#                       at-spi2-core gnome-keyring secret-tool openssl \
+#                       python3-gobject libXdamage1 libXtst6
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -84,8 +94,8 @@ for tool in Xvfb dbus-run-session gnome-keyring-daemon secret-tool openssl pytho
         exit 2
     fi
 done
-launcher=/usr/libexec/at-spi-bus-launcher
-registry=/usr/libexec/at-spi2-registryd
+. scripts/at-spi.sh
+find_at_spi measure.sh
 
 if [ "$build" = 1 ]; then
     cargo build --release --quiet -p mailrs --bin penguin-mail

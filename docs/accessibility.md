@@ -37,6 +37,15 @@ widget the list view wraps for itself cannot be named from outside
 without crashing GTK. The thread row takes the `ListItem` role instead,
 and then the name it builds is the one a reader hears.
 
+## Column widths
+
+The mailbox sidebar and message list have named, focusable dividers.
+Drag either divider, or Tab to it and use Left and Right to resize in
+12-pixel steps. Home and End select its minimum and maximum width.
+The widths are remembered between starts. In a narrow window, the
+existing sidebar overlay and one-page mail navigation take over, and
+hidden dividers leave the keyboard focus order.
+
 ## The message
 
 Hovering over a web or email link, or focusing it with Tab, shows its destination at the bottom-right of the reading pane. The preview is a status region for screen readers. It names the destination site before the full address and explains any signs of deception. A message with such links also has a warning above its body, outside the sender's styles. These local checks compare displayed addresses with destinations and look for disguised hosts and hidden characters. They make no network requests and do not certify that a site is safe.

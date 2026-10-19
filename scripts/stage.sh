@@ -31,6 +31,9 @@ install -Dm644 "app/data/icons/scalable/apps/$id-symbolic.svg" \
 # The tray's glyph while mail is unread: the envelope with a dot.
 install -Dm644 "app/data/icons/scalable/apps/$id-unread-symbolic.svg" \
     "$dir/share/icons/hicolor/symbolic/apps/$to-unread-symbolic.svg"
+# A complete color icon keeps the unread dot orange without an overlay.
+install -Dm644 "app/data/icons/scalable/apps/$id-unread.svg" \
+    "$dir/share/icons/hicolor/scalable/apps/$to-unread.svg"
 # A drawing of its own for 16 px, on whole pixels, so menus and lists show a
 # sharp icon rather than the large one scaled down to a blur. A size folder
 # takes a PNG, rendered from the SVG beside it with

@@ -53,6 +53,7 @@ mod arrange;
 mod assistant;
 mod attachments;
 mod categories;
+mod column_width;
 mod detached;
 mod export;
 mod flags;
@@ -512,6 +513,32 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
 }
 
 impl MainWindow {
+    /// A drag may use spare room, but must not fold away its own divider.
+    fn fit_column_width(&self, column: crate::settings::MailColumn, width: i32) -> i32 {
+        let (reading, reading_buttons) = self.conversation.least_width();
+        let (calendar, calendar_buttons) = self.calendar.least_width();
+        let controls =
+            if self.assistant_split.shows_sidebar() && !self.assistant_split.is_collapsed() {
+                0
+            } else {
+                reading_buttons.max(calendar_buttons)
+            };
+        let available = match column {
+            crate::settings::MailColumn::Mailboxes => {
+                let list = self
+                    .list
+                    .page
+                    .measure(gtk::Orientation::Horizontal, -1)
+                    .0
+                    .max(self.nav.min_sidebar_width() as i32);
+                self.split.width() - (list + reading).max(calendar) - controls
+            }
+            crate::settings::MailColumn::Messages => self.nav.width() - reading - controls,
+        };
+        let (least, most) = column.limits();
+        width.clamp(least, available.clamp(least, most))
+    }
+
     pub fn new(app: &Rc<App>) -> Rc<MainWindow> {
         let (tool_requests, tool_calls) = async_channel::unbounded::<ToolRequest>();
         let window = Rc::new_cyclic(|weak: &Weak<MainWindow>| {
@@ -556,15 +583,54 @@ impl MainWindow {
             // window colour, as the mockup draws it, rather than the
             // sidebar shade an `AdwNavigationSplitView` pane takes by
             // default.
+            let settings = app.settings();
             let nav = adw::NavigationSplitView::builder()
                 .sidebar(&list.page)
                 .content(&conversation.page)
                 .css_classes(["mail-columns"])
+                .sidebar_width_unit(adw::LengthUnit::Px)
                 .min_sidebar_width(300.0)
                 .max_sidebar_width(420.0)
                 // The mockup's list is 392 px of the 1,184 left beside
                 // the sidebar in a 1,440 px window.
                 .sidebar_width_fraction(0.331)
+                .build();
+            if let Some(width) = settings.message_list_width {
+                let width = f64::from(crate::settings::MailColumn::Messages.clamp(width));
+                nav.set_max_sidebar_width(width.max(nav.min_sidebar_width()));
+                nav.set_min_sidebar_width(width);
+                nav.set_max_sidebar_width(width);
+            }
+            let content = list.page.child().expect("the list has its toolbar");
+            list.page.set_child(None::<&gtk::Widget>);
+            let (columns, owner, window) = (nav.downgrade(), Rc::downgrade(app), weak.clone());
+            let (list_body, list_divider) = column_width::wrap(
+                &content,
+                &nav,
+                crate::settings::MailColumn::Messages,
+                move |width, save| {
+                    let width = window.upgrade().map_or(width, |win| {
+                        win.fit_column_width(crate::settings::MailColumn::Messages, width)
+                    });
+                    if let Some(nav) = columns.upgrade() {
+                        let width = f64::from(width);
+                        nav.set_max_sidebar_width(width.max(nav.min_sidebar_width()));
+                        nav.set_min_sidebar_width(width);
+                        nav.set_max_sidebar_width(width);
+                    }
+                    if save && let Some(app) = owner.upgrade() {
+                        app.change_settings(crate::settings::Change::MailColumnWidth {
+                            column: crate::settings::MailColumn::Messages,
+                            width,
+                        });
+                    }
+                    width
+                },
+            );
+            list.page.set_child(Some(&list_body));
+            nav.bind_property("collapsed", &list_divider, "visible")
+                .invert_boolean()
+                .sync_create()
                 .build();
             let (t, g, n, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
@@ -655,12 +721,50 @@ impl MainWindow {
             spaces.add_named(&nav, Some("mail"));
             spaces.add_named(&calendar.page, Some("calendar"));
             let split = adw::OverlaySplitView::builder()
+                .sidebar_width_unit(adw::LengthUnit::Px)
                 .sidebar(&sidebar.page)
                 .content(&spaces)
                 .css_classes(["inset-sidebar"])
                 .min_sidebar_width(256.0)
                 .max_sidebar_width(256.0)
                 .sidebar_width_fraction(0.178)
+                .build();
+            if let Some(width) = settings.mailbox_width {
+                let width = f64::from(crate::settings::MailColumn::Mailboxes.clamp(width));
+                split.set_max_sidebar_width(width.max(split.min_sidebar_width()));
+                split.set_min_sidebar_width(width);
+                split.set_max_sidebar_width(width);
+            }
+            split.set_sidebar(None::<&gtk::Widget>);
+            let (panes, owner, window) = (split.downgrade(), Rc::downgrade(app), weak.clone());
+            let (sidebar_body, sidebar_divider) = column_width::wrap(
+                &sidebar.page,
+                &split,
+                crate::settings::MailColumn::Mailboxes,
+                move |width, save| {
+                    let width = window.upgrade().map_or(width, |win| {
+                        win.fit_column_width(crate::settings::MailColumn::Mailboxes, width)
+                    });
+                    if let Some(split) = panes.upgrade() {
+                        let width = f64::from(width);
+                        split.set_max_sidebar_width(width.max(split.min_sidebar_width()));
+                        split.set_min_sidebar_width(width);
+                        split.set_max_sidebar_width(width);
+                    }
+                    if save && let Some(app) = owner.upgrade() {
+                        app.change_settings(crate::settings::Change::MailColumnWidth {
+                            column: crate::settings::MailColumn::Mailboxes,
+                            width,
+                        });
+                    }
+                    width
+                },
+            );
+            split.set_sidebar(Some(&sidebar_body));
+            split
+                .bind_property("collapsed", &sidebar_divider, "visible")
+                .invert_boolean()
+                .sync_create()
                 .build();
             split
                 .bind_property("collapsed", &list.sidebar_button, "visible")
@@ -768,10 +872,10 @@ impl MainWindow {
             let room = {
                 let least =
                     |widget: &gtk::Widget| widget.measure(gtk::Orientation::Horizontal, -1).0;
-                let mailboxes = sidebar.page.clone().upcast::<gtk::Widget>().downgrade();
+                let mailboxes = sidebar_body.clone().upcast::<gtk::Widget>().downgrade();
                 let list_page = list.page.clone().upcast::<gtk::Widget>().downgrade();
                 let panel = assistant.page.clone().upcast::<gtk::Widget>().downgrade();
-                let sidebar_least = split.min_sidebar_width() as i32;
+                let sidebar_panes = split.downgrade();
                 let (columns, reading, days) = (
                     nav.downgrade(),
                     Rc::downgrade(&conversation),
@@ -797,10 +901,11 @@ impl MainWindow {
                         days.upgrade().map_or((0, 0), |view| view.least_width());
                     buttons.set(buttons.get().max(bar_buttons).max(calendar_buttons));
                     room::Needs {
-                        mailboxes: mailboxes
-                            .upgrade()
-                            .map_or(0, |w| least(&w))
-                            .max(sidebar_least),
+                        mailboxes: mailboxes.upgrade().map_or(0, |w| least(&w)).max(
+                            sidebar_panes
+                                .upgrade()
+                                .map_or(0, |split| split.min_sidebar_width() as i32),
+                        ),
                         space: mail.max(calendar),
                         columns: mail,
                         controls: buttons.get(),

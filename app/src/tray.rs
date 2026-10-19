@@ -153,13 +153,13 @@ impl ksni::Tray for MailTray {
         self.icon_theme_path.clone()
     }
 
-    /// The app's own envelope glyph, drawn by the host in the panel's
-    /// colour like its other icons. With mail unread it carries a dot,
-    /// for the hosts that leave out the label.
+    /// A complete color icon keeps the unread dot orange on hosts that
+    /// recolor symbolic icons or omit overlays. The read icon follows the
+    /// panel's foreground color.
     fn icon_name(&self) -> String {
         match self.unread {
             ..=0 => format!("{APP_ID}-symbolic"),
-            _ => format!("{APP_ID}-unread-symbolic"),
+            _ => format!("{APP_ID}-unread"),
         }
     }
 
@@ -277,6 +277,7 @@ mod tests {
         use ksni::Tray;
         let tray = tray(0);
         assert_eq!(tray.icon_name(), format!("{}-symbolic", crate::APP_ID));
+        assert_eq!(tray.overlay_icon_name(), "");
         assert_eq!(tray.x_ayatana_label(), "");
         assert_eq!(tray.x_ayatana_label_guide(), "");
         assert_eq!(tray.tool_tip().title, "Penguin Mail: No unread mail");
@@ -290,8 +291,9 @@ mod tests {
         let tray = tray(1);
         assert_eq!(
             tray.icon_name(),
-            format!("{}-unread-symbolic", crate::APP_ID)
+            format!("{}-unread", crate::APP_ID)
         );
+        assert_eq!(tray.overlay_icon_name(), "");
         assert_eq!(tray.x_ayatana_label(), "1");
         assert_eq!(tray.x_ayatana_label_guide(), "1");
         assert_eq!(tray.tool_tip().title, "Penguin Mail: 1 unread message");
@@ -308,7 +310,7 @@ mod tests {
         let tray = tray(120);
         assert_eq!(
             tray.icon_name(),
-            format!("{}-unread-symbolic", crate::APP_ID)
+            format!("{}-unread", crate::APP_ID)
         );
         assert_eq!(tray.x_ayatana_label(), "120");
         assert_eq!(tray.tool_tip().title, "Penguin Mail: 120 unread messages");
@@ -323,11 +325,13 @@ mod tests {
         tray.accounts = vec![unread(1, "a@example.com", 3)];
         assert_eq!(tray.x_ayatana_label(), "3");
         assert_eq!(tray.tool_tip().description, "a@example.com: 3");
+        assert_eq!(tray.overlay_icon_name(), "");
         tray.unread = 0;
         tray.accounts = vec![unread(1, "a@example.com", 0)];
         assert_eq!(tray.x_ayatana_label(), "");
         assert_eq!(tray.x_ayatana_label_guide(), "");
         assert_eq!(tray.icon_name(), format!("{}-symbolic", crate::APP_ID));
+        assert_eq!(tray.overlay_icon_name(), "");
         assert_eq!(tray.tool_tip().title, "Penguin Mail: No unread mail");
         assert_eq!(tray.tool_tip().description, "");
         assert_eq!(tray.icon_accessible_desc(), "Penguin Mail: No unread mail");
@@ -342,7 +346,7 @@ mod tests {
         assert_eq!(tray.tool_tip().title, "Penguin Mail: 4321 unread messages");
     }
 
-    /// Both glyphs ship with the app, under the names the tray sends.
+    /// All three glyphs ship with the app, under the names the tray sends.
     #[test]
     fn the_tray_glyphs_are_in_the_icon_folder() {
         let apps =
@@ -350,6 +354,7 @@ mod tests {
         for name in [
             "io.github.c9dev.PenguinMail-symbolic",
             "io.github.c9dev.PenguinMail-unread-symbolic",
+            "io.github.c9dev.PenguinMail-unread",
         ] {
             assert!(apps.join(format!("{name}.svg")).is_file(), "{name}");
         }

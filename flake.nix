@@ -84,13 +84,27 @@
               bubblewrap
               dbus
               xvfb-run
-              python3
+              # What scripts/a11y-names.sh and scripts/demo-shot.sh need for
+              # the hidden display: the accessibility bus, Xvfb itself, which
+              # the scripts look for beside xvfb-run, and the AT-SPI typelib
+              # that the gobject-introspection hook puts on GI_TYPELIB_PATH.
+              at-spi2-core
+              xvfb
+              gobject-introspection
+              imagemagick
+              (python3.withPackages (p: [
+                p.pygobject3
+                p.python-xlib
+              ]))
             ];
             shellHook = ''
               export XDG_DATA_DIRS="$GSETTINGS_SCHEMAS_PATH:${
                 pkgs.lib.makeSearchPath "share" [
                   pkgs.adwaita-icon-theme
                   pkgs.shared-mime-info
+                  # Its D-Bus service files are how scripts/at-spi.sh finds
+                  # the accessibility daemons in the store.
+                  pkgs.at-spi2-core
                 ]
               }''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
               export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"

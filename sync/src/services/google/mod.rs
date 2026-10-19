@@ -78,7 +78,7 @@ const GMAIL: MailCapabilities = MailCapabilities {
     // Gmail keeps these three as its UNREAD, STARRED and MUTE labels.
     keywords: &[keyword::SEEN, keyword::FLAGGED, keyword::MUTED],
     native_search: true,
-    paged_mailboxes: false,
+    paged_mailboxes: true,
     batch_limit: mailrs_gmail::BATCH_LIMIT,
     renames: false,
     restates: false,
@@ -326,6 +326,25 @@ impl<G: GmailApi> MailBackend for Google<G> {
         mailbox: Option<&str>,
     ) -> Result<Vec<RemoteRef>, BackendError> {
         self.every_id(mailbox, &fetch::window_query(days)).await
+    }
+
+    async fn mailbox_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        let limit = limit.clamp(1, ID_PAGE_SIZE as usize) as u32;
+        match paced(self.gmail.list_labelled(mailbox, "", cursor, limit)).await {
+            Ok(page) => Ok(Backfill {
+                refs: page.messages.into_iter().map(RemoteRef::from).collect(),
+                next: page.next_page_token,
+            }),
+            Err(GmailError::Http { status: 400, .. }) if cursor.is_some() => {
+                Err(BackendError::StateLost)
+            }
+            Err(err) => Err(err.into()),
+        }
     }
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
@@ -831,6 +850,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn mailbox_pages_keep_gmails_limit_and_restart_expired_cursors() {
+        let (gmail, google) = google();
+        gmail.with(|s| s.page_size = 1000);
+        for n in 0..501 {
+            gmail.seed(crate::fake::meta(
+                &format!("m{n}"),
+                &format!("t{n}"),
+                n,
+                &["SENT"],
+            ));
+        }
+        let first = google.mailbox_page("SENT", None, 1000).await.unwrap();
+        assert_eq!(first.refs.len(), 500);
+        let last = google
+            .mailbox_page("SENT", first.next.as_deref(), 1000)
+            .await
+            .unwrap();
+        assert_eq!(last.refs.len(), 1);
+        assert!(last.next.is_none());
+        assert!(matches!(
+            google.mailbox_page("SENT", Some("expired"), 25).await,
+            Err(BackendError::StateLost)
+        ));
+        gmail.fail_next(GmailError::Http {
+            status: 400,
+            body: "Bad request".into(),
+        });
+        assert!(matches!(
+            google.mailbox_page("SENT", None, 25).await,
+            Err(BackendError::Gmail(GmailError::Http { status: 400, .. }))
+        ));
+    }
+
+    #[tokio::test]
     async fn a_missing_message_is_only_missing() {
         let (_, google) = google();
         let found = google
@@ -888,7 +941,7 @@ mod tests {
                 delete_forever: true,
                 keywords: &["$seen", "$flagged", "$muted"],
                 native_search: true,
-                paged_mailboxes: false,
+                paged_mailboxes: true,
                 batch_limit: 1000,
                 renames: false,
                 restates: false,

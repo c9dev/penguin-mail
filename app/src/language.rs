@@ -7,6 +7,7 @@
 //! ahead of all of them. Either way it has to happen before the first word
 //! is built, so [`bind`] runs at the top of `main`.
 
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use mailrs_domain::translate::DOMAIN;
@@ -15,6 +16,11 @@ include!(concat!(env!("OUT_DIR"), "/languages.rs"));
 
 /// Where to read the translations from, when the usual places are wrong.
 const LOCALE_DIR: &str = "PENGUIN_MAIL_LOCALE_DIR";
+
+/// The desktop's own `LANGUAGE`, empty when it set none, as the first copy
+/// of the app found it. A copy the app starts again inherits it, and
+/// [`environment`] says why that matters.
+const DESKTOP_LANGUAGE: &str = "PENGUIN_MAIL_DESKTOP_LANGUAGE";
 
 /// One language the Language preference offers.
 pub struct Language {
@@ -48,6 +54,40 @@ pub fn locale_dir() -> PathBuf {
     }
 }
 
+/// What the environment holds once a start has settled the language: the
+/// desktop's own `LANGUAGE`, to hand on to the next copy, and the
+/// `LANGUAGE` this copy runs with, `None` for none at all.
+#[derive(Debug, PartialEq)]
+struct Environment {
+    desktop: OsString,
+    language: Option<OsString>,
+}
+
+/// Settles the language from the desktop's `LANGUAGE` as an earlier copy
+/// handed it on (`inherited`), the `LANGUAGE` this copy was started with,
+/// and the preference.
+///
+/// The app restarts itself for a new language, to return memory and after
+/// an update, and each new copy inherits the environment of the old one,
+/// `LANGUAGE` included. Taken at face value, that would keep a language the
+/// person has since switched away from, because Follow System leaves
+/// `LANGUAGE` alone. So the first copy notes what the desktop set, and every
+/// copy after it starts from that note rather than from what it inherited.
+fn environment(inherited: Option<&OsStr>, language: Option<&OsStr>, chosen: &str) -> Environment {
+    let desktop = inherited
+        .or(language)
+        .map(OsStr::to_os_string)
+        .unwrap_or_default();
+    let language = if !chosen.is_empty() {
+        Some(OsString::from(chosen))
+    } else if desktop.is_empty() {
+        None
+    } else {
+        Some(desktop.clone())
+    };
+    Environment { desktop, language }
+}
+
 /// Points gettext at the translations, in `chosen` or in whatever the
 /// desktop asked for when `chosen` is empty. Nothing a person reads may be
 /// built before this runs, or the first words out are English whatever the
@@ -56,8 +96,15 @@ pub fn bind(chosen: &str) {
     // Startup, before any window or worker: nothing else is reading the
     // environment or the locale while these set them.
     unsafe {
-        if !chosen.is_empty() {
-            std::env::set_var("LANGUAGE", chosen);
+        let settled = environment(
+            std::env::var_os(DESKTOP_LANGUAGE).as_deref(),
+            std::env::var_os("LANGUAGE").as_deref(),
+            chosen,
+        );
+        std::env::set_var(DESKTOP_LANGUAGE, &settled.desktop);
+        match &settled.language {
+            Some(language) => std::env::set_var("LANGUAGE", language),
+            None => std::env::remove_var("LANGUAGE"),
         }
         gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
         // glibc ignores LANGUAGE while the message locale is the bare C
@@ -138,6 +185,61 @@ pub fn code_at(languages: &[Language], index: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn start(inherited: Option<&str>, language: Option<&str>, chosen: &str) -> Environment {
+        environment(
+            inherited.map(OsStr::new),
+            language.map(OsStr::new),
+            chosen,
+        )
+    }
+
+    /// A first start keeps the desktop's own LANGUAGE for a later restart
+    /// and leaves it in force while the preference follows the desktop.
+    #[test]
+    fn a_first_start_keeps_what_the_desktop_asked_for() {
+        let env = start(None, Some("de_DE:de"), "");
+        assert_eq!(env.desktop, OsString::from("de_DE:de"));
+        assert_eq!(env.language, Some(OsString::from("de_DE:de")));
+    }
+
+    #[test]
+    fn a_chosen_language_goes_ahead_of_the_desktop() {
+        let env = start(None, Some("de_DE:de"), "ru");
+        assert_eq!(env.desktop, OsString::from("de_DE:de"));
+        assert_eq!(env.language, Some(OsString::from("ru")));
+    }
+
+    /// A restart from the app inherits the LANGUAGE the old copy set. Back
+    /// on Follow System, the new copy speaks the desktop's language again,
+    /// not the one the person just left.
+    #[test]
+    fn following_the_system_after_a_restart_drops_the_old_choice() {
+        let env = start(Some("de_DE:de"), Some("ru"), "");
+        assert_eq!(env.language, Some(OsString::from("de_DE:de")));
+        assert_eq!(env.desktop, OsString::from("de_DE:de"));
+    }
+
+    #[test]
+    fn a_desktop_without_language_gets_none_back() {
+        let env = start(Some(""), Some("ru"), "");
+        assert_eq!(env.language, None);
+        assert_eq!(env.desktop, OsString::new());
+    }
+
+    #[test]
+    fn a_desktop_without_language_stays_without_it() {
+        let env = start(None, None, "");
+        assert_eq!(env.language, None);
+        assert_eq!(env.desktop, OsString::new());
+    }
+
+    #[test]
+    fn a_new_choice_after_a_restart_still_wins() {
+        let env = start(Some(""), Some("ru"), "el_GR");
+        assert_eq!(env.language, Some(OsString::from("el_GR")));
+        assert_eq!(env.desktop, OsString::new());
+    }
 
     /// The source strings are American English, and British English is a
     /// catalogue beside them, so the list says which English each is.

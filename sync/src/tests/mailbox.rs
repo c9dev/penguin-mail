@@ -108,6 +108,71 @@ async fn a_label_lists_only_its_own_mail() {
 }
 
 #[tokio::test]
+async fn gmail_sent_drafts_and_labels_page_through_mail_outside_the_sync_window() {
+    for label in ["SENT", "DRAFT", "Label_1"] {
+        let h = harness().await;
+        let now = now_millis();
+        for n in 0..5 {
+            h.fake.seed(meta(
+                &format!("old{n}"),
+                &format!("thread{n}"),
+                now - (90 + n) * DAY,
+                &[label],
+            ));
+        }
+        h.fake.seed(meta("other", "other", now - 100 * DAY, &[]));
+        h.bootstrap_all().await;
+        assert!(h.all_threads().await.is_empty());
+        h.fake.with(|s| s.page_size = 2);
+        h.fake.reset_usage();
+        let mailbox = match label {
+            "SENT" => Mailbox::Standard {
+                account_id: h.account_id,
+                which: Standard::Sent,
+            },
+            "DRAFT" => Mailbox::Unified(Standard::Drafts),
+            _ => Mailbox::Label {
+                account_id: h.account_id,
+                label_id: label.into(),
+                name: label.into(),
+            },
+        };
+        let lists = lists(&h);
+        let view = View {
+            limit: Some(2),
+            ..view()
+        };
+        let mut rows = Vec::new();
+        for (count, more) in [(2, true), (4, true), (5, false)] {
+            let page = lists
+                .list(&mailbox, &scope(&h), &view, Loaded::rows(&rows))
+                .await
+                .unwrap();
+            assert!(page.notices.is_empty(), "{label}: {:?}", page.notices);
+            assert_eq!(page.rows.len(), count, "{label}");
+            assert_eq!(page.more, more, "{label}");
+            assert!(page.replace, "each page replaces the loaded prefix");
+            rows = page.rows;
+        }
+        assert_eq!(
+            rows.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(),
+            ["thread0", "thread1", "thread2", "thread3", "thread4"],
+            "{label} lists only its own mail in date order"
+        );
+        assert_eq!(h.fake.usage().calls_to("users.messages.list"), 3);
+        assert_eq!(h.all_threads().await.len(), 5);
+        let account_id = h.account_id;
+        assert_eq!(
+            h.db.read(move |c| mailrs_store::accounts::window_days(c, account_id))
+                .await
+                .unwrap(),
+            Some(30),
+            "browsing does not extend background sync"
+        );
+    }
+}
+
+#[tokio::test]
 async fn the_muted_mailbox_lists_muted_threads_and_the_inbox_leaves_them_out() {
     let h = seeded().await;
     h.sync

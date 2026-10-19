@@ -21,9 +21,18 @@
 # through the own Google project setup with the keyboard alone, and checks
 # that a failed sign-in through it leads back to the step that fixes it.
 #
-# The hidden display needs Xvfb, dbus-run-session, at-spi2-core, python3
-# with the GObject bindings, and the XTest library to click and type:
-#   sudo apt install xvfb dbus-daemon at-spi2-core python3-gi libxtst6
+# The hidden display needs Xvfb and xvfb-run, dbus-run-session,
+# at-spi2-core, python3 with the GObject and AT-SPI bindings, and the XTest
+# library to click and type:
+#   Debian, Ubuntu  sudo apt install xvfb dbus-daemon at-spi2-core python3-gi \
+#                       gir1.2-atspi-2.0 libxtst6
+#   Fedora          sudo dnf install xorg-x11-server-Xvfb dbus-daemon \
+#                       at-spi2-core python3-gobject gobject-introspection libXtst
+#   Arch            sudo pacman -S xorg-server-xvfb dbus at-spi2-core \
+#                       python-gobject libxtst
+#   openSUSE        sudo zypper install xorg-x11-server-Xvfb xvfb-run \
+#                       dbus-1-daemon at-spi2-core python3-gobject libXtst6
+#   NixOS           nix develop
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -1389,18 +1398,14 @@ if [ -n "$here" ]; then
     exit 2
 fi
 
-for tool in Xvfb dbus-run-session python3; do
+for tool in Xvfb xvfb-run dbus-run-session python3; do
     if ! command -v "$tool" >/dev/null; then
         echo "a11y-names.sh needs $tool; see the comment at the top" >&2
         exit 2
     fi
 done
-registry=/usr/libexec/at-spi2-registryd
-launcher=/usr/libexec/at-spi-bus-launcher
-if [ ! -x "$registry" ] || [ ! -x "$launcher" ]; then
-    echo "a11y-names.sh needs at-spi2-core installed" >&2
-    exit 2
-fi
+. scripts/at-spi.sh
+find_at_spi a11y-names.sh
 
 cargo build --quiet -p mailrs
 

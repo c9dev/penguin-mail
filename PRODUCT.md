@@ -52,8 +52,9 @@ supported and checked.
 - Security: OpenPGP and S/MIME signing and encryption through GnuPG, revocation checks, signed update checks.
 - Assistant: models from Anthropic, OpenAI-compatible servers, local servers or a Claude subscription; MCP
   servers; sandboxed skills; every change asks first unless the person chose Always Allow.
-- Languages: American English source strings, British English generated from them, French, German, Spanish,
-  European Portuguese, Traditional Chinese (Taiwan) and Vietnamese kept complete.
+- Languages: American English source strings, British English generated from them, French, German, Greek,
+  Indonesian, Italian, Japanese, Korean, Polish, Romanian, Russian, Spanish, European Portuguese, Simplified
+  Chinese, Traditional Chinese (Taiwan), Turkish, Ukrainian and Vietnamese kept complete.
 - Terms are defined in `CONTEXT.md`; the code's rules are in `AGENTS.md`.
 
 ## Brand Commitments
@@ -92,5 +93,6 @@ supported and checked.
 
 Every control has an accessible name; `scripts/a11y-names.sh` checks it in CI, including every menu. Keyboard
 shortcuts cover the main actions and are listed in the Keyboard Shortcuts dialog. Motion follows GNOME's
-animations setting. The interface ships in American English, British English, French, German, Spanish, European
-Portuguese, Traditional Chinese (Taiwan) and Vietnamese. Details in `docs/accessibility.md`.
+animations setting. The interface ships in American English, British English, French, German, Greek, Indonesian,
+Italian, Japanese, Korean, Polish, Romanian, Russian, Spanish, European Portuguese, Simplified Chinese, Traditional
+Chinese (Taiwan), Turkish, Ukrainian and Vietnamese. Details in `docs/accessibility.md`.

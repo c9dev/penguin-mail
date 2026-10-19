@@ -75,6 +75,10 @@ pub enum Change {
     },
     /// The space the window shows, remembered for the next start.
     Space(super::Space),
+    MailColumnWidth {
+        column: super::MailColumn,
+        width: i32,
+    },
     /// The grid the calendar shows.
     CalendarView(super::CalendarView),
     ShowDeclinedEvents(bool),
@@ -259,6 +263,13 @@ impl Change {
     /// Makes the change without working out its effects.
     pub fn apply_to(self, settings: &mut Settings) {
         match self {
+            Change::MailColumnWidth { column, width } => {
+                let width = Some(column.clamp(width));
+                match column {
+                    super::MailColumn::Mailboxes => settings.mailbox_width = width,
+                    super::MailColumn::Messages => settings.message_list_width = width,
+                }
+            }
             Change::Threading(on) => settings.threading = on,
             Change::MarkRead(when) => settings.mark_read = when,
             Change::RemoteImages(when) => settings.remote_images = when,
@@ -617,6 +628,8 @@ settable! {
         announced_update,
         // Where the window was and what the calendar showed are the
         // window's memory of the person's own clicks.
+        mailbox_width,
+        message_list_width,
         calendar_view,
         last_calendar_account,
         folded_calendar_accounts,
@@ -873,6 +886,8 @@ impl Effects {
             last_update_check,
             announced_update,
             space,
+            mailbox_width,
+            message_list_width,
             calendar_view,
             show_declined_events,
             working_hours,
@@ -931,6 +946,8 @@ impl Effects {
             // The calendar changes its own view as the person picks one,
             // and the setting only remembers the pick for the next start.
             space,
+            mailbox_width,
+            message_list_width,
             calendar_view,
             show_declined_events,
             // The grid and the free-time tool read this as they need it,
@@ -995,6 +1012,32 @@ impl Effects {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn column_widths_are_bounded_and_round_trip_without_refreshing_mail() {
+        use crate::settings::{MailColumn, Settings};
+        let mut settings = Settings::default();
+        assert_eq!(settings.mailbox_width, None);
+        assert_eq!(settings.message_list_width, None);
+        for (column, width) in [
+            (MailColumn::Mailboxes, i32::MIN),
+            (MailColumn::Messages, i32::MAX),
+        ] {
+            let effects = super::Change::MailColumnWidth { column, width }.apply(&mut settings);
+            assert!(effects.is_empty());
+        }
+        assert_eq!(
+            settings.mailbox_width,
+            Some(MailColumn::Mailboxes.limits().0)
+        );
+        assert_eq!(
+            settings.message_list_width,
+            Some(MailColumn::Messages.limits().1)
+        );
+        let saved = toml::to_string(&settings).unwrap();
+        let loaded: Settings = toml::from_str(&saved).unwrap();
+        assert_eq!(loaded, settings);
+    }
+
     use super::*;
     use crate::settings::AiProvider;
     use mailrs_domain::smart::{Condition, Field};

@@ -91,7 +91,7 @@ python3 scripts/en-gb.py "$pot" po/en_GB.po
 # file whose words nobody can translate. Say so loudly.
 grep -rlE '(gettext|fill_plural)\(' --include='*.rs' app/src domain/src sync/src |
     LC_ALL=C sort > "$work/rust.txt"
-forgotten=$(comm -13 <(echo "$listed") "$work/rust.txt")
+forgotten=$(LC_ALL=C comm -13 <(echo "$listed") "$work/rust.txt")
 if [ -n "$forgotten" ]; then
     echo "po/POTFILES.in is missing, and their words go untranslated:" >&2
     echo "$forgotten" | sed 's/^/  /' >&2

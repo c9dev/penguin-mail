@@ -14,8 +14,15 @@
 # and a screenshot run that only kills its own children leaves one behind
 # for every run, so take agents here rather than to a recipe of their own.
 #
-# Needs Xvfb, dbus-run-session, at-spi2-core and ImageMagick's import:
-#   sudo apt install xvfb dbus-daemon at-spi2-core imagemagick
+# Needs Xvfb and xvfb-run, dbus-run-session, at-spi2-core and ImageMagick's
+# import:
+#   Debian, Ubuntu  sudo apt install xvfb dbus-daemon at-spi2-core imagemagick
+#   Fedora          sudo dnf install xorg-x11-server-Xvfb dbus-daemon \
+#                       at-spi2-core ImageMagick
+#   Arch            sudo pacman -S xorg-server-xvfb dbus at-spi2-core imagemagick
+#   openSUSE        sudo zypper install xorg-x11-server-Xvfb xvfb-run \
+#                       dbus-1-daemon at-spi2-core ImageMagick
+#   NixOS           nix develop
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -36,14 +43,14 @@ done
 out=$(realpath -m "$out")
 mkdir -p "$(dirname "$out")"
 
-for tool in Xvfb dbus-run-session import; do
+for tool in Xvfb xvfb-run dbus-run-session import; do
     if ! command -v "$tool" >/dev/null; then
         echo "demo-shot.sh needs $tool; see the comment at the top" >&2
         exit 2
     fi
 done
-registry=/usr/libexec/at-spi2-registryd
-launcher=/usr/libexec/at-spi-bus-launcher
+. scripts/at-spi.sh
+find_at_spi demo-shot.sh
 
 cargo build --quiet -p mailrs
 

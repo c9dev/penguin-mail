@@ -15,10 +15,19 @@
 # store, the welcome shot runs with an empty home directory, and the
 # assistant shot answers from a scripted model on 127.0.0.1.
 #
-# Needs Xvfb, dbus-run-session, at-spi2-core, ImageMagick's import, and
-# python3 with the GObject and Xlib bindings:
-#   sudo apt install xvfb dbus-daemon at-spi2-core imagemagick \
-#       python3-gi python3-xlib
+# Needs Xvfb and xvfb-run, dbus-run-session, at-spi2-core, ImageMagick's
+# import, and python3 with the GObject, AT-SPI and Xlib bindings:
+#   Debian, Ubuntu  sudo apt install xvfb dbus-daemon at-spi2-core imagemagick \
+#                       python3-gi gir1.2-atspi-2.0 python3-xlib
+#   Fedora          sudo dnf install xorg-x11-server-Xvfb dbus-daemon \
+#                       at-spi2-core ImageMagick python3-gobject \
+#                       gobject-introspection python3-xlib
+#   Arch            sudo pacman -S xorg-server-xvfb dbus at-spi2-core \
+#                       imagemagick python-gobject python-xlib
+#   openSUSE        sudo zypper install xorg-x11-server-Xvfb xvfb-run \
+#                       dbus-1-daemon at-spi2-core ImageMagick python3-gobject \
+#                       python3-python-xlib
+#   NixOS           nix develop
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -33,12 +42,8 @@ if ! python3 -c 'import Xlib, gi' 2>/dev/null; then
     echo "screenshots.sh needs python3-xlib and python3-gi" >&2
     exit 2
 fi
-registry=/usr/libexec/at-spi2-registryd
-launcher=/usr/libexec/at-spi-bus-launcher
-if [ ! -x "$registry" ] || [ ! -x "$launcher" ]; then
-    echo "screenshots.sh needs at-spi2-core installed" >&2
-    exit 2
-fi
+. scripts/at-spi.sh
+find_at_spi screenshots.sh
 
 cargo build --quiet -p mailrs
 

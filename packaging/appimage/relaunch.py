@@ -192,6 +192,10 @@ class Pointer:
         self.xtst = ctypes.CDLL("libXtst.so.6")
         self.x11.XOpenDisplay.restype = ctypes.c_void_p
         self.x11.XFlush.argtypes = [ctypes.c_void_p]
+        self.x11.XKeysymToKeycode.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+        self.x11.XKeysymToKeycode.restype = ctypes.c_ubyte
+        self.xtst.XTestFakeKeyEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_int,
+                                               ctypes.c_ulong]
         self.xtst.XTestFakeMotionEvent.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int,
                                                    ctypes.c_int, ctypes.c_ulong]
         self.xtst.XTestFakeButtonEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_int,
@@ -212,13 +216,22 @@ class Pointer:
             time.sleep(0.05)
         time.sleep(0.5)
 
+    def key(self, keysym):
+        code = self.x11.XKeysymToKeycode(self.dpy, keysym)
+        for pressed in (1, 0):
+            self.xtst.XTestFakeKeyEvent(self.dpy, code, pressed, 0)
+            self.x11.XFlush(self.dpy)
+            time.sleep(0.05)
 
-def element(test, what, timeout=30):
+
+def element(test, what, timeout=30, advance=None):
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         hit = find(application(), test)
         if hit:
             return hit
+        if advance:
+            advance()
         time.sleep(0.25)
     (LOGS / "tree.log").write_text("\n".join(outline(application())))
     fail(f"found no {what}")
@@ -285,8 +298,13 @@ pointer.click(element(named("list item", "Appearance"), "the Appearance page"))
 language = element(lambda n: n.get_role_name() in ("combo box", "list item", "button")
                    and (n.get_name() or "").startswith("Language"), "the Language row")
 pointer.click(language)
-choice = element(lambda n: n.get_role_name() in ("list item", "label", "menu item")
-                 and (n.get_name() or "").startswith("Português"), "Português in the list")
+# GTK creates only the rows near the visible part of this list. Moving
+# down reveals languages below the popup's initial viewport.
+choice = element(lambda n: n.get_role_name() == "list item"
+                 and (n.get_name() or "").startswith("Português"), "Português in the list",
+                 advance=lambda: pointer.key(0xFF54))  # Down
+act(choice, "listitem.scroll-to")
+time.sleep(0.25)
 pointer.click(choice)
 close = element(named("button", "Close"), "the dialog's Close button")
 act(close, "click")

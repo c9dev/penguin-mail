@@ -1826,7 +1826,7 @@ mod tests {
                 delete_forever: true,
                 keywords: &["$seen", "$flagged", "$muted"],
                 native_search: true,
-                paged_mailboxes: false,
+                paged_mailboxes: true,
                 batch_limit: 1000,
                 renames: false,
                 restates: false,

@@ -131,6 +131,9 @@ pub struct Settings {
     pub announced_update: Option<String>,
     /// Which space the window opened on last: mail or the calendar.
     pub space: Space,
+    /// Preferred pane widths in pixels; absent keeps the responsive defaults.
+    pub mailbox_width: Option<i32>,
+    pub message_list_width: Option<i32>,
     /// The view the calendar shows: a day, a week, a month or the agenda.
     pub calendar_view: CalendarView,
     /// Show events the person said No to, faded and struck through,
@@ -505,6 +508,8 @@ impl Default for Settings {
             last_update_check: None,
             announced_update: None,
             space: Space::Mail,
+            mailbox_width: None,
+            message_list_width: None,
             calendar_view: CalendarView::Week,
             show_declined_events: false,
             working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
@@ -512,6 +517,27 @@ impl Default for Settings {
             last_calendar_account: None,
             folded_calendar_accounts: Vec::new(),
         }
+    }
+}
+
+/// The two columns whose dividers remember the width the person chose.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MailColumn {
+    Mailboxes,
+    Messages,
+}
+
+impl MailColumn {
+    pub fn limits(self) -> (i32, i32) {
+        match self {
+            Self::Mailboxes => (220, 480),
+            Self::Messages => (300, 720),
+        }
+    }
+
+    pub fn clamp(self, width: i32) -> i32 {
+        let (least, most) = self.limits();
+        width.clamp(least, most)
     }
 }
 
