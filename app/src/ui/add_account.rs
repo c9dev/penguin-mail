@@ -857,12 +857,19 @@ struct BrowserPage {
     /// The title and lede a finishing move replaced, for a failure to
     /// put back.
     held: RefCell<Option<(glib::GString, glib::GString)>>,
+    /// Turns beside the lede while a move finishes.
+    spinner: gtk::Spinner,
 }
 
 impl BrowserPage {
-    /// The sign-in came back and a move is finishing: Cancel and Back no
-    /// longer stop it, and the countdown has nothing left to count.
-    fn finishing(&self) {
+    /// The sign-in came back and a move is finishing: Cancel, Back, the
+    /// close button and Escape no longer stop it, and the countdown has
+    /// nothing left to count. A failure after the dialog closed would
+    /// reach nobody, so `window` stays open until it ends.
+    fn finishing(&self, window: &adw::Dialog) {
+        window.set_can_close(false);
+        self.spinner.set_visible(true);
+        self.spinner.start();
         self.cancel.set_sensitive(false);
         self.banded.page.set_can_pop(false);
         self.left.set_text("");
@@ -883,7 +890,10 @@ impl BrowserPage {
     /// A move that failed while finishing says again what it asked of the
     /// browser, above the failure. A page that was not finishing keeps its
     /// words.
-    fn unfinish(&self) {
+    fn unfinish(&self, window: &adw::Dialog) {
+        window.set_can_close(true);
+        self.spinner.stop();
+        self.spinner.set_visible(false);
         if let Some((title, lede)) = self.held.take() {
             self.title.set_text(&title);
             self.lede.set_text(&lede);
@@ -895,6 +905,16 @@ fn browser_page() -> BrowserPage {
     let banded = banded("browser", &gettext("Sign In in Your Browser"));
     let title = heading("");
     let lede = label("", &["post-lede"]);
+    lede.set_hexpand(true);
+    // A 16-pixel spinner: an `adw::Spinner` grows to fill the line.
+    let spinner = gtk::Spinner::builder()
+        .visible(false)
+        .valign(gtk::Align::Center)
+        .css_classes(["post-spinner", "post-moving-spinner"])
+        .build();
+    let lede_line = gtk::Box::builder().spacing(8).build();
+    lede_line.append(&spinner);
+    lede_line.append(&lede);
     let steps = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .css_classes(["post-steps"])
@@ -953,7 +973,7 @@ fn browser_page() -> BrowserPage {
     }
     let body = &banded.body;
     body.append(&title);
-    body.append(&lede);
+    body.append(&lede_line);
     body.append(&steps);
     body.append(&failed.area);
     body.append(&filler());
@@ -975,6 +995,7 @@ fn browser_page() -> BrowserPage {
         cancel,
         buttons,
         held: RefCell::new(None),
+        spinner,
     }
 }
 
@@ -3757,12 +3778,13 @@ impl Dialog {
         if let Some(timer) = timer {
             timer.remove();
         }
-        self.browser.finishing();
+        self.browser.finishing(&self.window);
     }
 
     /// The account that moved is signed in again, and the walk goes on to
     /// the next account or ends.
     fn moved(self: &Rc<Self>, account: Account) {
+        self.browser.unfinish(&self.window);
         self.stop_browser();
         (self.done)(Done::SignedInAgain(account));
         let next = self
@@ -3972,7 +3994,7 @@ impl Dialog {
     fn browser_failed_with(&self, failure: &Failure) {
         let page = &self.browser;
         // A move that failed while finishing gives its ways out back.
-        page.unfinish();
+        page.unfinish(&self.window);
         page.cancel.set_sensitive(true);
         page.banded.page.set_can_pop(true);
         page.steps.set_visible(false);
@@ -4856,8 +4878,14 @@ pub(crate) mod checks {
 
     fn a_move_cannot_be_left_once_its_sign_in_has_returned() {
         let page = browser_page();
+        let dialog = adw::Dialog::new();
         assert!(page.cancel.is_sensitive() && page.banded.page.can_pop());
-        page.finishing();
+        assert!(!page.spinner.get_visible());
+        page.finishing(&dialog);
+        // Neither the close button nor Escape ends the dialog: a failure
+        // after it closed would reach nobody.
+        assert!(!dialog.can_close());
+        assert!(page.spinner.get_visible() && page.spinner.is_spinning());
         assert!(!page.cancel.is_sensitive());
         assert!(!page.banded.page.can_pop());
         // The browser is done with, so the page stops saying it is open.
@@ -4877,8 +4905,11 @@ pub(crate) mod checks {
         page.title.set_text("Sign in with Google in your browser");
         page.lede
             .set_text("Google's sign-in page is open in your browser.");
-        page.finishing();
-        page.unfinish();
+        let dialog = adw::Dialog::new();
+        page.finishing(&dialog);
+        page.unfinish(&dialog);
+        assert!(dialog.can_close());
+        assert!(!page.spinner.get_visible());
         assert_eq!(page.title.text(), "Sign in with Google in your browser");
         assert_eq!(
             page.lede.text(),
@@ -4886,8 +4917,9 @@ pub(crate) mod checks {
         );
         // A page that never reached the end keeps what it says.
         page.title.set_text("Could not sign in");
-        page.unfinish();
+        page.unfinish(&dialog);
         assert_eq!(page.title.text(), "Could not sign in");
+        assert!(dialog.can_close());
     }
 
     fn the_calendar_password_stays_while_the_browser_leads() {

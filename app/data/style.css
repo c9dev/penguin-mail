@@ -1763,6 +1763,7 @@ list.post-list row > box.header > box.prefixes image { color: var(--post-dim); }
 .post-status > * { min-height: 0; min-width: 0; }
 .post-check-title { font-size: 14.5px; font-weight: 500; }
 .post-spinner { color: var(--post-acc); }
+.post-moving-spinner { margin-top: 5px; }
 list.post-servers > row > box.header { min-height: 0; padding-top: 0; padding-bottom: 0; margin: -3px 12px -3px; }
 list.post-servers > row { min-height: 0; }
 .post-status { color: var(--post-acc); }

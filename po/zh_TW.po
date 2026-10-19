@@ -4414,7 +4414,7 @@ msgstr "手動輸入伺服器設定"
 msgid "Add a calendar without mail"
 msgstr "新增不含郵件的行事曆"
 
-#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:1996
+#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:2017
 msgid "Add Account"
 msgstr "新增帳號"
 
@@ -4464,44 +4464,44 @@ msgstr "正在查詢"
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "僅會將網域傳送至電腦外，不會傳送完整地址。"
 
-#: app/src/ui/add_account.rs:874 app/src/ui/add_account.rs:3045
-#: app/src/ui/add_account.rs:3138 app/src/ui/add_account.rs:3658
-#: app/src/ui/add_account.rs:4623
+#: app/src/ui/add_account.rs:881 app/src/ui/add_account.rs:3066
+#: app/src/ui/add_account.rs:3159 app/src/ui/add_account.rs:3679
+#: app/src/ui/add_account.rs:4645
 msgid "Signing In…"
 msgstr "正在登入…"
 
-#: app/src/ui/add_account.rs:876
+#: app/src/ui/add_account.rs:883
 msgid "Moving your account. This takes a moment."
 msgstr "正在轉移您的帳號。這需要一點時間。"
 
-#: app/src/ui/add_account.rs:895
+#: app/src/ui/add_account.rs:905
 msgid "Sign In in Your Browser"
 msgstr "在瀏覽器中登入"
 
-#: app/src/ui/add_account.rs:912
+#: app/src/ui/add_account.rs:932
 msgid "Time left"
 msgstr "剩餘時間"
 
-#: app/src/ui/add_account.rs:921 app/src/ui/add_account.rs:3817
+#: app/src/ui/add_account.rs:941 app/src/ui/add_account.rs:3839
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail 會在五分鐘後停止等候。"
 
-#: app/src/ui/add_account.rs:927 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:947 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "再次開啟頁面"
 
-#: app/src/ui/add_account.rs:932
+#: app/src/ui/add_account.rs:952
 msgid "Copy Link"
 msgstr "複製連結"
 
-#: app/src/ui/add_account.rs:937 app/src/ui/add_account.rs:1158
+#: app/src/ui/add_account.rs:957 app/src/ui/add_account.rs:1179
 #: app/src/ui/hide_my_email.rs:376 app/src/ui/hide_my_email.rs:380
 #: app/src/ui/key_import.rs:213 app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
 msgstr "重試"
 
-#: app/src/ui/add_account.rs:942 app/src/ui/add_account.rs:4145
-#: app/src/ui/add_account.rs:4214 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:4167
+#: app/src/ui/add_account.rs:4236 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4517,157 +4517,157 @@ msgstr "重試"
 msgid "Cancel"
 msgstr "取消"
 
-#: app/src/ui/add_account.rs:1084 app/src/ui/add_account.rs:1239
-#: app/src/ui/add_account.rs:3053 app/src/ui/add_account.rs:3143
-#: app/src/ui/add_account.rs:3600 app/src/ui/window.rs:1359
+#: app/src/ui/add_account.rs:1105 app/src/ui/add_account.rs:1260
+#: app/src/ui/add_account.rs:3074 app/src/ui/add_account.rs:3164
+#: app/src/ui/add_account.rs:3621 app/src/ui/window.rs:1359
 msgid "Sign In"
 msgstr "登入"
 
-#: app/src/ui/add_account.rs:1089 app/src/ui/add_account.rs:1092
+#: app/src/ui/add_account.rs:1110 app/src/ui/add_account.rs:1113
 msgid "Your Name"
 msgstr "姓名"
 
-#: app/src/ui/add_account.rs:1109 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1130 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "使用瀏覽器登入"
 
-#: app/src/ui/add_account.rs:1127
+#: app/src/ui/add_account.rs:1148
 msgid "Use an API Token Instead"
 msgstr "改用 API 權杖"
 
-#: app/src/ui/add_account.rs:1135 app/src/ui/add_account.rs:1138
+#: app/src/ui/add_account.rs:1156 app/src/ui/add_account.rs:1159
 msgid "Sign In With a Token"
 msgstr "使用權杖登入"
 
-#: app/src/ui/add_account.rs:1141 app/src/ui/add_account.rs:1147
+#: app/src/ui/add_account.rs:1162 app/src/ui/add_account.rs:1168
 msgid "App Password for Calendar"
 msgstr "行事曆的應用程式密碼"
 
-#: app/src/ui/add_account.rs:1143
+#: app/src/ui/add_account.rs:1164
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
 msgstr "選填。請在供應商的設定中建立具有行事曆存取權的應用程式密碼。"
 
-#: app/src/ui/add_account.rs:1153 app/src/ui/add_account.rs:1782
+#: app/src/ui/add_account.rs:1174 app/src/ui/add_account.rs:1803
 msgid "Server Settings"
 msgstr "伺服器設定"
 
-#: app/src/ui/add_account.rs:1177 app/src/ui/add_account.rs:3200
+#: app/src/ui/add_account.rs:1198 app/src/ui/add_account.rs:3221
 msgid "Outgoing"
 msgstr "寄件"
 
-#: app/src/ui/add_account.rs:1182
+#: app/src/ui/add_account.rs:1203
 msgid "Keep this account's mail on this computer alone"
 msgstr "僅在此電腦上保留此帳號的郵件"
 
-#: app/src/ui/add_account.rs:1187
+#: app/src/ui/add_account.rs:1208
 msgid "Servers"
 msgstr "伺服器"
 
-#: app/src/ui/add_account.rs:1192 app/src/ui/add_account.rs:1194
-#: app/src/ui/add_account.rs:2693 app/src/ui/add_account.rs:2697
+#: app/src/ui/add_account.rs:1213 app/src/ui/add_account.rs:1215
+#: app/src/ui/add_account.rs:2714 app/src/ui/add_account.rs:2718
 msgid "Use these servers"
 msgstr "使用這些伺服器"
 
-#: app/src/ui/add_account.rs:1196 app/src/ui/add_account.rs:2695
+#: app/src/ui/add_account.rs:1217 app/src/ui/add_account.rs:2716
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
 msgstr ""
 "Penguin Mail 推測使用這些伺服器。勾選核取方塊後，才會將密碼傳送至伺服器。"
 
-#: app/src/ui/add_account.rs:1202 app/src/ui/add_account.rs:1503
-#: app/src/ui/add_account.rs:1738
+#: app/src/ui/add_account.rs:1223 app/src/ui/add_account.rs:1524
+#: app/src/ui/add_account.rs:1759
 msgid "Server"
 msgstr "伺服器"
 
-#: app/src/ui/add_account.rs:1206
+#: app/src/ui/add_account.rs:1227
 msgid "Use IMAP Instead"
 msgstr "改用 IMAP"
 
-#: app/src/ui/add_account.rs:1302
+#: app/src/ui/add_account.rs:1323
 msgid "No Other Mail Apps"
 msgstr "無法使用其他郵件程式"
 
-#: app/src/ui/add_account.rs:1308
+#: app/src/ui/add_account.rs:1329
 msgid "Use another address"
 msgstr "使用其他地址"
 
-#: app/src/ui/add_account.rs:1309
+#: app/src/ui/add_account.rs:1330
 msgid "Change the address and look it up again"
 msgstr "變更地址並重新查詢"
 
-#: app/src/ui/add_account.rs:1315
+#: app/src/ui/add_account.rs:1336
 msgid "Choose another provider"
 msgstr "選擇其他服務提供者"
 
-#: app/src/ui/add_account.rs:1316
+#: app/src/ui/add_account.rs:1337
 msgid "Back to the list"
 msgstr "回到清單"
 
-#: app/src/ui/add_account.rs:1362
+#: app/src/ui/add_account.rs:1383
 msgid "Account Added"
 msgstr "已新增帳號"
 
-#: app/src/ui/add_account.rs:1385
+#: app/src/ui/add_account.rs:1406
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "封存"
 
-#: app/src/ui/add_account.rs:1419
+#: app/src/ui/add_account.rs:1440
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
 msgstr "[授予存取權] 會再次開啟 Google 頁面。也可以稍後在 [偏好設定] 中授予。"
 
-#: app/src/ui/add_account.rs:1423
+#: app/src/ui/add_account.rs:1444
 msgid "Open Inbox"
 msgstr "開啟收件匣"
 
-#: app/src/ui/add_account.rs:1425
+#: app/src/ui/add_account.rs:1446
 msgid "Add Another Account"
 msgstr "新增其他帳號"
 
-#: app/src/ui/add_account.rs:1427 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1448 app/src/ui/confirm.rs:46
 #: app/src/ui/route_page.rs:141
 msgid "Not Now"
 msgstr "暫時不要"
 
-#: app/src/ui/add_account.rs:1432 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/add_account.rs:1453 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:483
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1491
 msgid "Grant Access"
 msgstr "授予存取權"
 
-#: app/src/ui/add_account.rs:1506 app/src/ui/add_account.rs:1507
+#: app/src/ui/add_account.rs:1527 app/src/ui/add_account.rs:1528
 msgid "Port"
 msgstr "連接埠"
 
-#: app/src/ui/add_account.rs:1517 app/src/ui/add_account.rs:1518
+#: app/src/ui/add_account.rs:1538 app/src/ui/add_account.rs:1539
 msgid "Security"
 msgstr "安全性"
 
-#: app/src/ui/add_account.rs:1579
+#: app/src/ui/add_account.rs:1600
 msgid "Mail on the Server"
 msgstr "伺服器上的郵件"
 
-#: app/src/ui/add_account.rs:1581
+#: app/src/ui/add_account.rs:1602
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail 會在此電腦上保留下載的每封郵件。"
 
-#: app/src/ui/add_account.rs:1586 app/src/ui/add_account.rs:1587
+#: app/src/ui/add_account.rs:1607 app/src/ui/add_account.rs:1608
 #: app/src/ui/preferences.rs:1385
 msgid "Days"
 msgstr "天數"
 
-#: app/src/ui/add_account.rs:1661 app/src/ui/add_account.rs:1739
+#: app/src/ui/add_account.rs:1682 app/src/ui/add_account.rs:1760
 msgid "Incoming User Name"
 msgstr "收件使用者名稱"
 
-#: app/src/ui/add_account.rs:1662
+#: app/src/ui/add_account.rs:1683
 msgid "Outgoing User Name"
 msgstr "寄件使用者名稱"
 
@@ -4675,63 +4675,63 @@ msgstr "寄件使用者名稱"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1668
+#: app/src/ui/add_account.rs:1689
 msgid "Leave it empty to use the incoming user name."
 msgstr "留空以使用收件使用者名稱。"
 
-#: app/src/ui/add_account.rs:1671 app/src/ui/add_account.rs:1673
+#: app/src/ui/add_account.rs:1692 app/src/ui/add_account.rs:1694
 msgid "Outgoing Password"
 msgstr "寄件密碼"
 
-#: app/src/ui/add_account.rs:1675
+#: app/src/ui/add_account.rs:1696
 msgid "Leave it empty to use the password you sign in with."
 msgstr "留空以使用登入時的密碼。"
 
-#: app/src/ui/add_account.rs:1678
+#: app/src/ui/add_account.rs:1699
 msgid "Incoming Mail"
 msgstr "收件郵件"
 
-#: app/src/ui/add_account.rs:1687 app/src/ui/add_account.rs:1688
+#: app/src/ui/add_account.rs:1708 app/src/ui/add_account.rs:1709
 msgid "Protocol"
 msgstr "通訊協定"
 
-#: app/src/ui/add_account.rs:1695
+#: app/src/ui/add_account.rs:1716
 msgid "Sign-In"
 msgstr "登入"
 
-#: app/src/ui/add_account.rs:1697 app/src/ui/add_account.rs:1740
+#: app/src/ui/add_account.rs:1718 app/src/ui/add_account.rs:1761
 msgid "Leave the user names empty to sign in with your address."
 msgstr "使用者名稱留空即以電子郵件地址登入。"
 
-#: app/src/ui/add_account.rs:1701
+#: app/src/ui/add_account.rs:1722
 msgid "Outgoing Mail"
 msgstr "寄件郵件"
 
-#: app/src/ui/add_account.rs:1733
+#: app/src/ui/add_account.rs:1754
 msgid "Session URL"
 msgstr "工作階段網址"
 
-#: app/src/ui/add_account.rs:1734 app/src/ui/add_account.rs:1813
+#: app/src/ui/add_account.rs:1755 app/src/ui/add_account.rs:1834
 msgid "User Name"
 msgstr "使用者名稱"
 
-#: app/src/ui/add_account.rs:1735
+#: app/src/ui/add_account.rs:1756
 msgid "Leave the user name empty to sign in with your address."
 msgstr "使用者名稱留空即以電子郵件地址登入。"
 
-#: app/src/ui/add_account.rs:1771 app/src/ui/add_account.rs:3513
+#: app/src/ui/add_account.rs:1792 app/src/ui/add_account.rs:3534
 msgid "Use These Settings"
 msgstr "使用這些設定"
 
-#: app/src/ui/add_account.rs:1811 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1832 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "伺服器位址"
 
-#: app/src/ui/add_account.rs:1826
+#: app/src/ui/add_account.rs:1847
 msgid "Calendar Server"
 msgstr "行事曆伺服器"
 
-#: app/src/ui/add_account.rs:1828
+#: app/src/ui/add_account.rs:1849
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -4739,24 +4739,24 @@ msgstr ""
 "CalDAV 伺服器，例如 Nextcloud。若伺服器使用兩步驟登入，請為 Penguin Mail 建立"
 "應用程式密碼。"
 
-#: app/src/ui/add_account.rs:1838 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/add_account.rs:1859 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "新增行事曆"
 
-#: app/src/ui/add_account.rs:1850
+#: app/src/ui/add_account.rs:1871
 msgid "Add a Calendar"
 msgstr "新增行事曆"
 
-#: app/src/ui/add_account.rs:2462 app/src/ui/add_account.rs:4552
+#: app/src/ui/add_account.rs:2483 app/src/ui/add_account.rs:4574
 msgid "Looking up {domain}"
 msgstr "正在查詢 {domain}"
 
-#: app/src/ui/add_account.rs:2724
+#: app/src/ui/add_account.rs:2745
 msgid "{domain} uses {provider}"
 msgstr "{domain} 使用 {provider}"
 
-#: app/src/ui/add_account.rs:2748
+#: app/src/ui/add_account.rs:2769
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -4764,33 +4764,33 @@ msgstr ""
 "請勿使用 {provider} 網站密碼。請在 {provider} 設定中建立具郵件存取權的應用程"
 "式密碼，再貼至此處。"
 
-#: app/src/ui/add_account.rs:3219
+#: app/src/ui/add_account.rs:3240
 msgid "Could not reach {host}"
 msgstr "無法連線至 {host}"
 
-#: app/src/ui/add_account.rs:3221
+#: app/src/ui/add_account.rs:3242
 msgid "Your password was not sent."
 msgstr "未傳送密碼。"
 
-#: app/src/ui/add_account.rs:3491
+#: app/src/ui/add_account.rs:3512
 msgid "Looking Up…"
 msgstr "正在查詢…"
 
-#: app/src/ui/add_account.rs:3599 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3620 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "重新登入"
 
-#: app/src/ui/add_account.rs:3805 app/src/ui/add_account.rs:4195
+#: app/src/ui/add_account.rs:3827 app/src/ui/add_account.rs:4217
 msgid "Sign in with {provider} in your browser"
 msgstr "在瀏覽器中以 {provider} 登入"
 
-#: app/src/ui/add_account.rs:3810 app/src/ui/add_account.rs:4200
+#: app/src/ui/add_account.rs:3832 app/src/ui/add_account.rs:4222
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
 msgstr "已在瀏覽器中開啟 {provider} 登入頁面。完成登入後，此視窗會繼續下一步。"
 
-#: app/src/ui/add_account.rs:3833
+#: app/src/ui/add_account.rs:3855
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -4798,7 +4798,7 @@ msgstr ""
 "此版本的 Penguin Mail 未包含 Google 登入功能。請從 github.com/c9dev/penguin-"
 "mail/releases 取得發行版本。"
 
-#: app/src/ui/add_account.rs:3836
+#: app/src/ui/add_account.rs:3858
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -4806,7 +4806,7 @@ msgstr ""
 "此版本的 Penguin Mail 未包含 Microsoft 登入功能。請從 github.com/c9dev/"
 "penguin-mail/releases 取得發行版本。"
 
-#: app/src/ui/add_account.rs:3847
+#: app/src/ui/add_account.rs:3869
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -4814,27 +4814,27 @@ msgstr ""
 "正在使用自己的 Google 用戶端登入。Google 登入頁面已在瀏覽器中開啟，在該處完成"
 "後，此視窗會繼續下一步。"
 
-#: app/src/ui/add_account.rs:4080
+#: app/src/ui/add_account.rs:4102
 msgid "Link copied"
 msgstr "已複製連結"
 
-#: app/src/ui/add_account.rs:4207
+#: app/src/ui/add_account.rs:4229
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail 會在十分鐘後停止等候。"
 
-#: app/src/ui/add_account.rs:4230
+#: app/src/ui/add_account.rs:4252
 msgid "Canceling…"
 msgstr "正在取消…"
 
-#: app/src/ui/add_account.rs:4294
+#: app/src/ui/add_account.rs:4316
 msgid "{account} is added"
 msgstr "已新增 {account}"
 
-#: app/src/ui/add_account.rs:4314
+#: app/src/ui/add_account.rs:4336
 msgid "{account} is ready"
 msgstr "{account} 已準備就緒"
 
-#: app/src/ui/add_account.rs:4626
+#: app/src/ui/add_account.rs:4648
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."

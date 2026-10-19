@@ -4661,7 +4661,7 @@ msgstr "Masukkan pengaturan server sendiri"
 msgid "Add a calendar without mail"
 msgstr "Tambahkan kalender tanpa email"
 
-#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:1996
+#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:2017
 msgid "Add Account"
 msgstr "Tambahkan Akun"
 
@@ -4711,44 +4711,44 @@ msgstr "Mencari"
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "Hanya domain yang keluar dari komputer ini, bukan alamat lengkap Anda."
 
-#: app/src/ui/add_account.rs:874 app/src/ui/add_account.rs:3045
-#: app/src/ui/add_account.rs:3138 app/src/ui/add_account.rs:3658
-#: app/src/ui/add_account.rs:4623
+#: app/src/ui/add_account.rs:881 app/src/ui/add_account.rs:3066
+#: app/src/ui/add_account.rs:3159 app/src/ui/add_account.rs:3679
+#: app/src/ui/add_account.rs:4645
 msgid "Signing In…"
 msgstr "Sedang Masuk…"
 
-#: app/src/ui/add_account.rs:876
+#: app/src/ui/add_account.rs:883
 msgid "Moving your account. This takes a moment."
 msgstr "Memindahkan akun Anda. Ini memerlukan waktu sebentar."
 
-#: app/src/ui/add_account.rs:895
+#: app/src/ui/add_account.rs:905
 msgid "Sign In in Your Browser"
 msgstr "Masuk di Peramban Anda"
 
-#: app/src/ui/add_account.rs:912
+#: app/src/ui/add_account.rs:932
 msgid "Time left"
 msgstr "Waktu tersisa"
 
-#: app/src/ui/add_account.rs:921 app/src/ui/add_account.rs:3817
+#: app/src/ui/add_account.rs:941 app/src/ui/add_account.rs:3839
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail berhenti menunggu setelah lima menit."
 
-#: app/src/ui/add_account.rs:927 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:947 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "Buka Halaman Lagi"
 
-#: app/src/ui/add_account.rs:932
+#: app/src/ui/add_account.rs:952
 msgid "Copy Link"
 msgstr "Salin Tautan"
 
-#: app/src/ui/add_account.rs:937 app/src/ui/add_account.rs:1158
+#: app/src/ui/add_account.rs:957 app/src/ui/add_account.rs:1179
 #: app/src/ui/hide_my_email.rs:376 app/src/ui/hide_my_email.rs:380
 #: app/src/ui/key_import.rs:213 app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
 msgstr "Coba Lagi"
 
-#: app/src/ui/add_account.rs:942 app/src/ui/add_account.rs:4145
-#: app/src/ui/add_account.rs:4214 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:4167
+#: app/src/ui/add_account.rs:4236 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4764,62 +4764,62 @@ msgstr "Coba Lagi"
 msgid "Cancel"
 msgstr "Batal"
 
-#: app/src/ui/add_account.rs:1084 app/src/ui/add_account.rs:1239
-#: app/src/ui/add_account.rs:3053 app/src/ui/add_account.rs:3143
-#: app/src/ui/add_account.rs:3600 app/src/ui/window.rs:1359
+#: app/src/ui/add_account.rs:1105 app/src/ui/add_account.rs:1260
+#: app/src/ui/add_account.rs:3074 app/src/ui/add_account.rs:3164
+#: app/src/ui/add_account.rs:3621 app/src/ui/window.rs:1359
 msgid "Sign In"
 msgstr "Masuk"
 
-#: app/src/ui/add_account.rs:1089 app/src/ui/add_account.rs:1092
+#: app/src/ui/add_account.rs:1110 app/src/ui/add_account.rs:1113
 msgid "Your Name"
 msgstr "Nama Anda"
 
-#: app/src/ui/add_account.rs:1109 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1130 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "Masuk melalui Peramban"
 
-#: app/src/ui/add_account.rs:1127
+#: app/src/ui/add_account.rs:1148
 msgid "Use an API Token Instead"
 msgstr "Gunakan Token API"
 
-#: app/src/ui/add_account.rs:1135 app/src/ui/add_account.rs:1138
+#: app/src/ui/add_account.rs:1156 app/src/ui/add_account.rs:1159
 msgid "Sign In With a Token"
 msgstr "Masuk dengan Token"
 
-#: app/src/ui/add_account.rs:1141 app/src/ui/add_account.rs:1147
+#: app/src/ui/add_account.rs:1162 app/src/ui/add_account.rs:1168
 msgid "App Password for Calendar"
 msgstr "Sandi Aplikasi untuk Kalender"
 
-#: app/src/ui/add_account.rs:1143
+#: app/src/ui/add_account.rs:1164
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
 msgstr ""
 "Opsional. Buat sandi aplikasi dengan akses kalender di pengaturan penyedia."
 
-#: app/src/ui/add_account.rs:1153 app/src/ui/add_account.rs:1782
+#: app/src/ui/add_account.rs:1174 app/src/ui/add_account.rs:1803
 msgid "Server Settings"
 msgstr "Pengaturan Server"
 
-#: app/src/ui/add_account.rs:1177 app/src/ui/add_account.rs:3200
+#: app/src/ui/add_account.rs:1198 app/src/ui/add_account.rs:3221
 msgid "Outgoing"
 msgstr "Keluar"
 
-#: app/src/ui/add_account.rs:1182
+#: app/src/ui/add_account.rs:1203
 msgid "Keep this account's mail on this computer alone"
 msgstr "Simpan email akun ini hanya di komputer ini"
 
-#: app/src/ui/add_account.rs:1187
+#: app/src/ui/add_account.rs:1208
 msgid "Servers"
 msgstr "Server"
 
-#: app/src/ui/add_account.rs:1192 app/src/ui/add_account.rs:1194
-#: app/src/ui/add_account.rs:2693 app/src/ui/add_account.rs:2697
+#: app/src/ui/add_account.rs:1213 app/src/ui/add_account.rs:1215
+#: app/src/ui/add_account.rs:2714 app/src/ui/add_account.rs:2718
 msgid "Use these servers"
 msgstr "Gunakan server ini"
 
-#: app/src/ui/add_account.rs:1196 app/src/ui/add_account.rs:2695
+#: app/src/ui/add_account.rs:1217 app/src/ui/add_account.rs:2716
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -4827,45 +4827,45 @@ msgstr ""
 "Penguin Mail memperkirakan server ini. Sandi Anda hanya dikirim setelah Anda "
 "mencentang kotak."
 
-#: app/src/ui/add_account.rs:1202 app/src/ui/add_account.rs:1503
-#: app/src/ui/add_account.rs:1738
+#: app/src/ui/add_account.rs:1223 app/src/ui/add_account.rs:1524
+#: app/src/ui/add_account.rs:1759
 msgid "Server"
 msgstr "Server"
 
-#: app/src/ui/add_account.rs:1206
+#: app/src/ui/add_account.rs:1227
 msgid "Use IMAP Instead"
 msgstr "Gunakan IMAP"
 
-#: app/src/ui/add_account.rs:1302
+#: app/src/ui/add_account.rs:1323
 msgid "No Other Mail Apps"
 msgstr "Tidak Mengizinkan Aplikasi Email Lain"
 
-#: app/src/ui/add_account.rs:1308
+#: app/src/ui/add_account.rs:1329
 msgid "Use another address"
 msgstr "Gunakan alamat lain"
 
-#: app/src/ui/add_account.rs:1309
+#: app/src/ui/add_account.rs:1330
 msgid "Change the address and look it up again"
 msgstr "Ubah alamat dan cari lagi"
 
-#: app/src/ui/add_account.rs:1315
+#: app/src/ui/add_account.rs:1336
 msgid "Choose another provider"
 msgstr "Pilih penyedia lain"
 
-#: app/src/ui/add_account.rs:1316
+#: app/src/ui/add_account.rs:1337
 msgid "Back to the list"
 msgstr "Kembali ke daftar"
 
-#: app/src/ui/add_account.rs:1362
+#: app/src/ui/add_account.rs:1383
 msgid "Account Added"
 msgstr "Akun Ditambahkan"
 
-#: app/src/ui/add_account.rs:1385
+#: app/src/ui/add_account.rs:1406
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "Arsip"
 
-#: app/src/ui/add_account.rs:1419
+#: app/src/ui/add_account.rs:1440
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
@@ -4873,52 +4873,52 @@ msgstr ""
 "Berikan Akses membuka halaman Google lagi. Anda juga dapat melakukannya "
 "nanti di Preferensi."
 
-#: app/src/ui/add_account.rs:1423
+#: app/src/ui/add_account.rs:1444
 msgid "Open Inbox"
 msgstr "Buka Kotak Masuk"
 
-#: app/src/ui/add_account.rs:1425
+#: app/src/ui/add_account.rs:1446
 msgid "Add Another Account"
 msgstr "Tambahkan Akun Lain"
 
-#: app/src/ui/add_account.rs:1427 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1448 app/src/ui/confirm.rs:46
 #: app/src/ui/route_page.rs:141
 msgid "Not Now"
 msgstr "Nanti Saja"
 
-#: app/src/ui/add_account.rs:1432 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/add_account.rs:1453 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:483
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1491
 msgid "Grant Access"
 msgstr "Berikan Akses"
 
-#: app/src/ui/add_account.rs:1506 app/src/ui/add_account.rs:1507
+#: app/src/ui/add_account.rs:1527 app/src/ui/add_account.rs:1528
 msgid "Port"
 msgstr "Porta"
 
-#: app/src/ui/add_account.rs:1517 app/src/ui/add_account.rs:1518
+#: app/src/ui/add_account.rs:1538 app/src/ui/add_account.rs:1539
 msgid "Security"
 msgstr "Keamanan"
 
-#: app/src/ui/add_account.rs:1579
+#: app/src/ui/add_account.rs:1600
 msgid "Mail on the Server"
 msgstr "Email di Server"
 
-#: app/src/ui/add_account.rs:1581
+#: app/src/ui/add_account.rs:1602
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail menyimpan semua pesan yang diunduh di komputer ini."
 
-#: app/src/ui/add_account.rs:1586 app/src/ui/add_account.rs:1587
+#: app/src/ui/add_account.rs:1607 app/src/ui/add_account.rs:1608
 #: app/src/ui/preferences.rs:1385
 msgid "Days"
 msgstr "Hari"
 
-#: app/src/ui/add_account.rs:1661 app/src/ui/add_account.rs:1739
+#: app/src/ui/add_account.rs:1682 app/src/ui/add_account.rs:1760
 msgid "Incoming User Name"
 msgstr "Nama Pengguna Masuk"
 
-#: app/src/ui/add_account.rs:1662
+#: app/src/ui/add_account.rs:1683
 msgid "Outgoing User Name"
 msgstr "Nama Pengguna Keluar"
 
@@ -4926,63 +4926,63 @@ msgstr "Nama Pengguna Keluar"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1668
+#: app/src/ui/add_account.rs:1689
 msgid "Leave it empty to use the incoming user name."
 msgstr "Biarkan kosong untuk menggunakan nama pengguna masuk."
 
-#: app/src/ui/add_account.rs:1671 app/src/ui/add_account.rs:1673
+#: app/src/ui/add_account.rs:1692 app/src/ui/add_account.rs:1694
 msgid "Outgoing Password"
 msgstr "Sandi Keluar"
 
-#: app/src/ui/add_account.rs:1675
+#: app/src/ui/add_account.rs:1696
 msgid "Leave it empty to use the password you sign in with."
 msgstr "Biarkan kosong untuk menggunakan sandi masuk Anda."
 
-#: app/src/ui/add_account.rs:1678
+#: app/src/ui/add_account.rs:1699
 msgid "Incoming Mail"
 msgstr "Email Masuk"
 
-#: app/src/ui/add_account.rs:1687 app/src/ui/add_account.rs:1688
+#: app/src/ui/add_account.rs:1708 app/src/ui/add_account.rs:1709
 msgid "Protocol"
 msgstr "Protokol"
 
-#: app/src/ui/add_account.rs:1695
+#: app/src/ui/add_account.rs:1716
 msgid "Sign-In"
 msgstr "Masuk"
 
-#: app/src/ui/add_account.rs:1697 app/src/ui/add_account.rs:1740
+#: app/src/ui/add_account.rs:1718 app/src/ui/add_account.rs:1761
 msgid "Leave the user names empty to sign in with your address."
 msgstr "Biarkan nama pengguna kosong untuk masuk dengan alamat Anda."
 
-#: app/src/ui/add_account.rs:1701
+#: app/src/ui/add_account.rs:1722
 msgid "Outgoing Mail"
 msgstr "Email Keluar"
 
-#: app/src/ui/add_account.rs:1733
+#: app/src/ui/add_account.rs:1754
 msgid "Session URL"
 msgstr "URL Sesi"
 
-#: app/src/ui/add_account.rs:1734 app/src/ui/add_account.rs:1813
+#: app/src/ui/add_account.rs:1755 app/src/ui/add_account.rs:1834
 msgid "User Name"
 msgstr "Nama Pengguna"
 
-#: app/src/ui/add_account.rs:1735
+#: app/src/ui/add_account.rs:1756
 msgid "Leave the user name empty to sign in with your address."
 msgstr "Biarkan nama pengguna kosong untuk masuk dengan alamat Anda."
 
-#: app/src/ui/add_account.rs:1771 app/src/ui/add_account.rs:3513
+#: app/src/ui/add_account.rs:1792 app/src/ui/add_account.rs:3534
 msgid "Use These Settings"
 msgstr "Gunakan Pengaturan Ini"
 
-#: app/src/ui/add_account.rs:1811 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1832 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "Alamat Server"
 
-#: app/src/ui/add_account.rs:1826
+#: app/src/ui/add_account.rs:1847
 msgid "Calendar Server"
 msgstr "Server Kalender"
 
-#: app/src/ui/add_account.rs:1828
+#: app/src/ui/add_account.rs:1849
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -4990,24 +4990,24 @@ msgstr ""
 "Server CalDAV, seperti Nextcloud. Jika server menggunakan masuk dua langkah, "
 "buat sandi aplikasi untuk Penguin Mail."
 
-#: app/src/ui/add_account.rs:1838 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/add_account.rs:1859 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "Tambahkan Kalender"
 
-#: app/src/ui/add_account.rs:1850
+#: app/src/ui/add_account.rs:1871
 msgid "Add a Calendar"
 msgstr "Tambahkan Kalender"
 
-#: app/src/ui/add_account.rs:2462 app/src/ui/add_account.rs:4552
+#: app/src/ui/add_account.rs:2483 app/src/ui/add_account.rs:4574
 msgid "Looking up {domain}"
 msgstr "Mencari {domain}"
 
-#: app/src/ui/add_account.rs:2724
+#: app/src/ui/add_account.rs:2745
 msgid "{domain} uses {provider}"
 msgstr "{domain} menggunakan {provider}"
 
-#: app/src/ui/add_account.rs:2748
+#: app/src/ui/add_account.rs:2769
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -5015,27 +5015,27 @@ msgstr ""
 "Bukan sandi situs web {provider} Anda. Buat sandi dengan akses email di "
 "pengaturan {provider} dan tempel di sini."
 
-#: app/src/ui/add_account.rs:3219
+#: app/src/ui/add_account.rs:3240
 msgid "Could not reach {host}"
 msgstr "Tidak dapat menghubungi {host}"
 
-#: app/src/ui/add_account.rs:3221
+#: app/src/ui/add_account.rs:3242
 msgid "Your password was not sent."
 msgstr "Sandi Anda tidak dikirim."
 
-#: app/src/ui/add_account.rs:3491
+#: app/src/ui/add_account.rs:3512
 msgid "Looking Up…"
 msgstr "Mencari…"
 
-#: app/src/ui/add_account.rs:3599 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3620 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "Masuk Lagi"
 
-#: app/src/ui/add_account.rs:3805 app/src/ui/add_account.rs:4195
+#: app/src/ui/add_account.rs:3827 app/src/ui/add_account.rs:4217
 msgid "Sign in with {provider} in your browser"
 msgstr "Masuk dengan {provider} di peramban Anda"
 
-#: app/src/ui/add_account.rs:3810 app/src/ui/add_account.rs:4200
+#: app/src/ui/add_account.rs:3832 app/src/ui/add_account.rs:4222
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -5043,7 +5043,7 @@ msgstr ""
 "Halaman masuk {provider} terbuka di peramban Anda. Setelah Anda selesai di "
 "sana, jendela ini akan melanjutkan."
 
-#: app/src/ui/add_account.rs:3833
+#: app/src/ui/add_account.rs:3855
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5051,7 +5051,7 @@ msgstr ""
 "Salinan Penguin Mail ini dibuat tanpa dukungan masuk Google. Dapatkan rilis "
 "dari github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3836
+#: app/src/ui/add_account.rs:3858
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5059,7 +5059,7 @@ msgstr ""
 "Salinan Penguin Mail ini dibuat tanpa dukungan masuk Microsoft. Dapatkan "
 "rilis dari github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3847
+#: app/src/ui/add_account.rs:3869
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -5067,27 +5067,27 @@ msgstr ""
 "Masuk dengan klien Google milik Anda sendiri. Halaman masuk Google terbuka "
 "di peramban Anda. Setelah Anda selesai di sana, jendela ini akan melanjutkan."
 
-#: app/src/ui/add_account.rs:4080
+#: app/src/ui/add_account.rs:4102
 msgid "Link copied"
 msgstr "Tautan disalin"
 
-#: app/src/ui/add_account.rs:4207
+#: app/src/ui/add_account.rs:4229
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail berhenti menunggu setelah sepuluh menit."
 
-#: app/src/ui/add_account.rs:4230
+#: app/src/ui/add_account.rs:4252
 msgid "Canceling…"
 msgstr "Membatalkan…"
 
-#: app/src/ui/add_account.rs:4294
+#: app/src/ui/add_account.rs:4316
 msgid "{account} is added"
 msgstr "{account} telah ditambahkan"
 
-#: app/src/ui/add_account.rs:4314
+#: app/src/ui/add_account.rs:4336
 msgid "{account} is ready"
 msgstr "{account} siap"
 
-#: app/src/ui/add_account.rs:4626
+#: app/src/ui/add_account.rs:4648
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
