@@ -18,10 +18,9 @@ url="https://github.com/c9dev/penguin-mail"
 license=('GPL-3.0-or-later')
 provides=('penguin-mail')
 conflicts=('penguin-mail')
-depends=('gtk4' 'libadwaita' 'webkitgtk-6.0' 'gnupg' 'hicolor-icon-theme')
-optdepends=('gnome-online-accounts: sign in to Gmail through the desktop'
-            'gnome-online-accounts-gtk: add Google accounts outside GNOME'
-            'gnome-shell-extension-appindicator: tray icon on GNOME Shell'
+depends=('gtk4' 'libadwaita' 'webkitgtk-6.0' 'gnupg' 'hicolor-icon-theme' 'gnome-online-accounts'
+         'gnome-online-accounts-gtk')
+optdepends=('gnome-shell-extension-appindicator: tray icon on GNOME Shell'
             'bubblewrap: run assistant skill scripts')
 # desktop-file-utils is not listed: see scripts/package-arch.sh, which
 # builds the same package from source.
