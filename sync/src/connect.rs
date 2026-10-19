@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use mailrs_dav::{DavClient, Kind as DavKind, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
-use mailrs_domain::{Account, AccountId, AccountState, MailRoute, Provider};
+use mailrs_domain::{Account, AccountId, AccountState, MailRoute, Provider, SignInClient};
 use mailrs_gmail::{GmailClient, GmailError, Granted, OAuthClient, TokenStore};
 use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
@@ -184,6 +184,9 @@ pub struct Connector {
     pub config: Config,
     pub clients: Clients,
     pub secrets: Secrets,
+    /// The desktop's Online Accounts, which signs a Gmail account in for
+    /// its mail when the account was linked through it.
+    pub goa: Arc<dyn crate::goa::OnlineAccounts>,
 }
 
 impl Connector {
@@ -242,15 +245,19 @@ impl Connector {
         account: &Account,
     ) -> Result<Result<AccountServices, Lacks>, SyncError> {
         let id = account.id;
-        let (client, route) = self
+        let (client, route, goa_id) = self
             .db
             .read(move |c| {
                 Ok((
                     accounts::sign_in_client(c, id)?,
                     accounts::mail_route(c, id)?,
+                    accounts::goa_id(c, id)?,
                 ))
             })
             .await?;
+        if client == SignInClient::Goa {
+            return gmail_route::goa_services(self, account, route, goa_id).await;
+        }
         // Signing in again through the built-in client cannot bring API
         // mail back, so such an account pauses its mail instead.
         let sign_in = GoogleSignIn { client, route };

@@ -549,6 +549,7 @@ mod tests {
             config: crate::config::Config::default(),
             clients: crate::Clients::default(),
             secrets: Secrets::memory(),
+            goa: crate::goa::session(),
         }
     }
 

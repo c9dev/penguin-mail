@@ -177,6 +177,7 @@ fn connector(db: &Db, config: &Config) -> Connector {
         config: config.clone(),
         clients: Clients::built_in(),
         secrets: Secrets::keyring(),
+        goa: mailrs_sync::goa::session(),
     }
 }
 

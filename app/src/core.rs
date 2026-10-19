@@ -389,6 +389,7 @@ impl Core {
             config: self.config.borrow().clone(),
             clients: Clients::current(),
             secrets: self.secrets.clone(),
+            goa: mailrs_sync::goa::session(),
         }
     }
 
@@ -494,6 +495,7 @@ impl Core {
                 config,
                 clients: Clients::built_in(),
                 secrets: self.secrets.clone(),
+                goa: mailrs_sync::goa::session(),
             },
             demo: self.demo_mail.clone(),
         });

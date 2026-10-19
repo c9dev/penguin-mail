@@ -14,7 +14,7 @@ use mailrs_store::accounts::{self, GoogleSignIn};
 use super::own_client::{OwnClient, OwnClientError, keep_project};
 use super::{
     JmapSignInError, KeptClient, MicrosoftSignInError, NewMicrosoft, SignInError, google_signed_in,
-    kept_own_client, microsoft_signed_in,
+    google_signed_in_as, kept_own_client, microsoft_signed_in,
 };
 use crate::passwords::Secrets;
 use crate::{
@@ -316,6 +316,7 @@ async fn with_google(
         config,
         clients,
         secrets,
+        ..
     } = connector;
     // An account signing in again keeps its own client. The environment
     // and the setup win over it, so it is read only when neither is set.
@@ -412,24 +413,41 @@ pub async fn calendar_consent(
         .clone()
         .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
     let (id, provider) = (account.id, account.provider);
-    let route = db
-        .read(move |c| accounts::mail_route(c, id))
+    let (client, route) = db
+        .read(move |c| {
+            Ok((
+                accounts::sign_in_client(c, id)?,
+                accounts::mail_route(c, id)?,
+            ))
+        })
         .await
         .map_err(SyncError::from)?;
-    // The sign-in is the built-in client's, so only the route is in question.
+    // An Online Accounts account keeps its mail there and never needs a
+    // move. Any other asks the built-in client for this token, so only its
+    // route is in question.
     let this_sign_in = GoogleSignIn {
-        client: SignInClient::BuiltIn,
+        client: match client {
+            SignInClient::Goa => SignInClient::Goa,
+            _ => SignInClient::BuiltIn,
+        },
         route,
     };
     if provider != Provider::Gmail || this_sign_in.needs_move(provider) {
         return Err(BrowserSignInError::NeedsRoute);
     }
-    let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
-        .await
-        .map_err(BrowserSignInError::Google)?;
+    let authorized =
+        mailrs_gmail::authorize_hinted(&oauth, GMAIL_API_BASE, Some(&account.email), open)
+            .await
+            .map_err(BrowserSignInError::Google)?;
     Wanted::Only(account.email.clone()).check(&authorized.email)?;
     let granted = authorized.granted.as_ref().map(Granted::to_scope);
-    Ok(google_signed_in(
+    // The account keeps the client it had: an Online Accounts account
+    // stays on Online Accounts, a built-in one on the built-in client.
+    let kept = match client {
+        SignInClient::Goa => SignInClient::Goa,
+        _ => SignInClient::BuiltIn,
+    };
+    Ok(google_signed_in_as(
         db,
         secrets,
         &account.email,
@@ -437,6 +455,7 @@ pub async fn calendar_consent(
         now_millis(),
         granted.as_deref(),
         &oauth.scopes().join(" "),
+        kept,
         None,
     )
     .await?)
@@ -452,6 +471,7 @@ async fn with_microsoft(
         config,
         clients,
         secrets,
+        ..
     } = connector;
     let client = clients
         .microsoft
