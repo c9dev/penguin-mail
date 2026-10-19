@@ -55,6 +55,20 @@ impl Step {
         }
     }
 
+    /// The page after this one, or `None` after the last.
+    pub fn next(self) -> Option<Step> {
+        Some(match self {
+            Step::Intro => Step::Project,
+            Step::Project => Step::Apis,
+            Step::Apis => Step::Screen,
+            Step::Screen => Step::Publish,
+            Step::Publish => Step::Key,
+            Step::Key => Step::File,
+            Step::File => Step::Warning,
+            Step::Warning => return None,
+        })
+    }
+
     /// The step with this number, 1 to 6.
     pub fn of_number(n: u8) -> Option<Step> {
         match n {
@@ -607,6 +621,16 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn next_leads_through_the_steps_in_order() {
+        assert_eq!(Step::Intro.next(), Some(Step::Project));
+        assert_eq!(Step::Project.next(), Some(Step::Apis));
+        assert_eq!(Step::Publish.next(), Some(Step::Key));
+        assert_eq!(Step::Key.next(), Some(Step::File));
+        assert_eq!(Step::File.next(), Some(Step::Warning));
+        assert_eq!(Step::Warning.next(), None);
     }
 
     #[test]

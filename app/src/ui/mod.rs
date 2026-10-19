@@ -30,6 +30,7 @@ pub mod list_feed;
 pub mod move_sheet;
 pub mod moving;
 pub mod narrow_header;
+pub mod own_project;
 pub mod permission;
 pub mod pgp;
 pub mod post_band;

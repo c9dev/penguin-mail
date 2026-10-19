@@ -2112,3 +2112,39 @@ button.move-sheet-button:not(.suggested-action) { background-color: var(--post-p
   min-width: 80px;
   min-height: 18px;
 }
+
+/* The own Google project setup, as its mockup: the intro and warning
+   under the band, the steps on a plain page with a numbered list. */
+.post-lede.own-intro-text { line-height: 1.07; margin-top: 10px; }
+.post-lede.own-intro-text + .post-lede.own-intro-text { margin-top: 12px; }
+.own-buttons { margin-top: 22px; }
+button.own-button {
+  min-height: 36px;
+  min-width: 112px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+button.own-button:not(.suggested-action) { background-color: var(--post-pill); }
+button.own-button buttoncontent image { -gtk-icon-size: 13px; }
+button.own-button buttoncontent > box { border-spacing: 7px; }
+.post-body.own-step { padding-top: 2px; padding-bottom: 0; }
+.own-caption { font-size: 12.5px; font-weight: 600; color: var(--post-dim); margin-bottom: 3px; }
+.own-lede { font-size: 14px; color: var(--post-dim); margin-top: 8px; }
+button.own-open { margin-top: 14px; min-width: 0; }
+list.own-list { margin-top: 16px; }
+list.own-list > row { padding: 0; min-height: 0; }
+.own-item { padding: 11px 14px; }
+.own-item-text { font-size: 14px; }
+.own-number {
+  min-width: 20px; min-height: 20px; border-radius: 10px; margin-top: 1px;
+  font-size: 11.5px; font-weight: 800; color: var(--post-acc);
+  background-color: alpha(#a84000, 0.10);
+}
+.app-dark .own-number { background-color: alpha(#ffa35c, 0.16); }
+.own-note { font-size: 12.5px; color: var(--post-dim); margin-top: 12px; }
+.own-foot { padding: 16px 24px 14px; border-spacing: 6px; }
+button.own-help { padding: 2px 4px; min-height: 0; font-size: 12.5px; font-weight: 600; color: var(--post-acc); }
+button.own-help buttoncontent image { -gtk-icon-size: 11px; }
+button.own-help buttoncontent > box { border-spacing: 5px; }
