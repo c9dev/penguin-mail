@@ -3366,6 +3366,7 @@ impl MainWindow {
                     self.present_add_account(Opening::OwnProject {
                         start: OwnStart::Resume,
                         address,
+                        moving: None,
                     });
                 }
                 Browser::Google => self.no_google_sign_in(),
@@ -3421,6 +3422,7 @@ impl MainWindow {
                     this.present_add_account(Opening::OwnProject {
                         start,
                         address: again,
+                        moving: None,
                     });
                 }
                 Err(err) => this.toast(&err.to_string()),
@@ -3446,6 +3448,7 @@ impl MainWindow {
                 this.present_add_account(Opening::OwnProject {
                     start: OwnStart::Resume,
                     address: None,
+                    moving: None,
                 });
             }
         });
@@ -3719,7 +3722,8 @@ impl MainWindow {
             Box::new(|win, account| {
                 win.present_add_account(Opening::OwnProject {
                     start: OwnStart::Resume,
-                    address: Some(account.email),
+                    address: Some(account.email.clone()),
+                    moving: Some(account),
                 });
             }),
         );

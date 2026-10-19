@@ -84,10 +84,13 @@ pub enum Opening {
     /// after its mail works.
     Consent(Account),
     /// The own Google project setup, for a new account or, with
-    /// `address`, for that account signing in again.
+    /// `address`, for that account signing in again. With `moving`, the
+    /// setup ends by moving that existing Gmail account onto the project,
+    /// the way the route choice's walk does.
     OwnProject {
         start: OwnStart,
         address: Option<String>,
+        moving: Option<Account>,
     },
     /// A demo stage, for screenshots: see [`preview`].
     Preview(String),
@@ -251,7 +254,15 @@ pub fn present(
         }
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
-        Opening::OwnProject { start, address } => {
+        Opening::OwnProject {
+            start,
+            address,
+            moving,
+        } => {
+            if let Some(account) = moving {
+                this.moving
+                    .replace(Some(add_account::MoveWalk::new(vec![account])));
+            }
             this.route_expected.replace(address);
             let at = this.open_own(start);
             this.window.set_focus(Some(&this.own.first_focus(at)));
