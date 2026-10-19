@@ -52,7 +52,7 @@ Requires:       libadwaita >= 1.8
 Requires:       webkitgtk6.0
 Requires:       gnupg2
 Requires:       gnome-online-accounts
-Recommends:     gnome-online-accounts-gtk
+Requires:       gnome-online-accounts-gtk
 Recommends:     gnupg2-smime
 Recommends:     bubblewrap
 Recommends:     gnome-shell-extension-appindicator
