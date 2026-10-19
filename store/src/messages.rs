@@ -159,13 +159,18 @@ pub struct Touched {
 /// touches no thread.
 pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Result<Touched> {
     let mut touched = Touched::default();
+    // Only an account that has just moved route keeps colour flags to put
+    // back, so every other account skips the lookup per message.
+    let kept = conn
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM kept_flags WHERE account_id = ?1)")?
+        .query_row(params![account_id], |row| row.get::<_, bool>(0))?;
     let mut applied: BTreeMap<String, Applied> = BTreeMap::new();
     let mut order: Vec<String> = Vec::new();
     let mut whole: Vec<&str> = Vec::new();
     for change in changes {
         match change {
             Change::Upsert { meta, generation } => {
-                upsert_message(conn, meta, *generation)?;
+                upsert_message(conn, meta, *generation, kept)?;
                 touched.threads.insert(meta.thread_id.clone());
             }
             Change::UpsertLocal {
@@ -178,7 +183,7 @@ pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Re
                     Some(kept) => kept,
                     None => threading::thread_for(conn, account_id, &meta, links)?,
                 };
-                upsert_message(conn, &meta, *generation)?;
+                upsert_message(conn, &meta, *generation, kept)?;
                 threading::remember(conn, account_id, &meta, links)?;
                 touched.threads.insert(meta.thread_id);
             }
@@ -315,7 +320,7 @@ fn set_membership(
     Ok(Some((thread_id, changed)))
 }
 
-fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<()> {
+fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64, kept: bool) -> Result<()> {
     let to = serde_json::to_string(&m.to).unwrap_or_else(|_| "[]".into());
     let cc = serde_json::to_string(&m.cc).unwrap_or_else(|_| "[]".into());
     let seen = !m.is_unread();
@@ -351,7 +356,7 @@ fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<(
         ],
     )?;
     replace_memberships(conn, m.account_id, &m.id, &m.held)?;
-    if let Some(msgid) = &m.rfc822_msgid {
+    if kept && let Some(msgid) = &m.rfc822_msgid {
         restore_kept_flag(conn, m.account_id, &m.id, msgid)?;
     }
     // For Gmail the server's id is the store's own.
