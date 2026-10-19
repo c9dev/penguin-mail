@@ -62,7 +62,7 @@ msgid ""
 "Gmail through the Google account your computer's Online Accounts already "
 "holds, on Linux"
 msgstr ""
-"Gmail через обліковий запис Google, який уже є в Online Accounts вашого "
+"Gmail через обліковий запис Google, який уже є в «Облікові записи в мережі» вашого "
 "комп’ютера, у Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
@@ -8716,7 +8716,7 @@ msgid ""
 "Open <b>Online Accounts</b> from your applications menu, add your Google "
 "account, and come back."
 msgstr ""
-"Відкрийте <b>Online Accounts</b> у меню програм, додайте свій обліковий "
+"Відкрийте <b>Облікові записи в мережі</b> у меню програм, додайте свій обліковий "
 "запис Google й поверніться."
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
@@ -8725,7 +8725,7 @@ msgid ""
 "Install Online Accounts from your software center, add your Google account "
 "there, and come back."
 msgstr ""
-"Встановіть Online Accounts із центру програм, додайте там свій обліковий "
+"Встановіть «Облікові записи в мережі» із центру програм, додайте там свій обліковий "
 "запис Google й поверніться."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
@@ -8739,7 +8739,7 @@ msgid ""
 "Penguin Mail reads Gmail through your computer's Online Accounts. Add "
 "<b>{address}</b> there, then come back."
 msgstr ""
-"Penguin Mail читає Gmail через Online Accounts вашого комп’ютера. Додайте "
+"Penguin Mail читає Gmail через «Облікові записи в мережі» вашого комп’ютера. Додайте "
 "там <b>{address}</b> і поверніться."
 
 #: app/src/ui/goa_page.rs:415

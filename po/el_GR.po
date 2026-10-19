@@ -61,7 +61,7 @@ msgid ""
 "Gmail through the Google account your computer's Online Accounts already "
 "holds, on Linux"
 msgstr ""
-"Gmail μέσω του λογαριασμού Google που έχουν ήδη τα Online Accounts του "
+"Gmail μέσω του λογαριασμού Google που έχουν ήδη τα «Λογαριασμοί διαδικτύου» του "
 "υπολογιστή σας, στο Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
@@ -2592,14 +2592,14 @@ msgstr "Προσθήκη ξανά"
 #: app/src/goa_notice.rs:119
 msgid "{address} was removed from Online Accounts. Your mail here is kept."
 msgstr ""
-"Το {address} αφαιρέθηκε από τα Online Accounts. Η αλληλογραφία σας εδώ "
+"Το {address} αφαιρέθηκε από τα «Λογαριασμοί διαδικτύου». Η αλληλογραφία σας εδώ "
 "διατηρείται."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:127
 msgid "Mail is turned off for {address} in Online Accounts."
 msgstr ""
-"Η αλληλογραφία είναι απενεργοποιημένη για το {address} στα Online Accounts."
+"Η αλληλογραφία είναι απενεργοποιημένη για το {address} στα «Λογαριασμοί διαδικτύου»."
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
@@ -2614,7 +2614,7 @@ msgstr ""
 #: app/src/goa_notice.rs:139
 msgid "Can't reach Online Accounts on this computer."
 msgstr ""
-"Δεν είναι δυνατή η πρόσβαση στα Online Accounts σε αυτόν τον υπολογιστή."
+"Δεν είναι δυνατή η πρόσβαση στα «Λογαριασμοί διαδικτύου» σε αυτόν τον υπολογιστή."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:146
@@ -8816,7 +8816,7 @@ msgid ""
 "Open <b>Online Accounts</b> from your applications menu, add your Google "
 "account, and come back."
 msgstr ""
-"Ανοίξτε τα <b>Online Accounts</b> από το μενού των εφαρμογών, προσθέστε τον "
+"Ανοίξτε τα <b>Λογαριασμοί διαδικτύου</b> από το μενού των εφαρμογών, προσθέστε τον "
 "λογαριασμό σας Google και επιστρέψτε."
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
@@ -8825,14 +8825,14 @@ msgid ""
 "Install Online Accounts from your software center, add your Google account "
 "there, and come back."
 msgstr ""
-"Εγκαταστήστε τα Online Accounts από το κέντρο λογισμικού, προσθέστε εκεί τον "
+"Εγκαταστήστε τα «Λογαριασμοί διαδικτύου» από το κέντρο λογισμικού, προσθέστε εκεί τον "
 "λογαριασμό σας Google και επιστρέψτε."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
 msgid "Penguin Mail needs permission to use Online Accounts."
 msgstr ""
-"Το Penguin Mail χρειάζεται άδεια για να χρησιμοποιεί τα Online Accounts."
+"Το Penguin Mail χρειάζεται άδεια για να χρησιμοποιεί τα «Λογαριασμοί διαδικτύου»."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
@@ -8840,7 +8840,7 @@ msgid ""
 "Penguin Mail reads Gmail through your computer's Online Accounts. Add "
 "<b>{address}</b> there, then come back."
 msgstr ""
-"Το Penguin Mail διαβάζει το Gmail μέσω των Online Accounts του υπολογιστή "
+"Το Penguin Mail διαβάζει το Gmail μέσω των «Λογαριασμοί διαδικτύου» του υπολογιστή "
 "σας. Προσθέστε εκεί το <b>{address}</b> και επιστρέψτε."
 
 #: app/src/ui/goa_page.rs:415
@@ -13420,7 +13420,7 @@ msgstr ""
 #: sync/src/sign_in/goa_link.rs:37
 msgid "Online Accounts couldn't sign in to Google. Sign in again there."
 msgstr ""
-"Τα Online Accounts δεν μπόρεσαν να συνδεθούν στη Google. Συνδεθείτε ξανά "
+"Τα «Λογαριασμοί διαδικτύου» δεν μπόρεσαν να συνδεθούν στη Google. Συνδεθείτε ξανά "
 "εκεί."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.

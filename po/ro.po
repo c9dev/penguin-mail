@@ -62,7 +62,7 @@ msgid ""
 "Gmail through the Google account your computer's Online Accounts already "
 "holds, on Linux"
 msgstr ""
-"Gmail prin contul Google pe care îl au deja Online Accounts ale computerului "
+"Gmail prin contul Google pe care îl au deja „Conturi online” ale computerului "
 "dvs., pe Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
@@ -2576,7 +2576,7 @@ msgstr "Adaugă din nou"
 #: app/src/goa_notice.rs:119
 msgid "{address} was removed from Online Accounts. Your mail here is kept."
 msgstr ""
-"{address} a fost eliminat din Online Accounts. Mesajele dvs. de aici sunt "
+"{address} a fost eliminat din „Conturi online”. Mesajele dvs. de aici sunt "
 "păstrate."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
@@ -8764,7 +8764,7 @@ msgid ""
 "Open <b>Online Accounts</b> from your applications menu, add your Google "
 "account, and come back."
 msgstr ""
-"Deschideți <b>Online Accounts</b> din meniul de aplicații, adăugați contul "
+"Deschideți <b>Conturi online</b> din meniul de aplicații, adăugați contul "
 "Google și reveniți."
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
@@ -8773,7 +8773,7 @@ msgid ""
 "Install Online Accounts from your software center, add your Google account "
 "there, and come back."
 msgstr ""
-"Instalați Online Accounts din centrul de programe, adăugați acolo contul "
+"Instalați „Conturi online” din centrul de programe, adăugați acolo contul "
 "Google și reveniți."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
@@ -8787,7 +8787,7 @@ msgid ""
 "Penguin Mail reads Gmail through your computer's Online Accounts. Add "
 "<b>{address}</b> there, then come back."
 msgstr ""
-"Penguin Mail citește Gmail prin Online Accounts ale computerului dvs. "
+"Penguin Mail citește Gmail prin „Conturi online” ale computerului dvs. "
 "Adăugați acolo <b>{address}</b>, apoi reveniți."
 
 #: app/src/ui/goa_page.rs:415
@@ -13378,7 +13378,7 @@ msgstr ""
 #: sync/src/sign_in/goa_link.rs:37
 msgid "Online Accounts couldn't sign in to Google. Sign in again there."
 msgstr ""
-"Online Accounts nu s-au putut conecta la Google. Conectați-vă din nou acolo."
+"„Conturi online” nu s-au putut conecta la Google. Conectați-vă din nou acolo."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: sync/src/sign_in/goa_link.rs:42
