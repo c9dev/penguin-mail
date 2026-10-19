@@ -35,6 +35,19 @@ It is built with GTK and libadwaita and fits best on GNOME. It also runs on
 other Linux desktops and macOS. On macOS, Settings lives in the native app
 menu.
 
+Gmail accounts sign in in up to three ways, and you pick one for each
+account:
+
+- **Use GNOME Online Accounts** (Linux). Every feature, signed in through
+  your desktop.
+- **Use a password from Google.** Quick. You get mail, calendar and
+  contacts.
+- **Set up your own Google project.** Every Gmail feature, on any computer.
+  It takes about 10 minutes, once.
+
+Preferences shows what each account has. Get Every Feature there lets an
+account switch to your own Google project later.
+
 [![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://youtu.be/0PyJCsw1FSE)
 
 ## Features
@@ -117,6 +130,9 @@ and an IMAP account its rules over ManageSieve.
   it, so this stops lazy spam, not a determined sender.
 
 Gmail runs all four, so they work with your computer off.
+
+With a password from Google, you change filters and the automatic reply on
+gmail.com. Your Gmail filters still run, and Penguin Mail links to the page.
 
 ### Calendar
 
