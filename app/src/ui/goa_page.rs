@@ -452,6 +452,7 @@ pub(crate) mod checks {
         the_waiting_page_gives_way_to_holds();
         another_new_account_asks_whether_to_use_it();
         the_snap_page_shows_the_connect_command();
+        without_online_accounts_the_page_says_to_install_it();
         the_main_button_hands_over_the_account_it_names();
     }
 
@@ -545,6 +546,20 @@ pub(crate) mod checks {
         assert!(page.command.is_visible());
         assert_eq!(page.command_text.label(), ACCOUNTS_COMMAND);
         assert_eq!(page.copy.label().as_deref(), Some("Copy"));
+    }
+
+    fn without_online_accounts_the_page_says_to_install_it() {
+        let page = GoaPage::new();
+        page.show(PageState::NotInstalled {
+            address: "dana@example.com".into(),
+        });
+        assert!(
+            page.body
+                .text()
+                .starts_with("Install GNOME Online Accounts")
+        );
+        assert!(!page.main.is_visible());
+        assert!(page.other_ways.is_visible());
     }
 
     fn the_main_button_hands_over_the_account_it_names() {

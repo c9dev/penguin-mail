@@ -786,6 +786,17 @@ mod tests {
     }
 
     #[test]
+    fn an_online_accounts_account_is_compared_with_the_built_in_list() {
+        for route in [MailRoute::Imap, MailRoute::GmailApi] {
+            let goa = GoogleSignIn {
+                client: SignInClient::Goa,
+                route,
+            };
+            assert_eq!(own_scopes(Provider::Gmail, Some(goa)), BUILT_IN_SCOPES);
+        }
+    }
+
+    #[test]
     fn either_calendar_management_scope_names_one_permission() {
         for withheld in [
             Withheld {

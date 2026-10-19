@@ -463,6 +463,29 @@ mod tests {
     }
 
     #[test]
+    fn a_token_refresh_restarts_nothing_and_a_mail_switch_does() {
+        let (account, saved) = dana();
+        let before = asking(false);
+        let same = GoaChange::Changed(before[0].clone());
+        assert!(!concerns(&same, Some(&before), &account, saved.as_deref()));
+        let off = GoaChange::Changed(GoaAccount {
+            mail_disabled: true,
+            ..before[0].clone()
+        });
+        assert!(concerns(&off, Some(&before), &account, saved.as_deref()));
+        assert!(concerns(&same, None, &account, saved.as_deref()));
+    }
+
+    #[test]
+    fn a_held_lease_shows_until_its_move_ends() {
+        let leases = MoveLeases::default();
+        let lease = leases.lease(4);
+        assert!(leases.is_held(4));
+        drop(lease);
+        assert!(!leases.is_held(4));
+    }
+
+    #[test]
     fn failures_count_in_a_row_and_a_good_read_resets_them() {
         let state = GoaState::default();
         let down = || Err(GoaError::Unreachable("x".into()));

@@ -261,7 +261,19 @@ mod tests {
         );
         assert_eq!(rows[0].subtitle, "Already signed in on this computer");
         assert_eq!(rows[1].subtitle, "Quick. Mail, calendar and contacts.");
-        assert!(rows.iter().all(|r| !r.recommended));
+        let recommended: Vec<Route> = rows
+            .iter()
+            .filter(|r| r.recommended)
+            .map(|r| r.route)
+            .collect();
+        assert_eq!(recommended, [Route::Goa]);
+    }
+
+    #[test]
+    fn the_footer_shows_only_where_online_accounts_is_not_listed() {
+        assert_eq!(footer(Platform::Linux, ready(Goa::Holds)), None);
+        assert!(footer(Platform::Linux, ready(Goa::Absent)).is_some());
+        assert!(footer(Platform::MacOs, ready(Goa::Absent)).is_some());
     }
 
     #[test]

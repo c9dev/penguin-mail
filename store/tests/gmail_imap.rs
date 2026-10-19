@@ -1,8 +1,8 @@
 mod common;
 
 use common::{db, meta, store};
-use mailrs_domain::{MailboxKind, RemoteMailbox};
-use mailrs_store::{drafts, mailboxes};
+use mailrs_domain::{FlagColor, MailboxKind, RemoteMailbox};
+use mailrs_store::{accounts, drafts, flags, mailboxes, switch};
 
 fn label(id: &str, name: &str) -> RemoteMailbox {
     RemoteMailbox {
@@ -44,4 +44,44 @@ fn forgetting_an_accounts_drafts_leaves_other_mail_alone() {
     assert_eq!(drafts::draft_of(&conn, id, "m1").unwrap(), None);
     drafts::remember(&conn, id, "d2", "m2").unwrap();
     assert_eq!(drafts::draft_of(&conn, id, "m2").unwrap(), None);
+}
+
+/// `meta` of the message `id` the new route lists again under `new_id`,
+/// with its Message-ID header unchanged.
+fn listed_again(account: i64, id: &str, new_id: &str) -> mailrs_domain::MessageMeta {
+    mailrs_domain::MessageMeta {
+        rfc822_msgid: Some(format!("<{id}@example.com>")),
+        ..meta(account, new_id, "t-new", 100, &["INBOX"])
+    }
+}
+
+#[test]
+fn a_colour_flag_waits_through_the_emptied_mail_and_returns_by_message_id() {
+    let (conn, id) = db();
+    store(&conn, &[meta(id, "m1", "t1", 100, &["INBOX"])]);
+    flags::set_color(&conn, id, "t1", Some("m1"), Some(FlagColor::Red)).unwrap();
+
+    switch::empty_mail(&conn, id).unwrap();
+    store(&conn, &[listed_again(id, "m1", "INBOX/1/7")]);
+
+    assert_eq!(
+        flags::colors(&conn, id, "t-new", None).unwrap(),
+        [("INBOX/1/7".to_string(), Some(FlagColor::Red))]
+    );
+}
+
+#[test]
+fn kept_colour_flags_go_once_the_first_full_sync_ends() {
+    let (conn, id) = db();
+    store(&conn, &[meta(id, "m1", "t1", 100, &["INBOX"])]);
+    flags::set_color(&conn, id, "t1", Some("m1"), Some(FlagColor::Red)).unwrap();
+
+    switch::empty_mail(&conn, id).unwrap();
+    accounts::set_backfill(&conn, id, None, true).unwrap();
+    store(&conn, &[listed_again(id, "m1", "INBOX/1/7")]);
+
+    assert_eq!(
+        flags::colors(&conn, id, "t-new", None).unwrap(),
+        [("INBOX/1/7".to_string(), None)]
+    );
 }

@@ -526,4 +526,26 @@ mod tests {
         // A clock that went backwards checks now rather than waiting.
         assert_eq!(until_check(Some(now + HOUR), now), Duration::ZERO);
     }
+    #[test]
+    fn gmails_bandwidth_alert_waits_an_hour_in_its_own_state() {
+        let alert = mailrs_imap::ImapError::BandwidthLimit {
+            text: "[ALERT] Account exceeded command or bandwidth limits.".into(),
+        };
+        let err = SyncError::Backend(alert.into());
+        let Failure::Retry { state, retry_after } = classify(&err, WhenGrantEnds::SignInAgain)
+        else {
+            panic!("the account waits and tries again");
+        };
+        assert_eq!(state, AccountState::DownloadLimit);
+        assert_eq!(retry_after, Some(crate::error::DOWNLOAD_LIMIT_WAIT));
+    }
+
+    #[test]
+    fn another_servers_refusal_stays_a_plain_refusal() {
+        let refused = mailrs_imap::ImapError::Refused("[OVERQUOTA] Quota exceeded".into());
+        assert!(matches!(
+            BackendError::from(refused),
+            BackendError::Refused(_)
+        ));
+    }
 }

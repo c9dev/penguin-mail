@@ -575,7 +575,14 @@ mod tests {
             &account(AccountState::Ok),
             true,
         );
-        assert_eq!(found, [Line::Features { every: true }, Line::OwnProject]);
+        assert_eq!(
+            found,
+            [
+                Line::Features { every: true },
+                Line::OwnProject,
+                Line::StopOwn
+            ]
+        );
     }
 
     #[test]
@@ -737,12 +744,15 @@ pub(crate) mod checks {
             added: offers.calendar,
             ..contacts()
         };
+        let facts = RouteFacts {
+            sign_in,
+            routes_ready: true,
+            goa_holds: false,
+        };
         register(
             &parent,
             &account(state),
-            sign_in,
-            true,
-            false,
+            facts,
             offers,
             &connect,
             kept,

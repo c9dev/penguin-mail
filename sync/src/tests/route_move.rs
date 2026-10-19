@@ -19,7 +19,6 @@ use crate::route_move::{
     needs_move, to_own_client,
 };
 use crate::sign_in::app_password::NewGmailImap;
-use crate::sign_in::goa_link::Linked;
 use crate::sign_in::own_client::OwnClient;
 use crate::{BackendError, Outbox, Posted, SyncError, TriageAction, now_millis};
 
@@ -811,7 +810,6 @@ async fn a_built_in_api_account_moves_to_goa_imap_with_the_rewrite_in_one_step()
         .to_goa(
             &account(&h).await,
             &goa_dana("me@example.com"),
-            Linked::Imap,
             drop_drafts(h.account_id),
             || steps.note("committed"),
         )
@@ -847,7 +845,6 @@ async fn a_move_to_goa_without_a_rewrite_for_another_route_stops_nothing() {
         .to_goa(
             &account(&h).await,
             &goa_dana("me@example.com"),
-            Linked::Imap,
             None,
             || steps.note("committed"),
         )
@@ -886,13 +883,7 @@ async fn an_app_password_account_moves_to_goa_imap_without_a_resync() {
     };
 
     mover
-        .to_goa(
-            &account(&h).await,
-            &goa_dana("me@example.com"),
-            Linked::Imap,
-            None,
-            || (),
-        )
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), None, || ())
         .await
         .unwrap();
 
@@ -918,7 +909,6 @@ async fn a_move_to_another_goa_address_ends_before_the_account_stops() {
         .to_goa(
             &account(&h).await,
             &goa_dana("other@example.com"),
-            Linked::Imap,
             drop_drafts(h.account_id),
             || steps.note("committed"),
         )
@@ -1001,7 +991,7 @@ async fn an_online_accounts_account_with_a_kept_project_moves_to_its_own_client(
 }
 
 #[tokio::test]
-async fn an_imap_account_moving_to_goa_stays_on_imap_whatever_the_probe_found() {
+async fn an_imap_account_moving_to_goa_stays_on_imap() {
     let h = built_in_account().await;
     let id = h.account_id;
     h.db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
@@ -1018,13 +1008,7 @@ async fn an_imap_account_moving_to_goa_stays_on_imap_whatever_the_probe_found() 
     };
 
     mover
-        .to_goa(
-            &account(&h).await,
-            &goa_dana("me@example.com"),
-            Linked::Api,
-            None,
-            || (),
-        )
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), None, || ())
         .await
         .unwrap();
 
@@ -1055,13 +1039,7 @@ async fn an_app_password_account_moving_to_goa_drops_its_password_and_servers() 
     };
 
     mover
-        .to_goa(
-            &account(&h).await,
-            &goa_dana("me@example.com"),
-            Linked::Imap,
-            None,
-            || (),
-        )
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), None, || ())
         .await
         .unwrap();
 
@@ -1134,4 +1112,70 @@ async fn an_online_accounts_account_moves_to_its_own_project_and_syncs_again_ove
         assert_eq!(count(&h.db, table).await, 0, "{table}");
     }
     let _ = row(&h, row_id).await;
+}
+
+#[tokio::test]
+async fn an_app_password_account_moving_to_its_own_project_drops_its_password_and_servers() {
+    let h = built_in_account().await;
+    let id = h.account_id;
+    let saved = gmail_imap("me@example.com").servers;
+    h.db.write(move |c| {
+        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        servers::save(c, id, &saved)
+    })
+    .await
+    .unwrap();
+    let secrets = Secrets::memory();
+    secrets.passwords.save(id, "abcdefghijklmnop").unwrap();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_own_client(
+            &account(&h).await,
+            &own(),
+            signed_in_as("me@example.com"),
+            || {},
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(client(&h.db, id).await, SignInClient::Own);
+    assert_eq!(
+        h.db.read(move |c| servers::load(c, id)).await.unwrap(),
+        None
+    );
+    assert_eq!(secrets.passwords.load(id).unwrap(), None);
+}
+
+#[tokio::test]
+async fn an_own_project_account_moving_to_an_app_password_signs_in_with_the_built_in_client() {
+    let h = built_in_account().await;
+    let id = h.account_id;
+    h.db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+        .await
+        .unwrap();
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_imap(&account(&h).await, gmail_imap("me@example.com"), || {})
+        .await
+        .unwrap();
+
+    assert_eq!(client(&h.db, id).await, SignInClient::BuiltIn);
+    assert_eq!(route(&h.db, id).await, MailRoute::Imap);
 }

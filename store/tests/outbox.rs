@@ -391,3 +391,18 @@ fn a_message_naming_a_held_draft_cannot_take_its_row() {
         "the row's own caller, by id, may let the hold go"
     );
 }
+
+#[test]
+fn a_row_with_no_draft_pair_and_no_message_id_keeps_its_draft_id_on_the_move_to_imap() {
+    let (conn, id) = db();
+    let lone = Queued {
+        message_id: None,
+        ..scheduled(id, "r-lone", 100)
+    };
+    outbox::put(&conn, &lone).unwrap();
+
+    outbox::draft_ids_to_message_ids(&conn, id).unwrap();
+
+    let kept = outbox::list(&conn).unwrap();
+    assert_eq!(kept[0].draft_id.as_deref(), Some("r-lone"));
+}

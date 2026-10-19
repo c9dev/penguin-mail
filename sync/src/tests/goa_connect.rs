@@ -6,9 +6,7 @@ use std::sync::Arc;
 use mailrs_domain::{Account, MailRoute, SignInClient};
 use mailrs_imap::Login;
 use mailrs_store::{Db, accounts};
-use serde_json::json;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+use wiremock::MockServer;
 
 use super::connector::{built_in_clients_answering, come_back_from_google, gmail_account, store};
 use crate::config::Config;
@@ -18,11 +16,10 @@ use crate::goa::{GoaAccount, GoaError};
 use crate::passwords::Secrets;
 use crate::services::AnyMail;
 use crate::sign_in::calendar_consent;
-use crate::sign_in::goa_link::{LinkError, Linked, link};
+use crate::sign_in::goa_link::{LinkError, link};
 use crate::{Clients, Connected, Connector};
 
 const NOW: i64 = 1_700_000_000_000;
-const PROFILE: &str = "/gmail/v1/users/me/profile";
 
 fn dana() -> GoaAccount {
     GoaAccount {
@@ -68,56 +65,16 @@ async fn linked_account(db: &Db, route: MailRoute) -> Account {
         .unwrap()
 }
 
-/// GNOME's project has the Gmail API off: what a live account answered.
-fn api_off() -> ResponseTemplate {
-    ResponseTemplate::new(403).set_body_json(json!({"error": {
-        "code": 403,
-        "message": "Gmail API has not been used in project 44438659992 before or it is disabled.",
-        "status": "PERMISSION_DENIED",
-        "errors": [{"reason": "accessNotConfigured", "domain": "usageLimits"}],
-        "details": [{
-            "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-            "reason": "SERVICE_DISABLED",
-            "domain": "googleapis.com",
-            "metadata": {
-                "service": "gmail.googleapis.com",
-                "serviceTitle": "Gmail API",
-                "activationUrl": "https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=44438659992"
-            }
-        }]
-    }}))
-}
-
-async fn profile_answers(server: &MockServer, answer: ResponseTemplate) {
-    Mock::given(method("GET"))
-        .and(path(PROFILE))
-        .respond_with(answer)
-        .mount(server)
-        .await;
-}
-
-fn base(server: &MockServer) -> String {
-    format!("{}/gmail/v1/users/me", server.uri())
-}
-
 #[tokio::test]
-async fn linking_lands_on_imap_when_gnomes_project_has_the_gmail_api_off() {
+async fn linking_keeps_a_new_address_on_goa_and_imap() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let server = MockServer::start().await;
-    profile_answers(&server, api_off()).await;
 
-    let (account, linked) = link(
-        &reach(&db, &goa, Clients::default()),
-        &dana(),
-        &base(&server),
-        NOW,
-    )
-    .await
-    .unwrap();
+    let account = link(&reach(&db, &goa, Clients::default()), &dana(), NOW)
+        .await
+        .unwrap();
 
-    assert_eq!(linked, Linked::Imap);
     let id = account.id;
     let (route, client, goa_id) = db
         .read(move |c| {
@@ -135,54 +92,18 @@ async fn linking_lands_on_imap_when_gnomes_project_has_the_gmail_api_off() {
 }
 
 #[tokio::test]
-async fn linking_lands_on_the_api_when_get_profile_answers() {
+async fn a_token_online_accounts_refuses_asks_for_a_sign_in_there() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let server = MockServer::start().await;
-    profile_answers(
-        &server,
-        ResponseTemplate::new(200)
-            .set_body_json(json!({"emailAddress": "dana@example.com", "historyId": "9"})),
-    )
-    .await;
+    goa.refuse_next_token(GoaError::NotAuthorized);
 
-    let (account, linked) = link(
-        &reach(&db, &goa, Clients::default()),
-        &dana(),
-        &base(&server),
-        NOW,
-    )
-    .await
-    .unwrap();
-
-    assert_eq!(linked, Linked::Api);
-    let id = account.id;
-    let route = db.read(move |c| accounts::mail_route(c, id)).await.unwrap();
-    assert_eq!(route, MailRoute::GmailApi);
-}
-
-#[tokio::test]
-async fn a_401_after_one_renewal_asks_for_a_sign_in_in_online_accounts() {
-    let (db, _dir) = store().await;
-    let goa = FakeAccounts::new();
-    goa.add(dana());
-    let server = MockServer::start().await;
-    profile_answers(&server, ResponseTemplate::new(401)).await;
-
-    let refused = link(
-        &reach(&db, &goa, Clients::default()),
-        &dana(),
-        &base(&server),
-        NOW,
-    )
-    .await;
+    let refused = link(&reach(&db, &goa, Clients::default()), &dana(), NOW).await;
 
     assert!(
         matches!(refused, Err(LinkError::SignInAgain)),
         "{refused:?}"
     );
-    assert_eq!(goa.ensure_calls(), 1);
     assert!(
         db.read(accounts::list_accounts).await.unwrap().is_empty(),
         "no account row"
@@ -199,13 +120,7 @@ async fn linking_refuses_an_account_with_mail_turned_off() {
     };
     goa.add(off.clone());
 
-    let refused = link(
-        &reach(&db, &goa, Clients::default()),
-        &off,
-        "http://unused",
-        NOW,
-    )
-    .await;
+    let refused = link(&reach(&db, &goa, Clients::default()), &off, NOW).await;
 
     assert!(matches!(refused, Err(LinkError::MailOff)), "{refused:?}");
     assert!(db.read(accounts::list_accounts).await.unwrap().is_empty());
@@ -221,20 +136,12 @@ async fn linking_an_address_the_store_holds_changes_nothing_and_answers_it() {
         ..dana()
     };
     goa.add(same.clone());
-    let server = MockServer::start().await;
-    profile_answers(&server, api_off()).await;
 
-    let (account, linked) = link(
-        &reach(&db, &goa, Clients::default()),
-        &same,
-        &base(&server),
-        NOW,
-    )
-    .await
-    .unwrap();
+    let account = link(&reach(&db, &goa, Clients::default()), &same, NOW)
+        .await
+        .unwrap();
 
     assert_eq!(account.id, held.id);
-    assert_eq!(linked, Linked::Imap);
     let id = held.id;
     let (client, goa_id) = db
         .read(move |c| Ok((accounts::sign_in_client(c, id)?, accounts::goa_id(c, id)?)))
@@ -253,32 +160,30 @@ async fn a_goa_account_writes_no_mail_token_to_the_keyring() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let server = MockServer::start().await;
-    profile_answers(&server, api_off()).await;
     let reach = reach(&db, &goa, Clients::default());
 
-    let (account, _) = link(&reach, &dana(), &base(&server), NOW).await.unwrap();
+    let account = link(&reach, &dana(), NOW).await.unwrap();
     reach.connect(&account).await.ok();
 
     assert_eq!(reach.secrets.google.load("dana@example.com").unwrap(), None);
 }
 
 #[tokio::test]
-async fn a_goa_api_account_connects_on_gnomes_token() {
+async fn a_goa_account_left_on_the_api_still_reads_its_mail_over_imap() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
     let account = linked_account(&db, MailRoute::GmailApi).await;
 
-    let connected = reach(&db, &goa, Clients::default())
+    let Connected::Ready(services) = reach(&db, &goa, Clients::default())
         .connect(&account)
         .await
-        .unwrap();
-
-    let Connected::Ready(services) = connected else {
+        .unwrap()
+    else {
         panic!("the account should be ready");
     };
-    assert!(matches!(services.mail, AnyMail::Google(_)));
+
+    assert!(matches!(services.mail, AnyMail::Imap(_)));
 }
 
 #[tokio::test]

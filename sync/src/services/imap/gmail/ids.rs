@@ -169,6 +169,16 @@ mod tests {
     }
 
     #[test]
+    fn a_forgotten_place_leaves_the_queue_too() {
+        let mut places = Places::default();
+        places.put("a".into(), at(1));
+        places.forget("a");
+        places.put("a".into(), at(2));
+        assert_eq!(places.order.len(), 1);
+        assert_eq!(places.get("a"), Some(at(2)));
+    }
+
+    #[test]
     fn a_hex_id_reads_to_its_number_and_other_text_to_none() {
         assert_eq!(msgid_of("11bdf8bba45a4d91"), Some(0x11bd_f8bb_a45a_4d91));
         assert_eq!(msgid_of("INBOX/1/2"), None);

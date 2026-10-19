@@ -475,6 +475,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         })
     }
 }
+
 /// Whether Gmail's search `text` holds `term` as a word of its own,
 /// outside quotes and not negated with `-`, whatever the case.
 fn names_term(text: &str, term: &str) -> bool {
@@ -497,4 +498,17 @@ fn names_term(text: &str, term: &str) -> bool {
             .trim_end_matches(')')
             .eq_ignore_ascii_case(term)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::names_term;
+
+    #[test]
+    fn a_search_names_trash_only_as_a_word_of_its_own() {
+        assert!(names_term("from:ann in:trash", "in:trash"));
+        assert!(names_term("(IN:TRASH)", "in:trash"));
+        assert!(!names_term("from:ann -in:trash", "in:trash"));
+        assert!(!names_term("subject:\"in:trash please\"", "in:trash"));
+    }
 }
