@@ -2148,3 +2148,12 @@ list.own-list > row { padding: 0; min-height: 0; }
 button.own-help { padding: 2px 4px; min-height: 0; font-size: 12.5px; font-weight: 600; color: var(--post-acc); }
 button.own-help buttoncontent image { -gtk-icon-size: 11px; }
 button.own-help buttoncontent > box { border-spacing: 5px; }
+
+/* The banner for what Online Accounts needs, over the mail list. */
+.goa-banner {
+  padding: 6px 12px;
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+}
+.goa-banner button { min-height: 0; padding: 3px 12px; }
+.goa-banner button.suggested-action { background-color: alpha(@accent_fg_color, 0.2); color: @accent_fg_color; }

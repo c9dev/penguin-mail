@@ -1267,8 +1267,13 @@ walk_demo() {
 # a row answers no AT-SPI action; the demo opens Add Account on that page
 # when asked, as it does for the screenshots, so a second start reads it.
 walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && WALK_SPACE=calendar walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page \
-    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=routes --shown 'list item' 'Use GNOME Online Accounts' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=routes --shown 'list item' 'Use the Google account on this computer' \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=consent --shown 'button' 'Continue to Google' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-use --shown 'button' 'Use This Account' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-add --shown 'button' 'Open Online Accounts' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-waiting --shown 'button' 'Other ways to sign in' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-other --shown 'button' 'Use It' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-snap --shown 'button' 'Copy' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=sheet --shown 'button' 'Choose Now' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-several --shown 'button' 'Choose…' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-paused --shown 'button' 'Choose…' \

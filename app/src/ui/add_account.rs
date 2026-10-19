@@ -32,7 +32,10 @@ use crate::add_account::{
 };
 use crate::core::Core;
 use crate::permission::Permission;
-use crate::route_choice::{Goa, Platform, Ready, Route, any_route, footer, ready_now, rows};
+use crate::route_choice::{
+    self, Goa, Platform, Ready, Route, any_route, footer, ready_now, rows, rows_without_goa,
+};
+use crate::ui::goa_page::{self, GoaPage, PageState};
 use crate::ui::post_band::PostBand;
 use crate::ui::route_page::{self, ConsentPage, RoutePage};
 use crate::ui::tile_grid::TileGrid;
@@ -175,6 +178,7 @@ pub fn present(
             this.asking.close();
             this.stop_browser();
             this.stop_counting();
+            this.stop_goa_wait();
         }
     });
     this.window.present(Some(parent));
@@ -295,7 +299,7 @@ pub(super) fn heading(text: &str) -> gtk::Label {
     heading
 }
 
-fn pill(text: &str, suggested: bool) -> gtk::Button {
+pub(super) fn pill(text: &str, suggested: bool) -> gtk::Button {
     let classes = if suggested {
         vec!["pill", "suggested-action", "post-wide"]
     } else {
@@ -1976,6 +1980,15 @@ struct Dialog {
     route_expected: RefCell<Option<String>>,
     pick: PickPage,
     routes: RoutePage,
+    /// The page that signs in through Online Accounts.
+    goa: Rc<GoaPage>,
+    /// The Google accounts Online Accounts held when its window opened, so
+    /// a new one can be told from the rest while the page waits.
+    goa_before: RefCell<Vec<String>>,
+    /// The address the Online Accounts page is for.
+    goa_address: RefCell<Option<String>>,
+    /// Reads the list again while the page waits.
+    goa_timer: RefCell<Option<glib::SourceId>>,
     consent: ConsentPage,
     /// The Gmail account the calendar consent is for, when the dialog
     /// opened on it.
@@ -2076,6 +2089,10 @@ impl Dialog {
             route_expected: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
             routes: RoutePage::new(),
+            goa: GoaPage::new(),
+            goa_before: RefCell::new(Vec::new()),
+            goa_address: RefCell::new(None),
+            goa_timer: RefCell::new(None),
             consent: ConsentPage::new(),
             consenting: RefCell::new(None),
             address: address_page(),
@@ -2089,10 +2106,11 @@ impl Dialog {
         })
     }
 
-    fn pages(&self) -> [(&'static str, adw::NavigationPage); 11] {
+    fn pages(&self) -> [(&'static str, adw::NavigationPage); 12] {
         [
             ("pick", self.pick.banded.page.clone()),
             (route_page::TAG, self.routes.page.clone()),
+            (goa_page::TAG, self.goa.page.clone()),
             (route_page::CONSENT_TAG, self.consent.page.clone()),
             ("address", self.address.banded.page.clone()),
             ("lookup", self.lookup.banded.page.clone()),
@@ -2109,6 +2127,7 @@ impl Dialog {
     /// reference to the dialog; `present` holds the strong one until the
     /// dialog closes.
     fn connect(self: &Rc<Self>) {
+        self.connect_goa();
         let on = |run: fn(&Rc<Dialog>)| {
             let weak = Rc::downgrade(self);
             move || {
@@ -3719,12 +3738,77 @@ impl Dialog {
 
     // ---- The routes --------------------------------------------------------------
 
-    /// Asks how a Google account signs in, or goes straight to the browser
-    /// page, which says so, when this computer offers no way. `expected` is
-    /// the address typed, when there was one.
+    /// Asks how a Google account signs in. On Linux the first question is
+    /// Online Accounts: when it can be reached, its page comes first and
+    /// "Other ways to sign in" leads to the rest. Goes straight to the
+    /// browser page, which says so, when this computer offers no way.
+    /// `expected` is the address typed, when there was one.
     fn offer_routes(self: &Rc<Self>, expected: Option<String>) {
         let platform = Platform::this();
-        let ready = ready_now(&mailrs_sync::Clients::current(), Goa::Absent);
+        if platform != Platform::Linux {
+            let ready = ready_now(&mailrs_sync::Clients::current(), Goa::Absent);
+            return self.offer_rows(platform, ready, expected);
+        }
+        if !self.running.begin() {
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let list = this.core.goa_accounts().await;
+            let plug = match (&list, crate::packaging::BUILT_FOR) {
+                (Err(_), crate::packaging::Packaging::Snap) => {
+                    Some(crate::keyring_plug::accounts_plug().await)
+                }
+                _ => None,
+            };
+            this.running.end();
+            this.update_buttons();
+            this.offered(expected, list, plug);
+        });
+    }
+
+    /// What `offer_routes` does once Online Accounts has answered.
+    fn offered(
+        self: &Rc<Self>,
+        expected: Option<String>,
+        list: Result<Vec<mailrs_sync::goa::GoaAccount>, mailrs_sync::goa::GoaError>,
+        plug: Option<crate::keyring_plug::Plug>,
+    ) {
+        let moving = self
+            .moving
+            .borrow()
+            .as_ref()
+            .and_then(|walk| walk.current().map(|a| a.email.clone()));
+        let address = moving.clone().or_else(|| expected.clone());
+        let goa = route_choice::goa_state(&list, address.as_deref());
+        let ready = ready_now(&mailrs_sync::Clients::current(), goa);
+        let platform = Platform::this();
+        // A move walk keeps the route page, with Online Accounts as its
+        // first row, since the person picks for each account.
+        if moving.is_some() {
+            return self.offer_rows(platform, ready, expected);
+        }
+        let Some(address) = address else {
+            return self.offer_rows(
+                platform,
+                ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
+                expected,
+            );
+        };
+        match (goa, &list) {
+            (Goa::Holds | Goa::Present, Ok(list)) => self.open_goa_page(address, list, expected),
+            (Goa::Absent, _) if plug == Some(crate::keyring_plug::Plug::Disconnected) => {
+                self.goa_address.replace(Some(address.clone()));
+                self.goa.show(PageState::SnapPlug { address });
+                self.set_band(goa_page::TAG, Step::Address, None, None);
+                self.push(goa_page::TAG);
+            }
+            _ => self.offer_rows(platform, ready, expected),
+        }
+    }
+
+    /// The route page, or the browser page when no row would show.
+    fn offer_rows(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
         if !any_route(platform, ready) {
             return self.start_browser(Browser::Google, expected);
         }
@@ -3768,9 +3852,251 @@ impl Dialog {
                     account.map_or(Flow::SignIn, Flow::Move),
                 );
             }
-            // Their plans connect these rows; until then no build lists them.
-            Route::Goa | Route::AppPassword => {}
+            Route::Goa => {
+                let this = Rc::clone(self);
+                let address = self
+                    .moving
+                    .borrow()
+                    .as_ref()
+                    .and_then(|walk| walk.current().map(|a| a.email.clone()));
+                let expected = self.route_expected.borrow().clone();
+                glib::spawn_future_local(async move {
+                    let list = this.core.goa_accounts().await;
+                    match (address.or_else(|| expected.clone()), list) {
+                        (Some(address), Ok(list)) => this.open_goa_page(address, &list, expected),
+                        _ => this.show_routes(
+                            Platform::this(),
+                            ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
+                            expected,
+                        ),
+                    }
+                });
+            }
+            // Its plan connects this row; until then no build lists it.
+            Route::AppPassword => {}
         }
+    }
+
+    // ---- Online Accounts -------------------------------------------------------
+
+    /// The Online Accounts page for `address`, in the state `list` puts it
+    /// in: the account is there to use, or has to be added.
+    fn open_goa_page(
+        self: &Rc<Self>,
+        address: String,
+        list: &[mailrs_sync::goa::GoaAccount],
+        expected: Option<String>,
+    ) {
+        use mailrs_sync::goa;
+        self.stop_goa_wait();
+        self.goa_address.replace(Some(address.clone()));
+        self.goa_before
+            .replace(list.iter().map(|a| a.id.clone()).collect());
+        self.route_expected.replace(expected);
+        match goa::find(list, None, &address) {
+            Some(account) => self.goa.show(PageState::Holds {
+                account: account.clone(),
+            }),
+            None => self.goa.show(PageState::Add {
+                address,
+                others: list.to_vec(),
+            }),
+        }
+        self.set_band(
+            goa_page::TAG,
+            Step::Address,
+            Some(post::stamp_for("Google")),
+            Some("Google"),
+        );
+        self.push(goa_page::TAG);
+    }
+
+    /// Wires the Online Accounts page's buttons.
+    fn connect_goa(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.goa.connect_use(move |account| {
+            if let Some(this) = weak.upgrade() {
+                this.goa_use(account);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.goa.connect_open(move || {
+            if let Some(this) = weak.upgrade() {
+                this.goa_open();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.goa.connect_wait(move || {
+            if let Some(this) = weak.upgrade() {
+                let address = this.goa_address.borrow().clone().unwrap_or_default();
+                this.goa.show(PageState::Waiting {
+                    address,
+                    others: Vec::new(),
+                });
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.goa.connect_other_ways(move || {
+            let Some(this) = weak.upgrade() else { return };
+            this.stop_goa_wait();
+            let platform = Platform::this();
+            let expected = this.route_expected.borrow().clone();
+            let held = this.goa_address.borrow().clone();
+            let state = match held {
+                Some(address) => route_choice::goa_state(&Ok(Vec::new()), Some(&address)),
+                None => Goa::Absent,
+            };
+            // The Online Accounts row was this page; the rest are the
+            // other ways.
+            let ready = ready_now(&mailrs_sync::Clients::current(), state);
+            let rows = rows_without_goa(platform, ready);
+            if rows.is_empty() {
+                return this.start_browser(Browser::Google, expected);
+            }
+            let weak = Rc::downgrade(&this);
+            this.routes.show(&rows, None, move |route| {
+                if let Some(this) = weak.upgrade() {
+                    this.chose_route(route);
+                }
+            });
+            this.set_band(route_page::TAG, Step::Address, None, None);
+            this.push(route_page::TAG);
+        });
+    }
+
+    /// Open Online Accounts, then wait for the address to turn up there.
+    fn goa_open(self: &Rc<Self>) {
+        let address = self.goa_address.borrow().clone().unwrap_or_default();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let opened = crate::goa::open_online_accounts().await;
+            let list = this.core.goa_accounts().await.unwrap_or_default();
+            this.goa_before
+                .replace(list.iter().map(|a| a.id.clone()).collect());
+            if matches!(opened, Ok(crate::goa::Opened::Window)) {
+                this.goa.show(PageState::Waiting {
+                    address: address.clone(),
+                    others: Vec::new(),
+                });
+            } else {
+                this.goa.show(PageState::Missing {
+                    address: address.clone(),
+                });
+            }
+            this.goa_wait(address);
+        });
+    }
+
+    /// Reads Online Accounts every two seconds while the page waits.
+    fn goa_wait(self: &Rc<Self>, address: String) {
+        self.stop_goa_wait();
+        let weak = Rc::downgrade(self);
+        let timer = glib::timeout_add_local(Duration::from_secs(2), move || {
+            let Some(this) = weak.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            let (this, address) = (Rc::clone(&this), address.clone());
+            glib::spawn_future_local(async move { this.goa_look(address).await });
+            glib::ControlFlow::Continue
+        });
+        self.goa_timer.replace(Some(timer));
+    }
+
+    async fn goa_look(self: &Rc<Self>, address: String) {
+        use mailrs_sync::goa;
+        if self.goa_timer.borrow().is_none() {
+            return;
+        }
+        let Ok(list) = self.core.goa_accounts().await else {
+            return;
+        };
+        if let Some(found) = goa::find(&list, None, &address) {
+            self.stop_goa_wait();
+            self.goa.show(PageState::Holds {
+                account: found.clone(),
+            });
+            return;
+        }
+        let before = self.goa_before.borrow().clone();
+        if let Some(added) = list.iter().find(|a| !before.contains(&a.id)) {
+            self.stop_goa_wait();
+            let others = list.iter().filter(|a| a.id != added.id).cloned().collect();
+            self.goa.show(PageState::OtherAdded {
+                address,
+                added: added.clone(),
+                others,
+            });
+        }
+    }
+
+    fn stop_goa_wait(&self) {
+        let timer = self.goa_timer.borrow_mut().take();
+        if let Some(timer) = timer {
+            timer.remove();
+        }
+    }
+
+    /// Signs in through `account`, or moves the account the walk is at.
+    fn goa_use(self: &Rc<Self>, account: mailrs_sync::goa::GoaAccount) {
+        self.stop_goa_wait();
+        let ticket = self.asking.ask();
+        let moving = self
+            .moving
+            .borrow()
+            .as_ref()
+            .and_then(|walk| walk.current().cloned());
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if let Some(held) = moving {
+                match this.core.move_to_goa(held, account).await {
+                    Ok(moved) if this.asking.wants(ticket) => this.moved(moved),
+                    Ok(moved) => (this.done)(Done::SignedInAgain(moved)),
+                    Err(err) if this.asking.wants(ticket) => this.goa.failed(&err.to_string()),
+                    Err(_) => {}
+                }
+                return;
+            }
+            match this.core.link_goa(account).await {
+                Ok((account, _)) => {
+                    // The account is kept whether or not the dialog is still
+                    // open, so the window hears about it either way.
+                    (this.done)(Done::BrowserAdded {
+                        account: account.clone(),
+                        name: None,
+                    });
+                    if this.asking.wants(ticket) {
+                        this.typed.replace(Address::parse(&account.email));
+                        let missing =
+                            crate::permission::withheld_permissions(crate::offered::withheld_for(
+                                this.core.account(account.id).as_ref().map(|s| s.services()),
+                            ));
+                        this.show_added(&account, Some(post::stamp_for("Google")), Some(&missing));
+                        this.note_limits(&account);
+                    }
+                }
+                Err(err) if this.asking.wants(ticket) => this.goa.failed(&err.to_string()),
+                Err(_) => {}
+            }
+        });
+    }
+
+    /// An account that reads its mail over IMAP through Online Accounts
+    /// has no filters, aliases or automatic reply; the last page says so.
+    fn note_limits(self: &Rc<Self>, account: &Account) {
+        let (this, id) = (Rc::clone(self), account.id);
+        glib::spawn_future_local(async move {
+            let route = this
+                .core
+                .read(move |c| mailrs_store::accounts::mail_route(c, id))
+                .await;
+            if matches!(route, Ok(mailrs_domain::MailRoute::Imap)) {
+                let lede = this.finished.lede.text();
+                this.finished.lede.set_text(&format!(
+                    "{lede} {}",
+                    gettext("Filters, aliases and the automatic reply aren't available this way.")
+                ));
+            }
+        });
     }
 
     /// Stops the countdown and the ways out while the move finishes.
@@ -4782,6 +5108,39 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
             } else {
                 this.show_routes(Platform::MacOs, everything(Goa::Absent), None);
             }
+        }
+        "goa-use" | "goa-add" | "goa-waiting" | "goa-other" | "goa-missing" | "goa-snap" => {
+            let goa = |id: &str, address: &str| mailrs_sync::goa::GoaAccount {
+                id: id.into(),
+                identity: address.into(),
+                presentation: address.into(),
+                mail_disabled: false,
+                attention_needed: false,
+            };
+            let address = "dana@example.com".to_string();
+            let others = vec![goa("account_2_0", "other@example.com")];
+            let state = match stage {
+                "goa-use" => PageState::Holds {
+                    account: goa("account_1_0", &address),
+                },
+                "goa-add" => PageState::Add { address, others },
+                "goa-waiting" => PageState::Waiting { address, others },
+                "goa-other" => PageState::OtherAdded {
+                    address,
+                    added: goa("account_2_0", "other@example.com"),
+                    others: Vec::new(),
+                },
+                "goa-missing" => PageState::Missing { address },
+                _ => PageState::SnapPlug { address },
+            };
+            this.goa.show(state);
+            this.set_band(
+                goa_page::TAG,
+                Step::Address,
+                Some(post::stamp_for("Google")),
+                Some("Google"),
+            );
+            this.push(goa_page::TAG);
         }
         "consent" => {
             let account = Account {

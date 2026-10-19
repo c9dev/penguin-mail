@@ -9,7 +9,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, MailRoute, Provider};
+use mailrs_domain::{Account, AccountId, MailRoute, Provider, SignInClient};
 use mailrs_store::accounts::GoogleSignIn;
 use mailrs_sync::Offers;
 
@@ -21,6 +21,9 @@ use crate::route_choice::Platform;
 /// The window action that opens the route choice for one account, by id.
 pub const CHOOSE_ROUTE: &str = "win.account-choose-route";
 
+/// The window action that moves one account to Online Accounts, by id.
+pub const SWITCH_TO_GOA: &str = "win.account-switch-goa";
+
 /// One line of a Gmail account's page.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Line {
@@ -30,6 +33,12 @@ pub enum Line {
     /// The account still has to choose how it signs in: the banner's words
     /// for one account.
     Move { title: String },
+    /// An account that reads its mail through this computer's sign-in has
+    /// no filters, aliases or automatic reply, and says so.
+    Limits { text: String },
+    /// Online Accounts holds the address of an account that signs in
+    /// another way: the question, with its Switch button.
+    Switch { title: String },
     /// Something the account does on gmail.com only, with the link.
     Gap {
         text: String,
@@ -48,7 +57,18 @@ pub fn lines(
     account: &Account,
     routes_ready: bool,
 ) -> Vec<Line> {
+    lines_with(sign_in, account, routes_ready, false)
+}
+
+/// [`lines`], knowing whether Online Accounts holds the account's address.
+pub fn lines_with(
+    sign_in: GoogleSignIn,
+    account: &Account,
+    routes_ready: bool,
+    goa_holds: bool,
+) -> Vec<Line> {
     let mut lines = Vec::new();
+    let on_goa = sign_in.client == SignInClient::Goa;
     match sign_in.route {
         MailRoute::GmailApi if routes_ready => lines.push(Line::Features { every: true }),
         MailRoute::GmailApi => {}
@@ -56,16 +76,24 @@ pub fn lines(
             if routes_ready {
                 lines.push(Line::Features { every: false });
             }
-            lines.push(Line::Gap {
-                text: offered::filters_gap(),
-                link: offered::FILTERS_LINK,
-                label: offered::filters_link_label(),
-            });
-            lines.push(Line::Gap {
-                text: offered::reply_gap(),
-                link: offered::SETTINGS_LINK,
-                label: offered::settings_link_label(),
-            });
+            if on_goa {
+                lines.push(Line::Limits {
+                    text: gettext(
+                        "Filters, aliases and the automatic reply need Gmail's own connection, which this computer's Google sign-in doesn't offer.",
+                    ),
+                });
+            } else {
+                lines.push(Line::Gap {
+                    text: offered::filters_gap(),
+                    link: offered::FILTERS_LINK,
+                    label: offered::filters_link_label(),
+                });
+                lines.push(Line::Gap {
+                    text: offered::reply_gap(),
+                    link: offered::SETTINGS_LINK,
+                    label: offered::settings_link_label(),
+                });
+            }
         }
     }
     if routes_ready && sign_in.needs_move(account.provider) {
@@ -78,6 +106,14 @@ pub fn lines(
                 title: banner.title,
             });
         }
+    }
+    if goa_holds && !on_goa && account.provider == Provider::Gmail {
+        lines.push(Line::Switch {
+            title: fill(
+                &gettext("Switch {address} to this computer's sign-in?"),
+                &[("address", &account.email)],
+            ),
+        });
     }
     lines
 }
@@ -97,6 +133,7 @@ struct Shown {
     rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
     sign_in: GoogleSignIn,
     routes_ready: bool,
+    goa_holds: bool,
     connect: Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
 }
@@ -134,6 +171,7 @@ pub fn rows(
             account,
             sign_in,
             app.routes_ready(),
+            app.core.goa_holds(&account.email) == Some(true),
             offers,
             connect,
             contacts,
@@ -147,6 +185,7 @@ fn register(
     account: &Account,
     sign_in: GoogleSignIn,
     routes_ready: bool,
+    goa_holds: bool,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
@@ -156,6 +195,7 @@ fn register(
         rows: RefCell::default(),
         sign_in,
         routes_ready,
+        goa_holds,
         connect: Rc::clone(connect),
         contacts,
     });
@@ -164,6 +204,7 @@ fn register(
         account,
         sign_in,
         routes_ready,
+        goa_holds,
         offers,
         connect,
         &shown.contacts,
@@ -194,6 +235,7 @@ pub fn refill(id: AccountId, account: &Account, offers: Offers) -> bool {
         account,
         shown.sign_in,
         shown.routes_ready,
+        shown.goa_holds,
         offers,
         &shown.connect,
         &shown.contacts,
@@ -230,6 +272,7 @@ fn fill_rows(
     account: &Account,
     sign_in: GoogleSignIn,
     routes_ready: bool,
+    goa_holds: bool,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: &Contacts,
@@ -239,10 +282,9 @@ fn fill_rows(
         parent.add_row(widget);
         added.push(widget.clone());
     };
-    let (gaps, own): (Vec<Line>, Vec<Line>) =
-        lines(sign_in, Platform::this(), account, routes_ready)
-            .into_iter()
-            .partition(|line| matches!(line, Line::Gap { .. }));
+    let (gaps, own): (Vec<Line>, Vec<Line>) = lines_with(sign_in, account, routes_ready, goa_holds)
+        .into_iter()
+        .partition(|line| matches!(line, Line::Gap { .. }));
     if !own.is_empty() {
         // Translators: a small heading over the Gmail account's rows; Gmail
         // is a name, keep it as it is.
@@ -271,9 +313,26 @@ fn fill_rows(
             }
             Line::Move { title } => {
                 let row = plain_row(&title, None);
-                // The GNOME Online Accounts plan replaces this with its
-                // one-click move for an address that GNOME already holds.
                 row.add_suffix(&route_button(&gettext("Choose…"), account.id));
+                put(row.upcast_ref());
+            }
+            Line::Limits { text } => {
+                let row = plain_row(&text, None);
+                row.set_title_lines(0);
+                row.add_suffix(&route_button(
+                    &gettext("Set up your own Google project"),
+                    account.id,
+                ));
+                put(row.upcast_ref());
+            }
+            Line::Switch { title } => {
+                let row = plain_row(&title, None);
+                row.set_title_lines(0);
+                row.add_suffix(&action_button(
+                    &gettext("Switch"),
+                    SWITCH_TO_GOA,
+                    account.id,
+                ));
                 put(row.upcast_ref());
             }
             Line::Gap { .. } => {}
@@ -402,13 +461,18 @@ fn dim(text: &str) -> gtk::Label {
 
 /// A button that opens the route choice for `account`.
 fn route_button(label: &str, account: AccountId) -> gtk::Button {
+    action_button(label, CHOOSE_ROUTE, account)
+}
+
+/// A button that runs the window action `action` for `account`.
+fn action_button(label: &str, action: &'static str, account: AccountId) -> gtk::Button {
     let button = gtk::Button::builder()
         .label(label)
         .valign(gtk::Align::Center)
         .build();
     button.connect_clicked(move |button| {
-        if let Err(err) = button.activate_action(CHOOSE_ROUTE, Some(&account.to_variant())) {
-            tracing::warn!(account, %err, "the route choice did not open");
+        if let Err(err) = button.activate_action(action, Some(&account.to_variant())) {
+            tracing::warn!(account, action, %err, "the window did not take the action");
         }
     });
     button
