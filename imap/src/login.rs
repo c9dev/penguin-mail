@@ -64,6 +64,11 @@ impl Login {
         format!("n,a={user},\x01auth=Bearer {}\x01\x01", self.password)
     }
 
+    /// The one message of Google's and Microsoft's XOAUTH2.
+    pub(crate) fn xoauth2_response(&self) -> String {
+        format!("user={}\x01auth=Bearer {}\x01\x01", self.user, self.password)
+    }
+
     /// `text` with the password taken out, in every form a server could
     /// repeat it: as typed, as LOGIN quotes it, as Debug escapes either of
     /// those, and in the base64 that AUTH PLAIN and AUTH LOGIN send. Server text goes
@@ -103,6 +108,7 @@ impl Login {
         ];
         if self.oauth {
             secrets.push(BASE64.encode(self.bearer_response()));
+            secrets.push(BASE64.encode(self.xoauth2_response()));
         }
         secrets.sort_by_key(|secret| std::cmp::Reverse(secret.len()));
         secrets.dedup();

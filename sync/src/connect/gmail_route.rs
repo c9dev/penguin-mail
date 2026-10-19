@@ -29,8 +29,8 @@ use crate::{AccountClient, AccountServices, AnyRules, BackendError, LocalRules, 
 pub(crate) enum GmailImapSignIn {
     /// The app password the account's servers row keeps.
     Password,
-    /// A login per connection from `source`, for IMAP (OAUTHBEARER) and
-    /// SMTP (XOAUTH2) alike.
+    /// A login per connection from `source`, for IMAP (XOAUTH2, else
+    /// OAUTHBEARER) and SMTP (XOAUTH2) alike.
     Token(Arc<dyn LoginSource>),
 }
 
@@ -198,17 +198,25 @@ pub(crate) fn goa_imap_sign_in(
 /// use the built-in client's own token, as for any account. An account
 /// Online Accounts no longer holds, or has switched off or wants signed in
 /// again, keeps its stored mail and its calendar and reads no new mail.
+/// So does one whose Online Accounts does not answer; the app's watch
+/// starts it again once Online Accounts answers.
 pub(crate) async fn goa_services(
     connector: &Connector,
     account: &Account,
     route: MailRoute,
     goa_id: Option<String>,
 ) -> Result<Result<AccountServices, Lacks>, SyncError> {
-    let list = connector
-        .goa
-        .google_accounts()
-        .await
-        .map_err(|err| SyncError::Backend(BackendError::Offline(err.to_string())))?;
+    let list = match connector.goa.google_accounts().await {
+        Ok(list) => list,
+        Err(err) => {
+            tracing::info!(
+                account = account.id,
+                error = %err,
+                "Online Accounts does not answer; starting without mail"
+            );
+            return Ok(Ok(without_mail(connector, account).await?));
+        }
+    };
     let Some(found) = goa::find(&list, goa_id.as_deref(), &account.email) else {
         tracing::info!(
             account = account.id,

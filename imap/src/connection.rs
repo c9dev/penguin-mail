@@ -79,6 +79,25 @@ impl Authenticator for Bearer<'_> {
     }
 }
 
+/// SASL XOAUTH2, which Google and Microsoft offer beside OAUTHBEARER. A
+/// rejected exchange sends a JSON challenge, answered with an empty line.
+struct XOAuth2<'a> {
+    login: &'a Login,
+    sent: bool,
+}
+
+impl Authenticator for XOAuth2<'_> {
+    type Response = String;
+
+    fn process(&mut self, _challenge: &[u8]) -> String {
+        if self.sent {
+            return String::new();
+        }
+        self.sent = true;
+        self.login.xoauth2_response()
+    }
+}
+
 impl<S: Stream> Conn<S> {
     /// Signs in on `stream`. `greeted` says the greeting was read already,
     /// as it is when STARTTLS ran before TLS. Reads the capabilities again
@@ -130,10 +149,16 @@ impl<S: Stream> Conn<S> {
             raw_capability(&mut client, &mut before).await?;
         }
         let has = |atom: &str| before.atoms.iter().any(|a| a == atom);
-        let session = if login.oauth {
+        // XOAUTH2 first: Gmail took it with a token from Online Accounts.
+        let session = if login.oauth && has("AUTH=XOAUTH2") {
+            client
+                .authenticate("XOAUTH2", XOAuth2 { login, sent: false })
+                .await
+                .map_err(|(err, _)| from_async_imap(err, Doing::Login))?
+        } else if login.oauth {
             if !has("AUTH=OAUTHBEARER") {
                 return Err(ImapError::Protocol(
-                    "the server does not offer OAUTHBEARER".into(),
+                    "the server offers neither XOAUTH2 nor OAUTHBEARER".into(),
                 ));
             }
             client
