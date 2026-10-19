@@ -26,6 +26,9 @@ pub struct Capabilities {
     pub special_use: bool,
     /// QUOTA (RFC 9208, RFC 2087): GETQUOTAROOT says how full the account is.
     pub quota: bool,
+    /// X-GM-EXT-1: Gmail's message and thread ids, labels and raw search.
+    /// [`Capabilities::all`] leaves it off, as only Gmail offers it.
+    pub gmail: bool,
 }
 
 impl Capabilities {
@@ -39,6 +42,7 @@ impl Capabilities {
             uidplus: true,
             special_use: true,
             quota: true,
+            gmail: false,
         }
     }
 
@@ -58,6 +62,7 @@ impl Capabilities {
                 "UIDPLUS" => caps.uidplus = true,
                 "SPECIAL-USE" => caps.special_use = true,
                 "QUOTA" => caps.quota = true,
+                "X-GM-EXT-1" => caps.gmail = true,
                 atom if atom.starts_with("QUOTA=") => caps.quota = true,
                 _ => {}
             }
@@ -178,6 +183,30 @@ impl Selected {
     }
 }
 
+/// What Gmail adds to a message over IMAP (X-GM-EXT-1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GmailMeta {
+    /// X-GM-MSGID. In hex it is the Gmail API's message id.
+    pub msgid: u64,
+    /// X-GM-THRID. In hex it is the Gmail API's thread id.
+    pub thrid: u64,
+    /// Labels decoded from modified UTF-7. System labels keep their
+    /// backslash: `\Inbox`, `\Important`, `\Sent`, `\Draft`, `\Starred`.
+    pub labels: Vec<String>,
+}
+
+impl GmailMeta {
+    /// The message id as the Gmail API writes it.
+    pub fn id(&self) -> String {
+        format!("{:x}", self.msgid)
+    }
+
+    /// The thread id as the Gmail API writes it.
+    pub fn thread_id(&self) -> String {
+        format!("{:x}", self.thrid)
+    }
+}
+
 /// One message's flags, and its MODSEQ where the server has CONDSTORE.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FlagsOf {
@@ -213,6 +242,8 @@ pub struct Fetched {
     /// The top-level type is `multipart/mixed`, which is how most mail
     /// with attachments arrives.
     pub mixed: bool,
+    /// Gmail's ids and labels. `None` unless the fetch asked for them.
+    pub gmail: Option<GmailMeta>,
 }
 
 /// The header fields [`Fetched::from_header`] reads, in the form
@@ -326,6 +357,13 @@ pub enum Woke {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn x_gm_ext_1_marks_gmail() {
+        assert!(Capabilities::from_atoms(["IMAP4rev1", "x-gm-ext-1"]).gmail);
+        assert!(!Capabilities::from_atoms(["IMAP4rev1"]).gmail);
+        assert!(!Capabilities::all().gmail);
+    }
 
     const HEADER: &[u8] = b"From: =?UTF-8?Q?Jo=C3=A3o?= <joao@example.pt>\r\n\
 To: ann@example.com, \"Bob B.\" <bob@example.com>\r\n\

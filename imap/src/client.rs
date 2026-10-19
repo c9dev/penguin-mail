@@ -225,6 +225,16 @@ impl<D: Dial> ImapClient<D> {
         on_worker!(self, conn => conn.headers(mailbox, uids))
     }
 
+    /// [`ImapClient::headers`] with Gmail's ids and labels in each item's
+    /// `gmail` field.
+    pub async fn gmail_headers(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> Result<Vec<Fetched>, ImapError> {
+        on_worker!(self, conn => conn.gmail_headers(mailbox, uids))
+    }
+
     pub async fn body(
         &self,
         mailbox: &str,

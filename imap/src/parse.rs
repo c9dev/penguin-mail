@@ -17,7 +17,8 @@ use mailrs_domain::EpochMillis;
 use crate::guard::{BODY_BYTES, COMMAND_BYTES, SEARCH_BYTES, SELECT_BYTES};
 use crate::structure::BodyStructure;
 use crate::{
-    AppendUid, CopyUid, Fetched, FlagsOf, ImapError, Listed, QuotaUse, Selected, SpecialUse, UidSet,
+    AppendUid, CopyUid, Fetched, FlagsOf, GmailMeta, ImapError, Listed, QuotaUse, Selected,
+    SpecialUse, UidSet,
 };
 
 /// The most answers one command may keep: messages, mailboxes, or pairs
@@ -438,6 +439,18 @@ fn flag_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
     }
 }
 
+/// A message's Gmail labels decoded from modified UTF-7, refused past
+/// [`MAX_FLAGS`] as flags are.
+fn label_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
+    match list.len() > MAX_FLAGS {
+        true => Err(ImapError::Protocol(format!(
+            "the server gave a message {} labels, more than {MAX_FLAGS}",
+            list.len()
+        ))),
+        false => Ok(list.iter().map(|l| crate::utf7::decode(l)).collect()),
+    }
+}
+
 /// The items a FETCH answer carries besides the header section.
 #[derive(Default)]
 struct Meta {
@@ -445,6 +458,9 @@ struct Meta {
     internal_date: Option<EpochMillis>,
     size: Option<u64>,
     modseq: Option<u64>,
+    gmail_msgid: Option<u64>,
+    gmail_thrid: Option<u64>,
+    gmail_labels: Option<Vec<String>>,
 }
 
 impl Meta {
@@ -456,6 +472,11 @@ impl Meta {
                 AttributeValue::InternalDate(date) => meta.internal_date = internal_date(date),
                 AttributeValue::Rfc822Size(size) => meta.size = Some(u64::from(*size)),
                 AttributeValue::ModSeq(m) => meta.modseq = Some(*m),
+                AttributeValue::GmailMsgId(id) => meta.gmail_msgid = Some(*id),
+                AttributeValue::GmailThrId(id) => meta.gmail_thrid = Some(*id),
+                AttributeValue::GmailLabels(list) => {
+                    meta.gmail_labels = Some(label_strings(list)?);
+                }
                 _ => {}
             }
         }
@@ -468,6 +489,9 @@ impl Meta {
         self.internal_date = later.internal_date.or(self.internal_date);
         self.size = later.size.or(self.size);
         self.modseq = later.modseq.or(self.modseq);
+        self.gmail_msgid = later.gmail_msgid.or(self.gmail_msgid);
+        self.gmail_thrid = later.gmail_thrid.or(self.gmail_thrid);
+        self.gmail_labels = later.gmail_labels.or(self.gmail_labels.take());
     }
 
     fn put_on(self, fetched: &mut Fetched) {
@@ -477,6 +501,17 @@ impl Meta {
         fetched.internal_date = self.internal_date.or(fetched.internal_date);
         fetched.size = self.size.or(fetched.size);
         fetched.modseq = self.modseq.or(fetched.modseq);
+        if let (Some(msgid), Some(thrid)) = (self.gmail_msgid, self.gmail_thrid) {
+            let labels = self
+                .gmail_labels
+                .or_else(|| fetched.gmail.take().map(|g| g.labels))
+                .unwrap_or_default();
+            fetched.gmail = Some(GmailMeta {
+                msgid,
+                thrid,
+                labels,
+            });
+        }
     }
 
     fn flag_count(&self) -> usize {
@@ -1035,6 +1070,65 @@ pub(crate) mod tests {
         let selected = reader.finish().unwrap();
         assert_eq!(selected.highestmodseq, None);
         assert!(selected.vanished.is_empty());
+    }
+
+    fn gmail_of(line: &str) -> Option<crate::GmailMeta> {
+        let mut reader = HeadersReader::new(&UidSet::from_uids([7]));
+        feed(&mut reader, &[line]);
+        reader.finish().remove(0).gmail
+    }
+
+    const GMAIL_HEAD: &str = "BODY[HEADER.FIELDS (SUBJECT)] {14}\r\nSubject: x\r\n\r\n)\r\n";
+
+    #[test]
+    fn a_gmail_fetch_reads_ids_and_labels() {
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1278455344230334865 X-GM-THRID 1278455344230334865 X-GM-LABELS (\\Inbox \\Important \"Work Stuff\") FLAGS (\\Seen) {GMAIL_HEAD}"
+        );
+        let gmail = gmail_of(&line).unwrap();
+        assert_eq!(gmail.msgid, 1_278_455_344_230_334_865);
+        assert_eq!(gmail.thrid, 1_278_455_344_230_334_865);
+        assert_eq!(gmail.labels, ["\\Inbox", "\\Important", "Work Stuff"]);
+        assert_eq!(gmail.id(), "11bdfc5cae0c8191");
+        assert_eq!(gmail.thread_id(), "11bdfc5cae0c8191");
+    }
+
+    #[test]
+    fn a_utf7_label_is_decoded() {
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS (\"Fam&AO0-lia/F&AOk-rias 2026\") {GMAIL_HEAD}"
+        );
+        assert_eq!(
+            gmail_of(&line).unwrap().labels,
+            ["Fam\u{ed}lia/F\u{e9}rias 2026"]
+        );
+    }
+
+    #[test]
+    fn an_empty_label_list_reads_empty() {
+        let line =
+            format!("* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS () {GMAIL_HEAD}");
+        assert_eq!(gmail_of(&line).unwrap().labels, Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_plain_fetch_has_no_gmail_meta() {
+        let line = format!("* 1 FETCH (UID 7 FLAGS (\\Seen) {GMAIL_HEAD}");
+        assert_eq!(gmail_of(&line), None);
+    }
+
+    #[test]
+    fn a_label_list_past_the_flag_cap_is_refused() {
+        let labels = (0..=MAX_FLAGS)
+            .map(|i| format!("L{i}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS ({labels}) {GMAIL_HEAD}"
+        );
+        let mut reader = HeadersReader::new(&UidSet::from_uids([7]));
+        feed(&mut reader, &[&line]);
+        assert!(reader.check().is_err());
     }
 
     #[test]

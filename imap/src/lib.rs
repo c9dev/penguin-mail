@@ -30,7 +30,7 @@ pub use login::Login;
 pub use smtp::{SmtpClient, SmtpTls};
 pub use structure::BodyStructure;
 pub use types::{
-    AppendUid, Capabilities, CopyUid, Fetched, FlagsOf, HEADER_FIELDS, Listed, QuotaUse, Selected,
-    Since, SpecialUse, Woke,
+    AppendUid, Capabilities, CopyUid, Fetched, FlagsOf, GmailMeta, HEADER_FIELDS, Listed, QuotaUse,
+    Selected, Since, SpecialUse, Woke,
 };
 pub use uid_set::UidSet;
