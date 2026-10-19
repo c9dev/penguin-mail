@@ -222,9 +222,11 @@ pub fn gm_thrid(id: u64) -> String {
     format!("X-GM-THRID {id}")
 }
 
-/// A search key for the messages with one label.
-pub fn gm_labels(label: &str) -> String {
-    format!("X-GM-LABELS {}", label_text(label))
+/// A search key for the messages with one label. Refused for a label no
+/// command can carry, so a name cannot add keys of its own.
+pub fn gm_labels(label: &str) -> Result<String, ImapError> {
+    check_label(label)?;
+    Ok(format!("X-GM-LABELS {}", label_text(label)))
 }
 
 /// A label as a command writes it: a system label (`\\Inbox`) as an
@@ -485,11 +487,12 @@ mod tests {
     #[test]
     fn gm_labels_quotes_in_utf7_and_leaves_system_labels_bare() {
         assert_eq!(
-            gm_labels("Fam\u{ed}lia/F\u{e9}rias 2026"),
+            gm_labels("Fam\u{ed}lia/F\u{e9}rias 2026").unwrap(),
             "X-GM-LABELS \"Fam&AO0-lia/F&AOk-rias 2026\""
         );
-        assert_eq!(gm_labels("\\Inbox"), "X-GM-LABELS \\Inbox");
-        assert_eq!(gm_labels("Work"), "X-GM-LABELS \"Work\"");
+        assert_eq!(gm_labels("\\Inbox").unwrap(), "X-GM-LABELS \\Inbox");
+        assert_eq!(gm_labels("Work").unwrap(), "X-GM-LABELS \"Work\"");
+        assert!(gm_labels("\\Inbox) OR ALL (").is_err());
     }
 
     #[test]

@@ -157,7 +157,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         &self,
     ) -> Result<Vec<DraftRef>, BackendError> {
         let boxes = self.gm_synced().await?;
-        let keys = format!("{} UNDELETED", gm_labels(DRAFT));
+        let keys = format!("{} UNDELETED", gm_labels(DRAFT)?);
         let selected = self.select(&boxes.all, None).await?;
         let uids = self.api.search(&boxes.all, &keys).await?;
         Ok(self

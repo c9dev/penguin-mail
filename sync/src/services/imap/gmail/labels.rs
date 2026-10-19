@@ -104,12 +104,12 @@ pub(in crate::services::imap) fn imap_label(id: &str) -> Option<String> {
 /// All Mail, without the sync window. `None` for a label whose mail is not
 /// in All Mail (Trash, Spam) or that stands for no set of messages.
 pub(in crate::services::imap) fn search_key(id: &str) -> Option<String> {
-    let label = |word: &str| mailrs_imap::gm_labels(word);
+    let label = |word: &str| mailrs_imap::gm_labels(word).ok();
     match id {
-        "INBOX" => Some(label("\\Inbox")),
-        "SENT" => Some(label("\\Sent")),
-        "DRAFT" => Some(label("\\Draft")),
-        "IMPORTANT" => Some(label("\\Important")),
+        "INBOX" => label("\\Inbox"),
+        "SENT" => label("\\Sent"),
+        "DRAFT" => label("\\Draft"),
+        "IMPORTANT" => label("\\Important"),
         "TRASH" | "SPAM" | "UNREAD" | "STARRED" => None,
         "CATEGORY_PERSONAL" => {
             let others: Vec<String> = TABS
@@ -122,7 +122,7 @@ pub(in crate::services::imap) fn search_key(id: &str) -> Option<String> {
             .iter()
             .find(|(_, id)| *id == tab)
             .and_then(|(name, _)| mailrs_imap::gm_raw(&format!("category:{name} in:inbox")).ok()),
-        name => Some(label(name)),
+        name => label(name),
     }
 }
 

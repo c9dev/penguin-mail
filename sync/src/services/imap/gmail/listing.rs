@@ -35,9 +35,8 @@ fn all_mail_keys(days: i64, today: NaiveDate) -> String {
         .checked_sub_days(chrono::Days::new(days.unsigned_abs()))
         .unwrap_or(NaiveDate::MIN);
     format!(
-        "UNDELETED OR SINCE {} {}",
+        "UNDELETED OR SINCE {} X-GM-LABELS \\Inbox",
         imap_date(start),
-        mailrs_imap::gm_labels("\\Inbox")
     )
 }
 
@@ -271,10 +270,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if wanted.contains(['"', '\r', '\n', '\\']) {
             return Ok(None);
         }
-        let keys = format!(
-            "HEADER Message-ID \"{wanted}\" {} UNDELETED",
-            mailrs_imap::gm_labels("\\Sent")
-        );
+        let keys = format!("HEADER Message-ID \"{wanted}\" X-GM-LABELS \\Sent UNDELETED");
         let (uidvalidity, uids) = self.gm_matching(&boxes.all, &keys).await?;
         Ok(self
             .gm_refs(&boxes.all, uidvalidity, &uids)
