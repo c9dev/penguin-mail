@@ -2660,11 +2660,11 @@ msgstr[0] "{count} cuenta de Gmail necesita una nueva forma de iniciar sesión"
 msgstr[1] ""
 "{count} cuentas de Gmail necesitan una nueva forma de iniciar sesión"
 
-#: app/src/move_banner.rs:100 app/src/ui/goa_page.rs:299
+#: app/src/move_banner.rs:100 app/src/ui/goa_page.rs:293
 msgid "Use This Account"
 msgstr "Usar esta cuenta"
 
-#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:320
+#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:322
 msgid "Choose…"
 msgstr "Elegir…"
 
@@ -4386,13 +4386,13 @@ msgstr ""
 "¿Quieres todas las funciones de Gmail? Tu propio proyecto de Google te las "
 "da todas, gratis."
 
-#: app/src/route_choice.rs:152 app/src/ui/goa_page.rs:291
+#: app/src/route_choice.rs:152 app/src/ui/goa_page.rs:285
 msgid "Use the Google account on this computer"
 msgstr "Usar la cuenta de Google de este equipo"
 
 #: app/src/route_choice.rs:154 app/src/ui/goa_page.rs:77
-#: app/src/ui/goa_page.rs:337 app/src/ui/goa_page.rs:353
-#: app/src/ui/goa_page.rs:375
+#: app/src/ui/goa_page.rs:331 app/src/ui/goa_page.rs:347
+#: app/src/ui/goa_page.rs:369
 msgid "Add your Google account to this computer"
 msgstr "Añadir tu cuenta de Google a este equipo"
 
@@ -4400,7 +4400,7 @@ msgstr "Añadir tu cuenta de Google a este equipo"
 msgid "Already signed in on this computer"
 msgstr "Sesión ya iniciada en este equipo"
 
-#: app/src/route_choice.rs:159 app/src/ui/preferences/google_route.rs:305
+#: app/src/route_choice.rs:159 app/src/ui/preferences/google_route.rs:307
 msgid "Mail, calendar and contacts"
 msgstr "Correo, calendario y contactos"
 
@@ -4432,7 +4432,7 @@ msgid "Set up a different project"
 msgstr "Configurar otro proyecto"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:197 app/src/ui/preferences/google_route.rs:327
+#: app/src/route_choice.rs:197 app/src/ui/preferences/google_route.rs:329
 #: app/src/ui/window.rs:3244
 msgid "Set up your own Google project"
 msgstr "Configurar tu propio proyecto de Google"
@@ -4574,7 +4574,7 @@ msgstr "{host} ha rechazado el inicio de sesión: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:367
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:369
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1505
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4582,7 +4582,7 @@ msgstr "Calendario"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:371
+#: app/src/ui/preferences/google_route.rs:373
 msgid "Contacts"
 msgstr "Contactos"
 
@@ -5483,7 +5483,7 @@ msgstr ""
 "esta forma."
 
 #: app/src/ui/add_account.rs:4530 app/src/ui/own_project.rs:627
-#: app/src/ui/preferences/google_route.rs:345 app/src/ui/window.rs:2223
+#: app/src/ui/preferences/google_route.rs:347 app/src/ui/window.rs:2223
 msgid "Open Google Cloud"
 msgstr "Abrir Google Cloud"
 
@@ -7449,7 +7449,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail no puede ver los calendarios de esta cuenta"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:375
+#: app/src/ui/preferences/google_route.rs:377
 msgid "Not connected"
 msgstr "No conectado"
 
@@ -7466,12 +7466,12 @@ msgid "Options for {calendar}"
 msgstr "Opciones de {calendar}"
 
 #: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:505
+#: app/src/ui/preferences/google_route.rs:507
 msgid "Connect"
 msgstr "Conectar"
 
 #: app/src/ui/calendar/sidebar.rs:1240 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:368
+#: app/src/ui/preferences/google_route.rs:370
 msgid "Connect the calendar for {account}"
 msgstr "Conectar el calendario de {account}"
 
@@ -8205,7 +8205,7 @@ msgstr ""
 "la contraseña de la cuenta o con la contraseña de aplicación que indicó para "
 "el calendario."
 
-#: app/src/ui/contacts_prefs.rs:136 app/src/ui/goa_page.rs:327
+#: app/src/ui/contacts_prefs.rs:136 app/src/ui/goa_page.rs:321
 msgid "Use It"
 msgstr "Usarlo"
 
@@ -8630,7 +8630,7 @@ msgstr ""
 msgid "Use another way to sign in"
 msgstr "Usar otra forma de iniciar sesión"
 
-#: app/src/ui/goa_page.rs:120 app/src/ui/goa_page.rs:362
+#: app/src/ui/goa_page.rs:120 app/src/ui/goa_page.rs:356
 #: app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Copiar"
@@ -8640,7 +8640,7 @@ msgid "Other ways to sign in"
 msgstr "Otras formas de iniciar sesión"
 
 #. Translators: {address} is an email address.
-#: app/src/ui/goa_page.rs:295
+#: app/src/ui/goa_page.rs:289
 msgid ""
 "This computer is already signed in to <b>{address}</b>. Penguin Mail can "
 "read your mail through it."
@@ -8648,20 +8648,20 @@ msgstr ""
 "Este equipo ya tiene la sesión iniciada en <b>{address}</b>. Penguin Mail "
 "puede leer tu correo a través de ella."
 
-#: app/src/ui/goa_page.rs:312 app/src/ui/goa_page.rs:347
+#: app/src/ui/goa_page.rs:306 app/src/ui/goa_page.rs:341
 msgid "Waiting for {address}…"
 msgstr "Esperando a {address}…"
 
-#: app/src/ui/goa_page.rs:323
+#: app/src/ui/goa_page.rs:317
 msgid "You added {address}. Use it instead?"
 msgstr "Añadiste {address}. ¿Quieres usarla en su lugar?"
 
-#: app/src/ui/goa_page.rs:329
+#: app/src/ui/goa_page.rs:323
 msgid "Wait for {address}"
 msgstr "Esperar a {address}"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
-#: app/src/ui/goa_page.rs:341
+#: app/src/ui/goa_page.rs:335
 msgid ""
 "Open <b>Online Accounts</b> from your applications menu, add your Google "
 "account, and come back."
@@ -8670,12 +8670,12 @@ msgstr ""
 "de Google y vuelve."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
-#: app/src/ui/goa_page.rs:358
+#: app/src/ui/goa_page.rs:352
 msgid "Penguin Mail needs permission to use Online Accounts."
 msgstr "Penguin Mail necesita permiso para usar Cuentas en línea."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
-#: app/src/ui/goa_page.rs:380
+#: app/src/ui/goa_page.rs:374
 msgid ""
 "Penguin Mail reads Gmail through your computer's Online Accounts. Add "
 "<b>{address}</b> there, then come back."
@@ -8683,7 +8683,7 @@ msgstr ""
 "Penguin Mail lee Gmail a través de las Cuentas en línea de tu equipo. Añade "
 "ahí <b>{address}</b> y vuelve."
 
-#: app/src/ui/goa_page.rs:403
+#: app/src/ui/goa_page.rs:397
 msgid "Use {address} instead"
 msgstr "Usar {address} en su lugar"
 
@@ -9953,7 +9953,7 @@ msgstr "No se encontraron resultados"
 msgid "Try a different search"
 msgstr "Prueba otra búsqueda"
 
-#: app/src/ui/preferences/google_route.rs:85
+#: app/src/ui/preferences/google_route.rs:86
 msgid ""
 "Filters, aliases and the automatic reply need Gmail's own connection, which "
 "this computer's Google sign-in doesn't offer."
@@ -9961,53 +9961,53 @@ msgstr ""
 "Los filtros, los alias y la respuesta automática necesitan la conexión "
 "propia de Gmail, que el inicio de sesión de Google de este equipo no ofrece."
 
-#: app/src/ui/preferences/google_route.rs:119
+#: app/src/ui/preferences/google_route.rs:120
 msgid "Switch {address} to this computer's sign-in?"
 msgstr "¿Cambiar {address} al inicio de sesión de este equipo?"
 
-#: app/src/ui/preferences/google_route.rs:255
+#: app/src/ui/preferences/google_route.rs:257
 msgid "Connected"
 msgstr "Conectado"
 
 #. Translators: a small heading over the Gmail account's rows; Gmail
 #. is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:295
+#: app/src/ui/preferences/google_route.rs:297
 msgid "Gmail"
 msgstr "Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:301
+#: app/src/ui/preferences/google_route.rs:303
 msgid "Gmail features"
 msgstr "Funciones de Gmail"
 
-#: app/src/ui/preferences/google_route.rs:303
+#: app/src/ui/preferences/google_route.rs:305
 msgid "Every feature"
 msgstr "Todas las funciones"
 
-#: app/src/ui/preferences/google_route.rs:314
+#: app/src/ui/preferences/google_route.rs:316
 msgid "Get Every Feature"
 msgstr "Obtener todas las funciones"
 
-#: app/src/ui/preferences/google_route.rs:336 app/src/ui/switch_jmap.rs:221
+#: app/src/ui/preferences/google_route.rs:338 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
 msgstr "Cambiar"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:344
+#: app/src/ui/preferences/google_route.rs:346
 msgid "Signed in through your own Google project"
 msgstr "Sesión iniciada con tu propio proyecto de Google"
 
-#: app/src/ui/preferences/google_route.rs:364
+#: app/src/ui/preferences/google_route.rs:366
 msgid "Calendar and contacts"
 msgstr "Calendario y contactos"
 
-#: app/src/ui/preferences/google_route.rs:372
+#: app/src/ui/preferences/google_route.rs:374
 msgid "Connect the contacts for {account}"
 msgstr "Conectar los contactos de {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:390
+#: app/src/ui/preferences/google_route.rs:392
 msgid "On gmail.com"
 msgstr "En gmail.com"
 
