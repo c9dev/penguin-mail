@@ -417,7 +417,10 @@ pub fn dropped(paths: &[PathBuf]) -> Option<&Path> {
 pub async fn read_key_file(file: &gio::File) -> Result<OwnClient, FileProblem> {
     let bytes = read_head(file, FILE_LIMIT + 1)
         .await
-        .map_err(|_| FileProblem::NotTheFile)?;
+        .map_err(|err| {
+            tracing::info!(error = %err, "could not read the key file");
+            FileProblem::Unreadable
+        })?;
     read_file(&bytes)
 }
 
@@ -793,10 +796,10 @@ mod tests {
     }
 
     #[test]
-    fn a_file_that_cannot_be_read_is_not_the_file() {
+    fn a_file_that_cannot_be_read_says_so() {
         let file = gtk::gio::File::for_path("/nonexistent/penguin/key.json");
         let read = gtk::glib::MainContext::new().block_on(read_key_file(&file));
-        assert_eq!(read.err(), Some(FileProblem::NotTheFile));
+        assert_eq!(read.err(), Some(FileProblem::Unreadable));
     }
 
     #[test]

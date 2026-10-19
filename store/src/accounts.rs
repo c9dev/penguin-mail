@@ -469,7 +469,7 @@ pub fn set_sync_state(conn: &Connection, id: AccountId, state: &str) -> Result<(
     Ok(())
 }
 
-/// How long a colour flag waits for its message after a route move, in
+/// how long a color flag waits for its message after a route move, in
 /// milliseconds: 90 days.
 pub const KEEP_FLAGS_FOR: i64 = 90 * 24 * 60 * 60 * 1000;
 
@@ -484,7 +484,7 @@ pub fn set_backfill(
          backfill_extends = backfill_extends AND NOT ?3 WHERE id = ?1",
         params![id, cursor, done],
     )?;
-    // A colour flag waits for its message after a route move: mail older
+    // A color flag waits for its message after a route move: mail older
     // than the sync window comes back only when the person opens or finds
     // it, and a pass of the old route can still end after the move. One
     // kept longer than `KEEP_FLAGS_FOR` has nothing left to go on.

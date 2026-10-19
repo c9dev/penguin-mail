@@ -26,7 +26,7 @@ pub enum GmailFailure {
     /// Google turned the app password down.
     WrongAppPassword,
     /// An administrator turned this way of signing in off.
-    Organisation,
+    Organization,
     /// The server that answered is not Gmail's.
     NotGmail,
     /// Gmail leaves All Mail out of apps until the person turns it on.
@@ -88,7 +88,7 @@ fn from_check(check: &CheckError, err: &anyhow::Error) -> GmailFailure {
                 false => GmailFailure::WrongAppPassword,
             }
         }
-        ImapError::ImapDisabled { .. } => GmailFailure::Organisation,
+        ImapError::ImapDisabled { .. } => GmailFailure::Organization,
         _ => GmailFailure::Other(err.to_string()),
     }
 }
@@ -105,7 +105,7 @@ impl GmailFailure {
             GmailFailure::WrongAppPassword => {
                 gettext("Google didn't accept that app password. Make a new one and paste it here.")
             }
-            GmailFailure::Organisation => gettext(
+            GmailFailure::Organization => gettext(
                 "Your organization turned off this way of signing in. Ask them, or sign in another way.",
             ),
             // Translators: Gmail is a name; keep it as it is.
@@ -125,7 +125,7 @@ impl GmailFailure {
             GmailFailure::NeedsAppPassword | GmailFailure::WrongAppPassword => {
                 vec![Action::OpenAppPasswords]
             }
-            GmailFailure::Organisation => vec![Action::SignInAnotherWay],
+            GmailFailure::Organization => vec![Action::SignInAnotherWay],
             GmailFailure::NotGmail => vec![Action::Back],
             GmailFailure::AllMailHidden => vec![Action::OpenGmailLabels, Action::TryAgain],
             GmailFailure::Other(_) => Vec::new(),
@@ -196,15 +196,15 @@ mod tests {
     }
 
     #[test]
-    fn imap_off_is_the_organisation() {
+    fn imap_off_is_the_organization() {
         let err = anyhow::Error::new(GmailCheckError::Check(CheckError::Imap(
             ImapError::ImapDisabled {
                 text: "IMAP access is disabled for your domain".into(),
             },
         )));
-        assert_eq!(failure(&err), GmailFailure::Organisation);
+        assert_eq!(failure(&err), GmailFailure::Organization);
         assert_eq!(
-            GmailFailure::Organisation.actions(),
+            GmailFailure::Organization.actions(),
             [Action::SignInAnotherWay]
         );
     }
@@ -255,7 +255,7 @@ mod tests {
         let failures = [
             GmailFailure::NeedsAppPassword,
             GmailFailure::WrongAppPassword,
-            GmailFailure::Organisation,
+            GmailFailure::Organization,
             GmailFailure::NotGmail,
             GmailFailure::AllMailHidden,
         ];

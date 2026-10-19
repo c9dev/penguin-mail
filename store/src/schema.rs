@@ -1111,7 +1111,7 @@ END;
     // desktop reads its mail with. It is kept to find the account again;
     // the address finds it when Online Accounts gives it a new id.
     "ALTER TABLE accounts ADD COLUMN goa_id TEXT;",
-    // The colour flags of an account whose stored mail a route move
+    // The color flags of an account whose stored mail a route move
     // emptied, by each message's Message-ID header, until the new route
     // lists those messages again or `accounts::KEEP_FLAGS_FOR` has passed since
     // the move (`kept_at`, in milliseconds), whichever comes first.

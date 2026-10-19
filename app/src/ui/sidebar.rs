@@ -1671,7 +1671,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
 }
 
 /// The items of a label's menu. The Color submenu shows only for an account
-/// whose labels take a colour.
+/// whose labels take a color.
 fn label_menu_model(
     account_id: AccountId,
     label: &Label,
@@ -2039,14 +2039,15 @@ fn heading(
 }
 
 /// The menu items that sign the account in or say why it does not sync.
-fn access_items() -> Vec<(String, &'static str)> {
-    let mut items = vec![(gettext("Sign In Again…"), "win.account-reconnect")];
-    items.push((gettext("Switch to JMAP…"), "account.switch-jmap"));
-    items.push((
-        gettext("Messages That Will Not Download…"),
-        "account.not-downloading",
-    ));
-    items
+fn access_items() -> [(String, &'static str); 3] {
+    [
+        (gettext("Sign In Again…"), "win.account-reconnect"),
+        (gettext("Switch to JMAP…"), "account.switch-jmap"),
+        (
+            gettext("Messages That Will Not Download…"),
+            "account.not-downloading",
+        ),
+    ]
 }
 
 /// The icon and the words beside an account's name for its state, or

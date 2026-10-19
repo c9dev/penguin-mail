@@ -75,6 +75,9 @@ pub struct OwnProject {
     warning: WarningPage,
     /// The client step 6 read, which the sign-in goes through.
     found: RefCell<Option<OwnClient>>,
+    /// `found` came from the pasted pair, so editing the pair away from a
+    /// valid one lets it go.
+    found_pasted: Cell<bool>,
 }
 
 /// The five steps done on Google Cloud.
@@ -98,6 +101,7 @@ impl OwnProject {
             file: file_page(),
             warning: warning_page(),
             found: RefCell::new(None),
+            found_pasted: Cell::new(false),
         });
         this.connect();
         this
@@ -346,6 +350,7 @@ impl OwnProject {
     }
 
     fn found_key(&self, own: OwnClient) {
+        self.found_pasted.set(false);
         self.show_found(own);
         self.file.sign_in.grab_focus();
     }
@@ -378,12 +383,31 @@ impl OwnProject {
     /// nothing until Sign In is pressed.
     fn pasted(&self) {
         let (id, secret) = (self.file.id.text(), self.file.secret.text());
-        if id.trim().is_empty() || secret.trim().is_empty() {
-            return;
+        let own = match id.trim().is_empty() || secret.trim().is_empty() {
+            true => None,
+            false => from_pasted(&id, &secret).ok(),
+        };
+        match own {
+            Some(own) => {
+                self.found_pasted.set(true);
+                self.show_found(own);
+            }
+            // A pair edited away from a valid one takes back the key it
+            // gave, so Sign In does not go through a key no longer shown.
+            None if self.found_pasted.replace(false) => self.forget_found(),
+            None => {}
         }
-        if let Ok(own) = from_pasted(&id, &secret) {
-            self.show_found(own);
-        }
+    }
+
+    /// Undoes [`OwnProject::show_found`]: no key, and the drop area open.
+    fn forget_found(&self) {
+        self.found.replace(None);
+        let page = &self.file;
+        page.ready.set_visible(false);
+        page.drop.remove_css_class("own-drop-found");
+        page.drop_icon.set_visible(true);
+        page.drop_inside.set_orientation(gtk::Orientation::Vertical);
+        self.update_sign_in();
     }
 
     /// Sign In shows once a key is found or the pasted rows are open.
@@ -432,8 +456,8 @@ fn weakly(this: &Rc<OwnProject>, run: impl Fn(&Rc<OwnProject>) + 'static) -> imp
     }
 }
 
-/// A row of centred buttons, as the intro and the warning have.
-fn centred_buttons(buttons: &[&gtk::Button]) -> gtk::Box {
+/// A row of centered buttons, as the intro and the warning have.
+fn centered_buttons(buttons: &[&gtk::Button]) -> gtk::Box {
     let row = gtk::Box::builder()
         .spacing(10)
         .halign(gtk::Align::Center)
@@ -471,7 +495,7 @@ fn intro_page() -> IntroPage {
     }
     let start = button(&gettext("Start"), true);
     let have_key = button(&gettext("I Already Have a Key"), false);
-    banded.body.append(&centred_buttons(&[&start, &have_key]));
+    banded.body.append(&centered_buttons(&[&start, &have_key]));
     IntroPage {
         page: banded.page,
         start,
@@ -495,7 +519,7 @@ fn warning_page() -> WarningPage {
         banded.body.append(&text);
     }
     let sign_in = button(&gettext("Sign in with Google"), true);
-    banded.body.append(&centred_buttons(&[&sign_in]));
+    banded.body.append(&centered_buttons(&[&sign_in]));
     WarningPage {
         page: banded.page,
         sign_in,

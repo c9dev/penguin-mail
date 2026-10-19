@@ -54,7 +54,7 @@ impl Core {
     /// account, sends what is due and finishes the writes under way
     /// through the old sign-in, stores the new one and starts the account
     /// again; on any error it starts again as it was. `committed` gets a
-    /// message once a move can no longer be cancelled. A second move of
+    /// message once a move can no longer be canceled. A second move of
     /// the same account is refused while one runs.
     pub async fn take_route(
         &self,

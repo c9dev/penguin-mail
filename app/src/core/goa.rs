@@ -135,7 +135,7 @@ impl Core {
     /// Links `goa_account` to Penguin Mail. A new address becomes an
     /// account and starts; an address already held moves to Online
     /// Accounts in place, and `committed` hears when that move can no
-    /// longer be cancelled.
+    /// longer be canceled.
     pub(super) async fn link_goa(
         &self,
         goa_account: GoaAccount,

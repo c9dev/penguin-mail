@@ -80,15 +80,15 @@ impl GoaPage {
     pub fn new() -> Rc<GoaPage> {
         let banded = banded(TAG, &gettext("Add your Google account to this computer"));
         let title = heading("");
-        let centred = |label: &gtk::Label| {
+        let centered = |label: &gtk::Label| {
             label.set_xalign(0.5);
             label.set_justify(gtk::Justification::Center);
         };
-        centred(&title);
+        centered(&title);
         title.add_css_class("post-route-title");
         let body = label("", &["post-lede", "post-consent-text"]);
         body.set_use_markup(true);
-        centred(&body);
+        centered(&body);
         let main = pill("", true);
         main.set_halign(gtk::Align::Center);
         main.set_margin_top(20);
@@ -139,7 +139,7 @@ impl GoaPage {
             .build();
         let problem = label("", &["post-lede-small", "error"]);
         problem.set_use_markup(false);
-        centred(&problem);
+        centered(&problem);
         problem.set_visible(false);
         for part in [
             title.upcast_ref::<gtk::Widget>(),

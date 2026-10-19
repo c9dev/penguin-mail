@@ -175,6 +175,9 @@ pub enum FileProblem {
     /// A pasted id that does not end the way Google's ids do.
     #[error("{}", words(FileProblem::WrongId))]
     WrongId,
+    /// The file could not be read at all, as one without permission.
+    #[error("{}", words(FileProblem::Unreadable))]
+    Unreadable,
 }
 
 fn words(problem: FileProblem) -> String {
@@ -195,6 +198,8 @@ fn words(problem: FileProblem) -> String {
             // This is a button on Google's page; use the words Google's page shows in your language.
             gettext("Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com.")
         }
+        // Translators: said under the key file a person chose in the Google project setup.
+        FileProblem::Unreadable => gettext("Penguin Mail can't open this file. Choose another."),
     }
 }
 
