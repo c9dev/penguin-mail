@@ -2,6 +2,7 @@
 //! provider's page, and keeping an IMAP, POP3, JMAP or Microsoft account
 //! that just signed in.
 
+pub mod app_password;
 mod browser;
 mod browser_grant;
 mod jmap_browser;
@@ -343,6 +344,14 @@ fn different_account(address: &str) -> String {
         &gettext("You signed in to a different account than {address}, so nothing changed."),
         &[("address", address)],
     )
+}
+
+/// The error for an address another provider's account holds.
+fn taken_error(address: &str, provider: &str) -> ImapSignInError {
+    ImapSignInError::Taken {
+        address: address.to_string(),
+        provider: provider.to_string(),
+    }
 }
 
 fn taken(address: &str, provider: &str) -> String {
