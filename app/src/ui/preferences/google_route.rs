@@ -712,13 +712,14 @@ pub(crate) mod checks {
             button.emit_clicked();
         }
         assert_eq!(*pressed.borrow(), [3, 3]);
-        // A paused account is not running, so it offers everything; its
-        // state is what shows Connect, and the move line repeats the banner.
+        // The window takes the calendar out of a paused account's offers
+        // when Google refused it too, which shows Connect; the move line
+        // repeats the banner.
         let built_in_api = GoogleSignIn {
             client: SignInClient::BuiltIn,
             route: MailRoute::GmailApi,
         };
-        let (paused, _) = filled(AccountState::MailPaused, built_in_api, Offers::EVERYTHING);
+        let (paused, _) = filled(AccountState::MailPaused, built_in_api, no_calendar());
         let found = titles(&paused);
         assert!(found.contains(&"Calendar".to_string()), "{found:?}");
         assert!(found.contains(&"Contacts".to_string()), "{found:?}");
@@ -726,6 +727,14 @@ pub(crate) mod checks {
             found
                 .iter()
                 .any(|t| t.starts_with("Penguin Mail can't get new mail for maria.costa@gmail.com")),
+            "{found:?}"
+        );
+        // Paused by a lost mail scope, its calendar still reads: no Connect.
+        let (granted, _) = filled(AccountState::MailPaused, built_in_api, Offers::EVERYTHING);
+        let found = titles(&granted);
+        assert!(!found.contains(&"Calendar".to_string()), "{found:?}");
+        assert!(
+            !found.contains(&"CALENDAR AND CONTACTS".to_string()),
             "{found:?}"
         );
     }

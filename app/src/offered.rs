@@ -632,12 +632,27 @@ impl Calendar {
     }
 }
 
+/// Whether a paused Gmail account lost its calendar along with its mail.
+/// A paused account stays in the engine with its services. When the last
+/// grant left out only the mail scope, the calendar and contacts still
+/// work. When the grant still holds the mail scope, Google refused the
+/// token itself, and the calendar goes with it. An account that is not
+/// running has no token to read with.
+pub fn paused_calendar_refused(account: &Account, services: Option<&AccountServices>) -> bool {
+    if account.provider != Provider::Gmail || account.state != AccountState::MailPaused {
+        return false;
+    }
+    services.is_none_or(|services| services.withheld().calendar || !services.mail.mail_grant_lost())
+}
+
 /// How `account`'s Google calendar and contacts stand, from what its
-/// services offer. A paused account is not running and offers everything,
-/// so its state says the token was refused.
+/// services offer. The window takes the calendar out of a paused account's
+/// offers when [`paused_calendar_refused`] says so.
 pub fn calendar_link(account: &Account, offers: Offers) -> Calendar {
     match account.provider {
-        Provider::Gmail if account.state == AccountState::MailPaused => Calendar::NeedsReauth,
+        Provider::Gmail if !offers.calendar && account.state == AccountState::MailPaused => {
+            Calendar::NeedsReauth
+        }
         Provider::Gmail if !offers.calendar => Calendar::NotConnected,
         _ => Calendar::Reads,
     }
@@ -1082,8 +1097,8 @@ mod tests {
 
     use super::{
         Calendar, calendar_link, failing_lines, held_back_line, hides_addresses, kept_here_lines,
-        offers_for, reason, reason_on, remove_account_body, shows_space_switch, still_held_line,
-        withheld_for,
+        offers_for, paused_calendar_refused, reason, reason_on, remove_account_body,
+        shows_space_switch, still_held_line, withheld_for,
     };
     use crate::settings::Space;
     use mailrs_domain::MailRoute;
@@ -1139,13 +1154,67 @@ mod tests {
 
     #[test]
     fn a_paused_account_shows_connect_on_its_calendar_and_contacts() {
-        // A paused account is not running, so its offers still read as
-        // everything; its refused token is what says the calendar needs
-        // a new sign-in.
-        let link = calendar_link(&gmail_in(AccountState::MailPaused), Offers::EVERYTHING);
+        // The window takes the calendar out of a paused account's offers
+        // when Google refused it too.
+        let link = calendar_link(&gmail_in(AccountState::MailPaused), NO_CALENDAR);
         assert_eq!(link, Calendar::NeedsReauth);
         assert!(link.shows_connect());
         assert!(!Calendar::Reads.shows_connect());
+    }
+
+    #[test]
+    fn a_paused_account_whose_calendar_still_works_reads_as_connected() {
+        let link = calendar_link(&gmail_in(AccountState::MailPaused), Offers::EVERYTHING);
+        assert_eq!(link, Calendar::Reads);
+    }
+
+    fn gmail_services(withheld: &[&'static str]) -> mailrs_sync::AccountServices {
+        let fake = std::sync::Arc::new(mailrs_sync::fake::FakeGmail::new());
+        for scope in withheld {
+            fake.withhold(scope);
+        }
+        mailrs_sync::AccountServices::google(fake)
+    }
+
+    #[test]
+    fn a_pause_from_a_lost_mail_scope_leaves_the_calendar_granted() {
+        let paused = gmail_in(AccountState::MailPaused);
+        let mail_gone = gmail_services(&[mailrs_gmail::GMAIL_SCOPE, mailrs_gmail::DELETE_SCOPE]);
+        assert!(!paused_calendar_refused(&paused, Some(&mail_gone)));
+    }
+
+    #[test]
+    fn a_pause_with_the_mail_scope_still_granted_means_google_refused_the_token() {
+        let paused = gmail_in(AccountState::MailPaused);
+        assert!(paused_calendar_refused(&paused, Some(&gmail_services(&[]))));
+    }
+
+    #[test]
+    fn a_paused_account_without_its_calendar_scope_has_its_calendar_refused() {
+        let paused = gmail_in(AccountState::MailPaused);
+        let services = gmail_services(&[
+            mailrs_gmail::GMAIL_SCOPE,
+            mailrs_gmail::DELETE_SCOPE,
+            mailrs_gmail::CALENDAR_SCOPE,
+        ]);
+        assert!(paused_calendar_refused(&paused, Some(&services)));
+    }
+
+    #[test]
+    fn a_paused_account_that_is_not_running_has_no_calendar() {
+        assert!(paused_calendar_refused(
+            &gmail_in(AccountState::MailPaused),
+            None
+        ));
+    }
+
+    #[test]
+    fn only_a_paused_account_has_its_calendar_refused_here() {
+        assert!(!paused_calendar_refused(
+            &gmail_in(AccountState::Ok),
+            Some(&gmail_services(&[]))
+        ));
+        assert!(!paused_calendar_refused(&gmail_in(AccountState::Ok), None));
     }
 
     #[test]

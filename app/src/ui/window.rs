@@ -3143,7 +3143,17 @@ impl MainWindow {
     /// What `account_id` offers, or everything while it has not started.
     pub(super) fn offers(&self, account_id: AccountId) -> Offers {
         let running = self.core.account(account_id);
-        let offers = crate::offered::offers_for(running.as_ref().map(|sync| sync.services()));
+        let services = running.as_ref().map(|sync| sync.services());
+        let mut offers = crate::offered::offers_for(services);
+        // A paused account whose calendar Google refused too shows Connect
+        // on it, unless this build has no route for its move to lead to.
+        if let Some(account) = self.account(account_id)
+            && crate::offered::paused_calendar_refused(&account, services)
+            && self.sign_in_path(&account) != Path::Stuck
+        {
+            offers.calendar = false;
+            offers.contacts = false;
+        }
         // The demo's account on the IMAP route runs on the sample Gmail
         // fake, which reaches everything; the screenshot shows what a real
         // one lacks.
