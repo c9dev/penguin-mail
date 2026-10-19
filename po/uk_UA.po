@@ -2268,7 +2268,7 @@ msgstr "Очікування браузера припинено через п'�
 
 #: app/src/core/goa.rs:145
 msgid "The demo cannot sign in through Online Accounts."
-msgstr "Демонстрація не може увійти через Online Accounts."
+msgstr "Демонстрація не може увійти через «Облікові записи в мережі»."
 
 #: app/src/core/route.rs:140
 msgid "This account is already moving to its new sign-in."
@@ -2549,7 +2549,7 @@ msgstr "Паролі програм складаються з 16 літер. Ц�
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:99
 msgid "Sign in to {address} again in Online Accounts."
-msgstr "Увійдіть до {address} знову в Online Accounts."
+msgstr "Увійдіть до {address} знову в «Облікові записи в мережі»."
 
 #: app/src/goa_notice.rs:107
 msgid ""
@@ -2566,12 +2566,12 @@ msgstr "Додати знову"
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:119
 msgid "{address} was removed from Online Accounts. Your mail here is kept."
-msgstr "{address} видалено з Online Accounts. Ваші листи тут збережено."
+msgstr "{address} видалено з «Облікові записи в мережі». Ваші листи тут збережено."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:127
 msgid "Mail is turned off for {address} in Online Accounts."
-msgstr "Пошту вимкнено для {address} в Online Accounts."
+msgstr "Пошту вимкнено для {address} в «Облікові записи в мережі»."
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
@@ -2585,12 +2585,12 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:139
 msgid "Can't reach Online Accounts on this computer."
-msgstr "Не вдається звернутися до Online Accounts на цьому комп’ютері."
+msgstr "Не вдається звернутися до «Облікові записи в мережі» на цьому комп’ютері."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:146
 msgid "Open Online Accounts"
-msgstr "Відкрити Online Accounts"
+msgstr "Відкрити «Облікові записи в мережі»"
 
 #: app/src/keyring_plug.rs:160
 msgid ""
@@ -8731,7 +8731,7 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
 msgid "Penguin Mail needs permission to use Online Accounts."
-msgstr "Penguin Mail потрібен дозвіл на використання Online Accounts."
+msgstr "Penguin Mail потрібен дозвіл на використання «Облікові записи в мережі»."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
@@ -13289,12 +13289,12 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. Google is a name.
 #: sync/src/sign_in/goa_link.rs:37
 msgid "Online Accounts couldn't sign in to Google. Sign in again there."
-msgstr "Online Accounts не вдалося увійти до Google. Увійдіть там знову."
+msgstr "«Облікові записи в мережі» не вдалося увійти до Google. Увійдіть там знову."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: sync/src/sign_in/goa_link.rs:42
 msgid "Mail is turned off for this account in Online Accounts."
-msgstr "Пошту вимкнено для цього облікового запису в Online Accounts."
+msgstr "Пошту вимкнено для цього облікового запису в «Облікові записи в мережі»."
 
 #: sync/src/sign_in/own_client.rs:87
 msgid ""

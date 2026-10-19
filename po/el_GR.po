@@ -2291,7 +2291,7 @@ msgstr ""
 
 #: app/src/core/goa.rs:145
 msgid "The demo cannot sign in through Online Accounts."
-msgstr "Η επίδειξη δεν μπορεί να συνδεθεί μέσω των Online Accounts."
+msgstr "Η επίδειξη δεν μπορεί να συνδεθεί μέσω των «Λογαριασμοί διαδικτύου»."
 
 #: app/src/core/route.rs:140
 msgid "This account is already moving to its new sign-in."
@@ -2574,7 +2574,7 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:99
 msgid "Sign in to {address} again in Online Accounts."
-msgstr "Συνδεθείτε ξανά στο {address} στα Online Accounts."
+msgstr "Συνδεθείτε ξανά στο {address} στους «Λογαριασμοί διαδικτύου»."
 
 #: app/src/goa_notice.rs:107
 msgid ""
@@ -2619,7 +2619,7 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:146
 msgid "Open Online Accounts"
-msgstr "Άνοιγμα των Online Accounts"
+msgstr "Άνοιγμα «Λογαριασμοί διαδικτύου»"
 
 #: app/src/keyring_plug.rs:160
 msgid ""

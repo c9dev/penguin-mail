@@ -2276,7 +2276,7 @@ msgstr "S-a renunțat la așteptarea navigatorului după cinci minute."
 
 #: app/src/core/goa.rs:145
 msgid "The demo cannot sign in through Online Accounts."
-msgstr "Demonstrația nu se poate conecta prin Online Accounts."
+msgstr "Demonstrația nu se poate conecta prin „Conturi online”."
 
 #: app/src/core/route.rs:140
 msgid "This account is already moving to its new sign-in."
@@ -2558,7 +2558,7 @@ msgstr "Parolele pentru aplicații au 16 litere. Aceasta pare altă parolă."
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:99
 msgid "Sign in to {address} again in Online Accounts."
-msgstr "Conectați-vă din nou la {address} în Online Accounts."
+msgstr "Conectați-vă din nou la {address} în „Conturi online”."
 
 #: app/src/goa_notice.rs:107
 msgid ""
@@ -2582,7 +2582,7 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:127
 msgid "Mail is turned off for {address} in Online Accounts."
-msgstr "Corespondența este oprită pentru {address} în Online Accounts."
+msgstr "Corespondența este oprită pentru {address} în „Conturi online”."
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
@@ -2596,12 +2596,12 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:139
 msgid "Can't reach Online Accounts on this computer."
-msgstr "Online Accounts nu pot fi accesate pe acest computer."
+msgstr "„Conturi online” nu pot fi accesate pe acest computer."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:146
 msgid "Open Online Accounts"
-msgstr "Deschide Online Accounts"
+msgstr "Deschide „Conturi online”"
 
 #: app/src/keyring_plug.rs:160
 msgid ""
@@ -8779,7 +8779,7 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
 msgid "Penguin Mail needs permission to use Online Accounts."
-msgstr "Penguin Mail are nevoie de permisiune pentru a folosi Online Accounts."
+msgstr "Penguin Mail are nevoie de permisiune pentru a folosi „Conturi online”."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
@@ -13383,7 +13383,7 @@ msgstr ""
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: sync/src/sign_in/goa_link.rs:42
 msgid "Mail is turned off for this account in Online Accounts."
-msgstr "Corespondența este oprită pentru acest cont în Online Accounts."
+msgstr "Corespondența este oprită pentru acest cont în „Conturi online”."
 
 #: sync/src/sign_in/own_client.rs:87
 msgid ""
