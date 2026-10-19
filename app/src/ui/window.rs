@@ -2092,8 +2092,31 @@ impl MainWindow {
     /// Preferences rows all end at.
     pub fn grant_access(self: &Rc<Self>, account_id: AccountId) {
         if let Some(account) = self.account(account_id) {
+            // A Gmail account with no calendar token has nothing to grant
+            // again: the calendar consent adds it, or the route choice
+            // does for an account whose mail has to move first.
+            if crate::offered::calendar_link(&account, self.offers(account_id)).shows_connect() {
+                return self.connect_calendar(account);
+            }
             self.grant(account.email);
         }
+    }
+
+    /// Offers `account` its Google calendar and contacts. An account on
+    /// the built-in client that still reads its mail through the API
+    /// chooses a route first: the consent refuses it until then.
+    fn connect_calendar(self: &Rc<Self>, account: Account) {
+        let moves = self
+            .app
+            .upgrade()
+            .and_then(|app| app.google_sign_in(account.id))
+            .is_some_and(|sign_in| sign_in.needs_move(account.provider));
+        let opening = if moves {
+            Opening::Move(vec![account])
+        } else {
+            Opening::Consent(account)
+        };
+        self.present_add_account(opening);
     }
 
     /// Says an API is switched off in the Google Cloud project Penguin Mail
@@ -2894,6 +2917,17 @@ impl MainWindow {
                     win.show_mailbox(inbox);
                 }
                 Done::Grant(email) => win.grant(email),
+                Done::CalendarConnected(account) => {
+                    win.toast(&fill(
+                        // Translators: {account} is an email address.
+                        &gettext("The calendar and contacts of {account} are connected."),
+                        &[("account", &account.email)],
+                    ));
+                    win.refresh_accounts(Reload::Yes);
+                    if let Some(app) = win.app.upgrade() {
+                        app.refresh_calendars();
+                    }
+                }
                 Done::CalendarAdded => win.calendar_added(),
                 Done::SignedInAgain(account) => {
                     win.toast(&fill(
@@ -3113,7 +3147,25 @@ impl MainWindow {
     /// What `account_id` offers, or everything while it has not started.
     pub(super) fn offers(&self, account_id: AccountId) -> Offers {
         let running = self.core.account(account_id);
-        crate::offered::offers_for(running.as_ref().map(|sync| sync.services()))
+        let offers = crate::offered::offers_for(running.as_ref().map(|sync| sync.services()));
+        // The demo's account on the IMAP route runs on the sample Gmail
+        // fake, which reaches everything; the screenshot shows what a real
+        // one lacks.
+        let imap = self
+            .app
+            .upgrade()
+            .and_then(|app| app.google_sign_in(account_id))
+            .is_some_and(|sign_in| sign_in.route == mailrs_domain::MailRoute::Imap);
+        if self.core.demo && imap {
+            return Offers {
+                calendar: false,
+                contacts: false,
+                rules: false,
+                auto_reply: false,
+                ..offers
+            };
+        }
+        offers
     }
 
     /// What `account_id`'s own consent left withheld, or nothing while it
@@ -3296,6 +3348,12 @@ impl MainWindow {
         with_account(
             "account-reconnect",
             Box::new(|win, account| win.sign_in_again(account)),
+        );
+        with_account(
+            "account-choose-route",
+            Box::new(|win, account| {
+                win.present_add_account(Opening::Move(vec![account]));
+            }),
         );
         with_account(
             "account-rules",

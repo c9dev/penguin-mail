@@ -59,6 +59,11 @@ pub fn account_rows(
         parent.add_row(&row);
         fill_servers(app, &row, account, &Rc::default());
     }
+    // A Gmail account whose calendar is not connected says so in its own
+    // Contacts row (`preferences::google_route`), which Connect fills.
+    if crate::offered::calendar_link(account, offers).shows_connect() {
+        return;
+    }
     parent.add_row(&contact_control(
         app, settings, account, offers, withheld, grant,
     ));
@@ -349,6 +354,29 @@ fn calendar(
     }
     let mut online_accounts = true;
     for (account, offers) in accounts {
+        if crate::offered::calendar_link(account, *offers).shows_connect() {
+            let row = adw::ActionRow::builder()
+                .use_markup(false)
+                .title(&account.email)
+                .subtitle(gettext("Not connected"))
+                .build();
+            let button = gtk::Button::builder()
+                .label(gettext("Connect"))
+                .valign(gtk::Align::Center)
+                .build();
+            crate::ui::name(
+                &button,
+                &fill(
+                    &gettext("Connect the calendar for {account}"),
+                    &[("account", &account.email)],
+                ),
+            );
+            let (account_id, connect) = (account.id, grant.clone());
+            button.connect_clicked(move |_| connect(account_id));
+            row.add_suffix(&button);
+            group.add(&row);
+            continue;
+        }
         match calendar_lack(
             account,
             *offers,

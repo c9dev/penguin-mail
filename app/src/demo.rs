@@ -10,7 +10,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::SignInClient;
 use mailrs_domain::calendar::{
     Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Reminder,
     ReminderMethod, Status as CalendarStatus,
@@ -20,6 +19,7 @@ use mailrs_domain::{
     AccountId, Address, Attachment, EpochMillis, Filter, FilterAction, FilterCriteria, MailSet,
     MessageBody, MessageMeta, Provenance, Role,
 };
+use mailrs_domain::{MailRoute, SignInClient};
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::services::{FoundService, ServiceKind};
@@ -808,6 +808,9 @@ pub enum MoveStage {
     /// All three Gmail accounts, and the first-launch sheet over the
     /// window.
     Sheet,
+    /// The first account reads its mail over IMAP and holds no calendar
+    /// token, for the Preferences lines of such an account.
+    PrefsImap,
 }
 
 /// Whether the demo counts the first-launch sheet as shown already. Only
@@ -823,6 +826,7 @@ impl MoveStage {
             "banner-several" => Some(MoveStage::Several),
             "banner-paused" => Some(MoveStage::Paused),
             "sheet" => Some(MoveStage::Sheet),
+            "prefs-imap" => Some(MoveStage::PrefsImap),
             _ => None,
         }
     }
@@ -836,7 +840,7 @@ impl MoveStage {
     /// Whether the demo account at `index` waits for a move.
     fn waits(self, index: usize) -> bool {
         match self {
-            MoveStage::Banner | MoveStage::Paused => index == 0,
+            MoveStage::Banner | MoveStage::Paused | MoveStage::PrefsImap => index == 0,
             MoveStage::Several | MoveStage::Sheet => true,
         }
     }
@@ -864,6 +868,10 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         let stage = MoveStage::asked();
         if !stage.is_some_and(|stage| stage.waits(index)) {
             db.write(move |c| accounts::set_sign_in_client(c, account_id, SignInClient::Own))
+                .await?;
+        }
+        if stage == Some(MoveStage::PrefsImap) && index == 0 {
+            db.write(move |c| accounts::set_mail_route(c, account_id, MailRoute::Imap))
                 .await?;
         }
         let fake = Arc::new(account.gmail());

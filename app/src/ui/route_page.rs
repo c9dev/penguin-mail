@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 
-use super::add_account::{banded, boxed_list, heading};
+use super::add_account::{banded, boxed_list, heading, label};
 use crate::route_choice::{self, Route, RouteRow};
 use mailrs_domain::translate::gettext;
 
@@ -79,6 +79,100 @@ impl RoutePage {
     }
 }
 
+/// The page's tag in the dialog's navigation view.
+pub const CONSENT_TAG: &str = "consent";
+
+/// Whether the consent page warns that Google may call the app
+/// unverified. A build with the flag set was verified.
+pub fn note_shown(verified: bool) -> bool {
+    !verified
+}
+
+/// The page that offers a Gmail account its calendar and contacts after
+/// its mail works.
+pub struct ConsentPage {
+    pub page: adw::NavigationPage,
+    #[cfg_attr(not(test), expect(dead_code, reason = "only the checks read it"))]
+    pub title: gtk::Label,
+    #[cfg_attr(not(test), expect(dead_code, reason = "only the checks read it"))]
+    pub body: gtk::Label,
+    #[cfg_attr(not(test), expect(dead_code, reason = "only the checks read it"))]
+    pub note: gtk::Label,
+    pub continue_button: gtk::Button,
+    pub not_now: gtk::Button,
+}
+
+impl ConsentPage {
+    pub fn new() -> ConsentPage {
+        let banded = banded(
+            CONSENT_TAG,
+            &gettext("Add your Google Calendar and contacts?"),
+        );
+        let centred = |label: &gtk::Label| {
+            label.set_xalign(0.5);
+            label.set_justify(gtk::Justification::Center);
+        };
+        // Translators: Google is a name; keep it as it is.
+        let title = heading(&gettext("Add your Google Calendar and contacts?"));
+        centred(&title);
+        let body = label(
+            // Translators: Google is a name; keep it as it is.
+            &gettext(
+                "Penguin Mail asks Google for your calendar, your contacts and the files it adds to Drive. Google will show its own screen. Your mail is already set up.",
+            ),
+            &["post-lede"],
+        );
+        centred(&body);
+        let note = label(
+            // Translators: Google and Penguin Mail are names; keep them as they are. The two
+            // button names are the ones Google's own page shows.
+            &gettext(
+                "Google may say \"Google hasn't verified this app\". Click Advanced, then Go to Penguin Mail (unsafe).",
+            ),
+            &["post-lede"],
+        );
+        centred(&note);
+        note.set_visible(note_shown(
+            option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some(),
+        ));
+        let not_now = gtk::Button::builder()
+            .label(gettext("Not Now"))
+            .css_classes(["pill", "post-mid-pill"])
+            .build();
+        let continue_button = gtk::Button::builder()
+            // Translators: Google is a name; keep it as it is.
+            .label(gettext("Continue to Google"))
+            .css_classes(["pill", "suggested-action", "post-mid-pill"])
+            .build();
+        let buttons = gtk::Box::builder()
+            .spacing(12)
+            .halign(gtk::Align::Center)
+            .margin_top(17)
+            .build();
+        buttons.append(&not_now);
+        buttons.append(&continue_button);
+        banded.body.append(&title);
+        banded.body.append(&body);
+        banded.body.append(&note);
+        banded.body.append(&buttons);
+        // A page pushed on top of a focused button leaves the focus nowhere.
+        let first = continue_button.downgrade();
+        banded.page.connect_shown(move |_| {
+            if let Some(button) = first.upgrade() {
+                button.grab_focus();
+            }
+        });
+        ConsentPage {
+            page: banded.page,
+            title,
+            body,
+            note,
+            continue_button,
+            not_now,
+        }
+    }
+}
+
 /// One row: its words, and a chevron after them. Text from the row is
 /// plain, never markup.
 fn route_row(shown: &RouteRow) -> adw::ActionRow {
@@ -136,6 +230,8 @@ pub(crate) mod checks {
         a_mac_page_shows_the_tag_and_the_footer();
         an_address_with_an_ampersand_stays_plain();
         showing_again_replaces_the_rows_and_the_answer();
+        the_consent_page_names_both_buttons();
+        the_consent_page_keeps_its_note_until_verified();
     }
 
     fn everything() -> Ready {
@@ -239,5 +335,33 @@ pub(crate) mod checks {
         ActionRowExt::activate(&row_at(&page, 0));
         assert_eq!(*first.borrow(), 0);
         assert_eq!(*second.borrow(), [Route::Goa]);
+    }
+
+    fn the_consent_page_names_both_buttons() {
+        let page = ConsentPage::new();
+        assert_eq!(
+            page.continue_button.label().as_deref(),
+            Some("Continue to Google")
+        );
+        assert_eq!(page.not_now.label().as_deref(), Some("Not Now"));
+        assert_eq!(page.title.label(), "Add your Google Calendar and contacts?");
+        assert_eq!(
+            page.body.label(),
+            "Penguin Mail asks Google for your calendar, your contacts and the files it adds to Drive. Google will show its own screen. Your mail is already set up."
+        );
+    }
+
+    fn the_consent_page_keeps_its_note_until_verified() {
+        assert!(note_shown(false));
+        assert!(!note_shown(true));
+        let page = ConsentPage::new();
+        assert_eq!(
+            page.note.get_visible(),
+            note_shown(option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some())
+        );
+        assert_eq!(
+            page.note.label(),
+            "Google may say \"Google hasn't verified this app\". Click Advanced, then Go to Penguin Mail (unsafe)."
+        );
     }
 }

@@ -36,7 +36,7 @@ use crate::core::Core;
 use crate::permission::Permission;
 use crate::route_choice::{Goa, Platform, Ready, Route, any_route, footer, ready_now, rows};
 use crate::ui::post_band::PostBand;
-use crate::ui::route_page::{self, RoutePage};
+use crate::ui::route_page::{self, ConsentPage, RoutePage};
 use crate::ui::tile_grid::TileGrid;
 use mailrs_sync::sign_in::Wanted;
 
@@ -69,6 +69,9 @@ pub enum Opening {
     /// The route page for each of these Gmail accounts in turn, to move
     /// each to its own sign-in. Closing the dialog ends the walk.
     Move(Vec<Account>),
+    /// The page that offers this Gmail account its calendar and contacts,
+    /// after its mail works.
+    Consent(Account),
     /// A demo stage, for screenshots: see [`preview`].
     Preview(String),
 }
@@ -98,9 +101,22 @@ pub enum Done {
     /// Open Inbox on the last page: the window shows that account's
     /// inbox. The dialog is closed.
     OpenInbox(AccountId),
+    /// The calendar consent went through for this account. The dialog is
+    /// closed.
+    CalendarConnected(Account),
     /// Grant Access on the last page: the window sends this account
     /// through its provider's consent again. The dialog is closed.
     Grant(String),
+}
+
+/// What the browser page waits for.
+enum Flow {
+    /// A new sign-in, or a sign-in again.
+    SignIn,
+    /// A Gmail account's move to its own sign-in.
+    Move(Account),
+    /// A Gmail account's calendar consent.
+    Consent(Account),
 }
 
 pub fn present(
@@ -117,6 +133,9 @@ pub fn present(
         _ => None,
     };
     let this = Dialog::new(core, again, Box::new(done));
+    if let Opening::Consent(account) = &opening {
+        this.consenting.replace(Some(account.clone()));
+    }
     this.connect();
     let routes_first = match &opening {
         Opening::Move(_) => true,
@@ -126,6 +145,7 @@ pub fn present(
     let root = match &opening {
         _ if routes_first => route_page::TAG,
         Opening::Move(_) => route_page::TAG,
+        Opening::Consent(_) => route_page::CONSENT_TAG,
         Opening::Pick | Opening::Preview(_) => "pick",
         Opening::Tile(_) | Opening::ByHand => "address",
         Opening::Browser(_) => "browser",
@@ -179,12 +199,19 @@ pub fn present(
                 .replace(Some(add_account::MoveWalk::new(accounts)));
             this.offer_routes(None);
         }
+        Opening::Consent(_) => {
+            // The closed envelope with no stamp, as the route page has.
+            this.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
+        }
         Opening::Calendar => this.open_calendar(),
         Opening::Again(account) if account.provider == Provider::CalDav => {
             this.load_calendar(account)
         }
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
+    }
+    if root == route_page::CONSENT_TAG {
+        this.window.set_focus(Some(&this.consent.continue_button));
     }
     if root == route_page::TAG
         && this.showing() == Some(route_page::TAG)
@@ -251,7 +278,7 @@ pub(super) fn banded(tag: &str, title: &str) -> Banded {
     Banded { page, header, body }
 }
 
-fn label(text: &str, classes: &[&str]) -> gtk::Label {
+pub(super) fn label(text: &str, classes: &[&str]) -> gtk::Label {
     gtk::Label::builder()
         .label(text)
         .wrap(true)
@@ -1904,6 +1931,10 @@ struct Dialog {
     route_expected: RefCell<Option<String>>,
     pick: PickPage,
     routes: RoutePage,
+    consent: ConsentPage,
+    /// The Gmail account the calendar consent is for, when the dialog
+    /// opened on it.
+    consenting: RefCell<Option<Account>>,
     address: AddressPage,
     lookup: LookupPage,
     browser: BrowserPage,
@@ -2000,6 +2031,8 @@ impl Dialog {
             route_expected: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
             routes: RoutePage::new(),
+            consent: ConsentPage::new(),
+            consenting: RefCell::new(None),
             address: address_page(),
             lookup: lookup_page(),
             browser,
@@ -2011,10 +2044,11 @@ impl Dialog {
         })
     }
 
-    fn pages(&self) -> [(&'static str, adw::NavigationPage); 10] {
+    fn pages(&self) -> [(&'static str, adw::NavigationPage); 11] {
         [
             ("pick", self.pick.banded.page.clone()),
             (route_page::TAG, self.routes.page.clone()),
+            (route_page::CONSENT_TAG, self.consent.page.clone()),
             ("address", self.address.banded.page.clone()),
             ("lookup", self.lookup.banded.page.clone()),
             ("browser", self.browser.banded.page.clone()),
@@ -2143,12 +2177,29 @@ impl Dialog {
             copied.show();
         });
         let retry = on(|this| {
+            let consenting = this.consenting.borrow().clone();
+            if let Some(account) = consenting {
+                return this.run_browser(Browser::Google, None, Flow::Consent(account));
+            }
             let expected = this.browser_expected.borrow().clone();
             this.start_browser(this.browser_provider.get(), expected);
         });
         self.browser.retry.connect_clicked(move |_| retry());
         let cancel = on(Dialog::cancel_browser);
         self.browser.cancel.connect_clicked(move |_| cancel());
+        let continue_to_google = on(|this| {
+            let consenting = this.consenting.borrow().clone();
+            if let Some(account) = consenting {
+                this.run_browser(Browser::Google, None, Flow::Consent(account));
+            }
+        });
+        self.consent
+            .continue_button
+            .connect_clicked(move |_| continue_to_google());
+        let not_now = on(|this| {
+            this.window.close();
+        });
+        self.consent.not_now.connect_clicked(move |_| not_now());
         let jmap_browser = on(Dialog::start_jmap_browser);
         self.password
             .browser
@@ -3666,7 +3717,11 @@ impl Dialog {
                     .as_ref()
                     .and_then(|w| w.current().cloned());
                 let expected = self.route_expected.borrow().clone();
-                self.run_browser(Browser::Google, expected, account);
+                self.run_browser(
+                    Browser::Google,
+                    expected,
+                    account.map_or(Flow::SignIn, Flow::Move),
+                );
             }
             // Their plans connect these rows; until then no build lists them.
             Route::Goa | Route::AppPassword => {}
@@ -3708,18 +3763,13 @@ impl Dialog {
     /// `browser`'s sign-in in the browser, with the page that waits for
     /// it. `expected` is the address typed, when there was one.
     fn start_browser(self: &Rc<Self>, browser: Browser, expected: Option<String>) {
-        self.run_browser(browser, expected, None);
+        self.run_browser(browser, expected, Flow::SignIn);
     }
 
-    /// As [`Dialog::start_browser`]; with `moving` the page waits for that
+    /// As [`Dialog::start_browser`]; with `flow` set to a move the page waits for that
     /// Gmail account's move to its own sign-in, which keeps the page up
     /// while the account's queued work finishes.
-    fn run_browser(
-        self: &Rc<Self>,
-        browser: Browser,
-        expected: Option<String>,
-        moving: Option<Account>,
-    ) {
+    fn run_browser(self: &Rc<Self>, browser: Browser, expected: Option<String>, flow: Flow) {
         self.stop_browser();
         self.browser.cancel.set_sensitive(true);
         self.browser.banded.page.set_can_pop(true);
@@ -3797,9 +3847,15 @@ impl Dialog {
                 (Browser::Google, Some(address)) => Wanted::Only(address),
                 (Browser::Microsoft, Some(address)) => Wanted::Suggested(address),
             };
-            let is_move = moving.is_some();
-            let signed = match moving {
-                Some(account) => {
+            let is_move = matches!(flow, Flow::Move(_));
+            let is_consent = matches!(flow, Flow::Consent(_));
+            let signed = match flow {
+                Flow::Consent(account) => this
+                    .core
+                    .connect_calendar(account, urls, canceled)
+                    .await
+                    .map(|a| (a, None)),
+                Flow::Move(account) => {
                     let (committed, signed_in) = async_channel::bounded::<()>(1);
                     let weak = Rc::downgrade(&this);
                     glib::spawn_future_local(async move {
@@ -3815,13 +3871,22 @@ impl Dialog {
                         .await
                         .map(|a| (a, None))
                 }
-                None => {
+                Flow::SignIn => {
                     this.core
                         .sign_in_in_browser(browser, urls, wanted, canceled)
                         .await
                 }
             };
             match signed {
+                Ok((account, _)) if is_consent => {
+                    // The account is connected whether or not the dialog is
+                    // still open, so the window hears about it either way.
+                    (this.done)(Done::CalendarConnected(account));
+                    if this.asking.wants(ticket) {
+                        this.stop_browser();
+                        this.window.close();
+                    }
+                }
                 Ok((account, _)) if is_move => {
                     if this.asking.wants(ticket) {
                         this.moved(account);
@@ -3959,6 +4024,11 @@ impl Dialog {
         }
         self.asking.forget();
         self.stop_browser();
+        // A canceled calendar consent counts as Not Now.
+        if self.consenting.borrow().is_some() {
+            self.window.close();
+            return;
+        }
         if self.nav.previous_page(&self.browser.banded.page).is_some() {
             self.nav.pop();
         } else {
@@ -4646,6 +4716,18 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
             } else {
                 this.show_routes(Platform::MacOs, everything(Goa::Absent), None);
             }
+        }
+        "consent" => {
+            let account = Account {
+                id: 1,
+                email: "maria.costa@gmail.com".into(),
+                state: mailrs_domain::AccountState::Ok,
+                provider: Provider::Gmail,
+                provider_name: Some("Gmail".into()),
+            };
+            this.consenting.replace(Some(account));
+            this.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
+            this.push(route_page::CONSENT_TAG);
         }
         "closed" => {
             let tuta = Address::parse("dana@tuta.com").expect("a sample address");

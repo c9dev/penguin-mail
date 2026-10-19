@@ -12392,6 +12392,100 @@ msgstr "Esta conta já está a mudar para o novo início de sessão."
 msgid "Moving your account. This takes a moment."
 msgstr "A mudar a sua conta. Demora um momento."
 
+#. Translators: Gmail and gmail.com are names; keep them as they are.
+#: app/src/offered.rs
+msgid "Your Gmail filters still run. Change them on gmail.com."
+msgstr ""
+"Os seus filtros do Gmail continuam a funcionar. Altere-os em gmail.com."
+
+#. Translators: gmail.com is a name; keep it as it is.
+#: app/src/offered.rs
+msgid "Set your automatic reply on gmail.com."
+msgstr "Defina a sua resposta automática em gmail.com."
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/offered.rs
+msgid "Open Gmail Filters"
+msgstr "Abrir os filtros do Gmail"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/offered.rs
+msgid "Open Gmail Settings"
+msgstr "Abrir as definições do Gmail"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/ui/preferences/google_route.rs
+msgid "Gmail features"
+msgstr "Funcionalidades do Gmail"
+
+#: app/src/ui/preferences/google_route.rs
+msgid "Every feature"
+msgstr "Todas as funcionalidades"
+
+#: app/src/ui/preferences/google_route.rs
+msgid "Mail, calendar and contacts"
+msgstr "Correio, calendário e contactos"
+
+#: app/src/ui/preferences/google_route.rs
+msgid "Get Every Feature"
+msgstr "Obter todas as funcionalidades"
+
+#: app/src/ui/preferences/google_route.rs app/src/ui/contacts_prefs.rs app/src/ui/calendar/sidebar.rs
+msgid "Not connected"
+msgstr "Não ligado"
+
+#: app/src/ui/preferences/google_route.rs app/src/ui/contacts_prefs.rs app/src/ui/calendar/sidebar.rs
+msgid "Connect"
+msgstr "Ligar"
+
+#: app/src/ui/preferences/google_route.rs app/src/ui/contacts_prefs.rs app/src/ui/calendar/sidebar.rs
+msgid "Connect the calendar for {account}"
+msgstr "Ligar o calendário de {account}"
+
+#: app/src/ui/preferences/google_route.rs
+msgid "Connect the contacts for {account}"
+msgstr "Ligar os contactos de {account}"
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/route_page.rs
+msgid "Add your Google Calendar and contacts?"
+msgstr "Adicionar o seu Google Calendar e os contactos?"
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/route_page.rs
+msgid ""
+"Penguin Mail asks Google for your calendar, your contacts and the files it"
+" adds to Drive. Google will show its own screen. Your mail is already set "
+"up."
+msgstr ""
+"O Penguin Mail pede ao Google o seu calendário, os seus contactos e os "
+"ficheiros que adiciona ao Drive. O Google mostra o seu próprio ecrã. O seu"
+" correio já está configurado."
+
+#. Translators: Google and Penguin Mail are names; keep them as they are. The two
+#. button names are the ones Google's own page shows.
+#: app/src/ui/route_page.rs
+msgid ""
+"Google may say \"Google hasn't verified this app\". Click Advanced, then "
+"Go to Penguin Mail (unsafe)."
+msgstr ""
+"O Google pode dizer \"O Google não verificou esta aplicação\". Clique em "
+"Avançadas e depois em Ir para o Penguin Mail (não seguro)."
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/route_page.rs
+msgid "Continue to Google"
+msgstr "Continuar para o Google"
+
+#. Translators: {account} is an email address.
+#: app/src/ui/window.rs
+msgid "The calendar and contacts of {account} are connected."
+msgstr "O calendário e os contactos de {account} estão ligados."
+
+#: app/src/core.rs
+msgid "The demo cannot connect a calendar."
+msgstr "A demonstração não pode ligar um calendário."
+
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Instalar o Bubblewrap"
 

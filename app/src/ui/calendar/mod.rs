@@ -1077,7 +1077,8 @@ impl CalendarView {
     /// The accounts the calendar reads, read again whenever the window
     /// reads its accounts, which it does when one starts: an account's
     /// reason line, such as a provider with no calendar yet, arrives
-    /// then.
+    /// then. A Gmail account with no calendar token says "Not connected"
+    /// and offers Connect instead of a reason.
     pub fn set_accounts(self: &Rc<Self>, accounts: Vec<CalendarAccount>) {
         self.accounts.replace(accounts);
         self.reload();

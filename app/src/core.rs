@@ -27,8 +27,8 @@ use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, JmapBrowser, NewCalDav, NewImap, NewJmap, NewPop3,
-    Wanted, caldav_signed_in, caldav_signed_in_again, check_pop3, google_sign_in, imap_signed_in,
-    in_browser, jmap_in_browser, jmap_signed_in, pop3_signed_in,
+    Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent, check_pop3, google_sign_in,
+    imap_signed_in, in_browser, jmap_in_browser, jmap_signed_in, pop3_signed_in,
 };
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, Clients, Connector,
@@ -1714,6 +1714,53 @@ impl Core {
                 tracing::warn!(account = id, error = %err, "could not start the account again after the move");
             }
             Ok::<_, anyhow::Error>(moved?)
+        })
+        .await
+    }
+}
+
+impl Core {
+    /// Asks Google, through the built-in client, for the calendar,
+    /// contacts and Drive access of `account`, a Gmail account whose mail
+    /// comes over IMAP, and starts the account again with them. Its mail
+    /// route stays as it was. `urls` and `cancel` work as for
+    /// [`Core::move_to_own_client`]: closing the channel behind `cancel`
+    /// ends the wait and leaves the account as it was.
+    pub async fn connect_calendar(
+        &self,
+        account: Account,
+        urls: async_channel::Sender<String>,
+        cancel: async_channel::Receiver<()>,
+    ) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("The demo cannot connect a calendar."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let db = self.db.clone();
+        let connector = self.connector();
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        self.call(async move {
+            let open = move |url: &str| {
+                let _ = urls.try_send(url.to_string());
+            };
+            let consent = calendar_consent(&connector, &account, open);
+            let signed = tokio::select! {
+                waited = tokio::time::timeout(BROWSER_WAIT, consent) => waited
+                    .map_err(|_| anyhow!(gettext("Gave up waiting for the browser after five minutes.")))??,
+                _ = cancel.recv() => bail!(gettext("Canceled.")),
+            };
+            // The account's services read the new token once its loop starts again.
+            engine.stop_account(signed.id);
+            if let Err(err) = start_again(&reach, &engine, &db, &signed, false).await {
+                tracing::warn!(account = signed.id, error = %err, "could not start the account again after its calendar consent");
+            }
+            Ok::<_, anyhow::Error>(signed)
         })
         .await
     }
