@@ -15,7 +15,7 @@ impl Dialog {
     pub(super) fn offer_routes(self: &Rc<Self>, expected: Option<String>) {
         let platform = Platform::this();
         if platform != Platform::Linux {
-            let ready = ready_now(&mailrs_sync::Clients::current(), Goa::Absent);
+            let ready = ready_now(Goa::Absent);
             return self.offer_rows(platform, ready, expected);
         }
         if !self.running.begin() {
@@ -50,7 +50,7 @@ impl Dialog {
             .and_then(|walk| walk.current().map(|a| a.email.clone()));
         let address = moving.clone().or_else(|| expected.clone());
         let goa = route_choice::goa_state(&list, address.as_deref());
-        let ready = ready_now(&mailrs_sync::Clients::current(), goa);
+        let ready = ready_now(goa);
         let platform = Platform::this();
         // A move walk keeps the route page, with Online Accounts as its
         // first row, since the person picks for each account.
@@ -58,11 +58,7 @@ impl Dialog {
             return self.offer_rows(platform, ready, expected);
         }
         let Some(address) = address else {
-            return self.offer_rows(
-                platform,
-                ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
-                expected,
-            );
+            return self.offer_rows(platform, ready_now(Goa::Absent), expected);
         };
         match (goa, &list) {
             (Goa::Holds | Goa::Present, Ok(list)) => self.open_goa_page(address, list, expected),
@@ -97,7 +93,8 @@ impl Dialog {
         }
     }
 
-    /// The route page, or the browser page when no row would show.
+    /// The route page, without the own-project rows while the account
+    /// leaves its own project.
     pub(super) fn offer_rows(
         self: &Rc<Self>,
         platform: Platform,
@@ -105,9 +102,6 @@ impl Dialog {
         expected: Option<String>,
     ) {
         let ready = self.without_own(ready);
-        if !any_route(platform, ready) {
-            return self.start_browser(Browser::Google, expected);
-        }
         self.show_routes(platform, ready, expected);
     }
 
@@ -161,11 +155,7 @@ impl Dialog {
             this.saved.replace(Some(own));
             let expected = this.route_expected.borrow().clone();
             let platform = Platform::this();
-            this.routes_for(
-                platform,
-                ready_now(&mailrs_sync::Clients::current(), this.routes_goa.get()),
-                expected,
-            );
+            this.routes_for(platform, ready_now(this.routes_goa.get()), expected);
         });
     }
 
@@ -208,11 +198,7 @@ impl Dialog {
                     let list = this.core.goa_accounts().await;
                     match (address.or_else(|| expected.clone()), list) {
                         (Some(address), Ok(list)) => this.open_goa_page(address, &list, expected),
-                        _ => this.show_routes(
-                            Platform::this(),
-                            ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
-                            expected,
-                        ),
+                        _ => this.show_routes(Platform::this(), ready_now(Goa::Absent), expected),
                     }
                 });
             }
@@ -303,7 +289,7 @@ impl Dialog {
             };
             // The Online Accounts row was this page; the rest are the
             // other ways.
-            let ready = ready_now(&mailrs_sync::Clients::current(), state);
+            let ready = ready_now(state);
             let rows = rows_without_goa(platform, ready);
             if rows.is_empty() {
                 return this.start_browser(Browser::Google, expected);
@@ -476,11 +462,7 @@ impl Dialog {
         // The rows are rebuilt before the page shows again, so the focus
         // lands on a row that stays.
         let platform = Platform::this();
-        self.routes_for(
-            platform,
-            ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
-            None,
-        );
+        self.routes_for(platform, ready_now(Goa::Absent), None);
         self.back_to(route_page::TAG);
     }
 

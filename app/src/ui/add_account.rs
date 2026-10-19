@@ -35,7 +35,7 @@ use crate::gmail_password::{self, Action as GmailAction};
 use crate::own_project::{self, Step as OwnStep};
 use crate::permission::Permission;
 use crate::route_choice::{
-    self, Goa, Platform, Ready, Route, any_route, footer, ready_now, rows, rows_without_goa,
+    self, Goa, Platform, Ready, Route, footer, ready_now, rows, rows_without_goa,
 };
 use crate::ui::gmail_password_page::GmailPasswordPage;
 use crate::ui::goa_page::{self, GoaPage, PageState};
@@ -170,7 +170,7 @@ pub fn present(
     }
     let routes_first = match &opening {
         Opening::Move(_) | Opening::LeaveOwn(_) => true,
-        Opening::Browser(Browser::Google) => google_routes().1,
+        Opening::Browser(Browser::Google) => true,
         _ => false,
     };
     let root = match &opening {
@@ -267,18 +267,6 @@ pub fn present(
         this.window.set_focus(Some(&row));
     }
     Some(this.window.clone())
-}
-
-/// The platform and what it can run now, and whether any route shows.
-fn google_routes() -> (Platform, bool) {
-    let platform = Platform::this();
-    (
-        platform,
-        any_route(
-            platform,
-            ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
-        ),
-    )
 }
 
 /// A banded page: a flat header over the band, the page's own column
@@ -5065,7 +5053,6 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
             // Every row is ready, so the screenshots show them all.
             let everything = |goa| Ready {
                 goa,
-                app_password: true,
                 own_project: true,
                 saved_project: false,
             };

@@ -70,13 +70,6 @@ impl MainWindow {
                 .collect(),
             not_downloading,
             switchable,
-            stuck: self.app.upgrade().map_or_else(HashSet::new, |app| {
-                sorted
-                    .iter()
-                    .filter(|(a, _)| app.sign_in_path(a) == crate::move_banner::Path::Stuck)
-                    .map(|(a, _)| a.id)
-                    .collect()
-            }),
         };
         (sorted, extras)
     }

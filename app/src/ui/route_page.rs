@@ -239,7 +239,6 @@ pub(crate) mod checks {
     fn everything() -> Ready {
         Ready {
             goa: Goa::Holds,
-            app_password: true,
             own_project: true,
             saved_project: false,
         }

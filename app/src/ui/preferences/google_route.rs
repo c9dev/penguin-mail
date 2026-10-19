@@ -60,35 +60,20 @@ pub enum Line {
 }
 
 /// The lines under `account`'s address. `platform` is for the GNOME Online
-/// Accounts plan, whose route changes what the Move line offers. With no
-/// route ready the features and the move stay out: both lead to the route
-/// choice, which would have nothing to offer.
+/// Accounts plan, whose route changes what the Move line offers.
 #[cfg(test)]
-pub fn lines(
-    sign_in: &GmailSignIn,
-    _platform: Platform,
-    account: &Account,
-    routes_ready: bool,
-) -> Vec<Line> {
-    lines_with(sign_in, account, routes_ready, false)
+pub fn lines(sign_in: &GmailSignIn, _platform: Platform, account: &Account) -> Vec<Line> {
+    lines_with(sign_in, account, false)
 }
 
 /// [`lines`], knowing whether Online Accounts holds the account's address.
-pub fn lines_with(
-    sign_in: &GmailSignIn,
-    account: &Account,
-    routes_ready: bool,
-    goa_holds: bool,
-) -> Vec<Line> {
+pub fn lines_with(sign_in: &GmailSignIn, account: &Account, goa_holds: bool) -> Vec<Line> {
     let mut lines = Vec::new();
     let on_goa = sign_in.on_online_accounts();
     match sign_in.route() {
-        MailRoute::GmailApi if routes_ready => lines.push(Line::Features { every: true }),
-        MailRoute::GmailApi => {}
+        MailRoute::GmailApi => lines.push(Line::Features { every: true }),
         MailRoute::Imap => {
-            if routes_ready {
-                lines.push(Line::Features { every: false });
-            }
+            lines.push(Line::Features { every: false });
             if on_goa {
                 lines.push(Line::Limits {
                     text: gettext(
@@ -111,11 +96,9 @@ pub fn lines_with(
     }
     if sign_in.client() == SignInClient::Own {
         lines.push(Line::OwnProject);
-        if routes_ready {
-            lines.push(Line::StopOwn);
-        }
+        lines.push(Line::StopOwn);
     }
-    if routes_ready && account.provider == Provider::Gmail && sign_in.waits_to_move() {
+    if account.provider == Provider::Gmail && sign_in.waits_to_move() {
         let waiting = Waiting {
             account: account.clone(),
             paused: account.state == mailrs_domain::AccountState::MailPaused,
@@ -150,13 +133,11 @@ pub struct Contacts {
     pub added: bool,
 }
 
-/// What decides an account's Gmail rows: how it signs in, whether this
-/// build offers the route choice, and whether Online Accounts holds the
-/// address.
+/// What decides an account's Gmail rows: how it signs in, and whether
+/// Online Accounts holds the address.
 #[derive(Clone)]
 struct RouteFacts {
     sign_in: GmailSignIn,
-    routes_ready: bool,
     goa_holds: bool,
 }
 
@@ -210,7 +191,6 @@ pub fn rows(
         });
         let facts = RouteFacts {
             sign_in,
-            routes_ready: app.routes_ready(),
             goa_holds: app.core.goa_holds(&account.email) == Some(true),
         };
         register(
@@ -301,7 +281,6 @@ fn fill_rows(
 ) -> Vec<gtk::Widget> {
     let RouteFacts {
         ref sign_in,
-        routes_ready,
         goa_holds,
     } = shown.facts;
     let (connect, contacts) = (&shown.connect, &shown.contacts);
@@ -310,7 +289,7 @@ fn fill_rows(
         parent.add_row(widget);
         added.push(widget.clone());
     };
-    let (gaps, own): (Vec<Line>, Vec<Line>) = lines_with(sign_in, account, routes_ready, goa_holds)
+    let (gaps, own): (Vec<Line>, Vec<Line>) = lines_with(sign_in, account, goa_holds)
         .into_iter()
         .partition(|line| matches!(line, Line::Gap { .. }));
     if !own.is_empty() {
@@ -583,7 +562,6 @@ mod tests {
             &sign_in(SignInClient::Own, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
-            true,
         );
         assert_eq!(
             found,
@@ -601,16 +579,8 @@ mod tests {
             &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
             Platform::Linux,
             &account(AccountState::Ok),
-            true,
         );
         assert!(!built_in.contains(&Line::OwnProject));
-        let unready = lines(
-            &sign_in(SignInClient::Own, MailRoute::GmailApi),
-            Platform::Linux,
-            &account(AccountState::Ok),
-            false,
-        );
-        assert_eq!(unready, [Line::OwnProject]);
     }
 
     #[test]
@@ -619,7 +589,6 @@ mod tests {
             &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
             Platform::Linux,
             &account(AccountState::Ok),
-            true,
         );
         assert_eq!(found[0], Line::Features { every: false });
         assert!(found.contains(&Line::Gap {
@@ -641,7 +610,6 @@ mod tests {
             &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
-            true,
         );
         assert_eq!(
             found,
@@ -661,34 +629,10 @@ mod tests {
             &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::MailPaused),
-            true,
         );
         assert!(found.contains(&Line::Move {
             title: "Penguin Mail can't get new mail for maria.costa@gmail.com. Choose how it signs in to get your mail back. Nothing on this computer was lost.".into()
         }));
-    }
-
-    #[test]
-    fn with_no_route_ready_a_built_in_api_account_shows_no_gmail_lines() {
-        let found = lines(
-            &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
-            Platform::Linux,
-            &account(AccountState::MailPaused),
-            false,
-        );
-        assert_eq!(found, []);
-    }
-
-    #[test]
-    fn with_no_route_ready_an_imap_account_keeps_only_what_gmail_com_does() {
-        let found = lines(
-            &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
-            Platform::Linux,
-            &account(AccountState::Ok),
-            false,
-        );
-        assert_eq!(found.len(), 2);
-        assert!(found.iter().all(|line| matches!(line, Line::Gap { .. })));
     }
 }
 
@@ -756,7 +700,6 @@ pub(crate) mod checks {
         };
         let facts = RouteFacts {
             sign_in,
-            routes_ready: true,
             goa_holds: false,
         };
         register(

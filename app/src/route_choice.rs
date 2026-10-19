@@ -3,11 +3,7 @@
 //! footer are tested without a display.
 
 use mailrs_domain::translate::gettext;
-use mailrs_sync::Clients;
 use mailrs_sync::goa::{self, GoaAccount, GoaError};
-
-/// Whether the own-project setup flow exists in this build.
-pub const OWN_PROJECT_SETUP: bool = true;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
@@ -36,12 +32,13 @@ pub enum Goa {
     Holds,
 }
 
-/// Which routes this build can run now. A route that is not built yet is
-/// left out of the list.
+/// What decides the rows beyond the platform. The password row is always
+/// listed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Ready {
     pub goa: Goa,
-    pub app_password: bool,
+    /// The own-project rows show. They go while an account leaves its own
+    /// project.
     pub own_project: bool,
     /// A project from an earlier setup is kept on this computer.
     pub saved_project: bool,
@@ -77,13 +74,12 @@ pub fn goa_state(list: &Result<Vec<GoaAccount>, GoaError>, email: Option<&str>) 
     }
 }
 
-/// What this build can run now. The own-project and password routes are
-/// always ready; the caller says whether a project is kept.
-pub fn ready_now(clients: &Clients, goa: Goa) -> Ready {
+/// The rows every route choice starts from: the own-project rows shown,
+/// no project kept. The caller says whether a project is kept.
+pub fn ready_now(goa: Goa) -> Ready {
     Ready {
         goa,
-        app_password: true,
-        own_project: OWN_PROJECT_SETUP || matches!(clients.own_google, Some(Ok(_))),
+        own_project: true,
         saved_project: false,
     }
 }
@@ -104,9 +100,7 @@ pub fn rows(platform: Platform, ready: Ready) -> Vec<RouteRow> {
     }
     if goa_listed {
         rows.push(goa_row(ready.goa));
-        if ready.app_password {
-            rows.push(password_row(true));
-        }
+        rows.push(password_row(true));
         if ready.own_project {
             rows.push(own_project_row(false, saved));
         }
@@ -114,9 +108,7 @@ pub fn rows(platform: Platform, ready: Ready) -> Vec<RouteRow> {
         if ready.own_project {
             rows.push(own_project_row(!saved, saved));
         }
-        if ready.app_password {
-            rows.push(password_row(false));
-        }
+        rows.push(password_row(false));
     }
     rows
 }
@@ -128,11 +120,6 @@ pub fn rows_without_goa(platform: Platform, ready: Ready) -> Vec<RouteRow> {
         .into_iter()
         .filter(|row| row.route != Route::Goa)
         .collect()
-}
-
-/// Whether any row would show.
-pub fn any_route(platform: Platform, ready: Ready) -> bool {
-    !rows(platform, ready).is_empty()
 }
 
 /// The line under the list, when the own-project row is listed and Online
@@ -211,12 +198,7 @@ mod tests {
     use super::*;
 
     fn ready(goa: Goa) -> Ready {
-        Ready {
-            goa,
-            app_password: true,
-            own_project: true,
-            saved_project: false,
-        }
+        ready_now(goa)
     }
 
     #[test]
@@ -341,21 +323,16 @@ mod tests {
     }
 
     #[test]
-    fn routes_not_built_yet_are_left_out() {
-        let only_own = Ready {
-            goa: Goa::Absent,
-            app_password: false,
-            own_project: true,
-            saved_project: false,
-        };
-        assert_eq!(rows(Platform::Linux, only_own).len(), 1);
-        let none = Ready {
+    fn leaving_the_own_project_still_lists_the_password() {
+        let no_own = Ready {
             own_project: false,
-            ..only_own
+            ..ready(Goa::Absent)
         };
-        assert!(rows(Platform::Linux, none).is_empty());
-        assert!(!any_route(Platform::Linux, none));
-        assert!(any_route(Platform::Linux, only_own));
+        let routes: Vec<Route> = rows(Platform::Linux, no_own)
+            .iter()
+            .map(|r| r.route)
+            .collect();
+        assert_eq!(routes, [Route::AppPassword]);
     }
 
     #[test]
@@ -387,17 +364,9 @@ mod tests {
     }
 
     #[test]
-    fn this_build_offers_the_own_project_setup_without_any_client() {
-        let none = mailrs_sync::Clients::default();
-        assert!(ready_now(&none, Goa::Absent).own_project);
-        assert!(!ready_now(&none, Goa::Absent).saved_project);
-        let named = mailrs_sync::Clients {
-            own_google: Some(Ok(mailrs_sync::sign_in::own_client::OwnClient::new(
-                "id", "secret",
-            ))),
-            ..Default::default()
-        };
-        assert!(ready_now(&named, Goa::Absent).own_project);
+    fn every_route_choice_starts_with_the_own_project_and_no_saved_one() {
+        let ready = ready_now(Goa::Absent);
+        assert!(ready.own_project && !ready.saved_project);
         assert_eq!(title(), "Choose how Penguin Mail signs in to Gmail");
     }
 }

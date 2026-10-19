@@ -1623,7 +1623,7 @@ impl MainWindow {
     /// computer offers no route, so the sheet never asks for a choice
     /// that cannot be made.
     fn show_move_sheet(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
-        if !crate::move_banner::sheet_due(self.core.google_move_shown(), waiting, true) {
+        if !crate::move_banner::sheet_due(self.core.google_move_shown(), waiting) {
             return;
         }
         // Marked before it shows, so a crash before an answer still shows
@@ -2145,10 +2145,6 @@ impl MainWindow {
         let Some(account) = self.account(account_id) else {
             return;
         };
-        // Its Grant Access would lead nowhere.
-        if self.sign_in_path(&account) == Path::Stuck {
-            return;
-        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let email = &account.email;
@@ -2182,7 +2178,6 @@ impl MainWindow {
                 Path::Move => {
                     self.present_add_account(Opening::Move(vec![account]));
                 }
-                Path::Stuck => {}
                 Path::Usual => {
                     if let Some(browser) = Browser::of(account.provider) {
                         self.sign_in_in_browser(browser, Some(email));
@@ -2215,7 +2210,6 @@ impl MainWindow {
     fn connect_calendar(self: &Rc<Self>, account: Account) {
         let opening = match self.sign_in_path(&account) {
             Path::Move => Opening::Move(vec![account]),
-            Path::Stuck => return,
             Path::Usual => Opening::Consent(account),
         };
         self.present_add_account(opening);
@@ -3089,14 +3083,9 @@ impl MainWindow {
     fn sign_in_again(self: &Rc<Self>, account: Account) {
         // An account that needs a move chooses a route instead: the
         // built-in sign-in would return a token without its mail scope.
-        // With no route to choose, nothing offers this press.
-        match self.sign_in_path(&account) {
-            Path::Move => {
-                self.present_add_account(Opening::Move(vec![account]));
-                return;
-            }
-            Path::Stuck => return,
-            Path::Usual => {}
+        if self.sign_in_path(&account) == Path::Move {
+            self.present_add_account(Opening::Move(vec![account]));
+            return;
         }
         // A Gmail account that reads its mail over IMAP signs in again
         // with a new app password.
@@ -3327,10 +3316,9 @@ impl MainWindow {
         let services = running.as_ref().map(|sync| sync.services());
         let mut offers = crate::offered::offers_for(services);
         // A paused account whose calendar Google refused too shows Connect
-        // on it, unless this build has no route for its move to lead to.
+        // on it.
         if let Some(account) = self.account(account_id)
             && crate::offered::paused_calendar_refused(&account, services)
-            && self.sign_in_path(&account) != Path::Stuck
         {
             offers.calendar = false;
             offers.contacts = false;

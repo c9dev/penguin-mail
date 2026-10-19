@@ -858,42 +858,18 @@ impl App {
         self.google_sign_ins.borrow().get(&id).cloned()
     }
 
-    /// Whether this build offers a route to choose, the gate in front of
-    /// the move banner, the sheet and every button that leads to the
-    /// route choice.
-    pub fn routes_ready(&self) -> bool {
-        use crate::route_choice::{Platform, any_route, ready_now};
-        let mut ready = ready_now(
-            &mailrs_sync::Clients::current(),
-            crate::route_choice::Goa::Absent,
-        );
-        // A demo stage that asks for the banner counts the own-project row
-        // as ready, so a copy built without its own client can show it.
-        if self.core.demo && crate::demo::MoveStage::asked().is_some() {
-            ready.own_project = true;
-        }
-        any_route(Platform::this(), ready)
-    }
-
-    /// Where a press that signs `account` in leads: the route choice, nowhere
-    /// on a build with no route for an account that needs a move, or the
-    /// usual sign-in.
+    /// Where a press that signs `account` in leads: the route choice, or
+    /// the usual sign-in.
     pub fn sign_in_path(&self, account: &Account) -> crate::move_banner::Path {
-        crate::move_banner::path(
-            account,
-            self.google_sign_in(account.id).as_ref(),
-            self.routes_ready(),
-        )
+        crate::move_banner::path(account, self.google_sign_in(account.id).as_ref())
     }
 
     /// The Gmail accounts that have to choose how they sign in, as
-    /// `reload_accounts` last read them. None while this computer offers
-    /// no route to choose.
+    /// `reload_accounts` last read them.
     pub fn waiting_for_move(&self) -> Vec<crate::move_banner::Waiting> {
         let mut waiting = crate::move_banner::waiting_for_move(
             &self.accounts.borrow(),
             &self.google_sign_ins.borrow(),
-            self.routes_ready(),
         );
         if self.core.demo && crate::demo::MoveStage::asked() == Some(crate::demo::MoveStage::Paused)
         {
