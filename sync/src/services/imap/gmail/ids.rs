@@ -38,7 +38,9 @@ impl Places {
     }
 
     pub fn forget(&mut self, id: &str) {
-        self.at.remove(id);
+        if self.at.remove(id).is_some() {
+            self.order.retain(|kept| kept != id);
+        }
     }
 }
 

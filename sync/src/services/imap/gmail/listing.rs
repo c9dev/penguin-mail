@@ -245,10 +245,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             SearchQuery::Tree(tree) => mailrs_gmail::query::print(tree),
         };
         let boxes = self.gm_synced().await?;
-        let lower = text.to_lowercase();
-        let mailbox = if lower.contains("in:trash") {
+        let mailbox = if names_term(text, "in:trash") {
             &boxes.trash
-        } else if lower.contains("in:spam") {
+        } else if names_term(text, "in:spam") {
             &boxes.spam
         } else {
             &boxes.all
@@ -476,3 +475,25 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         })
     }
 }
+/// Whether Gmail's search `text` holds `term` as a word of its own,
+/// outside quotes and not negated with `-`, whatever the case.
+fn names_term(text: &str, term: &str) -> bool {
+    let mut quoted = false;
+    let mut words = Vec::new();
+    let mut word = String::new();
+    for c in text.chars() {
+        match c {
+            '"' => {
+                quoted = !quoted;
+                word.push(c);
+            }
+            c if c.is_whitespace() && !quoted => words.push(std::mem::take(&mut word)),
+            c => word.push(c),
+        }
+    }
+    words.push(word);
+    words
+        .iter()
+        .any(|w| w.trim_start_matches('(').trim_end_matches(')').eq_ignore_ascii_case(term))
+}
+
