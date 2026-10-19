@@ -1129,6 +1129,7 @@ if sys.argv[1:] == ["--calendar-page"]:
 
     if not wait_until(page_read, 20):
         sys.exit("Add Account did not open on its calendar page.")
+    print("calendar page: " + ", ".join(sorted({row[1] for row in found if row[1]})[:12]))
 if sys.argv[1:2] == ["--shown"]:
     # A stage the demo opens on its own: a page, a sheet or a banner. The
     # walk waits for the control named in the arguments (role, then
@@ -1247,7 +1248,11 @@ sleep 1
 walk_demo() {
     # Each start gets fresh settings: the calendar walk leaves the app in
     # the calendar space, where the mail window and its banner do not show.
+    # \$WALK_SPACE, when set, names the space the app starts in.
     printf 'last_calendar_account = \"dana@fernwood.example\"\n' >$sandbox/settings.toml
+    if [ -n \"\${WALK_SPACE:-}\" ]; then
+        printf 'space = \"%s\"\n' \"\$WALK_SPACE\" >>$sandbox/settings.toml
+    fi
     env $webkit \$1 $app --demo >$sandbox/app.log 2>&1 &
     window=\$!
     python3 $walk \"\${@:2}\"
@@ -1261,7 +1266,7 @@ walk_demo() {
 # rest. The page that adds a calendar without mail sits behind a row, and
 # a row answers no AT-SPI action; the demo opens Add Account on that page
 # when asked, as it does for the screenshots, so a second start reads it.
-walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page \
+walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && WALK_SPACE=calendar walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=routes --shown 'list item' 'Use GNOME Online Accounts' \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=consent --shown 'button' 'Continue to Google' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=sheet --shown 'button' 'Choose Now' \
