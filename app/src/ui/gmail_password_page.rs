@@ -32,6 +32,7 @@ impl GmailPasswordPage {
         let title_text = gettext("Sign in with an app password");
         let banded = banded(TAG, &title_text);
         banded.body.add_css_class("post-found");
+        banded.body.add_css_class("app-password");
         let title = heading(&title_text);
         title.set_xalign(0.5);
         title.set_justify(gtk::Justification::Center);
@@ -87,7 +88,7 @@ impl GmailPasswordPage {
             &gettext(
                 "Changing your Google password removes your app passwords. Make a new one to keep getting mail.",
             ),
-            &["post-lede-small"],
+            &["post-lede-small", "app-password-again"],
         );
         again_line.set_visible(false);
 
@@ -226,6 +227,10 @@ impl GmailPasswordPage {
     pub fn open(&self, address: Option<&str>, again: bool) {
         self.address.set_text(address.unwrap_or_default());
         self.address.set_editable(!again);
+        match again {
+            true => self.address.add_css_class("app-password-locked"),
+            false => self.address.remove_css_class("app-password-locked"),
+        }
         self.again_line.set_visible(again);
         self.password.set_text("");
         self.clear_failure();
@@ -297,18 +302,19 @@ fn step(number: u32, text: &str, link: Option<(String, &str)>) -> gtk::ListBoxRo
     words.set_hexpand(true);
     let column = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
-        .spacing(4)
+        .spacing(2)
         .hexpand(true)
         .build();
     column.append(&words);
     if let Some((label_text, url)) = link {
-        let content = adw::ButtonContent::builder()
-            .icon_name("adw-external-link-symbolic")
-            .label(&label_text)
-            .build();
+        // The words come first and the arrow after them, as the mockup has it.
+        let content = gtk::Box::builder().spacing(5).build();
+        content.append(&gtk::Label::new(Some(&label_text)));
+        content.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
         let button = gtk::LinkButton::builder()
             .uri(url)
             .halign(gtk::Align::Start)
+            .css_classes(["app-password-link"])
             .build();
         button.set_child(Some(&content));
         crate::ui::name(&button, &label_text);
@@ -316,8 +322,8 @@ fn step(number: u32, text: &str, link: Option<(String, &str)>) -> gtk::ListBoxRo
     }
     let row = gtk::Box::builder()
         .spacing(12)
-        .margin_top(12)
-        .margin_bottom(12)
+        .margin_top(8)
+        .margin_bottom(6)
         .margin_start(12)
         .margin_end(12)
         .build();
@@ -359,8 +365,9 @@ pub(crate) mod checks {
         fn accessible_label_text(&self) -> String {
             self.downcast_ref::<gtk::LinkButton>()
                 .and_then(|l| l.child())
-                .and_then(|c| c.downcast::<adw::ButtonContent>().ok())
-                .map(|c| c.label().to_string())
+                .and_then(|c| c.first_child())
+                .and_downcast::<gtk::Label>()
+                .map(|l| l.label().to_string())
                 .unwrap_or_default()
         }
     }

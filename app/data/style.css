@@ -2179,3 +2179,25 @@ list.own-paste { margin-top: 12px; }
 }
 .goa-banner button { min-height: 0; padding: 3px 12px; }
 .goa-banner button.suggested-action { background-color: alpha(@accent_fg_color, 0.2); color: @accent_fg_color; }
+
+/* The app-password page, as its mockups: a 19 px heading, links that
+   start under the step's words, a 34 px Sign In and a 13.5 px disclosure. */
+.post-body.app-password .post-title { font-size: 19px; }
+.post-body.app-password .post-lede.post-consent-text { font-size: 13px; margin-top: 8px; }
+.post-body.app-password > list.post-steps-list { margin-top: 14px; }
+.post-body.app-password list.post-steps-list .post-step-text { font-size: 13.5px; }
+.post-body.app-password button.app-password-link {
+  padding: 0; min-height: 28px; font-size: 13px; font-weight: 700; color: var(--post-acc);
+  background: none; box-shadow: none;
+}
+.post-body.app-password button.app-password-link image { color: var(--post-acc); -gtk-icon-size: 12px; }
+.post-body.app-password button.post-wide {
+  min-height: 34px; min-width: 132px; border-radius: 10px; margin-top: 8px; padding: 0 16px;
+}
+.post-body.app-password list.post-field { margin-top: 14px; }
+.post-body.app-password label.app-password-again {
+  font-size: 13px; color: var(--window-fg-color); margin-top: 10px;
+  padding: 9px 12px; border-radius: 10px; background-color: alpha(#ed5b00, 0.10);
+}
+.app-dark .post-body.app-password label.app-password-again { background-color: alpha(#ff7a1a, 0.16); }
+.post-body.app-password row.app-password-locked { background-color: alpha(currentColor, 0.05); }
