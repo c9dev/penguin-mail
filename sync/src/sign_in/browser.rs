@@ -13,7 +13,7 @@ use mailrs_store::accounts::{self, GoogleSignIn};
 
 use super::own_client::{OwnClient, OwnClientError, keep_project};
 use super::{
-    JmapSignInError, MicrosoftSignInError, NewMicrosoft, SignInError, google_signed_in,
+    JmapSignInError, KeptClient, MicrosoftSignInError, NewMicrosoft, SignInError, google_signed_in,
     kept_own_client, microsoft_signed_in,
 };
 use crate::passwords::Secrets;
@@ -130,6 +130,16 @@ pub enum BrowserSignInError {
     Canceled,
     #[error(transparent)]
     Connect(#[from] SyncError),
+    /// The account signed in with an own Google client that is no longer
+    /// on this computer, and nothing else may take its place.
+    // Translators: Penguin Mail and Google are names; keep them as they are.
+    #[error(
+        "{}",
+        gettext(
+            "Penguin Mail can't find your Google project on this computer. Give it the key again to sign in."
+        )
+    )]
+    OwnClientMissing,
     /// The environment names half an own Google client.
     #[error(transparent)]
     OwnClient(#[from] OwnClientError),
@@ -272,6 +282,8 @@ pub fn google_sign_in(
 /// The own client a built-in account moves to: the one the setup chose,
 /// else the one the environment names. Half an own client in the
 /// environment is an error, as for [`google_sign_in`].
+// The setup's client wins over half a pair in the environment here, since
+// the person just chose it for this move.
 pub fn move_choice(clients: &Clients) -> Result<ClientChoice, BrowserSignInError> {
     match (&clients.chosen_google, &clients.own_google) {
         (Some(chosen), _) => Ok(ClientChoice::own(chosen, ClientSource::Setup)),
@@ -307,9 +319,14 @@ async fn with_google(
     } = connector;
     // An account signing in again keeps its own client. The environment
     // and the setup win over it, so it is read only when neither is set.
+    // One whose client is gone stops here and never takes the built-in one.
     let kept = match (&wanted, &clients.own_google, &clients.chosen_google) {
         (Wanted::Only(address), None, None) => {
-            kept_own_client(db, config, secrets, address).await?
+            match kept_own_client(db, config, secrets, address).await? {
+                KeptClient::Found(own) => Some(own),
+                KeptClient::Missing => return Err(BrowserSignInError::OwnClientMissing),
+                KeptClient::NotOwn => None,
+            }
         }
         _ => None,
     };

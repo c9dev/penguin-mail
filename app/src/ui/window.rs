@@ -3054,16 +3054,17 @@ impl MainWindow {
         // Without the build's client the browser would open for nothing,
         // so say why at once. An own account signs in again through its
         // own client. The demo goes on to its own message.
-        let own_account = address.as_deref().is_some_and(|address| {
-            self.app.upgrade().is_some_and(|app| {
-                app.accounts().iter().any(|account| {
-                    account.email == address
-                        && app
-                            .google_sign_in(account.id)
-                            .is_some_and(|sign_in| sign_in.client == SignInClient::Own)
+        let own_account = browser == Browser::Google
+            && address.as_deref().is_some_and(|address| {
+                self.app.upgrade().is_some_and(|app| {
+                    app.accounts().iter().any(|account| {
+                        account.email == address
+                            && app
+                                .google_sign_in(account.id)
+                                .is_some_and(|sign_in| sign_in.client == SignInClient::Own)
+                    })
                 })
-            })
-        });
+            });
         if !self.core.demo && !self.core.built_with_sign_in(browser, own_account) {
             return match browser {
                 Browser::Google => self.no_google_sign_in(),

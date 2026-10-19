@@ -81,16 +81,25 @@ pub(crate) async fn client_of<P: PasswordStore + 'static>(
     })
 }
 
+/// What an account signing in again kept of its own client.
+pub enum KeptClient {
+    /// The address is no Gmail account that signed in with an own client.
+    NotOwn,
+    /// The own client it signed in with.
+    Found(OwnClient),
+    /// It signed in with an own client that is no longer on this computer.
+    Missing,
+}
+
 /// The own client the Gmail account at `address` signed in with, so that
 /// signing it in again keeps it: the one its keyring entry holds, else the
-/// one in `config.toml`. `None` for a built-in account, an account of
-/// another provider, and an address nobody holds.
+/// one in `config.toml`.
 pub async fn kept_own_client(
     db: &Db,
     config: &Config,
     secrets: &Secrets,
     address: &str,
-) -> Result<Option<OwnClient>, SyncError> {
+) -> Result<KeptClient, SyncError> {
     let address = address.to_string();
     let own = db
         .read(move |c| match accounts::account_by_email(c, &address)? {
@@ -100,10 +109,15 @@ pub async fn kept_own_client(
             _ => Ok(None),
         })
         .await?;
-    match own {
-        Some(id) => own_client_of(config, Arc::clone(&secrets.google_clients), id).await,
-        None => Ok(None),
-    }
+    let Some(id) = own else {
+        return Ok(KeptClient::NotOwn);
+    };
+    Ok(
+        match own_client_of(config, Arc::clone(&secrets.google_clients), id).await? {
+            Some(own) => KeptClient::Found(own),
+            None => KeptClient::Missing,
+        },
+    )
 }
 
 /// An own account's client: the one `kept` holds under `id`, else the one
@@ -1310,25 +1324,6 @@ async fn save_passwords<P: PasswordStore + 'static>(
     Ok(())
 }
 
-/// The client for an account that signed in with `client` and has no own
-/// client kept in the keyring. A built-in account takes `built_in`, the
-/// build's own; an own account takes the one in `config.toml`. `None` when
-/// that client is missing, which the caller treats as needing a new
-/// sign-in.
-pub fn client_for(
-    client: SignInClient,
-    config: &Config,
-    built_in: Option<OAuthClient>,
-) -> Option<OAuthClient> {
-    match client {
-        SignInClient::BuiltIn => built_in,
-        SignInClient::Own => config
-            .oauth
-            .as_ref()
-            .map(|own| OAuthClient::new(&own.client_id, &own.client_secret)),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use mailrs_domain::{Account, AccountState, SignInClient};
@@ -1360,28 +1355,6 @@ mod tests {
             }),
             ..Config::default()
         }
-    }
-
-    #[test]
-    fn a_built_in_account_takes_the_builds_client() {
-        let client = client_for(SignInClient::BuiltIn, &with_own(), built_in()).unwrap();
-        assert_eq!(client.id(), "built.apps.googleusercontent.com");
-    }
-
-    #[test]
-    fn an_own_account_takes_the_client_in_the_config() {
-        let client = client_for(SignInClient::Own, &with_own(), built_in()).unwrap();
-        assert_eq!(client.id(), "own.apps.googleusercontent.com");
-    }
-
-    #[test]
-    fn an_own_account_with_no_client_in_the_config_has_none() {
-        assert!(client_for(SignInClient::Own, &Config::default(), built_in()).is_none());
-    }
-
-    #[test]
-    fn a_built_in_account_in_a_build_without_one_has_none() {
-        assert!(client_for(SignInClient::BuiltIn, &with_own(), None).is_none());
     }
 
     fn store() -> (tempfile::TempDir, Db) {
@@ -1937,26 +1910,31 @@ mod tests {
             .google_clients
             .save(built.id, &own_client().encode())
             .unwrap();
+        account(&db, "gone@gmail.com", SignInClient::Own).await;
         let config = with_own();
-        let id_of = |address: &'static str| {
-            let (db, config, secrets) = (&db, &config, &secrets);
+        let found = |config: &'static Config, address: &'static str| {
+            let (db, secrets) = (&db, &secrets);
             async move {
-                kept_own_client(db, config, secrets, address)
-                    .await
-                    .unwrap()
-                    .map(|own| own.id().to_string())
+                match kept_own_client(db, config, secrets, address).await.unwrap() {
+                    KeptClient::Found(own) => own.id().to_string(),
+                    KeptClient::Missing => "missing".to_string(),
+                    KeptClient::NotOwn => "not own".to_string(),
+                }
             }
         };
+        let config: &'static Config = Box::leak(Box::new(config));
+        let none: &'static Config = Box::leak(Box::default());
         assert_eq!(
-            id_of("kept@gmail.com").await.as_deref(),
-            Some("kept.apps.googleusercontent.com")
+            found(config, "kept@gmail.com").await,
+            "kept.apps.googleusercontent.com"
         );
         assert_eq!(
-            id_of("config@gmail.com").await.as_deref(),
-            Some("own.apps.googleusercontent.com")
+            found(config, "config@gmail.com").await,
+            "own.apps.googleusercontent.com"
         );
-        assert_eq!(id_of("built@gmail.com").await, None);
-        assert_eq!(id_of("nobody@gmail.com").await, None);
+        assert_eq!(found(none, "gone@gmail.com").await, "missing");
+        assert_eq!(found(config, "built@gmail.com").await, "not own");
+        assert_eq!(found(config, "nobody@gmail.com").await, "not own");
     }
 
     #[tokio::test]
@@ -1969,7 +1947,7 @@ mod tests {
         let found = kept_own_client(&db, &with_own(), &secrets, "me@example.com")
             .await
             .unwrap();
-        assert!(found.is_none());
+        assert!(matches!(found, KeptClient::NotOwn));
     }
 
     #[test]

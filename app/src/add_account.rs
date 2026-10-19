@@ -2208,6 +2208,7 @@ pub fn failure_kind(err: &anyhow::Error) -> &'static str {
             | BrowserSignInError::KeptJmap(_) => "keeping the account",
             BrowserSignInError::Connect(_) => "connect",
             BrowserSignInError::OwnClient(_) => "own client",
+            BrowserSignInError::OwnClientMissing => "own client missing",
             BrowserSignInError::Jmap(_) => "jmap",
             BrowserSignInError::NotOffered => "not offered",
             BrowserSignInError::NoRefreshToken => "no refresh token",

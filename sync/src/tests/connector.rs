@@ -1190,6 +1190,59 @@ async fn an_own_account_signs_in_again_in_a_build_without_the_built_in_client() 
     assert!(url.contains("client_id=kept-cid"), "{url}");
 }
 
+/// A Gmail account at `me@gmail.com` that signed in with `client`, with
+/// nothing in the keyring.
+async fn gmail_account_of(db: &Db, client: SignInClient) -> Account {
+    db.write(move |c| {
+        let id = accounts::insert_account(c, "me@gmail.com", 0)?;
+        accounts::set_sign_in_client(c, id, client)?;
+        Ok(accounts::account_by_email(c, "me@gmail.com")?.unwrap())
+    })
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn an_own_account_whose_key_is_gone_takes_no_other_client() {
+    let (db, _dir) = store().await;
+    let me = gmail_account_of(&db, SignInClient::Own).await;
+    let refused = in_browser(
+        &connector(&db, both_clients()),
+        Browser::Google,
+        Wanted::Only(me.email.clone()),
+        |url: &str| panic!("opened {url}"),
+    )
+    .await;
+    assert!(matches!(refused, Err(BrowserSignInError::OwnClientMissing)));
+    let client = db
+        .read(move |c| accounts::sign_in_client(c, me.id))
+        .await
+        .unwrap();
+    assert_eq!(client, SignInClient::Own);
+}
+
+#[tokio::test]
+async fn an_own_account_whose_key_is_gone_signs_in_through_the_environment() {
+    let (db, _dir) = store().await;
+    gmail_account_of(&db, SignInClient::Own).await;
+    let clients = Clients {
+        own_google: Some(Ok(OwnClient::new("env-cid", "s"))),
+        ..both_clients()
+    };
+    let reach = connector(&db, clients);
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=env-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn a_built_in_account_signs_in_again_through_the_built_in_client() {
+    let (db, _dir) = store().await;
+    gmail_account_of(&db, SignInClient::BuiltIn).await;
+    let reach = connector(&db, both_clients());
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=cid&"), "{url}");
+}
+
 /// A built-in client that asks for no mail, as a release build carries.
 fn mail_free_built_in() -> Clients {
     Clients {

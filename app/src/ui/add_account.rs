@@ -3866,8 +3866,8 @@ impl Dialog {
                 Ok(ClientSource::BuiltIn) => {}
                 Ok(ClientSource::Environment | ClientSource::Setup | ClientSource::Kept) => {
                     page.lede.set_text(&gettext(
-                    "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on.",
-                ));
+                        "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on.",
+                    ));
                 }
             }
         }
