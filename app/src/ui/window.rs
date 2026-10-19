@@ -33,6 +33,7 @@ use crate::app::{App, Signature};
 use crate::assistant::ToolRequest;
 use crate::compose::{self, ReplyKind};
 use crate::core::Core;
+use crate::move_banner::Path;
 use crate::offered::Filing;
 use crate::open_thread::OpenThread;
 use crate::permission::{Occasion, Permission};
@@ -2034,6 +2035,10 @@ impl MainWindow {
         let Some(account) = self.account(account_id) else {
             return;
         };
+        // Its Grant Access would lead nowhere.
+        if self.sign_in_path(&account) == Path::Stuck {
+            return;
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let email = &account.email;
@@ -2062,11 +2067,18 @@ impl MainWindow {
             .into_iter()
             .find(|account| account.email.eq_ignore_ascii_case(&email));
         match account {
-            Some(account) => {
-                if let Some(browser) = Browser::of(account.provider) {
-                    self.sign_in_in_browser(browser, Some(email));
+            // The built-in consent refuses an account that needs a move.
+            Some(account) => match self.sign_in_path(&account) {
+                Path::Move => {
+                    self.present_add_account(Opening::Move(vec![account]));
                 }
-            }
+                Path::Stuck => {}
+                Path::Usual => {
+                    if let Some(browser) = Browser::of(account.provider) {
+                        self.sign_in_in_browser(browser, Some(email));
+                    }
+                }
+            },
             // An address no account has yet goes to Google, as before.
             None => self.sign_in_in_browser(Browser::Google, Some(email)),
         }
@@ -2091,17 +2103,20 @@ impl MainWindow {
     /// the built-in client that still reads its mail through the API
     /// chooses a route first: the consent refuses it until then.
     fn connect_calendar(self: &Rc<Self>, account: Account) {
-        let moves = self
-            .app
-            .upgrade()
-            .and_then(|app| app.google_sign_in(account.id))
-            .is_some_and(|sign_in| sign_in.needs_move(account.provider));
-        let opening = if moves {
-            Opening::Move(vec![account])
-        } else {
-            Opening::Consent(account)
+        let opening = match self.sign_in_path(&account) {
+            Path::Move => Opening::Move(vec![account]),
+            Path::Stuck => return,
+            Path::Usual => Opening::Consent(account),
         };
         self.present_add_account(opening);
+    }
+
+    /// [`crate::app::App::sign_in_path`], or the usual sign-in once the app
+    /// is gone.
+    fn sign_in_path(&self, account: &Account) -> Path {
+        self.app
+            .upgrade()
+            .map_or(Path::Usual, |app| app.sign_in_path(account))
     }
 
     /// Says an API is switched off in the Google Cloud project Penguin Mail
@@ -2955,16 +2970,16 @@ impl MainWindow {
     /// provider's page in the browser, step 2 of Another Provider with
     /// its servers, or the calendar page for a calendar account.
     fn sign_in_again(self: &Rc<Self>, account: Account) {
-        // An account that waits for a move chooses a route instead: the
+        // An account that needs a move chooses a route instead: the
         // built-in sign-in would return a token without its mail scope.
-        let moves = self
-            .app
-            .upgrade()
-            .and_then(|app| app.google_sign_in(account.id))
-            .is_some_and(|sign_in| sign_in.needs_move(account.provider));
-        if moves {
-            self.present_add_account(Opening::Move(vec![account]));
-            return;
+        // With no route to choose, nothing offers this press.
+        match self.sign_in_path(&account) {
+            Path::Move => {
+                self.present_add_account(Opening::Move(vec![account]));
+                return;
+            }
+            Path::Stuck => return,
+            Path::Usual => {}
         }
         match Browser::of(account.provider) {
             Some(browser) => self.sign_in_in_browser(browser, Some(account.email)),
@@ -3333,7 +3348,9 @@ impl MainWindow {
         with_account(
             "account-choose-route",
             Box::new(|win, account| {
-                win.present_add_account(Opening::Move(vec![account]));
+                if win.sign_in_path(&account) == Path::Move {
+                    win.present_add_account(Opening::Move(vec![account]));
+                }
             }),
         );
         with_account(

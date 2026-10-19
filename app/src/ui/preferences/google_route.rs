@@ -39,13 +39,23 @@ pub enum Line {
 }
 
 /// The lines under `account`'s address. `platform` is for the GNOME Online
-/// Accounts plan, whose route changes what the Move line offers.
-pub fn lines(sign_in: GoogleSignIn, _platform: Platform, account: &Account) -> Vec<Line> {
+/// Accounts plan, whose route changes what the Move line offers. With no
+/// route ready the features and the move stay out: both lead to the route
+/// choice, which would have nothing to offer.
+pub fn lines(
+    sign_in: GoogleSignIn,
+    _platform: Platform,
+    account: &Account,
+    routes_ready: bool,
+) -> Vec<Line> {
     let mut lines = Vec::new();
     match sign_in.route {
-        MailRoute::GmailApi => lines.push(Line::Features { every: true }),
+        MailRoute::GmailApi if routes_ready => lines.push(Line::Features { every: true }),
+        MailRoute::GmailApi => {}
         MailRoute::Imap => {
-            lines.push(Line::Features { every: false });
+            if routes_ready {
+                lines.push(Line::Features { every: false });
+            }
             lines.push(Line::Gap {
                 text: offered::filters_gap(),
                 link: offered::FILTERS_LINK,
@@ -58,7 +68,7 @@ pub fn lines(sign_in: GoogleSignIn, _platform: Platform, account: &Account) -> V
             });
         }
     }
-    if sign_in.needs_move(account.provider) {
+    if routes_ready && sign_in.needs_move(account.provider) {
         let waiting = Waiting {
             account: account.clone(),
             paused: account.state == mailrs_domain::AccountState::MailPaused,
@@ -86,6 +96,7 @@ struct Shown {
     parent: glib::WeakRef<adw::ExpanderRow>,
     rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
     sign_in: GoogleSignIn,
+    routes_ready: bool,
     connect: Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
 }
@@ -118,7 +129,15 @@ pub fn rows(
         return;
     }
     if let Some(sign_in) = app.google_sign_in(account.id) {
-        register(parent, account, sign_in, offers, connect, contacts);
+        register(
+            parent,
+            account,
+            sign_in,
+            app.routes_ready(),
+            offers,
+            connect,
+            contacts,
+        );
     }
 }
 
@@ -127,6 +146,7 @@ fn register(
     parent: &adw::ExpanderRow,
     account: &Account,
     sign_in: GoogleSignIn,
+    routes_ready: bool,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
@@ -135,10 +155,19 @@ fn register(
         parent: parent.downgrade(),
         rows: RefCell::default(),
         sign_in,
+        routes_ready,
         connect: Rc::clone(connect),
         contacts,
     });
-    let added = fill_rows(parent, account, sign_in, offers, connect, &shown.contacts);
+    let added = fill_rows(
+        parent,
+        account,
+        sign_in,
+        routes_ready,
+        offers,
+        connect,
+        &shown.contacts,
+    );
     *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
     SHOWN.with(|all| all.borrow_mut().insert(account.id, shown));
 }
@@ -164,6 +193,7 @@ pub fn refill(id: AccountId, account: &Account, offers: Offers) -> bool {
         &parent,
         account,
         shown.sign_in,
+        shown.routes_ready,
         offers,
         &shown.connect,
         &shown.contacts,
@@ -199,6 +229,7 @@ fn fill_rows(
     parent: &adw::ExpanderRow,
     account: &Account,
     sign_in: GoogleSignIn,
+    routes_ready: bool,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: &Contacts,
@@ -208,12 +239,15 @@ fn fill_rows(
         parent.add_row(widget);
         added.push(widget.clone());
     };
-    let (gaps, own): (Vec<Line>, Vec<Line>) = lines(sign_in, Platform::this(), account)
-        .into_iter()
-        .partition(|line| matches!(line, Line::Gap { .. }));
-    // Translators: a small heading over the Gmail account's rows; Gmail is a
-    // name, keep it as it is.
-    put(heading(&gettext("Gmail")).upcast_ref());
+    let (gaps, own): (Vec<Line>, Vec<Line>) =
+        lines(sign_in, Platform::this(), account, routes_ready)
+            .into_iter()
+            .partition(|line| matches!(line, Line::Gap { .. }));
+    if !own.is_empty() {
+        // Translators: a small heading over the Gmail account's rows; Gmail
+        // is a name, keep it as it is.
+        put(heading(&gettext("Gmail")).upcast_ref());
+    }
     for line in own {
         match line {
             Line::Features { every } => {
@@ -418,6 +452,7 @@ mod tests {
             sign_in(SignInClient::Own, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
+            true,
         );
         assert_eq!(found, [Line::Features { every: true }]);
     }
@@ -428,6 +463,7 @@ mod tests {
             sign_in(SignInClient::BuiltIn, MailRoute::Imap),
             Platform::Linux,
             &account(AccountState::Ok),
+            true,
         );
         assert_eq!(found[0], Line::Features { every: false });
         assert!(found.contains(&Line::Gap {
@@ -449,6 +485,7 @@ mod tests {
             sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
+            true,
         );
         assert_eq!(
             found,
@@ -468,10 +505,36 @@ mod tests {
             sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::MailPaused),
+            true,
         );
         assert!(found.contains(&Line::Move {
             title: "Penguin Mail can't get new mail for maria.costa@gmail.com. Choose how it signs in to get your mail back. Nothing on this computer was lost.".into()
         }));
+    }
+
+    #[test]
+    fn with_no_route_ready_an_api_account_shows_no_gmail_lines() {
+        for client in [SignInClient::BuiltIn, SignInClient::Own] {
+            let found = lines(
+                sign_in(client, MailRoute::GmailApi),
+                Platform::Linux,
+                &account(AccountState::MailPaused),
+                false,
+            );
+            assert_eq!(found, []);
+        }
+    }
+
+    #[test]
+    fn with_no_route_ready_an_imap_account_keeps_only_what_gmail_com_does() {
+        let found = lines(
+            sign_in(SignInClient::BuiltIn, MailRoute::Imap),
+            Platform::Linux,
+            &account(AccountState::Ok),
+            false,
+        );
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().all(|line| matches!(line, Line::Gap { .. })));
     }
 }
 
@@ -537,7 +600,15 @@ pub(crate) mod checks {
             added: offers.calendar,
             ..contacts()
         };
-        register(&parent, &account(state), sign_in, offers, &connect, kept);
+        register(
+            &parent,
+            &account(state),
+            sign_in,
+            true,
+            offers,
+            &connect,
+            kept,
+        );
         (parent, pressed)
     }
 

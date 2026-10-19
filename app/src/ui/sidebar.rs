@@ -939,6 +939,7 @@ impl Sidebar {
                 account_offers,
                 extras.not_downloading.contains(&account.id),
                 extras.switchable.contains(&account.id),
+                extras.stuck.contains(&account.id),
             );
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
@@ -1541,6 +1542,9 @@ pub struct Extras {
     pub not_downloading: HashSet<AccountId>,
     /// IMAP accounts whose server also speaks JMAP.
     pub switchable: HashSet<AccountId>,
+    /// Gmail accounts that need a move on a build with no route to offer:
+    /// nothing in their row leads to the route choice.
+    pub stuck: HashSet<AccountId>,
 }
 
 /// A small heading between sections. It cannot be selected.
@@ -1865,6 +1869,7 @@ fn heading(
     offers: Offers,
     not_downloading: bool,
     switchable: bool,
+    stuck: bool,
 ) -> (gtk::ListBoxRow, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
         .spacing(6)
@@ -1891,7 +1896,7 @@ fn heading(
             .tooltip_text(heading_tooltip(account))
             .build(),
     );
-    let status = status_of(account);
+    let status = status_of(account, stuck);
     let count = gtk::Label::builder()
         .css_classes(["count", "unread"])
         .visible(false)
@@ -1948,12 +1953,9 @@ fn heading(
     look.append_item(&item(&gettext("Move Down"), "win.account-down"));
     menu.append_section(None, &look);
     let access = gio::Menu::new();
-    access.append_item(&item(&gettext("Sign In Again…"), "win.account-reconnect"));
-    access.append_item(&item(&gettext("Switch to JMAP…"), "account.switch-jmap"));
-    access.append_item(&item(
-        &gettext("Messages That Will Not Download…"),
-        "account.not-downloading",
-    ));
+    for (label, action) in access_items(stuck) {
+        access.append_item(&item(&label, action));
+    }
     menu.append_section(None, &access);
     let danger = gio::Menu::new();
     danger.append_item(&item(&gettext("Remove Account…"), "win.account-remove"));
@@ -2018,9 +2020,26 @@ fn heading(
     (row, count, own)
 }
 
+/// The menu items that sign the account in or say why it does not sync.
+/// A `stuck` account has no Sign In Again…: it needs a move, and this build
+/// has no route to offer.
+fn access_items(stuck: bool) -> Vec<(String, &'static str)> {
+    let mut items = Vec::new();
+    if !stuck {
+        items.push((gettext("Sign In Again…"), "win.account-reconnect"));
+    }
+    items.push((gettext("Switch to JMAP…"), "account.switch-jmap"));
+    items.push((
+        gettext("Messages That Will Not Download…"),
+        "account.not-downloading",
+    ));
+    items
+}
+
 /// The icon and the words beside an account's name for its state, or
-/// nothing while it syncs as it should.
-fn status_of(account: &Account) -> Option<(&'static str, String)> {
+/// nothing while it syncs as it should. A `stuck` account's paused line
+/// only says so, as no route waits to be chosen.
+fn status_of(account: &Account, stuck: bool) -> Option<(&'static str, String)> {
     match account.state {
         AccountState::NeedsReauth => Some((
             "dialog-warning-symbolic",
@@ -2051,6 +2070,13 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
             gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
         )),
         // Translators: the line beside an account whose mail stopped
+        // arriving, on a copy of Penguin Mail with no other way to sign in
+        // to offer.
+        AccountState::MailPaused if stuck => Some((
+            "dialog-warning-symbolic",
+            gettext("Penguin Mail can't get new mail for this account"),
+        )),
+        // Translators: the line beside an account whose mail stopped
         // arriving; the person picks another way to sign in.
         AccountState::MailPaused => Some((
             "dialog-warning-symbolic",
@@ -2064,8 +2090,8 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
 mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
 
-    use super::status_of;
     use super::{Mailbox, Standard, heading_row_name, label_icon, mailbox_row_name, takes_mail};
+    use super::{access_items, status_of};
 
     use super::{Offers, account_settings};
 
@@ -2134,7 +2160,7 @@ mod tests {
             provider_name: Some("fastmail.com".into()),
             ..fastmail.clone()
         };
-        let said = |account: &Account| status_of(account).map(|(_, said)| said);
+        let said = |account: &Account| status_of(account, false).map(|(_, said)| said);
         assert_eq!(
             said(&gmail).as_deref(),
             Some("Gmail is not responding; retrying")
@@ -2160,7 +2186,7 @@ mod tests {
             provider_name: Some("reyes-home.example".into()),
         };
         assert_eq!(
-            status_of(&waiting),
+            status_of(&waiting, false),
             Some((
                 "dialog-password-symbolic",
                 "The keyring is not responding; retrying".to_string()
@@ -2178,11 +2204,51 @@ mod tests {
             provider_name: None,
         };
         assert_eq!(
-            status_of(&paused),
+            status_of(&paused, false),
             Some((
                 "dialog-warning-symbolic",
                 "Choose how this account signs in to get new mail".to_string()
             ))
+        );
+    }
+
+    #[test]
+    fn a_paused_account_with_no_route_to_choose_only_says_it_is_paused() {
+        let paused = Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::MailPaused,
+            provider: Provider::Gmail,
+            provider_name: None,
+        };
+        assert_eq!(
+            status_of(&paused, true),
+            Some((
+                "dialog-warning-symbolic",
+                "Penguin Mail can't get new mail for this account".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn an_account_with_no_route_to_choose_has_no_sign_in_again() {
+        let actions = |stuck| {
+            access_items(stuck)
+                .into_iter()
+                .map(|(_, action)| action)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            actions(false),
+            [
+                "win.account-reconnect",
+                "account.switch-jmap",
+                "account.not-downloading"
+            ]
+        );
+        assert_eq!(
+            actions(true),
+            ["account.switch-jmap", "account.not-downloading"]
         );
     }
 
@@ -2195,7 +2261,7 @@ mod tests {
             provider: Provider::Gmail,
             provider_name: None,
         };
-        assert_eq!(status_of(&fine), None);
+        assert_eq!(status_of(&fine, false), None);
     }
 
     fn actions(offers: Offers) -> Vec<&'static str> {

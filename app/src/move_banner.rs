@@ -117,6 +117,28 @@ fn needs_move(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
     sign_in.is_some_and(|sign_in| sign_in.needs_move(account.provider))
 }
 
+/// Where a press that signs `account` in, or connects its calendar, leads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Path {
+    /// The account needs a move and a route is ready: the route choice.
+    Move,
+    /// The account needs a move and this build has no route to offer, so
+    /// no button leads there.
+    Stuck,
+    /// The account signs in the way it always has.
+    Usual,
+}
+
+/// [`Path`] for `account`. `routes_ready` is the same gate the move
+/// banner and the sheet use.
+pub fn path(account: &Account, sign_in: Option<GoogleSignIn>, routes_ready: bool) -> Path {
+    match (needs_move(account, sign_in), routes_ready) {
+        (true, true) => Path::Move,
+        (true, false) => Path::Stuck,
+        (false, _) => Path::Usual,
+    }
+}
+
 /// Whether `account` gets a Grant Access banner. One that needs a move
 /// gets none, even on a build with no route to offer: a consent through
 /// the built-in client would return a token without the mail scope and
@@ -323,8 +345,20 @@ mod tests {
     fn a_build_with_no_route_still_keeps_the_grant_banner_from_a_move_account() {
         let dana = account(3, "dana@gmail.com", AccountState::Ok);
         let sign_ins = HashMap::from([(3, BUILT_IN_API)]);
-        assert_eq!(waiting_for_move(&[dana.clone()], &sign_ins, false), []);
+        assert_eq!(
+            waiting_for_move(std::slice::from_ref(&dana), &sign_ins, false),
+            []
+        );
         assert!(!grant_banner_wanted(&dana, sign_ins.get(&3).copied()));
+    }
+
+    #[test]
+    fn a_move_account_reaches_the_route_choice_only_when_a_route_is_ready() {
+        let dana = account(3, "dana@gmail.com", AccountState::MailPaused);
+        assert_eq!(path(&dana, Some(BUILT_IN_API), true), Path::Move);
+        assert_eq!(path(&dana, Some(BUILT_IN_API), false), Path::Stuck);
+        assert_eq!(path(&dana, Some(OWN_API), false), Path::Usual);
+        assert_eq!(path(&dana, None, true), Path::Usual);
     }
 
     #[test]
