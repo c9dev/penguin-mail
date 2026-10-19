@@ -103,7 +103,7 @@ pub fn lines_with(sign_in: &GmailSignIn, account: &Account, goa_holds: bool) -> 
             account: account.clone(),
             paused: account.state == mailrs_domain::AccountState::MailPaused,
         };
-        if let Some(banner) = banner(&[waiting], |_| false) {
+        if let Some(banner) = banner(&[waiting]) {
             lines.push(Line::Move {
                 title: banner.title,
             });

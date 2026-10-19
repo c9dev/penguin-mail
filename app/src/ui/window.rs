@@ -1638,9 +1638,7 @@ impl MainWindow {
     /// Brings the move banner in line with the accounts that wait for a
     /// move: one banner for all of them, worded for one or several.
     fn rebuild_move_banner(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
-        let core = Rc::clone(&self.core);
-        let shown =
-            crate::move_banner::banner(waiting, |email| core.goa_holds(email) == Some(true));
+        let shown = crate::move_banner::banner(waiting);
         self.move_banner.show(shown);
         self.show_move_sheet(waiting);
         self.refresh_goa_banner();
@@ -1688,9 +1686,7 @@ impl MainWindow {
             return self.refresh_goa_banner();
         };
         let core = Rc::clone(&self.core);
-        let shown = crate::move_banner::banner(&app.waiting_for_move(), |email| {
-            core.goa_holds(email) == Some(true)
-        });
+        let shown = crate::move_banner::banner(&app.waiting_for_move());
         self.move_banner.show(shown);
         for account in self.accounts() {
             if account.provider == Provider::Gmail {

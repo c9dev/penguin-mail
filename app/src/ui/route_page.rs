@@ -290,10 +290,9 @@ pub(crate) mod checks {
             assert!(row.is_activatable());
             assert!(row.is_focusable());
         }
-        // Online Accounts is listed first, so the line under the list stays
-        // out.
-        assert!(!page.footer.get_visible());
-        ActionRowExt::activate(&row_at(&page, 1));
+        // The own project is listed first, so the line under the list shows.
+        assert!(page.footer.get_visible());
+        ActionRowExt::activate(&row_at(&page, 2));
         assert_eq!(*picked.borrow(), [Route::AppPassword]);
     }
 
@@ -345,7 +344,7 @@ pub(crate) mod checks {
         assert!(!page.footer.get_visible());
         ActionRowExt::activate(&row_at(&page, 0));
         assert_eq!(*first.borrow(), 0);
-        assert_eq!(*second.borrow(), [Route::Goa]);
+        assert_eq!(*second.borrow(), [Route::OwnProject]);
     }
 
     fn the_consent_page_names_both_buttons() {

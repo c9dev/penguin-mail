@@ -96,20 +96,18 @@ pub fn rows(platform: Platform, ready: Ready) -> Vec<RouteRow> {
     let saved = ready.own_project && ready.saved_project;
     let mut rows = Vec::new();
     if saved {
-        rows.push(saved_project_row(!goa_listed));
+        rows.push(saved_project_row(true));
+    }
+    // The own project always comes first: Online Accounts gets Gmail over
+    // IMAP only, so it has no filters, automatic reply, aliases or label
+    // colours.
+    if ready.own_project {
+        rows.push(own_project_row(!saved, saved));
     }
     if goa_listed {
         rows.push(goa_row(ready.goa));
-        rows.push(password_row(true));
-        if ready.own_project {
-            rows.push(own_project_row(false, saved));
-        }
-    } else {
-        if ready.own_project {
-            rows.push(own_project_row(!saved, saved));
-        }
-        rows.push(password_row(false));
     }
+    rows.push(password_row(goa_listed));
     rows
 }
 
@@ -122,12 +120,11 @@ pub fn rows_without_goa(platform: Platform, ready: Ready) -> Vec<RouteRow> {
         .collect()
 }
 
-/// The line under the list, when the own-project row is listed and Online
-/// Accounts is not: on macOS, and on Linux without Online Accounts.
+/// The line under the list, whenever the own-project row is listed.
 pub fn footer(platform: Platform, ready: Ready) -> Option<String> {
-    let rows = rows(platform, ready);
-    let listed = rows.iter().any(|row| row.route == Route::OwnProject)
-        && !rows.iter().any(|row| row.route == Route::Goa);
+    let listed = rows(platform, ready)
+        .iter()
+        .any(|row| row.route == Route::OwnProject);
     listed.then(|| {
         // Translators: Gmail and Google are names; keep them as they are.
         gettext("Want every Gmail feature? Your own Google project gives you all of them, free.")
@@ -145,11 +142,9 @@ fn goa_row(goa: Goa) -> RouteRow {
         subtitle: if goa == Goa::Holds {
             gettext("Already signed in on this computer")
         } else {
-            gettext("Mail, calendar and contacts")
+            gettext("Quick. Mail, calendar and contacts.")
         },
-        // Signing in through the desktop is the first choice wherever
-        // Online Accounts runs.
-        recommended: true,
+        recommended: false,
     }
 }
 
@@ -235,25 +230,29 @@ mod tests {
     }
 
     #[test]
-    fn linux_with_goa_lists_three_rows_goa_first() {
+    fn linux_with_goa_lists_the_own_project_first_then_goa_then_the_password() {
         let rows = rows(Platform::Linux, ready(Goa::Holds));
         assert_eq!(
             rows.iter().map(|r| r.route).collect::<Vec<_>>(),
-            [Route::Goa, Route::AppPassword, Route::OwnProject]
+            [Route::OwnProject, Route::Goa, Route::AppPassword]
         );
-        assert_eq!(rows[0].subtitle, "Already signed in on this computer");
-        assert_eq!(rows[1].subtitle, "Quick. Mail, calendar and contacts.");
+        assert_eq!(
+            rows[0].subtitle,
+            "Every Gmail feature, on any computer. About 10 minutes, once."
+        );
+        assert_eq!(rows[1].subtitle, "Already signed in on this computer");
+        assert_eq!(rows[2].subtitle, "Quick. Mail, calendar and contacts.");
         let recommended: Vec<Route> = rows
             .iter()
             .filter(|r| r.recommended)
             .map(|r| r.route)
             .collect();
-        assert_eq!(recommended, [Route::Goa]);
+        assert_eq!(recommended, [Route::OwnProject]);
     }
 
     #[test]
-    fn the_footer_shows_only_where_online_accounts_is_not_listed() {
-        assert_eq!(footer(Platform::Linux, ready(Goa::Holds)), None);
+    fn the_footer_shows_on_every_platform_while_the_own_project_is_listed() {
+        assert!(footer(Platform::Linux, ready(Goa::Holds)).is_some());
         assert!(footer(Platform::Linux, ready(Goa::Absent)).is_some());
         assert!(footer(Platform::MacOs, ready(Goa::Absent)).is_some());
     }
@@ -261,10 +260,10 @@ mod tests {
     #[test]
     fn the_goa_row_says_this_computer_and_never_gnome() {
         let holds = rows(Platform::Linux, ready(Goa::Holds));
-        assert_eq!(holds[0].title, "Use the Google account on this computer");
+        assert_eq!(holds[1].title, "Use the Google account on this computer");
         let present = rows(Platform::Linux, ready(Goa::Present));
-        assert_eq!(present[0].title, "Add your Google account to this computer");
-        assert_eq!(present[0].subtitle, "Mail, calendar and contacts");
+        assert_eq!(present[1].title, "Add your Google account to this computer");
+        assert_eq!(present[1].subtitle, "Quick. Mail, calendar and contacts.");
         for row in holds.iter().chain(&present) {
             assert!(!row.title.contains("GNOME"), "{}", row.title);
             assert!(!row.subtitle.contains("GNOME"), "{}", row.subtitle);
@@ -277,7 +276,7 @@ mod tests {
             .iter()
             .map(|r| r.route)
             .collect();
-        assert_eq!(routes, [Route::AppPassword, Route::OwnProject]);
+        assert_eq!(routes, [Route::OwnProject, Route::AppPassword]);
     }
 
     #[test]
@@ -348,14 +347,14 @@ mod tests {
     }
 
     #[test]
-    fn the_footer_shows_when_the_own_project_is_listed_without_online_accounts() {
+    fn the_footer_shows_when_the_own_project_is_listed() {
         let wanted = Some(
             "Want every Gmail feature? Your own Google project gives you all of them, free."
                 .to_string(),
         );
         assert_eq!(footer(Platform::MacOs, ready(Goa::Absent)), wanted);
         assert_eq!(footer(Platform::Linux, ready(Goa::Absent)), wanted);
-        assert_eq!(footer(Platform::Linux, ready(Goa::Present)), None);
+        assert_eq!(footer(Platform::Linux, ready(Goa::Present)), wanted);
         let no_own = Ready {
             own_project: false,
             ..ready(Goa::Absent)

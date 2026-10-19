@@ -2540,7 +2540,7 @@ msgstr "Penguin Mail を起動できませんでした"
 msgid "Report a Problem"
 msgstr "問題を報告"
 
-#: app/src/move_banner.rs:58
+#: app/src/move_banner.rs:61
 msgid ""
 "Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
 "your mail back. Nothing on this computer was lost."
@@ -2549,12 +2549,12 @@ msgstr ""
 "は、ログイン方法を選んでください。このコンピューターのデータは失われていませ"
 "ん。"
 
-#: app/src/move_banner.rs:65
+#: app/src/move_banner.rs:68
 msgid "Choose how {address} signs in to keep your mail arriving."
 msgstr "メールを受信し続けるために、{address} のログイン方法を選んでください。"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/move_banner.rs:76
+#: app/src/move_banner.rs:78
 msgid ""
 "{count} Gmail account can't get new mail. Choose how each signs in to get "
 "your mail back. Nothing on this computer was lost."
@@ -2567,16 +2567,12 @@ msgstr[0] ""
 "れていません。"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/move_banner.rs:84
+#: app/src/move_banner.rs:86
 msgid "{count} Gmail account needs a new way to sign in"
 msgid_plural "{count} Gmail accounts need a new way to sign in"
 msgstr[0] "Gmail アカウント {count} 件に新しいログイン方法が必要です"
 
-#: app/src/move_banner.rs:94 app/src/ui/goa_page.rs:297
-msgid "Use This Account"
-msgstr "このアカウントを使う"
-
-#: app/src/move_banner.rs:96 app/src/ui/preferences/google_route.rs:345
+#: app/src/move_banner.rs:94 app/src/ui/preferences/google_route.rs:345
 msgid "Choose…"
 msgstr "選択…"
 
@@ -4030,8 +4026,8 @@ msgstr "そのアカウントは接続されていません。"
 msgid "Could not save: {reason}"
 msgstr "保存できませんでした: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3005
-#: app/src/ui/window.rs:3028
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3001
+#: app/src/ui/window.rs:3024
 msgid "Could not open the draft: {reason}"
 msgstr "下書きを開けませんでした: {reason}"
 
@@ -4231,7 +4227,7 @@ msgid "Choose how Penguin Mail signs in to Gmail"
 msgstr "Penguin Mail の Gmail へのログイン方法を選んでください"
 
 #. Translators: Gmail and Google are names; keep them as they are.
-#: app/src/route_choice.rs:133
+#: app/src/route_choice.rs:130
 msgid ""
 "Want every Gmail feature? Your own Google project gives you all of them, "
 "free."
@@ -4239,59 +4235,55 @@ msgstr ""
 "Gmail のすべての機能を使いたいですか？ 自分の Google プロジェクトなら、すべて"
 "無料で使えます。"
 
-#: app/src/route_choice.rs:141 app/src/ui/goa_page.rs:289
+#: app/src/route_choice.rs:138 app/src/ui/goa_page.rs:289
 msgid "Use the Google account on this computer"
 msgstr "このコンピューターの Google アカウントを使う"
 
-#: app/src/route_choice.rs:143 app/src/ui/goa_page.rs:81
+#: app/src/route_choice.rs:140 app/src/ui/goa_page.rs:81
 #: app/src/ui/goa_page.rs:335 app/src/ui/goa_page.rs:351
 #: app/src/ui/goa_page.rs:362 app/src/ui/goa_page.rs:387
 msgid "Add your Google account to this computer"
 msgstr "Google アカウントをこのコンピューターに追加する"
 
-#: app/src/route_choice.rs:146
+#: app/src/route_choice.rs:143
 msgid "Already signed in on this computer"
 msgstr "このコンピューターではログイン済み"
 
-#: app/src/route_choice.rs:148 app/src/ui/preferences/google_route.rs:330
-msgid "Mail, calendar and contacts"
-msgstr "メール、カレンダー、連絡先"
-
-#. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:160
-msgid "Use a password from Google"
-msgstr "Google のパスワードを使う"
-
-#: app/src/route_choice.rs:162
+#: app/src/route_choice.rs:145 app/src/route_choice.rs:157
 msgid "Quick. Mail, calendar and contacts."
 msgstr "手早く。メール、カレンダー、連絡先。"
 
-#: app/src/route_choice.rs:164
+#. Translators: Google is a name; keep it as it is.
+#: app/src/route_choice.rs:155
+msgid "Use a password from Google"
+msgstr "Google のパスワードを使う"
+
+#: app/src/route_choice.rs:159
 msgid "Quickest. About 2 minutes"
 msgstr "最短。約2分"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:174 app/src/ui/add_account.rs:3972
+#: app/src/route_choice.rs:169 app/src/ui/add_account.rs:3972
 msgid "Use your Google project again"
 msgstr "Google プロジェクトをもう一度使う"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:176
+#: app/src/route_choice.rs:171
 msgid "Every Gmail feature, with the project you set up before."
 msgstr "以前設定したプロジェクトで Gmail のすべての機能を使います。"
 
-#: app/src/route_choice.rs:185
+#: app/src/route_choice.rs:180
 msgid "Set up a different project"
 msgstr "別のプロジェクトを設定"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:188 app/src/ui/preferences/google_route.rs:352
-#: app/src/ui/window.rs:3444
+#: app/src/route_choice.rs:183 app/src/ui/preferences/google_route.rs:352
+#: app/src/ui/window.rs:3440
 msgid "Set up your own Google project"
 msgstr "自分の Google プロジェクトを設定する"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:191
+#: app/src/route_choice.rs:186
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
 msgstr "Gmail のすべての機能を、どのコンピューターでも。約10分、1回だけ。"
 
@@ -4466,8 +4458,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude サブスクリプション"
 
-#: app/src/settings/mod.rs:230 app/src/ui/window.rs:3857
-#: app/src/ui/window.rs:3937
+#: app/src/settings/mod.rs:230 app/src/ui/window.rs:3853
+#: app/src/ui/window.rs:3933
 msgid "Assistant"
 msgstr "アシスタント"
 
@@ -4834,7 +4826,7 @@ msgstr "Penguin Mail を開く"
 msgid "New Message"
 msgstr "新規メッセージ"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1952 app/src/ui/window.rs:3863
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1952 app/src/ui/window.rs:3859
 msgid "Check for Mail"
 msgstr "メールを確認"
 
@@ -4852,7 +4844,7 @@ msgstr "{version} の新機能"
 msgid "Check for Updates"
 msgstr "更新を確認"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3876
+#: app/src/tray.rs:254 app/src/ui/window.rs:3872
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "終了"
@@ -4874,7 +4866,7 @@ msgstr "新機能"
 msgid "Website"
 msgstr "ウェブサイト"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3875
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3871
 msgid "Donate"
 msgstr "寄付"
 
@@ -4882,7 +4874,7 @@ msgstr "寄付"
 msgid "License"
 msgstr "ライセンス"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3874
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3870
 msgid "About Penguin Mail"
 msgstr "Penguin Mail について"
 
@@ -5321,7 +5313,7 @@ msgid "Sign In Again"
 msgstr "再ログイン"
 
 #: app/src/ui/add_account.rs:3991 app/src/ui/own_project.rs:680
-#: app/src/ui/preferences/google_route.rs:371 app/src/ui/window.rs:2403
+#: app/src/ui/preferences/google_route.rs:371 app/src/ui/window.rs:2399
 msgid "Open Google Cloud"
 msgstr "Google Cloudを開く"
 
@@ -5399,7 +5391,7 @@ msgstr ""
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr "この方法では、フィルタ、エイリアス、自動返信は使えません。"
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:4023
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:4019
 msgid "Summarize this conversation"
 msgstr "このスレッドを要約して"
 
@@ -5424,13 +5416,13 @@ msgstr "開いているスレッドへの返信を下書きして"
 msgid "Choose a Model"
 msgstr "モデルを選択"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3984
-#: app/src/ui/window.rs:3985
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3980
+#: app/src/ui/window.rs:3981
 msgid "Detach"
 msgstr "切り離す"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4626
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4622
 msgid "Close"
 msgstr "閉じる"
 
@@ -5635,7 +5627,7 @@ msgstr "{server} を編集"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:192 app/src/ui/window.rs:3596
+#: app/src/ui/sender_prefs.rs:192 app/src/ui/window.rs:3592
 msgid "Remove"
 msgstr "削除"
 
@@ -8441,6 +8433,10 @@ msgstr ""
 "このコンピューターは <b>{address}</b> にすでにログインしています。Penguin "
 "Mail はそのログインを通してメールを読めます。"
 
+#: app/src/ui/goa_page.rs:297
+msgid "Use This Account"
+msgstr "このアカウントを使う"
+
 #: app/src/ui/goa_page.rs:310 app/src/ui/goa_page.rs:345
 msgid "Waiting for {address}…"
 msgstr "{address} を待っています…"
@@ -8624,7 +8620,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "メールアドレスの非公開を許可"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4074
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4070
 msgid "Add an account first"
 msgstr "先にアカウントを追加してください"
 
@@ -9693,7 +9689,7 @@ msgstr "{account}を下に移動"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3872 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3868 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "設定"
 
@@ -9744,6 +9740,10 @@ msgstr "Gmail の機能"
 #: app/src/ui/preferences/google_route.rs:328
 msgid "Every feature"
 msgstr "すべての機能"
+
+#: app/src/ui/preferences/google_route.rs:330
+msgid "Mail, calendar and contacts"
+msgstr "メール、カレンダー、連絡先"
 
 #: app/src/ui/preferences/google_route.rs:362 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
@@ -10169,7 +10169,7 @@ msgstr "署名…"
 msgid "Rules…"
 msgstr "ルール…"
 
-#: app/src/ui/sidebar.rs:1863 app/src/ui/window.rs:3866
+#: app/src/ui/sidebar.rs:1863 app/src/ui/window.rs:3862
 msgid "Hide My Email…"
 msgstr "メールアドレスを非公開…"
 
@@ -10648,7 +10648,7 @@ msgstr "メールを読み込めませんでした: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account}を追加しました。メールをダウンロード中…"
 
-#: app/src/ui/window.rs:367 app/src/ui/window.rs:3211
+#: app/src/ui/window.rs:367 app/src/ui/window.rs:3207
 msgid "{account} is signed in again."
 msgstr "{account}に再ログインしました。"
 
@@ -10781,67 +10781,67 @@ msgstr "Penguin Mail（デモ）"
 msgid "Could not read accounts: {reason}"
 msgstr "アカウントを読み取れませんでした: {reason}"
 
-#: app/src/ui/window.rs:1764
+#: app/src/ui/window.rs:1760
 msgid "Signed in with this computer's sign-in."
 msgstr "このコンピューターのログインでログイン中です。"
 
-#: app/src/ui/window.rs:2274
+#: app/src/ui/window.rs:2270
 msgid "Could not delete the mail: {reason}"
 msgstr "メールを削除できませんでした: {reason}"
 
-#: app/src/ui/window.rs:2401
+#: app/src/ui/window.rs:2397
 msgid "Turn On the {service}"
 msgstr "{service}を有効にする"
 
-#: app/src/ui/window.rs:2724
+#: app/src/ui/window.rs:2720
 msgid "Select mail from one account to tag it."
 msgstr "タグを付けるには、1つのアカウントのメールを選んでください。"
 
-#: app/src/ui/window.rs:2736
+#: app/src/ui/window.rs:2732
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "このアカウントにはタグがありません。Outlookで作成してください。"
 
-#: app/src/ui/window.rs:2903
+#: app/src/ui/window.rs:2899
 msgid "Could not include {file}: {reason}"
 msgstr "{file}を含められませんでした: {reason}"
 
-#: app/src/ui/window.rs:2984
+#: app/src/ui/window.rs:2980
 msgid "The server had already sent this message."
 msgstr "サーバーはこのメッセージを送信済みでした。"
 
-#: app/src/ui/window.rs:2989
+#: app/src/ui/window.rs:2985
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "このメッセージは別のアプリでキャンセルされ、下書きにも残っていません。"
 
-#: app/src/ui/window.rs:3103
+#: app/src/ui/window.rs:3099
 msgid "Downloading {file}…"
 msgstr "{file}をダウンロード中…"
 
-#: app/src/ui/window.rs:3124 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:3120 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "{file}をダウンロードフォルダーに保存しました"
 
-#: app/src/ui/window.rs:3127
+#: app/src/ui/window.rs:3123
 msgid "Open"
 msgstr "開く"
 
-#: app/src/ui/window.rs:3142 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:3138 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "{file}を保存できませんでした: {reason}"
 
-#: app/src/ui/window.rs:3391
+#: app/src/ui/window.rs:3387
 msgid "Continue in your browser"
 msgstr "ブラウザーで続けてください"
 
-#: app/src/ui/window.rs:3441
+#: app/src/ui/window.rs:3437
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "このPenguin Mailは、Googleログイン機能なしでビルドされています。"
 
-#: app/src/ui/window.rs:3463
+#: app/src/ui/window.rs:3459
 msgid "Get a Release"
 msgstr "リリース版を入手"
 
-#: app/src/ui/window.rs:3582
+#: app/src/ui/window.rs:3578
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10849,80 +10849,80 @@ msgstr ""
 "サーバーが保持する予約送信メッセージを確認できなかったため、{account}を削除し"
 "ません: {reason}"
 
-#: app/src/ui/window.rs:3593
+#: app/src/ui/window.rs:3589
 msgid "Remove {account}?"
 msgstr "{account}を削除しますか？"
 
-#: app/src/ui/window.rs:3612
+#: app/src/ui/window.rs:3608
 msgid "Remove Anyway"
 msgstr "確認せずに削除"
 
-#: app/src/ui/window.rs:3625
+#: app/src/ui/window.rs:3621
 msgid "Removed {account}"
 msgstr "{account}を削除しました"
 
-#: app/src/ui/window.rs:3627
+#: app/src/ui/window.rs:3623
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}を削除できませんでした: {reason}"
 
-#: app/src/ui/window.rs:3844
+#: app/src/ui/window.rs:3840
 msgid "Refresh"
 msgstr "更新"
 
-#: app/src/ui/window.rs:3848
+#: app/src/ui/window.rs:3844
 msgid "Show Declined Events"
 msgstr "辞退した予定を表示"
 
-#: app/src/ui/window.rs:3864
+#: app/src/ui/window.rs:3860
 msgid "Add Account…"
 msgstr "アカウントを追加…"
 
-#: app/src/ui/window.rs:3865
+#: app/src/ui/window.rs:3861
 msgid "New Smart Mailbox…"
 msgstr "新しいスマートメールボックス…"
 
-#: app/src/ui/window.rs:3873
+#: app/src/ui/window.rs:3869
 msgid "Keyboard Shortcuts"
 msgstr "キーボードショートカット"
 
-#: app/src/ui/window.rs:3882 app/src/ui/window.rs:3884
+#: app/src/ui/window.rs:3878 app/src/ui/window.rs:3880
 msgid "Main Menu"
 msgstr "メインメニュー"
 
-#: app/src/ui/window.rs:3949 app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:3945 app/src/ui/window.rs:3946
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:4075
+#: app/src/ui/window.rs:4071
 msgid "Add a mail account first"
 msgstr "先にメールアカウントを追加してください"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4312
+#: app/src/ui/window.rs:4308
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} のカレンダーと連絡先を接続しました。"
 
-#: app/src/ui/window.rs:4428
+#: app/src/ui/window.rs:4424
 msgid "Open a message from the person first"
 msgstr "先にその人からのメッセージを開いてください"
 
-#: app/src/ui/window.rs:4509
+#: app/src/ui/window.rs:4505
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "再起動後に新しい言語で表示します"
 
-#: app/src/ui/window.rs:4511 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4507 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "再起動"
 
-#: app/src/ui/window.rs:4575
+#: app/src/ui/window.rs:4571
 msgid "Show Rules"
 msgstr "ルールを表示"
 
-#: app/src/ui/window.rs:4601
+#: app/src/ui/window.rs:4597
 msgid "Messages That Will Not Download"
 msgstr "ダウンロードできないメッセージ"
 
-#: app/src/ui/window.rs:4603
+#: app/src/ui/window.rs:4599
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."

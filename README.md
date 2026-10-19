@@ -38,14 +38,16 @@ menu.
 Gmail accounts sign in in up to three ways, and you pick one for each
 account:
 
+- **Set up your own Google project.** Every Gmail feature, on Linux and
+  macOS: Gmail filters, the automatic reply, send-as aliases and
+  signatures, and label colours. It takes about 10 minutes, once:
+  Penguin Mail opens each Google page for you and says what to click.
 - **Use the Google account on this computer** (Linux). Mail, calendar and
   contacts, signed in through your computer's Online Accounts, with no
-  new password.
+  new password. It has no Gmail filters, automatic reply, aliases or
+  label colours.
 - **Use a password from Google.** Quick. You get mail, calendar and
-  contacts.
-- **Set up your own Google project.** Every Gmail feature, on Linux and
-  macOS. It takes about 10 minutes, once: Penguin Mail opens each Google
-  page for you and says what to click.
+  contacts, without those four.
 
 Preferences shows what each account has. Get Every Feature there lets an
 account switch to your own Google project later.

@@ -21,7 +21,8 @@ pub struct MoveBanner {
     pub button: String,
     /// The accounts the button leads to, in the order given.
     pub accounts: Vec<AccountId>,
-    /// The button signs the one account in through Online Accounts.
+    /// The button signs the one account in through Online Accounts. The
+    /// banner never sets it now; the route choice offers that move.
     pub goa_now: bool,
     /// Some account's mail has stopped, which the banner's tint shows.
     pub paused: bool,
@@ -42,16 +43,18 @@ pub fn waiting_for_move(
         .collect()
 }
 
-/// The banner for `waiting`, or none when nothing waits. `holds` says
-/// whether Online Accounts is already signed in as an address.
-pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveBanner> {
+/// The banner for `waiting`, or none when nothing waits. Its button always
+/// opens the route choice, which lists the own Google project first: a
+/// one-click move to Online Accounts would hide the route with every Gmail
+/// feature.
+pub fn banner(waiting: &[Waiting]) -> Option<MoveBanner> {
     let accounts: Vec<AccountId> = waiting.iter().map(|w| w.account.id).collect();
     let paused = waiting.iter().any(|w| w.paused);
-    let (title, goa_now) = match waiting {
+    let title = match waiting {
         [] => return None,
         [one] => {
             let address = one.account.email.as_str();
-            let title = if one.paused {
+            if one.paused {
                 // Translators: {address} is an email address.
                 fill(
                     &gettext(
@@ -65,12 +68,11 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
                     &gettext("Choose how {address} signs in to keep your mail arriving."),
                     &[("address", address)],
                 )
-            };
-            (title, holds(address))
+            }
         }
         _ => {
             let count = waiting.len().to_string();
-            let title = if paused {
+            if paused {
                 // Translators: Gmail is a name; keep it as it is.
                 fill_plural(
                     "{count} Gmail account can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost.",
@@ -86,20 +88,15 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
                     waiting.len(),
                     &[("count", &count)],
                 )
-            };
-            (title, false)
+            }
         }
     };
-    let button = if goa_now {
-        gettext("Use This Account")
-    } else {
-        gettext("Choose…")
-    };
+    let button = gettext("Choose…");
     Some(MoveBanner {
         title,
         button,
         accounts,
-        goa_now,
+        goa_now: false,
         paused,
     })
 }
@@ -173,10 +170,6 @@ mod tests {
         }
     }
 
-    fn nobody(_: &str) -> bool {
-        false
-    }
-
     /// Grant Access in the calendar sidebar, the Calendar and Contacts
     /// Connect rows and the permission questions all go through
     /// `App::sign_in_path`. In this build, with no client from the
@@ -204,7 +197,7 @@ mod tests {
 
     #[test]
     fn one_waiting_account_is_named() {
-        let banner = banner(&[waiting(1, "dana@gmail.com", false)], nobody).unwrap();
+        let banner = banner(&[waiting(1, "dana@gmail.com", false)]).unwrap();
         assert_eq!(
             banner.title,
             "Choose how dana@gmail.com signs in to keep your mail arriving."
@@ -221,7 +214,7 @@ mod tests {
             waiting(1, "a@gmail.com", false),
             waiting(2, "b@gmail.com", false),
         ];
-        let banner = banner(&all, nobody).unwrap();
+        let banner = banner(&all).unwrap();
         assert_eq!(banner.title, "3 Gmail accounts need a new way to sign in");
         assert_eq!(banner.accounts, [3, 1, 2]);
         assert_eq!(banner.button, "Choose…");
@@ -229,7 +222,7 @@ mod tests {
 
     #[test]
     fn a_paused_account_changes_the_words() {
-        let banner = banner(&[waiting(1, "dana@gmail.com", true)], nobody).unwrap();
+        let banner = banner(&[waiting(1, "dana@gmail.com", true)]).unwrap();
         assert_eq!(
             banner.title,
             "Penguin Mail can't get new mail for dana@gmail.com. Choose how it signs in to get your mail back. Nothing on this computer was lost."
@@ -243,43 +236,23 @@ mod tests {
     }
 
     fn banner_of_two(paused: bool) -> MoveBanner {
-        banner(
-            &[
-                waiting(1, "a@gmail.com", paused),
-                waiting(2, "b@gmail.com", false),
-            ],
-            nobody,
-        )
+        banner(&[
+            waiting(1, "a@gmail.com", paused),
+            waiting(2, "b@gmail.com", false),
+        ])
         .unwrap()
     }
 
     #[test]
-    fn goa_holding_the_address_offers_one_click() {
-        let banner = banner(&[waiting(1, "dana@gmail.com", false)], |email| {
-            email == "dana@gmail.com"
-        })
-        .unwrap();
-        assert_eq!(banner.button, "Use This Account");
-        assert!(banner.goa_now);
-    }
-
-    #[test]
-    fn goa_one_click_needs_a_single_account() {
-        let banner = banner(
-            &[
-                waiting(1, "a@gmail.com", false),
-                waiting(2, "b@gmail.com", false),
-            ],
-            |_| true,
-        )
-        .unwrap();
+    fn a_single_account_gets_choose_and_no_one_click_move() {
+        let banner = banner(&[waiting(1, "dana@gmail.com", false)]).unwrap();
         assert_eq!(banner.button, "Choose…");
         assert!(!banner.goa_now);
     }
 
     #[test]
     fn no_banner_without_waiting_accounts() {
-        assert_eq!(banner(&[], nobody), None);
+        assert_eq!(banner(&[]), None);
     }
 
     #[test]

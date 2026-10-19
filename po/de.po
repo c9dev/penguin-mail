@@ -2653,7 +2653,7 @@ msgstr "Penguin Mail konnte nicht starten"
 msgid "Report a Problem"
 msgstr "Problem melden"
 
-#: app/src/move_banner.rs:58
+#: app/src/move_banner.rs:61
 msgid ""
 "Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
 "your mail back. Nothing on this computer was lost."
@@ -2662,13 +2662,13 @@ msgstr ""
 "sich das Konto anmeldet, um Ihre E-Mails zurückzubekommen. Auf diesem "
 "Rechner ist nichts verloren gegangen."
 
-#: app/src/move_banner.rs:65
+#: app/src/move_banner.rs:68
 msgid "Choose how {address} signs in to keep your mail arriving."
 msgstr ""
 "Wählen Sie, wie sich {address} anmeldet, damit weiterhin E-Mails ankommen."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/move_banner.rs:76
+#: app/src/move_banner.rs:78
 msgid ""
 "{count} Gmail account can't get new mail. Choose how each signs in to get "
 "your mail back. Nothing on this computer was lost."
@@ -2685,17 +2685,13 @@ msgstr[1] ""
 "diesem Rechner ist nichts verloren gegangen."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/move_banner.rs:84
+#: app/src/move_banner.rs:86
 msgid "{count} Gmail account needs a new way to sign in"
 msgid_plural "{count} Gmail accounts need a new way to sign in"
 msgstr[0] "{count} Gmail-Konto braucht eine neue Anmeldeart"
 msgstr[1] "{count} Gmail-Konten brauchen eine neue Anmeldeart"
 
-#: app/src/move_banner.rs:94 app/src/ui/goa_page.rs:297
-msgid "Use This Account"
-msgstr "Dieses Konto verwenden"
-
-#: app/src/move_banner.rs:96 app/src/ui/preferences/google_route.rs:345
+#: app/src/move_banner.rs:94 app/src/ui/preferences/google_route.rs:345
 msgid "Choose…"
 msgstr "Wählen …"
 
@@ -4241,8 +4237,8 @@ msgstr "Dieses Konto ist nicht verbunden."
 msgid "Could not save: {reason}"
 msgstr "Speichern fehlgeschlagen: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3005
-#: app/src/ui/window.rs:3028
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3001
+#: app/src/ui/window.rs:3024
 msgid "Could not open the draft: {reason}"
 msgstr "Der Entwurf konnte nicht geöffnet werden: {reason}"
 
@@ -4446,7 +4442,7 @@ msgid "Choose how Penguin Mail signs in to Gmail"
 msgstr "Wählen Sie, wie sich Penguin Mail bei Gmail anmeldet"
 
 #. Translators: Gmail and Google are names; keep them as they are.
-#: app/src/route_choice.rs:133
+#: app/src/route_choice.rs:130
 msgid ""
 "Want every Gmail feature? Your own Google project gives you all of them, "
 "free."
@@ -4454,60 +4450,56 @@ msgstr ""
 "Sie möchten alle Gmail-Funktionen? Mit einem eigenen Google-Projekt bekommen "
 "Sie alle, kostenlos."
 
-#: app/src/route_choice.rs:141 app/src/ui/goa_page.rs:289
+#: app/src/route_choice.rs:138 app/src/ui/goa_page.rs:289
 msgid "Use the Google account on this computer"
 msgstr "Das Google-Konto auf diesem Rechner verwenden"
 
-#: app/src/route_choice.rs:143 app/src/ui/goa_page.rs:81
+#: app/src/route_choice.rs:140 app/src/ui/goa_page.rs:81
 #: app/src/ui/goa_page.rs:335 app/src/ui/goa_page.rs:351
 #: app/src/ui/goa_page.rs:362 app/src/ui/goa_page.rs:387
 msgid "Add your Google account to this computer"
 msgstr "Google-Konto zu diesem Rechner hinzufügen"
 
-#: app/src/route_choice.rs:146
+#: app/src/route_choice.rs:143
 msgid "Already signed in on this computer"
 msgstr "Auf diesem Rechner bereits angemeldet"
 
-#: app/src/route_choice.rs:148 app/src/ui/preferences/google_route.rs:330
-msgid "Mail, calendar and contacts"
-msgstr "E-Mail, Kalender und Kontakte"
-
-#. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:160
-msgid "Use a password from Google"
-msgstr "Ein Passwort von Google verwenden"
-
-#: app/src/route_choice.rs:162
+#: app/src/route_choice.rs:145 app/src/route_choice.rs:157
 msgid "Quick. Mail, calendar and contacts."
 msgstr "Schnell. E-Mail, Kalender und Kontakte."
 
-#: app/src/route_choice.rs:164
+#. Translators: Google is a name; keep it as it is.
+#: app/src/route_choice.rs:155
+msgid "Use a password from Google"
+msgstr "Ein Passwort von Google verwenden"
+
+#: app/src/route_choice.rs:159
 msgid "Quickest. About 2 minutes"
 msgstr "Am schnellsten. Etwa 2 Minuten"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:174 app/src/ui/add_account.rs:3972
+#: app/src/route_choice.rs:169 app/src/ui/add_account.rs:3972
 msgid "Use your Google project again"
 msgstr "Ihr Google-Projekt wieder verwenden"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:176
+#: app/src/route_choice.rs:171
 msgid "Every Gmail feature, with the project you set up before."
 msgstr ""
 "Jede Gmail-Funktion, mit dem Projekt, das Sie schon eingerichtet haben."
 
-#: app/src/route_choice.rs:185
+#: app/src/route_choice.rs:180
 msgid "Set up a different project"
 msgstr "Ein anderes Projekt einrichten"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:188 app/src/ui/preferences/google_route.rs:352
-#: app/src/ui/window.rs:3444
+#: app/src/route_choice.rs:183 app/src/ui/preferences/google_route.rs:352
+#: app/src/ui/window.rs:3440
 msgid "Set up your own Google project"
 msgstr "Eigenes Google-Projekt einrichten"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:191
+#: app/src/route_choice.rs:186
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
 msgstr "Alle Gmail-Funktionen, auf jedem Rechner. Etwa 10 Minuten, einmalig."
 
@@ -4684,8 +4676,8 @@ msgstr "Anthropic-API"
 msgid "Claude Subscription"
 msgstr "Claude-Abonnement"
 
-#: app/src/settings/mod.rs:230 app/src/ui/window.rs:3857
-#: app/src/ui/window.rs:3937
+#: app/src/settings/mod.rs:230 app/src/ui/window.rs:3853
+#: app/src/ui/window.rs:3933
 msgid "Assistant"
 msgstr "Assistent"
 
@@ -5059,7 +5051,7 @@ msgstr "Penguin Mail öffnen"
 msgid "New Message"
 msgstr "Neue Nachricht"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1952 app/src/ui/window.rs:3863
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1952 app/src/ui/window.rs:3859
 msgid "Check for Mail"
 msgstr "Nach E-Mails sehen"
 
@@ -5077,7 +5069,7 @@ msgstr "Neuigkeiten in {version}"
 msgid "Check for Updates"
 msgstr "Nach Aktualisierungen suchen"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3876
+#: app/src/tray.rs:254 app/src/ui/window.rs:3872
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Beenden"
@@ -5098,7 +5090,7 @@ msgstr "Neuigkeiten"
 msgid "Website"
 msgstr "Webseite"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3875
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3871
 msgid "Donate"
 msgstr "Spenden"
 
@@ -5106,7 +5098,7 @@ msgstr "Spenden"
 msgid "License"
 msgstr "Lizenz"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3874
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3870
 msgid "About Penguin Mail"
 msgstr "Info zu Penguin Mail"
 
@@ -5551,7 +5543,7 @@ msgid "Sign In Again"
 msgstr "Erneut anmelden"
 
 #: app/src/ui/add_account.rs:3991 app/src/ui/own_project.rs:680
-#: app/src/ui/preferences/google_route.rs:371 app/src/ui/window.rs:2403
+#: app/src/ui/preferences/google_route.rs:371 app/src/ui/window.rs:2399
 msgid "Open Google Cloud"
 msgstr "Google Cloud öffnen"
 
@@ -5634,7 +5626,7 @@ msgstr ""
 "Filter, Aliasse und die automatische Antwort sind auf diese Weise nicht "
 "verfügbar."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:4023
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:4019
 msgid "Summarize this conversation"
 msgstr "Diese Unterhaltung zusammenfassen"
 
@@ -5659,13 +5651,13 @@ msgstr "Eine Antwort auf die geöffnete Unterhaltung entwerfen"
 msgid "Choose a Model"
 msgstr "Modell wählen"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3984
-#: app/src/ui/window.rs:3985
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3980
+#: app/src/ui/window.rs:3981
 msgid "Detach"
 msgstr "Abtrennen"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4626
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4622
 msgid "Close"
 msgstr "Schließen"
 
@@ -5876,7 +5868,7 @@ msgstr "{server} bearbeiten"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:192 app/src/ui/window.rs:3596
+#: app/src/ui/sender_prefs.rs:192 app/src/ui/window.rs:3592
 msgid "Remove"
 msgstr "Entfernen"
 
@@ -8744,6 +8736,10 @@ msgstr ""
 "Dieser Rechner ist bereits bei <b>{address}</b> angemeldet. Penguin Mail "
 "kann Ihre E-Mails darüber lesen."
 
+#: app/src/ui/goa_page.rs:297
+msgid "Use This Account"
+msgstr "Dieses Konto verwenden"
+
 #: app/src/ui/goa_page.rs:310 app/src/ui/goa_page.rs:345
 msgid "Waiting for {address}…"
 msgstr "Warten auf {address}…"
@@ -8930,7 +8926,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Hide My Email erlauben"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4074
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4070
 msgid "Add an account first"
 msgstr "Fügen Sie zuerst ein Konto hinzu"
 
@@ -10049,7 +10045,7 @@ msgstr "{account} nach unten verschieben"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3872 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3868 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Einstellungen"
 
@@ -10100,6 +10096,10 @@ msgstr "Gmail-Funktionen"
 #: app/src/ui/preferences/google_route.rs:328
 msgid "Every feature"
 msgstr "Alle Funktionen"
+
+#: app/src/ui/preferences/google_route.rs:330
+msgid "Mail, calendar and contacts"
+msgstr "E-Mail, Kalender und Kontakte"
 
 #: app/src/ui/preferences/google_route.rs:362 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
@@ -10532,7 +10532,7 @@ msgstr "Signatur …"
 msgid "Rules…"
 msgstr "Regeln …"
 
-#: app/src/ui/sidebar.rs:1863 app/src/ui/window.rs:3866
+#: app/src/ui/sidebar.rs:1863 app/src/ui/window.rs:3862
 msgid "Hide My Email…"
 msgstr "Hide My Email …"
 
@@ -11016,7 +11016,7 @@ msgstr "E-Mails konnten nicht geladen werden: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} hinzugefügt. E-Mails werden heruntergeladen …"
 
-#: app/src/ui/window.rs:367 app/src/ui/window.rs:3211
+#: app/src/ui/window.rs:367 app/src/ui/window.rs:3207
 msgid "{account} is signed in again."
 msgstr "{account} ist wieder angemeldet."
 
@@ -11162,71 +11162,71 @@ msgstr "Penguin Mail (Demo)"
 msgid "Could not read accounts: {reason}"
 msgstr "Konten konnten nicht gelesen werden: {reason}"
 
-#: app/src/ui/window.rs:1764
+#: app/src/ui/window.rs:1760
 msgid "Signed in with this computer's sign-in."
 msgstr "Mit der Anmeldung dieses Rechners angemeldet."
 
-#: app/src/ui/window.rs:2274
+#: app/src/ui/window.rs:2270
 msgid "Could not delete the mail: {reason}"
 msgstr "Die E-Mails konnten nicht gelöscht werden: {reason}"
 
-#: app/src/ui/window.rs:2401
+#: app/src/ui/window.rs:2397
 msgid "Turn On the {service}"
 msgstr "{service} einschalten"
 
-#: app/src/ui/window.rs:2724
+#: app/src/ui/window.rs:2720
 msgid "Select mail from one account to tag it."
 msgstr ""
 "Wählen Sie E-Mails aus einem einzigen Konto aus, um sie zu verschlagworten."
 
-#: app/src/ui/window.rs:2736
+#: app/src/ui/window.rs:2732
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr ""
 "Dieses Konto hat noch keine Schlagwörter. Erstellen Sie eines in Outlook."
 
-#: app/src/ui/window.rs:2903
+#: app/src/ui/window.rs:2899
 msgid "Could not include {file}: {reason}"
 msgstr "{file} konnte nicht eingefügt werden: {reason}"
 
-#: app/src/ui/window.rs:2984
+#: app/src/ui/window.rs:2980
 msgid "The server had already sent this message."
 msgstr "Der Server hatte diese Nachricht bereits gesendet."
 
-#: app/src/ui/window.rs:2989
+#: app/src/ui/window.rs:2985
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Diese Nachricht wurde in einer anderen App abgebrochen und ist nicht mehr in "
 "den Entwürfen."
 
-#: app/src/ui/window.rs:3103
+#: app/src/ui/window.rs:3099
 msgid "Downloading {file}…"
 msgstr "{file} wird heruntergeladen …"
 
-#: app/src/ui/window.rs:3124 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:3120 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "{file} in Downloads gespeichert"
 
-#: app/src/ui/window.rs:3127
+#: app/src/ui/window.rs:3123
 msgid "Open"
 msgstr "Öffnen"
 
-#: app/src/ui/window.rs:3142 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:3138 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "{file} konnte nicht gespeichert werden: {reason}"
 
-#: app/src/ui/window.rs:3391
+#: app/src/ui/window.rs:3387
 msgid "Continue in your browser"
 msgstr "Im Browser fortfahren"
 
-#: app/src/ui/window.rs:3441
+#: app/src/ui/window.rs:3437
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Diese Ausgabe von Penguin Mail wurde ohne Google-Anmeldung gebaut."
 
-#: app/src/ui/window.rs:3463
+#: app/src/ui/window.rs:3459
 msgid "Get a Release"
 msgstr "Veröffentlichung herunterladen"
 
-#: app/src/ui/window.rs:3582
+#: app/src/ui/window.rs:3578
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11234,80 +11234,80 @@ msgstr ""
 "Die Nachrichten, die der Server zum späteren Senden bereithält, konnten "
 "nicht geprüft werden, daher bleibt {account}: {reason}"
 
-#: app/src/ui/window.rs:3593
+#: app/src/ui/window.rs:3589
 msgid "Remove {account}?"
 msgstr "{account} entfernen?"
 
-#: app/src/ui/window.rs:3612
+#: app/src/ui/window.rs:3608
 msgid "Remove Anyway"
 msgstr "Trotzdem entfernen"
 
-#: app/src/ui/window.rs:3625
+#: app/src/ui/window.rs:3621
 msgid "Removed {account}"
 msgstr "{account} entfernt"
 
-#: app/src/ui/window.rs:3627
+#: app/src/ui/window.rs:3623
 msgid "Could not remove {account}: {reason}"
 msgstr "{account} konnte nicht entfernt werden: {reason}"
 
-#: app/src/ui/window.rs:3844
+#: app/src/ui/window.rs:3840
 msgid "Refresh"
 msgstr "Aktualisieren"
 
-#: app/src/ui/window.rs:3848
+#: app/src/ui/window.rs:3844
 msgid "Show Declined Events"
 msgstr "Abgelehnte Termine anzeigen"
 
-#: app/src/ui/window.rs:3864
+#: app/src/ui/window.rs:3860
 msgid "Add Account…"
 msgstr "Konto hinzufügen …"
 
-#: app/src/ui/window.rs:3865
+#: app/src/ui/window.rs:3861
 msgid "New Smart Mailbox…"
 msgstr "Neues intelligentes Postfach …"
 
-#: app/src/ui/window.rs:3873
+#: app/src/ui/window.rs:3869
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: app/src/ui/window.rs:3882 app/src/ui/window.rs:3884
+#: app/src/ui/window.rs:3878 app/src/ui/window.rs:3880
 msgid "Main Menu"
 msgstr "Hauptmenü"
 
-#: app/src/ui/window.rs:3949 app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:3945 app/src/ui/window.rs:3946
 msgid "Dock"
 msgstr "Andocken"
 
-#: app/src/ui/window.rs:4075
+#: app/src/ui/window.rs:4071
 msgid "Add a mail account first"
 msgstr "Fügen Sie zuerst ein E-Mail-Konto hinzu"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4312
+#: app/src/ui/window.rs:4308
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Kalender und Kontakte von {account} sind verbunden."
 
-#: app/src/ui/window.rs:4428
+#: app/src/ui/window.rs:4424
 msgid "Open a message from the person first"
 msgstr "Öffnen Sie zuerst eine Nachricht dieser Person"
 
-#: app/src/ui/window.rs:4509
+#: app/src/ui/window.rs:4505
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail zeigt die neue Sprache nach einem Neustart an"
 
-#: app/src/ui/window.rs:4511 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4507 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Neu starten"
 
-#: app/src/ui/window.rs:4575
+#: app/src/ui/window.rs:4571
 msgid "Show Rules"
 msgstr "Regeln anzeigen"
 
-#: app/src/ui/window.rs:4601
+#: app/src/ui/window.rs:4597
 msgid "Messages That Will Not Download"
 msgstr "Nachrichten, die sich nicht herunterladen lassen"
 
-#: app/src/ui/window.rs:4603
+#: app/src/ui/window.rs:4599
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."

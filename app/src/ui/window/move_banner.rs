@@ -145,15 +145,13 @@ pub(crate) mod checks {
             bar.widget().button_style(),
             adw::BannerButtonStyle::Suggested
         );
-        bar.show(banner(
-            &[waiting(1, "a@gmail.com", AccountState::MailPaused)],
-            none_held,
-        ));
+        bar.show(banner(&[waiting(
+            1,
+            "a@gmail.com",
+            AccountState::MailPaused,
+        )]));
         assert!(bar.widget().has_css_class("move-banner-paused"));
-        bar.show(banner(
-            &[waiting(1, "a@gmail.com", AccountState::Ok)],
-            none_held,
-        ));
+        bar.show(banner(&[waiting(1, "a@gmail.com", AccountState::Ok)]));
         assert!(!bar.widget().has_css_class("move-banner-paused"));
     }
 
@@ -170,15 +168,11 @@ pub(crate) mod checks {
         }
     }
 
-    fn none_held(_: &str) -> bool {
-        false
-    }
-
     fn the_banner_keeps_one_widget_as_accounts_join() {
         let bar = Bar::new();
         let before = bar.widget().clone();
         let one = [waiting(1, "a@gmail.com", AccountState::Ok)];
-        bar.show(banner(&one, none_held));
+        bar.show(banner(&one));
         assert_eq!(
             bar.widget().title(),
             "Choose how a@gmail.com signs in to keep your mail arriving."
@@ -188,7 +182,7 @@ pub(crate) mod checks {
             waiting(1, "a@gmail.com", AccountState::Ok),
             waiting(2, "b&c@gmail.com", AccountState::Ok),
         ];
-        bar.show(banner(&two, none_held));
+        bar.show(banner(&two));
         assert_eq!(bar.widget(), &before);
         assert_eq!(
             bar.widget().title(),
@@ -198,7 +192,7 @@ pub(crate) mod checks {
         assert!(!bar.widget().is_revealed());
         // An address with an ampersand is shown as typed, not parsed.
         let amp = [waiting(2, "b&c@gmail.com", AccountState::Ok)];
-        bar.show(banner(&amp, none_held));
+        bar.show(banner(&amp));
         assert!(bar.widget().title().contains("b&c@gmail.com"));
         assert!(!bar.widget().uses_markup());
     }
@@ -220,7 +214,7 @@ pub(crate) mod checks {
             waiting(1, "a@gmail.com", AccountState::Ok),
             waiting(2, "b@gmail.com", AccountState::MailPaused),
         ];
-        bar.show(banner(&two, none_held));
+        bar.show(banner(&two));
         let mut labels = Vec::new();
         names_in(bar.widget().upcast_ref(), &mut labels);
         assert_eq!(labels, ["Choose…"]);
@@ -235,7 +229,7 @@ pub(crate) mod checks {
             waiting(3, "c@gmail.com", AccountState::Ok),
             waiting(1, "a@gmail.com", AccountState::Ok),
         ];
-        bar.show(banner(&all, none_held));
+        bar.show(banner(&all));
         bar.widget().emit_by_name::<()>("button-clicked", &[]);
         assert_eq!(
             *pressed.borrow(),
@@ -243,22 +237,6 @@ pub(crate) mod checks {
                 accounts: vec![3, 1],
                 goa_now: false
             }]
-        );
-        // A fake GNOME Online Accounts that holds the address: the press
-        // asks for the one-click move. The GOA plan wires what it does.
-        let one = [waiting(5, "dana@gmail.com", AccountState::Ok)];
-        bar.show(banner(&one, |email| email == "dana@gmail.com"));
-        assert_eq!(
-            bar.widget().button_label().as_deref(),
-            Some("Use This Account")
-        );
-        bar.widget().emit_by_name::<()>("button-clicked", &[]);
-        assert_eq!(
-            pressed.borrow().last(),
-            Some(&Press {
-                accounts: vec![5],
-                goa_now: true
-            })
         );
     }
 
