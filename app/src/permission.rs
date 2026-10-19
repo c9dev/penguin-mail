@@ -339,8 +339,10 @@ pub fn grant_bar_title(account: &str, missing: &[Permission], provider: Provider
 
 /// The scopes `provider`'s account asks for at sign-in: what its client's
 /// own list holds. A built-in Gmail account that reads mail through IMAP
-/// asks for the built-in list; every other Gmail account asks for the full
-/// one, as does an account whose sign-in is unknown.
+/// asks for the built-in list, and so does an Online Accounts account,
+/// whose calendar token comes from the built-in client; every other Gmail
+/// account asks for the full one, as does an account whose sign-in is
+/// unknown.
 pub fn own_scopes(provider: Provider, sign_in: Option<GoogleSignIn>) -> &'static [&'static str] {
     match (provider, sign_in) {
         (Provider::Microsoft, _) => &mailrs_graph::SCOPES,
@@ -349,6 +351,13 @@ pub fn own_scopes(provider: Provider, sign_in: Option<GoogleSignIn>) -> &'static
             Some(GoogleSignIn {
                 client: SignInClient::BuiltIn,
                 route: MailRoute::Imap,
+            }),
+        ) => &BUILT_IN_SCOPES,
+        (
+            _,
+            Some(GoogleSignIn {
+                client: SignInClient::Goa,
+                ..
             }),
         ) => &BUILT_IN_SCOPES,
         _ => &FULL_SCOPES,
