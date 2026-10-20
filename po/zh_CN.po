@@ -114,22 +114,6 @@ msgstr ""
 "添加 Gmail 或 Microsoft 账号只需在浏览器中登录一次。Penguin Mail 采用 GTK 和 "
 "libadwaita，最适合 GNOME，也可在任何 Linux 桌面环境中运行。"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "电子邮件"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "邮件"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "收件箱"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "所有账号集中在同一收件箱，并打开一封回复"
@@ -1992,7 +1976,7 @@ msgstr "重点"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "即使未打开窗口，Penguin Mail 也会持续同步"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "请至少添加一位收件人。"
 
@@ -2000,19 +1984,19 @@ msgstr "请至少添加一位收件人。"
 msgid "“{address}” is not an email address."
 msgstr "「{address}」不是电子邮件地址。"
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "请选择未来的时间"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}，{sender} 写道："
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail 无法组成这封邮件。"
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "此邮件列表未提供唯一的收件地址。"
 
@@ -11762,6 +11746,18 @@ msgstr "标记为非垃圾邮件"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "电子邮件"
+
+#~ msgid "mail"
+#~ msgstr "邮件"
+
+#~ msgid "inbox"
+#~ msgstr "收件箱"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

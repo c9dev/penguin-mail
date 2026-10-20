@@ -120,22 +120,6 @@ msgstr ""
 "navegador. O Penguin Mail é feito com GTK e libadwaita e integra-se melhor "
 "no GNOME, mas funciona em qualquer ambiente de trabalho Linux."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "e-mail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "correio"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "caixa de entrada"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Todas as contas numa caixa de entrada, com uma resposta aberta"
@@ -2108,7 +2092,7 @@ msgstr "Destaques"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
@@ -2116,19 +2100,19 @@ msgstr "Adicione pelo menos um destinatário."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "Escolha uma hora no futuro"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "O Penguin Mail não conseguiu montar a mensagem."
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "A lista não indicou um único endereço para onde escrever."
 
@@ -12355,6 +12339,18 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "e-mail"
+
+#~ msgid "mail"
+#~ msgstr "correio"
+
+#~ msgid "inbox"
+#~ msgstr "caixa de entrada"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

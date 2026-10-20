@@ -1207,9 +1207,11 @@ impl Editor {
     /// everything typed before. False when nothing changed.
     pub fn swap_signature(&self, old: &str, new: &str) -> bool {
         if self.format.get() == ComposeFormat::Rich {
-            let body = self.rich();
+            let anchors = self.anchors.borrow();
+            let blocks = (0..self.buffer.line_count())
+                .filter_map(|line| richbuffer::read_line(&self.buffer, &anchors, line));
             let Some((first, removed, mut replacement)) =
-                crate::compose::rich_signature_change(&body, old, new)
+                crate::compose::rich_signature_change(blocks, old, new)
             else {
                 return false;
             };
@@ -1221,11 +1223,14 @@ impl Editor {
                 .buffer
                 .iter_at_line((first + removed) as i32)
                 .unwrap_or_else(|| self.buffer.end_iter());
-            if first + removed < body.blocks.len() && !replacement.blocks.is_empty() {
-                replacement
-                    .blocks
-                    .push(Block::new(body.blocks[first + removed].kind, Vec::new()));
+            if first + removed < self.buffer.line_count() as usize && !replacement.blocks.is_empty()
+            {
+                replacement.blocks.push(Block::new(
+                    richbuffer::kind_at(&self.buffer, (first + removed) as i32),
+                    Vec::new(),
+                ));
             }
+            drop(anchors);
             let cursor = self.buffer.create_mark(
                 None,
                 &self.buffer.iter_at_mark(&self.buffer.get_insert()),
@@ -1249,7 +1254,7 @@ impl Editor {
             self.busy.set(false);
             return true;
         }
-        let Some(change) = signature_change(&self.lines_to_quote(), old, new) else {
+        let Some(change) = signature_change(&self.lines_to_quote(old), old, new) else {
             return false;
         };
         self.replace_lines(&change);
@@ -1258,11 +1263,14 @@ impl Editor {
 
     /// The lines of the body as text, down to the first quoted one. A
     /// quoted line in rich text has no `>` of its own, so it gets one here
-    /// for [`signature_change`] to recognise it by.
-    fn lines_to_quote(&self) -> Vec<String> {
+    /// for [`signature_change`] to recognise it by. Read the expected signature's
+    /// lines after its separator before stopping at a quote within it.
+    fn lines_to_quote(&self, signature: &str) -> Vec<String> {
         let buffer = &self.buffer;
         let rich = self.format.get() == ComposeFormat::Rich;
         let mut lines = Vec::new();
+        let signature_lines = signature.trim_end().lines().count() as i32;
+        let mut signature_end = 0;
         for line in 0..buffer.line_count() {
             let start = match rich {
                 true => richbuffer::text_start(buffer, line),
@@ -1273,6 +1281,9 @@ impl Editor {
             let text = buffer
                 .text(&start, &line_end(buffer, line), false)
                 .to_string();
+            if line >= signature_end && text.trim_end() == "--" {
+                signature_end = line + 1 + signature_lines;
+            }
             let quoted = match rich {
                 true => richbuffer::kind_at(buffer, line) == BlockKind::Quote,
                 false => text.trim_start().starts_with('>'),
@@ -1281,7 +1292,7 @@ impl Editor {
                 true => lines.push(format!("> {text}")),
                 false => lines.push(text),
             }
-            if quoted {
+            if quoted && line >= signature_end {
                 break;
             }
         }
@@ -1607,6 +1618,7 @@ pub(super) mod checks {
         clearing_formatting_takes_the_list_markers_too();
         a_new_signature_leaves_the_cursor_and_undo_alone();
         a_new_signature_keeps_the_quote_below_it();
+        markdown_signature_quotes_follow_the_sender();
         a_keystroke_looks_at_its_own_lines_only();
         the_body_is_read_once_for_a_draft();
         an_unfolded_quote_lands_where_the_folded_one_would_go();
@@ -2355,8 +2367,30 @@ pub(super) mod checks {
         assert_eq!(editor.rich().to_plain(), "one\n1. two\n2. three");
     }
 
+    fn markdown_signature_quotes_follow_the_sender() {
+        let view = gtk::TextView::new();
+        let editor = Editor::new(&view, ComposeFormat::Markdown);
+        let old = "> me@example.com";
+        let new = "> me+shop@example.com";
+        let history = "\n\nOn Monday, Ann wrote:\n> Original message";
+        editor.fill(
+            &format!(
+                "{}{}",
+                crate::compose::with_signature("Hello", old),
+                history
+            ),
+            None,
+            &[],
+        );
+        assert!(editor.swap_signature(old, new));
+        assert!(editor.markdown().contains(new));
+        assert!(editor.swap_signature(new, ""));
+        assert!(!editor.markdown().contains("example.com"));
+        assert!(editor.markdown().ends_with(history));
+    }
+
     fn a_new_signature_keeps_the_quote_below_it() {
-        for old in ["", "Dana"] {
+        for old in ["", "Dana", "> Dana\n> Sales"] {
             let view = gtk::TextView::new();
             let editor = Editor::new(&view, ComposeFormat::Rich);
             let mut body = RichBody::from_markdown(&crate::compose::with_signature("", old));

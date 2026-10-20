@@ -124,22 +124,6 @@ msgstr ""
 "navigator. Penguin Mail este construit cu GTK și libadwaita și se potrivește "
 "cel mai bine în GNOME, dar rulează pe orice desktop Linux."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "e-mail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "corespondență"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "mesaje primite"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
@@ -2152,7 +2136,7 @@ msgstr "Prioritare"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail continuă sincronizarea fără nicio fereastră deschisă"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "Adăugați cel puțin un destinatar."
 
@@ -2160,19 +2144,19 @@ msgstr "Adăugați cel puțin un destinatar."
 msgid "“{address}” is not an email address."
 msgstr "„{address}” nu este o adresă de e-mail."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "Alegeți un moment din viitor"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "La {date}, {sender} a scris:"
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail nu a putut compune mesajul."
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "Lista nu a indicat nicio adresă la care să scrieți."
 
@@ -12560,6 +12544,18 @@ msgstr "Marchează ca nefiind spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mută în {folder}"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "e-mail"
+
+#~ msgid "mail"
+#~ msgstr "corespondență"
+
+#~ msgid "inbox"
+#~ msgstr "mesaje primite"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

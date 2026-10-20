@@ -1128,42 +1128,56 @@ pub fn expand_signature(template: &str, email: &str) -> String {
     result
 }
 
-/// Changes only an untouched rich signature, including its styles and links.
+/// Changes only an untouched rich signature, reading no further than the first
+/// history block. Quotes that belong to the generated signature are matched first.
 pub fn rich_signature_change(
-    body: &RichBody,
+    blocks: impl IntoIterator<Item = Block>,
     old: &str,
     new: &str,
 ) -> Option<(usize, usize, RichBody)> {
-    let lines: Vec<_> = body
-        .blocks
-        .iter()
-        .map(|b| {
-            if b.kind == richtext::BlockKind::Quote {
-                format!("> {}", b.text())
+    let expected = if old.trim().is_empty() {
+        RichBody::default()
+    } else {
+        RichBody::from_markdown(&signature_block(old))
+    };
+    let tail = attribution_tail();
+    let mut candidate = None;
+    let mut matched = None;
+    let mut attribution = None;
+    let mut end = 0;
+    let mut count = 0;
+    for (index, block) in blocks.into_iter().enumerate() {
+        count = index + 1;
+        if candidate.is_some_and(|start| expected.blocks.get(index - start) != Some(&block)) {
+            candidate = None;
+        }
+        if candidate.is_none() && expected.blocks.first() == Some(&block) {
+            candidate = Some(index);
+        }
+        let in_signature = candidate.is_some();
+        if block.kind == richtext::BlockKind::Quote && !in_signature {
+            end = attribution.unwrap_or(end);
+            break;
+        }
+        if in_signature || !block.is_blank() {
+            attribution = if !in_signature && block.text().trim_end().ends_with(&tail) {
+                Some(end)
             } else {
-                b.text()
-            }
-        })
-        .collect();
-    let text = lines.join("\n");
-    let quote = quote_starts_at(&text).map_or(body.blocks.len(), |at| {
-        text[..at].bytes().filter(|b| *b == b'\n').count()
-    });
-    let mut end = quote;
-    while end > 0 && body.blocks[end - 1].is_blank() {
-        end -= 1;
+                None
+            };
+            end = index + 1;
+        }
+        if let Some(start) = candidate
+            && index + 1 - start == expected.blocks.len()
+        {
+            matched = Some((start, index + 1));
+            candidate = None;
+        }
     }
     let first = if old.trim().is_empty() {
         end
     } else {
-        let start = body.blocks[..end]
-            .iter()
-            .rposition(|b| b.text().trim_end() == "--")?;
-        let expected = RichBody::from_markdown(&signature_block(old));
-        if body.blocks[start..end] != expected.blocks {
-            return None;
-        }
-        start
+        matched.filter(|(_, past)| *past == end)?.0
     };
     let mut replacement = if new.trim().is_empty() {
         RichBody::default()
@@ -1172,7 +1186,7 @@ pub fn rich_signature_change(
     };
     if old.trim().is_empty() && !replacement.blocks.is_empty() && first > 0 {
         replacement.blocks.insert(0, Block::default());
-        if first == body.blocks.len() {
+        if first == count {
             replacement.blocks.insert(0, Block::default());
         }
     }
@@ -1231,17 +1245,32 @@ fn attribution_tail() -> String {
 /// Where the quoted original starts, counting the "On Monday, Ann wrote:"
 /// line that introduces it. `None` when nothing is quoted.
 fn quote_starts_at(markdown: &str) -> Option<usize> {
+    quote_after_signature(markdown, "")
+}
+
+fn quote_after_signature(markdown: &str, signature: &str) -> Option<usize> {
+    let expected: Vec<_> = signature.trim_end().lines().map(str::trim_end).collect();
+    let mut candidate = None;
     let tail = attribution_tail();
     let mut at = 0;
     let mut attribution = None;
     for line in markdown.split_inclusive('\n') {
-        if line.trim_start().starts_with('>') {
+        let text = line.trim_end();
+        let in_signature = candidate.is_some_and(|next| expected.get(next) == Some(&text));
+        candidate = if in_signature {
+            candidate.map(|next| next + 1)
+        } else if text == "--" && !expected.is_empty() {
+            Some(0)
+        } else {
+            None
+        };
+        if line.trim_start().starts_with('>') && !in_signature {
             return Some(attribution.unwrap_or(at));
         }
         // A blank line between the attribution and the quote belongs to the
         // quote, so it does not clear what was found.
         if !line.trim().is_empty() {
-            attribution = line.trim_end().ends_with(&tail).then_some(at);
+            attribution = (!in_signature && line.trim_end().ends_with(&tail)).then_some(at);
         }
         at += line.len();
     }
@@ -1285,7 +1314,7 @@ fn signature_starts_at(head: &str, signature: &str) -> Option<usize> {
 /// losing a rewritten one to a dropdown would be worse than showing the
 /// wrong one.
 pub fn restyle_signature(markdown: &str, old: &str, new: &str) -> String {
-    let quote = quote_starts_at(markdown).unwrap_or(markdown.len());
+    let quote = quote_after_signature(markdown, old).unwrap_or(markdown.len());
     // Where the writer's own words end: above the old signature while it is
     // still where it was left, else right above the quote.
     let ends = match old.trim().is_empty() {
@@ -2360,7 +2389,8 @@ mod tests {
         for quote in ["", "\n\nOn Monday, Ann wrote:\n> Hello"] {
             let text = format!("My *own* words.\n\n-- \n{old}{quote}");
             let body = RichBody::from_markdown(&text);
-            let (first, removed, replacement) = rich_signature_change(&body, &old, &new).unwrap();
+            let (first, removed, replacement) =
+                rich_signature_change(body.blocks.iter().cloned(), &old, &new).unwrap();
             let mut changed = body.clone();
             changed
                 .blocks
@@ -2371,12 +2401,12 @@ mod tests {
                 changed.blocks.last().unwrap().kind,
                 body.blocks.last().unwrap().kind
             );
-            assert!(rich_signature_change(&changed, &old, &new).is_none());
+            assert!(rich_signature_change(changed.blocks.iter().cloned(), &old, &new).is_none());
             let mut edited = body.clone();
             edited.blocks[first + 1].spans[0].style.italic = true;
-            assert!(rich_signature_change(&edited, &old, &new).is_none());
+            assert!(rich_signature_change(edited.blocks.iter().cloned(), &old, &new).is_none());
             edited.blocks[first + 1].spans[0].text.push_str(" edited");
-            assert!(rich_signature_change(&edited, &old, &new).is_none());
+            assert!(rich_signature_change(edited.blocks.iter().cloned(), &old, &new).is_none());
         }
     }
 
@@ -2392,8 +2422,82 @@ mod tests {
             let new = expand_signature(template, "me+shop@example.com");
             let body = RichBody::from_markdown(&with_signature("Hello", &old));
             assert!(
-                rich_signature_change(&body, &old, &new).is_some(),
+                rich_signature_change(body.blocks.iter().cloned(), &old, &new).is_some(),
                 "{template}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_blockquote_signature_changes_and_disappears_before_history() {
+        let old = expand_signature("> <email>\n> **Sales**", "me@example.com");
+        let new = expand_signature("> <email>\n> **Sales**", "me+shop@example.com");
+        for history in ["", "\n\nOn Monday, Ann wrote:\n> Original message"] {
+            let body = RichBody::from_markdown(&format!(
+                "{}{}",
+                with_signature("My words", &old),
+                history
+            ));
+            for replacement in [&new[..], ""] {
+                let (first, removed, added) =
+                    rich_signature_change(body.blocks.iter().cloned(), &old, replacement).unwrap();
+                let mut changed = body.clone();
+                changed.blocks.splice(first..first + removed, added.blocks);
+                assert_eq!(changed.blocks[0], body.blocks[0]);
+                assert!(!changed.to_plain().contains("me@example.com"));
+                if !replacement.is_empty() {
+                    assert!(changed.to_plain().contains("me+shop@example.com"));
+                }
+                if !history.is_empty() {
+                    assert_eq!(changed.blocks.last(), body.blocks.last());
+                    assert!(changed.to_plain().contains("On Monday, Ann wrote:"));
+                }
+                let mut edited = body.clone();
+                edited.blocks[first + removed - 1].spans[0]
+                    .text
+                    .push_str(" edited");
+                assert!(rich_signature_change(edited.blocks, &old, replacement).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn markdown_blockquote_signatures_change_and_disappear() {
+        let old = "> me@example.com\n> **Sales**";
+        let new = "> me+shop@example.com\n> **Sales**";
+        for history in ["", "\n\nOn Monday, Ann wrote:\n> Original message"] {
+            let body = format!("{}{}", with_signature("My words", old), history);
+            for replacement in [new, ""] {
+                let changed = restyle_signature(&body, old, replacement);
+                assert!(changed.starts_with("My words"));
+                assert!(!changed.contains("me@example.com"));
+                assert!(changed.ends_with(history));
+                if !replacement.is_empty() {
+                    assert!(changed.contains(new));
+                }
+            }
+            let edited = body.replace("**Sales**", "**Personal**");
+            assert_eq!(restyle_signature(&edited, old, new), edited);
+        }
+    }
+
+    #[test]
+    fn changing_a_signature_does_not_read_the_rest_of_the_history() {
+        for old in ["", "Dana", "> Dana\n> Sales", "# Dana\n\n> Sales"] {
+            let prefix = RichBody::from_markdown(&format!(
+                "{}\n\nOn Monday, Ann wrote:\n> First history line",
+                with_signature("My words", old)
+            ));
+            let unread_history = std::iter::from_fn(|| -> Option<Block> {
+                panic!("signature replacement read past the first history block");
+            });
+            assert!(
+                rich_signature_change(
+                    prefix.blocks.into_iter().chain(unread_history),
+                    old,
+                    "New signature"
+                )
+                .is_some()
             );
         }
     }
@@ -2402,13 +2506,15 @@ mod tests {
     fn rich_signatures_can_be_disabled_and_added_again() {
         let old = "**Dana**";
         let body = RichBody::from_markdown(&with_signature("Hello", old));
-        let (first, removed, replacement) = rich_signature_change(&body, old, "").unwrap();
+        let (first, removed, replacement) =
+            rich_signature_change(body.blocks.iter().cloned(), old, "").unwrap();
         let mut changed = body.clone();
         changed
             .blocks
             .splice(first..first + removed, replacement.blocks);
         assert!(!changed.to_html().contains("Dana"));
-        let (first, removed, replacement) = rich_signature_change(&changed, "", old).unwrap();
+        let (first, removed, replacement) =
+            rich_signature_change(changed.blocks.iter().cloned(), "", old).unwrap();
         changed
             .blocks
             .splice(first..first + removed, replacement.blocks);

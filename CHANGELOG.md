@@ -12,6 +12,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Changing From replaces signatures containing quotes, and typing an address suffix no longer rereads the whole message.
 - Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.
 
 ## 1.0.10 (2026-10-20)

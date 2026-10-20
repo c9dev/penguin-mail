@@ -120,22 +120,6 @@ msgstr ""
 "Penguin Mail usa GTK e libadwaita e si integra al meglio con GNOME, ma "
 "funziona su qualsiasi ambiente desktop Linux."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "email"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "posta"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "posta in arrivo"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
@@ -2116,7 +2100,7 @@ msgstr "Evidenziata"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail continua a sincronizzare senza finestre aperte"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "Aggiungi almeno un destinatario."
 
@@ -2124,19 +2108,19 @@ msgstr "Aggiungi almeno un destinatario."
 msgid "“{address}” is not an email address."
 msgstr "«{address}» non è un indirizzo email."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "Scegli un orario futuro"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "Il {date}, {sender} ha scritto:"
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail non ha potuto comporre il messaggio."
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "L'elenco non ha fornito un unico indirizzo a cui scrivere."
 
@@ -12381,6 +12365,18 @@ msgstr "Segna come non indesiderato"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Sposta in {folder}"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "email"
+
+#~ msgid "mail"
+#~ msgstr "posta"
+
+#~ msgid "inbox"
+#~ msgstr "posta in arrivo"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

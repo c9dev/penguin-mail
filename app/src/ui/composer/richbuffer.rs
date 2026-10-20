@@ -388,52 +388,54 @@ pub fn read(buffer: &gtk::TextBuffer, anchors: &Anchors) -> RichBody {
 /// The buffer's lines above `end` as a rich body, for a question about
 /// the writer's words that has no need of the history under them.
 pub fn read_until(buffer: &gtk::TextBuffer, anchors: &Anchors, end: i32) -> RichBody {
-    let end = end.min(buffer.line_count());
-    let mut blocks = Vec::with_capacity(end.max(0) as usize);
-    for line in 0..end {
-        let Some((start, end)) = line_bounds(buffer, line) else {
+    RichBody {
+        blocks: (0..end.min(buffer.line_count()))
+            .filter_map(|line| read_line(buffer, anchors, line))
+            .collect(),
+    }
+}
+
+/// Reads one line so callers can stop before reconstructing quoted history.
+pub fn read_line(buffer: &gtk::TextBuffer, anchors: &Anchors, line: i32) -> Option<Block> {
+    let (start, end) = line_bounds(buffer, line)?;
+    let kind = kind_at(buffer, line);
+    let mut spans: Vec<Span> = Vec::new();
+    let mut iter = start;
+    while iter < end {
+        let mut next = iter;
+        if !next.forward_to_tag_toggle(None::<&gtk::TextTag>) || next > end {
+            next = end;
+        }
+        if iter
+            .tags()
+            .iter()
+            .any(|t| t.name().as_deref() == Some(MARKER))
+        {
+            iter = next;
             continue;
-        };
-        let kind = kind_at(buffer, line);
-        let mut spans: Vec<Span> = Vec::new();
-        let mut iter = start;
-        while iter < end {
-            let mut next = iter;
-            if !next.forward_to_tag_toggle(None::<&gtk::TextTag>) || next > end {
-                next = end;
-            }
-            if iter
-                .tags()
-                .iter()
-                .any(|t| t.name().as_deref() == Some(MARKER))
-            {
-                iter = next;
+        }
+        let (style, link) = style_at(&iter);
+        // The slice keeps a placeholder where a picture sits, which
+        // the plain text leaves out.
+        let text = buffer.slice(&iter, &next, true);
+        let mut from = 0;
+        for (at, (index, character)) in text.char_indices().enumerate() {
+            if character != '\u{fffc}' {
                 continue;
             }
-            let (style, link) = style_at(&iter);
-            // The slice keeps a placeholder where a picture sits, which
-            // the plain text leaves out.
-            let text = buffer.slice(&iter, &next, true);
-            let mut from = 0;
-            for (at, (index, character)) in text.char_indices().enumerate() {
-                if character != '\u{fffc}' {
-                    continue;
-                }
-                push_text(&mut spans, &text[from..index], style, &link);
-                from = index + character.len_utf8();
-                let placed = buffer.iter_at_offset(iter.offset() + at as i32);
-                if let Some(anchor) = placed.child_anchor()
-                    && let Some(picture) = anchors.iter().find(|p| p.anchor == anchor)
-                {
-                    spans.push(picture.span());
-                }
+            push_text(&mut spans, &text[from..index], style, &link);
+            from = index + character.len_utf8();
+            let placed = buffer.iter_at_offset(iter.offset() + at as i32);
+            if let Some(anchor) = placed.child_anchor()
+                && let Some(picture) = anchors.iter().find(|p| p.anchor == anchor)
+            {
+                spans.push(picture.span());
             }
-            push_text(&mut spans, &text[from..], style, &link);
-            iter = next;
         }
-        blocks.push(Block { kind, spans });
+        push_text(&mut spans, &text[from..], style, &link);
+        iter = next;
     }
-    RichBody { blocks }
+    Some(Block { kind, spans })
 }
 
 /// Adds `text` to the end of `spans`, joining the last span when it has

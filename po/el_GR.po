@@ -125,22 +125,6 @@ msgstr ""
 "και ταιριάζει καλύτερα στο GNOME, αλλά λειτουργεί σε κάθε επιφάνεια εργασίας "
 "Linux."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "ηλεκτρονικό ταχυδρομείο"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "αλληλογραφία"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "εισερχόμενα"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Όλοι οι λογαριασμοί σας σε κοινά εισερχόμενα, με μια απάντηση ανοιχτή"
@@ -2164,7 +2148,7 @@ msgstr "Εστιασμένα"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Το Penguin Mail συνεχίζει τον συγχρονισμό χωρίς ανοιχτό παράθυρο"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "Προσθέστε τουλάχιστον έναν παραλήπτη."
 
@@ -2172,19 +2156,19 @@ msgstr "Προσθέστε τουλάχιστον έναν παραλήπτη."
 msgid "“{address}” is not an email address."
 msgstr "Το «{address}» δεν είναι διεύθυνση ηλεκτρονικού ταχυδρομείου."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "Επιλέξτε μια μελλοντική ώρα"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "Στις {date}, {sender} έγραψε:"
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "Το Penguin Mail δεν μπόρεσε να συνθέσει το μήνυμα."
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "Η λίστα δεν έδωσε μια διεύθυνση στην οποία να γράψετε."
 
@@ -12582,6 +12566,18 @@ msgstr "Σήμανση ως μη ανεπιθύμητο"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Μετακίνηση σε {folder}"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "ηλεκτρονικό ταχυδρομείο"
+
+#~ msgid "mail"
+#~ msgstr "αλληλογραφία"
+
+#~ msgid "inbox"
+#~ msgstr "εισερχόμενα"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

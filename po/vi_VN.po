@@ -118,22 +118,6 @@ msgstr ""
 "duyệt. Penguin Mail được xây dựng với GTK và libadwaita, phù hợp nhất với "
 "GNOME nhưng chạy được trên mọi môi trường Linux."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "email"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "thư"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "hộp thư đến"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Mọi tài khoản trong một hộp thư đến, với thư trả lời đang mở"
@@ -2039,7 +2023,7 @@ msgstr "Ưu tiên"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail tiếp tục đồng bộ khi không có cửa sổ nào mở"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "Thêm ít nhất một người nhận."
 
@@ -2047,19 +2031,19 @@ msgstr "Thêm ít nhất một người nhận."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” không phải địa chỉ email."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "Chọn thời gian trong tương lai"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "Vào {date}, {sender} đã viết:"
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail không thể tạo thư."
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "Danh sách không cung cấp một địa chỉ duy nhất để gửi thư."
 
@@ -11989,6 +11973,18 @@ msgstr "Đánh dấu không phải thư rác"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Chuyển vào {folder}"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "email"
+
+#~ msgid "mail"
+#~ msgstr "thư"
+
+#~ msgid "inbox"
+#~ msgstr "hộp thư đến"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

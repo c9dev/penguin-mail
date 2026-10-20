@@ -118,22 +118,6 @@ msgstr ""
 "す。Penguin Mail は GTK と libadwaita を使って作られており、GNOME に適した外"
 "観ですが、どの Linux デスクトップでも動作します。"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "email"
-msgstr "メール"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "mail"
-msgstr "メール"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "inbox"
-msgstr "受信トレイ"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "すべてのアカウントを一つの受信トレイにまとめ、返信を開いた画面"
@@ -2057,7 +2041,7 @@ msgstr "優先"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail はウィンドウを閉じても同期を続けます"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3267
+#: app/src/compose.rs:668 app/src/compose.rs:3373
 msgid "Add at least one recipient."
 msgstr "宛先を少なくとも一つ追加してください。"
 
@@ -2065,19 +2049,19 @@ msgstr "宛先を少なくとも一つ追加してください。"
 msgid "“{address}” is not an email address."
 msgstr "「{address}」はメールアドレスではありません。"
 
-#: app/src/compose.rs:903 app/src/compose.rs:3273
+#: app/src/compose.rs:903 app/src/compose.rs:3379
 msgid "Choose a time in the future"
 msgstr "未来の時刻を選んでください"
 
-#: app/src/compose.rs:1212
+#: app/src/compose.rs:1226
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}、{sender} は書きました:"
 
-#: app/src/compose.rs:1476
+#: app/src/compose.rs:1505
 msgid "Penguin Mail could not put the message together."
 msgstr "メッセージを組み立てられませんでした。"
 
-#: app/src/compose.rs:1500
+#: app/src/compose.rs:1529
 msgid "The list did not give one address to write to."
 msgstr "メーリングリストの送信先アドレスを特定できませんでした。"
 
@@ -12051,6 +12035,18 @@ msgstr "迷惑メールではないとする"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}に移動"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "メール"
+
+#~ msgid "mail"
+#~ msgstr "メール"
+
+#~ msgid "inbox"
+#~ msgstr "受信トレイ"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."
