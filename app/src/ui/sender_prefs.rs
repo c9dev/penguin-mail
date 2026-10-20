@@ -1,11 +1,13 @@
 //! Addresses and suffixes sent through an account's existing SMTP server.
 
+mod signature;
+
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, Provider};
 
 use crate::app::App;
@@ -74,6 +76,30 @@ impl List {
                 .use_markup(false)
                 .activatable(self.editable)
                 .build();
+            if !sender.email.eq_ignore_ascii_case(&self.account) {
+                let button = gtk::Button::builder()
+                    .label(gettext("Signature…"))
+                    .valign(gtk::Align::Center)
+                    .build();
+                crate::ui::name(
+                    &button,
+                    &fill(
+                        &gettext("Signature for {account}"),
+                        &[("account", &sender.email)],
+                    ),
+                );
+                let (app, account, email) = (
+                    Rc::downgrade(&app),
+                    self.account.clone(),
+                    sender.email.clone(),
+                );
+                button.connect_clicked(move |button| {
+                    if let Some(app) = app.upgrade() {
+                        signature::show(&app, button, &account, &email);
+                    }
+                });
+                row.add_suffix(&button);
+            }
             let weak = Rc::downgrade(self);
             row.connect_activated(move |_| {
                 if let Some(list) = weak.upgrade().filter(|list| list.editable) {

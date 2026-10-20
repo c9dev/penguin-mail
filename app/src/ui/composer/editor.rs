@@ -1206,6 +1206,49 @@ impl Editor {
     /// change, so the cursor stays where it was and Undo still reaches
     /// everything typed before. False when nothing changed.
     pub fn swap_signature(&self, old: &str, new: &str) -> bool {
+        if self.format.get() == ComposeFormat::Rich {
+            let body = self.rich();
+            let Some((first, removed, mut replacement)) =
+                crate::compose::rich_signature_change(&body, old, new)
+            else {
+                return false;
+            };
+            let start = self
+                .buffer
+                .iter_at_line(first as i32)
+                .unwrap_or_else(|| self.buffer.end_iter());
+            let end = self
+                .buffer
+                .iter_at_line((first + removed) as i32)
+                .unwrap_or_else(|| self.buffer.end_iter());
+            if first + removed < body.blocks.len() && !replacement.blocks.is_empty() {
+                replacement
+                    .blocks
+                    .push(Block::new(body.blocks[first + removed].kind, Vec::new()));
+            }
+            let cursor = self.buffer.create_mark(
+                None,
+                &self.buffer.iter_at_mark(&self.buffer.get_insert()),
+                false,
+            );
+            let bound = self.buffer.create_mark(
+                None,
+                &self.buffer.iter_at_mark(&self.buffer.selection_bound()),
+                false,
+            );
+            self.busy.set(true);
+            self.buffer.begin_user_action();
+            richbuffer::rewrite(&self.buffer, &start, &end, &replacement);
+            self.buffer.select_range(
+                &self.buffer.iter_at_mark(&cursor),
+                &self.buffer.iter_at_mark(&bound),
+            );
+            self.buffer.delete_mark(&cursor);
+            self.buffer.delete_mark(&bound);
+            self.buffer.end_user_action();
+            self.busy.set(false);
+            return true;
+        }
         let Some(change) = signature_change(&self.lines_to_quote(), old, new) else {
             return false;
         };
@@ -1563,6 +1606,7 @@ pub(super) mod checks {
         the_body_moves_to_markdown_and_back();
         clearing_formatting_takes_the_list_markers_too();
         a_new_signature_leaves_the_cursor_and_undo_alone();
+        a_new_signature_keeps_the_quote_below_it();
         a_keystroke_looks_at_its_own_lines_only();
         the_body_is_read_once_for_a_draft();
         an_unfolded_quote_lands_where_the_folded_one_would_go();
@@ -2309,6 +2353,19 @@ pub(super) mod checks {
         select(&editor, 3, 5);
         editor.clear();
         assert_eq!(editor.rich().to_plain(), "one\n1. two\n2. three");
+    }
+
+    fn a_new_signature_keeps_the_quote_below_it() {
+        for old in ["", "Dana"] {
+            let view = gtk::TextView::new();
+            let editor = Editor::new(&view, ComposeFormat::Rich);
+            let mut body = RichBody::from_markdown(&crate::compose::with_signature("", old));
+            let quote = Block::new(BlockKind::Quote, vec![Span::plain("Original message")]);
+            body.blocks.push(quote.clone());
+            editor.fill("", Some(&body), &[]);
+            assert!(editor.swap_signature(old, "Dana Reyes"));
+            assert_eq!(editor.rich().blocks.last(), Some(&quote));
+        }
     }
 
     fn a_new_signature_leaves_the_cursor_and_undo_alone() {

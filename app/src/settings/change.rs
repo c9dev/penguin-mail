@@ -104,6 +104,12 @@ pub enum Change {
         email: String,
         text: String,
     },
+    /// A sender's signature choice and its saved Markdown.
+    SenderSignature {
+        email: String,
+        mode: super::SignatureMode,
+        text: String,
+    },
     /// Adds the address when it is not a VIP yet, removes it when it is.
     ToggleVip {
         email: String,
@@ -341,6 +347,12 @@ impl Change {
                 }
             }
             Change::Signature { email, text } => settings.set_signature(&email, &text),
+            Change::SenderSignature { email, mode, text } => {
+                settings.signature_modes.insert(email.to_lowercase(), mode);
+                settings
+                    .signatures
+                    .insert(email.to_lowercase(), text.trim_end().to_string());
+            }
             Change::ToggleVip { email, name } => {
                 settings.toggle_vip(&email, &name);
             }
@@ -687,6 +699,7 @@ settable! {
         show_declined_events,
         sign_by_default,
         signatures,
+        signature_modes,
         smart_mailboxes,
         space,
         spell_languages,
@@ -849,6 +862,7 @@ impl Effects {
             default_account,
             account_defaults,
             signatures,
+            signature_modes,
             undo_send,
             flag_color,
             vips,
@@ -906,6 +920,7 @@ impl Effects {
             default_account,
             account_defaults,
             signatures,
+            signature_modes,
             undo_send,
             flag_color,
             notify_vips_only,

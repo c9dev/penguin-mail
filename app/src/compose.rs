@@ -1078,6 +1078,110 @@ fn references(original: &MessageMeta, thread: &[MessageMeta]) -> Vec<String> {
     ids
 }
 
+/// Expands the sender tokens before Markdown reads the signature.
+pub fn expand_signature(template: &str, email: &str) -> String {
+    let domain = email.rsplit_once('@').map_or("", |(_, domain)| domain);
+    let literal = |text: &str| text.replace("<email>", email).replace("<domain>", domain);
+    let mut replacements = Vec::new();
+    let mut code_block = false;
+    for (event, range) in Parser::new(template).into_offset_iter() {
+        match event {
+            Event::Start(pulldown_cmark::Tag::CodeBlock(_)) => code_block = true,
+            Event::End(pulldown_cmark::TagEnd::CodeBlock) => code_block = false,
+            Event::Code(text) if text.contains("<email>") || text.contains("<domain>") => {
+                let text = literal(&text);
+                let ticks =
+                    "`".repeat(text.split(|c| c != '`').map(str::len).max().unwrap_or(0) + 1);
+                replacements.push((range, format!("{ticks} {text} {ticks}")));
+            }
+            Event::Text(text) if code_block => replacements.push((range, literal(&text))),
+            _ => {}
+        }
+    }
+    for (token, value) in [("<email>", email), ("<domain>", domain)] {
+        for (at, _) in template.match_indices(token) {
+            if replacements.iter().any(|(range, _)| range.contains(&at)) {
+                continue;
+            }
+            let mailto = template[..at]
+                .get(at.saturating_sub(7)..)
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case("mailto:"));
+            let value = if mailto {
+                url::form_urlencoded::byte_serialize(value.as_bytes())
+                    .collect::<String>()
+                    .replace("%40", "@")
+            } else {
+                plain_as_markdown(value).trim_end().to_string()
+            };
+            replacements.push((at..at + token.len(), value));
+        }
+    }
+    replacements.sort_by_key(|(range, _)| range.start);
+    let mut result = String::new();
+    let mut at = 0;
+    for (range, value) in replacements {
+        result.push_str(&template[at..range.start]);
+        result.push_str(&value);
+        at = range.end;
+    }
+    result.push_str(&template[at..]);
+    result
+}
+
+/// Changes only an untouched rich signature, including its styles and links.
+pub fn rich_signature_change(
+    body: &RichBody,
+    old: &str,
+    new: &str,
+) -> Option<(usize, usize, RichBody)> {
+    let lines: Vec<_> = body
+        .blocks
+        .iter()
+        .map(|b| {
+            if b.kind == richtext::BlockKind::Quote {
+                format!("> {}", b.text())
+            } else {
+                b.text()
+            }
+        })
+        .collect();
+    let text = lines.join("\n");
+    let quote = quote_starts_at(&text).map_or(body.blocks.len(), |at| {
+        text[..at].bytes().filter(|b| *b == b'\n').count()
+    });
+    let mut end = quote;
+    while end > 0 && body.blocks[end - 1].is_blank() {
+        end -= 1;
+    }
+    let first = if old.trim().is_empty() {
+        end
+    } else {
+        let start = body.blocks[..end]
+            .iter()
+            .rposition(|b| b.text().trim_end() == "--")?;
+        let expected = RichBody::from_markdown(&signature_block(old));
+        if body.blocks[start..end] != expected.blocks {
+            return None;
+        }
+        start
+    };
+    let mut replacement = if new.trim().is_empty() {
+        RichBody::default()
+    } else {
+        RichBody::from_markdown(&signature_block(new))
+    };
+    if old.trim().is_empty() && !replacement.blocks.is_empty() && first > 0 {
+        replacement.blocks.insert(0, Block::default());
+        if first == body.blocks.len() {
+            replacement.blocks.insert(0, Block::default());
+        }
+    }
+    if first == end && replacement.blocks.is_empty() {
+        return None;
+    }
+    Some((first, end - first, replacement))
+}
+
 /// Puts `signature` below what is written and above the quote: at the top
 /// of an empty new message, under the words in a message that already has
 /// them, and before the quoted original in a reply.
@@ -2196,6 +2300,120 @@ mod tests {
     fn changed(mut lines: Vec<String>, change: LineChange) -> String {
         lines.splice(change.first..change.first + change.removed, change.lines);
         lines.join("\n")
+    }
+
+    #[test]
+    fn signature_tokens_use_the_full_sender_and_keep_markdown() {
+        for (email, target) in [
+            ("user+Shop@domain.example", "user%2BShop@domain.example"),
+            ("user.shop@domain.example", "user.shop@domain.example"),
+            ("a*b_c@domain.example", "a*b_c@domain.example"),
+            ("sales#shop@example.com", "sales%23shop@example.com"),
+            ("sales?shop@example.com", "sales%3Fshop@example.com"),
+            ("sales%shop@example.com", "sales%25shop@example.com"),
+            ("random-mask@domain.example", "random-mask@domain.example"),
+        ] {
+            let template =
+                "**Dana**\n<email>\n[Email](mailto:<email>) · [Website](https://<domain>)";
+            let expanded = expand_signature(template, email);
+            for html in [
+                markdown_to_html(&expanded),
+                RichBody::from_markdown(&expanded).to_html(),
+            ] {
+                assert!(html.contains("<strong>Dana</strong>"), "{html}");
+                assert!(html.contains(email), "{html}");
+                assert!(html.contains(&format!("mailto:{target}")), "{html}");
+                assert!(
+                    html.contains(&format!("https://{}", email.split_once('@').unwrap().1)),
+                    "{html}"
+                );
+                assert!(!html.contains("&lt;email&gt;"));
+            }
+        }
+        assert_eq!(
+            expand_signature("Unknown <name>", "me@example.com"),
+            "Unknown <name>"
+        );
+        assert_eq!(expand_signature("", "me@example.com"), "");
+    }
+
+    #[test]
+    fn signature_tokens_in_code_keep_the_address_literal() {
+        for email in ["me+shop@example.com", "a`b@example.com"] {
+            for template in ["`<email>`", "```\n<email>\n<domain>\n```"] {
+                let expanded = expand_signature(template, email);
+                for html in [
+                    markdown_to_html(&expanded),
+                    RichBody::from_markdown(&expanded).to_html(),
+                ] {
+                    assert!(html.contains(email), "{html}");
+                    assert!(!html.contains("\\"), "{html}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn rich_signatures_change_without_touching_words_quotes_or_manual_styles() {
+        let old = expand_signature("**Dana**\n[Email](mailto:<email>)", "me@example.com");
+        let new = expand_signature("**Dana**\n[Email](mailto:<email>)", "me+shop@example.com");
+        for quote in ["", "\n\nOn Monday, Ann wrote:\n> Hello"] {
+            let text = format!("My *own* words.\n\n-- \n{old}{quote}");
+            let body = RichBody::from_markdown(&text);
+            let (first, removed, replacement) = rich_signature_change(&body, &old, &new).unwrap();
+            let mut changed = body.clone();
+            changed
+                .blocks
+                .splice(first..first + removed, replacement.blocks);
+            assert_eq!(changed.blocks[0], body.blocks[0]);
+            assert!(changed.to_html().contains("mailto:me%2Bshop@example.com"));
+            assert_eq!(
+                changed.blocks.last().unwrap().kind,
+                body.blocks.last().unwrap().kind
+            );
+            assert!(rich_signature_change(&changed, &old, &new).is_none());
+            let mut edited = body.clone();
+            edited.blocks[first + 1].spans[0].style.italic = true;
+            assert!(rich_signature_change(&edited, &old, &new).is_none());
+            edited.blocks[first + 1].spans[0].text.push_str(" edited");
+            assert!(rich_signature_change(&edited, &old, &new).is_none());
+        }
+    }
+
+    #[test]
+    fn rich_signature_blocks_follow_the_sender() {
+        for template in [
+            "# <email>",
+            "- <email>\n- <domain>",
+            "```\n<email>\n```",
+            "| Sender |\n| --- |\n| <email> |",
+        ] {
+            let old = expand_signature(template, "me@example.com");
+            let new = expand_signature(template, "me+shop@example.com");
+            let body = RichBody::from_markdown(&with_signature("Hello", &old));
+            assert!(
+                rich_signature_change(&body, &old, &new).is_some(),
+                "{template}"
+            );
+        }
+    }
+
+    #[test]
+    fn rich_signatures_can_be_disabled_and_added_again() {
+        let old = "**Dana**";
+        let body = RichBody::from_markdown(&with_signature("Hello", old));
+        let (first, removed, replacement) = rich_signature_change(&body, old, "").unwrap();
+        let mut changed = body.clone();
+        changed
+            .blocks
+            .splice(first..first + removed, replacement.blocks);
+        assert!(!changed.to_html().contains("Dana"));
+        let (first, removed, replacement) = rich_signature_change(&changed, "", old).unwrap();
+        changed
+            .blocks
+            .splice(first..first + removed, replacement.blocks);
+        assert!(changed.to_html().contains("<strong>Dana</strong>"));
+        assert_eq!(changed.blocks[0], body.blocks[0]);
     }
 
     #[test]

@@ -481,8 +481,9 @@ fn signature_row(
         .right_margin(12)
         .accepts_tab(false)
         .build();
-    let help =
-        gettext("Added below new messages and above quoted text in replies. Markdown works.");
+    let help = gettext(
+        "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
+    );
     dialog::explain(&row, &help);
     dialog::explain(&view, &help);
     view.buffer().set_text(&text);
