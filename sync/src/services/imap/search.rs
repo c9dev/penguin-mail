@@ -176,6 +176,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         mailbox: &str,
         cursor: Option<&str>,
         limit: usize,
+        keys: &str,
     ) -> Result<Backfill, BackendError> {
         self.ensure_listed().await?;
         if self
@@ -202,7 +203,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         };
         let limit = limit.max(1);
         let uids = self
-            .newest_matching(mailbox, "ALL UNDELETED", top, limit.saturating_add(1))
+            .newest_matching(mailbox, keys, top, limit.saturating_add(1))
             .await?;
         let more = uids.len() > limit;
         let refs: Vec<_> = uids

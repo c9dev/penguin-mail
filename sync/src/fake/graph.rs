@@ -119,6 +119,9 @@ pub struct GraphState {
     pub mail_log: Vec<Logged>,
     /// The ids of each metadata fetch, one entry a call.
     pub meta_fetches: Vec<Vec<String>>,
+    /// The most messages one listing page holds, below what was asked, as
+    /// Graph may answer a short page with a next link.
+    pub listing_page: Option<usize>,
     /// Mail that arrives right after the next delta read, in the folder
     /// named: how a test lands a message between two reads of one look.
     pub deliver_after_delta: Option<(String, mail::FakeMail)>,

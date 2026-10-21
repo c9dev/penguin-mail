@@ -194,6 +194,7 @@ impl<G: GraphApi> Microsoft<G> {
         mailbox: &str,
         cursor: Option<&str>,
         limit: usize,
+        unread: bool,
     ) -> Result<Backfill, BackendError> {
         let link = match cursor {
             Some(cursor) => {
@@ -208,6 +209,7 @@ impl<G: GraphApi> Microsoft<G> {
         };
         let listing = Listing {
             folder: Some(mailbox.to_string()),
+            unread,
             top: limit.clamp(1, 1000) as u32,
             fields: Fields::Ids,
             ..Listing::default()

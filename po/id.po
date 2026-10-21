@@ -1038,7 +1038,11 @@ msgstr "{provider} menggunakan peramban Anda untuk masuk"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Lanjutkan membuka halaman masuk {provider} di peramban Anda."
 
-#: app/src/app.rs:416
+#: app/src/app.rs:392
+msgid "Could not mark all mail as read: {reason}"
+msgstr "Tidak dapat menandai semua email sebagai sudah dibaca: {reason}"
+
+#: app/src/app.rs:439
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -2170,7 +2174,7 @@ msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "Tidak dapat menyimpan {count} orang ke kontak di {account}"
 msgstr[1] "Tidak dapat menyimpan {count} orang ke kontak di {account}"
 
-#: app/src/core.rs:220
+#: app/src/core.rs:221
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2178,32 +2182,32 @@ msgstr ""
 "Salinan Penguin Mail lain, atau penguin-mail-cli sync, sedang menyinkronkan "
 "email Anda. Hentikan, lalu buka kembali Penguin Mail."
 
-#: app/src/core.rs:232
+#: app/src/core.rs:233
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "Penguin Mail tidak dapat memperbarui penyimpanan email dan mempertahankan "
 "salinan lama."
 
-#: app/src/core.rs:805 app/src/core.rs:883 app/src/core.rs:1012
-#: app/src/core.rs:1026 app/src/core.rs:1091 app/src/core.rs:1187
+#: app/src/core.rs:822 app/src/core.rs:900 app/src/core.rs:1029
+#: app/src/core.rs:1043 app/src/core.rs:1108 app/src/core.rs:1204
 msgid "Demo mode cannot add real accounts."
 msgstr "Mode demo tidak dapat menambahkan akun sungguhan."
 
-#: app/src/core.rs:819
+#: app/src/core.rs:836
 msgid "Canceled."
 msgstr "Dibatalkan."
 
-#: app/src/core.rs:823
+#: app/src/core.rs:840
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Berhenti menunggu peramban setelah lima menit."
 
-#: app/src/core.rs:1357 app/src/core.rs:1382
+#: app/src/core.rs:1374 app/src/core.rs:1399
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Akun ini tidak menyimpan sandi yang dapat digunakan server kalender atau "
 "kontak."
 
-#: app/src/core.rs:1563 app/src/core.rs:1602
+#: app/src/core.rs:1580 app/src/core.rs:1619
 msgid "The demo cannot switch accounts."
 msgstr "Demo tidak dapat beralih akun."
 
@@ -4393,55 +4397,59 @@ msgid ""
 msgstr ""
 "Pesan dikirim ke Anthropic untuk dibaca oleh Claude melalui langganan Anda."
 
-#: app/src/tray.rs:24
+#: app/src/tray.rs:25
 msgid "No unread mail"
 msgstr "Tidak ada email belum dibaca"
 
-#: app/src/tray.rs:26
+#: app/src/tray.rs:27
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] "{count} pesan belum dibaca"
 msgstr[1] "{count} pesan belum dibaca"
 
-#: app/src/tray.rs:40 app/src/ui/sidebar.rs:1533
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1533
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} pesan belum dibaca"
 msgstr[1] "{account}, {count} pesan belum dibaca"
 
-#: app/src/tray.rs:147 app/src/tray.rs:185
+#: app/src/tray.rs:148 app/src/tray.rs:186
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
-#: app/src/tray.rs:236
+#: app/src/tray.rs:239
+msgid "Mark All as Read"
+msgstr "Tandai Semua Sudah Dibaca"
+
+#: app/src/tray.rs:248
 msgid "Open Penguin Mail"
 msgstr "Buka Penguin Mail"
 
-#: app/src/tray.rs:237 app/src/ui/composer/mod.rs:369
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
 #: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:456
 msgid "New Message"
 msgstr "Pesan Baru"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3412
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3412
 msgid "Check for Mail"
 msgstr "Periksa Email"
 
-#: app/src/tray.rs:242 app/src/update/mod.rs:98
+#: app/src/tray.rs:254 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr "Pasang Pembaruan {version}"
 
-#: app/src/tray.rs:245
+#: app/src/tray.rs:257
 msgid "What's New in {version}"
 msgstr "Yang Baru di {version}"
 
-#: app/src/tray.rs:249 app/src/ui/about.rs:119 app/src/ui/about.rs:227
+#: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
 #: app/src/ui/preferences.rs:1031 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3425
+#: app/src/tray.rs:266 app/src/ui/window.rs:3425
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Keluar"
@@ -10601,7 +10609,7 @@ msgstr "Pesan Ini"
 msgid "Copied {address}"
 msgstr "{address} disalin"
 
-#: app/src/ui/window/notice.rs:101
+#: app/src/ui/window/notice.rs:104
 msgid "A rule that waited was refused: {reason}"
 msgstr "Aturan yang menunggu ditolak: {reason}"
 
@@ -11590,21 +11598,21 @@ msgstr[1] "{count} detik"
 msgid "a minute"
 msgstr "satu menit"
 
-#: sync/src/actions.rs:124 sync/src/actions.rs:747
+#: sync/src/actions.rs:125 sync/src/actions.rs:804 sync/src/actions.rs:905
 msgid "Change labels"
 msgstr "Ubah label"
 
-#: sync/src/actions.rs:372
+#: sync/src/actions.rs:403
 msgid "Delete Forever failed: {reason}"
 msgstr "Hapus Permanen gagal: {reason}"
 
-#: sync/src/actions.rs:639
+#: sync/src/actions.rs:671 sync/src/actions.rs:795
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Email ini sudah dipindahkan, sehingga Urungkan membiarkannya di tempatnya "
 "sekarang."
 
-#: sync/src/actions.rs:700 sync/src/actions.rs:754
+#: sync/src/actions.rs:735 sync/src/actions.rs:762 sync/src/actions.rs:912
 msgid "Could not undo: {reason}"
 msgstr "Tidak dapat mengurungkan: {reason}"
 
@@ -11992,11 +12000,11 @@ msgstr "Penguin Mail tidak dapat menyimpan pengulangan ini ke kalender JMAP."
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Server ini tidak menyimpan warna kotak surat."
 
-#: sync/src/services/jmap/mod.rs:411
+#: sync/src/services/jmap/mod.rs:420
 msgid "This server files sent mail itself."
 msgstr "Server ini menyimpan sendiri email terkirim."
 
-#: sync/src/services/jmap/mod.rs:594
+#: sync/src/services/jmap/mod.rs:603
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "Server membuat alamat yang tidak dapat dibaca Penguin Mail."
 
