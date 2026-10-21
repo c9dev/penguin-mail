@@ -404,13 +404,13 @@ impl ThreadRow {
         snippet.set_lines(count.max(1));
         snippet.set_visible(count > 0 && !thread.snippet.trim().is_empty());
         if count == 0 {
-            self.update_property(&[gtk::accessible::Property::Label(&spoken(
+            self.set_spoken(&spoken(
                 thread.unread,
                 thread.invitation,
                 &thread.from,
                 &thread.subject,
                 "",
-            ))]);
+            ));
         }
     }
 
@@ -534,11 +534,15 @@ impl ThreadRow {
             &thread.subject,
             &snippet,
         );
-        self.update_property(&[gtk::accessible::Property::Label(&described)]);
+        self.set_spoken(&described);
+    }
+
+    fn set_spoken(&self, described: &str) {
+        self.update_property(&[gtk::accessible::Property::Label(described)]);
         // The keyboard focus sits on the list item GTK wraps the row in,
         // so that item carries the same words for a screen reader to say.
-        if let Some(item) = imp.item.upgrade() {
-            item.set_accessible_label(&described);
+        if let Some(item) = self.imp().item.upgrade() {
+            item.set_accessible_label(described);
         }
     }
 }
@@ -590,12 +594,20 @@ fn one_line(text: &str) -> String {
 pub(crate) fn check_appearance() {
     use crate::settings::PreviewLines;
     let row = ThreadRow::default();
+    let item = glib::Object::new::<gtk::ListItem>();
+    item.set_child(Some(&row));
+    row.set_item(&item);
     let mut thread = ThreadSummary {
         unread: true,
         snippet: "A preview that wraps onto another line when there is room.".into(),
         ..Default::default()
     };
-    for lines in [PreviewLines::None, PreviewLines::One, PreviewLines::Two] {
+    for lines in [
+        PreviewLines::Two,
+        PreviewLines::None,
+        PreviewLines::One,
+        PreviewLines::None,
+    ] {
         row.bind(&thread, false, false, Avatar::Hidden);
         row.set_appearance(&thread, lines, false, false);
         assert!(row.has_css_class("unread"));
@@ -603,6 +615,20 @@ pub(crate) fn check_appearance() {
         let snippet = row.imp().snippet.get().unwrap();
         assert_eq!(snippet.is_visible(), lines != PreviewLines::None);
         assert_eq!(snippet.lines(), lines.count().max(1));
+        assert_eq!(
+            item.accessible_label(),
+            spoken(
+                thread.unread,
+                thread.invitation,
+                &thread.from,
+                &thread.subject,
+                if lines == PreviewLines::None {
+                    ""
+                } else {
+                    &thread.snippet
+                },
+            )
+        );
     }
     for unread in [false, true] {
         thread.unread = unread;
@@ -629,12 +655,14 @@ pub(crate) fn check_appearance() {
     row.bind(&thread, false, false, Avatar::Hidden);
     row.set_appearance(&thread, PreviewLines::None, false, false);
     assert!(row.imp().snippet.get().unwrap().is_visible());
+    assert!(item.accessible_label().contains(&thread.snippet));
     thread.scheduled = false;
     thread.id = mailrs_sync::mailbox::outbox_row(1);
     thread.snippet = "Sending failed, retrying later".into();
     row.bind(&thread, false, false, Avatar::Hidden);
     row.set_appearance(&thread, PreviewLines::None, false, false);
     assert!(row.imp().snippet.get().unwrap().is_visible());
+    assert!(item.accessible_label().contains(&thread.snippet));
 }
 
 #[cfg(test)]

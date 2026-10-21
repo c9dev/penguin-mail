@@ -12,6 +12,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Screen readers omit hidden message previews when navigating the list with the keyboard.
 - IMAP messages show preview text in the list without needing to open them first.
 - Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.
 
