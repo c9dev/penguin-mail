@@ -1971,6 +1971,7 @@ fn row_of(hit: &MessageMeta, alone: bool) -> ThreadSummary {
         account_id: hit.account_id,
         id: hit.thread_id.clone(),
         message_id: alone.then(|| hit.id.clone()),
+        preview_message_id: Some(hit.id.clone()),
         last_message_at: hit.date,
         subject: hit.subject.clone(),
         snippet: hit.snippet.clone(),
@@ -2128,6 +2129,8 @@ mod tests {
         );
         assert!(plans.unread);
         assert_eq!(plans.last_message_at, 200);
+        assert_eq!(plans.preview_message_id.as_deref(), Some("a2"));
+        assert!(plans.message_id.is_none());
     }
 
     #[test]

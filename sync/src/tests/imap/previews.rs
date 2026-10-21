@@ -197,3 +197,48 @@ async fn a_gone_target_does_not_fetch_and_provider_previews_can_still_be_cleared
     .unwrap();
     assert!(h.stored("INBOX/1001/1").await.unwrap().snippet.is_empty());
 }
+
+#[tokio::test]
+async fn grouped_search_and_folder_previews_use_the_matching_message() {
+    let h = imap_harness().await;
+    let first = String::from_utf8(message("a", "Kites", ""))
+        .unwrap()
+        .replace("Hi.", "Matching body.");
+    let second = String::from_utf8(message(
+        "b",
+        "Re: Kites",
+        "In-Reply-To: <a@example.com>\r\nReferences: <a@example.com>\r\n",
+    ))
+    .unwrap()
+    .replace("Hi.", "Newer unrelated body.");
+    h.imap
+        .deliver_flagged("INBOX", first.as_bytes(), &[], days_ago(2));
+    h.imap
+        .deliver_flagged("INBOX", second.as_bytes(), &[], days_ago(1));
+    h.bootstrap().await;
+    let hit = h.stored("INBOX/1001/1").await.unwrap();
+    let grouped = crate::summarize_search(vec![hit], true).pop().unwrap();
+    let action = Target::from_row(&grouped);
+    assert!(
+        action.message_id.is_none(),
+        "actions still cover the whole conversation"
+    );
+    let preview = Target::for_preview(&grouped);
+    assert_eq!(preview.message_id.as_deref(), Some("INBOX/1001/1"));
+    assert_eq!(
+        lists(&h).preview(preview).await.unwrap().as_deref(),
+        Some("Matching body.")
+    );
+    assert_eq!(h.imap.calls_to("body"), 1);
+    assert!(h.stored("INBOX/1001/2").await.unwrap().snippet.is_empty());
+    let stored =
+        h.db.read(move |c| threads::get_thread(c, action.account_id, &action.thread_id))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(stored.preview_message_id.as_deref(), Some("INBOX/1001/2"));
+    assert!(
+        stored.snippet.is_empty(),
+        "the inbox conversation still previews its newest message"
+    );
+}
