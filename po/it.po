@@ -1052,7 +1052,11 @@ msgstr "{provider} usa il browser per l'accesso"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continua apre la pagina di accesso di {provider} nel browser."
 
-#: app/src/app.rs:416
+#: app/src/app.rs:392
+msgid "Could not mark all mail as read: {reason}"
+msgstr "Impossibile segnare tutta la posta come letta: {reason}"
+
+#: app/src/app.rs:439
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -2184,7 +2188,7 @@ msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "Impossibile salvare {count} persona nei contatti di {account}"
 msgstr[1] "Impossibile salvare {count} persone nei contatti di {account}"
 
-#: app/src/core.rs:220
+#: app/src/core.rs:221
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2192,32 +2196,32 @@ msgstr ""
 "Un'altra copia di Penguin Mail o penguin-mail-cli sync sta sincronizzando la "
 "posta. Arrestala, poi riapri Penguin Mail."
 
-#: app/src/core.rs:232
+#: app/src/core.rs:233
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "Penguin Mail non ha potuto aggiornare l'archivio della posta e ha conservato "
 "quello precedente."
 
-#: app/src/core.rs:805 app/src/core.rs:883 app/src/core.rs:1012
-#: app/src/core.rs:1026 app/src/core.rs:1091 app/src/core.rs:1187
+#: app/src/core.rs:822 app/src/core.rs:900 app/src/core.rs:1029
+#: app/src/core.rs:1043 app/src/core.rs:1108 app/src/core.rs:1204
 msgid "Demo mode cannot add real accounts."
 msgstr "La modalità demo non può aggiungere account reali."
 
-#: app/src/core.rs:819
+#: app/src/core.rs:836
 msgid "Canceled."
 msgstr "Annullato."
 
-#: app/src/core.rs:823
+#: app/src/core.rs:840
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Attesa del browser interrotta dopo cinque minuti."
 
-#: app/src/core.rs:1357 app/src/core.rs:1382
+#: app/src/core.rs:1374 app/src/core.rs:1399
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Questo account non conserva una password accettata da un server di calendari "
 "o contatti."
 
-#: app/src/core.rs:1563 app/src/core.rs:1602
+#: app/src/core.rs:1580 app/src/core.rs:1619
 msgid "The demo cannot switch accounts."
 msgstr "La demo non può cambiare account."
 
@@ -4421,55 +4425,59 @@ msgstr ""
 "Il messaggio viene inviato ad Anthropic perché Claude lo legga tramite il "
 "tuo abbonamento."
 
-#: app/src/tray.rs:24
+#: app/src/tray.rs:25
 msgid "No unread mail"
 msgstr "Nessuna posta da leggere"
 
-#: app/src/tray.rs:26
+#: app/src/tray.rs:27
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] "{count} messaggio da leggere"
 msgstr[1] "{count} messaggi da leggere"
 
-#: app/src/tray.rs:40 app/src/ui/sidebar.rs:1533
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1533
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} messaggio da leggere"
 msgstr[1] "{account}, {count} messaggi da leggere"
 
-#: app/src/tray.rs:147 app/src/tray.rs:185
+#: app/src/tray.rs:148 app/src/tray.rs:186
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
-#: app/src/tray.rs:236
+#: app/src/tray.rs:239
+msgid "Mark All as Read"
+msgstr "Segna tutto come letto"
+
+#: app/src/tray.rs:248
 msgid "Open Penguin Mail"
 msgstr "Apri Penguin Mail"
 
-#: app/src/tray.rs:237 app/src/ui/composer/mod.rs:365
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:365
 #: app/src/ui/composer/mod.rs:668 app/src/ui/composer/mod.rs:1550
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:456
 msgid "New Message"
 msgstr "Nuovo messaggio"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3412
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3412
 msgid "Check for Mail"
 msgstr "Controlla la posta"
 
-#: app/src/tray.rs:242 app/src/update/mod.rs:98
+#: app/src/tray.rs:254 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr "Installa aggiornamento {version}"
 
-#: app/src/tray.rs:245
+#: app/src/tray.rs:257
 msgid "What's New in {version}"
 msgstr "Novità della versione {version}"
 
-#: app/src/tray.rs:249 app/src/ui/about.rs:119 app/src/ui/about.rs:227
+#: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
 #: app/src/ui/preferences.rs:1030 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Controlla aggiornamenti"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3425
+#: app/src/tray.rs:266 app/src/ui/window.rs:3425
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Esci"
@@ -10618,7 +10626,7 @@ msgstr "Questo messaggio"
 msgid "Copied {address}"
 msgstr "{address} copiato"
 
-#: app/src/ui/window/notice.rs:101
+#: app/src/ui/window/notice.rs:104
 msgid "A rule that waited was refused: {reason}"
 msgstr "Una regola in attesa è stata rifiutata: {reason}"
 
@@ -11604,21 +11612,21 @@ msgstr[1] "{count} secondi"
 msgid "a minute"
 msgstr "un minuto"
 
-#: sync/src/actions.rs:124 sync/src/actions.rs:747
+#: sync/src/actions.rs:125 sync/src/actions.rs:804 sync/src/actions.rs:905
 msgid "Change labels"
 msgstr "Modifica etichette"
 
-#: sync/src/actions.rs:372
+#: sync/src/actions.rs:403
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminazione definitiva non riuscita: {reason}"
 
-#: sync/src/actions.rs:639
+#: sync/src/actions.rs:671 sync/src/actions.rs:795
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Questa posta è stata spostata nel frattempo, quindi Annulla l'ha lasciata "
 "dov'è."
 
-#: sync/src/actions.rs:700 sync/src/actions.rs:754
+#: sync/src/actions.rs:735 sync/src/actions.rs:762 sync/src/actions.rs:912
 msgid "Could not undo: {reason}"
 msgstr "Impossibile annullare: {reason}"
 
@@ -12015,11 +12023,11 @@ msgstr "Penguin Mail non può salvare questa ripetizione in un calendario JMAP."
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Questo server non conserva colori per le sue caselle di posta."
 
-#: sync/src/services/jmap/mod.rs:411
+#: sync/src/services/jmap/mod.rs:420
 msgid "This server files sent mail itself."
 msgstr "Questo server archivia da sé la posta inviata."
 
-#: sync/src/services/jmap/mod.rs:594
+#: sync/src/services/jmap/mod.rs:603
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "Il server ha creato un indirizzo che Penguin Mail non può leggere."
 

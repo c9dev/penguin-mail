@@ -1223,6 +1223,18 @@ pub trait MailBackend: Send + Sync + 'static {
         async { Err(BackendError::Unsupported) }
     }
 
+    /// One page of the unread mail in an explicit server mailbox, paged
+    /// as [`Self::mailbox_page`] pages all of it. Mark All as Read lists
+    /// each inbox this way.
+    fn unread_page(
+        &self,
+        _mailbox: &str,
+        _cursor: Option<&str>,
+        _limit: usize,
+    ) -> impl Future<Output = Result<Backfill, BackendError>> + Send {
+        async { Err(BackendError::Unsupported) }
+    }
+
     /// The sent message carrying the `Message-ID` header `message_id`, when
     /// the server holds one.
     fn find_sent(

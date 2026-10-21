@@ -373,6 +373,29 @@ impl App {
         });
     }
 
+    /// Marks the unread mail in every account's inbox read, the tray's
+    /// Mark All as Read. Each page asks the accounts' servers, so mail
+    /// older than this computer keeps goes read too.
+    fn read_all(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let accounts: Vec<_> = this.mail_accounts().into_iter().map(|a| a.id).collect();
+            let read = this.core.read_inboxes(accounts).await;
+            if read.read > 0 {
+                this.tell_window(Notice::InboxesRead);
+            }
+            for (account, error) in &read.failed {
+                tracing::warn!(account, error, "could not mark all inbox mail read");
+            }
+            if let Some((_, reason)) = read.failed.first() {
+                this.tell_window(Notice::Toast(fill(
+                    &gettext("Could not mark all mail as read: {reason}"),
+                    &[("reason", reason)],
+                )));
+            }
+        });
+    }
+
     /// Shows the window on `account_id`'s inbox, as the sidebar's Inbox row
     /// under that account does. A tray line can outlive its account, and
     /// then the window opens as it is.
@@ -1750,6 +1773,7 @@ impl App {
         glib::spawn_future_local(async move {
             while let Ok(command) = received.recv().await {
                 match command {
+                    TrayCommand::ReadAll => this.read_all(),
                     TrayCommand::Toggle => match this.window() {
                         Some(window) if window.is_active() => window.window.close(),
                         _ => {

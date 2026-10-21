@@ -1239,6 +1239,30 @@ fn messages_walking(
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// At most `limit` unread messages in the account's inbox whose id sorts
+/// after `after`, as thread and message ids in id order. It reads no row's
+/// subject or sender, so a large inbox with a few unread messages costs a
+/// few rows.
+pub fn unread_inbox_ids(
+    conn: &Connection,
+    account_id: AccountId,
+    after: &str,
+    limit: i64,
+) -> Result<Vec<(String, String)>> {
+    let filter = ThreadFilter::account(account_id, MailSet::Role(Role::Inbox));
+    let mut sql = filter.counting(conn, Rows::Messages, "SELECT m.thread_id, m.id", true)?;
+    sql.push(MESSAGE_UNREAD)
+        .push(" AND m.id > ")
+        .bind(after.to_string())
+        .push(" ORDER BY m.id LIMIT ")
+        .bind(limit);
+    let mut stmt = conn.prepare_cached(&sql.text)?;
+    let rows = stmt.query_map(params_from_iter(&sql.params), |row| {
+        Ok((row.get(0)?, row.get(1)?))
+    })?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
 pub fn unread_messages(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
     let mut sql = filter.counting(conn, Rows::Messages, "SELECT COUNT(*)", true)?;
     sql.push(MESSAGE_UNREAD);

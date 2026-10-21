@@ -418,7 +418,16 @@ impl<G: GraphApi> MailBackend for Microsoft<G> {
         cursor: Option<&str>,
         limit: usize,
     ) -> Result<Backfill, BackendError> {
-        self.folder_page(mailbox, cursor, limit).await
+        self.folder_page(mailbox, cursor, limit, false).await
+    }
+
+    async fn unread_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        self.folder_page(mailbox, cursor, limit, true).await
     }
 
     async fn search(

@@ -5,6 +5,7 @@ use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 pub enum TrayCommand {
+    ReadAll,
     Toggle,
     Open,
     /// Show the window on this account's inbox.
@@ -233,6 +234,17 @@ impl ksni::Tray for MailTray {
             }
             .into()
         };
+        items.push(
+            StandardItem {
+                label: gettext("Mark All as Read"),
+                enabled: self.unread > 0,
+                activate: Box::new(|tray: &mut Self| {
+                    tray.send(TrayCommand::ReadAll);
+                }),
+                ..Default::default()
+            }
+            .into(),
+        );
         items.push(item(&gettext("Open Penguin Mail"), || TrayCommand::Open));
         items.push(item(&gettext("New Message"), || TrayCommand::Compose));
         items.push(item(&gettext("Check for Mail"), || TrayCommand::Check));
@@ -466,5 +478,51 @@ mod tests {
             Ok(super::TrayCommand::OpenInbox(2))
         ));
         assert!(matches!(menu[1], MenuItem::Separator));
+    }
+
+    #[test]
+    fn mark_all_read_becomes_disabled_when_the_unread_count_reaches_zero() {
+        use ksni::Tray;
+        use ksni::menu::MenuItem;
+
+        let mut tray = tray(0);
+        for count in [0, 1, 4, 0] {
+            tray.unread = count;
+            let menu = tray.menu();
+            let item = menu
+                .iter()
+                .find_map(|item| match item {
+                    MenuItem::Standard(item) if item.label == "Mark All as Read" => Some(item),
+                    _ => None,
+                })
+                .expect("the action stays visible even with no unread mail");
+            assert_eq!(item.enabled, count > 0, "unread count: {count}");
+        }
+    }
+
+    #[test]
+    fn choosing_mark_all_read_sends_one_read_all_command() {
+        use ksni::Tray;
+        use ksni::menu::MenuItem;
+
+        let (commands, received) = async_channel::unbounded();
+        let mut tray = tray(4);
+        tray.commands = commands;
+        tray.accounts = vec![unread(1, "a@example.com", 1), unread(2, "b@example.com", 3)];
+        let menu = tray.menu();
+        let item = menu
+            .iter()
+            .find_map(|item| match item {
+                MenuItem::Standard(item) if item.label == "Mark All as Read" => Some(item),
+                _ => None,
+            })
+            .expect("the menu offers to mark all inboxes read");
+        assert!(item.enabled);
+        (item.activate)(&mut tray);
+        assert!(matches!(
+            received.try_recv(),
+            Ok(super::TrayCommand::ReadAll)
+        ));
+        assert!(received.try_recv().is_err(), "one click sends one command");
     }
 }
