@@ -11,6 +11,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- IMAP and POP3 accounts stay signed in while their mail server restarts or updates, and try again every few minutes instead of asking you to sign in ([#79](https://github.com/c9dev/penguin-mail/issues/79)).
 - Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.
 
 ## 1.0.10 (2026-10-20)
