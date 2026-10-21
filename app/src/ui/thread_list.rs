@@ -77,6 +77,7 @@ pub struct ThreadList {
     /// The rows of the drag in progress.
     dragged: Rc<RefCell<Vec<Row>>>,
     show_accounts: Rc<Cell<bool>>,
+    appearance: Rc<Cell<(crate::settings::PreviewLines, bool)>>,
     /// Lower-case VIP addresses; their rows get a star.
     vips: Rc<RefCell<HashSet<String>>>,
     /// Contact photos, read as rows ask for them. None, or none on disk
@@ -162,6 +163,8 @@ impl ThreadList {
             row.add_controller(source);
             item.set_child(Some(&row));
         });
+        let appearance = Rc::new(Cell::new((crate::settings::PreviewLines::Two, true)));
+        let row_appearance = Rc::clone(&appearance);
         let shown = Rc::clone(&show_accounts);
         let vips: Rc<RefCell<HashSet<String>>> = Rc::new(RefCell::new(HashSet::new()));
         let starred_people = Rc::clone(&vips);
@@ -187,6 +190,8 @@ impl ThreadList {
                 (Some(_), None) => Avatar::Initials,
             };
             row.bind(&thread, shown.get(), vip, avatar);
+            let (lines, bold) = row_appearance.get();
+            row.set_appearance(&thread, lines, bold);
         });
         let binds = Rc::clone(&bind);
         factory.connect_bind(move |_, item| {
@@ -374,6 +379,7 @@ impl ThreadList {
             rows,
             dragged,
             show_accounts,
+            appearance,
             vips,
             photos,
             made,
@@ -537,6 +543,80 @@ impl ThreadList {
                 (self.bind)(&item);
             }
         }
+    }
+
+    pub fn set_appearance(&self, lines: crate::settings::PreviewLines, bold: bool) {
+        if self.appearance.replace((lines, bold)) != (lines, bold) {
+            self.rebind();
+        }
+    }
+
+    /// Checks the viewport rather than all bound rows, which GTK also keeps offscreen.
+    pub fn connect_previews(
+        self: &Rc<Self>,
+        visible: impl Fn(Vec<mailrs_domain::Target>) + 'static,
+    ) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local(std::time::Duration::from_millis(250), move || {
+            let Some(list) = weak.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            let targets = list.visible_previews();
+            visible(targets);
+            glib::ControlFlow::Continue
+        });
+    }
+
+    fn visible_previews(&self) -> Vec<mailrs_domain::Target> {
+        if self.appearance.get().0 == crate::settings::PreviewLines::None || !self.view.is_mapped()
+        {
+            return Vec::new();
+        }
+        let mut visible = Vec::new();
+        for row in self.made.borrow().iter().filter_map(|row| row.upgrade()) {
+            let Some(bounds) = row.compute_bounds(&self.scroller) else {
+                continue;
+            };
+            if bounds.width() <= 0.0
+                || bounds.height() <= 0.0
+                || bounds.y() >= self.scroller.height() as f32
+                || bounds.y() + bounds.height() <= 0.0
+            {
+                continue;
+            }
+            let Some(object) = row
+                .item()
+                .and_then(|item| item.item())
+                .and_downcast::<glib::BoxedAnyObject>()
+            else {
+                continue;
+            };
+            let thread = object.borrow::<Row>();
+            if thread.snippet.is_empty() && !thread.scheduled {
+                visible.push((bounds.y(), mailrs_domain::Target::for_preview(&thread)));
+            }
+        }
+        visible.sort_by(|a, b| a.0.total_cmp(&b.0));
+        visible.into_iter().map(|(_, target)| target).collect()
+    }
+
+    pub fn preview_arrived(&self, target: &mailrs_domain::Target, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        for (index, row) in self.rows.borrow_mut().iter_mut().enumerate() {
+            if mailrs_domain::Target::for_preview(row) == *target && row.snippet.is_empty() {
+                Rc::make_mut(row).snippet = text.to_string();
+                if let Some(object) = self
+                    .store
+                    .item(index as u32)
+                    .and_downcast::<glib::BoxedAnyObject>()
+                {
+                    *object.borrow_mut::<Row>() = Rc::clone(row);
+                }
+            }
+        }
+        self.redraw_made(|row| mailrs_domain::Target::for_preview(row) == *target);
     }
 
     /// Marks rows from these addresses as VIP mail.
@@ -988,6 +1068,7 @@ pub(crate) mod checks {
     use super::*;
 
     pub(crate) fn run() {
+        crate::ui::thread_row::check_appearance();
         let list = ThreadList::new(|_| {}, |_| {});
         let calls = Rc::new(Cell::new(0));
         let clicked = Rc::clone(&calls);
@@ -1001,6 +1082,7 @@ pub(crate) mod checks {
         let row = ThreadSummary {
             account_id: 1,
             id: "plans".into(),
+            preview_message_id: Some("matching-message".into()),
             from: "Ann".into(),
             subject: "Project plans".into(),
             snippet: "The updated plans are ready.".into(),
@@ -1015,6 +1097,24 @@ pub(crate) mod checks {
             "No Mail",
             "mail-unread-symbolic",
         );
+        list.selection.select_item(0, false);
+        let mut empty = row.clone();
+        empty.snippet.clear();
+        list.set_rows(vec![Rc::new(empty)], "No Mail", "mail-unread-symbolic");
+        list.preview_arrived(&mailrs_domain::Target::for_preview(&row), "Fetched preview");
+        assert_eq!(list.rows.borrow()[0].snippet, "Fetched preview");
+        assert!(list.selection.is_selected(0));
+        assert_eq!(
+            list.store
+                .item(0)
+                .unwrap()
+                .downcast::<glib::BoxedAnyObject>()
+                .unwrap()
+                .borrow::<Row>()
+                .snippet,
+            "Fetched preview"
+        );
+
         list.selection.select_item(0, false);
         list.set_rows(
             vec![Rc::new(ThreadSummary {

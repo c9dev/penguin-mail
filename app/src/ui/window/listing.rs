@@ -759,6 +759,7 @@ impl ListingRun {
         match splice {
             Splice::Stale => {}
             Splice::Put(fresh) => {
+                self.state.borrow_mut().previews.reset(Some(ticket));
                 let held = self.pane.loaded();
                 let rows = self
                     .state

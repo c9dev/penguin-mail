@@ -7,10 +7,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Choose zero, one, or two message preview lines and whether unread messages use bold text.
 - Empty Trash from its mailbox menu, including older mail outside the local cache, with bounded memory use and a fresh check before each delete batch.
 
 ### Fixed
 
+- IMAP messages show preview text in the list without needing to open them first.
 - Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.
 
 ## 1.0.10 (2026-10-20)

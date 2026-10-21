@@ -280,7 +280,11 @@ impl Pane for Fake {
         self.call(Call::PreviewArrived);
         self.with(|s| {
             s.preview_arrivals.push(target.clone());
-            if let Some(row) = s.rows.iter_mut().find(|r| Target::from_row(r) == *target) {
+            if let Some(row) = s
+                .rows
+                .iter_mut()
+                .find(|r| Target::for_preview(r) == *target)
+            {
                 row.snippet = text.to_string();
             }
         });

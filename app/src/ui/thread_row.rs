@@ -377,6 +377,37 @@ impl ThreadRow {
         open.map(|open| open(None)).is_some()
     }
 
+    pub fn set_appearance(
+        &self,
+        thread: &ThreadSummary,
+        lines: crate::settings::PreviewLines,
+        bold: bool,
+    ) {
+        if bold {
+            self.remove_css_class("normal-unread");
+        } else {
+            self.add_css_class("normal-unread");
+        }
+        let snippet = self.imp().snippet.get().expect("snippet exists");
+        // Queued rows use this space for send times and failures, not previews.
+        let count = if thread.scheduled || mailrs_sync::mailbox::outbox_id(&thread.id).is_some() {
+            2
+        } else {
+            lines.count()
+        };
+        snippet.set_lines(count.max(1));
+        snippet.set_visible(count > 0 && !thread.snippet.trim().is_empty());
+        if count == 0 {
+            self.update_property(&[gtk::accessible::Property::Label(&spoken(
+                thread.unread,
+                thread.invitation,
+                &thread.from,
+                &thread.subject,
+                "",
+            ))]);
+        }
+    }
+
     pub fn bind(&self, thread: &ThreadSummary, show_account: bool, vip: bool, avatar: Avatar) {
         let imp = self.imp();
         let face = imp.avatar.get().expect("avatar exists");
@@ -547,6 +578,42 @@ fn held_lines(snippet: &str) -> (&str, Option<&str>) {
 /// every line of it.
 fn one_line(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+#[cfg(test)]
+pub(crate) fn check_appearance() {
+    use crate::settings::PreviewLines;
+    let row = ThreadRow::default();
+    let mut thread = ThreadSummary {
+        unread: true,
+        snippet: "A preview that wraps onto another line when there is room.".into(),
+        ..Default::default()
+    };
+    for lines in [PreviewLines::None, PreviewLines::One, PreviewLines::Two] {
+        row.bind(&thread, false, false, Avatar::Hidden);
+        row.set_appearance(&thread, lines, false);
+        assert!(row.has_css_class("unread"));
+        assert!(row.has_css_class("normal-unread"));
+        let snippet = row.imp().snippet.get().unwrap();
+        assert_eq!(snippet.is_visible(), lines != PreviewLines::None);
+        assert_eq!(snippet.lines(), lines.count().max(1));
+    }
+    thread.snippet.clear();
+    row.bind(&thread, false, false, Avatar::Hidden);
+    row.set_appearance(&thread, PreviewLines::Two, true);
+    assert!(!row.imp().snippet.get().unwrap().is_visible());
+    assert!(!row.has_css_class("normal-unread"));
+    thread.scheduled = true;
+    thread.snippet = "Sends tomorrow".into();
+    row.bind(&thread, false, false, Avatar::Hidden);
+    row.set_appearance(&thread, PreviewLines::None, false);
+    assert!(row.imp().snippet.get().unwrap().is_visible());
+    thread.scheduled = false;
+    thread.id = mailrs_sync::mailbox::outbox_row(1);
+    thread.snippet = "Sending failed, retrying later".into();
+    row.bind(&thread, false, false, Avatar::Hidden);
+    row.set_appearance(&thread, PreviewLines::None, false);
+    assert!(row.imp().snippet.get().unwrap().is_visible());
 }
 
 #[cfg(test)]

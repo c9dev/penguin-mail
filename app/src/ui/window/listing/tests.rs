@@ -729,7 +729,10 @@ async fn previews_replace_the_queue_and_never_fetch_two_rows_together() {
     assert!(poll!(settling.as_mut()).is_pending());
     run.previews(vec![first.clone(), new.clone(), new.clone()]);
     assert!(poll!(settling.as_mut()).is_pending());
-    assert_eq!(fake.with(|s| s.previews.clone()), [first.clone()]);
+    assert_eq!(
+        fake.with(|s| s.previews.clone()),
+        std::slice::from_ref(&first)
+    );
     answer.send(()).unwrap();
     settling.await;
     assert_eq!(
@@ -824,4 +827,33 @@ async fn unavailable_previews_do_not_loop_and_attempts_only_keep_the_viewport() 
         fake.settle().await;
         assert_eq!(run.state.borrow().previews.attempted.len(), 1);
     }
+}
+
+#[tokio::test]
+async fn a_new_message_in_a_visible_thread_gets_its_own_preview() {
+    let (fake, run) = Fake::new();
+    fake.with(|s| {
+        s.store = vec![row("same", 1)];
+        s.preview_answers.extend([
+            Ok(Some("Old message".into())),
+            Ok(Some("New message".into())),
+        ]);
+    });
+    run.change(show(inbox()));
+    fake.settle().await;
+    let answer = fake.hold(Call::Preview);
+    let target = Target::thread(1, "same");
+    run.previews(vec![target.clone()]);
+    let settling = fake.settle();
+    pin_mut!(settling);
+    assert!(poll!(settling.as_mut()).is_pending());
+    fake.with(|s| s.store = vec![row("same", 2)]);
+    let ticket = run.state.borrow().previews.ticket.unwrap();
+    run.splice(ticket, vec![(1, "same".into())]).await;
+    run.previews(vec![target]);
+    answer.send(()).unwrap();
+    settling.await;
+    assert_eq!(fake.calls(Call::Preview), 2);
+    assert_eq!(fake.calls(Call::PreviewArrived), 1);
+    assert_eq!(fake.with(|s| s.rows[0].snippet.clone()), "New message");
 }
