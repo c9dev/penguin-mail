@@ -6,6 +6,7 @@ mod feed;
 mod follow;
 mod mailboxes;
 mod moves;
+mod previews;
 mod search;
 mod sending;
 mod uidvalidity;
