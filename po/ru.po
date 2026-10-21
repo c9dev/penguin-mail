@@ -124,6 +124,22 @@ msgstr ""
 "в браузере. Penguin Mail создан на GTK и libadwaita и лучше всего подходит "
 "для GNOME, но работает в любом окружении рабочего стола Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "почта"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "письма"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "входящие"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Все ваши учётные записи в общих входящих, с открытым ответом"
@@ -12476,18 +12492,6 @@ msgstr "Отметить как не спам"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Переместить в {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "почта"
-
-#~ msgid "mail"
-#~ msgstr "письма"
-
-#~ msgid "inbox"
-#~ msgstr "входящие"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

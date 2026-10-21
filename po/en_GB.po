@@ -75,6 +75,22 @@ msgstr "Every control named for screen readers and reachable from the keyboard, 
 msgid "Adding a Gmail or Microsoft account takes one sign-in in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
 msgstr "Adding a Gmail or Microsoft account takes one sign-in in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "email"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "mail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "inbox"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "All your accounts in one inbox, with a reply open"

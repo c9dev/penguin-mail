@@ -124,6 +124,22 @@ msgstr ""
 "navigateur. Penguin Mail est conçu avec GTK et libadwaita et s’intègre au "
 "mieux à GNOME, mais il fonctionne sur n’importe quel bureau Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "courriel"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "courrier"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "boîte de réception"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
@@ -12434,18 +12450,6 @@ msgstr "Marquer comme non indésirable"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Déplacer vers {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "courriel"
-
-#~ msgid "mail"
-#~ msgstr "courrier"
-
-#~ msgid "inbox"
-#~ msgstr "boîte de réception"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

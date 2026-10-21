@@ -125,6 +125,22 @@ msgstr ""
 "και ταιριάζει καλύτερα στο GNOME, αλλά λειτουργεί σε κάθε επιφάνεια εργασίας "
 "Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "ηλεκτρονικό ταχυδρομείο"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "αλληλογραφία"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "εισερχόμενα"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Όλοι οι λογαριασμοί σας σε κοινά εισερχόμενα, με μια απάντηση ανοιχτή"
@@ -12566,18 +12582,6 @@ msgstr "Σήμανση ως μη ανεπιθύμητο"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Μετακίνηση σε {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "ηλεκτρονικό ταχυδρομείο"
-
-#~ msgid "mail"
-#~ msgstr "αλληλογραφία"
-
-#~ msgid "inbox"
-#~ msgstr "εισερχόμενα"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

@@ -118,6 +118,22 @@ msgstr ""
 "す。Penguin Mail は GTK と libadwaita を使って作られており、GNOME に適した外"
 "観ですが、どの Linux デスクトップでも動作します。"
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "メール"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "メール"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "受信トレイ"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "すべてのアカウントを一つの受信トレイにまとめ、返信を開いた画面"
@@ -12035,18 +12051,6 @@ msgstr "迷惑メールではないとする"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}に移動"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "メール"
-
-#~ msgid "mail"
-#~ msgstr "メール"
-
-#~ msgid "inbox"
-#~ msgstr "受信トレイ"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

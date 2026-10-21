@@ -124,6 +124,22 @@ msgstr ""
 "браузері. Penguin Mail створено на GTK і libadwaita; найкраще програма "
 "вписується в GNOME, але працює в будь-якому стільничному середовищі Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "електронна пошта"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "пошта"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "вхідні"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Усі ваші облікові записи в одних вхідних, із відкритою відповіддю"
@@ -12464,18 +12480,6 @@ msgstr "Позначити як не спам"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Перемістити до {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "електронна пошта"
-
-#~ msgid "mail"
-#~ msgstr "пошта"
-
-#~ msgid "inbox"
-#~ msgstr "вхідні"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

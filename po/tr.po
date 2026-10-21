@@ -122,6 +122,22 @@ msgstr ""
 "açmanız yeterlidir. Penguin Mail, GTK ve libadwaita ile geliştirilmiştir ve "
 "GNOME'a uyumludur, ancak tüm Linux masaüstlerinde çalışır."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "e-posta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "posta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "gelen kutusu"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Yanıt penceresi açıkken tüm hesaplarınız tek gelen kutusunda"
@@ -12248,18 +12264,6 @@ msgstr "Gereksiz değil işaretle"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder} klasörüne taşı"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "e-posta"
-
-#~ msgid "mail"
-#~ msgstr "posta"
-
-#~ msgid "inbox"
-#~ msgstr "gelen kutusu"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

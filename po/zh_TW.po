@@ -114,6 +114,22 @@ msgstr ""
 "新增 Gmail 或 Microsoft 帳號只需在瀏覽器中登入一次。Penguin Mail 採用 GTK 和 "
 "libadwaita，最適合 GNOME，也可在任何 Linux 桌面環境中執行。"
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "電子郵件"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "郵件"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "收件匣"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "所有帳號集中在同一收件匣，並開啟回覆視窗"
@@ -11753,18 +11769,6 @@ msgstr "標示為非垃圾郵件"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "電子郵件"
-
-#~ msgid "mail"
-#~ msgstr "郵件"
-
-#~ msgid "inbox"
-#~ msgstr "收件匣"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

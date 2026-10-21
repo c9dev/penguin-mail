@@ -117,6 +117,22 @@ msgstr ""
 "다. GTK와 libadwaita로 만든 Penguin Mail은 GNOME에 잘 어울리며 모든 Linux 데"
 "스크톱에서 실행됩니다."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "이메일"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "메일"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "받은편지함"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "모든 계정이 모인 받은편지함과 열린 답장"
@@ -11975,18 +11991,6 @@ msgstr "스팸 아님으로 표시"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}(으)로 이동"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "이메일"
-
-#~ msgid "mail"
-#~ msgstr "메일"
-
-#~ msgid "inbox"
-#~ msgstr "받은편지함"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

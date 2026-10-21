@@ -118,6 +118,22 @@ msgstr ""
 "duyệt. Penguin Mail được xây dựng với GTK và libadwaita, phù hợp nhất với "
 "GNOME nhưng chạy được trên mọi môi trường Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "email"
+msgstr "email"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "mail"
+msgstr "thư"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "inbox"
+msgstr "hộp thư đến"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Mọi tài khoản trong một hộp thư đến, với thư trả lời đang mở"
@@ -11973,18 +11989,6 @@ msgstr "Đánh dấu không phải thư rác"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Chuyển vào {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "email"
-
-#~ msgid "mail"
-#~ msgstr "thư"
-
-#~ msgid "inbox"
-#~ msgstr "hộp thư đến"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."
