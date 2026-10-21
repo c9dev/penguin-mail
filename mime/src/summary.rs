@@ -99,12 +99,11 @@ pub fn summary(raw: &[u8]) -> Summary {
 }
 
 /// The start of `text`, its white space folded to single spaces.
-fn preview(text: Option<&str>) -> String {
+pub fn preview(text: Option<&str>) -> String {
     text.unwrap_or_default()
         .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
+        .flat_map(|word| std::iter::once(' ').chain(word.chars()))
+        .skip(1)
         .take(SNIPPET_CHARS)
         .collect()
 }
@@ -112,6 +111,13 @@ fn preview(text: Option<&str>) -> String {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn a_preview_folds_whitespace_and_stops_on_a_unicode_character() {
+        assert_eq!(preview(Some("  Olá\n\t světe   ")), "Olá světe");
+        assert_eq!(preview(None), "");
+        assert_eq!(preview(Some(&"č".repeat(200))), "č".repeat(SNIPPET_CHARS));
+    }
 
     #[test]
     fn the_first_recipient_keeps_a_comma_in_a_quoted_name() {
