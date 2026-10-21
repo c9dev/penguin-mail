@@ -77,7 +77,7 @@ pub struct ThreadList {
     /// The rows of the drag in progress.
     dragged: Rc<RefCell<Vec<Row>>>,
     show_accounts: Rc<Cell<bool>>,
-    appearance: Rc<Cell<(crate::settings::PreviewLines, bool)>>,
+    appearance: Rc<Cell<(crate::settings::PreviewLines, bool, bool, bool)>>,
     /// Lower-case VIP addresses; their rows get a star.
     vips: Rc<RefCell<HashSet<String>>>,
     /// Contact photos, read as rows ask for them. None, or none on disk
@@ -163,7 +163,12 @@ impl ThreadList {
             row.add_controller(source);
             item.set_child(Some(&row));
         });
-        let appearance = Rc::new(Cell::new((crate::settings::PreviewLines::Two, true)));
+        let appearance = Rc::new(Cell::new((
+            crate::settings::PreviewLines::Two,
+            true,
+            false,
+            true,
+        )));
         let row_appearance = Rc::clone(&appearance);
         let shown = Rc::clone(&show_accounts);
         let vips: Rc<RefCell<HashSet<String>>> = Rc::new(RefCell::new(HashSet::new()));
@@ -182,7 +187,11 @@ impl ThreadList {
             // recipient's, not the sender's own.
             let sender = super::thread_row::person(&thread).1.to_lowercase();
             let vip = starred_people.borrow().contains(&sender);
-            let faces = faces.borrow().clone().filter(|faces| faces.any());
+            let (lines, bold, bold_senders, show_avatars) = row_appearance.get();
+            let faces = faces
+                .borrow()
+                .clone()
+                .filter(|faces| show_avatars && faces.any());
             let photo = faces.as_ref().and_then(|faces| faces.texture(&sender));
             let avatar = match (&faces, &photo) {
                 (None, _) => Avatar::Hidden,
@@ -190,8 +199,7 @@ impl ThreadList {
                 (Some(_), None) => Avatar::Initials,
             };
             row.bind(&thread, shown.get(), vip, avatar);
-            let (lines, bold) = row_appearance.get();
-            row.set_appearance(&thread, lines, bold);
+            row.set_appearance(&thread, lines, bold, bold_senders);
         });
         let binds = Rc::clone(&bind);
         factory.connect_bind(move |_, item| {
@@ -545,8 +553,15 @@ impl ThreadList {
         }
     }
 
-    pub fn set_appearance(&self, lines: crate::settings::PreviewLines, bold: bool) {
-        if self.appearance.replace((lines, bold)) != (lines, bold) {
+    pub fn set_appearance(
+        &self,
+        lines: crate::settings::PreviewLines,
+        bold: bool,
+        bold_senders: bool,
+        show_avatars: bool,
+    ) {
+        let appearance = (lines, bold, bold_senders, show_avatars);
+        if self.appearance.replace(appearance) != appearance {
             self.rebind();
         }
     }

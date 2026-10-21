@@ -52,7 +52,9 @@ Appearance preferences offer zero, one, or two preview lines and a switch for
 bold unread messages. Turning off bold keeps the unread dot and the screen
 reader's unread announcement. Turning off previews also removes their text
 from the row's accessible name. Send Later keeps its scheduled time visible,
-and Outbox keeps its sending status.
+and Outbox keeps its sending status. A separate switch keeps senders bold in
+both read and unread messages. Avatars can be hidden to leave more room for
+message text; sender names remain visible and announced.
 
 ## The message
 

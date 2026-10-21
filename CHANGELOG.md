@@ -7,7 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
-- Choose zero, one, or two message preview lines and whether unread messages use bold text.
+- Choose message preview lines, hide avatars, and control bold text for unread messages and senders.
 - Empty Trash from its mailbox menu, including older mail outside the local cache, with bounded memory use and a fresh check before each delete batch.
 
 ### Fixed

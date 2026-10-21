@@ -119,6 +119,7 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .thread-list > row:selected .thread-text,
 .thread-list > row:hover .thread-text { border-bottom-color: transparent; }
 .thread-row .from { font-weight: 600; }
+.thread-row.bold-senders .from,
 .thread-row.unread:not(.normal-unread) .from { font-weight: 800; }
 /* The sender's address beside the name, styled as the mockup's secondary
    text (R4): it lets a person spot a look-alike name. */

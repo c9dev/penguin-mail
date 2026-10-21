@@ -1114,9 +1114,12 @@ impl MainWindow {
         let photos = app.photos();
         window.list.set_photos(Rc::clone(&photos));
         let settings = window.settings();
-        window
-            .list
-            .set_appearance(settings.preview_lines, settings.bold_unread);
+        window.list.set_appearance(
+            settings.preview_lines,
+            settings.bold_unread,
+            settings.bold_senders,
+            settings.show_avatars,
+        );
         let weak = Rc::downgrade(&window);
         window.list.connect_previews(move |targets| {
             if let Some(window) = weak.upgrade() {
@@ -3972,8 +3975,12 @@ impl MainWindow {
             Effect::ListShape => self.listing.change(|screen| Some(screen.list_shape())),
             Effect::Accounts => self.refresh_accounts(Reload::Yes),
             Effect::RowAppearance => {
-                self.list
-                    .set_appearance(settings.preview_lines, settings.bold_unread);
+                self.list.set_appearance(
+                    settings.preview_lines,
+                    settings.bold_unread,
+                    settings.bold_senders,
+                    settings.show_avatars,
+                );
                 if settings.preview_lines == crate::settings::PreviewLines::None {
                     self.listing.previews(Vec::new());
                 }

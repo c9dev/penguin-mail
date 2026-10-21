@@ -254,6 +254,24 @@ fn appearance_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.bold_unread,
         Change::BoldUnread,
     ));
+    appearance.add(&switch(
+        app,
+        &gettext("Always Bold Senders"),
+        Some(&gettext(
+            "Use heavier sender text for both read and unread messages",
+        )),
+        settings.bold_senders,
+        Change::BoldSenders,
+    ));
+    appearance.add(&switch(
+        app,
+        &gettext("Show Avatars"),
+        Some(&gettext(
+            "Show contact pictures or initials in the message list",
+        )),
+        settings.show_avatars,
+        Change::ShowAvatars,
+    ));
     appearance.add(&language_row(app, settings));
     page.add(&appearance);
     page

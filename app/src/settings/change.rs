@@ -27,6 +27,8 @@ pub enum Change {
     TextSize(TextSize),
     PreviewLines(PreviewLines),
     BoldUnread(bool),
+    BoldSenders(bool),
+    ShowAvatars(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
     ColorScheme(ColorScheme),
@@ -278,6 +280,8 @@ impl Change {
             Change::TextSize(size) => settings.text_size = size,
             Change::PreviewLines(lines) => settings.preview_lines = lines,
             Change::BoldUnread(on) => settings.bold_unread = on,
+            Change::BoldSenders(on) => settings.bold_senders = on,
+            Change::ShowAvatars(on) => settings.show_avatars = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
                     TextSize::Normal
@@ -615,6 +619,8 @@ settable! {
         TextSize => text_size,
         PreviewLines => preview_lines,
         BoldUnread => bold_unread,
+        BoldSenders => bold_senders,
+        ShowAvatars => show_avatars,
         ColorScheme => color_scheme,
         Notifications => notifications,
         NotificationPreviews => notification_previews,
@@ -853,6 +859,8 @@ impl Effects {
             text_size,
             preview_lines,
             bold_unread,
+            bold_senders,
+            show_avatars,
             color_scheme,
             language,
             notifications,
@@ -988,7 +996,10 @@ impl Effects {
                 }
                 Effect::RowColors => colors_changed,
                 Effect::RowAppearance => {
-                    *preview_lines != before.preview_lines || *bold_unread != before.bold_unread
+                    *preview_lines != before.preview_lines
+                        || *bold_unread != before.bold_unread
+                        || *bold_senders != before.bold_senders
+                        || *show_avatars != before.show_avatars
                 }
                 Effect::SmartMailboxes => smart_changed,
                 Effect::Vips => vips_changed,
@@ -1033,6 +1044,8 @@ mod tests {
         let before: Settings = toml::from_str("").unwrap();
         assert_eq!(before.preview_lines, PreviewLines::Two);
         assert!(before.bold_unread);
+        assert!(!before.bold_senders);
+        assert!(before.show_avatars);
         for lines in [PreviewLines::None, PreviewLines::One] {
             let mut after = before.clone();
             Change::PreviewLines(lines).apply_to(&mut after);
@@ -1040,6 +1053,23 @@ mod tests {
             let saved: Settings = toml::from_str(&toml::to_string(&after).unwrap()).unwrap();
             assert_eq!(saved.preview_lines, lines);
             assert!(!saved.bold_unread);
+            assert_eq!(
+                Effects::between(&before, &saved).iter().collect::<Vec<_>>(),
+                vec![Effect::RowAppearance]
+            );
+        }
+    }
+
+    #[test]
+    fn sender_appearance_changes_persist_and_only_redraw_rows() {
+        use super::{Change, Effect, Effects};
+        use crate::settings::Settings;
+        let before = Settings::default();
+        for change in [Change::BoldSenders(true), Change::ShowAvatars(false)] {
+            let mut after = before.clone();
+            change.apply_to(&mut after);
+            let saved: Settings = toml::from_str(&toml::to_string(&after).unwrap()).unwrap();
+            assert_eq!(saved, after);
             assert_eq!(
                 Effects::between(&before, &saved).iter().collect::<Vec<_>>(),
                 vec![Effect::RowAppearance]

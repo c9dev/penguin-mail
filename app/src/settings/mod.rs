@@ -28,6 +28,8 @@ pub struct Settings {
     pub text_size: TextSize,
     pub preview_lines: PreviewLines,
     pub bold_unread: bool,
+    pub bold_senders: bool,
+    pub show_avatars: bool,
     pub color_scheme: ColorScheme,
     /// The locale the interface speaks, such as `pt_PT`. Empty follows the
     /// desktop. Read once at startup, since GTK reads its own locale then
@@ -468,6 +470,8 @@ impl Default for Settings {
             text_size: TextSize::Normal,
             preview_lines: PreviewLines::Two,
             bold_unread: true,
+            bold_senders: false,
+            show_avatars: true,
             color_scheme: ColorScheme::System,
             language: String::new(),
             notifications: true,

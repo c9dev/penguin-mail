@@ -382,7 +382,13 @@ impl ThreadRow {
         thread: &ThreadSummary,
         lines: crate::settings::PreviewLines,
         bold: bool,
+        bold_senders: bool,
     ) {
+        if bold_senders {
+            self.add_css_class("bold-senders");
+        } else {
+            self.remove_css_class("bold-senders");
+        }
         if bold {
             self.remove_css_class("normal-unread");
         } else {
@@ -591,28 +597,43 @@ pub(crate) fn check_appearance() {
     };
     for lines in [PreviewLines::None, PreviewLines::One, PreviewLines::Two] {
         row.bind(&thread, false, false, Avatar::Hidden);
-        row.set_appearance(&thread, lines, false);
+        row.set_appearance(&thread, lines, false, false);
         assert!(row.has_css_class("unread"));
         assert!(row.has_css_class("normal-unread"));
         let snippet = row.imp().snippet.get().unwrap();
         assert_eq!(snippet.is_visible(), lines != PreviewLines::None);
         assert_eq!(snippet.lines(), lines.count().max(1));
     }
+    for unread in [false, true] {
+        thread.unread = unread;
+        for bold_unread in [false, true] {
+            for bold_senders in [true, false] {
+                row.bind(&thread, false, false, Avatar::Initials);
+                row.set_appearance(&thread, PreviewLines::Two, bold_unread, bold_senders);
+                assert_eq!(row.has_css_class("bold-senders"), bold_senders);
+                assert_eq!(row.has_css_class("normal-unread"), !bold_unread);
+                assert_eq!(row.has_css_class("unread"), unread);
+                assert!(row.imp().avatar.get().unwrap().is_visible());
+                row.bind(&thread, false, false, Avatar::Hidden);
+                assert!(!row.imp().avatar.get().unwrap().is_visible());
+            }
+        }
+    }
     thread.snippet.clear();
     row.bind(&thread, false, false, Avatar::Hidden);
-    row.set_appearance(&thread, PreviewLines::Two, true);
+    row.set_appearance(&thread, PreviewLines::Two, true, false);
     assert!(!row.imp().snippet.get().unwrap().is_visible());
     assert!(!row.has_css_class("normal-unread"));
     thread.scheduled = true;
     thread.snippet = "Sends tomorrow".into();
     row.bind(&thread, false, false, Avatar::Hidden);
-    row.set_appearance(&thread, PreviewLines::None, false);
+    row.set_appearance(&thread, PreviewLines::None, false, false);
     assert!(row.imp().snippet.get().unwrap().is_visible());
     thread.scheduled = false;
     thread.id = mailrs_sync::mailbox::outbox_row(1);
     thread.snippet = "Sending failed, retrying later".into();
     row.bind(&thread, false, false, Avatar::Hidden);
-    row.set_appearance(&thread, PreviewLines::None, false);
+    row.set_appearance(&thread, PreviewLines::None, false, false);
     assert!(row.imp().snippet.get().unwrap().is_visible());
 }
 
