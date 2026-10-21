@@ -9,14 +9,17 @@ mod listed;
 mod muted;
 mod outbox;
 mod receipts;
+mod snapshot;
 mod space;
 mod store_mail;
 mod threads;
 mod trash;
+mod unread_inbox;
 mod window;
 mod writes;
 
 pub(crate) use outbox::message_id_header;
+pub(crate) use snapshot::Snapshot;
 pub(crate) use space::quiet;
 
 pub use listed::Searched;

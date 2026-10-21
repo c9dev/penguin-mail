@@ -522,9 +522,10 @@ pub(super) fn list_messages(
                 .as_ref()
                 .is_none_or(|c| m.message.categories.iter().flatten().any(|n| n == c))
         })
+        .filter(|m| !listing.unread || m.message.is_read != Some(true))
         .collect();
     found.sort_by_key(|m| std::cmp::Reverse(m.message.received_millis()));
-    let top = listing.top.clamp(1, 1000) as usize;
+    let top = (listing.top.clamp(1, 1000) as usize).min(s.listing_page.unwrap_or(usize::MAX));
     let value: Vec<Message> = found
         .iter()
         .skip(offset)

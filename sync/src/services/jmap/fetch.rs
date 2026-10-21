@@ -3,6 +3,7 @@
 //! the last id the one before it named, so a message another client
 //! removes meanwhile does not shift the rest past the listing.
 
+use mailrs_domain::mailbox::keyword::SEEN;
 use mailrs_domain::{Address, Memberships, MessageMeta, Role};
 use mailrs_jmap::{Email, EmailAddress, EmailQuery, HELD, Hit, JmapError, META, Queried};
 use serde_json::{Value, json};
@@ -318,6 +319,7 @@ impl<J: JmapApi> Jmap<J> {
         mailbox: &str,
         cursor: Option<&str>,
         limit: usize,
+        unread: bool,
     ) -> Result<Backfill, BackendError> {
         self.listed().await?;
         let (state, position) = match cursor {
@@ -334,7 +336,11 @@ impl<J: JmapApi> Jmap<J> {
         let found = self
             .api()
             .query(&EmailQuery {
-                filter: Some(json!({ "inMailbox": mailbox })),
+                filter: Some(if unread {
+                    json!({ "inMailbox": mailbox, "notKeyword": SEEN })
+                } else {
+                    json!({ "inMailbox": mailbox })
+                }),
                 position,
                 limit: limit.clamp(1, IDS_PER_CALL),
                 total: false,

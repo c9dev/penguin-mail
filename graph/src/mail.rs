@@ -187,6 +187,8 @@ pub struct Listing {
     pub category: Option<String>,
     /// KQL, without the quotes Graph wants around it.
     pub search: Option<String>,
+    /// Only messages not yet read.
+    pub unread: bool,
     pub top: u32,
     pub fields: Fields,
 }
@@ -412,6 +414,9 @@ impl Graph {
                         "categories/any(c:c eq '{}')",
                         name.replace('\'', "''")
                     ));
+                }
+                if listing.unread {
+                    filters.push("isRead eq false".to_string());
                 }
                 if !filters.is_empty() {
                     query.push(("$filter", filters.join(" and ")));
