@@ -2116,27 +2116,31 @@ msgstr "Destaques"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3373
+#: app/src/compose.rs:669 app/src/compose.rs:3412
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
-#: app/src/compose.rs:677
+#: app/src/compose.rs:678
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3379
+#: app/src/compose.rs:904 app/src/compose.rs:3418
 msgid "Choose a time in the future"
 msgstr "Escolha uma hora no futuro"
 
-#: app/src/compose.rs:1226
+#: app/src/compose.rs:1230
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/compose.rs:1505
+#: app/src/compose.rs:1236
+msgid "{sender} wrote:"
+msgstr "{sender} escreveu:"
+
+#: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
 msgstr "O Penguin Mail não conseguiu montar a mensagem."
 
-#: app/src/compose.rs:1529
+#: app/src/compose.rs:1539
 msgid "The list did not give one address to write to."
 msgstr "A lista não indicou um único endereço para onde escrever."
 
@@ -2468,11 +2472,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:438
+#: app/src/main.rs:442
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:443 app/src/ui/about.rs:181
+#: app/src/main.rs:447 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -7919,11 +7923,11 @@ msgstr "Marcar como lida (U)"
 msgid "Mark as Unread (U)"
 msgstr "Marcar como não lida (U)"
 
-#: app/src/ui/conversation.rs:2114
+#: app/src/ui/conversation.rs:2115
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2131 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2132 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "Retirar a marca"
 

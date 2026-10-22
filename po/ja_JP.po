@@ -2067,27 +2067,33 @@ msgstr "優先"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail はウィンドウを閉じても同期を続けます"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3373
+#: app/src/compose.rs:669 app/src/compose.rs:3412
 msgid "Add at least one recipient."
 msgstr "宛先を少なくとも一つ追加してください。"
 
-#: app/src/compose.rs:677
+#: app/src/compose.rs:678
 msgid "“{address}” is not an email address."
 msgstr "「{address}」はメールアドレスではありません。"
 
-#: app/src/compose.rs:903 app/src/compose.rs:3379
+#: app/src/compose.rs:904 app/src/compose.rs:3418
 msgid "Choose a time in the future"
 msgstr "未来の時刻を選んでください"
 
-#: app/src/compose.rs:1226
+#: app/src/compose.rs:1230
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}、{sender} は書きました:"
 
-#: app/src/compose.rs:1505
+#: app/src/compose.rs:1236
+#, fuzzy
+#| msgid "On {date}, {sender} wrote:"
+msgid "{sender} wrote:"
+msgstr "{date}、{sender} は書きました:"
+
+#: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
 msgstr "メッセージを組み立てられませんでした。"
 
-#: app/src/compose.rs:1529
+#: app/src/compose.rs:1539
 msgid "The list did not give one address to write to."
 msgstr "メーリングリストの送信先アドレスを特定できませんでした。"
 
@@ -2408,11 +2414,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 不明なオプション {option}"
 
-#: app/src/main.rs:438
+#: app/src/main.rs:442
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail を起動できませんでした"
 
-#: app/src/main.rs:443 app/src/ui/about.rs:181
+#: app/src/main.rs:447 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "問題を報告"
 
@@ -7738,11 +7744,11 @@ msgstr "既読にする（U）"
 msgid "Mark as Unread (U)"
 msgstr "未読にする（U）"
 
-#: app/src/ui/conversation.rs:2114
+#: app/src/ui/conversation.rs:2115
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color}（Ctrl+Alt+{number}）"
 
-#: app/src/ui/conversation.rs:2131 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2132 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "フラグを解除"
 

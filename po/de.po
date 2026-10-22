@@ -2163,27 +2163,33 @@ msgstr "Relevant"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail gleicht weiter ab, auch ohne geöffnetes Fenster"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3373
+#: app/src/compose.rs:669 app/src/compose.rs:3412
 msgid "Add at least one recipient."
 msgstr "Fügen Sie mindestens einen Empfänger hinzu."
 
-#: app/src/compose.rs:677
+#: app/src/compose.rs:678
 msgid "“{address}” is not an email address."
 msgstr "„{address}“ ist keine E-Mail-Adresse."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3379
+#: app/src/compose.rs:904 app/src/compose.rs:3418
 msgid "Choose a time in the future"
 msgstr "Wählen Sie eine Zeit in der Zukunft"
 
-#: app/src/compose.rs:1226
+#: app/src/compose.rs:1230
 msgid "On {date}, {sender} wrote:"
 msgstr "Am {date} schrieb {sender}:"
 
-#: app/src/compose.rs:1505
+#: app/src/compose.rs:1236
+#, fuzzy
+#| msgid "On {date}, {sender} wrote:"
+msgid "{sender} wrote:"
+msgstr "Am {date} schrieb {sender}:"
+
+#: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail konnte die Nachricht nicht zusammenstellen."
 
-#: app/src/compose.rs:1529
+#: app/src/compose.rs:1539
 msgid "The list did not give one address to write to."
 msgstr "Die Liste hat keine Adresse zum Anschreiben angegeben."
 
@@ -2519,11 +2525,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: Unbekannte Option {option}"
 
-#: app/src/main.rs:438
+#: app/src/main.rs:442
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail konnte nicht starten"
 
-#: app/src/main.rs:443 app/src/ui/about.rs:181
+#: app/src/main.rs:447 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Problem melden"
 
@@ -8017,11 +8023,11 @@ msgstr "Als gelesen markieren (U)"
 msgid "Mark as Unread (U)"
 msgstr "Als ungelesen markieren (U)"
 
-#: app/src/ui/conversation.rs:2114
+#: app/src/ui/conversation.rs:2115
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Strg+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2131 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2132 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "Markierung entfernen"
 

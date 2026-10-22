@@ -2162,27 +2162,33 @@ msgstr "Prioritare"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail continuă sincronizarea fără nicio fereastră deschisă"
 
-#: app/src/compose.rs:668 app/src/compose.rs:3373
+#: app/src/compose.rs:669 app/src/compose.rs:3412
 msgid "Add at least one recipient."
 msgstr "Adăugați cel puțin un destinatar."
 
-#: app/src/compose.rs:677
+#: app/src/compose.rs:678
 msgid "“{address}” is not an email address."
 msgstr "„{address}” nu este o adresă de e-mail."
 
-#: app/src/compose.rs:903 app/src/compose.rs:3379
+#: app/src/compose.rs:904 app/src/compose.rs:3418
 msgid "Choose a time in the future"
 msgstr "Alegeți un moment din viitor"
 
-#: app/src/compose.rs:1226
+#: app/src/compose.rs:1230
 msgid "On {date}, {sender} wrote:"
 msgstr "La {date}, {sender} a scris:"
 
-#: app/src/compose.rs:1505
+#: app/src/compose.rs:1236
+#, fuzzy
+#| msgid "On {date}, {sender} wrote:"
+msgid "{sender} wrote:"
+msgstr "La {date}, {sender} a scris:"
+
+#: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail nu a putut compune mesajul."
 
-#: app/src/compose.rs:1529
+#: app/src/compose.rs:1539
 msgid "The list did not give one address to write to."
 msgstr "Lista nu a indicat nicio adresă la care să scrieți."
 
@@ -2522,11 +2528,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opțiune necunoscută {option}"
 
-#: app/src/main.rs:438
+#: app/src/main.rs:442
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail nu a putut porni"
 
-#: app/src/main.rs:443 app/src/ui/about.rs:181
+#: app/src/main.rs:447 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Raportează o problemă"
 
@@ -8028,11 +8034,11 @@ msgstr "Marchează ca citit (U)"
 msgid "Mark as Unread (U)"
 msgstr "Marchează ca necitit (U)"
 
-#: app/src/ui/conversation.rs:2114
+#: app/src/ui/conversation.rs:2115
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2131 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2132 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "Elimină stegulețul"
 
