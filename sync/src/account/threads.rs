@@ -29,10 +29,13 @@ enum Written {
 /// order, so a new order from the server is no change and the thread is
 /// not announced for it. The roles come from the store's own mailboxes,
 /// whatever the fetch said.
-fn differs(stored: &MessageMeta, meta: &MessageMeta) -> bool {
+fn differs(stored: &MessageMeta, meta: &MessageMeta, local: bool) -> bool {
     let mut written = meta.clone();
     written.held.sort();
     written.roles = stored.roles.clone();
+    if local && written.snippet.is_empty() {
+        written.snippet = stored.snippet.clone();
+    }
     *stored != written
 }
 
@@ -107,7 +110,8 @@ impl AccountSync {
         // back where the write took it from.
         let _moves = self.mail.hold_moves().await;
         let account_id = self.account_id;
-        let mut answer = match self.local_threads() {
+        let local = self.local_threads();
+        let mut answer = match local {
             true => self.fetch_stored_thread(thread_id).await?,
             false => self.fetch_whole(vec![thread_id.to_string()]).await?,
         };
@@ -130,7 +134,7 @@ impl AccountSync {
                             if overtaken && stored.is_some() {
                                 continue;
                             }
-                            changed |= stored.is_none_or(|stored| differs(stored, meta));
+                            changed |= stored.is_none_or(|stored| differs(stored, meta, local));
                             changes.push(answer.placing.upsert(account_id, meta, cursor.sync_gen));
                         }
                         // A message of a local thread that the server no
@@ -298,5 +302,22 @@ impl AccountSync {
                 tracing::debug!(error = %err, "could not record body reads");
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::differs;
+
+    #[test]
+    fn a_cached_preview_is_not_a_change_in_local_headers() {
+        let mut stored = crate::fake::meta("m", "t", 1, &["INBOX"]);
+        stored.snippet = "A saved preview".into();
+        let mut fetched = stored.clone();
+        fetched.snippet.clear();
+        assert!(!differs(&stored, &fetched, true));
+        assert!(differs(&stored, &fetched, false));
+        fetched.subject = "Changed".into();
+        assert!(differs(&stored, &fetched, true));
     }
 }

@@ -28,6 +28,10 @@ pub struct Settings {
     pub mark_read: MarkRead,
     pub remote_images: RemoteImages,
     pub text_size: TextSize,
+    pub preview_lines: PreviewLines,
+    pub bold_unread: bool,
+    pub bold_senders: bool,
+    pub show_avatars: bool,
     pub color_scheme: ColorScheme,
     /// The locale the interface speaks, such as `pt_PT`. Empty follows the
     /// desktop. Read once at startup, since GTK reads its own locale then
@@ -468,6 +472,10 @@ impl Default for Settings {
             mark_read: MarkRead::Immediately,
             remote_images: RemoteImages::Ask,
             text_size: TextSize::Normal,
+            preview_lines: PreviewLines::Two,
+            bold_unread: true,
+            bold_senders: false,
+            show_avatars: true,
             color_scheme: ColorScheme::System,
             language: String::new(),
             notifications: true,
@@ -658,6 +666,35 @@ impl Choice for ReadReceipts {
         match self {
             ReadReceipts::Ask => gettext("Ask each time"),
             ReadReceipts::Never => gettext("Never ask"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PreviewLines {
+    None,
+    One,
+    Two,
+}
+
+impl PreviewLines {
+    pub fn count(self) -> i32 {
+        match self {
+            Self::None => 0,
+            Self::One => 1,
+            Self::Two => 2,
+        }
+    }
+}
+
+impl Choice for PreviewLines {
+    const ALL: &'static [Self] = &[Self::None, Self::One, Self::Two];
+    fn label(self) -> String {
+        match self {
+            Self::None => gettext("No Preview"),
+            Self::One => gettext("1 Line"),
+            Self::Two => gettext("2 Lines"),
         }
     }
 }

@@ -119,11 +119,12 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .thread-list > row:selected .thread-text,
 .thread-list > row:hover .thread-text { border-bottom-color: transparent; }
 .thread-row .from { font-weight: 600; }
-.thread-row.unread .from { font-weight: 800; }
+.thread-row.bold-senders .from,
+.thread-row.unread:not(.normal-unread) .from { font-weight: 800; }
 /* The sender's address beside the name, styled as the mockup's secondary
    text (R4): it lets a person spot a look-alike name. */
 .thread-row .subject { font-weight: 500; }
-.thread-row.unread .subject { font-weight: 700; }
+.thread-row.unread:not(.normal-unread) .subject { font-weight: 700; }
 /* At 60 % the preview and a read date measured 3.6:1 on the list in
    light and 3.4:1 on a selected card. At 75 % they read 5.6:1 on the
    list and 5.1:1 or better on the card under the pointer, whatever the
@@ -135,7 +136,8 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
    win. */
 .app-dark .thread-row .snippet,
 .app-dark .thread-row .date { opacity: 0.6; }
-.thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 700; }
+.thread-row .unread.date { opacity: 1; color: var(--accent-color); }
+.thread-row:not(.normal-unread) .unread.date { font-weight: 700; }
 .thread-row .count {
   font-size: 0.78em; font-weight: 700; padding: 0 6px; border-radius: 999px;
   background: alpha(currentColor, 0.1); opacity: 0.8;

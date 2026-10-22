@@ -46,6 +46,16 @@ The widths are remembered between starts. In a narrow window, the
 existing sidebar overlay and one-page mail navigation take over, and
 hidden dividers leave the keyboard focus order.
 
+## Message list previews
+
+Appearance preferences offer zero, one, or two preview lines and a switch for
+bold unread messages. Turning off bold keeps the unread dot and the screen
+reader's unread announcement. Turning off previews also removes their text
+from the row's accessible name. Send Later keeps its scheduled time visible,
+and Outbox keeps its sending status. A separate switch keeps senders bold in
+both read and unread messages. Avatars can be hidden to leave more room for
+message text; sender names remain visible and announced.
+
 ## The message
 
 Hovering over a web or email link, or focusing it with Tab, shows its destination at the bottom-right of the reading pane. The preview is a status region for screen readers. It names the destination site before the full address and explains any signs of deception. A message with such links also has a warning above its body, outside the sender's styles. These local checks compare displayed addresses with destinations and look for disguised hosts and hidden characters. They make no network requests and do not certify that a site is safe.

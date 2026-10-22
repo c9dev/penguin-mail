@@ -114,12 +114,11 @@ fn envelope(message: &mail_parser::Message<'_>, snippet: String, has_files: bool
 }
 
 /// The start of `text`, its white space folded to single spaces.
-fn preview(text: Option<&str>) -> String {
+pub fn preview(text: Option<&str>) -> String {
     text.unwrap_or_default()
         .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
+        .flat_map(|word| std::iter::once(' ').chain(word.chars()))
+        .skip(1)
         .take(SNIPPET_CHARS)
         .collect()
 }
@@ -143,6 +142,13 @@ pub(crate) mod tests {
         assert_eq!(head.message_id.as_deref(), Some("<k@example.com>"));
         assert!(full.has_files && !full.snippet.is_empty());
         assert!(!head.has_files && head.snippet.is_empty());
+    }
+
+    #[test]
+    fn a_preview_folds_whitespace_and_stops_on_a_unicode_character() {
+        assert_eq!(preview(Some("  Olá\n\t světe   ")), "Olá světe");
+        assert_eq!(preview(None), "");
+        assert_eq!(preview(Some(&"č".repeat(200))), "č".repeat(SNIPPET_CHARS));
     }
 
     #[test]

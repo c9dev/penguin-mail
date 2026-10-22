@@ -968,7 +968,9 @@ const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snipp
                        EXISTS (SELECT 1 FROM messages im CROSS JOIN invitations i \
                                ON i.account_id = im.account_id AND i.message_id = im.id \
                                WHERE im.account_id = t.account_id AND im.thread_id = t.id \
-                               AND i.cancelled = 0)";
+                               AND i.cancelled = 0), \
+                       (SELECT MAX(pm.id) FROM messages pm WHERE pm.account_id = t.account_id \
+                        AND pm.thread_id = t.id AND pm.date = t.last_message_at)";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -981,6 +983,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         account_id: row.get(0)?,
         id: row.get(1)?,
         message_id: None,
+        preview_message_id: row.get(14)?,
         last_message_at: row.get(2)?,
         subject: row.get(3)?,
         snippet: row.get(4)?,
@@ -1174,6 +1177,7 @@ fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         account_id: row.get(0)?,
         id: row.get(1)?,
         message_id: Some(row.get(2)?),
+        preview_message_id: Some(row.get(2)?),
         last_message_at: row.get(3)?,
         subject: row.get(4)?,
         snippet: row.get(5)?,

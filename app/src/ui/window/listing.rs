@@ -18,7 +18,7 @@
 //! and the tests are another.
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -74,6 +74,8 @@ pub(super) trait Pane {
     fn replace(&self, changed: &[Named], rows: Vec<ThreadSummary>, title: &str, subtitle: &str);
     /// Drops the rows of these targets, which left the folder on screen.
     fn drop_rows(&self, gone: &[Target]);
+    /// Fills a preview on its existing row, without changing selection or scroll.
+    fn preview_arrived(&self, target: &Target, text: &str);
     /// Shows the spinner in place of the rows.
     fn loading(&self);
     /// Selects a thread a reveal waited on, now that its row is listed.
@@ -131,6 +133,8 @@ pub(super) trait Lists {
         account_id: AccountId,
         server_mailbox: String,
     ) -> Answer<'_, anyhow::Result<()>>;
+    /// The text preview for one visible row, without marking its mail read.
+    fn preview(&self, target: Target) -> Answer<'_, anyhow::Result<Option<String>>>;
     fn sleep(&self, time: Duration) -> Answer<'_, ()>;
     /// Runs `work` on the main loop, beside whatever else runs.
     fn spawn(&self, work: Work);
@@ -178,6 +182,27 @@ struct Follow {
     status: FollowStatus,
 }
 
+#[derive(Default)]
+struct Previews {
+    ticket: Option<Ticket>,
+    revision: u64,
+    visible: HashSet<Target>,
+    attempted: HashSet<Target>,
+    queued: VecDeque<Target>,
+    active: Option<(u64, Target)>,
+    running: bool,
+}
+
+impl Previews {
+    fn reset(&mut self, ticket: Option<Ticket>) {
+        self.ticket = ticket;
+        self.revision += 1;
+        self.visible.clear();
+        self.attempted.clear();
+        self.queued.clear();
+    }
+}
+
 struct State {
     screen: OnScreen,
     /// The search field between keys.
@@ -192,6 +217,7 @@ struct State {
     /// remembered, since a failure must allow the next visit to retry.
     followed: HashMap<(AccountId, String), Follow>,
     follow_attempt: u64,
+    previews: Previews,
 }
 
 /// The thread list's run. See the module's comment.
@@ -213,6 +239,7 @@ impl ListingRun {
                 stop: None,
                 followed: HashMap::new(),
                 follow_attempt: 0,
+                previews: Previews::default(),
             }),
             pane,
             lists,
@@ -332,9 +359,79 @@ impl ListingRun {
                 return;
             }
             match loaded {
-                Ok(listing) if listing.replace => this.pane.set_rows(listing),
+                Ok(listing) if listing.replace => this.put_rows(ticket, listing),
                 Ok(listing) => this.pane.append(listing.rows),
                 Err(err) => this.pane.failed(&err),
+            }
+        }));
+    }
+
+    /// Replaces the preview queue with the visible rows that still need text.
+    /// Empty also stops queued work when previews are disabled or the list hides.
+    pub(super) fn previews(self: &Rc<Self>, targets: Vec<Target>) {
+        {
+            let mut state = self.state.borrow_mut();
+            let previews = &mut state.previews;
+            previews.visible = targets.iter().cloned().collect();
+            previews.attempted.retain(|t| previews.visible.contains(t));
+            if let Some((revision, target)) = &previews.active
+                && *revision == previews.revision
+                && previews.visible.contains(target)
+            {
+                previews.attempted.insert(target.clone());
+            }
+            let mut queued = HashSet::new();
+            previews.queued = targets
+                .into_iter()
+                .filter(|t| !previews.attempted.contains(t) && queued.insert(t.clone()))
+                .collect();
+            if previews.ticket.is_none() || previews.running || previews.queued.is_empty() {
+                return;
+            }
+            previews.running = true;
+        }
+        let this = Rc::clone(self);
+        self.lists.spawn(Box::pin(async move {
+            loop {
+                let next = {
+                    let mut state = this.state.borrow_mut();
+                    let current = state
+                        .previews
+                        .ticket
+                        .is_some_and(|t| state.screen.feed().current(t));
+                    let previews = &mut state.previews;
+                    if !current {
+                        previews.queued.clear();
+                    }
+                    match previews.queued.pop_front() {
+                        Some(target) => {
+                            previews.attempted.insert(target.clone());
+                            previews.active = Some((previews.revision, target.clone()));
+                            Some((previews.revision, target))
+                        }
+                        None => {
+                            previews.running = false;
+                            None
+                        }
+                    }
+                };
+                let Some((revision, target)) = next else {
+                    break;
+                };
+                let answer = this.lists.preview(target.clone()).await;
+                let wanted = {
+                    let mut state = this.state.borrow_mut();
+                    let current = state
+                        .previews
+                        .ticket
+                        .is_some_and(|t| state.screen.feed().current(t));
+                    let previews = &mut state.previews;
+                    previews.active = None;
+                    current && previews.revision == revision && previews.visible.contains(&target)
+                };
+                if wanted && let Ok(Some(text)) = answer {
+                    this.pane.preview_arrived(&target, &text);
+                }
             }
         }));
     }
@@ -461,6 +558,7 @@ impl ListingRun {
     /// Lists the first page under `ticket`, which the feed dropped all
     /// earlier requests for.
     fn first_page(self: &Rc<Self>, ticket: Ticket, waiting: Waiting) {
+        self.state.borrow_mut().previews.reset(None);
         let mailbox = self.mailbox();
         if let Some((account_id, server_mailbox)) = self.pane.follows(&mailbox) {
             self.follow(mailbox.clone(), account_id, server_mailbox);
@@ -595,7 +693,7 @@ impl ListingRun {
                 return;
             }
             match stored {
-                Ok(found) if !found.rows.is_empty() => this.pane.set_rows(found),
+                Ok(found) if !found.rows.is_empty() => this.put_rows(ticket, found),
                 Err(err) => tracing::warn!(error = %err, "could not search the stored mail"),
                 Ok(_) if spinner => this.pane.loading(),
                 Ok(_) => {}
@@ -631,12 +729,17 @@ impl ListingRun {
             return;
         };
         match loaded {
-            Ok(listing) => self.pane.set_rows(listing),
+            Ok(listing) => self.put_rows(ticket, listing),
             Err(err) => self.pane.failed(&err),
         }
         if let Some(thread) = landed.reveal {
             self.pane.select(thread);
         }
+    }
+
+    fn put_rows(&self, ticket: Ticket, listing: Listing) {
+        self.state.borrow_mut().previews.reset(Some(ticket));
+        self.pane.set_rows(listing);
     }
 
     /// Re-reads the threads a change event named and puts them back in the
@@ -656,6 +759,7 @@ impl ListingRun {
         match splice {
             Splice::Stale => {}
             Splice::Put(fresh) => {
+                self.state.borrow_mut().previews.reset(Some(ticket));
                 let held = self.pane.loaded();
                 let rows = self
                     .state
