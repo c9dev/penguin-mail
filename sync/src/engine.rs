@@ -16,7 +16,7 @@ use tokio::time::Instant;
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::raw_cache::{RAW_CACHE_BYTES, RawCache};
 use crate::{
-    AccountServices, AccountSync, BackendError, MailBackend, SyncError, background, backoff_delay,
+    AccountServices, AccountSync, AnyMail, BackendError, MailBackend, SyncError, background, backoff_delay,
     now_millis, poll_offset, with_jitter,
 };
 
@@ -231,8 +231,22 @@ enum Failure {
     },
 }
 
-fn classify(err: &SyncError) -> Failure {
+/// Whether the account signs in with a saved password rather than a token.
+fn signs_in_with_password(services: &AccountServices) -> bool {
+    matches!(services.mail, AnyMail::Imap(_) | AnyMail::Pop3(_))
+}
+
+/// `password` says the account signs in with a saved password. A mail
+/// server refuses every login while it restarts or updates, and the saved
+/// password is still right afterwards, so a refusal there waits and tries
+/// again instead of asking the person to sign in. A refused Google or
+/// Microsoft token stays refused, so those accounts still ask.
+fn classify(err: &SyncError, password: bool) -> Failure {
     match err {
+        SyncError::Backend(BackendError::NeedsReauth) if password => Failure::Retry {
+            state: AccountState::BackingOff,
+            retry_after: None,
+        },
         SyncError::Backend(BackendError::NeedsReauth) => Failure::Reauth,
         SyncError::Backend(BackendError::Offline(_)) => Failure::Retry {
             state: AccountState::Offline,
@@ -376,7 +390,7 @@ async fn run_account(
                     }
                 }
             }
-            Err(err) => match classify(&err) {
+            Err(err) => match classify(&err, signs_in_with_password(sync.services())) {
                 Failure::Reauth => {
                     tracing::warn!(
                         account = sync.account_id(),
@@ -497,5 +511,18 @@ mod tests {
         );
         // A clock that went backwards checks now rather than waiting.
         assert_eq!(until_check(Some(now + HOUR), now), Duration::ZERO);
+    }
+
+    #[test]
+    fn a_refused_password_waits_and_a_refused_token_asks() {
+        let refused = SyncError::Backend(BackendError::NeedsReauth);
+        assert!(matches!(
+            classify(&refused, true),
+            Failure::Retry {
+                state: AccountState::BackingOff,
+                retry_after: None
+            }
+        ));
+        assert!(matches!(classify(&refused, false), Failure::Reauth));
     }
 }
