@@ -326,9 +326,9 @@ fn named_file(args: &[OsString], here: &std::path::Path) -> Option<NamedFile> {
 }
 
 /// What `path` holds: `.ics` and `.eml` say so by name; otherwise a file
-/// whose first bytes, after any white space, are `BEGIN:VCALENDAR` is a
-/// calendar, and anything else is mail, since the desktop hands over
-/// only the types the entry names.
+/// whose first bytes, after a byte-order mark and any white space, are
+/// `BEGIN:VCALENDAR` in any case is a calendar, and anything else is
+/// mail, since the desktop hands over only the types the entry names.
 pub fn file_kind(path: &std::path::Path) -> FileKind {
     let extension = path
         .extension()
@@ -344,11 +344,15 @@ pub fn file_kind(path: &std::path::Path) -> FileKind {
         .and_then(|mut file| std::io::Read::read(&mut file, &mut head))
         .unwrap_or(0);
     let head = &head[..read];
+    let head = head.strip_prefix(b"\xef\xbb\xbf").unwrap_or(head);
     let start = head
         .iter()
         .position(|b| !b.is_ascii_whitespace())
-        .unwrap_or(read);
-    match head[start..].starts_with(b"BEGIN:VCALENDAR") {
+        .unwrap_or(head.len());
+    let calendar = head[start..]
+        .get(..b"BEGIN:VCALENDAR".len())
+        .is_some_and(|first| first.eq_ignore_ascii_case(b"BEGIN:VCALENDAR"));
+    match calendar {
         true => FileKind::Calendar,
         false => FileKind::Mail,
     }
@@ -514,6 +518,14 @@ mod tests {
         assert_eq!(file_kind(&cal), FileKind::Calendar);
         assert_eq!(file_kind(&mail), FileKind::Mail);
         assert_eq!(file_kind(&dir.path().join("missing")), FileKind::Mail);
+        // Outlook writes a byte-order mark first, and RFC 5545 names are
+        // case-insensitive.
+        let bom = dir.path().join("invite.ical");
+        std::fs::write(&bom, b"\xef\xbb\xbfBEGIN:VCALENDAR\r\n").unwrap();
+        assert_eq!(file_kind(&bom), FileKind::Calendar);
+        let lower = dir.path().join("booking");
+        std::fs::write(&lower, "begin:vcalendar\n").unwrap();
+        assert_eq!(file_kind(&lower), FileKind::Calendar);
     }
 
     #[test]
