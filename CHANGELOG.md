@@ -7,11 +7,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Give each sending address its own signature or use the account signature, with `<email>` and `<domain>` filled from the actual sender.
 - Mark all unread inbox mail as read in every account from the tray menu.
 - Empty Trash from its mailbox menu, including older mail outside the local cache, with bounded memory use and a fresh check before each delete batch.
 
 ### Fixed
 
+- Changing From replaces signatures containing quotes, and typing an address suffix no longer rereads the whole message.
 - TLS connections reject distrusted emSign certificates.
 - Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.
 
