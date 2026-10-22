@@ -182,6 +182,15 @@ impl MainWindow {
         let Some((account_id, message_id, subject)) = found else {
             return;
         };
+        // A loose message's bytes are here already, and the window they
+        // are in is the one the source belongs over.
+        if let Some(raw) = view.find(|open| open.raw_of(&message_id)) {
+            let parent = view
+                .window()
+                .and_downcast::<adw::Window>()
+                .unwrap_or_else(|| self.window.clone());
+            return show_source(&parent, &subject, raw);
+        }
         let Some(sync) = self.core.account(account_id) else {
             return self.toast(&gettext("That account is not connected"));
         };

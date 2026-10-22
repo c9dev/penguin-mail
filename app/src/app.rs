@@ -37,6 +37,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 
 mod announce;
 mod calendar_file;
+mod mail_file;
 mod composing;
 mod dictionaries;
 mod dock_badge;
@@ -93,7 +94,7 @@ pub struct App {
     pending_compose: RefCell<Option<String>>,
     /// A calendar file requested on the command line, opened on first
     /// activation.
-    pending_file: RefCell<Option<std::path::PathBuf>>,
+    pending_file: RefCell<Option<crate::NamedFile>>,
     tray_started: Cell<bool>,
     /// The unread counts the sidebar, the tray and the Dock badge share.
     unread: Rc<Unread<CoreCounts>>,
@@ -143,7 +144,7 @@ impl App {
         core: Rc<Core>,
         background: bool,
         compose: Option<String>,
-        calendar_file: Option<std::path::PathBuf>,
+        file: Option<crate::NamedFile>,
     ) -> Rc<App> {
         let (chosen, picked) = async_channel::unbounded();
         let core_demo = core.demo;
@@ -184,7 +185,7 @@ impl App {
             open_windows: Cell::new(0),
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
-            pending_file: RefCell::new(calendar_file),
+            pending_file: RefCell::new(file),
             tray_started: Cell::new(false),
             unread: Unread::new(CoreCounts(counted_by)),
             dock_badge: dock_badge::Badge::new(&app_id),
@@ -287,13 +288,17 @@ impl App {
             });
             return;
         }
-        if let Some(path) = self.pending_file.borrow_mut().take() {
+        if let Some(file) = self.pending_file.borrow_mut().take() {
             self.skip_first_window.set(false);
             // Accounts load asynchronously; give them a moment first, so
-            // the window knows which have a calendar.
+            // the window knows which have a calendar, and a mail file
+            // knows which account answers from it.
             let (this, hold) = (Rc::clone(self), self.gio.hold());
             glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
-                this.open_calendar_file(&path);
+                match &file {
+                    crate::NamedFile::Calendar(path) => this.open_calendar_file(path),
+                    crate::NamedFile::Mail(path) => this.open_mail_file(path),
+                }
                 drop(hold);
             });
             return;
@@ -473,7 +478,7 @@ impl App {
         }
     }
 
-    fn window_opened(&self) {
+    pub(crate) fn window_opened(&self) {
         self.open_windows.set(self.open_windows.get() + 1);
         self.shed_generation.set(self.shed_generation.get() + 1);
     }
@@ -483,7 +488,7 @@ impl App {
     /// unloaded, so this is how a closed window gives its memory back.
     /// With no accounts there is nothing to keep running for, and the
     /// process ends instead.
-    fn window_closed(self: &Rc<Self>) {
+    pub(crate) fn window_closed(self: &Rc<Self>) {
         let open = self.open_windows.get().saturating_sub(1);
         self.open_windows.set(open);
         if open == 0 {
@@ -1297,6 +1302,17 @@ impl App {
             }
         });
         self.gio.add_action(&open_file);
+        let open_mail =
+            gio::SimpleAction::new("open-mail-file", Some(glib::VariantTy::BYTE_STRING));
+        let weak = Rc::downgrade(self);
+        open_mail.connect_activate(move |_, parameter| {
+            if let (Some(app), Some(path)) =
+                (weak.upgrade(), parameter.and_then(crate::path_from_variant))
+            {
+                app.open_mail_file(&path);
+            }
+        });
+        self.gio.add_action(&open_mail);
         add("quit", Box::new(|app| app.quit()));
     }
 

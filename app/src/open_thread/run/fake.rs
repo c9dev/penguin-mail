@@ -26,7 +26,9 @@ use super::{
     Answer, Card, Desk, Effects, Fetched, InlinePictures, Preferences, ReceiptCard, Stored,
     ThreadRun,
 };
-use crate::open_thread::{Cleaned, Document, InlineImage, OpenThread, Page, ToClean, Unsent};
+use crate::open_thread::{
+    Cleaned, Document, InlineImage, Loose, OpenThread, Origin, Page, ToClean, Unsent,
+};
 use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::Translation;
@@ -156,6 +158,8 @@ pub struct Screen {
     /// The invitations put on the card, by UID, and `None` for the card
     /// taken down.
     pub invitations: Vec<Option<String>>,
+    /// Every card shown whole, for what it offered.
+    pub event_cards: Vec<Showing>,
     pub marked: Vec<Target>,
     pub toasts: Vec<String>,
     /// Every whole page the window loaded, oldest first.
@@ -245,6 +249,21 @@ pub fn invited() -> MessageBody {
     MessageBody {
         calendar: Some(ics()),
         ..body("You are invited.")
+    }
+}
+
+/// A loose message from the fixture file, as the desktop would hand it over.
+pub fn loose() -> Loose {
+    loose_with(crate::open_thread::loose::fixture_raw())
+}
+
+/// A loose message made of `raw`.
+pub fn loose_with(raw: Vec<u8>) -> Loose {
+    Loose {
+        raw: std::sync::Arc::new(raw),
+        account_id: ACCOUNT,
+        has_account: true,
+        origin: Origin::File("/tmp/kites.eml".into()),
     }
 }
 
@@ -454,6 +473,7 @@ impl FakeWindow {
             shown: Vec::new(),
             cards: Vec::new(),
             invitations: Vec::new(),
+            event_cards: Vec::new(),
             marked: Vec::new(),
             toasts: Vec::new(),
             loads: Vec::new(),
@@ -944,6 +964,9 @@ impl Effects for FakeWindow {
         self.change(Step::ShowInvitation, |open| open.take_invitation_place(at));
         self.draw();
         self.with(|screen| {
+            if let Some(showing) = showing.as_ref() {
+                screen.event_cards.push(showing.clone());
+            }
             screen.invitations.push(
                 showing
                     .as_ref()

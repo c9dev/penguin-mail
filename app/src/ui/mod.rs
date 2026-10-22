@@ -22,6 +22,7 @@ pub mod dav_edit;
 pub mod disclosure;
 pub mod find;
 pub mod hide_my_email;
+pub mod eml_file;
 pub mod ics_file;
 pub mod invitation;
 pub mod key_import;

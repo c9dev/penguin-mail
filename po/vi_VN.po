@@ -1016,17 +1016,23 @@ msgstr "{provider} đăng nhập qua trình duyệt"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Tiếp tục sẽ mở trang đăng nhập của {provider} trong trình duyệt."
 
-#: app/src/app.rs:392
+#: app/src/app.rs:397
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Không thể đánh dấu tất cả thư là đã đọc: {reason}"
 
-#: app/src/app.rs:439
+#: app/src/app.rs:444
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
 msgstr ""
 "Không thể đọc tùy chọn nên Penguin Mail dùng cài đặt mặc định. Tệp cũ được "
 "giữ lại tại {file}."
+
+#: app/src/app/mail_file.rs:48
+#, fuzzy
+#| msgid "This file holds no OpenPGP key."
+msgid "This file could not be read."
+msgstr "Tệp này không có khóa OpenPGP."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2383,38 +2389,39 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: tùy chọn không xác định {option}"
 
-#: app/src/main.rs:389
+#: app/src/main.rs:438
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail không thể khởi động"
 
-#: app/src/main.rs:394 app/src/ui/about.rs:181
+#: app/src/main.rs:443 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Báo cáo sự cố"
 
-#: app/src/notify.rs:61 app/src/ui/conversation.rs:410
-#: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:1080
-#: app/src/ui/window/message_menu.rs:125 app/src/ui/window/shortcuts.rs:396
+#: app/src/notify.rs:61 app/src/ui/conversation.rs:436
+#: app/src/ui/conversation.rs:592 app/src/ui/conversation.rs:1123
+#: app/src/ui/window/message_menu.rs:129 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Lưu trữ"
 
-#: app/src/notify.rs:62 app/src/ui/conversation.rs:411
-#: app/src/ui/conversation.rs:1124 app/src/ui/preferences.rs:183
-#: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:128
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:437
+#: app/src/ui/conversation.rs:1167 app/src/ui/preferences.rs:183
+#: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:132
 msgid "Mark as Read"
 msgstr "Đánh dấu đã đọc"
 
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/conversation.rs:552 app/src/ui/hide_my_email.rs:574
+#: app/src/ui/conversation.rs:578 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:108
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "Xóa"
 
-#: app/src/notify.rs:64 app/src/ui/conversation.rs:560
-#: app/src/ui/window/message_menu.rs:122 app/src/ui/window/shortcuts.rs:475
+#: app/src/notify.rs:64 app/src/ui/conversation.rs:242
+#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Trả lời"
 
@@ -2949,15 +2956,15 @@ msgstr[0] ""
 "{address} hiện dùng JMAP. Có {count} quy tắc bị tắt vì thư mục của chúng "
 "không có trên máy chủ."
 
-#: app/src/open_thread/run/receipt.rs:129
+#: app/src/open_thread/run/receipt.rs:143
 msgid "Read receipt sent"
 msgstr "Đã gửi xác nhận đã đọc"
 
-#: app/src/open_thread/run/receipt.rs:146
+#: app/src/open_thread/run/receipt.rs:160
 msgid "The receipt was not sent, and you can try again: {reason}"
 msgstr "Chưa gửi xác nhận đã đọc và bạn có thể thử lại: {reason}"
 
-#: app/src/open_thread/run/receipt.rs:151
+#: app/src/open_thread/run/receipt.rs:165
 msgid ""
 "The receipt may have gone out, so Penguin Mail will not send it again: "
 "{reason}"
@@ -3555,8 +3562,8 @@ msgstr "Tài khoản đó chưa kết nối."
 msgid "Could not save: {reason}"
 msgstr "Không thể lưu: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2716
-#: app/src/ui/window.rs:2739
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2742
+#: app/src/ui/window.rs:2765
 msgid "Could not open the draft: {reason}"
 msgstr "Không thể mở thư nháp: {reason}"
 
@@ -3605,7 +3612,8 @@ msgstr "Không thể tải thư này: {reason}"
 msgid "This message could not be displayed"
 msgstr "Không thể hiển thị thư này"
 
-#: app/src/render.rs:429 app/src/ui/conversation.rs:593
+#: app/src/render.rs:429 app/src/ui/conversation.rs:248
+#: app/src/ui/conversation.rs:619
 msgid "View Source"
 msgstr "Xem nguồn"
 
@@ -3674,8 +3682,8 @@ msgstr[0] "{count} tệp đính kèm"
 msgid "Quick Look"
 msgstr "Xem nhanh"
 
-#: app/src/render.rs:622 app/src/ui/window/attachments.rs:331
-#: app/src/ui/window/attachments.rs:337
+#: app/src/render.rs:622 app/src/ui/window/attachments.rs:350
+#: app/src/ui/window/attachments.rs:356
 msgid "Save to Downloads"
 msgstr "Lưu vào Tải xuống"
 
@@ -3915,8 +3923,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Gói đăng ký Claude"
 
-#: app/src/settings/mod.rs:234 app/src/ui/window.rs:3406
-#: app/src/ui/window.rs:3486
+#: app/src/settings/mod.rs:234 app/src/ui/window.rs:3432
+#: app/src/ui/window.rs:3512
 msgid "Assistant"
 msgstr "Trợ lý"
 
@@ -4277,7 +4285,7 @@ msgstr "Mở Penguin Mail"
 msgid "New Message"
 msgstr "Thư mới"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3412
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3438
 msgid "Check for Mail"
 msgstr "Kiểm tra thư"
 
@@ -4295,7 +4303,7 @@ msgstr "Điểm mới trong {version}"
 msgid "Check for Updates"
 msgstr "Kiểm tra bản cập nhật"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3425
+#: app/src/tray.rs:266 app/src/ui/window.rs:3451
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Thoát"
@@ -4316,7 +4324,7 @@ msgstr "Điểm mới"
 msgid "Website"
 msgstr "Trang web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3424
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3450
 msgid "Donate"
 msgstr "Quyên góp"
 
@@ -4324,7 +4332,7 @@ msgstr "Quyên góp"
 msgid "License"
 msgstr "Giấy phép"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3423
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3449
 msgid "About Penguin Mail"
 msgstr "Giới thiệu Penguin Mail"
 
@@ -4373,12 +4381,12 @@ msgid "The update to {version} failed"
 msgstr "Cập nhật lên {version} thất bại"
 
 #: app/src/ui/add_account.rs:419 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1505
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1506
 msgid "Copy Command"
 msgstr "Sao chép lệnh"
 
 #: app/src/ui/add_account.rs:429 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1510
+#: app/src/ui/window.rs:1511
 msgid "Command copied"
 msgstr "Đã sao chép lệnh"
 
@@ -4490,7 +4498,7 @@ msgstr "Hủy"
 
 #: app/src/ui/add_account.rs:984 app/src/ui/add_account.rs:1139
 #: app/src/ui/add_account.rs:2918 app/src/ui/add_account.rs:3008
-#: app/src/ui/add_account.rs:3465 app/src/ui/window.rs:1450
+#: app/src/ui/add_account.rs:3465 app/src/ui/window.rs:1451
 msgid "Sign In"
 msgstr "Đăng nhập"
 
@@ -4613,7 +4621,7 @@ msgstr "Để sau"
 #: app/src/ui/add_account.rs:1332 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1003 app/src/ui/contacts_prefs.rs:442
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1572
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1573
 msgid "Grant Access"
 msgstr "Cấp quyền"
 
@@ -4824,7 +4832,7 @@ msgstr ""
 "Máy chủ này không phân biệt được các thư nên Penguin Mail không thể tải thư "
 "an toàn."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3572
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3598
 msgid "Summarize this conversation"
 msgstr "Tóm tắt cuộc hội thoại này"
 
@@ -4849,13 +4857,13 @@ msgstr "Soạn thư trả lời cho cuộc hội thoại đang mở"
 msgid "Choose a Model"
 msgstr "Chọn mô hình"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3533
-#: app/src/ui/window.rs:3534
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3559
+#: app/src/ui/window.rs:3560
 msgid "Detach"
 msgstr "Tách cửa sổ"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4143
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4178
 msgid "Close"
 msgstr "Đóng"
 
@@ -5060,7 +5068,7 @@ msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3176
+#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3202
 msgid "Remove"
 msgstr "Xóa"
 
@@ -5272,7 +5280,7 @@ msgstr "Trò chuyện với trợ lý"
 msgid "Email Translations"
 msgstr "Dịch thư"
 
-#: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:698
+#: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
 #: app/src/ui/window/detached.rs:65
 msgid "Conversation"
 msgstr "Cuộc hội thoại"
@@ -5679,7 +5687,9 @@ msgid "New and existing"
 msgstr "Mới và hiện có"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/vacation.rs:259 app/src/ui/vacation.rs:287
+#: app/src/ui/eml_file.rs:58 app/src/ui/vacation.rs:259
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
+#: app/src/ui/window/loose.rs:127
 msgid "Message"
 msgstr "Thông điệp"
 
@@ -6240,7 +6250,7 @@ msgstr ""
 "Lịch sẽ rời khỏi danh sách lịch trong Google Calendar trên mọi thiết bị. Bạn "
 "có thể đăng ký lại sau."
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:399
+#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:425
 #: app/src/ui/unsubscribe.rs:120
 msgid "Unsubscribe"
 msgstr "Hủy đăng ký"
@@ -6336,7 +6346,7 @@ msgid "Show Calendars"
 msgstr "Hiện các lịch"
 
 #: app/src/ui/calendar/mod.rs:400 app/src/ui/calendar/mod.rs:404
-#: app/src/ui/conversation.rs:540 app/src/ui/conversation.rs:544
+#: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:570
 msgid "Assistant (Ctrl+J)"
 msgstr "Trợ lý (Ctrl+J)"
 
@@ -6758,7 +6768,7 @@ msgstr "Đổi tên…"
 msgid "Delete…"
 msgstr "Xóa…"
 
-#: app/src/ui/calendar/sidebar.rs:1490 app/src/ui/conversation.rs:598
+#: app/src/ui/calendar/sidebar.rs:1490 app/src/ui/conversation.rs:624
 msgid "Unsubscribe…"
 msgstr "Hủy đăng ký…"
 
@@ -6977,7 +6987,7 @@ msgstr "Mã hóa"
 msgid "Request Read Receipt"
 msgstr "Yêu cầu xác nhận đã đọc"
 
-#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1749
+#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1792
 msgid "Choose a Time…"
 msgstr "Chọn thời gian…"
 
@@ -7430,7 +7440,7 @@ msgstr "Dùng {host} cho {account}"
 msgid "Find Again"
 msgstr "Tìm lại"
 
-#: app/src/ui/contacts_prefs.rs:157 app/src/ui/conversation.rs:550
+#: app/src/ui/contacts_prefs.rs:157 app/src/ui/conversation.rs:576
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1588
 msgid "Edit…"
 msgstr "Sửa…"
@@ -7489,218 +7499,220 @@ msgstr "Thêm {account} vào Tài khoản trực tuyến GNOME"
 msgid "Not allowed when you signed in"
 msgstr "Không được cho phép khi đăng nhập"
 
-#: app/src/ui/conversation.rs:387
-msgid "No Conversation Selected"
-msgstr "Chưa chọn cuộc hội thoại"
-
-#: app/src/ui/conversation.rs:393
-msgid "Remote images are hidden to protect your privacy"
-msgstr "Hình ảnh từ xa bị ẩn để bảo vệ quyền riêng tư"
-
-#: app/src/ui/conversation.rs:394
-msgid "Load Images"
-msgstr "Tải hình ảnh"
-
-#: app/src/ui/conversation.rs:398
-msgid "This message is from a mailing list"
-msgstr "Thư này từ danh sách gửi thư"
-
-#: app/src/ui/conversation.rs:412 app/src/ui/conversation.rs:1131
-#: app/src/ui/window/message_menu.rs:130
-msgid "Flag"
-msgstr "Gắn cờ"
-
-#: app/src/ui/conversation.rs:413 app/src/ui/conversation.rs:576
-#: app/src/ui/conversation.rs:913 app/src/ui/conversation.rs:1136
-msgid "Mute"
-msgstr "Tắt thông báo"
-
-#: app/src/ui/conversation.rs:415 app/src/ui/conversation.rs:567
-#: app/src/ui/conversation.rs:1068 app/src/ui/window/message_menu.rs:126
-msgid "Move to Trash"
-msgstr "Chuyển vào Thùng rác"
-
-#: app/src/ui/conversation.rs:442
-msgid "Several Conversations Selected"
-msgstr "Đã chọn nhiều cuộc hội thoại"
-
-#: app/src/ui/conversation.rs:444
-msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
-msgstr "Thao tác và phím tắt áp dụng cho tất cả. Esc bỏ chọn."
-
-#: app/src/ui/conversation.rs:490
-msgid "Archive (E or Ctrl+Alt+A)"
-msgstr "Lưu trữ (E hoặc Ctrl+Alt+A)"
-
-#: app/src/ui/conversation.rs:492 app/src/ui/conversation.rs:1051
-msgid "Move to Trash (Delete)"
-msgstr "Chuyển vào Thùng rác (Delete)"
-
-#: app/src/ui/conversation.rs:493 app/src/ui/conversation.rs:1061
-msgid "Junk (Ctrl+Shift+J)"
-msgstr "Thư rác (Ctrl+Shift+J)"
-
-#: app/src/ui/conversation.rs:496
-msgid "Mark as Unread (Ctrl+Shift+U)"
-msgstr "Đánh dấu chưa đọc (Ctrl+Shift+U)"
-
-#: app/src/ui/conversation.rs:501 app/src/ui/conversation.rs:505
-#: app/src/ui/conversation.rs:1788
-msgid "Flag (Ctrl+Shift+L)"
-msgstr "Gắn cờ (Ctrl+Shift+L)"
-
-#: app/src/ui/conversation.rs:502 app/src/ui/conversation.rs:508
-msgid "Choose Flag Color"
-msgstr "Chọn màu cờ"
-
-#: app/src/ui/conversation.rs:509
-msgid "Flags it in the color you chose last, or takes the flag off"
-msgstr "Gắn cờ bằng màu chọn lần cuối hoặc bỏ cờ"
-
-#: app/src/ui/conversation.rs:513
-msgid "Reply (Ctrl+R)"
-msgstr "Trả lời (Ctrl+R)"
-
-#: app/src/ui/conversation.rs:516
-msgid "Reply All (Ctrl+Shift+R)"
-msgstr "Trả lời tất cả (Ctrl+Shift+R)"
-
-#: app/src/ui/conversation.rs:518
-msgid "Forward (Ctrl+Shift+F)"
-msgstr "Chuyển tiếp (Ctrl+Shift+F)"
-
-#: app/src/ui/conversation.rs:520
-msgid "Edit Draft"
-msgstr "Sửa thư nháp"
-
-#: app/src/ui/conversation.rs:527 app/src/ui/conversation.rs:530
-msgid "More Actions"
-msgstr "Thao tác khác"
-
-#: app/src/ui/conversation.rs:551 app/src/ui/queued.rs:56
-msgid "Send Now"
-msgstr "Gửi ngay"
-
-#: app/src/ui/conversation.rs:561 app/src/ui/window/message_menu.rs:123
+#: app/src/ui/conversation.rs:243 app/src/ui/conversation.rs:587
+#: app/src/ui/window/message_menu.rs:127
 msgid "Reply All"
 msgstr "Trả lời tất cả"
 
-#: app/src/ui/conversation.rs:562 app/src/ui/window/message_menu.rs:124
-#: app/src/ui/window/shortcuts.rs:488
+#: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
+#: app/src/ui/window/message_menu.rs:128 app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "Chuyển tiếp"
 
-#: app/src/ui/conversation.rs:571
+#: app/src/ui/conversation.rs:247 app/src/ui/conversation.rs:618
+msgid "Print…"
+msgstr "In…"
+
+#: app/src/ui/conversation.rs:249 app/src/ui/conversation.rs:620
+#: app/src/ui/window/message_menu.rs:140
+msgid "Export…"
+msgstr "Xuất…"
+
+#: app/src/ui/conversation.rs:253 app/src/ui/conversation.rs:626
+msgid "Always Load Images…"
+msgstr "Luôn tải hình ảnh…"
+
+#: app/src/ui/conversation.rs:413
+msgid "No Conversation Selected"
+msgstr "Chưa chọn cuộc hội thoại"
+
+#: app/src/ui/conversation.rs:419
+msgid "Remote images are hidden to protect your privacy"
+msgstr "Hình ảnh từ xa bị ẩn để bảo vệ quyền riêng tư"
+
+#: app/src/ui/conversation.rs:420
+msgid "Load Images"
+msgstr "Tải hình ảnh"
+
+#: app/src/ui/conversation.rs:424
+msgid "This message is from a mailing list"
+msgstr "Thư này từ danh sách gửi thư"
+
+#: app/src/ui/conversation.rs:438 app/src/ui/conversation.rs:1174
+#: app/src/ui/window/message_menu.rs:134
+msgid "Flag"
+msgstr "Gắn cờ"
+
+#: app/src/ui/conversation.rs:439 app/src/ui/conversation.rs:602
+#: app/src/ui/conversation.rs:940 app/src/ui/conversation.rs:1179
+msgid "Mute"
+msgstr "Tắt thông báo"
+
+#: app/src/ui/conversation.rs:441 app/src/ui/conversation.rs:593
+#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:130
+msgid "Move to Trash"
+msgstr "Chuyển vào Thùng rác"
+
+#: app/src/ui/conversation.rs:468
+msgid "Several Conversations Selected"
+msgstr "Đã chọn nhiều cuộc hội thoại"
+
+#: app/src/ui/conversation.rs:470
+msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
+msgstr "Thao tác và phím tắt áp dụng cho tất cả. Esc bỏ chọn."
+
+#: app/src/ui/conversation.rs:516
+msgid "Archive (E or Ctrl+Alt+A)"
+msgstr "Lưu trữ (E hoặc Ctrl+Alt+A)"
+
+#: app/src/ui/conversation.rs:518 app/src/ui/conversation.rs:1094
+msgid "Move to Trash (Delete)"
+msgstr "Chuyển vào Thùng rác (Delete)"
+
+#: app/src/ui/conversation.rs:519 app/src/ui/conversation.rs:1104
+msgid "Junk (Ctrl+Shift+J)"
+msgstr "Thư rác (Ctrl+Shift+J)"
+
+#: app/src/ui/conversation.rs:522
+msgid "Mark as Unread (Ctrl+Shift+U)"
+msgstr "Đánh dấu chưa đọc (Ctrl+Shift+U)"
+
+#: app/src/ui/conversation.rs:527 app/src/ui/conversation.rs:531
+#: app/src/ui/conversation.rs:1833
+msgid "Flag (Ctrl+Shift+L)"
+msgstr "Gắn cờ (Ctrl+Shift+L)"
+
+#: app/src/ui/conversation.rs:528 app/src/ui/conversation.rs:534
+msgid "Choose Flag Color"
+msgstr "Chọn màu cờ"
+
+#: app/src/ui/conversation.rs:535
+msgid "Flags it in the color you chose last, or takes the flag off"
+msgstr "Gắn cờ bằng màu chọn lần cuối hoặc bỏ cờ"
+
+#: app/src/ui/conversation.rs:539
+msgid "Reply (Ctrl+R)"
+msgstr "Trả lời (Ctrl+R)"
+
+#: app/src/ui/conversation.rs:542
+msgid "Reply All (Ctrl+Shift+R)"
+msgstr "Trả lời tất cả (Ctrl+Shift+R)"
+
+#: app/src/ui/conversation.rs:544
+msgid "Forward (Ctrl+Shift+F)"
+msgstr "Chuyển tiếp (Ctrl+Shift+F)"
+
+#: app/src/ui/conversation.rs:546
+msgid "Edit Draft"
+msgstr "Sửa thư nháp"
+
+#: app/src/ui/conversation.rs:553 app/src/ui/conversation.rs:556
+msgid "More Actions"
+msgstr "Thao tác khác"
+
+#: app/src/ui/conversation.rs:577 app/src/ui/queued.rs:56
+msgid "Send Now"
+msgstr "Gửi ngay"
+
+#: app/src/ui/conversation.rs:597
 msgid "Flag or Unflag"
 msgstr "Gắn hoặc bỏ cờ"
 
-#: app/src/ui/conversation.rs:573
+#: app/src/ui/conversation.rs:599
 msgid "Mark Read or Unread"
 msgstr "Đánh dấu đã đọc hoặc chưa đọc"
 
-#: app/src/ui/conversation.rs:581 app/src/ui/window/message_menu.rs:135
+#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:139
 msgid "Tags…"
 msgstr "Thẻ…"
 
-#: app/src/ui/conversation.rs:585 app/src/ui/sidebar.rs:1127
+#: app/src/ui/conversation.rs:611 app/src/ui/sidebar.rs:1127
 #: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Nhắc tôi"
 
-#: app/src/ui/conversation.rs:589
+#: app/src/ui/conversation.rs:615
 msgid "Open in New Window"
 msgstr "Mở trong cửa sổ mới"
 
-#: app/src/ui/conversation.rs:592
-msgid "Print…"
-msgstr "In…"
-
-#: app/src/ui/conversation.rs:594 app/src/ui/window/message_menu.rs:136
-msgid "Export…"
-msgstr "Xuất…"
-
-#: app/src/ui/conversation.rs:597 app/src/ui/conversation.rs:880
+#: app/src/ui/conversation.rs:623 app/src/ui/conversation.rs:907
 msgid "Add Sender to VIPs"
 msgstr "Thêm người gửi vào người quan trọng"
 
-#: app/src/ui/conversation.rs:600
-msgid "Always Load Images…"
-msgstr "Luôn tải hình ảnh…"
-
 #. Both sender items leave a rule on the server, so an account
 #. without rules turns them off, and the menu leaves them out.
-#: app/src/ui/conversation.rs:605
+#: app/src/ui/conversation.rs:631
 msgid "Block Sender…"
 msgstr "Chặn người gửi…"
 
-#: app/src/ui/conversation.rs:613 app/src/ui/conversation.rs:900
+#: app/src/ui/conversation.rs:639 app/src/ui/conversation.rs:927
 msgid "Categorize Sender"
 msgstr "Phân loại người gửi"
 
-#: app/src/ui/conversation.rs:641 app/src/ui/conversation.rs:643
+#: app/src/ui/conversation.rs:667 app/src/ui/conversation.rs:669
 msgid "Tags"
 msgstr "Thẻ"
 
-#: app/src/ui/conversation.rs:878
+#: app/src/ui/conversation.rs:905
 msgid "Remove Sender from VIPs"
 msgstr "Xóa người gửi khỏi người quan trọng"
 
-#: app/src/ui/conversation.rs:911 app/src/ui/conversation.rs:1134
+#: app/src/ui/conversation.rs:938 app/src/ui/conversation.rs:1177
 msgid "Unmute"
 msgstr "Bật lại thông báo"
 
-#: app/src/ui/conversation.rs:1050
+#: app/src/ui/conversation.rs:1093
 msgid "Delete Forever (Delete)"
 msgstr "Xóa vĩnh viễn (Delete)"
 
-#: app/src/ui/conversation.rs:1059
+#: app/src/ui/conversation.rs:1102
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Không phải thư rác (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:1067 app/src/ui/window/message_menu.rs:127
+#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:131
 #: app/src/ui/window/press.rs:436
 msgid "Delete Forever"
 msgstr "Xóa vĩnh viễn"
 
-#: app/src/ui/conversation.rs:1072
+#: app/src/ui/conversation.rs:1115
 msgid "Not Junk"
 msgstr "Không phải thư rác"
 
-#: app/src/ui/conversation.rs:1126 app/src/ui/window/message_menu.rs:129
+#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:133
 msgid "Mark as Unread"
 msgstr "Đánh dấu chưa đọc"
 
-#: app/src/ui/conversation.rs:1129 app/src/ui/window/message_menu.rs:131
+#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:135
 msgid "Unflag"
 msgstr "Bỏ cờ"
 
-#: app/src/ui/conversation.rs:1145
+#: app/src/ui/conversation.rs:1188
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "Đã chọn {count} cuộc hội thoại"
 
-#: app/src/ui/conversation.rs:1151
+#: app/src/ui/conversation.rs:1194
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "Đã chọn {count} thư"
 
-#: app/src/ui/conversation.rs:1787
+#: app/src/ui/conversation.rs:1832
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Bỏ cờ (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:1800
+#: app/src/ui/conversation.rs:1845
 msgid "Mark as Read (U)"
 msgstr "Đánh dấu đã đọc (U)"
 
-#: app/src/ui/conversation.rs:1801
+#: app/src/ui/conversation.rs:1846
 msgid "Mark as Unread (U)"
 msgstr "Đánh dấu chưa đọc (U)"
 
-#: app/src/ui/conversation.rs:2067
+#: app/src/ui/conversation.rs:2114
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2084 app/src/ui/window/message_menu.rs:258
+#: app/src/ui/conversation.rs:2131 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "Bỏ cờ"
 
@@ -7728,6 +7740,28 @@ msgstr "Máy chủ lịch và danh bạ"
 #: app/src/ui/dav_edit.rs:97
 msgid "Could not use that server: {reason}"
 msgstr "Không thể dùng máy chủ đó: {reason}"
+
+#: app/src/ui/eml_file.rs:27
+#, fuzzy
+#| msgid "This file is too large to be a calendar."
+msgid "This file is too large to be a message."
+msgstr "Tệp này quá lớn để làm tệp lịch."
+
+#: app/src/ui/eml_file.rs:31
+#, fuzzy
+#| msgid "This file holds no OpenPGP key."
+msgid "This file is empty."
+msgstr "Tệp này không có khóa OpenPGP."
+
+#: app/src/ui/eml_file.rs:43
+#, fuzzy
+#| msgid "This file is too large to be a calendar."
+msgid "This file does not hold a message."
+msgstr "Tệp này quá lớn để làm tệp lịch."
+
+#: app/src/ui/eml_file.rs:70 app/src/ui/ics_file.rs:81
+msgid "Could Not Open This File"
+msgstr "Không thể mở tệp"
 
 #: app/src/ui/find.rs:77
 msgid "No matches"
@@ -7813,7 +7847,7 @@ msgid "Off: mail goes to the Trash"
 msgstr "Tắt: thư vào Thùng rác"
 
 #: app/src/ui/hide_my_email.rs:410 app/src/ui/hide_my_email.rs:497
-#: app/src/ui/window/message_menu.rs:137
+#: app/src/ui/window/message_menu.rs:141
 msgid "Copy Address"
 msgstr "Sao chép địa chỉ"
 
@@ -7886,7 +7920,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Cho phép Ẩn email của tôi"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3623
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3649
 msgid "Add an account first"
 msgstr "Thêm tài khoản trước"
 
@@ -7958,10 +7992,6 @@ msgstr "Không có sự kiện trong tệp"
 #: app/src/ui/ics_file.rs:79
 msgid "Penguin Mail found no event to add in it."
 msgstr "Penguin Mail không tìm thấy sự kiện để thêm trong tệp."
-
-#: app/src/ui/ics_file.rs:81
-msgid "Could Not Open This File"
-msgstr "Không thể mở tệp"
 
 #: app/src/ui/ics_file.rs:148
 msgid "No app on this desktop opens calendar files"
@@ -8308,7 +8338,7 @@ msgstr "Địa chỉ này chứa tên người dùng có thể che giấu địa
 msgid "This link contains hidden or direction-changing characters."
 msgstr "Liên kết này chứa ký tự ẩn hoặc ký tự thay đổi hướng văn bản."
 
-#: app/src/ui/mod.rs:500
+#: app/src/ui/mod.rs:501
 msgid "Gray"
 msgstr "Xám"
 
@@ -8888,7 +8918,7 @@ msgstr "Di chuyển {account} xuống"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3421 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3447 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Tùy chọn"
 
@@ -9280,7 +9310,7 @@ msgstr "Trả lời tự động…"
 msgid "Rules…"
 msgstr "Quy tắc…"
 
-#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3415
+#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3441
 msgid "Hide My Email…"
 msgstr "Ẩn email của tôi…"
 
@@ -9495,7 +9525,7 @@ msgstr "Tìm thư"
 msgid "VIP"
 msgstr "Người quan trọng"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:404
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:405
 msgid "Muted"
 msgstr "Đã tắt thông báo"
 
@@ -9706,182 +9736,182 @@ msgid ""
 "Choose where your mail lives. You can add more later from the main menu."
 msgstr "Chọn nơi lưu thư. Bạn có thể thêm tài khoản sau từ trình đơn chính."
 
-#: app/src/ui/window.rs:285
+#: app/src/ui/window.rs:286
 msgid "Deleted forever"
 msgstr "Đã xóa vĩnh viễn"
 
-#: app/src/ui/window.rs:287
+#: app/src/ui/window.rs:288
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "Đã xóa vĩnh viễn {count} cuộc hội thoại"
 
-#: app/src/ui/window.rs:293
+#: app/src/ui/window.rs:294
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "Đã xóa vĩnh viễn {count} thư"
 
-#: app/src/ui/window.rs:306
+#: app/src/ui/window.rs:307
 msgid "{label}, on this mail"
 msgstr "{label}, trên thư này"
 
-#: app/src/ui/window.rs:335
+#: app/src/ui/window.rs:336
 msgid "Added {person} to VIPs"
 msgstr "Đã thêm {person} vào người quan trọng"
 
-#: app/src/ui/window.rs:336
+#: app/src/ui/window.rs:337
 msgid "Removed {person} from VIPs"
 msgstr "Đã xóa {person} khỏi người quan trọng"
 
-#: app/src/ui/window.rs:342
+#: app/src/ui/window.rs:343
 msgid "Could not load mail: {reason}"
 msgstr "Không thể tải thư: {reason}"
 
-#: app/src/ui/window.rs:352
+#: app/src/ui/window.rs:353
 msgid "Added {account}. Downloading mail…"
 msgstr "Đã thêm {account}. Đang tải thư…"
 
-#: app/src/ui/window.rs:356 app/src/ui/window.rs:2901
+#: app/src/ui/window.rs:357 app/src/ui/window.rs:2927
 msgid "{account} is signed in again."
 msgstr "{account} đã đăng nhập lại."
 
-#: app/src/ui/window.rs:375
+#: app/src/ui/window.rs:376
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "Đã tạo thư mục “{name}” trên {provider} cho thư lưu trữ"
 
-#: app/src/ui/window.rs:384
+#: app/src/ui/window.rs:385
 msgid "Flagged red"
 msgstr "Đã gắn cờ đỏ"
 
-#: app/src/ui/window.rs:385
+#: app/src/ui/window.rs:386
 msgid "Flagged orange"
 msgstr "Đã gắn cờ cam"
 
-#: app/src/ui/window.rs:386
+#: app/src/ui/window.rs:387
 msgid "Flagged yellow"
 msgstr "Đã gắn cờ vàng"
 
-#: app/src/ui/window.rs:387
+#: app/src/ui/window.rs:388
 msgid "Flagged green"
 msgstr "Đã gắn cờ xanh lá"
 
-#: app/src/ui/window.rs:388
+#: app/src/ui/window.rs:389
 msgid "Flagged blue"
 msgstr "Đã gắn cờ xanh dương"
 
-#: app/src/ui/window.rs:389
+#: app/src/ui/window.rs:390
 msgid "Flagged purple"
 msgstr "Đã gắn cờ tím"
 
-#: app/src/ui/window.rs:390
+#: app/src/ui/window.rs:391
 msgid "Flagged gray"
 msgstr "Đã gắn cờ xám"
 
-#: app/src/ui/window.rs:401 app/src/ui/window.rs:499
+#: app/src/ui/window.rs:402 app/src/ui/window.rs:500
 msgid "Labels changed"
 msgstr "Đã đổi nhãn"
 
-#: app/src/ui/window.rs:405
+#: app/src/ui/window.rs:406
 msgid "Unmuted"
 msgstr "Đã bật lại thông báo"
 
-#: app/src/ui/window.rs:407
+#: app/src/ui/window.rs:408
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "Đã tắt thông báo {count} cuộc hội thoại"
 
-#: app/src/ui/window.rs:413
+#: app/src/ui/window.rs:414
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "Đã tắt thông báo {count} thư"
 
-#: app/src/ui/window.rs:419
+#: app/src/ui/window.rs:420
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "Đã bật lại thông báo {count} cuộc hội thoại"
 
-#: app/src/ui/window.rs:425
+#: app/src/ui/window.rs:426
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "Đã bật lại thông báo {count} thư"
 
-#: app/src/ui/window.rs:435
+#: app/src/ui/window.rs:436
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "Đã bỏ {count} mục theo dõi"
 
-#: app/src/ui/window.rs:444
+#: app/src/ui/window.rs:445
 msgid "Archived"
 msgstr "Đã lưu trữ"
 
-#: app/src/ui/window.rs:446
+#: app/src/ui/window.rs:447
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "Đã lưu trữ {count} cuộc hội thoại"
 
-#: app/src/ui/window.rs:452
+#: app/src/ui/window.rs:453
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "Đã lưu trữ {count} thư"
 
-#: app/src/ui/window.rs:457
+#: app/src/ui/window.rs:458
 msgid "Moved to Trash"
 msgstr "Đã chuyển vào Thùng rác"
 
-#: app/src/ui/window.rs:459
+#: app/src/ui/window.rs:460
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "Đã chuyển {count} cuộc hội thoại vào Thùng rác"
 
-#: app/src/ui/window.rs:465
+#: app/src/ui/window.rs:466
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "Đã chuyển {count} thư vào Thùng rác"
 
-#: app/src/ui/window.rs:470
+#: app/src/ui/window.rs:471
 msgid "Marked as junk"
 msgstr "Đã đánh dấu thư rác"
 
-#: app/src/ui/window.rs:472
+#: app/src/ui/window.rs:473
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "Đã đánh dấu {count} cuộc hội thoại là thư rác"
 
-#: app/src/ui/window.rs:478
+#: app/src/ui/window.rs:479
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "Đã đánh dấu {count} thư là thư rác"
 
-#: app/src/ui/window.rs:483
+#: app/src/ui/window.rs:484
 msgid "Moved to the Inbox"
 msgstr "Đã chuyển vào Hộp thư đến"
 
-#: app/src/ui/window.rs:485
+#: app/src/ui/window.rs:486
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "Đã chuyển {count} cuộc hội thoại vào Hộp thư đến"
 
-#: app/src/ui/window.rs:491
+#: app/src/ui/window.rs:492
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Đã chuyển {count} thư vào Hộp thư đến"
 
-#: app/src/ui/window.rs:929
+#: app/src/ui/window.rs:930
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Minh họa)"
 
-#: app/src/ui/window.rs:1341
+#: app/src/ui/window.rs:1342
 msgid "Could not read accounts: {reason}"
 msgstr "Không thể đọc tài khoản: {reason}"
 
-#: app/src/ui/window.rs:2013
+#: app/src/ui/window.rs:2014
 msgid "Could not delete the mail: {reason}"
 msgstr "Không thể xóa thư: {reason}"
 
-#: app/src/ui/window.rs:2105
+#: app/src/ui/window.rs:2106
 msgid "Turn On the {service}"
 msgstr "Bật {service}"
 
-#: app/src/ui/window.rs:2108
+#: app/src/ui/window.rs:2109
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -9891,60 +9921,66 @@ msgstr ""
 "Google từ chối trước khi hỏi quyền của bạn. Bật dịch vụ, chờ một phút rồi "
 "thử lại."
 
-#: app/src/ui/window.rs:2114
+#: app/src/ui/window.rs:2115
 msgid "Open Google Cloud"
 msgstr "Mở Google Cloud"
 
-#: app/src/ui/window.rs:2435
+#: app/src/ui/window.rs:2436
 msgid "Select mail from one account to tag it."
 msgstr "Chọn thư từ một tài khoản để gắn thẻ."
 
-#: app/src/ui/window.rs:2447
+#: app/src/ui/window.rs:2448
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Tài khoản này chưa có thẻ. Tạo thẻ trong Outlook."
 
-#: app/src/ui/window.rs:2614
+#: app/src/ui/window.rs:2541
+#, fuzzy
+#| msgid "Add an account first"
+msgid "Add an account to reply or forward"
+msgstr "Thêm tài khoản trước"
+
+#: app/src/ui/window.rs:2640
 msgid "Could not include {file}: {reason}"
 msgstr "Không thể thêm {file}: {reason}"
 
-#: app/src/ui/window.rs:2695
+#: app/src/ui/window.rs:2721
 msgid "The server had already sent this message."
 msgstr "Máy chủ đã gửi thư này."
 
-#: app/src/ui/window.rs:2700
+#: app/src/ui/window.rs:2726
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Thư này bị hủy trong ứng dụng khác và không còn trong Thư nháp."
 
-#: app/src/ui/window.rs:2814
+#: app/src/ui/window.rs:2840
 msgid "Downloading {file}…"
 msgstr "Đang tải {file}…"
 
-#: app/src/ui/window.rs:2835 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2861 app/src/ui/window/attachments.rs:250
 msgid "Saved {file} to Downloads"
 msgstr "Đã lưu {file} vào Tải xuống"
 
-#: app/src/ui/window.rs:2838
+#: app/src/ui/window.rs:2864
 msgid "Open"
 msgstr "Mở"
 
-#: app/src/ui/window.rs:2853 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2879 app/src/ui/window/attachments.rs:255
 msgid "Could not save {file}: {reason}"
 msgstr "Không thể lưu {file}: {reason}"
 
-#: app/src/ui/window.rs:3032
+#: app/src/ui/window.rs:3058
 msgid "Continue in your browser"
 msgstr "Tiếp tục trong trình duyệt"
 
-#: app/src/ui/window.rs:3062
+#: app/src/ui/window.rs:3088
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google."
 
-#: app/src/ui/window.rs:3070
+#: app/src/ui/window.rs:3096
 msgid "Get a Release"
 msgstr "Tải bản phát hành"
 
-#: app/src/ui/window.rs:3162
+#: app/src/ui/window.rs:3188
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -9952,75 +9988,75 @@ msgstr ""
 "Không thể kiểm tra các thư máy chủ đang giữ để gửi sau, nên tài khoản "
 "{account} được giữ lại: {reason}"
 
-#: app/src/ui/window.rs:3173
+#: app/src/ui/window.rs:3199
 msgid "Remove {account}?"
 msgstr "Xóa {account}?"
 
-#: app/src/ui/window.rs:3192
+#: app/src/ui/window.rs:3218
 msgid "Remove Anyway"
 msgstr "Vẫn xóa"
 
-#: app/src/ui/window.rs:3205
+#: app/src/ui/window.rs:3231
 msgid "Removed {account}"
 msgstr "Đã xóa {account}"
 
-#: app/src/ui/window.rs:3207
+#: app/src/ui/window.rs:3233
 msgid "Could not remove {account}: {reason}"
 msgstr "Không thể xóa {account}: {reason}"
 
-#: app/src/ui/window.rs:3393
+#: app/src/ui/window.rs:3419
 msgid "Refresh"
 msgstr "Làm mới"
 
-#: app/src/ui/window.rs:3397
+#: app/src/ui/window.rs:3423
 msgid "Show Declined Events"
 msgstr "Hiện sự kiện đã từ chối"
 
-#: app/src/ui/window.rs:3413
+#: app/src/ui/window.rs:3439
 msgid "Add Account…"
 msgstr "Thêm tài khoản…"
 
-#: app/src/ui/window.rs:3414
+#: app/src/ui/window.rs:3440
 msgid "New Smart Mailbox…"
 msgstr "Hộp thư thông minh mới…"
 
-#: app/src/ui/window.rs:3422
+#: app/src/ui/window.rs:3448
 msgid "Keyboard Shortcuts"
 msgstr "Phím tắt"
 
-#: app/src/ui/window.rs:3431 app/src/ui/window.rs:3433
+#: app/src/ui/window.rs:3457 app/src/ui/window.rs:3459
 msgid "Main Menu"
 msgstr "Trình đơn chính"
 
-#: app/src/ui/window.rs:3498 app/src/ui/window.rs:3499
+#: app/src/ui/window.rs:3524 app/src/ui/window.rs:3525
 msgid "Dock"
 msgstr "Gắn lại"
 
-#: app/src/ui/window.rs:3624
+#: app/src/ui/window.rs:3650
 msgid "Add a mail account first"
 msgstr "Thêm tài khoản thư trước"
 
-#: app/src/ui/window.rs:3945
+#: app/src/ui/window.rs:3980
 msgid "Open a message from the person first"
 msgstr "Mở thư từ người đó trước"
 
-#: app/src/ui/window.rs:4026
+#: app/src/ui/window.rs:4061
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail hiển thị ngôn ngữ mới sau khi khởi động lại"
 
-#: app/src/ui/window.rs:4028 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4063 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Khởi động lại"
 
-#: app/src/ui/window.rs:4092
+#: app/src/ui/window.rs:4127
 msgid "Show Rules"
 msgstr "Hiện quy tắc"
 
-#: app/src/ui/window.rs:4118
+#: app/src/ui/window.rs:4153
 msgid "Messages That Will Not Download"
 msgstr "Thư không thể tải"
 
-#: app/src/ui/window.rs:4120
+#: app/src/ui/window.rs:4155
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10046,37 +10082,37 @@ msgid ""
 "address."
 msgstr "Thanh bên hiển thị tên thay cho địa chỉ. Để trống để dùng địa chỉ."
 
-#: app/src/ui/window/attachments.rs:59
+#: app/src/ui/window/attachments.rs:74
 msgid "Could not open {file}: {reason}"
 msgstr "Không thể mở {file}: {reason}"
 
-#: app/src/ui/window/attachments.rs:104
+#: app/src/ui/window/attachments.rs:121
 msgid "Save Attachments"
 msgstr "Lưu tệp đính kèm"
 
-#: app/src/ui/window/attachments.rs:115
+#: app/src/ui/window/attachments.rs:132
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "Đang lưu {count} tệp đính kèm…"
 
-#: app/src/ui/window/attachments.rs:163
+#: app/src/ui/window/attachments.rs:182
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "Đã lưu {count} tệp đính kèm vào {folder}"
 
-#: app/src/ui/window/attachments.rs:170
+#: app/src/ui/window/attachments.rs:189
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "Đã lưu {count} vào {folder}. Không thể lưu {files}"
 
-#: app/src/ui/window/attachments.rs:279
+#: app/src/ui/window/attachments.rs:298
 msgid "Could not open {file}"
 msgstr "Không thể mở {file}"
 
-#: app/src/ui/window/attachments.rs:335 app/src/ui/window/attachments.rs:338
+#: app/src/ui/window/attachments.rs:354 app/src/ui/window/attachments.rs:357
 msgid "Open in Another Program"
 msgstr "Mở bằng chương trình khác"
 
-#: app/src/ui/window/attachments.rs:342
+#: app/src/ui/window/attachments.rs:361
 msgid "{file}, preview"
 msgstr "{file}, xem trước"
 
@@ -10120,55 +10156,62 @@ msgstr ""
 "Kéo để đổi kích thước, hoặc dùng phím Trái và Phải. Home và End chọn độ rộng "
 "nhỏ nhất và lớn nhất."
 
-#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
-#: app/src/ui/window/export.rs:124
+#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
+#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:179
 msgid "Open a conversation first"
 msgstr "Mở cuộc hội thoại trước"
 
-#: app/src/ui/window/detached.rs:186 app/src/ui/window/export.rs:75
-#: app/src/ui/window/export.rs:139 app/src/ui/window/organize.rs:94
+#: app/src/ui/window/detached.rs:195 app/src/ui/window/export.rs:82
+#: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
 #: app/src/ui/window/senders.rs:288
 msgid "That account is not connected"
 msgstr "Tài khoản đó chưa kết nối"
 
-#: app/src/ui/window/detached.rs:199
+#: app/src/ui/window/detached.rs:208
 msgid "Could not load the source: {reason}"
 msgstr "Không thể tải nguồn: {reason}"
 
-#: app/src/ui/window/detached.rs:229 app/src/ui/window/detached.rs:235
-#: app/src/ui/window/detached.rs:247
+#: app/src/ui/window/detached.rs:238 app/src/ui/window/detached.rs:244
+#: app/src/ui/window/detached.rs:256
 msgid "Message Source"
 msgstr "Nguồn thư"
 
-#: app/src/ui/window/detached.rs:231
+#: app/src/ui/window/detached.rs:240
 msgid "Save As…"
 msgstr "Lưu thành…"
 
-#: app/src/ui/window/detached.rs:232
+#: app/src/ui/window/detached.rs:241
 msgid "Save as an .eml file"
 msgstr "Lưu thành tệp .eml"
 
-#: app/src/ui/window/detached.rs:270
+#: app/src/ui/window/detached.rs:279
 msgid "Save Message"
 msgstr "Lưu thư"
 
-#: app/src/ui/window/export.rs:79 app/src/ui/window/export.rs:143
+#: app/src/ui/window/export.rs:86 app/src/ui/window/export.rs:139
+#: app/src/ui/window/export.rs:198
 msgid "Export Mail"
 msgstr "Xuất thư"
 
-#: app/src/ui/window/export.rs:93 app/src/ui/window/export.rs:152
+#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:207
 msgid "Exporting…"
 msgstr "Đang xuất…"
 
-#: app/src/ui/window/export.rs:104 app/src/ui/window/export.rs:161
+#: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
+#: app/src/ui/window/export.rs:216
 msgid "Saved {file}"
 msgstr "Đã lưu {file}"
 
-#: app/src/ui/window/export.rs:105 app/src/ui/window/export.rs:162
+#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:155
+#: app/src/ui/window/export.rs:158 app/src/ui/window/export.rs:217
 msgid "Could not export the mail: {reason}"
 msgstr "Không thể xuất thư: {reason}"
+
+#: app/src/ui/window/export.rs:159
+msgid "the write was interrupted"
+msgstr ""
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -10312,19 +10355,25 @@ msgstr "Đã trả lời qua email tới {organizer}"
 msgid "Replied by email"
 msgstr "Đã trả lời qua email"
 
-#: app/src/ui/window/message_menu.rs:132
+#: app/src/ui/window/loose.rs:136
+#, fuzzy
+#| msgid "Read: {subject}"
+msgid "Attached to {subject}"
+msgstr "Đã đọc: {subject}"
+
+#: app/src/ui/window/message_menu.rs:136
 msgid "Flag Color"
 msgstr "Màu cờ"
 
-#: app/src/ui/window/message_menu.rs:219
+#: app/src/ui/window/message_menu.rs:227
 msgid "Message from {sender}"
 msgstr "Thư từ {sender}"
 
-#: app/src/ui/window/message_menu.rs:220
+#: app/src/ui/window/message_menu.rs:228
 msgid "This Message"
 msgstr "Thư này"
 
-#: app/src/ui/window/message_menu.rs:387
+#: app/src/ui/window/message_menu.rs:395
 msgid "Copied {address}"
 msgstr "Đã sao chép {address}"
 

@@ -14,12 +14,14 @@ use crate::protection::{self, Engine, Mark};
 use crate::translation::{Body, Language, Prose, Translation};
 
 pub mod inline;
+pub mod loose;
 mod page;
 pub mod queued;
 mod receipt;
 pub mod run;
 
 pub use inline::{InlineImage, Served};
+pub use loose::{Loose, Origin, loose_id};
 #[cfg(test)]
 pub use page::Document;
 pub use page::{Article, Cleaned, Page, ToClean};
@@ -95,6 +97,9 @@ pub struct OpenThread {
     /// Set when the pane shows a queued message rather than a Gmail
     /// thread: what it says above the message, and which buttons.
     pub queued: Option<Unsent>,
+    /// Set when the pane shows a message from its own bytes, in no
+    /// mailbox: the bytes themselves, and where they came from.
+    pub loose: Option<Loose>,
     /// The message the event card sits in, which keeps a place for it in
     /// the page. `None` while the card is down.
     invitation_at: Option<String>,
@@ -159,6 +164,7 @@ impl OpenThread {
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
+            loose: None,
             invitation_at: None,
             receipt_card: None,
             receipts_answered: HashSet::new(),
@@ -596,6 +602,7 @@ mod tests {
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
+            loose: None,
             invitation_at: None,
             receipt_card: None,
             receipts_answered: HashSet::new(),

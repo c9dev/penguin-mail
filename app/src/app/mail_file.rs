@@ -1,0 +1,70 @@
+//! A mail file handed to the app: from Files, by the desktop entry's
+//! `message/rfc822`, or by a second launch that the running copy answers.
+//!
+//! The message opens in a window of its own over the main window, which
+//! comes up first when none is open: everything a reading window does,
+//! from Reply to the attachment rows, hangs off the main window, and the
+//! person chose to see it rather than have those lifted off it.
+
+use std::cell::RefCell;
+use std::path::Path;
+use std::rc::Rc;
+use std::sync::Arc;
+
+use gtk::gio::prelude::ApplicationExtManual;
+use gtk::prelude::WidgetExt;
+use gtk::{gio, glib};
+use mailrs_domain::translate::gettext;
+
+use super::App;
+use crate::open_thread::{Loose, Origin};
+use crate::ui::eml_file;
+
+impl App {
+    /// Opens `path` as a loose message, acting as the default account,
+    /// or says why the file will not open.
+    pub(super) fn open_mail_file(self: &Rc<Self>, path: &Path) {
+        crate::ensure_gtk();
+        self.apply_style();
+        let path = path.to_path_buf();
+        let (this, hold) = (Rc::clone(self), self.gio.hold());
+        glib::spawn_future_local(async move {
+            let reading = path.clone();
+            let read = gio::spawn_blocking(move || eml_file::read_message(&reading)).await;
+            match read {
+                Ok(Ok(raw)) => {
+                    // An open main window is left as it is; one is made
+                    // only when there is none to hang the message on.
+                    let window = this.window().unwrap_or_else(|| this.show_window());
+                    let account = this.default_account(None);
+                    window.open_loose(Loose {
+                        raw: Arc::new(raw),
+                        account_id: account.unwrap_or_default(),
+                        has_account: account.is_some(),
+                        origin: Origin::File(path),
+                    });
+                }
+                Ok(Err(why)) => this.show_unreadable(&path, &why),
+                Err(_) => this.show_unreadable(&path, &gettext("This file could not be read.")),
+            }
+            drop(hold);
+        });
+    }
+
+    /// A window saying the file could not be opened, counted among the
+    /// windows that keep the process from shedding its memory, and
+    /// holding the application for as long as it is up, as the calendar
+    /// file's window does.
+    fn show_unreadable(self: &Rc<Self>, path: &Path, why: &str) {
+        self.window_opened();
+        let hold = RefCell::new(Some(self.gio.hold()));
+        let window = eml_file::show_unreadable(path, why);
+        let app = Rc::downgrade(self);
+        window.connect_destroy(move |_| {
+            hold.borrow_mut().take();
+            if let Some(app) = app.upgrade() {
+                app.window_closed();
+            }
+        });
+    }
+}

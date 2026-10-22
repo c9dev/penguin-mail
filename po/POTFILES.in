@@ -4,6 +4,7 @@ app/src/add_account.rs
 app/src/add_account/lookup.rs
 app/src/add_account/post.rs
 app/src/app.rs
+app/src/app/mail_file.rs
 app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs
@@ -86,6 +87,7 @@ app/src/ui/contact_card.rs
 app/src/ui/contacts_prefs.rs
 app/src/ui/copied.rs
 app/src/ui/conversation.rs
+app/src/ui/eml_file.rs
 app/src/ui/link_preview.rs
 app/src/ui/find.rs
 app/src/ui/hide_my_email.rs
@@ -130,6 +132,7 @@ app/src/ui/window/followup.rs
 app/src/ui/window/images.rs
 app/src/ui/window/in_flight.rs
 app/src/ui/window/invitation.rs
+app/src/ui/window/loose.rs
 app/src/ui/window/message_menu.rs
 app/src/ui/window/notice.rs
 app/src/ui/window/on_screen.rs

@@ -34,8 +34,20 @@ impl MainWindow {
         // A file out of an encrypted message is already here. Gmail holds
         // the ciphertext, so there is nothing to fetch and nothing to wait
         // for.
+        let subject = view.read(|open| open.subject.clone()).unwrap_or_default();
+        // A message nested in a loose one acts as the account the loose one
+        // was opened with, which a file opened with no account lacks.
+        let has_account = view.read(super::loose::account_of).is_none_or(|(_, has)| has);
         if let Some(data) = opened_file(view, &message_id, index) {
-            self.show_attachment(attachment, data, true);
+            match is_message(&attachment) {
+                true => self.open_loose(super::loose::attached(
+                    data,
+                    account_id,
+                    has_account,
+                    subject,
+                )),
+                false => self.show_attachment(attachment, data, true),
+            }
             return;
         }
         let (Some(sync), Some(attachment_id)) = (
@@ -54,6 +66,9 @@ impl MainWindow {
                 })
                 .await;
             match fetched {
+                Ok(data) if is_message(&attachment) => this.open_loose(
+                    super::loose::attached(data, account_id, has_account, subject),
+                ),
                 Ok(data) => this.show_attachment(attachment, data, false),
                 Err(err) => this.toast(&with_reason(
                     &gettext("Could not open {file}: {reason}"),
@@ -97,9 +112,11 @@ impl MainWindow {
         if files.is_empty() {
             return;
         }
-        let Some(sync) = self.core.account(account_id) else {
+        // Files the window holds need no account; the rest are fetched.
+        let sync = self.core.account(account_id);
+        if !all_held(&files, &held) && sync.is_none() {
             return;
-        };
+        }
         let dialog = gtk::FileDialog::builder()
             .title(gettext("Save Attachments"))
             .modal(true)
@@ -135,7 +152,9 @@ impl MainWindow {
                     }
                     continue;
                 }
-                let Some(attachment_id) = attachment.attachment_id.clone() else {
+                let (Some(sync), Some(attachment_id)) =
+                    (sync.as_ref(), attachment.attachment_id.clone())
+                else {
                     continue;
                 };
                 let (s, m, folder) = (sync.clone(), message_id.clone(), folder.clone());
@@ -422,8 +441,23 @@ fn save_under_free_name(
     Ok(path)
 }
 
-/// The bytes of one file that came out of an encrypted message, when the
-/// open thread holds them.
+/// An attachment that is a message: `message/rfc822`, or an `.eml` name on
+/// a type that says nothing, as a sender's program that did not know the
+/// type labels it.
+pub(super) fn is_message(attachment: &Attachment) -> bool {
+    attachment.mime_type == "message/rfc822"
+        || (attachment.mime_type == "application/octet-stream"
+            && attachment.filename.to_lowercase().ends_with(".eml"))
+}
+
+/// Whether every file in `files` is among the bytes the window holds, so
+/// saving or forwarding them needs no account.
+pub(super) fn all_held(files: &[(usize, Attachment)], held: &[Vec<u8>]) -> bool {
+    files.iter().all(|(index, _)| held.len() > *index)
+}
+
+/// The bytes of one file that came out of an encrypted message, or of a
+/// loose message's own, when the open thread holds them.
 fn opened_file(view: &ConversationView, message_id: &str, index: usize) -> Option<Vec<u8>> {
     view.find(|open| open.opened_files.get(message_id)?.get(index).cloned())
 }
@@ -447,6 +481,41 @@ fn fit(width: i32, height: i32) -> (i32, i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_message_attachment_is_known_by_type_or_by_its_eml_name() {
+        let mut a = Attachment {
+            part_id: "2".into(),
+            filename: "Fwd.eml".into(),
+            mime_type: "message/rfc822".into(),
+            size: 1,
+            attachment_id: None,
+            content_id: None,
+        };
+        assert!(is_message(&a));
+        a.mime_type = "application/octet-stream".into();
+        assert!(is_message(&a));
+        a.filename = "report.EML".into();
+        assert!(is_message(&a));
+        a.filename = "report.pdf".into();
+        assert!(!is_message(&a));
+    }
+
+    #[test]
+    fn files_the_window_holds_need_no_account() {
+        let file = |name: &str| Attachment {
+            part_id: "1".into(),
+            filename: name.into(),
+            mime_type: "text/plain".into(),
+            size: 1,
+            attachment_id: None,
+            content_id: None,
+        };
+        let held = vec![b"a".to_vec(), b"b".to_vec()];
+        assert!(all_held(&[(0, file("a")), (1, file("b"))], &held));
+        assert!(!all_held(&[(0, file("a")), (2, file("c"))], &held));
+        assert!(all_held(&[], &[]));
+    }
 
     #[test]
     fn saving_a_file_twice_keeps_both_copies() {

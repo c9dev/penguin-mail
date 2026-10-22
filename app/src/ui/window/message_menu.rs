@@ -47,6 +47,9 @@ pub(super) struct Message {
     /// The only message of its thread, so a change to it takes the whole
     /// conversation out of the mailbox on screen.
     pub alone: bool,
+    /// A message from its own bytes, in no mailbox, so nothing files,
+    /// marks or labels it.
+    pub loose: bool,
 }
 
 /// What the menu needs about one message of `open`. `None` when the thread
@@ -73,6 +76,7 @@ pub(super) fn message_of(open: &OpenThread, message_id: &str) -> Option<Message>
             .map(|from| from.display().to_string())
             .filter(|shown| !shown.trim().is_empty()),
         alone: open.messages.len() == 1,
+        loose: open.is_loose(),
     })
 }
 
@@ -168,6 +172,14 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Ve
     if !message.draft {
         groups.push(vec![Item::Reply, Item::ReplyAll, Item::Forward]);
     }
+    let mut out = vec![Item::Export];
+    if message.sender.is_some() {
+        out.push(Item::CopyAddress);
+    }
+    if message.loose {
+        groups.push(out);
+        return groups;
+    }
     let mut filing = vec![Item::Archive];
     filing.extend(delete_item(mailbox, offers.delete_forever));
     filing.push(match message.unread {
@@ -190,10 +202,6 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Ve
         marks.push(Item::Tags);
     }
     groups.push(marks);
-    let mut out = vec![Item::Export];
-    if message.sender.is_some() {
-        out.push(Item::CopyAddress);
-    }
     groups.push(out);
     groups
 }
@@ -451,6 +459,7 @@ mod tests {
             sender: Some("ana@example.com".into()),
             from: Some("Ana".into()),
             alone: false,
+            loose: false,
         }
     }
 
@@ -467,6 +476,24 @@ mod tests {
 
     fn items(message: &Message, mailbox: &Mailbox) -> Vec<Item> {
         groups(message, mailbox, Offers::EVERYTHING).concat()
+    }
+
+    #[test]
+    fn a_loose_message_offers_replies_export_and_the_address_only() {
+        let loose = Message {
+            loose: true,
+            ..message()
+        };
+        assert_eq!(
+            items(&loose, &inbox()),
+            vec![
+                Item::Reply,
+                Item::ReplyAll,
+                Item::Forward,
+                Item::Export,
+                Item::CopyAddress
+            ]
+        );
     }
 
     #[test]

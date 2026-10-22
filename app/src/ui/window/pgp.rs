@@ -51,6 +51,10 @@ impl Effects for Ports {
         account_id: AccountId,
         message_id: String,
     ) -> Answer<'_, Result<Vec<u8>, String>> {
+        // A loose message is its own bytes; nothing else holds them.
+        if let Some(raw) = self.view.find(|open| open.raw_of(&message_id)) {
+            return Box::pin(async move { Ok(raw.as_ref().clone()) });
+        }
         Box::pin(async move {
             let sync = self
                 .core

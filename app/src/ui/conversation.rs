@@ -233,6 +233,30 @@ fn slot_widget(
     }
 }
 
+/// The More menu of a loose message's window: the replies; Print, View
+/// Source and Export; and Always Load Images. Everything that acts on a
+/// mailbox is left out, since the message is in none.
+fn loose_menu() -> gio::Menu {
+    let more = gio::Menu::new();
+    let replies = gio::Menu::new();
+    replies.append(Some(&gettext("Reply")), Some("win.reply"));
+    replies.append(Some(&gettext("Reply All")), Some("win.reply-all"));
+    replies.append(Some(&gettext("Forward")), Some("win.forward"));
+    more.append_section(None, &replies);
+    let views = gio::Menu::new();
+    views.append(Some(&gettext("Print…")), Some("win.print"));
+    views.append(Some(&gettext("View Source")), Some("win.view-source"));
+    views.append(Some(&gettext("Export…")), Some("win.export"));
+    more.append_section(None, &views);
+    let sender = gio::Menu::new();
+    sender.append(
+        Some(&gettext("Always Load Images…")),
+        Some("win.always-load-images"),
+    );
+    more.append_section(None, &sender);
+    more
+}
+
 /// Fills `menu` with one Categorize Sender item for each of `set`. The key
 /// is the provider's own name for the category and stays as it is.
 fn fill_categorize(menu: &gio::Menu, set: &[Category]) {
@@ -342,6 +366,8 @@ pub struct ConversationView {
     held: RefCell<Vec<(Address, web::Request)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
+    /// A loose message's window, which has no mailbox to act on.
+    loose: Cell<bool>,
     /// The mail the header acts on comes from one account that keeps tags.
     tags: Cell<bool>,
     /// Whether the head of the page offers Summarize.
@@ -772,6 +798,7 @@ impl ConversationView {
             held: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
+            loose: Cell::new(false),
             tags: Cell::new(false),
             summarize: Cell::new(false),
             this: this.clone(),
@@ -1000,6 +1027,22 @@ impl ConversationView {
         self.tag_button.set_visible(false);
         self.assistant_toggle.set_visible(false);
         self.detached.set(true);
+    }
+
+    /// A loose message's window: detached, with the mailbox buttons and
+    /// menu items gone rather than greyed, since the message is in no
+    /// mailbox for them to act on.
+    pub fn set_loose(&self) {
+        self.set_detached();
+        self.loose.set(true);
+        self.buttons.more.set_menu_model(Some(&loose_menu()));
+    }
+
+    /// Names the window's header: the subject over where the message
+    /// came from.
+    pub fn set_origin_title(&self, title: &str, subtitle: &str) {
+        self.header
+            .set_title_widget(Some(&adw::WindowTitle::new(title, subtitle)));
     }
 
     /// Whether this conversation is in a window of its own, which has no
@@ -1761,7 +1804,9 @@ impl ConversationView {
         }
         self.queued.hide();
         self.refresh_remind_menu();
-        self.apply_toolbar(if header.draft {
+        self.apply_toolbar(if header.loose {
+            Holds::Loose
+        } else if header.draft {
             Holds::Draft
         } else {
             Holds::Message
@@ -2007,6 +2052,7 @@ struct Drawn {
 /// What the header buttons show for the open thread.
 struct Header {
     queued: Option<Unsent>,
+    loose: bool,
     draft: bool,
     /// Whether the list banner offers to unsubscribe.
     unsubscribe: bool,
@@ -2020,6 +2066,7 @@ impl Header {
     fn of(open: &OpenThread) -> Header {
         Header {
             queued: open.queued.clone(),
+            loose: open.is_loose(),
             draft: open.is_draft(),
             unsubscribe: !open.unsubscribed && open.list_unsubscribe().is_some(),
             starred: open.starred(),
