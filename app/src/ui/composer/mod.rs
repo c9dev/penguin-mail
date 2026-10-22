@@ -55,6 +55,8 @@ pub use crate::compose::Identity;
 /// dictionaries, and somewhere to report what the writer taught it.
 pub struct Writing {
     pub identities: Vec<Identity>,
+    /// The expanded signature expected in the draft, for preserving manual edits.
+    pub signature: String,
     /// Account address to the send-as address it last sent from.
     pub last_used: Vec<(String, String)>,
     /// The dictionaries every composer shares. Reading one takes long
@@ -302,6 +304,7 @@ pub struct Composer {
     identities: Vec<Identity>,
     /// Which identity the From row is on, so a change knows what to undo.
     showing: Cell<usize>,
+    signature: RefCell<String>,
     /// The spell checker marking up the body, when one could start.
     spell: RefCell<Option<Rc<spell::SpellCheck>>>,
     /// The saved templates, and the menu section that lists them.
@@ -352,6 +355,7 @@ impl Composer {
     ) -> Rc<Composer> {
         let Writing {
             identities,
+            signature,
             last_used,
             dictionaries,
             remember,
@@ -760,6 +764,7 @@ impl Composer {
             block: RefCell::new(None),
             identities,
             showing: Cell::new(selected),
+            signature: RefCell::new(signature),
             spell: RefCell::new(None),
             templates: RefCell::new(Vec::new()),
             template_items,
@@ -916,6 +921,7 @@ impl Composer {
         self.suffix.connect_changed(move |_| {
             if let Some(c) = weak.upgrade() {
                 c.dirty.set(true);
+                c.update_signature();
                 c.check_send();
                 c.check_own();
             }
@@ -1485,6 +1491,7 @@ impl Composer {
                         email: masked.email.clone(),
                     }));
                     this.suffix.set_visible(false);
+                    this.update_signature();
                     this.dirty.set(true);
                     this.check_send();
                     this.check_own();
@@ -1504,7 +1511,7 @@ impl Composer {
     /// Follows the From row with the signature, since Gmail keeps one per
     /// send-as address and a message signed by the wrong one looks careless.
     fn identity_changed(self: &Rc<Self>, to: usize) {
-        let was = self.showing.replace(to);
+        self.showing.set(to);
         self.masked.replace(None);
         self.suffix.set_text("");
         self.suffix.set_visible(
@@ -1522,13 +1529,17 @@ impl Composer {
         }
         // The new address may be one the other standard holds.
         self.check_own();
-        let (Some(old), Some(new)) = (self.identities.get(was), self.identities.get(to)) else {
+        self.update_signature();
+    }
+
+    fn update_signature(&self) {
+        let Some(identity) = self.identity() else {
             return;
         };
-        if old.signature == new.signature {
-            return;
-        }
-        if self.editor.swap_signature(&old.signature, &new.signature) {
+        let new = crate::compose::expand_signature(&identity.signature, &identity.address.email);
+        let old = self.signature.borrow().clone();
+        if old != new && self.editor.swap_signature(&old, &new) {
+            self.signature.replace(new);
             self.check_send();
         }
     }

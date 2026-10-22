@@ -307,3 +307,21 @@ fn folder_badges_count_only_unread_mail_in_the_folder() {
         }
     }
 }
+
+/// Unread inbox ids leave out read mail, other folders, Trash, Spam and
+/// other accounts, and page by id.
+#[test]
+fn unread_inbox_ids_are_the_unread_inbox_mail_of_one_account() {
+    let (conn, a, b) = mixed_mail();
+    let ids = |account, after: &str, limit| {
+        threads::unread_inbox_ids(&conn, account, after, limit)
+            .unwrap()
+            .into_iter()
+            .map(|(_, id)| id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(a, "", 10), ["a2", "a3"]);
+    assert_eq!(ids(b, "", 10), ["b1"]);
+    assert_eq!(ids(a, "", 1), ["a2"]);
+    assert_eq!(ids(a, "a2", 10), ["a3"]);
+}

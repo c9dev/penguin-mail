@@ -550,7 +550,18 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         cursor: Option<&str>,
         limit: usize,
     ) -> Result<Backfill, BackendError> {
-        self.browse_page(mailbox, cursor, limit).await
+        self.browse_page(mailbox, cursor, limit, "ALL UNDELETED")
+            .await
+    }
+
+    async fn unread_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        self.browse_page(mailbox, cursor, limit, "UNSEEN UNDELETED")
+            .await
     }
 
     async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {

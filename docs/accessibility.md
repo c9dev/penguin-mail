@@ -102,6 +102,13 @@ for the browser lists each provider's own steps, two for Microsoft and
 three for Google, and the band above it is read as "Waiting for your
 browser, Microsoft".
 
+## Sender signatures
+
+Each additional address under Addresses You Send From has a Signature button.
+Its dialog offers the account signature, a custom signature, or no signature.
+The custom text field is named for the address and describes the Markdown and
+sender placeholders. Save applies the choice; Cancel leaves it unchanged.
+
 ## The composer from the keyboard
 
 Tab goes From, Address Suffix when enabled, To, Cc and Bcc while they show, Subject, the formatting

@@ -23,6 +23,7 @@ use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
+use mailrs_sync::read_inbox::InboxesRead;
 use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, JmapBrowser, NewCalDav, NewImap, NewJmap, NewPop3,
@@ -707,6 +708,22 @@ impl Core {
                 })
                 .collect(),
             recorded: None,
+        })
+    }
+
+    /// Marks every unread message in each account's inbox read, on its
+    /// server as well as here. See `MailActions::read_inboxes`.
+    pub async fn read_inboxes(&self, accounts: Vec<AccountId>) -> InboxesRead {
+        let actions = Arc::clone(&self.actions);
+        self.call(async move {
+            Ok::<_, std::convert::Infallible>(
+                actions.read_inboxes(&accounts, History::Record).await,
+            )
+        })
+        .await
+        .unwrap_or_else(|err| {
+            tracing::warn!(error = %err, "marking the inboxes read stopped");
+            InboxesRead::default()
         })
     }
 

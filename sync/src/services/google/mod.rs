@@ -182,6 +182,26 @@ impl<G: GmailApi> Google<G> {
     pub fn workspace(&self) -> bool {
         self.gmail.workspace()
     }
+
+    async fn labelled_page(
+        &self,
+        label: &str,
+        query: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        let limit = limit.clamp(1, ID_PAGE_SIZE as usize) as u32;
+        match paced(self.gmail.list_labelled(label, query, cursor, limit)).await {
+            Ok(page) => Ok(Backfill {
+                refs: page.messages.into_iter().map(RemoteRef::from).collect(),
+                next: page.next_page_token,
+            }),
+            Err(GmailError::Http { status: 400, .. }) if cursor.is_some() => {
+                Err(BackendError::StateLost)
+            }
+            Err(err) => Err(err.into()),
+        }
+    }
 }
 
 /// Whether `address` belongs to a Google Workspace account rather than a
@@ -309,17 +329,17 @@ impl<G: GmailApi> MailBackend for Google<G> {
         cursor: Option<&str>,
         limit: usize,
     ) -> Result<Backfill, BackendError> {
-        let limit = limit.clamp(1, ID_PAGE_SIZE as usize) as u32;
-        match paced(self.gmail.list_labelled(mailbox, "", cursor, limit)).await {
-            Ok(page) => Ok(Backfill {
-                refs: page.messages.into_iter().map(RemoteRef::from).collect(),
-                next: page.next_page_token,
-            }),
-            Err(GmailError::Http { status: 400, .. }) if cursor.is_some() => {
-                Err(BackendError::StateLost)
-            }
-            Err(err) => Err(err.into()),
-        }
+        self.labelled_page(mailbox, "", cursor, limit).await
+    }
+
+    async fn unread_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        self.labelled_page(mailbox, "is:unread", cursor, limit)
+            .await
     }
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {

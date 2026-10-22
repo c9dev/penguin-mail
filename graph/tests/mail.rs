@@ -387,3 +387,32 @@ async fn a_full_listing_expands_the_size() {
     assert!(pairs["$expand"].contains("Integer 0x0E08"));
     assert!(pairs["$select"].contains("internetMessageHeaders"));
 }
+
+#[tokio::test]
+async fn an_unread_listing_filters_on_the_read_state() {
+    let server = MockServer::start().await;
+    common::token_endpoint(&server, "r").await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/mailFolders/inbox/messages"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"value": []})))
+        .mount(&server)
+        .await;
+    let listing = Listing {
+        folder: Some("inbox".into()),
+        unread: true,
+        top: 200,
+        ..Listing::default()
+    };
+    common::graph(&server)
+        .list_messages(&listing, None)
+        .await
+        .unwrap();
+    let asked = server.received_requests().await.unwrap();
+    let url = &asked
+        .iter()
+        .find(|r| r.url.path() == "/v1.0/me/mailFolders/inbox/messages")
+        .unwrap()
+        .url;
+    let pairs: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+    assert_eq!(pairs["$filter"], "isRead eq false");
+}
