@@ -2539,11 +2539,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: άγνωστη επιλογή {option}"
 
-#: app/src/main.rs:442
+#: app/src/main.rs:445
 msgid "Penguin Mail Could Not Start"
 msgstr "Δεν ήταν δυνατή η εκκίνηση του Penguin Mail"
 
-#: app/src/main.rs:447 app/src/ui/about.rs:181
+#: app/src/main.rs:450 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Αναφορά προβλήματος"
 
@@ -6002,7 +6002,7 @@ msgid "New and existing"
 msgstr "Νέες και υπάρχουσες"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:58 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:56 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
 #: app/src/ui/window/loose.rs:129
 msgid "Message"
@@ -8071,11 +8071,11 @@ msgstr "Σήμανση ως αναγνωσμένο (U)"
 msgid "Mark as Unread (U)"
 msgstr "Σήμανση ως μη αναγνωσμένο (U)"
 
-#: app/src/ui/conversation.rs:2115
+#: app/src/ui/conversation.rs:2118
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2132 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "Αφαίρεση σημαίας"
 
@@ -8104,25 +8104,25 @@ msgstr "Διακομιστές ημερολογίου και επαφών"
 msgid "Could not use that server: {reason}"
 msgstr "Δεν ήταν δυνατή η χρήση αυτού του διακομιστή: {reason}"
 
-#: app/src/ui/eml_file.rs:27
+#: app/src/ui/eml_file.rs:26
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "Αυτό το αρχείο είναι πολύ μεγάλο για να είναι ημερολόγιο."
 
-#: app/src/ui/eml_file.rs:31
+#: app/src/ui/eml_file.rs:30
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "Αυτό το αρχείο δεν περιέχει κλειδί OpenPGP."
 
-#: app/src/ui/eml_file.rs:43
+#: app/src/ui/eml_file.rs:42
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file does not hold a message."
 msgstr "Αυτό το αρχείο είναι πολύ μεγάλο για να είναι ημερολόγιο."
 
-#: app/src/ui/eml_file.rs:70 app/src/ui/ics_file.rs:81
+#: app/src/ui/eml_file.rs:63 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Δεν ήταν δυνατό το άνοιγμα του αρχείου"
 
@@ -8350,28 +8350,28 @@ msgstr "Η διεύθυνση δημιουργήθηκε"
 msgid "This file is too large to be a calendar."
 msgstr "Αυτό το αρχείο είναι πολύ μεγάλο για να είναι ημερολόγιο."
 
-#: app/src/ui/ics_file.rs:55
+#: app/src/ui/ics_file.rs:54
 msgid "Calendar File"
 msgstr "Αρχείο ημερολογίου"
 
-#: app/src/ui/ics_file.rs:78
+#: app/src/ui/ics_file.rs:65
 msgid "No Events in This File"
 msgstr "Κανένα συμβάν σε αυτό το αρχείο"
 
-#: app/src/ui/ics_file.rs:79
+#: app/src/ui/ics_file.rs:66
 msgid "Penguin Mail found no event to add in it."
 msgstr "Το Penguin Mail δεν βρήκε σε αυτό κανένα συμβάν για προσθήκη."
 
-#: app/src/ui/ics_file.rs:148
+#: app/src/ui/ics_file.rs:131
 msgid "No app on this desktop opens calendar files"
 msgstr ""
 "Καμία εφαρμογή σε αυτήν την επιφάνεια εργασίας δεν ανοίγει αρχεία ημερολογίου"
 
-#: app/src/ui/ics_file.rs:159
+#: app/src/ui/ics_file.rs:142
 msgid "A file has nobody to answer to"
 msgstr "Ένα αρχείο δεν έχει κανέναν στον οποίο να απαντήσετε"
 
-#: app/src/ui/ics_file.rs:196
+#: app/src/ui/ics_file.rs:179
 msgid ""
 "No account here has a calendar Penguin Mail can add to. Add an account with "
 "a calendar, or turn one on in Preferences, under Calendar, then open the "
@@ -8381,26 +8381,26 @@ msgstr ""
 "Penguin Mail. Προσθέστε λογαριασμό με ημερολόγιο ή ενεργοποιήστε έναν στις "
 "«Προτιμήσεις», στην ενότητα «Ημερολόγιο», και ανοίξτε ξανά το αρχείο."
 
-#: app/src/ui/ics_file.rs:275
+#: app/src/ui/ics_file.rs:258
 msgid ""
 "Nothing in this file can be added, since its events have no id or start time"
 msgstr ""
 "Τίποτα από αυτό το αρχείο δεν μπορεί να προστεθεί, αφού τα συμβάντα του δεν "
 "έχουν αναγνωριστικό ή ώρα έναρξης"
 
-#: app/src/ui/ics_file.rs:281
+#: app/src/ui/ics_file.rs:264
 msgid "Some events were left out, since they have no id or start time"
 msgstr ""
 "Ορισμένα συμβάντα παραλείφθηκαν, αφού δεν έχουν αναγνωριστικό ή ώρα έναρξης"
 
-#: app/src/ui/ics_file.rs:291
+#: app/src/ui/ics_file.rs:274
 msgid ""
 "Penguin Mail has no permission to use this calendar. Allow it in Preferences."
 msgstr ""
 "Το Penguin Mail δεν έχει άδεια χρήσης αυτού του ημερολογίου. Επιτρέψτε το "
 "στις «Προτιμήσεις»."
 
-#: app/src/ui/ics_file.rs:294
+#: app/src/ui/ics_file.rs:277
 msgid "Could not add to your calendar: {reason}"
 msgstr "Δεν ήταν δυνατή η προσθήκη στο ημερολόγιό σας: {reason}"
 
@@ -8740,7 +8740,7 @@ msgstr ""
 "Αυτός ο σύνδεσμος περιέχει κρυφούς χαρακτήρες ή χαρακτήρες αλλαγής "
 "κατεύθυνσης."
 
-#: app/src/ui/mod.rs:501
+#: app/src/ui/mod.rs:502
 msgid "Gray"
 msgstr "Γκρι"
 

@@ -128,8 +128,6 @@ impl OpenThread {
         if !files.is_empty() {
             thread.opened_files.insert(id, files);
         }
-        // There is no list to leave, so the banner stays down.
-        thread.unsubscribed = true;
         thread.loose = Some(loose.clone());
         thread
     }
@@ -238,7 +236,6 @@ mod tests {
         assert_eq!(thread.only_message.as_deref(), Some(m.id.as_str()));
         assert!(loose_id(&thread.thread_id).is_some());
         assert_eq!(thread.account_id, 1);
-        assert!(thread.unsubscribed, "no list banner for a loose message");
         let body = thread.bodies[&m.id].as_ref().unwrap();
         assert!(
             body.html

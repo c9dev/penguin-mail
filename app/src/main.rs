@@ -227,9 +227,12 @@ fn main() -> glib::ExitCode {
         .as_ref()
         .map(|to| ("compose-to", to.to_variant()))
         .or_else(|| {
-            file.as_ref().map(|file| match file {
-                NamedFile::Calendar(path) => ("open-calendar-file", path.to_variant()),
-                NamedFile::Mail(path) => ("open-mail-file", path.to_variant()),
+            file.as_ref().map(|file| {
+                let action = match file.kind {
+                    FileKind::Calendar => "open-calendar-file",
+                    FileKind::Mail => "open-mail-file",
+                };
+                (action, file.path.to_variant())
             })
         });
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
@@ -291,9 +294,9 @@ fn main() -> glib::ExitCode {
 
 /// The file the desktop asked this launch to open, and what it is.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NamedFile {
-    Calendar(std::path::PathBuf),
-    Mail(std::path::PathBuf),
+pub struct NamedFile {
+    pub kind: FileKind,
+    pub path: std::path::PathBuf,
 }
 
 /// What a file handed to the app holds.
@@ -319,9 +322,9 @@ fn named_file(args: &[OsString], here: &std::path::Path) -> Option<NamedFile> {
         None => std::path::PathBuf::from(named),
     };
     let path = here.join(path);
-    Some(match file_kind(&path) {
-        FileKind::Calendar => NamedFile::Calendar(path),
-        FileKind::Mail => NamedFile::Mail(path),
+    Some(NamedFile {
+        kind: file_kind(&path),
+        path,
     })
 }
 
@@ -488,16 +491,23 @@ mod tests {
         named_file(&args(list), Path::new(HERE))
     }
 
+    fn named(kind: FileKind, path: &str) -> Option<NamedFile> {
+        Some(NamedFile {
+            kind,
+            path: PathBuf::from(path),
+        })
+    }
+
     #[test]
     fn files_hands_over_a_calendar_file_as_a_path_or_a_uri() {
-        let path = Some(NamedFile::Calendar(PathBuf::from("/tmp/my ticket.ics")));
+        let path = named(FileKind::Calendar, "/tmp/my ticket.ics");
         assert_eq!(file(&["/tmp/my ticket.ics"]), path);
         assert_eq!(file(&["file:///tmp/my%20ticket.ics"]), path);
     }
 
     #[test]
     fn files_hands_over_a_mail_file_as_a_path_or_a_uri() {
-        let path = Some(NamedFile::Mail(PathBuf::from("/tmp/fwd.eml")));
+        let path = named(FileKind::Mail, "/tmp/fwd.eml");
         assert_eq!(file(&["/tmp/fwd.eml"]), path);
         assert_eq!(file(&["file:///tmp/fwd.eml"]), path);
     }
@@ -534,15 +544,11 @@ mod tests {
         // name would point at a file that is not there.
         assert_eq!(
             file(&["invite.ics"]),
-            Some(NamedFile::Calendar(PathBuf::from(
-                "/home/ann/Downloads/invite.ics"
-            )))
+            named(FileKind::Calendar, "/home/ann/Downloads/invite.ics")
         );
         assert_eq!(
             file(&["./trips/invite.ics"]),
-            Some(NamedFile::Calendar(PathBuf::from(
-                "/home/ann/Downloads/trips/invite.ics"
-            )))
+            named(FileKind::Calendar, "/home/ann/Downloads/trips/invite.ics")
         );
     }
 
@@ -552,9 +558,9 @@ mod tests {
         let name = std::ffi::OsStr::from_bytes(b"/tmp/f\xe9rias.ics");
         let mut list = args(&[]);
         list.push(name.to_os_string());
-        let Some(NamedFile::Calendar(path)) = named_file(&list, Path::new(HERE)) else {
-            panic!("a calendar file");
-        };
+        let file = named_file(&list, Path::new(HERE)).expect("a calendar file");
+        assert_eq!(file.kind, FileKind::Calendar);
+        let path = file.path;
         assert_eq!(path.as_os_str(), name);
         let handed = gtk::glib::prelude::ToVariant::to_variant(&path);
         assert_eq!(path_from_variant(&handed), Some(path));

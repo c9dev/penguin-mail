@@ -6,7 +6,6 @@
 use std::path::Path;
 
 use adw::prelude::*;
-use gtk::glib;
 use mailrs_domain::translate::gettext;
 
 /// The largest file read: the ceiling mail servers put on a message, so
@@ -53,25 +52,17 @@ pub fn show_unreadable(path: &Path, why: &str) -> adw::Window {
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let window = adw::Window::builder()
-        .title(if name.is_empty() {
-            gettext("Message")
-        } else {
-            name
-        })
-        .default_width(520)
-        .default_height(-1)
-        .build();
-    crate::ui::window::track_dark_class(&window);
-    let toolbar = adw::ToolbarView::new();
-    toolbar.add_top_bar(&adw::HeaderBar::new());
-    let status = adw::StatusPage::builder()
-        .icon_name("io.github.c9dev.PenguinMail-symbolic")
-        .title(glib::markup_escape_text(&gettext("Could Not Open This File")).as_str())
-        .description(glib::markup_escape_text(why).as_str())
-        .build();
-    toolbar.set_content(Some(&status));
-    window.set_content(Some(&toolbar));
+    let title = if name.is_empty() {
+        gettext("Message")
+    } else {
+        name
+    };
+    let (window, toasts) = crate::ui::file_window::shell(&title);
+    toasts.set_child(Some(&crate::ui::file_window::status(
+        "io.github.c9dev.PenguinMail-symbolic",
+        &gettext("Could Not Open This File"),
+        why,
+    )));
     window.present();
     window
 }

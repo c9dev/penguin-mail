@@ -2519,11 +2519,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: невідомий параметр {option}"
 
-#: app/src/main.rs:442
+#: app/src/main.rs:445
 msgid "Penguin Mail Could Not Start"
 msgstr "Не вдалося запустити Penguin Mail"
 
-#: app/src/main.rs:447 app/src/ui/about.rs:181
+#: app/src/main.rs:450 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Повідомити про проблему"
 
@@ -5922,7 +5922,7 @@ msgid "New and existing"
 msgstr "Нові й наявні"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:58 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:56 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
 #: app/src/ui/window/loose.rs:129
 msgid "Message"
@@ -7994,11 +7994,11 @@ msgstr "Позначити як прочитане (U)"
 msgid "Mark as Unread (U)"
 msgstr "Позначити як непрочитане (U)"
 
-#: app/src/ui/conversation.rs:2115
+#: app/src/ui/conversation.rs:2118
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2132 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:266
 msgid "Clear Flag"
 msgstr "Зняти прапорець"
 
@@ -8026,25 +8026,25 @@ msgstr "Сервери календаря і контактів"
 msgid "Could not use that server: {reason}"
 msgstr "Не вдалося використати цей сервер: {reason}"
 
-#: app/src/ui/eml_file.rs:27
+#: app/src/ui/eml_file.rs:26
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "Цей файл завеликий, щоб бути календарем."
 
-#: app/src/ui/eml_file.rs:31
+#: app/src/ui/eml_file.rs:30
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "Цей файл не містить ключа OpenPGP."
 
-#: app/src/ui/eml_file.rs:43
+#: app/src/ui/eml_file.rs:42
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file does not hold a message."
 msgstr "Цей файл завеликий, щоб бути календарем."
 
-#: app/src/ui/eml_file.rs:70 app/src/ui/ics_file.rs:81
+#: app/src/ui/eml_file.rs:63 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Не вдалося відкрити цей файл"
 
@@ -8271,27 +8271,27 @@ msgstr "Адресу створено"
 msgid "This file is too large to be a calendar."
 msgstr "Цей файл завеликий, щоб бути календарем."
 
-#: app/src/ui/ics_file.rs:55
+#: app/src/ui/ics_file.rs:54
 msgid "Calendar File"
 msgstr "Файл календаря"
 
-#: app/src/ui/ics_file.rs:78
+#: app/src/ui/ics_file.rs:65
 msgid "No Events in This File"
 msgstr "У цьому файлі немає подій"
 
-#: app/src/ui/ics_file.rs:79
+#: app/src/ui/ics_file.rs:66
 msgid "Penguin Mail found no event to add in it."
 msgstr "Penguin Mail не знайшов у ньому жодної події для додавання."
 
-#: app/src/ui/ics_file.rs:148
+#: app/src/ui/ics_file.rs:131
 msgid "No app on this desktop opens calendar files"
 msgstr "Жодна програма на цій стільниці не відкриває файли календаря"
 
-#: app/src/ui/ics_file.rs:159
+#: app/src/ui/ics_file.rs:142
 msgid "A file has nobody to answer to"
 msgstr "У файлі немає кому відповідати"
 
-#: app/src/ui/ics_file.rs:196
+#: app/src/ui/ics_file.rs:179
 msgid ""
 "No account here has a calendar Penguin Mail can add to. Add an account with "
 "a calendar, or turn one on in Preferences, under Calendar, then open the "
@@ -8301,26 +8301,26 @@ msgstr ""
 "додавати події. Додайте обліковий запис із календарем або ввімкніть його в "
 "«Параметрах», у розділі «Календар», а тоді знову відкрийте файл."
 
-#: app/src/ui/ics_file.rs:275
+#: app/src/ui/ics_file.rs:258
 msgid ""
 "Nothing in this file can be added, since its events have no id or start time"
 msgstr ""
 "Із цього файлу нічого не можна додати, бо його події не мають ідентифікатора "
 "або часу початку"
 
-#: app/src/ui/ics_file.rs:281
+#: app/src/ui/ics_file.rs:264
 msgid "Some events were left out, since they have no id or start time"
 msgstr ""
 "Деякі події пропущено, бо вони не мають ідентифікатора або часу початку"
 
-#: app/src/ui/ics_file.rs:291
+#: app/src/ui/ics_file.rs:274
 msgid ""
 "Penguin Mail has no permission to use this calendar. Allow it in Preferences."
 msgstr ""
 "Penguin Mail не має дозволу використовувати цей календар. Надайте його в "
 "«Параметрах»."
 
-#: app/src/ui/ics_file.rs:294
+#: app/src/ui/ics_file.rs:277
 msgid "Could not add to your calendar: {reason}"
 msgstr "Не вдалося додати до календаря: {reason}"
 
@@ -8663,7 +8663,7 @@ msgid "This link contains hidden or direction-changing characters."
 msgstr ""
 "Це посилання містить приховані символи або символи зміни напрямку тексту."
 
-#: app/src/ui/mod.rs:501
+#: app/src/ui/mod.rs:502
 msgid "Gray"
 msgstr "Сірий"
 

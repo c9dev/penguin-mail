@@ -2069,7 +2069,10 @@ impl Header {
             queued: open.queued.clone(),
             loose: open.loose.as_ref().map(|loose| loose.has_account),
             draft: open.is_draft(),
-            unsubscribe: !open.unsubscribed && open.list_unsubscribe().is_some(),
+            // A loose message is in no list to leave.
+            unsubscribe: !open.is_loose()
+                && !open.unsubscribed
+                && open.list_unsubscribe().is_some(),
             starred: open.starred(),
             flag_color: open.flag_color,
             muted: open.muted(),

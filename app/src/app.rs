@@ -295,9 +295,9 @@ impl App {
             // knows which account answers from it.
             let (this, hold) = (Rc::clone(self), self.gio.hold());
             glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
-                match &file {
-                    crate::NamedFile::Calendar(path) => this.open_calendar_file(path),
-                    crate::NamedFile::Mail(path) => this.open_mail_file(path),
+                match file.kind {
+                    crate::FileKind::Calendar => this.open_calendar_file(&file.path),
+                    crate::FileKind::Mail => this.open_mail_file(&file.path),
                 }
                 drop(hold);
             });
