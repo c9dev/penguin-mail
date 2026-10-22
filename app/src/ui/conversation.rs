@@ -1804,8 +1804,8 @@ impl ConversationView {
         }
         self.queued.hide();
         self.refresh_remind_menu();
-        self.apply_toolbar(if header.loose {
-            Holds::Loose
+        self.apply_toolbar(if let Some(answerable) = header.loose {
+            Holds::Loose { answerable }
         } else if header.draft {
             Holds::Draft
         } else {
@@ -2052,7 +2052,8 @@ struct Drawn {
 /// What the header buttons show for the open thread.
 struct Header {
     queued: Option<Unsent>,
-    loose: bool,
+    /// A loose message, and whether an account exists to answer it from.
+    loose: Option<bool>,
     draft: bool,
     /// Whether the list banner offers to unsubscribe.
     unsubscribe: bool,
@@ -2066,7 +2067,7 @@ impl Header {
     fn of(open: &OpenThread) -> Header {
         Header {
             queued: open.queued.clone(),
-            loose: open.is_loose(),
+            loose: open.loose.as_ref().map(|loose| loose.has_account),
             draft: open.is_draft(),
             unsubscribe: !open.unsubscribed && open.list_unsubscribe().is_some(),
             starred: open.starred(),
