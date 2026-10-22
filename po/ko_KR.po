@@ -3555,8 +3555,8 @@ msgstr "해당 계정이 연결되어 있지 않습니다."
 msgid "Could not save: {reason}"
 msgstr "저장할 수 없습니다: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2716
-#: app/src/ui/window.rs:2739
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2729
+#: app/src/ui/window.rs:2752
 msgid "Could not open the draft: {reason}"
 msgstr "임시보관 메일을 열 수 없습니다: {reason}"
 
@@ -3569,7 +3569,7 @@ msgstr[0] "메시지 {count}개"
 msgid "Summarize"
 msgstr "요약"
 
-#: app/src/render.rs:281 app/src/ui/thread_row.rs:410
+#: app/src/render.rs:281 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
 msgstr "알 수 없는 발신자"
 
@@ -3804,7 +3804,7 @@ msgstr "{size} 미만"
 msgid "Larger than {size}"
 msgstr "{size} 초과"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:822
+#: app/src/rules.rs:251 app/src/settings/mod.rs:859
 msgid "All mail"
 msgstr "모든 메일"
 
@@ -3900,191 +3900,205 @@ msgstr "Penguin Mail이 열려 있는 동안 이 컴퓨터에서"
 msgid "On the server"
 msgstr "서버에서"
 
-#: app/src/settings/mod.rs:206 app/src/settings/mod.rs:394
-#: app/src/settings/mod.rs:734 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
+#: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
 msgid "Off"
 msgstr "끄기"
 
-#: app/src/settings/mod.rs:207
+#: app/src/settings/mod.rs:211
 msgid "Local Server"
 msgstr "로컬 서버"
 
-#: app/src/settings/mod.rs:208
+#: app/src/settings/mod.rs:212
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:209
+#: app/src/settings/mod.rs:213
 msgid "Claude Subscription"
 msgstr "Claude 구독"
 
-#: app/src/settings/mod.rs:234 app/src/ui/window.rs:3406
-#: app/src/ui/window.rs:3486
+#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3419
+#: app/src/ui/window.rs:3499
 msgid "Assistant"
 msgstr "도우미"
 
-#: app/src/settings/mod.rs:235 app/src/ui/preferences.rs:213
+#: app/src/settings/mod.rs:239 app/src/ui/preferences.rs:213
 msgid "Translation"
 msgstr "번역"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:239
+#: app/src/settings/mod.rs:243
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "구독 해지"
 
-#: app/src/settings/mod.rs:245
+#: app/src/settings/mod.rs:249
 msgid "Answers questions and acts on your mail"
 msgstr "메일에 관한 질문에 답하고 작업 수행"
 
-#: app/src/settings/mod.rs:246
+#: app/src/settings/mod.rs:250
 msgid "Translates a message when you ask"
 msgstr "요청한 메시지 번역"
 
-#: app/src/settings/mod.rs:248
+#: app/src/settings/mod.rs:252
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "규칙으로 처리할 수 없는 뉴스레터 구독 해지 페이지 읽기"
 
-#: app/src/settings/mod.rs:286
+#: app/src/settings/mod.rs:290
 msgid "Same as the Assistant"
 msgstr "도우미와 동일"
 
-#: app/src/settings/mod.rs:395
+#: app/src/settings/mod.rs:399
 msgid "Claude's own only"
 msgstr "Claude 자체 검색만"
 
-#: app/src/settings/mod.rs:396
+#: app/src/settings/mod.rs:400
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:397
+#: app/src/settings/mod.rs:401
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:563
+#: app/src/settings/mod.rs:571
 msgid "Rich text"
 msgstr "서식 있는 텍스트"
 
-#: app/src/settings/mod.rs:564
+#: app/src/settings/mod.rs:572
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:583 app/src/ui/preferences/accounts.rs:150
+#: app/src/settings/mod.rs:591 app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "자동"
 
-#: app/src/settings/mod.rs:584 app/src/ui/calendar/editor.rs:2163
+#: app/src/settings/mod.rs:592 app/src/ui/calendar/editor.rs:2163
 msgid "Monday"
 msgstr "월요일"
 
-#: app/src/settings/mod.rs:585 app/src/ui/calendar/editor.rs:2169
+#: app/src/settings/mod.rs:593 app/src/ui/calendar/editor.rs:2169
 msgid "Sunday"
 msgstr "일요일"
 
-#: app/src/settings/mod.rs:623
+#: app/src/settings/mod.rs:631
 msgid "When opened"
 msgstr "열었을 때"
 
-#: app/src/settings/mod.rs:624
+#: app/src/settings/mod.rs:632
 msgid "After 2 seconds"
 msgstr "2초 후"
 
-#: app/src/settings/mod.rs:625
+#: app/src/settings/mod.rs:633
 msgid "Only when I choose"
 msgstr "직접 선택할 때만"
 
-#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:659
+#: app/src/settings/mod.rs:649 app/src/settings/mod.rs:667
 msgid "Ask each time"
 msgstr "매번 묻기"
 
-#: app/src/settings/mod.rs:642
+#: app/src/settings/mod.rs:650
 msgid "Always load"
 msgstr "항상 불러오기"
 
-#: app/src/settings/mod.rs:660
+#: app/src/settings/mod.rs:668
 msgid "Never ask"
 msgstr "묻지 않기"
 
-#: app/src/settings/mod.rs:694
+#: app/src/settings/mod.rs:695
+#, fuzzy
+#| msgid "Preview"
+msgid "No Preview"
+msgstr "미리 보기"
+
+#: app/src/settings/mod.rs:696
+msgid "1 Line"
+msgstr ""
+
+#: app/src/settings/mod.rs:697
+msgid "2 Lines"
+msgstr ""
+
+#: app/src/settings/mod.rs:731
 msgid "Small"
 msgstr "작게"
 
-#: app/src/settings/mod.rs:695
+#: app/src/settings/mod.rs:732
 msgid "Default"
 msgstr "기본값"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:733
 msgid "Large"
 msgstr "크게"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:734
 msgid "Larger"
 msgstr "더 크게"
 
-#: app/src/settings/mod.rs:735
+#: app/src/settings/mod.rs:772
 msgid "5 seconds"
 msgstr "5초"
 
-#: app/src/settings/mod.rs:736
+#: app/src/settings/mod.rs:773
 msgid "10 seconds"
 msgstr "10초"
 
-#: app/src/settings/mod.rs:737
+#: app/src/settings/mod.rs:774
 msgid "20 seconds"
 msgstr "20초"
 
-#: app/src/settings/mod.rs:738
+#: app/src/settings/mod.rs:775
 msgid "30 seconds"
 msgstr "30초"
 
-#: app/src/settings/mod.rs:755
+#: app/src/settings/mod.rs:792
 msgid "Follow system"
 msgstr "시스템 설정 따르기"
 
-#: app/src/settings/mod.rs:756
+#: app/src/settings/mod.rs:793
 msgid "Light"
 msgstr "밝게"
 
-#: app/src/settings/mod.rs:757
+#: app/src/settings/mod.rs:794
 msgid "Dark"
 msgstr "어둡게"
 
-#: app/src/settings/mod.rs:791
+#: app/src/settings/mod.rs:828
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "{count}초마다"
 
-#: app/src/settings/mod.rs:799
+#: app/src/settings/mod.rs:836
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "{count}분마다"
 
-#: app/src/settings/mod.rs:816
+#: app/src/settings/mod.rs:853
 msgid "2 weeks"
 msgstr "2주"
 
-#: app/src/settings/mod.rs:817
+#: app/src/settings/mod.rs:854
 msgid "30 days"
 msgstr "30일"
 
-#: app/src/settings/mod.rs:818
+#: app/src/settings/mod.rs:855
 msgid "90 days"
 msgstr "90일"
 
-#: app/src/settings/mod.rs:819
+#: app/src/settings/mod.rs:856
 msgid "1 year"
 msgstr "1년"
 
-#: app/src/settings/mod.rs:820
+#: app/src/settings/mod.rs:857
 msgid "2 years"
 msgstr "2년"
 
-#: app/src/settings/mod.rs:821
+#: app/src/settings/mod.rs:858
 msgid "5 years"
 msgstr "5년"
 
-#: app/src/settings/mod.rs:843
+#: app/src/settings/mod.rs:880
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4092,19 +4106,19 @@ msgstr ""
 "모든 메시지를 이 컴퓨터에 보관합니다. 큰 계정은 많은 디스크 공간과 메모리를 "
 "사용하며 이전 메일은 백그라운드에서 다운로드합니다."
 
-#: app/src/settings/mod.rs:845
+#: app/src/settings/mod.rs:882
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "받은편지함의 메일은 모두 유지하며 이전 메일도 검색할 수 있습니다"
 
-#: app/src/settings/mod.rs:852
+#: app/src/settings/mod.rs:889
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:853
+#: app/src/settings/mod.rs:890
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:854
+#: app/src/settings/mod.rs:891
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4277,11 +4291,11 @@ msgstr "Penguin Mail 열기"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
 #: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:456
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:470
 msgid "New Message"
 msgstr "새 메시지"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3412
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3425
 msgid "Check for Mail"
 msgstr "메일 확인"
 
@@ -4295,11 +4309,11 @@ msgstr "{version}의 새로운 기능"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1031 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1065 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "업데이트 확인"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3425
+#: app/src/tray.rs:266 app/src/ui/window.rs:3438
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "종료"
@@ -4320,7 +4334,7 @@ msgstr "새로운 기능"
 msgid "Website"
 msgstr "웹사이트"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3424
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3437
 msgid "Donate"
 msgstr "기부"
 
@@ -4328,7 +4342,7 @@ msgstr "기부"
 msgid "License"
 msgstr "라이선스"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3423
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3436
 msgid "About Penguin Mail"
 msgstr "Penguin Mail 정보"
 
@@ -4377,12 +4391,12 @@ msgid "The update to {version} failed"
 msgstr "{version} 업데이트 실패"
 
 #: app/src/ui/add_account.rs:419 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1505
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1518
 msgid "Copy Command"
 msgstr "명령 복사"
 
 #: app/src/ui/add_account.rs:429 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1510
+#: app/src/ui/window.rs:1523
 msgid "Command copied"
 msgstr "명령을 복사했습니다"
 
@@ -4494,7 +4508,7 @@ msgstr "취소"
 
 #: app/src/ui/add_account.rs:984 app/src/ui/add_account.rs:1139
 #: app/src/ui/add_account.rs:2918 app/src/ui/add_account.rs:3008
-#: app/src/ui/add_account.rs:3465 app/src/ui/window.rs:1450
+#: app/src/ui/add_account.rs:3465 app/src/ui/window.rs:1463
 msgid "Sign In"
 msgstr "로그인"
 
@@ -4616,7 +4630,7 @@ msgstr "나중에"
 #: app/src/ui/add_account.rs:1332 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1003 app/src/ui/contacts_prefs.rs:442
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1572
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1585
 msgid "Grant Access"
 msgstr "접근 권한 부여"
 
@@ -4637,7 +4651,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail은 다운로드한 모든 메시지를 이 컴퓨터에 보관합니다."
 
 #: app/src/ui/add_account.rs:1486 app/src/ui/add_account.rs:1487
-#: app/src/ui/preferences.rs:1379
+#: app/src/ui/preferences.rs:1413
 msgid "Days"
 msgstr "일"
 
@@ -4825,7 +4839,7 @@ msgid ""
 "from it safely."
 msgstr "서버에서 메시지를 구별할 수 없어 안전하게 다운로드할 수 없습니다."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3572
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3585
 msgid "Summarize this conversation"
 msgstr "이 대화 요약"
 
@@ -4850,13 +4864,13 @@ msgstr "열린 대화에 답장 초안 작성"
 msgid "Choose a Model"
 msgstr "모델 선택"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3533
-#: app/src/ui/window.rs:3534
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3546
+#: app/src/ui/window.rs:3547
 msgid "Detach"
 msgstr "분리"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4143
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4167
 msgid "Close"
 msgstr "닫기"
 
@@ -5061,7 +5075,7 @@ msgstr "{server} 편집"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3176
+#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3189
 msgid "Remove"
 msgstr "제거"
 
@@ -5413,7 +5427,7 @@ msgstr ""
 "접 켜기 전에는 꺼져 있습니다. 스킬 스크립트는 메일, 키, 홈 폴더에 접근할 수 "
 "없는 샌드박스에서 실행하며 도우미가 명령을 실행할 때마다 묻습니다."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:413
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:447
 msgid "Not Available"
 msgstr "사용할 수 없음"
 
@@ -5591,7 +5605,7 @@ msgid "Declined"
 msgstr "거절함"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1198
+#: app/src/ui/preferences.rs:1232
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -5703,11 +5717,11 @@ msgstr "종료 날짜"
 msgid "End time"
 msgstr "종료 시간"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1331
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1365
 msgid "Starts"
 msgstr "시작"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1333
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1367
 msgid "Ends"
 msgstr "종료"
 
@@ -5848,8 +5862,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "{file}을(를) 첨부할 수 없습니다: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1947 app/src/ui/composer/mod.rs:413
-#: app/src/ui/thread_list.rs:326 app/src/ui/thread_list.rs:332
-#: app/src/ui/thread_list.rs:998
+#: app/src/ui/thread_list.rs:339 app/src/ui/thread_list.rs:345
+#: app/src/ui/thread_list.rs:1094
 msgid "More"
 msgstr "더 보기"
 
@@ -6371,7 +6385,7 @@ msgstr "종일"
 
 #: app/src/ui/calendar/mod.rs:1794 app/src/ui/calendar/mod.rs:3046
 #: app/src/ui/calendar/sidebar.rs:352 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1212 app/src/ui/preferences.rs:1387
+#: app/src/ui/preferences.rs:1246 app/src/ui/preferences.rs:1421
 msgid "%a"
 msgstr "%a"
 
@@ -7882,7 +7896,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "이메일 가리기 허용"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3623
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3636
 msgid "Add an account first"
 msgstr "먼저 계정을 추가하세요"
 
@@ -8401,155 +8415,196 @@ msgstr "스타일"
 msgid "Text Size"
 msgstr "텍스트 크기"
 
-#: app/src/ui/preferences.rs:248 app/src/ui/preferences.rs:253
+#: app/src/ui/preferences.rs:243
+#, fuzzy
+#| msgid "Message Source"
+msgid "Message Preview"
+msgstr "메시지 원문"
+
+#: app/src/ui/preferences.rs:244
+msgid "Lines of message text below the subject"
+msgstr ""
+
+#: app/src/ui/preferences.rs:250
+#, fuzzy
+#| msgid "{count} unread message"
+#| msgid_plural "{count} unread messages"
+msgid "Bold Unread Messages"
+msgstr "읽지 않은 메시지 {count}개"
+
+#: app/src/ui/preferences.rs:252
+msgid "Use heavier text for unread senders, subjects, and dates"
+msgstr ""
+
+#: app/src/ui/preferences.rs:259
+#, fuzzy
+#| msgid "Always Load Images?"
+msgid "Always Bold Senders"
+msgstr "항상 이미지를 불러올까요?"
+
+#: app/src/ui/preferences.rs:261
+msgid "Use heavier sender text for both read and unread messages"
+msgstr ""
+
+#: app/src/ui/preferences.rs:268
+#, fuzzy
+#| msgid "Show Calendars"
+msgid "Show Avatars"
+msgstr "캘린더 표시"
+
+#: app/src/ui/preferences.rs:270
+msgid "Show contact pictures or initials in the message list"
+msgstr ""
+
+#: app/src/ui/preferences.rs:282 app/src/ui/preferences.rs:287
 msgid "Notifications"
 msgstr "알림"
 
-#: app/src/ui/preferences.rs:257
+#: app/src/ui/preferences.rs:291
 msgid "Notify About New Mail"
 msgstr "새 메일 알림"
 
-#: app/src/ui/preferences.rs:264
+#: app/src/ui/preferences.rs:298
 msgid "Show Sender and Subject"
 msgstr "발신자와 제목 표시"
 
-#: app/src/ui/preferences.rs:265
+#: app/src/ui/preferences.rs:299
 msgid "Turn off to see only how much mail arrived"
 msgstr "끄면 도착한 메일 수만 표시합니다"
 
-#: app/src/ui/preferences.rs:275
+#: app/src/ui/preferences.rs:309
 msgid "Only for VIPs"
 msgstr "VIP만"
 
-#: app/src/ui/preferences.rs:276
+#: app/src/ui/preferences.rs:310
 msgid "Stay quiet about mail from everyone else"
 msgstr "다른 사람의 메일은 알리지 않습니다"
 
-#: app/src/ui/preferences.rs:286
+#: app/src/ui/preferences.rs:320
 msgid "Buttons"
 msgstr "버튼"
 
-#: app/src/ui/preferences.rs:288
+#: app/src/ui/preferences.rs:322
 msgid "What a notification offers besides opening the conversation"
 msgstr "대화 열기 외에 알림에서 제공할 작업"
 
-#: app/src/ui/preferences.rs:319
+#: app/src/ui/preferences.rs:353
 msgid "Event Reminders"
 msgstr "일정 알림"
 
-#: app/src/ui/preferences.rs:321
+#: app/src/ui/preferences.rs:355
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr "일정 또는 캘린더에 설정된 시간에 일정 시작을 알립니다"
 
-#: app/src/ui/preferences.rs:343 app/src/ui/preferences.rs:350
+#: app/src/ui/preferences.rs:377 app/src/ui/preferences.rs:384
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "계정"
 
-#: app/src/ui/preferences.rs:351
+#: app/src/ui/preferences.rs:385
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
 msgstr "서명, 발신 주소, 서버, 연락처 및 서버가 보고한 저장 공간."
 
-#: app/src/ui/preferences.rs:356 app/src/ui/preferences.rs:590
+#: app/src/ui/preferences.rs:390 app/src/ui/preferences.rs:624
 msgid "No Accounts Yet"
 msgstr "아직 계정 없음"
 
-#: app/src/ui/preferences.rs:358 app/src/ui/preferences.rs:592
+#: app/src/ui/preferences.rs:392 app/src/ui/preferences.rs:626
 msgid "Add an account to choose a sender and write signatures."
 msgstr "계정을 추가하여 발신자를 선택하고 서명을 작성하세요."
 
-#: app/src/ui/preferences.rs:398
+#: app/src/ui/preferences.rs:432
 msgid "Mailbox storage is not available through this connection."
 msgstr "이 연결에서는 편지함 저장 공간을 확인할 수 없습니다."
 
-#: app/src/ui/preferences.rs:400
+#: app/src/ui/preferences.rs:434
 msgid "The server has not reported its storage usage."
 msgstr "서버에서 저장 공간 사용량을 보고하지 않았습니다."
 
-#: app/src/ui/preferences.rs:403
+#: app/src/ui/preferences.rs:437
 msgid "Space on the Server"
 msgstr "서버 저장 공간"
 
-#: app/src/ui/preferences.rs:471 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:505 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "서명"
 
-#: app/src/ui/preferences.rs:485
+#: app/src/ui/preferences.rs:519
 msgid ""
 "Used by this account and addresses without their own signature. Markdown "
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
 
-#: app/src/ui/preferences.rs:493 app/src/ui/sender_prefs.rs:87
+#: app/src/ui/preferences.rs:527 app/src/ui/sender_prefs.rs:87
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "{account}의 서명"
 
-#: app/src/ui/preferences.rs:507
+#: app/src/ui/preferences.rs:541
 msgid "Import from Gmail"
 msgstr "Gmail에서 가져오기"
 
-#: app/src/ui/preferences.rs:527
+#: app/src/ui/preferences.rs:561
 msgid "This account is not syncing yet"
 msgstr "이 계정은 아직 동기화 중이 아닙니다"
 
-#: app/src/ui/preferences.rs:543
+#: app/src/ui/preferences.rs:577
 msgid "Imported the signature from Gmail"
 msgstr "Gmail에서 서명을 가져왔습니다"
 
-#: app/src/ui/preferences.rs:547
+#: app/src/ui/preferences.rs:581
 msgid "Gmail has no signature for this account"
 msgstr "이 계정의 Gmail 서명이 없습니다"
 
-#: app/src/ui/preferences.rs:550
+#: app/src/ui/preferences.rs:584
 msgid "Could not import: {reason}"
 msgstr "가져올 수 없습니다: {reason}"
 
-#: app/src/ui/preferences.rs:585 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:619 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "작성"
 
-#: app/src/ui/preferences.rs:601 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:635 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "새 메시지"
 
-#: app/src/ui/preferences.rs:605
+#: app/src/ui/preferences.rs:639
 msgid "New Messages Start As"
 msgstr "새 메시지 작성 형식"
 
-#: app/src/ui/preferences.rs:607
+#: app/src/ui/preferences.rs:641
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "서식 있는 텍스트는 글자에 서식을 적용하고 Markdown은 서식 기호를 표시합니다"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:614 app/src/ui/sidebar.rs:64
+#: app/src/ui/preferences.rs:648 app/src/ui/sidebar.rs:64
 #: app/src/ui/sidebar.rs:77
 msgid "Undo Send"
 msgstr "보내기 취소"
 
-#: app/src/ui/preferences.rs:616
+#: app/src/ui/preferences.rs:650
 msgid "How long you can take a message back after sending it"
 msgstr "메시지를 보낸 후 취소할 수 있는 시간"
 
-#: app/src/ui/preferences.rs:623
+#: app/src/ui/preferences.rs:657
 msgid "Check for Missing Attachments"
 msgstr "첨부 파일 누락 확인"
 
-#: app/src/ui/preferences.rs:625
+#: app/src/ui/preferences.rs:659
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr "파일을 첨부했다고 썼지만 첨부 파일이 없는 메시지를 보내기 전에 확인"
 
-#: app/src/ui/preferences.rs:659
+#: app/src/ui/preferences.rs:693
 msgid "Signing and Encryption"
 msgstr "서명 및 암호화"
 
-#: app/src/ui/preferences.rs:661
+#: app/src/ui/preferences.rs:695
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -8557,49 +8612,49 @@ msgstr ""
 "Penguin Mail은 키를 보관하고 암호를 직접 요청하는 GnuPG를 통해 서명하고 암호"
 "화합니다."
 
-#: app/src/ui/preferences.rs:666
+#: app/src/ui/preferences.rs:700
 msgid "Your OpenPGP Keys"
 msgstr "내 OpenPGP 키"
 
-#: app/src/ui/preferences.rs:667
+#: app/src/ui/preferences.rs:701
 msgid "Asking gpg…"
 msgstr "gpg에 요청 중…"
 
-#: app/src/ui/preferences.rs:671
+#: app/src/ui/preferences.rs:705
 msgid "Your S/MIME Certificates"
 msgstr "내 S/MIME 인증서"
 
-#: app/src/ui/preferences.rs:672
+#: app/src/ui/preferences.rs:706
 msgid "Asking gpgsm…"
 msgstr "gpgsm에 요청 중…"
 
-#: app/src/ui/preferences.rs:679
+#: app/src/ui/preferences.rs:713
 msgid "Sign My Messages by Default"
 msgstr "기본적으로 내 메시지에 서명"
 
-#: app/src/ui/preferences.rs:680
+#: app/src/ui/preferences.rs:714
 msgid "New messages open with Sign turned on"
 msgstr "새 메시지를 열 때 서명 켜기"
 
-#: app/src/ui/preferences.rs:686
+#: app/src/ui/preferences.rs:720
 msgid "Encrypt When I Can"
 msgstr "가능하면 암호화"
 
-#: app/src/ui/preferences.rs:688
+#: app/src/ui/preferences.rs:722
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "모든 수신자에게 키 또는 인증서가 있으면 암호화 켜기"
 
-#: app/src/ui/preferences.rs:777
+#: app/src/ui/preferences.rs:811
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg에 요청할 수 없습니다: {reason}"
 
-#: app/src/ui/preferences.rs:796
+#: app/src/ui/preferences.rs:830
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm에 요청할 수 없습니다: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:805
+#: app/src/ui/preferences.rs:839
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -8610,11 +8665,11 @@ msgstr[0] ""
 "Penguin Mail은 키를 보관하고 암호를 직접 요청하는 {programs}을 통해 서명하고 "
 "암호화합니다."
 
-#: app/src/ui/preferences.rs:837 app/src/ui/preferences.rs:850
+#: app/src/ui/preferences.rs:871 app/src/ui/preferences.rs:884
 msgid "Spelling"
 msgstr "맞춤법"
 
-#: app/src/ui/preferences.rs:839
+#: app/src/ui/preferences.rs:873
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -8623,166 +8678,166 @@ msgstr ""
 "설치된 사전이 없어 Penguin Mail이 맞춤법을 검사하지 않습니다. hunspell-en-us "
 "또는 hunspell-pt-pt 같은 Hunspell 사전을 설치한 후 작성 창을 다시 여세요."
 
-#: app/src/ui/preferences.rs:852
+#: app/src/ui/preferences.rs:886
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "각 계정의 맞춤법 검사 언어입니다. 설치된 사전: {languages}."
 
-#: app/src/ui/preferences.rs:864
+#: app/src/ui/preferences.rs:898
 msgid "System: {language}"
 msgstr "시스템: {language}"
 
-#: app/src/ui/preferences.rs:879
+#: app/src/ui/preferences.rs:913
 msgid "All Installed Languages"
 msgstr "설치된 모든 언어"
 
-#: app/src/ui/preferences.rs:922
+#: app/src/ui/preferences.rs:956
 msgid "Sync"
 msgstr "동기화"
 
-#: app/src/ui/preferences.rs:930
+#: app/src/ui/preferences.rs:964
 msgid "Checking"
 msgstr "확인"
 
-#: app/src/ui/preferences.rs:936
+#: app/src/ui/preferences.rs:970
 msgid "Check for New Mail"
 msgstr "새 메일 확인"
 
-#: app/src/ui/preferences.rs:945
+#: app/src/ui/preferences.rs:979
 msgid "Storage"
 msgstr "저장 공간"
 
-#: app/src/ui/preferences.rs:953
+#: app/src/ui/preferences.rs:987
 msgid "Keep Mail on This Computer For"
 msgstr "이 컴퓨터의 메일 보관 기간"
 
-#: app/src/ui/preferences.rs:974
+#: app/src/ui/preferences.rs:1008
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "오프라인에서 열 수 있도록 보관한 읽은 메일의 본문"
 
-#: app/src/ui/preferences.rs:977
+#: app/src/ui/preferences.rs:1011
 msgid "Message Cache"
 msgstr "메시지 캐시"
 
-#: app/src/ui/preferences.rs:1006
+#: app/src/ui/preferences.rs:1040
 msgid "Startup"
 msgstr "시작"
 
-#: app/src/ui/preferences.rs:1009
+#: app/src/ui/preferences.rs:1043
 msgid "Start in the Tray at Login"
 msgstr "로그인 시 트레이에서 시작"
 
-#: app/src/ui/preferences.rs:1024
+#: app/src/ui/preferences.rs:1058
 msgid "Not available in demo mode"
 msgstr "데모 모드에서는 사용할 수 없음"
 
-#: app/src/ui/preferences.rs:1032
+#: app/src/ui/preferences.rs:1066
 msgid "Look for a new release once a day"
 msgstr "하루에 한 번 새 버전 확인"
 
-#: app/src/ui/preferences.rs:1073
+#: app/src/ui/preferences.rs:1107
 msgid "{used} of {limit}"
 msgstr "{limit} 중 {used} 사용"
 
-#: app/src/ui/preferences.rs:1085
+#: app/src/ui/preferences.rs:1119
 msgid "{amount} · Full"
 msgstr "{amount} · 가득 참"
 
-#: app/src/ui/preferences.rs:1087
+#: app/src/ui/preferences.rs:1121
 msgid "{amount} · Nearly full"
 msgstr "{amount} · 거의 가득 참"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1133
 msgid "Senders Who May Load Images"
 msgstr "이미지 로드를 허용한 발신자"
 
-#: app/src/ui/preferences.rs:1100 app/src/ui/preferences.rs:1109
+#: app/src/ui/preferences.rs:1134 app/src/ui/preferences.rs:1143
 msgid "Nobody yet"
 msgstr "아직 없음"
 
-#: app/src/ui/preferences.rs:1111
+#: app/src/ui/preferences.rs:1145
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "발신자 {count}명"
 
-#: app/src/ui/preferences.rs:1121
+#: app/src/ui/preferences.rs:1155
 msgid "Anyone at this domain"
 msgstr "이 도메인의 모든 발신자"
 
-#: app/src/ui/preferences.rs:1123
+#: app/src/ui/preferences.rs:1157
 msgid "This address"
 msgstr "이 주소"
 
-#: app/src/ui/preferences.rs:1128
+#: app/src/ui/preferences.rs:1162
 msgid "Stop Loading Images from This Sender"
 msgstr "이 발신자의 이미지 로드 중지"
 
-#: app/src/ui/preferences.rs:1135
+#: app/src/ui/preferences.rs:1169
 msgid "Stop loading images from {sender}"
 msgstr "{sender}의 이미지 로드 중지"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1239
 msgid "Monday to Friday"
 msgstr "월요일부터 금요일까지"
 
-#: app/src/ui/preferences.rs:1206
+#: app/src/ui/preferences.rs:1240
 msgid "Every day of the week"
 msgstr "매일"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1241
 msgid "No days"
 msgstr "선택한 요일 없음"
 
-#: app/src/ui/preferences.rs:1214
+#: app/src/ui/preferences.rs:1248
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1251
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1285
+#: app/src/ui/preferences.rs:1319
 msgid "Week Starts On"
 msgstr "한 주의 시작 요일"
 
-#: app/src/ui/preferences.rs:1290
+#: app/src/ui/preferences.rs:1324
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "자동을 선택하면 지역 설정의 주 시작 요일을 따릅니다"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1338
 msgid "Working Hours"
 msgstr "근무 시간"
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1357
 msgid "Hours"
 msgstr "시간"
 
-#: app/src/ui/preferences.rs:1374
+#: app/src/ui/preferences.rs:1408
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1457
+#: app/src/ui/preferences.rs:1491
 msgid "Never Translate"
 msgstr "번역하지 않을 언어"
 
-#: app/src/ui/preferences.rs:1459
+#: app/src/ui/preferences.rs:1493
 msgid "Messages in these languages get no offer to translate them"
 msgstr "이 언어로 된 메시지에는 번역을 제안하지 않습니다"
 
-#: app/src/ui/preferences.rs:1488
+#: app/src/ui/preferences.rs:1522
 msgid "Follow System"
 msgstr "시스템 설정 따르기"
 
-#: app/src/ui/preferences.rs:1492
+#: app/src/ui/preferences.rs:1526
 msgid "Language"
 msgstr "언어"
 
-#: app/src/ui/preferences.rs:1493
+#: app/src/ui/preferences.rs:1527
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/preferences.rs:1570 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1604 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "서명 없음"
 
@@ -8858,7 +8913,7 @@ msgstr "마지막으로 사용한 캘린더 계정"
 msgid "Same as New Messages"
 msgstr "새 메시지와 동일"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:257
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:270
 msgid "All Inboxes"
 msgstr "모든 받은편지함"
 
@@ -8877,7 +8932,7 @@ msgstr "{account} 아래로 이동"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3421 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3434 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "환경설정"
 
@@ -9204,7 +9259,7 @@ msgid "Mailboxes"
 msgstr "메일함"
 
 #: app/src/ui/sidebar.rs:388 app/src/ui/sidebar.rs:1508
-#: app/src/ui/thread_list.rs:346
+#: app/src/ui/thread_list.rs:359
 msgid "Mail"
 msgstr "메일"
 
@@ -9270,7 +9325,7 @@ msgstr "자동 회신…"
 msgid "Rules…"
 msgstr "규칙…"
 
-#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3415
+#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3428
 msgid "Hide My Email…"
 msgstr "이메일 가리기…"
 
@@ -9457,30 +9512,30 @@ msgstr "본문"
 msgid "New Template"
 msgstr "새 템플릿"
 
-#: app/src/ui/thread_list.rs:220
+#: app/src/ui/thread_list.rs:233
 msgid "No Mail"
 msgstr "메일 없음"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:238
+#: app/src/ui/thread_list.rs:251
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "메일 검색, 예: from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:277 app/src/ui/thread_list.rs:297
+#: app/src/ui/thread_list.rs:290 app/src/ui/thread_list.rs:310
 msgid "Show Mailboxes"
 msgstr "메일함 표시"
 
-#: app/src/ui/thread_list.rs:282
+#: app/src/ui/thread_list.rs:295
 msgid "New Message (C)"
 msgstr "새 메시지 (C)"
 
-#: app/src/ui/thread_list.rs:287
+#: app/src/ui/thread_list.rs:300
 msgid "Search (/)"
 msgstr "검색 (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:296
+#: app/src/ui/thread_list.rs:309
 msgid "Search mail"
 msgstr "메일 검색"
 
@@ -9508,7 +9563,7 @@ msgstr "초대, {sender}, {subject}, {snippet}"
 msgid "{sender}, {subject}, {snippet}"
 msgstr "{sender}, {subject}, {snippet}"
 
-#: app/src/ui/thread_row.rs:488
+#: app/src/ui/thread_row.rs:525
 msgid "On the server, {lines}"
 msgstr "서버에 있음, {lines}"
 
@@ -9733,7 +9788,7 @@ msgstr "메일을 불러올 수 없습니다: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account}을(를) 추가했습니다. 메일 다운로드 중…"
 
-#: app/src/ui/window.rs:356 app/src/ui/window.rs:2901
+#: app/src/ui/window.rs:356 app/src/ui/window.rs:2914
 msgid "{account} is signed in again."
 msgstr "{account}에 다시 로그인했습니다."
 
@@ -9862,19 +9917,19 @@ msgstr[0] "메시지 {count}개를 받은편지함으로 이동했습니다"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (데모)"
 
-#: app/src/ui/window.rs:1341
+#: app/src/ui/window.rs:1354
 msgid "Could not read accounts: {reason}"
 msgstr "계정을 읽을 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2013
+#: app/src/ui/window.rs:2026
 msgid "Could not delete the mail: {reason}"
 msgstr "메일을 삭제할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2105
+#: app/src/ui/window.rs:2118
 msgid "Turn On the {service}"
 msgstr "{service} 켜기"
 
-#: app/src/ui/window.rs:2108
+#: app/src/ui/window.rs:2121
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -9884,59 +9939,59 @@ msgstr ""
 "져 있어 Google이 권한을 요청하기도 전에 거부합니다. 서비스를 켜고 잠시 기다"
 "린 후 다시 시도하세요."
 
-#: app/src/ui/window.rs:2114
+#: app/src/ui/window.rs:2127
 msgid "Open Google Cloud"
 msgstr "Google Cloud 열기"
 
-#: app/src/ui/window.rs:2435
+#: app/src/ui/window.rs:2448
 msgid "Select mail from one account to tag it."
 msgstr "태그를 지정하려면 한 계정의 메일을 선택하세요."
 
-#: app/src/ui/window.rs:2447
+#: app/src/ui/window.rs:2460
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "이 계정에는 아직 태그가 없습니다. Outlook에서 만드세요."
 
-#: app/src/ui/window.rs:2614
+#: app/src/ui/window.rs:2627
 msgid "Could not include {file}: {reason}"
 msgstr "{file}을(를) 포함할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2695
+#: app/src/ui/window.rs:2708
 msgid "The server had already sent this message."
 msgstr "서버가 이미 이 메시지를 보냈습니다."
 
-#: app/src/ui/window.rs:2700
+#: app/src/ui/window.rs:2713
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "다른 앱에서 이 메시지를 취소하여 더 이상 임시보관함에 없습니다."
 
-#: app/src/ui/window.rs:2814
+#: app/src/ui/window.rs:2827
 msgid "Downloading {file}…"
 msgstr "{file} 다운로드 중…"
 
-#: app/src/ui/window.rs:2835 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2848 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "{file}을(를) 다운로드 폴더에 저장했습니다"
 
-#: app/src/ui/window.rs:2838
+#: app/src/ui/window.rs:2851
 msgid "Open"
 msgstr "열기"
 
-#: app/src/ui/window.rs:2853 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2866 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "{file}을(를) 저장할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:3032
+#: app/src/ui/window.rs:3045
 msgid "Continue in your browser"
 msgstr "브라우저에서 계속"
 
-#: app/src/ui/window.rs:3062
+#: app/src/ui/window.rs:3075
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "이 Penguin Mail 빌드에는 Google 로그인 기능이 없습니다."
 
-#: app/src/ui/window.rs:3070
+#: app/src/ui/window.rs:3083
 msgid "Get a Release"
 msgstr "출시 버전 받기"
 
-#: app/src/ui/window.rs:3162
+#: app/src/ui/window.rs:3175
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -9944,75 +9999,75 @@ msgstr ""
 "서버가 나중에 보내려고 보관 중인 메시지를 확인할 수 없어 {account} 계정을 유"
 "지합니다: {reason}"
 
-#: app/src/ui/window.rs:3173
+#: app/src/ui/window.rs:3186
 msgid "Remove {account}?"
 msgstr "{account}을(를) 제거할까요?"
 
-#: app/src/ui/window.rs:3192
+#: app/src/ui/window.rs:3205
 msgid "Remove Anyway"
 msgstr "제거 진행"
 
-#: app/src/ui/window.rs:3205
+#: app/src/ui/window.rs:3218
 msgid "Removed {account}"
 msgstr "{account}을(를) 제거했습니다"
 
-#: app/src/ui/window.rs:3207
+#: app/src/ui/window.rs:3220
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}을(를) 제거할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:3393
+#: app/src/ui/window.rs:3406
 msgid "Refresh"
 msgstr "새로 고침"
 
-#: app/src/ui/window.rs:3397
+#: app/src/ui/window.rs:3410
 msgid "Show Declined Events"
 msgstr "거절한 일정 표시"
 
-#: app/src/ui/window.rs:3413
+#: app/src/ui/window.rs:3426
 msgid "Add Account…"
 msgstr "계정 추가…"
 
-#: app/src/ui/window.rs:3414
+#: app/src/ui/window.rs:3427
 msgid "New Smart Mailbox…"
 msgstr "새 스마트 메일함…"
 
-#: app/src/ui/window.rs:3422
+#: app/src/ui/window.rs:3435
 msgid "Keyboard Shortcuts"
 msgstr "키보드 단축키"
 
-#: app/src/ui/window.rs:3431 app/src/ui/window.rs:3433
+#: app/src/ui/window.rs:3444 app/src/ui/window.rs:3446
 msgid "Main Menu"
 msgstr "기본 메뉴"
 
-#: app/src/ui/window.rs:3498 app/src/ui/window.rs:3499
+#: app/src/ui/window.rs:3511 app/src/ui/window.rs:3512
 msgid "Dock"
 msgstr "독"
 
-#: app/src/ui/window.rs:3624
+#: app/src/ui/window.rs:3637
 msgid "Add a mail account first"
 msgstr "먼저 메일 계정을 추가하세요"
 
-#: app/src/ui/window.rs:3945
+#: app/src/ui/window.rs:3958
 msgid "Open a message from the person first"
 msgstr "먼저 해당 사람의 메시지를 여세요"
 
-#: app/src/ui/window.rs:4026
+#: app/src/ui/window.rs:4050
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/window.rs:4028 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4052 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "다시 시작"
 
-#: app/src/ui/window.rs:4092
+#: app/src/ui/window.rs:4116
 msgid "Show Rules"
 msgstr "규칙 표시"
 
-#: app/src/ui/window.rs:4118
+#: app/src/ui/window.rs:4142
 msgid "Messages That Will Not Download"
 msgstr "다운로드할 수 없는 메시지"
 
-#: app/src/ui/window.rs:4120
+#: app/src/ui/window.rs:4144
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11437,83 +11492,83 @@ msgstr "{account}의 메일을 불러올 수 없습니다: {reason}"
 msgid "All Mail"
 msgstr "전체 메일"
 
-#: sync/src/mailbox.rs:928
+#: sync/src/mailbox.rs:982
 msgid "This smart mailbox has no conditions"
 msgstr "이 스마트 메일함에는 조건이 없습니다"
 
-#: sync/src/mailbox.rs:1488
+#: sync/src/mailbox.rs:1542
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account}의 결과는 이 컴퓨터의 메일만 검색합니다"
 
-#: sync/src/mailbox.rs:1622
+#: sync/src/mailbox.rs:1676
 msgid "Returns {when}"
 msgstr "{when}에 다시 표시"
 
-#: sync/src/mailbox.rs:1665 sync/src/mailbox.rs:1748
+#: sync/src/mailbox.rs:1719 sync/src/mailbox.rs:1802
 msgid "No recipients"
 msgstr "수신자 없음"
 
-#: sync/src/mailbox.rs:1668 sync/src/mailbox.rs:1751
+#: sync/src/mailbox.rs:1722 sync/src/mailbox.rs:1805
 msgid "To {recipients}"
 msgstr "받는 사람 {recipients}"
 
-#: sync/src/mailbox.rs:1711
+#: sync/src/mailbox.rs:1765
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "읽지 않음 {count}개 · {category}"
 
-#: sync/src/mailbox.rs:1716
+#: sync/src/mailbox.rs:1770
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "읽지 않음 {count}개"
 
-#: sync/src/mailbox.rs:1723
+#: sync/src/mailbox.rs:1777
 msgid "Sent yesterday, no reply yet"
 msgstr "어제 보냄, 아직 답장 없음"
 
-#: sync/src/mailbox.rs:1725
+#: sync/src/mailbox.rs:1779
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days}일 전에 보냄, 아직 답장 없음"
 
-#: sync/src/mailbox.rs:1789
+#: sync/src/mailbox.rs:1843
 msgid "The server has not sent this message yet."
 msgstr "서버가 아직 이 메시지를 보내지 않았습니다."
 
-#: sync/src/mailbox.rs:1790
+#: sync/src/mailbox.rs:1844
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail이 서버의 메시지 수신 여부를 확인하지 못했습니다."
 
-#: sync/src/mailbox.rs:1800
+#: sync/src/mailbox.rs:1854
 msgid "Sends {when}."
 msgstr "{when}에 보냅니다."
 
-#: sync/src/mailbox.rs:1801
+#: sync/src/mailbox.rs:1855
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Penguin Mail을 닫아도 서버가 전송합니다."
 
-#: sync/src/mailbox.rs:1803
+#: sync/src/mailbox.rs:1857
 msgid "Sends {when}"
 msgstr "{when}에 보냄"
 
-#: sync/src/mailbox.rs:1810
+#: sync/src/mailbox.rs:1864
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "보낸편지함을 확인하세요. Penguin Mail이 전송 여부를 확인하지 못했습니다."
 
-#: sync/src/mailbox.rs:1813
+#: sync/src/mailbox.rs:1867
 msgid "Canceled in another app."
 msgstr "다른 앱에서 취소했습니다."
 
-#: sync/src/mailbox.rs:1815
+#: sync/src/mailbox.rs:1869
 msgid "Not sent"
 msgstr "보내지 않음"
 
-#: sync/src/mailbox.rs:1822
+#: sync/src/mailbox.rs:1876
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. {when}에 다시 시도"
 
-#: sync/src/mailbox.rs:1829
+#: sync/src/mailbox.rs:1883
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail이 재시도를 중지했습니다"
 

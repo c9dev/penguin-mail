@@ -697,3 +697,163 @@ async fn a_queued_append_for_a_previous_mailbox_never_starts() {
     assert_eq!(fake.calls(Call::List), 2);
     assert_eq!(fake.calls(Call::Append), 0);
 }
+
+#[tokio::test]
+async fn previews_fill_existing_rows_without_relisting_or_selecting() {
+    let (fake, run) = Fake::new();
+    fake.with(|s| s.store = vec![row("first", 1), row("second", 2)]);
+    run.change(show(inbox()));
+    fake.settle().await;
+    run.previews(vec![Target::thread(1, "first")]);
+    fake.settle().await;
+    assert_eq!(fake.ids(), ["first", "second"]);
+    assert_eq!(fake.with(|s| s.rows[0].snippet.clone()), "Preview");
+    assert!(fake.with(|s| s.rows[1].snippet.is_empty()));
+    assert_eq!(fake.calls(Call::List), 1);
+    assert_eq!(fake.calls(Call::SetRows), 1);
+    assert_eq!(fake.calls(Call::Select), 0);
+}
+
+#[tokio::test]
+async fn previews_replace_the_queue_and_never_fetch_two_rows_together() {
+    let (fake, run) = Fake::new();
+    run.change(show(inbox()));
+    fake.settle().await;
+    let first = Target::thread(1, "first");
+    let old = Target::thread(1, "old");
+    let new = Target::thread(1, "new");
+    let answer = fake.hold(Call::Preview);
+    run.previews(vec![first.clone(), old]);
+    let settling = fake.settle();
+    pin_mut!(settling);
+    assert!(poll!(settling.as_mut()).is_pending());
+    run.previews(vec![first.clone(), new.clone(), new.clone()]);
+    assert!(poll!(settling.as_mut()).is_pending());
+    assert_eq!(
+        fake.with(|s| s.previews.clone()),
+        std::slice::from_ref(&first)
+    );
+    answer.send(()).unwrap();
+    settling.await;
+    assert_eq!(
+        fake.with(|s| s.previews.clone()),
+        [first.clone(), new.clone()]
+    );
+    run.previews(vec![first, new]);
+    fake.settle().await;
+    assert_eq!(fake.calls(Call::Preview), 2);
+}
+
+#[tokio::test]
+async fn disabling_previews_drops_the_answer_and_queued_work() {
+    let (fake, run) = Fake::new();
+    run.change(show(inbox()));
+    fake.settle().await;
+    fake.during(Call::Preview, |run| run.previews(Vec::new()));
+    run.previews(vec![
+        Target::thread(1, "first"),
+        Target::thread(1, "second"),
+    ]);
+    fake.settle().await;
+    assert_eq!(fake.calls(Call::Preview), 1);
+    assert_eq!(fake.calls(Call::PreviewArrived), 0);
+    assert!(run.state.borrow().previews.attempted.is_empty());
+}
+
+#[tokio::test]
+async fn a_preview_from_the_previous_listing_never_lands() {
+    for reload in [false, true] {
+        let (fake, run) = Fake::new();
+        run.change(show(inbox()));
+        fake.settle().await;
+        fake.during(Call::Preview, move |run| {
+            if reload {
+                run.reload();
+            } else {
+                run.change(show(trash()));
+            }
+        });
+        run.previews(vec![Target::thread(1, "same"), Target::thread(1, "queued")]);
+        fake.settle().await;
+        assert_eq!(fake.calls(Call::Preview), 1);
+        assert_eq!(fake.calls(Call::PreviewArrived), 0);
+        run.previews(vec![Target::thread(1, "same")]);
+        fake.settle().await;
+        assert_eq!(fake.calls(Call::Preview), 2);
+        assert_eq!(fake.calls(Call::PreviewArrived), 1);
+    }
+}
+
+#[tokio::test]
+async fn a_preview_from_the_stored_search_cannot_reach_the_server_page() {
+    let (fake, run) = Fake::new();
+    let server = fake.hold(Call::ServerSearch);
+    run.search("invoice".into());
+    let settling = fake.settle();
+    pin_mut!(settling);
+    assert!(poll!(settling.as_mut()).is_pending());
+    let preview = fake.hold(Call::Preview);
+    run.previews(vec![Target::thread(1, "invoice-stored")]);
+    assert!(poll!(settling.as_mut()).is_pending());
+    server.send(()).unwrap();
+    assert!(poll!(settling.as_mut()).is_pending());
+    preview.send(()).unwrap();
+    settling.await;
+    assert_eq!(fake.ids(), ["invoice-server"]);
+    assert_eq!(fake.calls(Call::PreviewArrived), 0);
+}
+
+#[tokio::test]
+async fn unavailable_previews_do_not_loop_and_attempts_only_keep_the_viewport() {
+    let (fake, run) = Fake::new();
+    run.change(show(inbox()));
+    fake.settle().await;
+    fake.with(|s| {
+        s.preview_answers.extend([
+            Ok(None),
+            Ok(Some(String::new())),
+            Err(anyhow::anyhow!("offline")),
+        ])
+    });
+    let targets: Vec<_> = (0..3).map(|n| Target::thread(1, n.to_string())).collect();
+    run.previews(targets.clone());
+    fake.settle().await;
+    run.previews(targets);
+    fake.settle().await;
+    assert_eq!(fake.calls(Call::Preview), 3);
+    assert_eq!(fake.calls(Call::Failed), 0);
+    for n in 3..100 {
+        run.previews(vec![Target::thread(1, n.to_string())]);
+        fake.settle().await;
+        assert_eq!(run.state.borrow().previews.attempted.len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn a_new_message_in_a_visible_thread_gets_its_own_preview() {
+    let (fake, run) = Fake::new();
+    fake.with(|s| {
+        s.store = vec![row("same", 1)];
+        s.preview_answers.extend([
+            Ok(Some("Old message".into())),
+            Ok(Some("New message".into())),
+        ]);
+    });
+    run.change(show(inbox()));
+    fake.settle().await;
+    let answer = fake.hold(Call::Preview);
+    let target = Target::thread(1, "same");
+    run.previews(vec![target.clone()]);
+    let settling = fake.settle();
+    pin_mut!(settling);
+    assert!(poll!(settling.as_mut()).is_pending());
+    fake.with(|s| s.store = vec![row("same", 2)]);
+    let ticket = run.state.borrow().previews.ticket.unwrap();
+    run.splice(ticket, vec![(1, "same".into())]).await;
+    run.previews(vec![target]);
+    answer.send(()).unwrap();
+    settling.await;
+    assert_eq!(fake.calls(Call::Preview), 2);
+    assert_eq!(fake.calls(Call::PreviewArrived), 1);
+    assert_eq!(fake.with(|s| s.rows[0].snippet.clone()), "New message");
+}

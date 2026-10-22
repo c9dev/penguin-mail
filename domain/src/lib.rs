@@ -394,6 +394,11 @@ pub struct ThreadSummary {
     /// Set when the row stands for one message rather than a whole thread,
     /// as it does with conversation grouping turned off.
     pub message_id: Option<String>,
+    /// The message whose sender and preview this row shows. Search and
+    /// folder rows may show a match older than the conversation's latest.
+    /// This does not narrow actions on a grouped conversation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview_message_id: Option<String>,
     pub last_message_at: EpochMillis,
     /// Subject of the earliest local message, so replies don't show "Re:".
     pub subject: String,

@@ -14,10 +14,10 @@ use chrono::{DateTime, Local, TimeZone};
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext, pgettext};
 use mailrs_domain::{
     Account, AccountId, Address, Category, EpochMillis, FlagColor, Folder, MailSet, MessageMeta,
-    Role, SmartMailbox, ThreadSummary,
+    Role, SmartMailbox, Target, ThreadSummary,
 };
 use mailrs_store::threads::ThreadFilter;
-use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
+use mailrs_store::{Db, flags, follow_ups, messages, outbox, reminders, threads};
 
 use crate::{Accounts, MailBackend, MovedFrom, SearchQuery, SyncError};
 
@@ -754,6 +754,60 @@ impl<A: Accounts> Mailboxes<A> {
                     .searched(None)
                     .iter()
                     .any(|a| self.paged_account(a.id))
+    }
+
+    /// Fills the preview of one visible row. IMAP headers carry no preview,
+    /// so only that provider reads a missing body, through its unread-safe
+    /// cache. Callers queue visible rows rather than whole mailbox pages.
+    pub async fn preview(&self, target: Target) -> Result<Option<String>, SyncError> {
+        let wanted = target.clone();
+        let Some((id, snippet)) = self
+            .db
+            .read(move |c| messages::preview_source(c, &wanted))
+            .await?
+        else {
+            return Ok(None);
+        };
+        if !snippet.is_empty() {
+            return Ok(Some(snippet));
+        }
+        let Some(sync) = self.accounts.account(target.account_id) else {
+            return Ok(None);
+        };
+        if !matches!(&sync.services().mail, crate::AnyMail::Imap(_)) {
+            return Ok(None);
+        }
+        let body = sync.body(&id).await?;
+        // Never turn encrypted mail's cached text into a persistent preview.
+        if matches!(
+            body.protection,
+            Some(mailrs_domain::Protection::Encrypted | mailrs_domain::Protection::SmimeEnveloped)
+        ) {
+            return Ok(Some(String::new()));
+        }
+        let text = body
+            .text
+            .filter(|text| !text.trim().is_empty())
+            .or_else(|| body.html.map(|html| mailrs_mime::html::html_to_text(&html)));
+        let snippet = mailrs_mime::preview(text.as_deref());
+        let account = target.account_id;
+        self.db
+            .write(move |c| {
+                messages::apply(
+                    c,
+                    account,
+                    &[messages::Change::Preview {
+                        message_id: id.clone(),
+                        snippet,
+                    }],
+                )?;
+                // Sync may have changed the conversation while its body arrived.
+                Ok(messages::preview_source(c, &target)?
+                    .filter(|(current, _)| current == &id)
+                    .map(|(_, snippet)| snippet))
+            })
+            .await
+            .map_err(Into::into)
     }
 
     /// The page of `mailbox` that follows the rows the caller holds.
@@ -1917,6 +1971,7 @@ fn row_of(hit: &MessageMeta, alone: bool) -> ThreadSummary {
         account_id: hit.account_id,
         id: hit.thread_id.clone(),
         message_id: alone.then(|| hit.id.clone()),
+        preview_message_id: Some(hit.id.clone()),
         last_message_at: hit.date,
         subject: hit.subject.clone(),
         snippet: hit.snippet.clone(),
@@ -2074,6 +2129,8 @@ mod tests {
         );
         assert!(plans.unread);
         assert_eq!(plans.last_message_at, 200);
+        assert_eq!(plans.preview_message_id.as_deref(), Some("a2"));
+        assert!(plans.message_id.is_none());
     }
 
     #[test]

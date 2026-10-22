@@ -19,4 +19,4 @@ pub use read::{
     Span, Spans, Transfer, decode_span, files, outline, outline_from, part, parts, read,
     undo_transfer_encoding,
 };
-pub use summary::{Summary, first_recipient, summary};
+pub use summary::{Summary, first_recipient, preview, summary};

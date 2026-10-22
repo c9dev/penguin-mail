@@ -135,6 +135,12 @@ impl Pane for ListPane {
         }
     }
 
+    fn preview_arrived(&self, target: &Target, text: &str) {
+        if let Some(win) = self.window() {
+            win.list.preview_arrived(target, text);
+        }
+    }
+
     fn loading(&self) {
         if let Some(win) = self.window() {
             win.list.show_loading();
@@ -276,6 +282,11 @@ impl Lists for CoreLists {
                 .call(async move { account.follow_mailbox(&server_mailbox).await })
                 .await
         })
+    }
+
+    fn preview(&self, target: Target) -> Answer<'_, anyhow::Result<Option<String>>> {
+        let lists = self.0.lists();
+        Box::pin(self.0.call(async move { lists.preview(target).await }))
     }
 
     fn sleep(&self, time: Duration) -> Answer<'_, ()> {

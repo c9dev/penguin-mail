@@ -229,6 +229,9 @@ async fn calendar_account() -> (Setup, Arc<FakeDav>, CalendarCopy<SyncEngine>) {
          DTSTART:20261006T120000Z\r\nDTEND:20261006T130000Z\r\nSUMMARY:Lunch\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
     );
     s.engine.start_account(1, services);
+    // Finish the startup announcement before a read changes the state,
+    // so it cannot arrive among the notifications a test is checking.
+    wait_for(&s.events, reached(AccountState::Bootstrapping)).await;
     let copy = CalendarCopy::new(Arc::clone(&s.engine), s.db.clone());
     (s, dav, copy)
 }
@@ -341,7 +344,8 @@ async fn a_refusal_met_outside_the_read_is_reported_once() {
     // And says it once, not at every tick after.
     copy.refresh_due(&[1], NOW + 2_000, true).await.unwrap();
     copy.refresh_due(&[1], NOW + 3_000, true).await.unwrap();
-    assert!(s.events.try_recv().is_err(), "the state was reported again");
+    let extra = s.events.try_recv();
+    assert!(extra.is_err(), "the state was reported again: {extra:?}");
 }
 
 #[tokio::test]
