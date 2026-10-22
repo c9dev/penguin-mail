@@ -1016,11 +1016,11 @@ msgstr "{provider} đăng nhập qua trình duyệt"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Tiếp tục sẽ mở trang đăng nhập của {provider} trong trình duyệt."
 
-#: app/src/app.rs:397
+#: app/src/app.rs:403
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Không thể đánh dấu tất cả thư là đã đọc: {reason}"
 
-#: app/src/app.rs:444
+#: app/src/app.rs:450
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -10167,7 +10167,7 @@ msgstr ""
 msgid "Open a conversation first"
 msgstr "Mở cuộc hội thoại trước"
 
-#: app/src/ui/window/detached.rs:203 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:214 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10175,24 +10175,24 @@ msgstr "Mở cuộc hội thoại trước"
 msgid "That account is not connected"
 msgstr "Tài khoản đó chưa kết nối"
 
-#: app/src/ui/window/detached.rs:216
+#: app/src/ui/window/detached.rs:227
 msgid "Could not load the source: {reason}"
 msgstr "Không thể tải nguồn: {reason}"
 
-#: app/src/ui/window/detached.rs:246 app/src/ui/window/detached.rs:252
-#: app/src/ui/window/detached.rs:264
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/detached.rs:263
+#: app/src/ui/window/detached.rs:275
 msgid "Message Source"
 msgstr "Nguồn thư"
 
-#: app/src/ui/window/detached.rs:248
+#: app/src/ui/window/detached.rs:259
 msgid "Save As…"
 msgstr "Lưu thành…"
 
-#: app/src/ui/window/detached.rs:249
+#: app/src/ui/window/detached.rs:260
 msgid "Save as an .eml file"
 msgstr "Lưu thành tệp .eml"
 
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:298
 msgid "Save Message"
 msgstr "Lưu thư"
 

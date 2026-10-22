@@ -57,6 +57,11 @@ pub struct App {
     pub gio: gio::Application,
     pub core: Rc<Core>,
     window: RefCell<Option<Rc<MainWindow>>>,
+    /// Main windows that closed while a conversation window of theirs
+    /// was still up. Everything such a window does, from Reply to its
+    /// menus, reaches through its main window, so that one is kept until
+    /// the last of them closes.
+    parked: RefCell<Vec<Rc<MainWindow>>>,
     filter: RefCell<Option<crate::web::Filter>>,
     /// The accounts in the store, in the order the store lists them, and
     /// each one's labels. The window's sidebar, list and dialogs all read
@@ -167,6 +172,7 @@ impl App {
             gio: gio_app.clone(),
             core,
             window: RefCell::new(None),
+            parked: RefCell::new(Vec::new()),
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
             accounts_read: Cell::new(false),
@@ -474,8 +480,29 @@ impl App {
             same
         };
         if forgotten {
+            if window.separate_windows(None) > 0 {
+                self.parked.borrow_mut().push(Rc::clone(window));
+            }
             self.window_closed();
         }
+    }
+
+    /// A conversation window of `host` closed, `closing` being its view.
+    /// The host is let go once none of its windows is left; `None` when
+    /// the host itself is already gone.
+    pub(crate) fn separate_window_closed(
+        self: &Rc<Self>,
+        host: Option<Rc<MainWindow>>,
+        closing: &crate::ui::conversation::ConversationView,
+    ) {
+        if let Some(host) = host
+            && host.separate_windows(Some(closing)) == 0
+        {
+            self.parked
+                .borrow_mut()
+                .retain(|parked| !Rc::ptr_eq(parked, &host));
+        }
+        self.window_closed();
     }
 
     pub(crate) fn window_opened(&self) {

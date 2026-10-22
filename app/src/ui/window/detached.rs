@@ -84,15 +84,26 @@ impl MainWindow {
             app.window_opened();
         }
         // The view lives as long as its window.
-        let (keep, app) = (Rc::clone(&view), self.app.clone());
+        let (keep, app, host) = (Rc::clone(&view), self.app.clone(), Rc::downgrade(self));
         window.connect_destroy(move |_| {
             keep.stop_rendering();
             if let Some(app) = app.upgrade() {
-                app.window_closed();
+                app.separate_window_closed(host.upgrade(), &keep);
             }
         });
         window.present();
         self.load_into(view, summary);
+    }
+
+    /// How many conversation windows of this main window are up, leaving
+    /// out `closing`, the one on its way down.
+    pub(crate) fn separate_windows(&self, closing: Option<&ConversationView>) -> usize {
+        self.detached
+            .borrow()
+            .iter()
+            .filter_map(|held| held.view.upgrade())
+            .filter(|view| closing.is_none_or(|closing| !std::ptr::eq(&**view, closing)))
+            .count()
     }
 
     /// Every conversation on screen: the main window's, and one for each

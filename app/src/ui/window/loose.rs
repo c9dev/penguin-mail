@@ -78,11 +78,11 @@ impl MainWindow {
         if let Some(app) = self.app.upgrade() {
             app.window_opened();
         }
-        let (keep, app) = (Rc::clone(&view), self.app.clone());
+        let (keep, app, host) = (Rc::clone(&view), self.app.clone(), Rc::downgrade(self));
         window.connect_destroy(move |_| {
             keep.stop_rendering();
             if let Some(app) = app.upgrade() {
-                app.window_closed();
+                app.separate_window_closed(host.upgrade(), &keep);
             }
         });
         window.present();

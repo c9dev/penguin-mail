@@ -1052,11 +1052,11 @@ msgstr "{provider} usa il browser per l'accesso"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continua apre la pagina di accesso di {provider} nel browser."
 
-#: app/src/app.rs:397
+#: app/src/app.rs:403
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Impossibile segnare tutta la posta come letta: {reason}"
 
-#: app/src/app.rs:444
+#: app/src/app.rs:450
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -10480,7 +10480,7 @@ msgstr ""
 msgid "Open a conversation first"
 msgstr "Apri prima una conversazione"
 
-#: app/src/ui/window/detached.rs:203 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:214 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10488,24 +10488,24 @@ msgstr "Apri prima una conversazione"
 msgid "That account is not connected"
 msgstr "Quell'account non è connesso"
 
-#: app/src/ui/window/detached.rs:216
+#: app/src/ui/window/detached.rs:227
 msgid "Could not load the source: {reason}"
 msgstr "Impossibile caricare il sorgente: {reason}"
 
-#: app/src/ui/window/detached.rs:246 app/src/ui/window/detached.rs:252
-#: app/src/ui/window/detached.rs:264
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/detached.rs:263
+#: app/src/ui/window/detached.rs:275
 msgid "Message Source"
 msgstr "Sorgente del messaggio"
 
-#: app/src/ui/window/detached.rs:248
+#: app/src/ui/window/detached.rs:259
 msgid "Save As…"
 msgstr "Salva come…"
 
-#: app/src/ui/window/detached.rs:249
+#: app/src/ui/window/detached.rs:260
 msgid "Save as an .eml file"
 msgstr "Salva come file .eml"
 
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:298
 msgid "Save Message"
 msgstr "Salva messaggio"
 

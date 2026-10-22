@@ -977,11 +977,11 @@ msgstr "{provider} 透過瀏覽器登入"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "選擇 [繼續] 會在瀏覽器中開啟 {provider} 的登入頁面。"
 
-#: app/src/app.rs:397
+#: app/src/app.rs:403
 msgid "Could not mark all mail as read: {reason}"
 msgstr "無法將所有郵件標示為已讀：{reason}"
 
-#: app/src/app.rs:444
+#: app/src/app.rs:450
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -10003,7 +10003,7 @@ msgstr "拖曳以調整大小，或使用左右方向鍵。Home 與 End 鍵可�
 msgid "Open a conversation first"
 msgstr "請先開啟對話"
 
-#: app/src/ui/window/detached.rs:203 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:214 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10011,24 +10011,24 @@ msgstr "請先開啟對話"
 msgid "That account is not connected"
 msgstr "此帳號尚未連線"
 
-#: app/src/ui/window/detached.rs:216
+#: app/src/ui/window/detached.rs:227
 msgid "Could not load the source: {reason}"
 msgstr "無法載入原始碼：{reason}"
 
-#: app/src/ui/window/detached.rs:246 app/src/ui/window/detached.rs:252
-#: app/src/ui/window/detached.rs:264
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/detached.rs:263
+#: app/src/ui/window/detached.rs:275
 msgid "Message Source"
 msgstr "郵件原始碼"
 
-#: app/src/ui/window/detached.rs:248
+#: app/src/ui/window/detached.rs:259
 msgid "Save As…"
 msgstr "另存新檔…"
 
-#: app/src/ui/window/detached.rs:249
+#: app/src/ui/window/detached.rs:260
 msgid "Save as an .eml file"
 msgstr "儲存為 .eml 檔案"
 
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:298
 msgid "Save Message"
 msgstr "儲存郵件"
 
