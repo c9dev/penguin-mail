@@ -12,20 +12,29 @@ use mailrs_domain::translate::gettext;
 /// nothing a mail program wrote is refused.
 pub const MOST_BYTES: u64 = 64 * 1024 * 1024;
 
-/// Whether a file of `len` bytes is past the ceiling.
-pub fn too_large(len: u64) -> bool {
-    len > MOST_BYTES
+/// The file's bytes, or why they will not do: unreadable, empty, over
+/// [`MOST_BYTES`], or without a single mail header.
+pub fn read_message(path: &Path) -> Result<Vec<u8>, String> {
+    read_message_within(path, MOST_BYTES)
 }
 
-/// The file's bytes, or why they will not do: unreadable, empty, over
-/// [`MOST_BYTES`], or without a single mail header. The size is checked
-/// before the read, so a huge file costs nothing.
-pub fn read_message(path: &Path) -> Result<Vec<u8>, String> {
+/// [`read_message`] with the ceiling at `most` bytes. The size the file
+/// reports is checked first, so a huge file costs nothing, and the read
+/// itself stops one byte past the ceiling, so a file that grew since, or
+/// a pipe that reports no size, is refused rather than read whole.
+fn read_message_within(path: &Path, most: u64) -> Result<Vec<u8>, String> {
+    use std::io::Read;
     let size = std::fs::metadata(path).map_err(|err| err.to_string())?.len();
-    if too_large(size) {
+    if size > most {
         return Err(gettext("This file is too large to be a message."));
     }
-    let bytes = std::fs::read(path).map_err(|err| err.to_string())?;
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .and_then(|file| file.take(most + 1).read_to_end(&mut bytes))
+        .map_err(|err| err.to_string())?;
+    if bytes.len() as u64 > most {
+        return Err(gettext("This file is too large to be a message."));
+    }
     if bytes.is_empty() {
         return Err(gettext("This file is empty."));
     }
@@ -81,8 +90,19 @@ mod tests {
         let ok = dir.path().join("ok.eml");
         std::fs::write(&ok, "Subject: x\r\n\r\nhi").unwrap();
         assert_eq!(read_message(&ok).unwrap(), b"Subject: x\r\n\r\nhi".to_vec());
-        assert!(!too_large(MOST_BYTES));
-        assert!(too_large(MOST_BYTES + 1));
+    }
+
+    /// The ceiling bounds the read itself, not only the size the file
+    /// reported before it: a file that grew since, or a pipe that reports
+    /// no size, is cut off and refused rather than read whole.
+    #[test]
+    fn the_read_itself_stops_at_the_ceiling() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("m.eml");
+        let raw = b"Subject: x\r\n\r\nhello";
+        std::fs::write(&file, raw).unwrap();
+        assert!(read_message_within(&file, raw.len() as u64 - 1).is_err());
+        assert_eq!(read_message_within(&file, raw.len() as u64).unwrap(), raw.to_vec());
     }
 
     #[test]

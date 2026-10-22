@@ -1081,7 +1081,7 @@ msgstr ""
 "Ihre Einstellungen konnten nicht gelesen werden, daher hat Penguin Mail mit "
 "den Standardwerten begonnen. Die alte Datei bleibt als {file} erhalten."
 
-#: app/src/app/mail_file.rs:48
+#: app/src/app/mail_file.rs:65
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
@@ -5964,7 +5964,7 @@ msgid "New and existing"
 msgstr "Neue und bestehende"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:56 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:70 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
 #: app/src/ui/window/loose.rs:129
 msgid "Message"
@@ -8055,25 +8055,25 @@ msgstr "Kalender- und Kontakteserver"
 msgid "Could not use that server: {reason}"
 msgstr "Dieser Server kann nicht verwendet werden: {reason}"
 
-#: app/src/ui/eml_file.rs:26
+#: app/src/ui/eml_file.rs:34 app/src/ui/eml_file.rs:41
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "Diese Datei ist zu groß für einen Kalender."
 
-#: app/src/ui/eml_file.rs:30
+#: app/src/ui/eml_file.rs:44
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "Diese Datei enthält keinen OpenPGP-Schlüssel."
 
-#: app/src/ui/eml_file.rs:42
+#: app/src/ui/eml_file.rs:56
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file does not hold a message."
 msgstr "Diese Datei ist zu groß für einen Kalender."
 
-#: app/src/ui/eml_file.rs:63 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:77 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Diese Datei konnte nicht geöffnet werden"
 

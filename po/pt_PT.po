@@ -1068,7 +1068,7 @@ msgstr ""
 "Não foi possível ler as suas preferências, por isso o Penguin Mail começou "
 "com as predefinições. O ficheiro antigo ficou guardado como {file}."
 
-#: app/src/app/mail_file.rs:48
+#: app/src/app/mail_file.rs:65
 msgid "This file could not be read."
 msgstr "Este ficheiro não pôde ser lido."
 
@@ -5875,7 +5875,7 @@ msgid "New and existing"
 msgstr "Novas e existentes"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:56 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:70 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
 #: app/src/ui/window/loose.rs:129
 msgid "Message"
@@ -7955,19 +7955,19 @@ msgstr "Servidores de calendário e contactos"
 msgid "Could not use that server: {reason}"
 msgstr "Não foi possível usar esse servidor: {reason}"
 
-#: app/src/ui/eml_file.rs:26
+#: app/src/ui/eml_file.rs:34 app/src/ui/eml_file.rs:41
 msgid "This file is too large to be a message."
 msgstr "Este ficheiro é demasiado grande para ser uma mensagem."
 
-#: app/src/ui/eml_file.rs:30
+#: app/src/ui/eml_file.rs:44
 msgid "This file is empty."
 msgstr "Este ficheiro está vazio."
 
-#: app/src/ui/eml_file.rs:42
+#: app/src/ui/eml_file.rs:56
 msgid "This file does not hold a message."
 msgstr "Este ficheiro não contém uma mensagem."
 
-#: app/src/ui/eml_file.rs:63 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:77 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Não foi possível abrir este ficheiro"
 

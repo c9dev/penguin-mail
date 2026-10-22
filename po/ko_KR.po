@@ -1020,7 +1020,7 @@ msgstr ""
 "환경설정을 읽을 수 없어 기본 설정으로 시작했습니다. 이전 파일은 {file}에 보관"
 "했습니다."
 
-#: app/src/app/mail_file.rs:48
+#: app/src/app/mail_file.rs:65
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
@@ -5692,7 +5692,7 @@ msgid "New and existing"
 msgstr "새 회의 및 기존 회의"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:56 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:70 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
 #: app/src/ui/window/loose.rs:129
 msgid "Message"
@@ -7743,25 +7743,25 @@ msgstr "캘린더 및 연락처 서버"
 msgid "Could not use that server: {reason}"
 msgstr "해당 서버를 사용할 수 없습니다: {reason}"
 
-#: app/src/ui/eml_file.rs:26
+#: app/src/ui/eml_file.rs:34 app/src/ui/eml_file.rs:41
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "캘린더 파일로 사용하기에는 너무 큽니다."
 
-#: app/src/ui/eml_file.rs:30
+#: app/src/ui/eml_file.rs:44
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "이 파일에는 OpenPGP 키가 없습니다."
 
-#: app/src/ui/eml_file.rs:42
+#: app/src/ui/eml_file.rs:56
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file does not hold a message."
 msgstr "캘린더 파일로 사용하기에는 너무 큽니다."
 
-#: app/src/ui/eml_file.rs:63 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:77 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "파일을 열 수 없습니다"
 
