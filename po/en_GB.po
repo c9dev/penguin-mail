@@ -3204,11 +3204,11 @@ msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "It carries {count} file, kept in this window only."
 msgstr[1] "It carries {count} files, kept in this window only."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} or {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} and {last}"
 
@@ -10228,7 +10228,7 @@ msgstr "Review Storage"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Hide Storage Warning Until Next Launch"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "The account is not connected yet."
 

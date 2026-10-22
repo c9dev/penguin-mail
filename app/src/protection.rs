@@ -908,12 +908,11 @@ pub(crate) fn files_line(files: usize) -> Option<String> {
 /// shows it, with the bytes of each file. Its files live in these bytes
 /// and nowhere on the server, so none carries a part path to fetch.
 pub(crate) fn opened_body(part: &[u8]) -> (MessageBody, Vec<Vec<u8>>) {
-    let mut body = mailrs_mime::read(part);
+    let (mut body, files) = mailrs_mime::opened(part);
     if body.html.is_none() && body.text.is_none() && body.attachments.is_empty() {
         body.text = Some(String::from_utf8_lossy(part).into_owned());
         return (body, Vec::new());
     }
-    let files = mailrs_mime::files(part);
     for file in &mut body.attachments {
         file.attachment_id = None;
     }

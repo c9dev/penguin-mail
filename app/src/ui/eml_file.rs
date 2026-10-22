@@ -32,7 +32,7 @@ pub fn read_message(path: &Path) -> Result<Vec<u8>, String> {
     }
     // A file with no header the parser accepts is notes, not mail; shown
     // as a message it would be blank but for its text.
-    let summary = mailrs_mime::summary(&bytes);
+    let summary = mailrs_mime::headers(&bytes);
     let headed = summary.from.is_some()
         || !summary.to.is_empty()
         || !summary.cc.is_empty()

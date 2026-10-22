@@ -1738,3 +1738,15 @@ async fn the_engine_opening_a_loose_message_brings_no_receipt_card() {
     assert!(!window.took(Step::ReceiptAnswered));
     assert!(window.with(|s| s.receipt_cards.is_empty()));
 }
+
+/// Parsing a file near the size ceiling takes most of a second, so it
+/// goes through the effects, away from the window, before the thread
+/// is built; a later open still wins over it.
+#[tokio::test]
+async fn a_loose_message_is_parsed_away_from_the_window_before_it_shows() {
+    let window = FakeWindow::new();
+    window.run().open_loose(loose()).await;
+    let steps = window.steps();
+    let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
+    assert!(at(Step::Parse) < at(Step::Show));
+}

@@ -3670,11 +3670,11 @@ msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Leva {count} ficheiro, guardado apenas nesta janela."
 msgstr[1] "Leva {count} ficheiros, guardados apenas nesta janela."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} ou {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} e {last}"
 
@@ -11212,7 +11212,7 @@ msgstr "Rever armazenamento"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Ocultar o aviso de espaço até ao próximo arranque"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "A conta ainda não está ligada."
 

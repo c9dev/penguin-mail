@@ -3716,11 +3716,11 @@ msgstr[0] "Воно містить {count} файл, доступний лише
 msgstr[1] "Воно містить {count} файли, доступні лише в цьому вікні."
 msgstr[2] "Воно містить {count} файлів, доступних лише в цьому вікні."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} або {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} і {last}"
 
@@ -11342,7 +11342,7 @@ msgstr "Переглянути сховище"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Сховати попередження про сховище до наступного запуску"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Обліковий запис ще не під'єднано."
 

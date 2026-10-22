@@ -54,6 +54,7 @@ pub enum Step {
     BodiesArrived,
     Clean,
     Cleaned,
+    Parse,
     Images,
     ImagesArrived,
     Replace,
@@ -709,6 +710,11 @@ impl Effects for FakeWindow {
 
     /// Cleans on a thread of its own, as the window cleans on a worker,
     /// and notes which thread did it.
+    fn parse_loose(&self, raw: Arc<Vec<u8>>) -> Answer<'_, crate::open_thread::Parsed> {
+        self.reached(Step::Parse);
+        Box::pin(async move { crate::open_thread::loose::parse(&raw) })
+    }
+
     fn clean(&self, html: ToClean) -> Answer<'_, HashMap<String, Cleaned>> {
         self.reached(Step::Clean);
         if self.with(|screen| screen.clean_fails) {

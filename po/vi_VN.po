@@ -3539,11 +3539,11 @@ msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Thư kèm {count} tệp chỉ được giữ trong cửa sổ này."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} hoặc {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} và {last}"
 
@@ -10903,7 +10903,7 @@ msgstr "Xem dung lượng"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Ẩn cảnh báo dung lượng đến lần khởi động sau"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Tài khoản chưa kết nối."
 

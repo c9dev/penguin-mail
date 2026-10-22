@@ -15,7 +15,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use mailrs_domain::{AccountId, Memberships, MessageMeta, Target};
+use mailrs_domain::{AccountId, Memberships, MessageBody, MessageMeta, Target};
+use mailrs_mime::Summary;
 
 use super::{OpenThread, queued};
 
@@ -40,6 +41,31 @@ pub struct Loose {
     pub origin: Origin,
 }
 
+/// A loose message's bytes read once: its headers, its body, and the
+/// bytes of each file the body lists. Made away from the window, since a
+/// message near the size ceiling takes most of a second to read.
+#[derive(Debug, Clone)]
+pub struct Parsed {
+    pub summary: Summary,
+    pub body: MessageBody,
+    pub files: Vec<Vec<u8>>,
+}
+
+/// Reads `raw` once for everything the thread needs. The attachment rows
+/// carry no server handle: nothing here asks one.
+pub fn parse(raw: &[u8]) -> Parsed {
+    let summary = mailrs_mime::headers(raw);
+    let (mut body, files) = mailrs_mime::opened(raw);
+    for attachment in &mut body.attachments {
+        attachment.attachment_id = None;
+    }
+    Parsed {
+        summary,
+        body,
+        files,
+    }
+}
+
 const PREFIX: &str = "loose:";
 
 /// Numbers the loose messages opened in this process, so two windows on
@@ -57,9 +83,9 @@ pub fn loose_id(thread_id: &str) -> Option<u64> {
 }
 
 impl OpenThread {
-    /// One message from `loose.raw`, open, under a fresh `loose:<n>`
-    /// thread id, with its files held here.
-    pub fn loose(loose: &Loose, me: Vec<String>) -> OpenThread {
+    /// One message from `loose.raw`, read as `parsed`, open, under a
+    /// fresh `loose:<n>` thread id, with its files held here.
+    pub fn loose(loose: &Loose, parsed: Parsed, me: Vec<String>) -> OpenThread {
         let n = NEXT.fetch_add(1, Ordering::Relaxed);
         let id = format!("loose-{n}");
         let target = Target {
@@ -67,14 +93,11 @@ impl OpenThread {
             thread_id: loose_row(n),
             message_id: Some(id.clone()),
         };
-        let raw = loose.raw.as_slice();
-        let summary = mailrs_mime::summary(raw);
-        let mut body = mailrs_mime::read(raw);
-        // A part path is what a server would take; nothing here asks one.
-        for attachment in &mut body.attachments {
-            attachment.attachment_id = None;
-        }
-        let files = mailrs_mime::files(raw);
+        let Parsed {
+            summary,
+            body,
+            files,
+        } = parsed;
         let meta = MessageMeta {
             account_id: loose.account_id,
             id: id.clone(),
@@ -86,7 +109,7 @@ impl OpenThread {
             subject: summary.subject.clone(),
             date: summary.date.unwrap_or_default(),
             snippet: summary.snippet,
-            size: raw.len() as i64,
+            size: loose.raw.len() as i64,
             has_attachments: !body.attachments.is_empty(),
             held: Memberships::read(),
             roles: Vec::new(),
@@ -196,7 +219,11 @@ mod tests {
 
     #[test]
     fn a_loose_message_opens_as_one_read_message_with_its_files_held() {
-        let thread = OpenThread::loose(&loose_from(fixture_raw()), vec!["bob@example.com".into()]);
+        let thread = OpenThread::loose(
+            &loose_from(fixture_raw()),
+            parse(&fixture_raw()),
+            vec!["bob@example.com".into()],
+        );
         assert_eq!(thread.messages.len(), 1);
         let m = &thread.messages[0];
         assert_eq!(m.subject, "Kite plans");
@@ -244,8 +271,8 @@ mod tests {
 
     #[test]
     fn each_loose_message_gets_its_own_thread_id() {
-        let a = OpenThread::loose(&loose_from(fixture_raw()), vec![]);
-        let b = OpenThread::loose(&loose_from(fixture_raw()), vec![]);
+        let a = OpenThread::loose(&loose_from(fixture_raw()), parse(&fixture_raw()), vec![]);
+        let b = OpenThread::loose(&loose_from(fixture_raw()), parse(&fixture_raw()), vec![]);
         assert_ne!(a.thread_id, b.thread_id);
         assert_eq!(loose_row(5), "loose:5");
         assert_eq!(loose_id("loose:5"), Some(5));
@@ -255,7 +282,8 @@ mod tests {
 
     #[test]
     fn bytes_that_are_no_message_still_open_with_nothing_in_them() {
-        let thread = OpenThread::loose(&loose_from(b"just some text\n".to_vec()), vec![]);
+        let raw = b"just some text\n".to_vec();
+        let thread = OpenThread::loose(&loose_from(raw.clone()), parse(&raw), vec![]);
         assert_eq!(thread.messages.len(), 1);
         assert_eq!(thread.messages[0].subject, "");
         assert!(thread.raw_of(&thread.messages[0].id).is_some());

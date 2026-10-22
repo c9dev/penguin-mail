@@ -3722,11 +3722,11 @@ msgstr[0] "Zawiera {count} plik przechowywany tylko w tym oknie."
 msgstr[1] "Zawiera {count} pliki przechowywane tylko w tym oknie."
 msgstr[2] "Zawiera {count} plików przechowywanych tylko w tym oknie."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} lub {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} i {last}"
 
@@ -11339,7 +11339,7 @@ msgstr "Sprawdź miejsce"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Ukryj ostrzeżenie o miejscu do następnego uruchomienia"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Konto nie jest jeszcze połączone."
 

@@ -3784,11 +3784,11 @@ msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Περιέχει {count} αρχείο, που φυλάσσεται μόνο σε αυτό το παράθυρο."
 msgstr[1] "Περιέχει {count} αρχεία, που φυλάσσονται μόνο σε αυτό το παράθυρο."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} ή {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} και {last}"
 
@@ -11413,7 +11413,7 @@ msgstr "Έλεγχος χώρου αποθήκευσης"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Απόκρυψη προειδοποίησης χώρου έως την επόμενη εκκίνηση"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Ο λογαριασμός δεν έχει συνδεθεί ακόμη."
 

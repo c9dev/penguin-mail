@@ -3539,11 +3539,11 @@ msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "이 창에만 보관하는 파일 {count}개가 첨부되어 있습니다."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} 또는 {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} 및 {last}"
 
@@ -10898,7 +10898,7 @@ msgstr "저장 공간 확인"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "다음 실행까지 저장 공간 경고 숨기기"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "아직 계정이 연결되지 않았습니다."
 

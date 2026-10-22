@@ -3745,11 +3745,11 @@ msgstr[0] "Conține {count} fișier, păstrat doar în această fereastră."
 msgstr[1] "Conține {count} fișiere, păstrate doar în această fereastră."
 msgstr[2] "Conține {count} de fișiere, păstrate doar în această fereastră."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} sau {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} și {last}"
 
@@ -11411,7 +11411,7 @@ msgstr "Verifică spațiul de stocare"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Ascunde avertismentul de stocare până la următoarea pornire"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Contul nu este încă conectat."
 

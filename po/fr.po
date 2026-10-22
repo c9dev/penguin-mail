@@ -3723,11 +3723,11 @@ msgstr[0] ""
 msgstr[1] ""
 "Il contient {count} fichiers, conservés dans cette fenêtre uniquement."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} ou {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} et {last}"
 
@@ -11309,7 +11309,7 @@ msgstr "Vérifier le stockage"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Masquer l’alerte d’espace jusqu’au prochain lancement"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Le compte n’est pas encore connecté."
 

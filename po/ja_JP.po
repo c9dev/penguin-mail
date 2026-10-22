@@ -3558,11 +3558,11 @@ msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 "{count} 個のファイルを添付しています。このウィンドウにのみ保持します。"
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} または {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} と {last}"
 
@@ -10947,7 +10947,7 @@ msgstr "使用容量を確認"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "次回起動まで容量の警告を非表示"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "アカウントはまだ接続していません。"
 

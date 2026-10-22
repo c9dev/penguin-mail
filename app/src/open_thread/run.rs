@@ -35,7 +35,7 @@ use mailrs_domain::{
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Opened, Spot, outbox_id};
 
-use super::{Loose, loose_id};
+use super::{Loose, Parsed, loose_id};
 
 use super::{Cleaned, InlineImage, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
@@ -154,6 +154,9 @@ pub trait Effects {
     /// Cleans HTML for the page, away from the GTK thread. The one place
     /// cleaning happens: drawing a page never cleans.
     fn clean(&self, html: ToClean) -> Answer<'_, HashMap<String, Cleaned>>;
+    /// Reads a loose message's bytes once, away from the window: a file
+    /// near the size ceiling takes most of a second.
+    fn parse_loose(&self, raw: Arc<Vec<u8>>) -> Answer<'_, Parsed>;
     /// The pictures these bodies name by `cid:`, by message and content
     /// id. Every body asked about is in the answer, with nothing for one
     /// whose pictures would not come.
@@ -562,8 +565,12 @@ impl ThreadRun {
     /// as it does for a thread: a later open wins over this one.
     pub async fn open_loose(&self, loose: Loose) {
         let ticket = self.desk.start_loading();
+        let parsed = self.effects.parse_loose(Arc::clone(&loose.raw)).await;
+        if !self.desk.still_loading(ticket) {
+            return;
+        }
         let me = self.desk.me(loose.account_id);
-        let mut thread = OpenThread::loose(&loose, me);
+        let mut thread = OpenThread::loose(&loose, parsed, me);
         let html = thread.to_clean();
         if !html.is_empty() {
             let cleaned = self.effects.clean(html).await;

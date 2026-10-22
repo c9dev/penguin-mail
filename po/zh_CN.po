@@ -3457,11 +3457,11 @@ msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "附有 {count} 个文件，仅保留在此窗口中。"
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} 或 {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} 和 {last}"
 
@@ -10714,7 +10714,7 @@ msgstr "查看存储空间"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "隐藏空间警告至下次启动"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "账号尚未连接。"
 

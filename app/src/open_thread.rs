@@ -21,7 +21,7 @@ mod receipt;
 pub mod run;
 
 pub use inline::{InlineImage, Served};
-pub use loose::{Loose, Origin, loose_id};
+pub use loose::{Loose, Origin, Parsed, loose_id};
 #[cfg(test)]
 pub use page::Document;
 pub use page::{Article, Cleaned, Page, ToClean};

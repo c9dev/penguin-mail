@@ -3639,11 +3639,11 @@ msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Yalnızca bu pencerede tutulan {count} dosya içeriyor."
 msgstr[1] "Yalnızca bu pencerede tutulan {count} dosya içeriyor."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} veya {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} ve {last}"
 
@@ -11146,7 +11146,7 @@ msgstr "Depolamayı İncele"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Depolama Uyarısını Sonraki Başlatmaya Kadar Gizle"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Hesap henüz bağlı değil."
 

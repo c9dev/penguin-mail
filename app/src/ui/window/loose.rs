@@ -163,7 +163,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::open_thread::loose::fixture_raw;
+    use crate::open_thread::loose::{fixture_raw, parse};
     use crate::open_thread::{Loose, OpenThread, Origin};
 
     #[test]
@@ -175,6 +175,7 @@ mod tests {
                 has_account: true,
                 origin: Origin::File("/home/ann/kites.eml".into()),
             },
+            parse(&fixture_raw()),
             vec![],
         );
         assert_eq!(
@@ -206,6 +207,7 @@ mod tests {
                 has_account: false,
                 origin: Origin::File("/tmp/kites.eml".into()),
             },
+            parse(&fixture_raw()),
             vec![],
         );
         assert_eq!(account_of(&no_account), (0, false));

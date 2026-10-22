@@ -3666,11 +3666,11 @@ msgstr[0] ""
 msgstr[1] ""
 "Pesan membawa {count} berkas, yang hanya disimpan dalam jendela ini."
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:929
 msgid "{names} or {last}"
 msgstr "{names} atau {last}"
 
-#: app/src/protection.rs:942
+#: app/src/protection.rs:941
 msgid "{names} and {last}"
 msgstr "{names} dan {last}"
 
@@ -11210,7 +11210,7 @@ msgstr "Tinjau Penyimpanan"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Sembunyikan Peringatan Penyimpanan hingga Mulai Berikutnya"
 
-#: app/src/ui/window/thread.rs:614
+#: app/src/ui/window/thread.rs:630
 msgid "The account is not connected yet."
 msgstr "Akun belum terhubung."
 
