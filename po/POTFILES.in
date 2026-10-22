@@ -101,6 +101,7 @@ app/src/ui/preferences.rs
 app/src/ui/preferences/dialog.rs
 app/src/ui/preferences/accounts.rs
 app/src/ui/sender_prefs.rs
+app/src/ui/sender_prefs/signature.rs
 app/src/ui/queued.rs
 app/src/ui/rules.rs
 app/src/ui/sandbox_setup.rs

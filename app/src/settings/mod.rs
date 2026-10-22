@@ -13,10 +13,12 @@ mod accounts;
 mod change;
 mod file;
 pub mod mcp;
+mod signatures;
 
 pub use accounts::{AccountChoice, AccountDefaults, AccountUse, accounts_for, preferred_calendar};
 pub use change::{AiChange, Change, Effect, Effects, Setting};
 pub use file::{Opened, Saver};
+pub use signatures::SignatureMode;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -40,6 +42,8 @@ pub struct Settings {
     pub account_defaults: AccountDefaults,
     /// Markdown signature per account address.
     pub signatures: BTreeMap<String, String>,
+    /// Whether a sender uses the account signature, its own, or none.
+    pub signature_modes: BTreeMap<String, SignatureMode>,
     /// How long Undo stays available after Send.
     pub undo_send: UndoSend,
     /// The colour a new flag gets: the last one chosen.
@@ -472,6 +476,7 @@ impl Default for Settings {
             default_account: None,
             account_defaults: AccountDefaults::default(),
             signatures: BTreeMap::new(),
+            signature_modes: BTreeMap::new(),
             undo_send: UndoSend::Ten,
             flag_color: mailrs_domain::FlagColor::Red,
             vips: BTreeMap::new(),
@@ -1006,27 +1011,6 @@ impl Settings {
         }
     }
 
-    /// What goes below a message sent from `email`. A signature written here
-    /// wins; failing that, the one Gmail keeps for that send-as address.
-    pub fn signature_for(&self, account: &str, email: &str) -> &str {
-        let written = self.signature(email);
-        if !written.is_empty() {
-            return written;
-        }
-        let Some(senders) = self.send_as.get(&account.to_lowercase()) else {
-            return "";
-        };
-        let Some(sender) = crate::compose::sender_for(senders, email) else {
-            return "";
-        };
-        let base = self.signature(&sender.email);
-        if base.is_empty() {
-            &sender.signature
-        } else {
-            base
-        }
-    }
-
     /// Whether the account's send-as addresses are a day old or were
     /// never read.
     pub fn send_as_due(&self, account: &str, now: i64) -> bool {
@@ -1103,6 +1087,18 @@ impl Settings {
                 return false;
             };
             senders.remove(at);
+        }
+        if let Some(old) = was.filter(|old| !old.eq_ignore_ascii_case(&sender.email)) {
+            if let Some(text) = self.signatures.get(&old.to_lowercase()).cloned() {
+                self.signatures
+                    .entry(sender.email.to_lowercase())
+                    .or_insert(text);
+            }
+            if let Some(mode) = self.signature_modes.get(&old.to_lowercase()).copied() {
+                self.signature_modes
+                    .entry(sender.email.to_lowercase())
+                    .or_insert(mode);
+            }
         }
         sender.name = sender
             .name
