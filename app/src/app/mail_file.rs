@@ -20,7 +20,20 @@ use super::App;
 use crate::open_thread::{Loose, Origin};
 use crate::ui::eml_file;
 
+/// How long a file waits for the first account load before going on
+/// with what is known: a store that does not answer by then will not.
+const ACCOUNTS_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
+
 impl App {
+    /// Resolves once the first account load has answered, or after
+    /// [`ACCOUNTS_WAIT`] when it has not.
+    async fn accounts_loaded(&self) {
+        let started = std::time::Instant::now();
+        while !self.accounts_read.get() && started.elapsed() < ACCOUNTS_WAIT {
+            glib::timeout_future(std::time::Duration::from_millis(50)).await;
+        }
+    }
+
     /// Opens `path` as a loose message, acting as the default account,
     /// or says why the file will not open.
     pub(super) fn open_mail_file(self: &Rc<Self>, path: &Path) {
@@ -36,6 +49,10 @@ impl App {
                     // An open main window is left as it is; one is made
                     // only when there is none to hang the message on.
                     let window = this.window().unwrap_or_else(|| this.show_window());
+                    // The window keeps the account it opens with, so the
+                    // first account load must have answered: a launch on
+                    // a file asks before it has.
+                    this.accounts_loaded().await;
                     let account = this.default_account(None);
                     window.open_loose(Loose {
                         raw: Arc::new(raw),
