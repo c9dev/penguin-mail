@@ -14,6 +14,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A conversation opened in its own window stays up after the main window closes, instead of vanishing when the app goes to the background a minute later.
+- A message with no Date header shows no date instead of 1 January 1970.
 - IMAP and POP3 accounts stay signed in while their mail server restarts or updates, and try again every few minutes instead of asking you to sign in ([#79](https://github.com/c9dev/penguin-mail/issues/79)).
 - Changing From replaces signatures containing quotes, and typing an address suffix no longer rereads the whole message.
 - TLS connections reject distrusted emSign certificates.

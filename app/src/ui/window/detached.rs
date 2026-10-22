@@ -78,10 +78,18 @@ impl MainWindow {
             account_id: summary.account_id,
             actions,
         });
+        // Counted among the open windows, so the process stays in the
+        // foreground for this one after the main window closes.
+        if let Some(app) = self.app.upgrade() {
+            app.window_opened();
+        }
         // The view lives as long as its window.
-        let keep = Rc::clone(&view);
+        let (keep, app) = (Rc::clone(&view), self.app.clone());
         window.connect_destroy(move |_| {
             keep.stop_rendering();
+            if let Some(app) = app.upgrade() {
+                app.window_closed();
+            }
         });
         window.present();
         self.load_into(view, summary);

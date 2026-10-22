@@ -2000,155 +2000,155 @@ msgstr "Tomorrow"
 msgid "%A %-d %B"
 msgstr "%A %-d %B"
 
-#: app/src/format.rs:35
+#: app/src/format.rs:40
 msgid "%H:%M"
 msgstr "%H:%M"
 
-#: app/src/format.rs:36 app/src/format.rs:227
+#: app/src/format.rs:41 app/src/format.rs:232
 msgid "Yesterday"
 msgstr "Yesterday"
 
-#: app/src/format.rs:38 app/src/format.rs:228
+#: app/src/format.rs:43 app/src/format.rs:233
 msgid "%A"
 msgstr "%A"
 
-#: app/src/format.rs:39 app/src/format.rs:81
+#: app/src/format.rs:44 app/src/format.rs:86
 msgid "%-d %b"
 msgstr "%-d %b"
 
-#: app/src/format.rs:40
+#: app/src/format.rs:45
 msgid "%Y-%m-%d"
 msgstr "%Y-%m-%d"
 
-#: app/src/format.rs:55
+#: app/src/format.rs:60
 msgid "Today at %H:%M"
 msgstr "Today at %H:%M"
 
-#: app/src/format.rs:56
+#: app/src/format.rs:61
 msgid "Yesterday at %H:%M"
 msgstr "Yesterday at %H:%M"
 
-#: app/src/format.rs:57
+#: app/src/format.rs:62
 msgid "Tomorrow at %H:%M"
 msgstr "Tomorrow at %H:%M"
 
-#: app/src/format.rs:58 app/src/format.rs:122
+#: app/src/format.rs:63 app/src/format.rs:127
 msgid "%a %-d %b at %H:%M"
 msgstr "%a %-d %b at %H:%M"
 
-#: app/src/format.rs:59 app/src/format.rs:123
+#: app/src/format.rs:64 app/src/format.rs:128
 msgid "%-d %b %Y at %H:%M"
 msgstr "%-d %b %Y at %H:%M"
 
-#: app/src/format.rs:60 app/src/format.rs:82
+#: app/src/format.rs:65 app/src/format.rs:87
 msgid "%-d %b %Y"
 msgstr "%-d %b %Y"
 
-#: app/src/format.rs:70
+#: app/src/format.rs:75
 msgid "%a, %-d %b"
 msgstr "%a, %-d %b"
 
-#: app/src/format.rs:71
+#: app/src/format.rs:76
 msgid "%a, %-d %b %Y"
 msgstr "%a, %-d %b %Y"
 
-#: app/src/format.rs:90 app/src/format.rs:230
+#: app/src/format.rs:95 app/src/format.rs:235
 msgid "%A, %-d %B %Y"
 msgstr "%A, %-d %B %Y"
 
-#: app/src/format.rs:98
+#: app/src/format.rs:103
 msgid "{date} at {time}"
 msgstr "{date} at {time}"
 
-#: app/src/format.rs:119
+#: app/src/format.rs:124
 msgid "today at %H:%M"
 msgstr "today at %H:%M"
 
-#: app/src/format.rs:120
+#: app/src/format.rs:125
 msgid "tomorrow at %H:%M"
 msgstr "tomorrow at %H:%M"
 
-#: app/src/format.rs:121
+#: app/src/format.rs:126
 msgid "%A at %H:%M"
 msgstr "%A at %H:%M"
 
-#: app/src/format.rs:133
+#: app/src/format.rs:138
 msgid "Send {when}"
 msgstr "Send {when}"
 
-#: app/src/format.rs:140
+#: app/src/format.rs:145
 msgid "In 1 Hour"
 msgstr "In 1 Hour"
 
-#: app/src/format.rs:160
+#: app/src/format.rs:165
 msgid "Tonight at 21:00"
 msgstr "Tonight at 21:00"
 
-#: app/src/format.rs:164
+#: app/src/format.rs:169
 msgid "Tomorrow at 08:00"
 msgstr "Tomorrow at 08:00"
 
-#: app/src/format.rs:171
+#: app/src/format.rs:176
 msgid "Monday at 08:00"
 msgstr "Monday at 08:00"
 
-#: app/src/format.rs:185
+#: app/src/format.rs:190
 msgid "{date} · All day"
 msgstr "{date} · All day"
 
-#: app/src/format.rs:197
+#: app/src/format.rs:202
 msgid "{date} · {start}"
 msgstr "{date} · {start}"
 
-#: app/src/format.rs:206
+#: app/src/format.rs:211
 msgid "{date} {time}"
 msgstr "{date} {time}"
 
-#: app/src/format.rs:214
+#: app/src/format.rs:219
 msgid "{date} · {start}–{end}"
 msgstr "{date} · {start}–{end}"
 
-#: app/src/format.rs:229
+#: app/src/format.rs:234
 msgid "%A, %-d %B"
 msgstr "%A, %-d %B"
 
-#: app/src/format.rs:246
+#: app/src/format.rs:251
 msgid "{day} {time}"
 msgstr "{day} {time}"
 
-#: app/src/format.rs:317
+#: app/src/format.rs:322
 msgid "Blue"
 msgstr "Blue"
 
-#: app/src/format.rs:318
+#: app/src/format.rs:323
 msgid "Teal"
 msgstr "Teal"
 
-#: app/src/format.rs:319
+#: app/src/format.rs:324
 msgid "Green"
 msgstr "Green"
 
-#: app/src/format.rs:320
+#: app/src/format.rs:325
 msgid "Yellow"
 msgstr "Yellow"
 
-#: app/src/format.rs:321
+#: app/src/format.rs:326
 msgid "Orange"
 msgstr "Orange"
 
-#: app/src/format.rs:322
+#: app/src/format.rs:327
 msgid "Red"
 msgstr "Red"
 
-#: app/src/format.rs:323
+#: app/src/format.rs:328
 msgid "Pink"
 msgstr "Pink"
 
-#: app/src/format.rs:324
+#: app/src/format.rs:329
 msgid "Purple"
 msgstr "Purple"
 
-#: app/src/format.rs:325
+#: app/src/format.rs:330
 msgid "Slate"
 msgstr "Slate"
 
@@ -3305,82 +3305,82 @@ msgstr "to"
 msgid "cc"
 msgstr "cc"
 
-#: app/src/render.rs:535
+#: app/src/render.rs:537
 msgid "date"
 msgstr "date"
 
-#: app/src/render.rs:536
+#: app/src/render.rs:539
 msgid "subject"
 msgstr "subject"
 
-#: app/src/render.rs:538
+#: app/src/render.rs:541
 msgid "mailed-by"
 msgstr "mailed-by"
 
-#: app/src/render.rs:541
+#: app/src/render.rs:544
 msgid "signed-by"
 msgstr "signed-by"
 
-#: app/src/render.rs:545
+#: app/src/render.rs:548
 msgid "security"
 msgstr "security"
 
-#: app/src/render.rs:547
+#: app/src/render.rs:550
 msgid "Standard encryption (TLS)"
 msgstr "Standard encryption (TLS)"
 
-#: app/src/render.rs:552
+#: app/src/render.rs:555
 msgid "Not encrypted in transit"
 msgstr "Not encrypted in transit"
 
-#: app/src/render.rs:589 app/src/ui/composer/mod.rs:2194
+#: app/src/render.rs:592 app/src/ui/composer/mod.rs:2194
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} attachment"
 msgstr[1] "{count} attachments"
 
-#: app/src/render.rs:621
+#: app/src/render.rs:624
 msgid "Quick Look"
 msgstr "Quick Look"
 
-#: app/src/render.rs:622 app/src/ui/window/attachments.rs:350
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:350
 #: app/src/ui/window/attachments.rs:356
 msgid "Save to Downloads"
 msgstr "Save to Downloads"
 
-#: app/src/render.rs:624
+#: app/src/render.rs:627
 msgid "Open {file}, {size}"
 msgstr "Open {file}, {size}"
 
-#: app/src/render.rs:631
+#: app/src/render.rs:634
 msgid "Save {file} to Downloads"
 msgstr "Save {file} to Downloads"
 
-#: app/src/render.rs:638
+#: app/src/render.rs:641
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "Save All ({count})"
 msgstr[1] "Save All ({count})"
 
-#: app/src/render.rs:649
+#: app/src/render.rs:652
 msgid "Save every attachment to a folder"
 msgstr "Save every attachment to a folder"
 
-#: app/src/render.rs:713
+#: app/src/render.rs:716
 msgid "undisclosed recipients"
 msgstr "undisclosed recipients"
 
-#: app/src/render.rs:716
+#: app/src/render.rs:719
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named}, and {count} other"
 msgstr[1] "{named}, and {count} others"
 
-#: app/src/render.rs:729
+#: app/src/render.rs:732
 msgid "me"
 msgstr "me"
 
-#: app/src/render.rs:739 app/src/ui/composer/mod.rs:616
+#: app/src/render.rs:742 app/src/ui/composer/mod.rs:616
 #: app/src/ui/composer/mod.rs:620
 msgid "Show trimmed content"
 msgstr "Show trimmed content"
@@ -5225,7 +5225,7 @@ msgstr "New and existing"
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:58 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
-#: app/src/ui/window/loose.rs:127
+#: app/src/ui/window/loose.rs:129
 msgid "Message"
 msgstr "Message"
 
@@ -9539,7 +9539,7 @@ msgstr "Drag to resize, or use Left and Right. Home and End choose the smallest 
 msgid "Open a conversation first"
 msgstr "Open a conversation first"
 
-#: app/src/ui/window/detached.rs:195 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:203 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -9547,24 +9547,24 @@ msgstr "Open a conversation first"
 msgid "That account is not connected"
 msgstr "That account is not connected"
 
-#: app/src/ui/window/detached.rs:208
+#: app/src/ui/window/detached.rs:216
 msgid "Could not load the source: {reason}"
 msgstr "Could not load the source: {reason}"
 
-#: app/src/ui/window/detached.rs:238 app/src/ui/window/detached.rs:244
-#: app/src/ui/window/detached.rs:256
+#: app/src/ui/window/detached.rs:246 app/src/ui/window/detached.rs:252
+#: app/src/ui/window/detached.rs:264
 msgid "Message Source"
 msgstr "Message Source"
 
-#: app/src/ui/window/detached.rs:240
+#: app/src/ui/window/detached.rs:248
 msgid "Save As…"
 msgstr "Save As…"
 
-#: app/src/ui/window/detached.rs:241
+#: app/src/ui/window/detached.rs:249
 msgid "Save as an .eml file"
 msgstr "Save as an .eml file"
 
-#: app/src/ui/window/detached.rs:279
+#: app/src/ui/window/detached.rs:287
 msgid "Save Message"
 msgstr "Save Message"
 
@@ -9734,7 +9734,7 @@ msgstr "Replied by email to {organizer}"
 msgid "Replied by email"
 msgstr "Replied by email"
 
-#: app/src/ui/window/loose.rs:136
+#: app/src/ui/window/loose.rs:138
 msgid "Attached to {subject}"
 msgstr "Attached to {subject}"
 

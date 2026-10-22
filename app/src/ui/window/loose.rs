@@ -64,7 +64,9 @@ impl MainWindow {
         super::track_dark_class(&window);
         let actions = self.install_loose_actions(&window, &view);
         // Listed with the other separate windows, so `views` and
-        // `mailbox_of` answer for this one too.
+        // `mailbox_of` answer for this one too. The mailbox is a stand-in:
+        // a loose message was opened from none, and no action that reads
+        // it is installed here.
         self.detached.borrow_mut().push(Detached {
             view: Rc::downgrade(&view),
             mailbox: self.shown(),
