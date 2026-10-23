@@ -247,7 +247,19 @@ mod tests {
                 "{name} is not an action"
             );
         }
-        for gone in ["archive", "trash", "junk", "toggle-star", "toggle-read", "unsubscribe", "block-sender", "message-archive", "message-trash", "message-flag", "message-label"] {
+        for gone in [
+            "archive",
+            "trash",
+            "junk",
+            "toggle-star",
+            "toggle-read",
+            "unsubscribe",
+            "block-sender",
+            "message-archive",
+            "message-trash",
+            "message-flag",
+            "message-label",
+        ] {
             assert!(!LOOSE_ACTIONS.contains(&gone), "{gone} acts on a mailbox");
         }
     }

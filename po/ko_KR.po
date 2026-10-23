@@ -2049,7 +2049,7 @@ msgstr "중요"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "열린 창이 없어도 Penguin Mail은 동기화를 계속합니다"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3412
+#: app/src/compose.rs:669 app/src/compose.rs:3446
 msgid "Add at least one recipient."
 msgstr "받는 사람을 한 명 이상 추가하세요."
 
@@ -2057,7 +2057,7 @@ msgstr "받는 사람을 한 명 이상 추가하세요."
 msgid "“{address}” is not an email address."
 msgstr "\"{address}\"는 이메일 주소가 아닙니다."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3418
+#: app/src/compose.rs:904 app/src/compose.rs:3452
 msgid "Choose a time in the future"
 msgstr "미래 시간을 선택하세요"
 
@@ -3687,8 +3687,8 @@ msgstr[0] "첨부 파일 {count}개"
 msgid "Quick Look"
 msgstr "빠른 보기"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:350
-#: app/src/ui/window/attachments.rs:356
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:361
 msgid "Save to Downloads"
 msgstr "다운로드 폴더에 저장"
 
@@ -4884,7 +4884,7 @@ msgid "Detach"
 msgstr "분리"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4202
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4206
 msgid "Close"
 msgstr "닫기"
 
@@ -5706,7 +5706,7 @@ msgid "New and existing"
 msgstr "새 회의 및 기존 회의"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:65 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
 #: app/src/ui/window/loose.rs:153
 msgid "Message"
@@ -7757,25 +7757,25 @@ msgstr "캘린더 및 연락처 서버"
 msgid "Could not use that server: {reason}"
 msgstr "해당 서버를 사용할 수 없습니다: {reason}"
 
-#: app/src/ui/eml_file.rs:29 app/src/ui/eml_file.rs:36
+#: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "캘린더 파일로 사용하기에는 너무 큽니다."
 
-#: app/src/ui/eml_file.rs:39
+#: app/src/ui/eml_file.rs:41
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "이 파일에는 OpenPGP 키가 없습니다."
 
-#: app/src/ui/eml_file.rs:51
+#: app/src/ui/eml_file.rs:53
 #, fuzzy
 #| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
 msgstr "이 파일에는 인증서가 없습니다."
 
-#: app/src/ui/eml_file.rs:72 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "파일을 열 수 없습니다"
 
@@ -10009,7 +10009,7 @@ msgstr "다른 앱에서 이 메시지를 취소하여 더 이상 임시보관�
 msgid "Downloading {file}…"
 msgstr "{file} 다운로드 중…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:250
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
 msgid "Saved {file} to Downloads"
 msgstr "{file}을(를) 다운로드 폴더에 저장했습니다"
 
@@ -10017,7 +10017,7 @@ msgstr "{file}을(를) 다운로드 폴더에 저장했습니다"
 msgid "Open"
 msgstr "열기"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
 msgid "Could not save {file}: {reason}"
 msgstr "{file}을(를) 저장할 수 없습니다: {reason}"
 
@@ -10089,27 +10089,27 @@ msgstr "독"
 msgid "Add a mail account first"
 msgstr "먼저 메일 계정을 추가하세요"
 
-#: app/src/ui/window.rs:3993
+#: app/src/ui/window.rs:3997
 msgid "Open a message from the person first"
 msgstr "먼저 해당 사람의 메시지를 여세요"
 
-#: app/src/ui/window.rs:4085
+#: app/src/ui/window.rs:4089
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/window.rs:4087 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4091 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "다시 시작"
 
-#: app/src/ui/window.rs:4151
+#: app/src/ui/window.rs:4155
 msgid "Show Rules"
 msgstr "규칙 표시"
 
-#: app/src/ui/window.rs:4177
+#: app/src/ui/window.rs:4181
 msgid "Messages That Will Not Download"
 msgstr "다운로드할 수 없는 메시지"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4183
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10136,37 +10136,37 @@ msgid ""
 msgstr ""
 "사이드바에 주소 대신 이 이름을 표시합니다. 주소를 표시하려면 비워 두세요."
 
-#: app/src/ui/window/attachments.rs:74
+#: app/src/ui/window/attachments.rs:79
 msgid "Could not open {file}: {reason}"
 msgstr "{file}을(를) 열 수 없습니다: {reason}"
 
-#: app/src/ui/window/attachments.rs:121
+#: app/src/ui/window/attachments.rs:126
 msgid "Save Attachments"
 msgstr "첨부 파일 저장"
 
-#: app/src/ui/window/attachments.rs:132
+#: app/src/ui/window/attachments.rs:137
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "첨부 파일 {count}개 저장 중…"
 
-#: app/src/ui/window/attachments.rs:182
+#: app/src/ui/window/attachments.rs:187
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "첨부 파일 {count}개를 {folder}에 저장했습니다"
 
-#: app/src/ui/window/attachments.rs:189
+#: app/src/ui/window/attachments.rs:194
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count}개를 {folder}에 저장했습니다. {files}을(를) 저장할 수 없습니다"
 
-#: app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:303
 msgid "Could not open {file}"
 msgstr "{file}을(를) 열 수 없습니다"
 
-#: app/src/ui/window/attachments.rs:354 app/src/ui/window/attachments.rs:357
+#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
 msgid "Open in Another Program"
 msgstr "다른 프로그램에서 열기"
 
-#: app/src/ui/window/attachments.rs:361
+#: app/src/ui/window/attachments.rs:366
 msgid "{file}, preview"
 msgstr "{file}, 미리보기"
 
@@ -10211,12 +10211,12 @@ msgstr ""
 "은 너비와 가장 큰 너비를 고릅니다."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
-#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:179
+#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "먼저 대화를 여세요"
 
 #: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
-#: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
+#: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
 #: app/src/ui/window/senders.rs:288
@@ -10245,25 +10245,25 @@ msgid "Save Message"
 msgstr "메시지 저장"
 
 #: app/src/ui/window/export.rs:86 app/src/ui/window/export.rs:139
-#: app/src/ui/window/export.rs:198
+#: app/src/ui/window/export.rs:196
 msgid "Export Mail"
 msgstr "메일 내보내기"
 
-#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:207
+#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:205
 msgid "Exporting…"
 msgstr "내보내는 중…"
 
 #: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
-#: app/src/ui/window/export.rs:216
+#: app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file}을(를) 저장했습니다"
 
-#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:155
-#: app/src/ui/window/export.rs:158 app/src/ui/window/export.rs:217
+#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:154
+#: app/src/ui/window/export.rs:156 app/src/ui/window/export.rs:215
 msgid "Could not export the mail: {reason}"
 msgstr "메일을 내보낼 수 없습니다: {reason}"
 
-#: app/src/ui/window/export.rs:159
+#: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
 msgstr ""
 

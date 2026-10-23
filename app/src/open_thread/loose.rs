@@ -25,7 +25,9 @@ use super::{OpenThread, queued};
 pub enum Origin {
     File(PathBuf),
     /// A part of a stored message, whose subject this carries.
-    Attachment { subject: String },
+    Attachment {
+        subject: String,
+    },
 }
 
 /// A message shown from its own bytes rather than from the store.
@@ -243,7 +245,11 @@ mod tests {
                 .unwrap_or_default()
                 .contains("cid:kite")
         );
-        let names: Vec<&str> = body.attachments.iter().map(|a| a.filename.as_str()).collect();
+        let names: Vec<&str> = body
+            .attachments
+            .iter()
+            .map(|a| a.filename.as_str())
+            .collect();
         assert!(names.contains(&"notes.txt"), "{names:?}");
         assert!(names.iter().any(|n| n.ends_with(".eml")), "{names:?}");
         assert!(

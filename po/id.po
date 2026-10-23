@@ -2112,7 +2112,7 @@ msgstr "Prioritas"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail terus menyinkronkan meskipun tidak ada jendela terbuka"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3412
+#: app/src/compose.rs:669 app/src/compose.rs:3446
 msgid "Add at least one recipient."
 msgstr "Tambahkan setidaknya satu penerima."
 
@@ -2120,7 +2120,7 @@ msgstr "Tambahkan setidaknya satu penerima."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” bukan alamat email."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3418
+#: app/src/compose.rs:904 app/src/compose.rs:3452
 msgid "Choose a time in the future"
 msgstr "Pilih waktu di masa depan"
 
@@ -3818,8 +3818,8 @@ msgstr[1] "{count} lampiran"
 msgid "Quick Look"
 msgstr "Lihat Sekilas"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:350
-#: app/src/ui/window/attachments.rs:356
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:361
 msgid "Save to Downloads"
 msgstr "Simpan ke Unduhan"
 
@@ -5036,7 +5036,7 @@ msgid "Detach"
 msgstr "Pisahkan"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4202
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4206
 msgid "Close"
 msgstr "Tutup"
 
@@ -5875,7 +5875,7 @@ msgid "New and existing"
 msgstr "Baru dan yang sudah ada"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:65 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
 #: app/src/ui/window/loose.rs:153
 msgid "Message"
@@ -7962,25 +7962,25 @@ msgstr "Server Kalender dan Kontak"
 msgid "Could not use that server: {reason}"
 msgstr "Tidak dapat menggunakan server tersebut: {reason}"
 
-#: app/src/ui/eml_file.rs:29 app/src/ui/eml_file.rs:36
+#: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "Berkas ini terlalu besar untuk menjadi kalender."
 
-#: app/src/ui/eml_file.rs:39
+#: app/src/ui/eml_file.rs:41
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "Berkas ini tidak mengandung kunci OpenPGP."
 
-#: app/src/ui/eml_file.rs:51
+#: app/src/ui/eml_file.rs:53
 #, fuzzy
 #| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
 msgstr "Berkas ini tidak mengandung sertifikat."
 
-#: app/src/ui/eml_file.rs:72 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Tidak Dapat Membuka Berkas Ini"
 
@@ -10285,7 +10285,7 @@ msgstr "Pesan ini dibatalkan di aplikasi lain dan tidak lagi berada di Draf."
 msgid "Downloading {file}…"
 msgstr "Mengunduh {file}…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:250
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
 msgid "Saved {file} to Downloads"
 msgstr "{file} disimpan ke Unduhan"
 
@@ -10293,7 +10293,7 @@ msgstr "{file} disimpan ke Unduhan"
 msgid "Open"
 msgstr "Buka"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
 msgid "Could not save {file}: {reason}"
 msgstr "Tidak dapat menyimpan {file}: {reason}"
 
@@ -10365,27 +10365,27 @@ msgstr "Dock"
 msgid "Add a mail account first"
 msgstr "Tambahkan akun email terlebih dahulu"
 
-#: app/src/ui/window.rs:3993
+#: app/src/ui/window.rs:3997
 msgid "Open a message from the person first"
 msgstr "Buka pesan dari orang tersebut terlebih dahulu"
 
-#: app/src/ui/window.rs:4085
+#: app/src/ui/window.rs:4089
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/window.rs:4087 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4091 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Mulai Ulang"
 
-#: app/src/ui/window.rs:4151
+#: app/src/ui/window.rs:4155
 msgid "Show Rules"
 msgstr "Tampilkan Aturan"
 
-#: app/src/ui/window.rs:4177
+#: app/src/ui/window.rs:4181
 msgid "Messages That Will Not Download"
 msgstr "Pesan yang Tidak Dapat Diunduh"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4183
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10416,39 +10416,39 @@ msgstr ""
 "Bilah sisi menampilkan nama sebagai pengganti alamat. Biarkan kosong untuk "
 "menampilkan alamat."
 
-#: app/src/ui/window/attachments.rs:74
+#: app/src/ui/window/attachments.rs:79
 msgid "Could not open {file}: {reason}"
 msgstr "Tidak dapat membuka {file}: {reason}"
 
-#: app/src/ui/window/attachments.rs:121
+#: app/src/ui/window/attachments.rs:126
 msgid "Save Attachments"
 msgstr "Simpan Lampiran"
 
-#: app/src/ui/window/attachments.rs:132
+#: app/src/ui/window/attachments.rs:137
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "Menyimpan {count} lampiran…"
 msgstr[1] "Menyimpan {count} lampiran…"
 
-#: app/src/ui/window/attachments.rs:182
+#: app/src/ui/window/attachments.rs:187
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} lampiran disimpan ke {folder}"
 msgstr[1] "{count} lampiran disimpan ke {folder}"
 
-#: app/src/ui/window/attachments.rs:189
+#: app/src/ui/window/attachments.rs:194
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} disimpan ke {folder}. Tidak dapat menyimpan {files}"
 
-#: app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:303
 msgid "Could not open {file}"
 msgstr "Tidak dapat membuka {file}"
 
-#: app/src/ui/window/attachments.rs:354 app/src/ui/window/attachments.rs:357
+#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
 msgid "Open in Another Program"
 msgstr "Buka di Program Lain"
 
-#: app/src/ui/window/attachments.rs:361
+#: app/src/ui/window/attachments.rs:366
 msgid "{file}, preview"
 msgstr "{file}, pratinjau"
 
@@ -10494,12 +10494,12 @@ msgstr ""
 "memilih lebar terkecil dan terbesar."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
-#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:179
+#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "Buka percakapan terlebih dahulu"
 
 #: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
-#: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
+#: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
 #: app/src/ui/window/senders.rs:288
@@ -10528,25 +10528,25 @@ msgid "Save Message"
 msgstr "Simpan Pesan"
 
 #: app/src/ui/window/export.rs:86 app/src/ui/window/export.rs:139
-#: app/src/ui/window/export.rs:198
+#: app/src/ui/window/export.rs:196
 msgid "Export Mail"
 msgstr "Ekspor Email"
 
-#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:207
+#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:205
 msgid "Exporting…"
 msgstr "Mengekspor…"
 
 #: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
-#: app/src/ui/window/export.rs:216
+#: app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file} disimpan"
 
-#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:155
-#: app/src/ui/window/export.rs:158 app/src/ui/window/export.rs:217
+#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:154
+#: app/src/ui/window/export.rs:156 app/src/ui/window/export.rs:215
 msgid "Could not export the mail: {reason}"
 msgstr "Tidak dapat mengekspor email: {reason}"
 
-#: app/src/ui/window/export.rs:159
+#: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
 msgstr ""
 

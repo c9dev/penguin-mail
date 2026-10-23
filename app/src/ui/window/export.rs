@@ -151,9 +151,7 @@ impl MainWindow {
             let written = gio::spawn_blocking(move || std::fs::write(&path, raw.as_slice())).await;
             match written {
                 Ok(Ok(())) => this.toast(&fill(&gettext("Saved {file}"), &[("file", &name)])),
-                Ok(Err(err)) => {
-                    this.failed(&gettext("Could not export the mail: {reason}"), &err)
-                }
+                Ok(Err(err)) => this.failed(&gettext("Could not export the mail: {reason}"), &err),
                 Err(_) => this.failed(
                     &gettext("Could not export the mail: {reason}"),
                     &gettext("the write was interrupted"),

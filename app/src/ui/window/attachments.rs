@@ -37,7 +37,9 @@ impl MainWindow {
         let subject = view.read(|open| open.subject.clone()).unwrap_or_default();
         // A message nested in a loose one acts as the account the loose one
         // was opened with, which a file opened with no account lacks.
-        let has_account = view.read(super::loose::account_of).is_none_or(|(_, has)| has);
+        let has_account = view
+            .read(super::loose::account_of)
+            .is_none_or(|(_, has)| has);
         if let Some(data) = opened_file(view, &message_id, index) {
             match is_message(&attachment) {
                 true => self.open_loose(super::loose::attached(
@@ -66,9 +68,12 @@ impl MainWindow {
                 })
                 .await;
             match fetched {
-                Ok(data) if is_message(&attachment) => this.open_loose(
-                    super::loose::attached(data, account_id, has_account, subject),
-                ),
+                Ok(data) if is_message(&attachment) => this.open_loose(super::loose::attached(
+                    data,
+                    account_id,
+                    has_account,
+                    subject,
+                )),
                 Ok(data) => this.show_attachment(attachment, data, false),
                 Err(err) => this.toast(&with_reason(
                     &gettext("Could not open {file}: {reason}"),

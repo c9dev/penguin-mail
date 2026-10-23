@@ -2163,7 +2163,7 @@ msgstr "Relevant"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail gleicht weiter ab, auch ohne geöffnetes Fenster"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3412
+#: app/src/compose.rs:669 app/src/compose.rs:3446
 msgid "Add at least one recipient."
 msgstr "Fügen Sie mindestens einen Empfänger hinzu."
 
@@ -2171,7 +2171,7 @@ msgstr "Fügen Sie mindestens einen Empfänger hinzu."
 msgid "“{address}” is not an email address."
 msgstr "„{address}“ ist keine E-Mail-Adresse."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3418
+#: app/src/compose.rs:904 app/src/compose.rs:3452
 msgid "Choose a time in the future"
 msgstr "Wählen Sie eine Zeit in der Zukunft"
 
@@ -3905,8 +3905,8 @@ msgstr[1] "{count} Anhänge"
 msgid "Quick Look"
 msgstr "Schnellansicht"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:350
-#: app/src/ui/window/attachments.rs:356
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:361
 msgid "Save to Downloads"
 msgstr "In Downloads speichern"
 
@@ -5133,7 +5133,7 @@ msgid "Detach"
 msgstr "Abtrennen"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4202
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4206
 msgid "Close"
 msgstr "Schließen"
 
@@ -5978,7 +5978,7 @@ msgid "New and existing"
 msgstr "Neue und bestehende"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:65 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
 #: app/src/ui/window/loose.rs:153
 msgid "Message"
@@ -8069,25 +8069,25 @@ msgstr "Kalender- und Kontakteserver"
 msgid "Could not use that server: {reason}"
 msgstr "Dieser Server kann nicht verwendet werden: {reason}"
 
-#: app/src/ui/eml_file.rs:29 app/src/ui/eml_file.rs:36
+#: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "Diese Datei ist zu groß für einen Kalender."
 
-#: app/src/ui/eml_file.rs:39
+#: app/src/ui/eml_file.rs:41
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "Diese Datei enthält keinen OpenPGP-Schlüssel."
 
-#: app/src/ui/eml_file.rs:51
+#: app/src/ui/eml_file.rs:53
 #, fuzzy
 #| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
 msgstr "Diese Datei enthält kein Zertifikat."
 
-#: app/src/ui/eml_file.rs:72 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Diese Datei konnte nicht geöffnet werden"
 
@@ -10417,7 +10417,7 @@ msgstr ""
 msgid "Downloading {file}…"
 msgstr "{file} wird heruntergeladen …"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:250
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
 msgid "Saved {file} to Downloads"
 msgstr "{file} in Downloads gespeichert"
 
@@ -10425,7 +10425,7 @@ msgstr "{file} in Downloads gespeichert"
 msgid "Open"
 msgstr "Öffnen"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
 msgid "Could not save {file}: {reason}"
 msgstr "{file} konnte nicht gespeichert werden: {reason}"
 
@@ -10497,27 +10497,27 @@ msgstr "Andocken"
 msgid "Add a mail account first"
 msgstr "Fügen Sie zuerst ein E-Mail-Konto hinzu"
 
-#: app/src/ui/window.rs:3993
+#: app/src/ui/window.rs:3997
 msgid "Open a message from the person first"
 msgstr "Öffnen Sie zuerst eine Nachricht dieser Person"
 
-#: app/src/ui/window.rs:4085
+#: app/src/ui/window.rs:4089
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail zeigt die neue Sprache nach einem Neustart an"
 
-#: app/src/ui/window.rs:4087 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4091 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Neu starten"
 
-#: app/src/ui/window.rs:4151
+#: app/src/ui/window.rs:4155
 msgid "Show Rules"
 msgstr "Regeln anzeigen"
 
-#: app/src/ui/window.rs:4177
+#: app/src/ui/window.rs:4181
 msgid "Messages That Will Not Download"
 msgstr "Nachrichten, die sich nicht herunterladen lassen"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4183
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10548,40 +10548,40 @@ msgstr ""
 "Die Seitenleiste zeigt den Namen statt der Adresse an. Leer lassen, um die "
 "Adresse zu verwenden."
 
-#: app/src/ui/window/attachments.rs:74
+#: app/src/ui/window/attachments.rs:79
 msgid "Could not open {file}: {reason}"
 msgstr "{file} konnte nicht geöffnet werden: {reason}"
 
-#: app/src/ui/window/attachments.rs:121
+#: app/src/ui/window/attachments.rs:126
 msgid "Save Attachments"
 msgstr "Anhänge speichern"
 
-#: app/src/ui/window/attachments.rs:132
+#: app/src/ui/window/attachments.rs:137
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "{count} Anhang wird gespeichert …"
 msgstr[1] "{count} Anhänge werden gespeichert …"
 
-#: app/src/ui/window/attachments.rs:182
+#: app/src/ui/window/attachments.rs:187
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} Anhang in {folder} gespeichert"
 msgstr[1] "{count} Anhänge in {folder} gespeichert"
 
-#: app/src/ui/window/attachments.rs:189
+#: app/src/ui/window/attachments.rs:194
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr ""
 "{count} in {folder} gespeichert. Nicht gespeichert werden konnten: {files}"
 
-#: app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:303
 msgid "Could not open {file}"
 msgstr "{file} konnte nicht geöffnet werden"
 
-#: app/src/ui/window/attachments.rs:354 app/src/ui/window/attachments.rs:357
+#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
 msgid "Open in Another Program"
 msgstr "In einem anderen Programm öffnen"
 
-#: app/src/ui/window/attachments.rs:361
+#: app/src/ui/window/attachments.rs:366
 msgid "{file}, preview"
 msgstr "{file}, Vorschau"
 
@@ -10627,12 +10627,12 @@ msgstr ""
 "wählen die kleinste und die größte Breite."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
-#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:179
+#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "Öffnen Sie zuerst eine Unterhaltung"
 
 #: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
-#: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
+#: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
 #: app/src/ui/window/senders.rs:288
@@ -10661,25 +10661,25 @@ msgid "Save Message"
 msgstr "Nachricht speichern"
 
 #: app/src/ui/window/export.rs:86 app/src/ui/window/export.rs:139
-#: app/src/ui/window/export.rs:198
+#: app/src/ui/window/export.rs:196
 msgid "Export Mail"
 msgstr "E-Mails exportieren"
 
-#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:207
+#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:205
 msgid "Exporting…"
 msgstr "Wird exportiert …"
 
 #: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
-#: app/src/ui/window/export.rs:216
+#: app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file} gespeichert"
 
-#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:155
-#: app/src/ui/window/export.rs:158 app/src/ui/window/export.rs:217
+#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:154
+#: app/src/ui/window/export.rs:156 app/src/ui/window/export.rs:215
 msgid "Could not export the mail: {reason}"
 msgstr "Die E-Mails konnten nicht exportiert werden: {reason}"
 
-#: app/src/ui/window/export.rs:159
+#: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
 msgstr ""
 

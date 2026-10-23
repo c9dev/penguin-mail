@@ -2162,7 +2162,7 @@ msgstr "Prioritare"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail continuă sincronizarea fără nicio fereastră deschisă"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3412
+#: app/src/compose.rs:669 app/src/compose.rs:3446
 msgid "Add at least one recipient."
 msgstr "Adăugați cel puțin un destinatar."
 
@@ -2170,7 +2170,7 @@ msgstr "Adăugați cel puțin un destinatar."
 msgid "“{address}” is not an email address."
 msgstr "„{address}” nu este o adresă de e-mail."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3418
+#: app/src/compose.rs:904 app/src/compose.rs:3452
 msgid "Choose a time in the future"
 msgstr "Alegeți un moment din viitor"
 
@@ -3899,8 +3899,8 @@ msgstr[2] "{count} de atașamente"
 msgid "Quick Look"
 msgstr "Previzualizare rapidă"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:350
-#: app/src/ui/window/attachments.rs:356
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:361
 msgid "Save to Downloads"
 msgstr "Salvează în Descărcări"
 
@@ -5132,7 +5132,7 @@ msgid "Detach"
 msgstr "Detașează"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4202
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4206
 msgid "Close"
 msgstr "Închide"
 
@@ -5974,7 +5974,7 @@ msgid "New and existing"
 msgstr "Noi și existente"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
-#: app/src/ui/eml_file.rs:65 app/src/ui/vacation.rs:259
+#: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
 #: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
 #: app/src/ui/window/loose.rs:153
 msgid "Message"
@@ -8080,25 +8080,25 @@ msgstr "Servere pentru calendar și contacte"
 msgid "Could not use that server: {reason}"
 msgstr "Nu s-a putut folosi acel server: {reason}"
 
-#: app/src/ui/eml_file.rs:29 app/src/ui/eml_file.rs:36
+#: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
 #, fuzzy
 #| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
 msgstr "Acest fișier este prea mare pentru a fi un calendar."
 
-#: app/src/ui/eml_file.rs:39
+#: app/src/ui/eml_file.rs:41
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
 msgstr "Acest fișier nu conține nicio cheie OpenPGP."
 
-#: app/src/ui/eml_file.rs:51
+#: app/src/ui/eml_file.rs:53
 #, fuzzy
 #| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
 msgstr "Acest fișier nu conține niciun certificat."
 
-#: app/src/ui/eml_file.rs:72 app/src/ui/ics_file.rs:68
+#: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
 msgstr "Acest fișier nu a putut fi deschis"
 
@@ -10463,7 +10463,7 @@ msgstr "Acest mesaj a fost anulat în altă aplicație și nu mai este în Ciorn
 msgid "Downloading {file}…"
 msgstr "Se descarcă {file}…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:250
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
 msgid "Saved {file} to Downloads"
 msgstr "{file} a fost salvat în Descărcări"
 
@@ -10471,7 +10471,7 @@ msgstr "{file} a fost salvat în Descărcări"
 msgid "Open"
 msgstr "Deschide"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
 msgid "Could not save {file}: {reason}"
 msgstr "{file} nu a putut fi salvat: {reason}"
 
@@ -10543,27 +10543,27 @@ msgstr "Andochează"
 msgid "Add a mail account first"
 msgstr "Adăugați mai întâi un cont de e-mail"
 
-#: app/src/ui/window.rs:3993
+#: app/src/ui/window.rs:3997
 msgid "Open a message from the person first"
 msgstr "Deschideți mai întâi un mesaj de la persoana respectivă"
 
-#: app/src/ui/window.rs:4085
+#: app/src/ui/window.rs:4089
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail afișează noua limbă după o repornire"
 
-#: app/src/ui/window.rs:4087 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4091 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Repornește"
 
-#: app/src/ui/window.rs:4151
+#: app/src/ui/window.rs:4155
 msgid "Show Rules"
 msgstr "Arată regulile"
 
-#: app/src/ui/window.rs:4177
+#: app/src/ui/window.rs:4181
 msgid "Messages That Will Not Download"
 msgstr "Mesaje care nu se descarcă"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4183
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10594,41 +10594,41 @@ msgstr ""
 "Bara laterală afișează numele în locul adresei. Lăsați câmpul gol pentru "
 "adresă."
 
-#: app/src/ui/window/attachments.rs:74
+#: app/src/ui/window/attachments.rs:79
 msgid "Could not open {file}: {reason}"
 msgstr "{file} nu a putut fi deschis: {reason}"
 
-#: app/src/ui/window/attachments.rs:121
+#: app/src/ui/window/attachments.rs:126
 msgid "Save Attachments"
 msgstr "Salvează atașamentele"
 
-#: app/src/ui/window/attachments.rs:132
+#: app/src/ui/window/attachments.rs:137
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "Se salvează {count} atașament…"
 msgstr[1] "Se salvează {count} atașamente…"
 msgstr[2] "Se salvează {count} de atașamente…"
 
-#: app/src/ui/window/attachments.rs:182
+#: app/src/ui/window/attachments.rs:187
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} atașament salvat în {folder}"
 msgstr[1] "{count} atașamente salvate în {folder}"
 msgstr[2] "{count} de atașamente salvate în {folder}"
 
-#: app/src/ui/window/attachments.rs:189
+#: app/src/ui/window/attachments.rs:194
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "Salvate în {folder}: {count}. Nu s-au putut salva: {files}"
 
-#: app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:303
 msgid "Could not open {file}"
 msgstr "{file} nu a putut fi deschis"
 
-#: app/src/ui/window/attachments.rs:354 app/src/ui/window/attachments.rs:357
+#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
 msgid "Open in Another Program"
 msgstr "Deschide în alt program"
 
-#: app/src/ui/window/attachments.rs:361
+#: app/src/ui/window/attachments.rs:366
 msgid "{file}, preview"
 msgstr "{file}, previzualizare"
 
@@ -10675,12 +10675,12 @@ msgstr ""
 "și End aleg lățimea minimă și maximă."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
-#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:179
+#: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "Deschideți mai întâi o conversație"
 
 #: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
-#: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
+#: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
 #: app/src/ui/window/senders.rs:288
@@ -10709,25 +10709,25 @@ msgid "Save Message"
 msgstr "Salvează mesajul"
 
 #: app/src/ui/window/export.rs:86 app/src/ui/window/export.rs:139
-#: app/src/ui/window/export.rs:198
+#: app/src/ui/window/export.rs:196
 msgid "Export Mail"
 msgstr "Exportă corespondența"
 
-#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:207
+#: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:205
 msgid "Exporting…"
 msgstr "Se exportă…"
 
 #: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
-#: app/src/ui/window/export.rs:216
+#: app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file} a fost salvat"
 
-#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:155
-#: app/src/ui/window/export.rs:158 app/src/ui/window/export.rs:217
+#: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:154
+#: app/src/ui/window/export.rs:156 app/src/ui/window/export.rs:215
 msgid "Could not export the mail: {reason}"
 msgstr "Corespondența nu a putut fi exportată: {reason}"
 
-#: app/src/ui/window/export.rs:159
+#: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
 msgstr ""
 

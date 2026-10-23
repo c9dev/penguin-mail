@@ -24,7 +24,9 @@ pub fn read_message(path: &Path) -> Result<Vec<u8>, String> {
 /// a pipe that reports no size, is refused rather than read whole.
 fn read_message_within(path: &Path, most: u64) -> Result<Vec<u8>, String> {
     use std::io::Read;
-    let size = std::fs::metadata(path).map_err(|err| err.to_string())?.len();
+    let size = std::fs::metadata(path)
+        .map_err(|err| err.to_string())?
+        .len();
     if size > most {
         return Err(gettext("This file is too large to be a message."));
     }
@@ -102,7 +104,10 @@ mod tests {
         let raw = b"Subject: x\r\n\r\nhello";
         std::fs::write(&file, raw).unwrap();
         assert!(read_message_within(&file, raw.len() as u64 - 1).is_err());
-        assert_eq!(read_message_within(&file, raw.len() as u64).unwrap(), raw.to_vec());
+        assert_eq!(
+            read_message_within(&file, raw.len() as u64).unwrap(),
+            raw.to_vec()
+        );
     }
 
     #[test]
@@ -113,6 +118,9 @@ mod tests {
         assert!(read_message(&text).is_err());
         let bare = dir.path().join("bare.eml");
         std::fs::write(&bare, "Subject: only a subject\r\n\r\n").unwrap();
-        assert!(read_message(&bare).is_ok(), "one header the parser accepts is enough");
+        assert!(
+            read_message(&bare).is_ok(),
+            "one header the parser accepts is enough"
+        );
     }
 }

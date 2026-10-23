@@ -67,7 +67,11 @@ pub fn summary(raw: &[u8]) -> Summary {
     let body = crate::read::skim(raw)
         .map(|parts| crate::body(&parts))
         .unwrap_or_default();
-    envelope(&message, preview(body.text.as_deref()), !body.attachments.is_empty())
+    envelope(
+        &message,
+        preview(body.text.as_deref()),
+        !body.attachments.is_empty(),
+    )
 }
 
 /// What `raw`'s headers say, and nothing from below them: no snippet and

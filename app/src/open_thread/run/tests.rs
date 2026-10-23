@@ -4,9 +4,9 @@
 use mailrs_domain::Target;
 
 use super::fake::{
-    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, ics, invited, loose,
-    loose_with, meta, opened_cancellation, opened_invitation, opened_occurrence, opened_publish,
-    personal, portuguese, queued, row, spot, strip, with_inline_picture, with_picture,
+    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, ics, invited, loose, loose_with,
+    meta, opened_cancellation, opened_invitation, opened_occurrence, opened_publish, personal,
+    portuguese, queued, row, spot, strip, with_inline_picture, with_picture,
 };
 use super::{Card, Event, ReceiptCard, Stale};
 use crate::open_thread::Served;
@@ -1693,7 +1693,13 @@ async fn an_invitation_in_a_loose_message_shows_as_an_event_to_keep() {
         !window.took(Step::OpenInvitation),
         "nothing is remembered in the store"
     );
-    let shown = window.0.borrow().event_cards.last().cloned().expect("a card");
+    let shown = window
+        .0
+        .borrow()
+        .event_cards
+        .last()
+        .cloned()
+        .expect("a card");
     assert_eq!(
         shown.invitation.method,
         mailrs_domain::invitation::Method::Publish

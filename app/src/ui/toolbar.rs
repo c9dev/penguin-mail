@@ -86,10 +86,7 @@ pub const CAPSULES: [&[Slot]; 5] = [
 pub fn shows(slot: Slot, on: On) -> bool {
     let any = matches!(on.holds, Holds::Many | Holds::Message | Holds::Draft);
     let wide = !on.compact;
-    let replies = matches!(
-        on.holds,
-        Holds::Message | Holds::Loose { answerable: true }
-    );
+    let replies = matches!(on.holds, Holds::Message | Holds::Loose { answerable: true });
     match slot {
         Slot::Reply => replies,
         Slot::ReplyAll | Slot::Forward => replies && wide,

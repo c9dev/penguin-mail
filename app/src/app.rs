@@ -37,11 +37,11 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 
 mod announce;
 mod calendar_file;
-mod mail_file;
 mod composing;
 mod dictionaries;
 mod dock_badge;
 mod hidden;
+mod mail_file;
 mod notifications;
 mod reminders;
 mod sending;

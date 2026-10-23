@@ -759,7 +759,10 @@ mod tests {
             assert_eq!(body, read(raw), "{}", shown(raw));
             assert_eq!(files, super::files(raw), "{}", shown(raw));
         }
-        assert_eq!(opened(b"just text, no header\n").0, read(b"just text, no header\n"));
+        assert_eq!(
+            opened(b"just text, no header\n").0,
+            read(b"just text, no header\n")
+        );
     }
 
     #[test]

@@ -3756,7 +3756,11 @@ impl MainWindow {
                                         .read(|open| open.messages.last().map(|m| m.id.clone()))
                                         .flatten()
                                 {
-                                    replier.preview_attachment_from(&replier.conversation, id, index);
+                                    replier.preview_attachment_from(
+                                        &replier.conversation,
+                                        id,
+                                        index,
+                                    );
                                 }
                                 replier.run_demo_action();
                             },

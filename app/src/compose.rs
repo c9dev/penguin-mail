@@ -1934,9 +1934,22 @@ mod tests {
     /// answering the original by its Message-ID.
     #[test]
     fn a_reply_to_a_loose_message_names_no_thread() {
-        let mut original = message("m2", addr(Some("Ann"), "ann@example.com"), vec![me()], vec![]);
+        let mut original = message(
+            "m2",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
         original.thread_id = "loose:3".into();
-        let draft = respond(ReplyKind::Reply, 1, &[me()], &original, "Hi", None, &[original.clone()]);
+        let draft = respond(
+            ReplyKind::Reply,
+            1,
+            &[me()],
+            &original,
+            "Hi",
+            None,
+            &[original.clone()],
+        );
         assert_eq!(draft.thread_id, None);
         assert_eq!(draft.in_reply_to.as_deref(), Some("<m2@mail.example.com>"));
         assert_eq!(draft.references, ["<m2@mail.example.com>"]);
@@ -1947,12 +1960,33 @@ mod tests {
     /// naming the start of 1970 or an empty slot.
     #[test]
     fn a_message_with_no_date_is_quoted_and_forwarded_without_one() {
-        let mut original = message("m2", addr(Some("Ann"), "ann@example.com"), vec![me()], vec![]);
+        let mut original = message(
+            "m2",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
         original.date = 0;
-        let reply = respond(ReplyKind::Reply, 1, &[me()], &original, "Hi", None, &[original.clone()]);
+        let reply = respond(
+            ReplyKind::Reply,
+            1,
+            &[me()],
+            &original,
+            "Hi",
+            None,
+            &[original.clone()],
+        );
         let quoted = reply.quoted.unwrap_or_default();
         assert!(quoted.starts_with("Ann wrote:\n"), "{quoted}");
-        let forward = respond(ReplyKind::Forward, 1, &[me()], &original, "Hi", None, &[original.clone()]);
+        let forward = respond(
+            ReplyKind::Forward,
+            1,
+            &[me()],
+            &original,
+            "Hi",
+            None,
+            &[original.clone()],
+        );
         let plain = forward.forwarded.as_ref().unwrap().to_plain();
         assert!(!plain.contains("Date:"), "{plain}");
         assert!(plain.contains("From: Ann <ann@example.com>"), "{plain}");
