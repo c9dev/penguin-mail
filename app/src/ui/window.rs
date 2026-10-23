@@ -2611,9 +2611,14 @@ impl MainWindow {
         // Files the window already holds, by index: a loose message's, or
         // the ones an engine cut out of an encrypted one. Only the rest
         // are fetched.
-        let held: Vec<Vec<u8>> = view
+        // Each file is taken out as it is attached rather than copied: a
+        // loose message can hold tens of megabytes of them.
+        let mut held: Vec<Option<Vec<u8>>> = view
             .find(|open| open.opened_files.get(&target.id).cloned())
-            .unwrap_or_default();
+            .unwrap_or_default()
+            .into_iter()
+            .map(Some)
+            .collect();
         let sync = self.core.account(account_id);
         let fetches = attachments
             .iter()
@@ -2625,10 +2630,10 @@ impl MainWindow {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             for (index, attachment) in attachments.into_iter().enumerate() {
-                if let Some(bytes) = held.get(index) {
+                if let Some(bytes) = held.get_mut(index).and_then(Option::take) {
                     draft.attachments.push(compose::forwarded_file(
                         attachment,
-                        bytes.clone(),
+                        bytes,
                         forwarded_html.as_deref(),
                     ));
                     continue;

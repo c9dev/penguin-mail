@@ -3727,8 +3727,8 @@ msgstr "Esa cuenta no está conectada."
 msgid "Could not save: {reason}"
 msgstr "No se ha podido guardar: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2755
-#: app/src/ui/window.rs:2778
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2760
+#: app/src/ui/window.rs:2783
 msgid "Could not open the draft: {reason}"
 msgstr "No se ha podido abrir el borrador: {reason}"
 
@@ -4096,8 +4096,8 @@ msgstr "API de Anthropic"
 msgid "Claude Subscription"
 msgstr "Suscripción a Claude"
 
-#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3445
-#: app/src/ui/window.rs:3525
+#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3450
+#: app/src/ui/window.rs:3530
 msgid "Assistant"
 msgstr "Asistente"
 
@@ -4487,7 +4487,7 @@ msgstr "Abrir Penguin Mail"
 msgid "New Message"
 msgstr "Mensaje nuevo"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3451
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3456
 msgid "Check for Mail"
 msgstr "Comprobar el correo"
 
@@ -4505,7 +4505,7 @@ msgstr "Novedades de la versión {version}"
 msgid "Check for Updates"
 msgstr "Buscar actualizaciones"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3464
+#: app/src/tray.rs:266 app/src/ui/window.rs:3469
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Salir"
@@ -4526,7 +4526,7 @@ msgstr "Novedades"
 msgid "Website"
 msgstr "Sitio web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3463
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3468
 msgid "Donate"
 msgstr "Donar"
 
@@ -4534,7 +4534,7 @@ msgstr "Donar"
 msgid "License"
 msgstr "Licencia"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3462
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3467
 msgid "About Penguin Mail"
 msgstr "Acerca de Penguin Mail"
 
@@ -5038,7 +5038,7 @@ msgstr ""
 "Este servidor no distingue sus mensajes entre sí, así que Penguin Mail no "
 "puede descargar de él con seguridad."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3611
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3616
 msgid "Summarize this conversation"
 msgstr "Resume esta conversación"
 
@@ -5064,13 +5064,13 @@ msgstr "Redacta una respuesta a la conversación abierta"
 msgid "Choose a Model"
 msgstr "Elegir un modelo"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3572
-#: app/src/ui/window.rs:3573
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3577
+#: app/src/ui/window.rs:3578
 msgid "Detach"
 msgstr "Separar"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4206
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4211
 msgid "Close"
 msgstr "Cerrar"
 
@@ -5281,7 +5281,7 @@ msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3215
+#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3220
 msgid "Remove"
 msgstr "Quitar"
 
@@ -8179,7 +8179,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar mi correo"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3662
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3667
 msgid "Add an account first"
 msgstr "Añade primero una cuenta"
 
@@ -9259,7 +9259,7 @@ msgstr "Mover {account} hacia abajo"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3460 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3465 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferencias"
 
@@ -9661,7 +9661,7 @@ msgstr "Respuesta automática…"
 msgid "Rules…"
 msgstr "Reglas…"
 
-#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3454
+#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3459
 msgid "Hide My Email…"
 msgstr "Ocultar mi correo…"
 
@@ -10133,7 +10133,7 @@ msgstr "No se ha podido cargar el correo: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Se ha añadido {account}. Descargando el correo…"
 
-#: app/src/ui/window.rs:357 app/src/ui/window.rs:2940
+#: app/src/ui/window.rs:357 app/src/ui/window.rs:2945
 msgid "{account} is signed in again."
 msgstr "{account} ha vuelto a iniciar sesión."
 
@@ -10317,47 +10317,47 @@ msgstr "Esta cuenta todavía no tiene marcas. Crea una en Outlook."
 msgid "Add an account to reply or forward"
 msgstr "Añade primero una cuenta"
 
-#: app/src/ui/window.rs:2653
+#: app/src/ui/window.rs:2658
 msgid "Could not include {file}: {reason}"
 msgstr "No se ha podido incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:2734
+#: app/src/ui/window.rs:2739
 msgid "The server had already sent this message."
 msgstr "El servidor ya había enviado este mensaje."
 
-#: app/src/ui/window.rs:2739
+#: app/src/ui/window.rs:2744
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Este mensaje se canceló en otra aplicación y ya no está en Borradores."
 
-#: app/src/ui/window.rs:2853
+#: app/src/ui/window.rs:2858
 msgid "Downloading {file}…"
 msgstr "Descargando {file}…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2879 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado en Descargas"
 
-#: app/src/ui/window.rs:2877
+#: app/src/ui/window.rs:2882
 msgid "Open"
 msgstr "Abrir"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:265
+#: app/src/ui/window.rs:2897 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "No se ha podido guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:3071
+#: app/src/ui/window.rs:3076
 msgid "Continue in your browser"
 msgstr "Continúa en el navegador"
 
-#: app/src/ui/window.rs:3101
+#: app/src/ui/window.rs:3106
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Esta copia de Penguin Mail se compiló sin inicio de sesión de Google."
 
-#: app/src/ui/window.rs:3109
+#: app/src/ui/window.rs:3114
 msgid "Get a Release"
 msgstr "Descargar una versión publicada"
 
-#: app/src/ui/window.rs:3201
+#: app/src/ui/window.rs:3206
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10365,75 +10365,75 @@ msgstr ""
 "No se pudieron comprobar los mensajes que el servidor guarda para enviar más "
 "tarde, así que {account} se queda: {reason}"
 
-#: app/src/ui/window.rs:3212
+#: app/src/ui/window.rs:3217
 msgid "Remove {account}?"
 msgstr "¿Quitar {account}?"
 
-#: app/src/ui/window.rs:3231
+#: app/src/ui/window.rs:3236
 msgid "Remove Anyway"
 msgstr "Quitar de todos modos"
 
-#: app/src/ui/window.rs:3244
+#: app/src/ui/window.rs:3249
 msgid "Removed {account}"
 msgstr "Se ha quitado {account}"
 
-#: app/src/ui/window.rs:3246
+#: app/src/ui/window.rs:3251
 msgid "Could not remove {account}: {reason}"
 msgstr "No se ha podido quitar {account}: {reason}"
 
-#: app/src/ui/window.rs:3432
+#: app/src/ui/window.rs:3437
 msgid "Refresh"
 msgstr "Actualizar"
 
-#: app/src/ui/window.rs:3436
+#: app/src/ui/window.rs:3441
 msgid "Show Declined Events"
 msgstr "Mostrar eventos rechazados"
 
-#: app/src/ui/window.rs:3452
+#: app/src/ui/window.rs:3457
 msgid "Add Account…"
 msgstr "Añadir cuenta…"
 
-#: app/src/ui/window.rs:3453
+#: app/src/ui/window.rs:3458
 msgid "New Smart Mailbox…"
 msgstr "Buzón inteligente nuevo…"
 
-#: app/src/ui/window.rs:3461
+#: app/src/ui/window.rs:3466
 msgid "Keyboard Shortcuts"
 msgstr "Atajos de teclado"
 
-#: app/src/ui/window.rs:3470 app/src/ui/window.rs:3472
+#: app/src/ui/window.rs:3475 app/src/ui/window.rs:3477
 msgid "Main Menu"
 msgstr "Menú principal"
 
-#: app/src/ui/window.rs:3537 app/src/ui/window.rs:3538
+#: app/src/ui/window.rs:3542 app/src/ui/window.rs:3543
 msgid "Dock"
 msgstr "Acoplar"
 
-#: app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3668
 msgid "Add a mail account first"
 msgstr "Añade primero una cuenta de correo"
 
-#: app/src/ui/window.rs:3997
+#: app/src/ui/window.rs:4002
 msgid "Open a message from the person first"
 msgstr "Abre primero un mensaje de esa persona"
 
-#: app/src/ui/window.rs:4089
+#: app/src/ui/window.rs:4094
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail muestra el idioma nuevo tras reiniciarse"
 
-#: app/src/ui/window.rs:4091 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4096 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:4155
+#: app/src/ui/window.rs:4160
 msgid "Show Rules"
 msgstr "Mostrar reglas"
 
-#: app/src/ui/window.rs:4181
+#: app/src/ui/window.rs:4186
 msgid "Messages That Will Not Download"
 msgstr "Mensajes que no se descargan"
 
-#: app/src/ui/window.rs:4183
+#: app/src/ui/window.rs:4188
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
