@@ -480,10 +480,20 @@ impl App {
             same
         };
         if forgotten {
-            if window.separate_windows(None) > 0 {
-                self.parked.borrow_mut().push(Rc::clone(window));
+            if window.separate_windows() > 0 {
+                self.park(window);
             }
             self.window_closed();
+        }
+    }
+
+    /// Keeps a main window that has closed while conversation windows of
+    /// its own are up, since everything they do hangs off it. The last of
+    /// them to close lets it go, in `separate_window_closed`.
+    pub(super) fn park(&self, window: &Rc<MainWindow>) {
+        let mut parked = self.parked.borrow_mut();
+        if !parked.iter().any(|kept| Rc::ptr_eq(kept, window)) {
+            parked.push(Rc::clone(window));
         }
     }
 
@@ -496,7 +506,7 @@ impl App {
         closing: &crate::ui::conversation::ConversationView,
     ) {
         if let Some(host) = host
-            && host.separate_windows(Some(closing)) == 0
+            && host.forget_separate(closing) == 0
         {
             self.parked
                 .borrow_mut()

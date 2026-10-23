@@ -95,15 +95,27 @@ impl MainWindow {
         self.load_into(view, summary);
     }
 
-    /// How many conversation windows of this main window are up, leaving
-    /// out `closing`, the one on its way down.
-    pub(crate) fn separate_windows(&self, closing: Option<&ConversationView>) -> usize {
+    /// How many conversation windows of this main window are up.
+    pub(crate) fn separate_windows(&self) -> usize {
         self.detached
             .borrow()
             .iter()
-            .filter_map(|held| held.view.upgrade())
-            .filter(|view| closing.is_none_or(|closing| !std::ptr::eq(&**view, closing)))
+            .filter(|held| held.view.upgrade().is_some())
             .count()
+    }
+
+    /// Forgets the separate window `closing` is in, and says how many are
+    /// still up. Its view can outlive the window, held by a dialog or a
+    /// run still finishing, so the entry goes by hand rather than when
+    /// the view does: a count that waited for the view would keep the
+    /// main window parked for a window that is gone.
+    pub(crate) fn forget_separate(&self, closing: &ConversationView) -> usize {
+        self.detached.borrow_mut().retain(|held| {
+            held.view
+                .upgrade()
+                .is_some_and(|view| !std::ptr::eq(&*view, closing))
+        });
+        self.detached.borrow().len()
     }
 
     /// Every conversation on screen: the main window's, and one for each

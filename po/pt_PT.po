@@ -1068,7 +1068,7 @@ msgstr ""
 "Não foi possível ler as suas preferências, por isso o Penguin Mail começou "
 "com as predefinições. O ficheiro antigo ficou guardado como {file}."
 
-#: app/src/app/mail_file.rs:69
+#: app/src/app/mail_file.rs:74
 msgid "This file could not be read."
 msgstr "Este ficheiro não pôde ser lido."
 
@@ -10496,7 +10496,7 @@ msgstr ""
 msgid "Open a conversation first"
 msgstr "Abra primeiro uma conversa"
 
-#: app/src/ui/window/detached.rs:214 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10504,24 +10504,24 @@ msgstr "Abra primeiro uma conversa"
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
-#: app/src/ui/window/detached.rs:227
+#: app/src/ui/window/detached.rs:239
 msgid "Could not load the source: {reason}"
 msgstr "Não foi possível carregar a origem: {reason}"
 
-#: app/src/ui/window/detached.rs:257 app/src/ui/window/detached.rs:263
-#: app/src/ui/window/detached.rs:275
+#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
+#: app/src/ui/window/detached.rs:287
 msgid "Message Source"
 msgstr "Origem da mensagem"
 
-#: app/src/ui/window/detached.rs:259
+#: app/src/ui/window/detached.rs:271
 msgid "Save As…"
 msgstr "Guardar como…"
 
-#: app/src/ui/window/detached.rs:260
+#: app/src/ui/window/detached.rs:272
 msgid "Save as an .eml file"
 msgstr "Guardar como ficheiro .eml"
 
-#: app/src/ui/window/detached.rs:298
+#: app/src/ui/window/detached.rs:310
 msgid "Save Message"
 msgstr "Guardar mensagem"
 

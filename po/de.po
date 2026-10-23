@@ -1081,7 +1081,7 @@ msgstr ""
 "Ihre Einstellungen konnten nicht gelesen werden, daher hat Penguin Mail mit "
 "den Standardwerten begonnen. Die alte Datei bleibt als {file} erhalten."
 
-#: app/src/app/mail_file.rs:69
+#: app/src/app/mail_file.rs:74
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
@@ -10631,7 +10631,7 @@ msgstr ""
 msgid "Open a conversation first"
 msgstr "Öffnen Sie zuerst eine Unterhaltung"
 
-#: app/src/ui/window/detached.rs:214 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:194 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10639,24 +10639,24 @@ msgstr "Öffnen Sie zuerst eine Unterhaltung"
 msgid "That account is not connected"
 msgstr "Dieses Konto ist nicht verbunden"
 
-#: app/src/ui/window/detached.rs:227
+#: app/src/ui/window/detached.rs:239
 msgid "Could not load the source: {reason}"
 msgstr "Der Quelltext konnte nicht geladen werden: {reason}"
 
-#: app/src/ui/window/detached.rs:257 app/src/ui/window/detached.rs:263
-#: app/src/ui/window/detached.rs:275
+#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
+#: app/src/ui/window/detached.rs:287
 msgid "Message Source"
 msgstr "Quelltext der Nachricht"
 
-#: app/src/ui/window/detached.rs:259
+#: app/src/ui/window/detached.rs:271
 msgid "Save As…"
 msgstr "Speichern unter …"
 
-#: app/src/ui/window/detached.rs:260
+#: app/src/ui/window/detached.rs:272
 msgid "Save as an .eml file"
 msgstr "Als .eml-Datei speichern"
 
-#: app/src/ui/window/detached.rs:298
+#: app/src/ui/window/detached.rs:310
 msgid "Save Message"
 msgstr "Nachricht speichern"
 
