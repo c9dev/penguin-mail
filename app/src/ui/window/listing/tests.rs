@@ -857,3 +857,31 @@ async fn a_new_message_in_a_visible_thread_gets_its_own_preview() {
     assert_eq!(fake.calls(Call::PreviewArrived), 1);
     assert_eq!(fake.with(|s| s.rows[0].snippet.clone()), "New message");
 }
+
+#[tokio::test]
+async fn a_filtered_empty_page_uses_its_unfiltered_cursor() {
+    let (fake, run) = Fake::new();
+    fake.with(|s| {
+        s.answers.push_back(Ok(Listing {
+            more: true,
+            next: Some(mailrs_sync::Loaded {
+                count: 25,
+                last: Some(row("hidden", 25)),
+            }),
+            ..Listing::default()
+        }))
+    });
+    run.change(show(inbox()));
+    fake.settle().await;
+    assert!(fake.ids().is_empty());
+    fake.with(|s| {
+        s.answers.push_back(Ok(Listing {
+            rows: vec![row("match", 26)],
+            ..Listing::default()
+        }))
+    });
+    run.scrolled_to_end();
+    fake.settle().await;
+    assert_eq!(fake.with(|s| s.held.clone()), [25]);
+    assert_eq!(fake.ids(), ["match"]);
+}

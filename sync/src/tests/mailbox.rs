@@ -1882,3 +1882,74 @@ async fn a_jmap_inbox_counts_unread_threads_not_messages() {
     assert_eq!(counts.mailboxes[&inbox], 1, "one conversation");
     assert_eq!(counts.mailboxes[&all], 1);
 }
+
+#[tokio::test]
+async fn quick_filters_run_before_paging_and_when_rows_change() {
+    use mailrs_domain::ListFilter;
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("read", "read", now, &["INBOX"]));
+    h.fake
+        .seed(meta("unread", "unread", now - 1, &["INBOX", "UNREAD"]));
+    let mut attached = meta(
+        "attached",
+        "attached",
+        now - 2,
+        &["INBOX", "UNREAD", "STARRED"],
+    );
+    attached.has_attachments = true;
+    h.fake.seed(attached);
+    h.fake
+        .seed(meta("outside", "outside", now - 3, &["UNREAD", "STARRED"]));
+    h.bootstrap_all().await;
+    let inbox = Mailbox::Unified(Standard::Inbox);
+    for threading in [true, false] {
+        let mut view = View {
+            filter: ListFilter {
+                unread: true,
+                ..ListFilter::default()
+            },
+            threading,
+            limit: Some(1),
+            ..view()
+        };
+        let first = list(&h, &inbox, &view).await;
+        assert_eq!(ids(&first), ["unread"]);
+        assert!(first.more);
+        assert_eq!(first.unread, 2);
+        let second = lists(&h)
+            .list(&inbox, &scope(&h), &view, first.next.unwrap())
+            .await
+            .unwrap();
+        assert_eq!(ids(&second), ["attached"]);
+        assert!(!second.more);
+        view.filter.flagged = true;
+        view.filter.attachments = true;
+        assert_eq!(ids(&list(&h, &inbox, &view).await), ["attached"]);
+        let changed = lists(&h)
+            .changed(
+                &inbox,
+                &[
+                    (h.account_id, "read".into()),
+                    (h.account_id, "attached".into()),
+                ],
+                &view,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(changed.rows.len(), 1);
+        assert_eq!(changed.rows[0].id, "attached");
+        let all = list(
+            &h,
+            &inbox,
+            &View {
+                filter: ListFilter::default(),
+                limit: None,
+                ..view
+            },
+        )
+        .await;
+        assert_eq!(ids(&all), ["read", "unread", "attached"]);
+    }
+}

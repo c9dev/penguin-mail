@@ -264,3 +264,12 @@ Preferences uses a single page-list Tab stop, with arrow keys to choose a page a
 The model menu in the assistant's question box and the Tools menu in its header work from the keyboard. File chips have a named Remove button. What it did is one disclosure per turn, with nested thought and tool disclosures whose input and result remain selectable. Detach and Dock move the same widgets and return focus to the question field. Closing a detached assistant preserves the chat in the mail window.
 
 Trash rows offer Empty Trash in their Options menu, through right-click, Menu or Shift+F10. A confirmation names the accounts whose Trash will be emptied and warns that deletion cannot be undone.
+
+## Message list filters
+
+The Filter Messages button opens named checkboxes for Unread Only, Flagged Only
+and With Attachments. All selected conditions apply together. Clear Filters
+unchecks them. The button announces when filters are active. More remains
+reachable when filters leave a server page empty; No Matching Mail explains
+that another page may still contain matches. Conditions stay selected when
+switching mailboxes and reset when the window closes.

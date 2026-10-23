@@ -484,6 +484,7 @@ impl Scope {
 /// The settings that change what a mailbox lists.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct View {
+    pub filter: mailrs_domain::ListFilter,
     /// Group a thread's messages into one row.
     pub threading: bool,
     /// The slice of an inbox to show, or `None` when categories are off.
@@ -502,6 +503,7 @@ pub struct View {
 impl Default for View {
     fn default() -> Self {
         View {
+            filter: mailrs_domain::ListFilter::default(),
             threading: true,
             category: None,
             follow_ups: true,
@@ -512,6 +514,18 @@ impl Default for View {
 }
 
 impl View {
+    fn empty(&self, mailbox: &Mailbox) -> Empty {
+        if self.filter.active() {
+            Empty {
+                title: gettext("No Matching Mail"),
+                description: gettext("Change the filters or load more messages if available."),
+                icon: "system-search-symbolic",
+            }
+        } else {
+            mailbox.empty()
+        }
+    }
+
     fn local_now(&self) -> DateTime<Local> {
         Local
             .timestamp_millis_opt(self.now)
@@ -523,6 +537,8 @@ impl View {
 /// One page of a mailbox, with everything the list header needs.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Listing {
+    /// Pagination before quick filters remove rows from a server page.
+    pub next: Option<Loaded>,
     pub rows: Vec<ThreadSummary>,
     /// Unread rows in the whole mailbox, not only in this page.
     pub unread: i64,
@@ -861,11 +877,12 @@ impl<A: Accounts> Mailboxes<A> {
             })
             .await?;
         let mut rows = summarize_search(hits, view.threading);
+        rows.retain(|row| view.filter.matches(row));
         rows.truncate(SEARCH_LIMIT);
         Ok(Listing {
             title: mailbox.title(),
             subtitle: query.to_string(),
-            empty: mailbox.empty(),
+            empty: view.empty(&mailbox),
             rows,
             ..Listing::default()
         })
@@ -883,10 +900,35 @@ impl<A: Accounts> Mailboxes<A> {
         held: Loaded,
         stop: &Stop,
     ) -> Result<Listing, SyncError> {
+        let mut listing = self
+            .list_unfiltered(mailbox, scope, view, held.clone(), stop)
+            .await?;
+        if view.filter.active() {
+            let mut next = Loaded::rows(&listing.rows);
+            if !listing.replace {
+                next.count += held.count;
+                if next.last.is_none() {
+                    next.last = held.last;
+                }
+            }
+            listing.next = Some(next);
+            listing.rows.retain(|row| view.filter.matches(row));
+        }
+        Ok(listing)
+    }
+
+    async fn list_unfiltered(
+        &self,
+        mailbox: &Mailbox,
+        scope: &Scope,
+        view: &View,
+        held: Loaded,
+        stop: &Stop,
+    ) -> Result<Listing, SyncError> {
         let from = held.count;
         let base = Listing {
             title: mailbox.title(),
-            empty: mailbox.empty(),
+            empty: view.empty(mailbox),
             ..Listing::default()
         };
         match mailbox {
@@ -1360,7 +1402,7 @@ impl<A: Accounts> Mailboxes<A> {
     /// The store query for `mailbox`, narrowed to the chosen category when
     /// the mailbox is an inbox and categories are on.
     fn filter_of(&self, mailbox: &Mailbox, view: &View) -> Option<ThreadFilter> {
-        let filter = mailbox.filter()?;
+        let filter = mailbox.filter()?.with_list_filter(view.filter);
         match view.category.filter(|_| mailbox.takes_categories()) {
             Some(category) => {
                 let (any, none) = category.categories();

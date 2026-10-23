@@ -251,9 +251,9 @@ impl Pane for Fake {
         });
     }
 
-    fn append(&self, rows: Vec<ThreadSummary>) {
+    fn append(&self, listing: Listing) {
         self.call(Call::Append);
-        self.with(|s| s.rows.extend(rows));
+        self.with(|s| s.rows.extend(listing.rows));
     }
 
     fn replace(&self, changed: &[Named], rows: Vec<ThreadSummary>, _title: &str, _subtitle: &str) {

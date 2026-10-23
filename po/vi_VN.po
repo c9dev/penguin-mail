@@ -3568,8 +3568,8 @@ msgstr "Tài khoản đó chưa kết nối."
 msgid "Could not save: {reason}"
 msgstr "Không thể lưu: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2760
-#: app/src/ui/window.rs:2783
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2761
+#: app/src/ui/window.rs:2784
 msgid "Could not open the draft: {reason}"
 msgstr "Không thể mở thư nháp: {reason}"
 
@@ -3929,8 +3929,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Gói đăng ký Claude"
 
-#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3450
-#: app/src/ui/window.rs:3530
+#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3451
+#: app/src/ui/window.rs:3531
 msgid "Assistant"
 msgstr "Trợ lý"
 
@@ -4301,11 +4301,11 @@ msgstr "Mở Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
 #: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:470
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:475
 msgid "New Message"
 msgstr "Thư mới"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3456
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1949 app/src/ui/window.rs:3457
 msgid "Check for Mail"
 msgstr "Kiểm tra thư"
 
@@ -4323,7 +4323,7 @@ msgstr "Điểm mới trong {version}"
 msgid "Check for Updates"
 msgstr "Kiểm tra bản cập nhật"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3469
+#: app/src/tray.rs:266 app/src/ui/window.rs:3470
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Thoát"
@@ -4344,7 +4344,7 @@ msgstr "Điểm mới"
 msgid "Website"
 msgstr "Trang web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3468
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3469
 msgid "Donate"
 msgstr "Quyên góp"
 
@@ -4352,7 +4352,7 @@ msgstr "Quyên góp"
 msgid "License"
 msgstr "Giấy phép"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3467
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3468
 msgid "About Penguin Mail"
 msgstr "Giới thiệu Penguin Mail"
 
@@ -4852,7 +4852,7 @@ msgstr ""
 "Máy chủ này không phân biệt được các thư nên Penguin Mail không thể tải thư "
 "an toàn."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3616
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3617
 msgid "Summarize this conversation"
 msgstr "Tóm tắt cuộc hội thoại này"
 
@@ -4877,13 +4877,13 @@ msgstr "Soạn thư trả lời cho cuộc hội thoại đang mở"
 msgid "Choose a Model"
 msgstr "Chọn mô hình"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3577
-#: app/src/ui/window.rs:3578
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3578
+#: app/src/ui/window.rs:3579
 msgid "Detach"
 msgstr "Tách cửa sổ"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4211
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4213
 msgid "Close"
 msgstr "Đóng"
 
@@ -5088,7 +5088,7 @@ msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3220
+#: app/src/ui/sender_prefs.rs:175 app/src/ui/window.rs:3221
 msgid "Remove"
 msgstr "Xóa"
 
@@ -5879,8 +5879,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Không thể đính kèm {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1947 app/src/ui/composer/mod.rs:413
-#: app/src/ui/thread_list.rs:339 app/src/ui/thread_list.rs:345
-#: app/src/ui/thread_list.rs:1094
+#: app/src/ui/thread_list.rs:343 app/src/ui/thread_list.rs:349
+#: app/src/ui/thread_list.rs:1102
 msgid "More"
 msgstr "Thêm"
 
@@ -7940,7 +7940,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Cho phép Ẩn email của tôi"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3667
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3668
 msgid "Add an account first"
 msgstr "Thêm tài khoản trước"
 
@@ -8960,7 +8960,7 @@ msgstr "Tài khoản lịch dùng gần nhất"
 msgid "Same as New Messages"
 msgstr "Giống như thư mới"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:270
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:272
 msgid "All Inboxes"
 msgstr "Mọi hộp thư đến"
 
@@ -8979,7 +8979,7 @@ msgstr "Di chuyển {account} xuống"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3465 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3466 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Tùy chọn"
 
@@ -9305,7 +9305,7 @@ msgid "Mailboxes"
 msgstr "Hộp thư"
 
 #: app/src/ui/sidebar.rs:388 app/src/ui/sidebar.rs:1508
-#: app/src/ui/thread_list.rs:359
+#: app/src/ui/thread_list.rs:363
 msgid "Mail"
 msgstr "Thư"
 
@@ -9371,7 +9371,7 @@ msgstr "Trả lời tự động…"
 msgid "Rules…"
 msgstr "Quy tắc…"
 
-#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3459
+#: app/src/ui/sidebar.rs:1860 app/src/ui/window.rs:3460
 msgid "Hide My Email…"
 msgstr "Ẩn email của tôi…"
 
@@ -9555,32 +9555,71 @@ msgstr "Nội dung"
 msgid "New Template"
 msgstr "Mẫu thư mới"
 
-#: app/src/ui/thread_list.rs:233
+#: app/src/ui/thread_list.rs:235
 msgid "No Mail"
 msgstr "Không có thư"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:251
+#: app/src/ui/thread_list.rs:253
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Tìm thư, ví dụ: from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:290 app/src/ui/thread_list.rs:310
+#: app/src/ui/thread_list.rs:292 app/src/ui/thread_list.rs:312
 msgid "Show Mailboxes"
 msgstr "Hiện hộp thư"
 
-#: app/src/ui/thread_list.rs:295
+#: app/src/ui/thread_list.rs:297
 msgid "New Message (C)"
 msgstr "Thư mới (C)"
 
-#: app/src/ui/thread_list.rs:300
+#: app/src/ui/thread_list.rs:302
 msgid "Search (/)"
 msgstr "Tìm kiếm (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:309
+#: app/src/ui/thread_list.rs:311
 msgid "Search mail"
 msgstr "Tìm thư"
+
+#: app/src/ui/thread_list/filters.rs:26
+msgid "Unread Only"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:27
+#, fuzzy
+#| msgid "Flagged blue"
+msgid "Flagged Only"
+msgstr "Đã gắn cờ xanh dương"
+
+#: app/src/ui/thread_list/filters.rs:28
+#, fuzzy
+#| msgid "Attachments"
+msgid "With Attachments"
+msgstr "Tệp đính kèm"
+
+#: app/src/ui/thread_list/filters.rs:34
+msgid "Match all selected filters"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:38
+#, fuzzy
+#| msgid "Calendar File"
+msgid "Clear Filters"
+msgstr "Tệp lịch"
+
+#: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
+#: app/src/ui/thread_list/filters.rs:101
+#, fuzzy
+#| msgid "New Messages"
+msgid "Filter Messages"
+msgstr "Thư mới"
+
+#: app/src/ui/thread_list/filters.rs:99
+#, fuzzy
+#| msgid "New Message (C)"
+msgid "Filter Messages (Active)"
+msgstr "Thư mới (C)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -9831,7 +9870,7 @@ msgstr "Không thể tải thư: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Đã thêm {account}. Đang tải thư…"
 
-#: app/src/ui/window.rs:357 app/src/ui/window.rs:2945
+#: app/src/ui/window.rs:357 app/src/ui/window.rs:2946
 msgid "{account} is signed in again."
 msgstr "{account} đã đăng nhập lại."
 
@@ -9964,15 +10003,15 @@ msgstr "Penguin Mail (Minh họa)"
 msgid "Could not read accounts: {reason}"
 msgstr "Không thể đọc tài khoản: {reason}"
 
-#: app/src/ui/window.rs:2027
+#: app/src/ui/window.rs:2028
 msgid "Could not delete the mail: {reason}"
 msgstr "Không thể xóa thư: {reason}"
 
-#: app/src/ui/window.rs:2119
+#: app/src/ui/window.rs:2120
 msgid "Turn On the {service}"
 msgstr "Bật {service}"
 
-#: app/src/ui/window.rs:2122
+#: app/src/ui/window.rs:2123
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -9982,66 +10021,66 @@ msgstr ""
 "Google từ chối trước khi hỏi quyền của bạn. Bật dịch vụ, chờ một phút rồi "
 "thử lại."
 
-#: app/src/ui/window.rs:2128
+#: app/src/ui/window.rs:2129
 msgid "Open Google Cloud"
 msgstr "Mở Google Cloud"
 
-#: app/src/ui/window.rs:2449
+#: app/src/ui/window.rs:2450
 msgid "Select mail from one account to tag it."
 msgstr "Chọn thư từ một tài khoản để gắn thẻ."
 
-#: app/src/ui/window.rs:2461
+#: app/src/ui/window.rs:2462
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Tài khoản này chưa có thẻ. Tạo thẻ trong Outlook."
 
-#: app/src/ui/window.rs:2554
+#: app/src/ui/window.rs:2555
 #, fuzzy
 #| msgid "Add an account first"
 msgid "Add an account to reply or forward"
 msgstr "Thêm tài khoản trước"
 
-#: app/src/ui/window.rs:2658
+#: app/src/ui/window.rs:2659
 msgid "Could not include {file}: {reason}"
 msgstr "Không thể thêm {file}: {reason}"
 
-#: app/src/ui/window.rs:2739
+#: app/src/ui/window.rs:2740
 msgid "The server had already sent this message."
 msgstr "Máy chủ đã gửi thư này."
 
-#: app/src/ui/window.rs:2744
+#: app/src/ui/window.rs:2745
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Thư này bị hủy trong ứng dụng khác và không còn trong Thư nháp."
 
-#: app/src/ui/window.rs:2858
+#: app/src/ui/window.rs:2859
 msgid "Downloading {file}…"
 msgstr "Đang tải {file}…"
 
-#: app/src/ui/window.rs:2879 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2880 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "Đã lưu {file} vào Tải xuống"
 
-#: app/src/ui/window.rs:2882
+#: app/src/ui/window.rs:2883
 msgid "Open"
 msgstr "Mở"
 
-#: app/src/ui/window.rs:2897 app/src/ui/window/attachments.rs:265
+#: app/src/ui/window.rs:2898 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "Không thể lưu {file}: {reason}"
 
-#: app/src/ui/window.rs:3076
+#: app/src/ui/window.rs:3077
 msgid "Continue in your browser"
 msgstr "Tiếp tục trong trình duyệt"
 
-#: app/src/ui/window.rs:3106
+#: app/src/ui/window.rs:3107
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google."
 
-#: app/src/ui/window.rs:3114
+#: app/src/ui/window.rs:3115
 msgid "Get a Release"
 msgstr "Tải bản phát hành"
 
-#: app/src/ui/window.rs:3206
+#: app/src/ui/window.rs:3207
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10049,75 +10088,75 @@ msgstr ""
 "Không thể kiểm tra các thư máy chủ đang giữ để gửi sau, nên tài khoản "
 "{account} được giữ lại: {reason}"
 
-#: app/src/ui/window.rs:3217
+#: app/src/ui/window.rs:3218
 msgid "Remove {account}?"
 msgstr "Xóa {account}?"
 
-#: app/src/ui/window.rs:3236
+#: app/src/ui/window.rs:3237
 msgid "Remove Anyway"
 msgstr "Vẫn xóa"
 
-#: app/src/ui/window.rs:3249
+#: app/src/ui/window.rs:3250
 msgid "Removed {account}"
 msgstr "Đã xóa {account}"
 
-#: app/src/ui/window.rs:3251
+#: app/src/ui/window.rs:3252
 msgid "Could not remove {account}: {reason}"
 msgstr "Không thể xóa {account}: {reason}"
 
-#: app/src/ui/window.rs:3437
+#: app/src/ui/window.rs:3438
 msgid "Refresh"
 msgstr "Làm mới"
 
-#: app/src/ui/window.rs:3441
+#: app/src/ui/window.rs:3442
 msgid "Show Declined Events"
 msgstr "Hiện sự kiện đã từ chối"
 
-#: app/src/ui/window.rs:3457
+#: app/src/ui/window.rs:3458
 msgid "Add Account…"
 msgstr "Thêm tài khoản…"
 
-#: app/src/ui/window.rs:3458
+#: app/src/ui/window.rs:3459
 msgid "New Smart Mailbox…"
 msgstr "Hộp thư thông minh mới…"
 
-#: app/src/ui/window.rs:3466
+#: app/src/ui/window.rs:3467
 msgid "Keyboard Shortcuts"
 msgstr "Phím tắt"
 
-#: app/src/ui/window.rs:3475 app/src/ui/window.rs:3477
+#: app/src/ui/window.rs:3476 app/src/ui/window.rs:3478
 msgid "Main Menu"
 msgstr "Trình đơn chính"
 
-#: app/src/ui/window.rs:3542 app/src/ui/window.rs:3543
+#: app/src/ui/window.rs:3543 app/src/ui/window.rs:3544
 msgid "Dock"
 msgstr "Gắn lại"
 
-#: app/src/ui/window.rs:3668
+#: app/src/ui/window.rs:3669
 msgid "Add a mail account first"
 msgstr "Thêm tài khoản thư trước"
 
-#: app/src/ui/window.rs:4002
+#: app/src/ui/window.rs:4004
 msgid "Open a message from the person first"
 msgstr "Mở thư từ người đó trước"
 
-#: app/src/ui/window.rs:4094
+#: app/src/ui/window.rs:4096
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail hiển thị ngôn ngữ mới sau khi khởi động lại"
 
-#: app/src/ui/window.rs:4096 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4098 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Khởi động lại"
 
-#: app/src/ui/window.rs:4160
+#: app/src/ui/window.rs:4162
 msgid "Show Rules"
 msgstr "Hiện quy tắc"
 
-#: app/src/ui/window.rs:4186
+#: app/src/ui/window.rs:4188
 msgid "Messages That Will Not Download"
 msgstr "Thư không thể tải"
 
-#: app/src/ui/window.rs:4188
+#: app/src/ui/window.rs:4190
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11501,7 +11540,7 @@ msgstr "Không có thư gắn cờ"
 msgid "No Mail from VIPs"
 msgstr "Không có thư từ người quan trọng"
 
-#: sync/src/mailbox.rs:351
+#: sync/src/mailbox.rs:351 sync/src/mailbox.rs:520
 msgid "No Matching Mail"
 msgstr "Không có thư phù hợp"
 
@@ -11549,82 +11588,86 @@ msgstr "Không thể tải thư cho {account}: {reason}"
 msgid "All Mail"
 msgstr "Tất cả thư"
 
-#: sync/src/mailbox.rs:982
+#: sync/src/mailbox.rs:521
+msgid "Change the filters or load more messages if available."
+msgstr ""
+
+#: sync/src/mailbox.rs:1024
 msgid "This smart mailbox has no conditions"
 msgstr "Hộp thư thông minh này chưa có điều kiện"
 
-#: sync/src/mailbox.rs:1542
+#: sync/src/mailbox.rs:1584
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Kết quả cho {account} chỉ đến từ thư trên máy tính này"
 
-#: sync/src/mailbox.rs:1676
+#: sync/src/mailbox.rs:1718
 msgid "Returns {when}"
 msgstr "Trở lại {when}"
 
-#: sync/src/mailbox.rs:1719 sync/src/mailbox.rs:1802
+#: sync/src/mailbox.rs:1761 sync/src/mailbox.rs:1844
 msgid "No recipients"
 msgstr "Không có người nhận"
 
-#: sync/src/mailbox.rs:1722 sync/src/mailbox.rs:1805
+#: sync/src/mailbox.rs:1764 sync/src/mailbox.rs:1847
 msgid "To {recipients}"
 msgstr "Đến {recipients}"
 
-#: sync/src/mailbox.rs:1765
+#: sync/src/mailbox.rs:1807
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} chưa đọc · {category}"
 
-#: sync/src/mailbox.rs:1770
+#: sync/src/mailbox.rs:1812
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} chưa đọc"
 
-#: sync/src/mailbox.rs:1777
+#: sync/src/mailbox.rs:1819
 msgid "Sent yesterday, no reply yet"
 msgstr "Gửi hôm qua, chưa có trả lời"
 
-#: sync/src/mailbox.rs:1779
+#: sync/src/mailbox.rs:1821
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Gửi {days} ngày trước, chưa có trả lời"
 
-#: sync/src/mailbox.rs:1843
+#: sync/src/mailbox.rs:1885
 msgid "The server has not sent this message yet."
 msgstr "Máy chủ chưa gửi thư này."
 
-#: sync/src/mailbox.rs:1844
+#: sync/src/mailbox.rs:1886
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail chưa xác nhận máy chủ đã nhận thư này."
 
-#: sync/src/mailbox.rs:1854
+#: sync/src/mailbox.rs:1896
 msgid "Sends {when}."
 msgstr "Gửi {when}."
 
-#: sync/src/mailbox.rs:1855
+#: sync/src/mailbox.rs:1897
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Máy chủ gửi kể cả khi Penguin Mail đóng."
 
-#: sync/src/mailbox.rs:1857
+#: sync/src/mailbox.rs:1899
 msgid "Sends {when}"
 msgstr "Gửi {when}"
 
-#: sync/src/mailbox.rs:1864
+#: sync/src/mailbox.rs:1906
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Kiểm tra Đã gửi. Penguin Mail chưa xác nhận thư đã được gửi."
 
-#: sync/src/mailbox.rs:1867
+#: sync/src/mailbox.rs:1909
 msgid "Canceled in another app."
 msgstr "Đã hủy trong ứng dụng khác."
 
-#: sync/src/mailbox.rs:1869
+#: sync/src/mailbox.rs:1911
 msgid "Not sent"
 msgstr "Chưa gửi"
 
-#: sync/src/mailbox.rs:1876
+#: sync/src/mailbox.rs:1918
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Thử lại {when}"
 
-#: sync/src/mailbox.rs:1883
+#: sync/src/mailbox.rs:1925
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail đã ngừng thử"
 

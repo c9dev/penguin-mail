@@ -440,6 +440,26 @@ pub struct ThreadSummary {
     pub recipient: Option<Box<Address>>,
 }
 
+/// Quick conditions applied together to the rows of the current mailbox.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ListFilter {
+    pub unread: bool,
+    pub flagged: bool,
+    pub attachments: bool,
+}
+
+impl ListFilter {
+    pub fn active(self) -> bool {
+        self.unread || self.flagged || self.attachments
+    }
+
+    pub fn matches(self, row: &ThreadSummary) -> bool {
+        (!self.unread || row.unread)
+            && (!self.flagged || row.starred)
+            && (!self.attachments || row.has_attachments)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Attachment {
     pub part_id: String,
