@@ -1020,7 +1020,7 @@ msgstr ""
 "환경설정을 읽을 수 없어 기본 설정으로 시작했습니다. 이전 파일은 {file}에 보관"
 "했습니다."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

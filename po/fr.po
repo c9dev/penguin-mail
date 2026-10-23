@@ -1085,7 +1085,7 @@ msgstr ""
 "Vos préférences n’ont pas pu être lues, Penguin Mail a donc démarré avec les "
 "valeurs par défaut. L’ancien fichier est conservé sous le nom {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

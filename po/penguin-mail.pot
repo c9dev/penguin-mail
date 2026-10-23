@@ -945,7 +945,7 @@ msgid ""
 "defaults. The old file is kept as {file}."
 msgstr ""
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 msgid "This file could not be read."
 msgstr ""
 

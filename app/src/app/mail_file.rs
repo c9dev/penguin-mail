@@ -53,6 +53,10 @@ impl App {
                     // first account load must have answered: a launch on
                     // a file asks before it has.
                     this.accounts_loaded().await;
+                    // The wait is long enough to close a window in, and
+                    // the one held here may be gone from the app by now.
+                    let window =
+                        host_after_wait(window, this.window(), &mut this.parked.borrow_mut());
                     let account = this.default_account(None);
                     window.open_loose(Loose {
                         raw: Arc::new(raw),
@@ -83,5 +87,55 @@ impl App {
                 app.window_closed();
             }
         });
+    }
+}
+
+/// The window a file opens on once its wait is over: the main window
+/// open now, when there is one, since the person may have closed and
+/// reopened it meanwhile. Otherwise `held`, the window that was open when
+/// the wait began. It closed during the wait with no window of its own
+/// to keep it parked, so it is parked here, as `forget_window` would have
+/// done, before it hosts one. The loose window lets it go when it closes.
+fn host_after_wait<T>(held: Rc<T>, current: Option<Rc<T>>, parked: &mut Vec<Rc<T>>) -> Rc<T> {
+    if let Some(current) = current {
+        return current;
+    }
+    if !parked.iter().any(|p| Rc::ptr_eq(p, &held)) {
+        parked.push(Rc::clone(&held));
+    }
+    held
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use super::host_after_wait;
+
+    #[test]
+    fn the_main_window_open_after_the_wait_hosts_the_file() {
+        let (held, current) = (Rc::new("held"), Rc::new("current"));
+        let mut parked = Vec::new();
+        let host = host_after_wait(Rc::clone(&held), Some(Rc::clone(&current)), &mut parked);
+        assert!(Rc::ptr_eq(&host, &current));
+        assert!(parked.is_empty());
+    }
+
+    #[test]
+    fn a_main_window_closed_during_the_wait_is_parked_and_hosts_the_file() {
+        let held = Rc::new("held");
+        let mut parked = Vec::new();
+        let host = host_after_wait(Rc::clone(&held), None, &mut parked);
+        assert!(Rc::ptr_eq(&host, &held));
+        assert_eq!(parked.len(), 1);
+        assert!(Rc::ptr_eq(&parked[0], &held));
+    }
+
+    #[test]
+    fn a_window_already_parked_is_not_parked_twice() {
+        let held = Rc::new("held");
+        let mut parked = vec![Rc::clone(&held)];
+        host_after_wait(Rc::clone(&held), None, &mut parked);
+        assert_eq!(parked.len(), 1);
     }
 }

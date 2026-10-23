@@ -1028,7 +1028,7 @@ msgstr ""
 "Không thể đọc tùy chọn nên Penguin Mail dùng cài đặt mặc định. Tệp cũ được "
 "giữ lại tại {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

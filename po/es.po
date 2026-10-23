@@ -1073,7 +1073,7 @@ msgstr ""
 "No se han podido leer tus preferencias, así que Penguin Mail ha empezado con "
 "los valores predeterminados. El archivo anterior se guarda como {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

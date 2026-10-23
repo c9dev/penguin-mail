@@ -1034,7 +1034,7 @@ msgstr ""
 "設定を読み込めなかったため、初期設定で起動しました。以前のファイルは {file} "
 "に保存してあります。"
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

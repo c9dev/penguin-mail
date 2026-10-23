@@ -987,7 +987,7 @@ msgid ""
 msgstr ""
 "无法读取首选项，因此 Penguin Mail 使用默认值启动。旧文件保留为 {file}。"
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

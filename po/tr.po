@@ -1056,7 +1056,7 @@ msgstr ""
 "Tercihleriniz okunamadığı için Penguin Mail varsayılan ayarlarla başladı. "
 "Eski dosya {file} olarak saklandı."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

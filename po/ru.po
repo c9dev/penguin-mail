@@ -1074,7 +1074,7 @@ msgstr ""
 "Не удалось прочитать ваши настройки, поэтому Penguin Mail запущен с "
 "настройками по умолчанию. Старый файл сохранён как {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

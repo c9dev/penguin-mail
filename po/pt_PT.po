@@ -1068,7 +1068,7 @@ msgstr ""
 "Não foi possível ler as suas preferências, por isso o Penguin Mail começou "
 "com as predefinições. O ficheiro antigo ficou guardado como {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 msgid "This file could not be read."
 msgstr "Este ficheiro não pôde ser lido."
 

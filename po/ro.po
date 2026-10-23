@@ -1080,7 +1080,7 @@ msgstr ""
 "Preferințele nu au putut fi citite, așa că Penguin Mail a pornit cu valorile "
 "implicite. Fișierul vechi a fost păstrat ca {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

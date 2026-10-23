@@ -1091,7 +1091,7 @@ msgstr ""
 "Δεν ήταν δυνατή η ανάγνωση των προτιμήσεών σας, οπότε το Penguin Mail "
 "ξεκίνησε με τις προεπιλογές. Το παλιό αρχείο διατηρείται ως {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

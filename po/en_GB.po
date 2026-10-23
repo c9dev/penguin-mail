@@ -867,7 +867,7 @@ msgstr "Could not mark all mail as read: {reason}"
 msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 msgstr "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 
-#: app/src/app/mail_file.rs:65
+#: app/src/app/mail_file.rs:69
 msgid "This file could not be read."
 msgstr "This file could not be read."
 
