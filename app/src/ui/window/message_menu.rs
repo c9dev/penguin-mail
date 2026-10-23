@@ -36,8 +36,10 @@ pub(super) struct Message {
     pub id: String,
     pub unread: bool,
     pub flagged: bool,
-    /// A draft has not gone out, so nobody can answer it.
-    pub draft: bool,
+    /// Something can go out in answer: the message is no draft, which
+    /// nobody has received yet, and a loose one was opened with an
+    /// account to send from.
+    pub answerable: bool,
     /// The sender's address, for Copy Address. `None` when the message
     /// names no sender.
     pub sender: Option<String>,
@@ -64,7 +66,8 @@ pub(super) fn message_of(open: &OpenThread, message_id: &str) -> Option<Message>
         id: meta.id.clone(),
         unread: meta.is_unread(),
         flagged: meta.is_flagged(),
-        draft: meta.in_role(Role::Drafts),
+        answerable: !meta.in_role(Role::Drafts)
+            && open.loose.as_ref().is_none_or(|loose| loose.has_account),
         sender: meta
             .from
             .as_ref()
@@ -169,7 +172,7 @@ impl Item {
 /// here is left out rather than greyed.
 pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Vec<Vec<Item>> {
     let mut groups = Vec::new();
-    if !message.draft {
+    if message.answerable {
         groups.push(vec![Item::Reply, Item::ReplyAll, Item::Forward]);
     }
     let mut out = vec![Item::Export];
@@ -455,7 +458,7 @@ mod tests {
             id: "m2".into(),
             unread: false,
             flagged: false,
-            draft: false,
+            answerable: true,
             sender: Some("ana@example.com".into()),
             from: Some("Ana".into()),
             alone: false,
@@ -493,6 +496,19 @@ mod tests {
                 Item::Export,
                 Item::CopyAddress
             ]
+        );
+    }
+
+    #[test]
+    fn a_loose_message_opened_with_no_account_offers_no_reply() {
+        let loose = Message {
+            loose: true,
+            answerable: false,
+            ..message()
+        };
+        assert_eq!(
+            items(&loose, &inbox()),
+            vec![Item::Export, Item::CopyAddress]
         );
     }
 
@@ -648,7 +664,7 @@ mod tests {
     #[test]
     fn a_draft_has_nobody_to_answer() {
         let draft = Message {
-            draft: true,
+            answerable: false,
             ..message()
         };
         let items = items(&draft, &inbox());
@@ -679,7 +695,7 @@ mod tests {
                 ..message()
             },
             Message {
-                draft: true,
+                answerable: false,
                 ..message()
             },
         ];

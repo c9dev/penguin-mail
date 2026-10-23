@@ -2479,13 +2479,13 @@ msgstr "Laporkan Masalah"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:436
 #: app/src/ui/conversation.rs:592 app/src/ui/conversation.rs:1123
-#: app/src/ui/window/message_menu.rs:129 app/src/ui/window/shortcuts.rs:396
+#: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Arsipkan"
 
 #: app/src/notify.rs:62 app/src/ui/conversation.rs:437
 #: app/src/ui/conversation.rs:1167 app/src/ui/preferences.rs:183
-#: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:132
+#: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "Tandai Sudah Dibaca"
 
@@ -2500,7 +2500,7 @@ msgid "Delete"
 msgstr "Hapus"
 
 #: app/src/notify.rs:64 app/src/ui/conversation.rs:242
-#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:129
 #: app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Balas"
@@ -5876,8 +5876,8 @@ msgstr "Baru dan yang sudah ada"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:65 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
-#: app/src/ui/window/loose.rs:129
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
+#: app/src/ui/window/loose.rs:153
 msgid "Message"
 msgstr "Pesan"
 
@@ -7720,12 +7720,12 @@ msgid "Not allowed when you signed in"
 msgstr "Tidak diizinkan saat Anda masuk"
 
 #: app/src/ui/conversation.rs:243 app/src/ui/conversation.rs:587
-#: app/src/ui/window/message_menu.rs:127
+#: app/src/ui/window/message_menu.rs:130
 msgid "Reply All"
 msgstr "Balas Semua"
 
 #: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
-#: app/src/ui/window/message_menu.rs:128 app/src/ui/window/shortcuts.rs:488
+#: app/src/ui/window/message_menu.rs:131 app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "Teruskan"
 
@@ -7734,7 +7734,7 @@ msgid "Print…"
 msgstr "Cetak…"
 
 #: app/src/ui/conversation.rs:249 app/src/ui/conversation.rs:620
-#: app/src/ui/window/message_menu.rs:140
+#: app/src/ui/window/message_menu.rs:143
 msgid "Export…"
 msgstr "Ekspor…"
 
@@ -7759,7 +7759,7 @@ msgid "This message is from a mailing list"
 msgstr "Pesan ini berasal dari milis"
 
 #: app/src/ui/conversation.rs:438 app/src/ui/conversation.rs:1174
-#: app/src/ui/window/message_menu.rs:134
+#: app/src/ui/window/message_menu.rs:137
 msgid "Flag"
 msgstr "Beri Bendera"
 
@@ -7769,7 +7769,7 @@ msgid "Mute"
 msgstr "Bisukan"
 
 #: app/src/ui/conversation.rs:441 app/src/ui/conversation.rs:593
-#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:130
+#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:133
 msgid "Move to Trash"
 msgstr "Pindahkan ke Sampah"
 
@@ -7842,7 +7842,7 @@ msgstr "Beri atau Hapus Bendera"
 msgid "Mark Read or Unread"
 msgstr "Tandai Sudah atau Belum Dibaca"
 
-#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:139
+#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:142
 msgid "Tags…"
 msgstr "Tag…"
 
@@ -7889,7 +7889,7 @@ msgstr "Hapus Permanen (Delete)"
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Bukan Spam (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:131
+#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:134
 #: app/src/ui/window/press.rs:436
 msgid "Delete Forever"
 msgstr "Hapus Permanen"
@@ -7898,11 +7898,11 @@ msgstr "Hapus Permanen"
 msgid "Not Junk"
 msgstr "Bukan Spam"
 
-#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:133
+#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:136
 msgid "Mark as Unread"
 msgstr "Tandai Belum Dibaca"
 
-#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:135
+#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:138
 msgid "Unflag"
 msgstr "Hapus Bendera"
 
@@ -7934,7 +7934,7 @@ msgstr "Tandai Belum Dibaca (U)"
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:269
 msgid "Clear Flag"
 msgstr "Hapus Bendera"
 
@@ -8071,7 +8071,7 @@ msgid "Off: mail goes to the Trash"
 msgstr "Nonaktif: email masuk ke Sampah"
 
 #: app/src/ui/hide_my_email.rs:410 app/src/ui/hide_my_email.rs:497
-#: app/src/ui/window/message_menu.rs:141
+#: app/src/ui/window/message_menu.rs:144
 msgid "Copy Address"
 msgstr "Salin Alamat"
 
@@ -10697,25 +10697,25 @@ msgstr "Dibalas melalui email kepada {organizer}"
 msgid "Replied by email"
 msgstr "Dibalas melalui email"
 
-#: app/src/ui/window/loose.rs:138
+#: app/src/ui/window/loose.rs:162
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"
 msgstr "Dibaca: {subject}"
 
-#: app/src/ui/window/message_menu.rs:136
+#: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
 msgstr "Warna Bendera"
 
-#: app/src/ui/window/message_menu.rs:227
+#: app/src/ui/window/message_menu.rs:230
 msgid "Message from {sender}"
 msgstr "Pesan dari {sender}"
 
-#: app/src/ui/window/message_menu.rs:228
+#: app/src/ui/window/message_menu.rs:231
 msgid "This Message"
 msgstr "Pesan Ini"
 
-#: app/src/ui/window/message_menu.rs:395
+#: app/src/ui/window/message_menu.rs:398
 msgid "Copied {address}"
 msgstr "{address} disalin"
 

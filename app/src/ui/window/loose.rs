@@ -37,6 +37,19 @@ const LOOSE_ACTIONS: &[&str] = &[
     "message-copy-address",
 ];
 
+/// The actions among [`LOOSE_ACTIONS`] that send something out, turned
+/// off when the message was opened with no account to send from. The
+/// toolbar hides its buttons for the same reason; this covers the menu
+/// items and the keys.
+const ANSWERING: &[&str] = &[
+    "reply",
+    "reply-all",
+    "forward",
+    "message-reply",
+    "message-reply-all",
+    "message-forward",
+];
+
 impl MainWindow {
     /// Opens `loose` in a window of its own, the way `open_in_window`
     /// opens a conversation.
@@ -62,7 +75,7 @@ impl MainWindow {
             .content(&view.page)
             .build();
         super::track_dark_class(&window);
-        let actions = self.install_loose_actions(&window, &view);
+        let actions = self.install_loose_actions(&window, &view, loose.has_account);
         // Listed with the other separate windows, so `views` and
         // `mailbox_of` answer for this one too. The mailbox is a stand-in:
         // a loose message was opened from none, and no action that reads
@@ -103,9 +116,20 @@ impl MainWindow {
         self: &Rc<Self>,
         window: &adw::Window,
         view: &Rc<ConversationView>,
+        answerable: bool,
     ) -> gio::SimpleActionGroup {
         let group = gio::SimpleActionGroup::new();
         self.install_actions_named(&group, view, Some(LOOSE_ACTIONS));
+        if !answerable {
+            for name in ANSWERING {
+                if let Some(action) = group
+                    .lookup_action(name)
+                    .and_downcast::<gio::SimpleAction>()
+                {
+                    action.set_enabled(false);
+                }
+            }
+        }
         window.insert_action_group("win", Some(&group));
         window.add_controller(super::shortcuts::conversation_chords());
         group

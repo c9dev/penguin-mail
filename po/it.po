@@ -2493,13 +2493,13 @@ msgstr "Segnala un problema"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:436
 #: app/src/ui/conversation.rs:592 app/src/ui/conversation.rs:1123
-#: app/src/ui/window/message_menu.rs:129 app/src/ui/window/shortcuts.rs:396
+#: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Archivia"
 
 #: app/src/notify.rs:62 app/src/ui/conversation.rs:437
 #: app/src/ui/conversation.rs:1167 app/src/ui/preferences.rs:183
-#: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:132
+#: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "Segna come letto"
 
@@ -2514,7 +2514,7 @@ msgid "Delete"
 msgstr "Elimina"
 
 #: app/src/notify.rs:64 app/src/ui/conversation.rs:242
-#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:129
 #: app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Rispondi"
@@ -5903,8 +5903,8 @@ msgstr "Nuove ed esistenti"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:65 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:59
-#: app/src/ui/window/loose.rs:129
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
+#: app/src/ui/window/loose.rs:153
 msgid "Message"
 msgstr "Messaggio"
 
@@ -7746,12 +7746,12 @@ msgid "Not allowed when you signed in"
 msgstr "Non consentito durante l'accesso"
 
 #: app/src/ui/conversation.rs:243 app/src/ui/conversation.rs:587
-#: app/src/ui/window/message_menu.rs:127
+#: app/src/ui/window/message_menu.rs:130
 msgid "Reply All"
 msgstr "Rispondi a tutti"
 
 #: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
-#: app/src/ui/window/message_menu.rs:128 app/src/ui/window/shortcuts.rs:488
+#: app/src/ui/window/message_menu.rs:131 app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "Inoltra"
 
@@ -7760,7 +7760,7 @@ msgid "Print…"
 msgstr "Stampa…"
 
 #: app/src/ui/conversation.rs:249 app/src/ui/conversation.rs:620
-#: app/src/ui/window/message_menu.rs:140
+#: app/src/ui/window/message_menu.rs:143
 msgid "Export…"
 msgstr "Esporta…"
 
@@ -7785,7 +7785,7 @@ msgid "This message is from a mailing list"
 msgstr "Questo messaggio proviene da una mailing list"
 
 #: app/src/ui/conversation.rs:438 app/src/ui/conversation.rs:1174
-#: app/src/ui/window/message_menu.rs:134
+#: app/src/ui/window/message_menu.rs:137
 msgid "Flag"
 msgstr "Contrassegna"
 
@@ -7795,7 +7795,7 @@ msgid "Mute"
 msgstr "Silenzia"
 
 #: app/src/ui/conversation.rs:441 app/src/ui/conversation.rs:593
-#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:130
+#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:133
 msgid "Move to Trash"
 msgstr "Sposta nel Cestino"
 
@@ -7868,7 +7868,7 @@ msgstr "Aggiungi o rimuovi contrassegno"
 msgid "Mark Read or Unread"
 msgstr "Segna come letto o da leggere"
 
-#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:139
+#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:142
 msgid "Tags…"
 msgstr "Tag…"
 
@@ -7915,7 +7915,7 @@ msgstr "Elimina definitivamente (Delete)"
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Non indesiderata (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:131
+#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:134
 #: app/src/ui/window/press.rs:436
 msgid "Delete Forever"
 msgstr "Elimina definitivamente"
@@ -7924,11 +7924,11 @@ msgstr "Elimina definitivamente"
 msgid "Not Junk"
 msgstr "Non indesiderata"
 
-#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:133
+#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:136
 msgid "Mark as Unread"
 msgstr "Segna come da leggere"
 
-#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:135
+#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:138
 msgid "Unflag"
 msgstr "Rimuovi contrassegno"
 
@@ -7960,7 +7960,7 @@ msgstr "Segna come da leggere (U)"
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:266
+#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:269
 msgid "Clear Flag"
 msgstr "Rimuovi contrassegno"
 
@@ -8096,7 +8096,7 @@ msgid "Off: mail goes to the Trash"
 msgstr "Disattivato: la posta va nel Cestino"
 
 #: app/src/ui/hide_my_email.rs:410 app/src/ui/hide_my_email.rs:497
-#: app/src/ui/window/message_menu.rs:141
+#: app/src/ui/window/message_menu.rs:144
 msgid "Copy Address"
 msgstr "Copia indirizzo"
 
@@ -10735,25 +10735,25 @@ msgstr "Risposta inviata via email a {organizer}"
 msgid "Replied by email"
 msgstr "Risposta inviata via email"
 
-#: app/src/ui/window/loose.rs:138
+#: app/src/ui/window/loose.rs:162
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"
 msgstr "Letto: {subject}"
 
-#: app/src/ui/window/message_menu.rs:136
+#: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
 msgstr "Colore del contrassegno"
 
-#: app/src/ui/window/message_menu.rs:227
+#: app/src/ui/window/message_menu.rs:230
 msgid "Message from {sender}"
 msgstr "Messaggio di {sender}"
 
-#: app/src/ui/window/message_menu.rs:228
+#: app/src/ui/window/message_menu.rs:231
 msgid "This Message"
 msgstr "Questo messaggio"
 
-#: app/src/ui/window/message_menu.rs:395
+#: app/src/ui/window/message_menu.rs:398
 msgid "Copied {address}"
 msgstr "{address} copiato"
 
