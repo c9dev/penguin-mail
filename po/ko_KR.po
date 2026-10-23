@@ -3687,8 +3687,8 @@ msgstr[0] "첨부 파일 {count}개"
 msgid "Quick Look"
 msgstr "빠른 보기"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
-#: app/src/ui/window/attachments.rs:361
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
+#: app/src/ui/window/attachments.rs:366
 msgid "Save to Downloads"
 msgstr "다운로드 폴더에 저장"
 
@@ -5301,7 +5301,7 @@ msgid "Email Translations"
 msgstr "이메일 번역"
 
 #: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
-#: app/src/ui/window/detached.rs:65
+#: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "대화"
 
@@ -5707,8 +5707,8 @@ msgstr "새 회의 및 기존 회의"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
-#: app/src/ui/window/loose.rs:153
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:74
+#: app/src/ui/window/loose.rs:156
 msgid "Message"
 msgstr "메시지"
 
@@ -10009,7 +10009,7 @@ msgstr "다른 앱에서 이 메시지를 취소하여 더 이상 임시보관�
 msgid "Downloading {file}…"
 msgstr "{file} 다운로드 중…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "{file}을(를) 다운로드 폴더에 저장했습니다"
 
@@ -10017,7 +10017,7 @@ msgstr "{file}을(를) 다운로드 폴더에 저장했습니다"
 msgid "Open"
 msgstr "열기"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "{file}을(를) 저장할 수 없습니다: {reason}"
 
@@ -10144,29 +10144,29 @@ msgstr "{file}을(를) 열 수 없습니다: {reason}"
 msgid "Save Attachments"
 msgstr "첨부 파일 저장"
 
-#: app/src/ui/window/attachments.rs:137
+#: app/src/ui/window/attachments.rs:142
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "첨부 파일 {count}개 저장 중…"
 
-#: app/src/ui/window/attachments.rs:187
+#: app/src/ui/window/attachments.rs:192
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "첨부 파일 {count}개를 {folder}에 저장했습니다"
 
-#: app/src/ui/window/attachments.rs:194
+#: app/src/ui/window/attachments.rs:199
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count}개를 {folder}에 저장했습니다. {files}을(를) 저장할 수 없습니다"
 
-#: app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:308
 msgid "Could not open {file}"
 msgstr "{file}을(를) 열 수 없습니다"
 
-#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
 msgid "Open in Another Program"
 msgstr "다른 프로그램에서 열기"
 
-#: app/src/ui/window/attachments.rs:366
+#: app/src/ui/window/attachments.rs:371
 msgid "{file}, preview"
 msgstr "{file}, 미리보기"
 
@@ -10210,12 +10210,12 @@ msgstr ""
 "끌어서 크기를 바꾸거나 왼쪽과 오른쪽 키를 사용하세요. Home과 End 키는 가장 작"
 "은 너비와 가장 큰 너비를 고릅니다."
 
-#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
+#: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "먼저 대화를 여세요"
 
-#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10223,24 +10223,24 @@ msgstr "먼저 대화를 여세요"
 msgid "That account is not connected"
 msgstr "해당 계정이 연결되지 않았습니다"
 
-#: app/src/ui/window/detached.rs:239
+#: app/src/ui/window/detached.rs:270
 msgid "Could not load the source: {reason}"
 msgstr "원문을 불러올 수 없습니다: {reason}"
 
-#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:300 app/src/ui/window/detached.rs:306
+#: app/src/ui/window/detached.rs:318
 msgid "Message Source"
 msgstr "메시지 원문"
 
-#: app/src/ui/window/detached.rs:271
+#: app/src/ui/window/detached.rs:302
 msgid "Save As…"
 msgstr "다른 이름으로 저장…"
 
-#: app/src/ui/window/detached.rs:272
+#: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr ".eml 파일로 저장"
 
-#: app/src/ui/window/detached.rs:310
+#: app/src/ui/window/detached.rs:341
 msgid "Save Message"
 msgstr "메시지 저장"
 
@@ -10409,7 +10409,7 @@ msgstr "{organizer}에게 이메일로 답장했습니다"
 msgid "Replied by email"
 msgstr "이메일로 답장했습니다"
 
-#: app/src/ui/window/loose.rs:162
+#: app/src/ui/window/loose.rs:165
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"

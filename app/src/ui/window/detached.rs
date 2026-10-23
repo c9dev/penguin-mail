@@ -22,6 +22,8 @@ pub(super) struct Detached {
     pub mailbox: Mailbox,
     pub account_id: AccountId,
     pub actions: gio::SimpleActionGroup,
+    /// Where a toast raised from this window appears.
+    pub toasts: adw::ToastOverlay,
 }
 
 impl MainWindow {
@@ -60,6 +62,8 @@ impl MainWindow {
             view.set_filter(filter);
         }
         view.set_zoom(self.settings_with(|s| s.text_size.zoom()));
+        let toasts = adw::ToastOverlay::new();
+        toasts.set_child(Some(&view.page));
         let window = adw::Window::builder()
             .title(if summary.subject.is_empty() {
                 gettext("Conversation")
@@ -68,7 +72,7 @@ impl MainWindow {
             })
             .default_width(820)
             .default_height(760)
-            .content(&view.page)
+            .content(&toasts)
             .build();
         super::track_dark_class(&window);
         let actions = self.install_window_actions(&window, &view, &mailbox, summary.account_id);
@@ -77,6 +81,7 @@ impl MainWindow {
             mailbox,
             account_id: summary.account_id,
             actions,
+            toasts,
         });
         // Counted among the open windows, so the process stays in the
         // foreground for this one after the main window closes.
@@ -93,6 +98,32 @@ impl MainWindow {
         });
         window.present();
         self.load_into(view, summary);
+    }
+
+    /// The overlay a toast goes on: the separate window the person is
+    /// working in when one is active, otherwise the main window, and once
+    /// the main window has closed, the first separate window still up.
+    /// A toast raised from a separate window used to land on the main
+    /// window, behind the one the person was looking at, and on nothing
+    /// at all once the main window had closed and was parked. An answer
+    /// that arrives after the person has moved to another window follows
+    /// them there.
+    pub(super) fn toast_overlay(&self) -> adw::ToastOverlay {
+        let detached = self.detached.borrow();
+        let up: Vec<_> = detached
+            .iter()
+            .filter_map(|held| Some((held.view.upgrade()?, &held.toasts)))
+            .collect();
+        let active = up
+            .iter()
+            .find(|(view, _)| view.window().is_some_and(|window| window.is_active()));
+        match active {
+            Some((_, toasts)) => (*toasts).clone(),
+            None if self.window.is_visible() => self.toasts.clone(),
+            None => up
+                .first()
+                .map_or_else(|| self.toasts.clone(), |(_, toasts)| (*toasts).clone()),
+        }
     }
 
     /// How many conversation windows of this main window are up.

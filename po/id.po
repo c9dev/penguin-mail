@@ -3818,8 +3818,8 @@ msgstr[1] "{count} lampiran"
 msgid "Quick Look"
 msgstr "Lihat Sekilas"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
-#: app/src/ui/window/attachments.rs:361
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
+#: app/src/ui/window/attachments.rs:366
 msgid "Save to Downloads"
 msgstr "Simpan ke Unduhan"
 
@@ -5465,7 +5465,7 @@ msgid "Email Translations"
 msgstr "Terjemahan Email"
 
 #: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
-#: app/src/ui/window/detached.rs:65
+#: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "Percakapan"
 
@@ -5876,8 +5876,8 @@ msgstr "Baru dan yang sudah ada"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
-#: app/src/ui/window/loose.rs:153
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:74
+#: app/src/ui/window/loose.rs:156
 msgid "Message"
 msgstr "Pesan"
 
@@ -10285,7 +10285,7 @@ msgstr "Pesan ini dibatalkan di aplikasi lain dan tidak lagi berada di Draf."
 msgid "Downloading {file}…"
 msgstr "Mengunduh {file}…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "{file} disimpan ke Unduhan"
 
@@ -10293,7 +10293,7 @@ msgstr "{file} disimpan ke Unduhan"
 msgid "Open"
 msgstr "Buka"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "Tidak dapat menyimpan {file}: {reason}"
 
@@ -10424,31 +10424,31 @@ msgstr "Tidak dapat membuka {file}: {reason}"
 msgid "Save Attachments"
 msgstr "Simpan Lampiran"
 
-#: app/src/ui/window/attachments.rs:137
+#: app/src/ui/window/attachments.rs:142
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "Menyimpan {count} lampiran…"
 msgstr[1] "Menyimpan {count} lampiran…"
 
-#: app/src/ui/window/attachments.rs:187
+#: app/src/ui/window/attachments.rs:192
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} lampiran disimpan ke {folder}"
 msgstr[1] "{count} lampiran disimpan ke {folder}"
 
-#: app/src/ui/window/attachments.rs:194
+#: app/src/ui/window/attachments.rs:199
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} disimpan ke {folder}. Tidak dapat menyimpan {files}"
 
-#: app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:308
 msgid "Could not open {file}"
 msgstr "Tidak dapat membuka {file}"
 
-#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
 msgid "Open in Another Program"
 msgstr "Buka di Program Lain"
 
-#: app/src/ui/window/attachments.rs:366
+#: app/src/ui/window/attachments.rs:371
 msgid "{file}, preview"
 msgstr "{file}, pratinjau"
 
@@ -10493,12 +10493,12 @@ msgstr ""
 "Seret untuk mengubah ukuran, atau gunakan Kiri dan Kanan. Home dan End "
 "memilih lebar terkecil dan terbesar."
 
-#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
+#: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "Buka percakapan terlebih dahulu"
 
-#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10506,24 +10506,24 @@ msgstr "Buka percakapan terlebih dahulu"
 msgid "That account is not connected"
 msgstr "Akun tersebut tidak terhubung"
 
-#: app/src/ui/window/detached.rs:239
+#: app/src/ui/window/detached.rs:270
 msgid "Could not load the source: {reason}"
 msgstr "Tidak dapat memuat sumber: {reason}"
 
-#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:300 app/src/ui/window/detached.rs:306
+#: app/src/ui/window/detached.rs:318
 msgid "Message Source"
 msgstr "Sumber Pesan"
 
-#: app/src/ui/window/detached.rs:271
+#: app/src/ui/window/detached.rs:302
 msgid "Save As…"
 msgstr "Simpan Sebagai…"
 
-#: app/src/ui/window/detached.rs:272
+#: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr "Simpan sebagai berkas .eml"
 
-#: app/src/ui/window/detached.rs:310
+#: app/src/ui/window/detached.rs:341
 msgid "Save Message"
 msgstr "Simpan Pesan"
 
@@ -10697,7 +10697,7 @@ msgstr "Dibalas melalui email kepada {organizer}"
 msgid "Replied by email"
 msgstr "Dibalas melalui email"
 
-#: app/src/ui/window/loose.rs:162
+#: app/src/ui/window/loose.rs:165
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"

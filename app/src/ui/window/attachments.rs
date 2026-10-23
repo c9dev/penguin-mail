@@ -126,9 +126,14 @@ impl MainWindow {
             .title(gettext("Save Attachments"))
             .modal(true)
             .build();
+        // The dialog belongs over the window it was asked from, which for
+        // a conversation in a window of its own is not the main one.
+        let parent = view
+            .window()
+            .unwrap_or_else(|| self.window.clone().upcast());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let Ok(folder) = dialog.select_folder_future(Some(&this.window)).await else {
+            let Ok(folder) = dialog.select_folder_future(Some(&parent)).await else {
                 return;
             };
             let Some(folder) = folder.path() else { return };

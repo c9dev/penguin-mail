@@ -68,11 +68,13 @@ impl MainWindow {
             view.set_filter(filter);
         }
         view.set_zoom(self.settings_with(|s| s.text_size.zoom()));
+        let toasts = adw::ToastOverlay::new();
+        toasts.set_child(Some(&view.page));
         let window = adw::Window::builder()
             .title(gettext("Message"))
             .default_width(820)
             .default_height(760)
-            .content(&view.page)
+            .content(&toasts)
             .build();
         super::track_dark_class(&window);
         let actions = self.install_loose_actions(&window, &view, loose.has_account);
@@ -85,6 +87,7 @@ impl MainWindow {
             mailbox: self.shown(),
             account_id: loose.account_id,
             actions,
+            toasts,
         });
         // Counted among the open windows: with no account at all, closing
         // the main window would otherwise quit the process under this one.

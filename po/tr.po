@@ -3791,8 +3791,8 @@ msgstr[1] "{count} ek"
 msgid "Quick Look"
 msgstr "Hızlı Bakış"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
-#: app/src/ui/window/attachments.rs:361
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
+#: app/src/ui/window/attachments.rs:366
 msgid "Save to Downloads"
 msgstr "İndirilenler'e Kaydet"
 
@@ -5424,7 +5424,7 @@ msgid "Email Translations"
 msgstr "E-posta çevirileri"
 
 #: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
-#: app/src/ui/window/detached.rs:65
+#: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "Yazışma"
 
@@ -5834,8 +5834,8 @@ msgstr "Yeni ve mevcut"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
-#: app/src/ui/window/loose.rs:153
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:74
+#: app/src/ui/window/loose.rs:156
 msgid "Message"
 msgstr "İleti"
 
@@ -10232,7 +10232,7 @@ msgstr ""
 msgid "Downloading {file}…"
 msgstr "{file} indiriliyor…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "{file} İndirilenler'e kaydedildi"
 
@@ -10240,7 +10240,7 @@ msgstr "{file} İndirilenler'e kaydedildi"
 msgid "Open"
 msgstr "Aç"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "{file} kaydedilemedi: {reason}"
 
@@ -10369,31 +10369,31 @@ msgstr "{file} açılamadı: {reason}"
 msgid "Save Attachments"
 msgstr "Ekleri Kaydet"
 
-#: app/src/ui/window/attachments.rs:137
+#: app/src/ui/window/attachments.rs:142
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "{count} ek kaydediliyor…"
 msgstr[1] "{count} ek kaydediliyor…"
 
-#: app/src/ui/window/attachments.rs:187
+#: app/src/ui/window/attachments.rs:192
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} ek {folder} klasörüne kaydedildi"
 msgstr[1] "{count} ek {folder} klasörüne kaydedildi"
 
-#: app/src/ui/window/attachments.rs:194
+#: app/src/ui/window/attachments.rs:199
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} ek {folder} klasörüne kaydedildi. {files} kaydedilemedi"
 
-#: app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:308
 msgid "Could not open {file}"
 msgstr "{file} açılamadı"
 
-#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
 msgid "Open in Another Program"
 msgstr "Başka Programda Aç"
 
-#: app/src/ui/window/attachments.rs:366
+#: app/src/ui/window/attachments.rs:371
 msgid "{file}, preview"
 msgstr "{file}, önizleme"
 
@@ -10440,12 +10440,12 @@ msgstr ""
 "Boyutlandırmak için sürükleyin veya Sol ve Sağ tuşlarını kullanın. Home ve "
 "End en küçük ve en büyük genişliği seçer."
 
-#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
+#: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "Önce bir yazışma açın"
 
-#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10453,24 +10453,24 @@ msgstr "Önce bir yazışma açın"
 msgid "That account is not connected"
 msgstr "Bu hesap bağlı değil"
 
-#: app/src/ui/window/detached.rs:239
+#: app/src/ui/window/detached.rs:270
 msgid "Could not load the source: {reason}"
 msgstr "Kaynak yüklenemedi: {reason}"
 
-#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:300 app/src/ui/window/detached.rs:306
+#: app/src/ui/window/detached.rs:318
 msgid "Message Source"
 msgstr "İleti Kaynağı"
 
-#: app/src/ui/window/detached.rs:271
+#: app/src/ui/window/detached.rs:302
 msgid "Save As…"
 msgstr "Farklı Kaydet…"
 
-#: app/src/ui/window/detached.rs:272
+#: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr ".eml dosyası olarak kaydet"
 
-#: app/src/ui/window/detached.rs:310
+#: app/src/ui/window/detached.rs:341
 msgid "Save Message"
 msgstr "İletiyi Kaydet"
 
@@ -10640,7 +10640,7 @@ msgstr "{organizer} e-postayla yanıtlandı"
 msgid "Replied by email"
 msgstr "E-postayla yanıtlandı"
 
-#: app/src/ui/window/loose.rs:162
+#: app/src/ui/window/loose.rs:165
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"

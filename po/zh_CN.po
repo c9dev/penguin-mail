@@ -3604,8 +3604,8 @@ msgstr[0] "{count} 个附件"
 msgid "Quick Look"
 msgstr "快速查看"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
-#: app/src/ui/window/attachments.rs:361
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
+#: app/src/ui/window/attachments.rs:366
 msgid "Save to Downloads"
 msgstr "保存至下载文件夹"
 
@@ -5199,7 +5199,7 @@ msgid "Email Translations"
 msgstr "邮件翻译"
 
 #: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
-#: app/src/ui/window/detached.rs:65
+#: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "对话"
 
@@ -5595,8 +5595,8 @@ msgstr "新旧会议"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
-#: app/src/ui/window/loose.rs:153
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:74
+#: app/src/ui/window/loose.rs:156
 msgid "Message"
 msgstr "消息"
 
@@ -9854,7 +9854,7 @@ msgstr "这封邮件已在其他应用中取消，且已不在草稿中。"
 msgid "Downloading {file}…"
 msgstr "正在下载 {file}…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "已将 {file} 保存至下载文件夹"
 
@@ -9862,7 +9862,7 @@ msgstr "已将 {file} 保存至下载文件夹"
 msgid "Open"
 msgstr "打开"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "无法保存 {file}：{reason}"
 
@@ -9986,29 +9986,29 @@ msgstr "无法打开 {file}：{reason}"
 msgid "Save Attachments"
 msgstr "保存附件"
 
-#: app/src/ui/window/attachments.rs:137
+#: app/src/ui/window/attachments.rs:142
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "正在保存 {count} 个附件…"
 
-#: app/src/ui/window/attachments.rs:187
+#: app/src/ui/window/attachments.rs:192
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "已将 {count} 个附件保存至 {folder}"
 
-#: app/src/ui/window/attachments.rs:194
+#: app/src/ui/window/attachments.rs:199
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "已将 {count} 个附件保存至 {folder}。无法保存 {files}"
 
-#: app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:308
 msgid "Could not open {file}"
 msgstr "无法打开 {file}"
 
-#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
 msgid "Open in Another Program"
 msgstr "以其他程序打开"
 
-#: app/src/ui/window/attachments.rs:366
+#: app/src/ui/window/attachments.rs:371
 msgid "{file}, preview"
 msgstr "{file}，预览"
 
@@ -10048,12 +10048,12 @@ msgid ""
 "largest widths."
 msgstr "拖动以调整大小，或使用左右方向键。Home 和 End 键可选择最小和最大宽度。"
 
-#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
+#: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "请先打开对话"
 
-#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10061,24 +10061,24 @@ msgstr "请先打开对话"
 msgid "That account is not connected"
 msgstr "此账号尚未连接"
 
-#: app/src/ui/window/detached.rs:239
+#: app/src/ui/window/detached.rs:270
 msgid "Could not load the source: {reason}"
 msgstr "无法加载邮件源码：{reason}"
 
-#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:300 app/src/ui/window/detached.rs:306
+#: app/src/ui/window/detached.rs:318
 msgid "Message Source"
 msgstr "邮件源码"
 
-#: app/src/ui/window/detached.rs:271
+#: app/src/ui/window/detached.rs:302
 msgid "Save As…"
 msgstr "另存为…"
 
-#: app/src/ui/window/detached.rs:272
+#: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr "保存为 .eml 文件"
 
-#: app/src/ui/window/detached.rs:310
+#: app/src/ui/window/detached.rs:341
 msgid "Save Message"
 msgstr "保存邮件"
 
@@ -10247,7 +10247,7 @@ msgstr "已以电子邮件回复 {organizer}"
 msgid "Replied by email"
 msgstr "已以电子邮件回复"
 
-#: app/src/ui/window/loose.rs:162
+#: app/src/ui/window/loose.rs:165
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"

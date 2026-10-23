@@ -3842,8 +3842,8 @@ msgstr[1] "{count} allegati"
 msgid "Quick Look"
 msgstr "Anteprima rapida"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:355
-#: app/src/ui/window/attachments.rs:361
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
+#: app/src/ui/window/attachments.rs:366
 msgid "Save to Downloads"
 msgstr "Salva in Scaricati"
 
@@ -5488,7 +5488,7 @@ msgid "Email Translations"
 msgstr "Traduzioni delle email"
 
 #: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
-#: app/src/ui/window/detached.rs:65
+#: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "Conversazione"
 
@@ -5903,8 +5903,8 @@ msgstr "Nuove ed esistenti"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:259
-#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:72
-#: app/src/ui/window/loose.rs:153
+#: app/src/ui/vacation.rs:287 app/src/ui/window/loose.rs:74
+#: app/src/ui/window/loose.rs:156
 msgid "Message"
 msgstr "Messaggio"
 
@@ -10325,7 +10325,7 @@ msgstr ""
 msgid "Downloading {file}…"
 msgstr "Download di {file}…"
 
-#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:255
+#: app/src/ui/window.rs:2874 app/src/ui/window/attachments.rs:260
 msgid "Saved {file} to Downloads"
 msgstr "{file} salvato in Scaricati"
 
@@ -10333,7 +10333,7 @@ msgstr "{file} salvato in Scaricati"
 msgid "Open"
 msgstr "Apri"
 
-#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:260
+#: app/src/ui/window.rs:2892 app/src/ui/window/attachments.rs:265
 msgid "Could not save {file}: {reason}"
 msgstr "Impossibile salvare {file}: {reason}"
 
@@ -10461,31 +10461,31 @@ msgstr "Impossibile aprire {file}: {reason}"
 msgid "Save Attachments"
 msgstr "Salva allegati"
 
-#: app/src/ui/window/attachments.rs:137
+#: app/src/ui/window/attachments.rs:142
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "Salvataggio di {count} allegato…"
 msgstr[1] "Salvataggio di {count} allegati…"
 
-#: app/src/ui/window/attachments.rs:187
+#: app/src/ui/window/attachments.rs:192
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} allegato salvato in {folder}"
 msgstr[1] "{count} allegati salvati in {folder}"
 
-#: app/src/ui/window/attachments.rs:194
+#: app/src/ui/window/attachments.rs:199
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} salvati in {folder}. Impossibile salvare {files}"
 
-#: app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:308
 msgid "Could not open {file}"
 msgstr "Impossibile aprire {file}"
 
-#: app/src/ui/window/attachments.rs:359 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
 msgid "Open in Another Program"
 msgstr "Apri in un altro programma"
 
-#: app/src/ui/window/attachments.rs:366
+#: app/src/ui/window/attachments.rs:371
 msgid "{file}, preview"
 msgstr "{file}, anteprima"
 
@@ -10530,12 +10530,12 @@ msgstr ""
 "Trascina per ridimensionare, oppure usa Sinistra e Destra. Inizio e Fine "
 "scelgono la larghezza minima e quella massima."
 
-#: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:79
+#: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
 msgid "Open a conversation first"
 msgstr "Apri prima una conversazione"
 
-#: app/src/ui/window/detached.rs:226 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:257 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -10543,24 +10543,24 @@ msgstr "Apri prima una conversazione"
 msgid "That account is not connected"
 msgstr "Quell'account non è connesso"
 
-#: app/src/ui/window/detached.rs:239
+#: app/src/ui/window/detached.rs:270
 msgid "Could not load the source: {reason}"
 msgstr "Impossibile caricare il sorgente: {reason}"
 
-#: app/src/ui/window/detached.rs:269 app/src/ui/window/detached.rs:275
-#: app/src/ui/window/detached.rs:287
+#: app/src/ui/window/detached.rs:300 app/src/ui/window/detached.rs:306
+#: app/src/ui/window/detached.rs:318
 msgid "Message Source"
 msgstr "Sorgente del messaggio"
 
-#: app/src/ui/window/detached.rs:271
+#: app/src/ui/window/detached.rs:302
 msgid "Save As…"
 msgstr "Salva come…"
 
-#: app/src/ui/window/detached.rs:272
+#: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr "Salva come file .eml"
 
-#: app/src/ui/window/detached.rs:310
+#: app/src/ui/window/detached.rs:341
 msgid "Save Message"
 msgstr "Salva messaggio"
 
@@ -10735,7 +10735,7 @@ msgstr "Risposta inviata via email a {organizer}"
 msgid "Replied by email"
 msgstr "Risposta inviata via email"
 
-#: app/src/ui/window/loose.rs:162
+#: app/src/ui/window/loose.rs:165
 #, fuzzy
 #| msgid "Read: {subject}"
 msgid "Attached to {subject}"

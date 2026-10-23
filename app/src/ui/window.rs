@@ -1267,7 +1267,7 @@ impl MainWindow {
     }
 
     fn toast(&self, text: &str) {
-        self.toasts.add_toast(
+        self.toast_overlay().add_toast(
             adw::Toast::builder()
                 .title(toast_title(text))
                 .timeout(4)
