@@ -976,18 +976,18 @@ msgstr "{provider} 通过浏览器登录"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "选择 [继续] 会在浏览器中打开 {provider} 的登录页面。"
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "无法将所有邮件标记为已读：{reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
 msgstr ""
 "无法读取首选项，因此 Penguin Mail 使用默认值启动。旧文件保留为 {file}。"
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

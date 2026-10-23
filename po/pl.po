@@ -1065,11 +1065,11 @@ msgstr "{provider} używa logowania przez przeglądarkę"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Dalej otworzy stronę logowania dostawcy {provider} w przeglądarce."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nie można oznaczyć całej poczty jako przeczytanej: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1077,7 +1077,7 @@ msgstr ""
 "Nie udało się odczytać preferencji, więc Penguin Mail użył ustawień "
 "domyślnych. Poprzedni plik zachowano jako {file}."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

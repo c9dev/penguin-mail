@@ -1016,11 +1016,11 @@ msgstr "{provider} đăng nhập qua trình duyệt"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Tiếp tục sẽ mở trang đăng nhập của {provider} trong trình duyệt."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Không thể đánh dấu tất cả thư là đã đọc: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1028,7 +1028,7 @@ msgstr ""
 "Không thể đọc tùy chọn nên Penguin Mail dùng cài đặt mặc định. Tệp cũ được "
 "giữ lại tại {file}."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

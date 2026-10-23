@@ -1060,11 +1060,11 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr ""
 "Кнопка «Продовжити» відкриває сторінку входу {provider} у вашому браузері."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Не вдалося позначити всю пошту як прочитану: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1072,7 +1072,7 @@ msgstr ""
 "Не вдалося прочитати ваші параметри, тому Penguin Mail запущено з типовими. "
 "Старий файл збережено як {file}."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

@@ -1079,11 +1079,11 @@ msgstr ""
 "Η «Συνέχεια» ανοίγει τη σελίδα σύνδεσης του {provider} στο πρόγραμμα "
 "περιήγησης."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Δεν ήταν δυνατή η σήμανση όλων των μηνυμάτων ως αναγνωσμένων: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1091,7 +1091,7 @@ msgstr ""
 "Δεν ήταν δυνατή η ανάγνωση των προτιμήσεών σας, οπότε το Penguin Mail "
 "ξεκίνησε με τις προεπιλογές. Το παλιό αρχείο διατηρείται ως {file}."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

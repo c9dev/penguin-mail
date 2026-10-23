@@ -1044,11 +1044,11 @@ msgstr "{provider}, tarayıcınız üzerinden oturum açar"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Devam, tarayıcınızda {provider} oturum açma sayfasını açar."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Tüm postalar okundu olarak işaretlenemedi: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1056,7 +1056,7 @@ msgstr ""
 "Tercihleriniz okunamadığı için Penguin Mail varsayılan ayarlarla başladı. "
 "Eski dosya {file} olarak saklandı."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

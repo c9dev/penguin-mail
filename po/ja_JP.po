@@ -1022,11 +1022,11 @@ msgstr "{provider} はブラウザーでログインします"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "「続行」を押すと、ブラウザーで {provider} のログインページを開きます。"
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "すべてのメールを既読にできませんでした: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1034,7 +1034,7 @@ msgstr ""
 "設定を読み込めなかったため、初期設定で起動しました。以前のファイルは {file} "
 "に保存してあります。"
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

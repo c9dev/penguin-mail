@@ -70,6 +70,9 @@ pub struct App {
     /// Whether `accounts` holds what the store does, rather than the empty
     /// list the app starts with.
     accounts_read: Cell<bool>,
+    /// Who is waiting for the first account load to answer: a mail file
+    /// opened before it has. Each is told once, when it does.
+    account_waiters: RefCell<Vec<futures::channel::oneshot::Sender<()>>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     /// Where the person put each account's labels among their siblings.
     label_order: RefCell<HashMap<AccountId, HashMap<String, i64>>>,
@@ -176,6 +179,7 @@ impl App {
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
             accounts_read: Cell::new(false),
+            account_waiters: RefCell::new(Vec::new()),
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
@@ -887,6 +891,10 @@ impl App {
         self.storage
             .set_accounts(loaded.iter().map(|(a, _)| a.id).collect());
         self.accounts_read.set(true);
+        for waiting in self.account_waiters.borrow_mut().drain(..) {
+            // A waiter that gave up at its timeout is gone; nothing to tell.
+            let _ = waiting.send(());
+        }
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
         *self.consent.borrow_mut() = consent;
         // A settings change that touches the accounts reloads them too, and

@@ -26,12 +26,15 @@ const ACCOUNTS_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
 
 impl App {
     /// Resolves once the first account load has answered, or after
-    /// [`ACCOUNTS_WAIT`] when it has not.
+    /// [`ACCOUNTS_WAIT`] when it has not. The load tells each waiter once
+    /// it is done, so the wait wakes exactly then rather than polling.
     async fn accounts_loaded(&self) {
-        let started = std::time::Instant::now();
-        while !self.accounts_read.get() && started.elapsed() < ACCOUNTS_WAIT {
-            glib::timeout_future(std::time::Duration::from_millis(50)).await;
+        if self.accounts_read.get() {
+            return;
         }
+        let (tell, told) = futures::channel::oneshot::channel();
+        self.account_waiters.borrow_mut().push(tell);
+        let _ = glib::future_with_timeout(ACCOUNTS_WAIT, told).await;
     }
 
     /// Opens `path` as a loose message, acting as the default account,

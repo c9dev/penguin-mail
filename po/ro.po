@@ -1068,11 +1068,11 @@ msgstr "{provider} se conectează prin navigator"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "„Continuă” deschide pagina de conectare {provider} în navigator."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nu s-a putut marca toată corespondența ca citită: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1080,7 +1080,7 @@ msgstr ""
 "Preferințele nu au putut fi citite, așa că Penguin Mail a pornit cu valorile "
 "implicite. Fișierul vechi a fost păstrat ca {file}."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."

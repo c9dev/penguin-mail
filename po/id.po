@@ -1038,11 +1038,11 @@ msgstr "{provider} menggunakan peramban Anda untuk masuk"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Lanjutkan membuka halaman masuk {provider} di peramban Anda."
 
-#: app/src/app.rs:403
+#: app/src/app.rs:407
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Tidak dapat menandai semua email sebagai sudah dibaca: {reason}"
 
-#: app/src/app.rs:450
+#: app/src/app.rs:454
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1050,7 +1050,7 @@ msgstr ""
 "Preferensi Anda tidak dapat dibaca, sehingga Penguin Mail menggunakan "
 "pengaturan bawaan. Berkas lama disimpan sebagai {file}."
 
-#: app/src/app/mail_file.rs:74
+#: app/src/app/mail_file.rs:77
 #, fuzzy
 #| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
