@@ -3,6 +3,7 @@
 //! Every row is held once, behind an `Rc`, and shared with the list model.
 
 mod entry;
+mod filters;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -45,6 +46,7 @@ pub struct ThreadList {
     pub page: adw::NavigationPage,
     pub sidebar_button: gtk::ToggleButton,
     pub search_button: gtk::ToggleButton,
+    pub filters: filters::Filters,
     /// Where `CategoryBar::install_categories` puts the chips, right under
     /// the header and above the banners, so a sign-in or Grant Access
     /// banner never lands between the header and the chips.
@@ -320,6 +322,8 @@ impl ThreadList {
         header.pack_start(&titles);
         header.pack_end(&compose_button);
         header.pack_end(&search_button);
+        let filters = filters::Filters::new();
+        header.pack_end(&filters.button);
 
         let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let banner = adw::Banner::builder()
@@ -365,6 +369,7 @@ impl ThreadList {
             page,
             sidebar_button,
             search_button,
+            filters,
             categories_slot,
             banner,
             grant_bars,
@@ -484,8 +489,10 @@ impl ThreadList {
             // New sits at the outer end with Search inside it, so Search
             // comes off and goes back after New.
             self.header.remove(&self.search_button);
+            self.header.remove(&self.filters.button);
             self.header.pack_end(&self.compose_button);
             self.header.pack_end(&self.search_button);
+            self.header.pack_end(&self.filters.button);
         }
         self.toolbar.set_reveal_bottom_bars(layout.new_below);
     }
@@ -669,8 +676,8 @@ impl ThreadList {
         self.stack.set_visible_child_name("loading");
     }
 
-    /// Only cursor-paged server mailboxes need a manual next page: a
-    /// grouped page may be too short to scroll, or may need a retry.
+    /// A grouped or filtered page may be too short to scroll, so its
+    /// next page must also be reachable by a button.
     pub fn show_more(&self, more: bool) {
         self.more.set_visible(more);
     }
@@ -1084,6 +1091,7 @@ pub(crate) mod checks {
 
     pub(crate) fn run() {
         crate::ui::thread_row::check_appearance();
+        filters::check();
         let list = ThreadList::new(|_| {}, |_| {});
         let calls = Rc::new(Cell::new(0));
         let clicked = Rc::clone(&calls);

@@ -210,3 +210,4 @@ app/src/ui/assistant/controls.rs
 app/src/ui/assistant/files.rs
 sync/src/account/space.rs
 app/src/ui/window/trash.rs
+app/src/ui/thread_list/filters.rs

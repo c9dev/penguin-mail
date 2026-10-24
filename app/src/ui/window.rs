@@ -1632,6 +1632,7 @@ impl MainWindow {
     fn view_of(&self, mailbox: &Mailbox, category: Category) -> View {
         let category = self.shows_categories(mailbox).then_some(category);
         self.settings_with(|settings| View {
+            filter: Default::default(),
             threading: settings.threading,
             category,
             follow_ups: settings.suggest_follow_ups,
@@ -3674,6 +3675,7 @@ impl MainWindow {
     /// Opens a thread from outside the window, such as a notification, and
     /// answers it when `then` asks for that.
     pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String, then: Reveal) {
+        self.list.filters.clear();
         // Selecting a row before the list's rows land finds nothing, so
         // the feed holds the thread until the first page is on screen.
         self.listing.reveal((account_id, thread_id, then));

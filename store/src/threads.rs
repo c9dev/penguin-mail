@@ -135,6 +135,7 @@ fn date_wins(start_rows: i64, all_rows: i64, wanted: i64) -> bool {
 /// describe without callers building filters it has not planned for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ThreadFilter {
+    list_filter: mailrs_domain::ListFilter,
     account_id: Option<AccountId>,
     /// `None` means any mail.
     set: Option<MailSet>,
@@ -493,6 +494,11 @@ impl ThreadFilter {
         self
     }
 
+    pub fn with_list_filter(mut self, filter: mailrs_domain::ListFilter) -> Self {
+        self.list_filter = filter;
+        self
+    }
+
     pub fn with_flag(mut self, flag: FlagColor) -> Self {
         self.flag = Some(flag);
         self
@@ -732,6 +738,17 @@ impl ThreadFilter {
         if !resolved.none.is_empty() {
             sql.push(" AND NOT ");
             rows.holds_any(sql, &resolved.none);
+        }
+        if self.list_filter.unread {
+            sql.push(" AND ");
+            rows.holds(sql, &Named::Unread);
+        }
+        if self.list_filter.flagged {
+            sql.push(" AND ");
+            rows.holds(sql, &Named::Keyword(FLAGGED.into()));
+        }
+        if self.list_filter.attachments {
+            sql.push(&format!(" AND {row}.has_attachments = 1"));
         }
         if let Some(flag) = self.flag {
             if let Rows::Threads = rows {

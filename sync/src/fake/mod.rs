@@ -1158,6 +1158,7 @@ impl GmailApi for FakeGmail {
             // sent mail, the fake can do the same.
             if let Some(copy) = s.sent_copy.as_ref().and_then(|read| read(raw)) {
                 draft.snippet = copy.meta.snippet;
+                draft.has_attachments = copy.meta.has_attachments;
             }
             s.messages.insert(message_id.clone(), draft);
             s.record(HistoryChange::MessageAdded {

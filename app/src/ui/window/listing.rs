@@ -68,7 +68,7 @@ pub(super) trait Pane {
     /// Puts a first page on screen in place of the rows there.
     fn set_rows(&self, listing: Listing);
     /// Adds a page of older rows at the end.
-    fn append(&self, rows: Vec<ThreadSummary>);
+    fn append(&self, listing: Listing);
     /// Puts `rows` in place of the rows of the `changed` threads, and
     /// `title` and `subtitle` over the list.
     fn replace(&self, changed: &[Named], rows: Vec<ThreadSummary>, title: &str, subtitle: &str);
@@ -218,6 +218,7 @@ struct State {
     followed: HashMap<(AccountId, String), Follow>,
     follow_attempt: u64,
     previews: Previews,
+    next: Option<Loaded>,
 }
 
 /// The thread list's run. See the module's comment.
@@ -240,6 +241,7 @@ impl ListingRun {
                 followed: HashMap::new(),
                 follow_attempt: 0,
                 previews: Previews::default(),
+                next: None,
             }),
             pane,
             lists,
@@ -342,7 +344,12 @@ impl ListingRun {
         };
         let mailbox = self.mailbox();
         let (scope, view) = self.asks(&mailbox);
-        let held = self.pane.loaded();
+        let held = self
+            .state
+            .borrow()
+            .next
+            .clone()
+            .unwrap_or_else(|| self.pane.loaded());
         let this = Rc::clone(self);
         self.lists.spawn(Box::pin(async move {
             if !this.state.borrow_mut().screen.feed().current(ticket) {
@@ -360,7 +367,10 @@ impl ListingRun {
             }
             match loaded {
                 Ok(listing) if listing.replace => this.put_rows(ticket, listing),
-                Ok(listing) => this.pane.append(listing.rows),
+                Ok(listing) => {
+                    this.state.borrow_mut().next = listing.next.clone();
+                    this.pane.append(listing);
+                }
                 Err(err) => this.pane.failed(&err),
             }
         }));
@@ -738,6 +748,7 @@ impl ListingRun {
     }
 
     fn put_rows(&self, ticket: Ticket, listing: Listing) {
+        self.state.borrow_mut().next = listing.next.clone();
         self.state.borrow_mut().previews.reset(Some(ticket));
         self.pane.set_rows(listing);
     }
@@ -747,9 +758,10 @@ impl ListingRun {
     async fn splice(self: &Rc<Self>, ticket: Ticket, named: Vec<Named>) {
         let mailbox = self.mailbox();
         let (_, view) = self.asks(&mailbox);
+        let filtered = view.filter.active();
         let fresh = self.lists.changed(mailbox, named.clone(), view).await;
         let mailbox = self.mailbox();
-        let prunes = mailbox.folder().is_some();
+        let prunes = mailbox.folder().is_some() && !filtered;
         let splice = self
             .state
             .borrow_mut()
