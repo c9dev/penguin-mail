@@ -23,6 +23,11 @@ pub enum ReceiptCard {
 
 impl ThreadRun {
     pub(super) async fn receipt(&self, wanted: &Want<'_>) {
+        // A receipt would mail about a message in no mailbox and remember
+        // the answer under an id the store never saw.
+        if self.loose_on_screen(wanted) {
+            return;
+        }
         futures::join!(self.receipt_card(wanted), self.reports(wanted));
     }
 
@@ -38,7 +43,16 @@ impl ThreadRun {
         }
     }
 
+    /// Whether the thread on screen is a loose message, which gets no
+    /// receipt card whatever its sender asked.
+    fn loose_on_screen(&self, wanted: &Want<'_>) -> bool {
+        wanted.on_screen(|_| self.thread(OpenThread::is_loose)) == Some(Some(true))
+    }
+
     async fn receipt_card(&self, wanted: &Want<'_>) {
+        if self.loose_on_screen(wanted) {
+            return;
+        }
         if wanted.on_screen(|_| self.desk.preferences().offers_receipts) != Some(true) {
             return;
         }

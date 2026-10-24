@@ -62,6 +62,7 @@ mod images;
 mod in_flight;
 mod invitation;
 mod listing;
+mod loose;
 mod message_menu;
 mod notice;
 mod on_screen;
@@ -1266,7 +1267,7 @@ impl MainWindow {
     }
 
     fn toast(&self, text: &str) {
-        self.toasts.add_toast(
+        self.toast_overlay().add_toast(
             adw::Toast::builder()
                 .title(toast_title(text))
                 .timeout(4)
@@ -2548,6 +2549,10 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
+        // A loose message opened with no account has nowhere to go out from.
+        if view.read(|open| open.loose.as_ref().is_some_and(|l| !l.has_account)) == Some(true) {
+            return self.toast(&gettext("Add an account to reply or forward"));
+        }
         let Some(answering) = view.find(|open| open.answering(only, kind == ReplyKind::Forward))
         else {
             return;
@@ -2603,13 +2608,39 @@ impl MainWindow {
             app.open_composer(draft, Signature::Add);
             return;
         }
-        let Some(sync) = self.core.account(account_id) else {
+        // Files the window already holds, by index: a loose message's, or
+        // the ones an engine cut out of an encrypted one. Only the rest
+        // are fetched.
+        // Each file is taken out as it is attached rather than copied: a
+        // loose message can hold tens of megabytes of them.
+        let mut held: Vec<Option<Vec<u8>>> = view
+            .find(|open| open.opened_files.get(&target.id).cloned())
+            .unwrap_or_default()
+            .into_iter()
+            .map(Some)
+            .collect();
+        let sync = self.core.account(account_id);
+        let fetches = attachments
+            .iter()
+            .enumerate()
+            .any(|(index, a)| held.get(index).is_none() && a.attachment_id.is_some());
+        if fetches && sync.is_none() {
             return;
-        };
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            for attachment in attachments {
-                let Some(attachment_id) = attachment.attachment_id.clone() else {
+            for (index, attachment) in attachments.into_iter().enumerate() {
+                if let Some(bytes) = held.get_mut(index).and_then(Option::take) {
+                    draft.attachments.push(compose::forwarded_file(
+                        attachment,
+                        bytes,
+                        forwarded_html.as_deref(),
+                    ));
+                    continue;
+                }
+                let (Some(sync), Some(attachment_id)) =
+                    (sync.as_ref(), attachment.attachment_id.clone())
+                else {
                     continue;
                 };
                 let (s, m) = (sync.clone(), target.id.clone());
@@ -3722,6 +3753,19 @@ impl MainWindow {
                                     && let Ok(position) = position.parse()
                                 {
                                     replier.conversation.ask_message_menu(position);
+                                }
+                                if let Ok(index) = std::env::var("MAILRS_DEMO_OPEN_ATTACHMENT")
+                                    && let Ok(index) = index.parse::<usize>()
+                                    && let Some(id) = replier
+                                        .conversation
+                                        .read(|open| open.messages.last().map(|m| m.id.clone()))
+                                        .flatten()
+                                {
+                                    replier.preview_attachment_from(
+                                        &replier.conversation,
+                                        id,
+                                        index,
+                                    );
                                 }
                                 replier.run_demo_action();
                             },

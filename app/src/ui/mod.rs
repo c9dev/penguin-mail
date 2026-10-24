@@ -20,6 +20,8 @@ pub mod conversation;
 pub mod copied;
 pub mod dav_edit;
 pub mod disclosure;
+pub mod eml_file;
+pub mod file_window;
 pub mod find;
 pub mod hide_my_email;
 pub mod ics_file;

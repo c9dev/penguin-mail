@@ -927,39 +927,7 @@ impl MainWindow {
         group: &gio::SimpleActionGroup,
         view: &Rc<ConversationView>,
     ) {
-        for (name, run) in VIEW_ACTIONS {
-            let action = gio::SimpleAction::new(name, None);
-            let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
-            action.connect_activate(move |_, _| {
-                let (Some(win), Some(view)) = (win.upgrade(), target.upgrade()) else {
-                    return;
-                };
-                // A separate window shows its conversation whatever the
-                // main window shows.
-                let own = Rc::ptr_eq(&view, &win.conversation);
-                match own.then(|| route(win.space(), name)) {
-                    None | Some(Route::Run) => run(&win, &view),
-                    Some(Route::Calendar) => win.calendar.focus_search(),
-                    Some(Route::Skip) => {}
-                }
-            });
-            group.add_action(&action);
-        }
-        for (name, run) in MESSAGE_ACTIONS {
-            let action = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
-            let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
-            action.connect_activate(move |_, parameter| {
-                let (Some(win), Some(view), Some(id)) = (
-                    win.upgrade(),
-                    target.upgrade(),
-                    parameter.and_then(|p| p.get::<String>()),
-                ) else {
-                    return;
-                };
-                run(&win, &view, &id);
-            });
-            group.add_action(&action);
-        }
+        self.install_actions_named(group, view, None);
         let flag_color = gio::SimpleAction::new(
             "message-flag-color",
             Some(&glib::VariantType::new("(ss)").expect("valid type")),
@@ -989,6 +957,52 @@ impl MainWindow {
             }
         });
         group.add_action(&categorize);
+    }
+
+    /// Adds those of [`VIEW_ACTIONS`] and [`MESSAGE_ACTIONS`] named in
+    /// `keep` to `group`, each running on `view`, or all of them for
+    /// `None`. A loose message's window keeps the ones that read or
+    /// answer the message and leaves the mailbox ones out.
+    pub(super) fn install_actions_named(
+        self: &Rc<Self>,
+        group: &gio::SimpleActionGroup,
+        view: &Rc<ConversationView>,
+        keep: Option<&[&str]>,
+    ) {
+        let kept = |name: &str| keep.is_none_or(|keep| keep.contains(&name));
+        for (name, run) in VIEW_ACTIONS.iter().filter(|(name, _)| kept(name)) {
+            let action = gio::SimpleAction::new(name, None);
+            let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
+            action.connect_activate(move |_, _| {
+                let (Some(win), Some(view)) = (win.upgrade(), target.upgrade()) else {
+                    return;
+                };
+                // A separate window shows its conversation whatever the
+                // main window shows.
+                let own = Rc::ptr_eq(&view, &win.conversation);
+                match own.then(|| route(win.space(), name)) {
+                    None | Some(Route::Run) => run(&win, &view),
+                    Some(Route::Calendar) => win.calendar.focus_search(),
+                    Some(Route::Skip) => {}
+                }
+            });
+            group.add_action(&action);
+        }
+        for (name, run) in MESSAGE_ACTIONS.iter().filter(|(name, _)| kept(name)) {
+            let action = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
+            let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
+            action.connect_activate(move |_, parameter| {
+                let (Some(win), Some(view), Some(id)) = (
+                    win.upgrade(),
+                    target.upgrade(),
+                    parameter.and_then(|p| p.get::<String>()),
+                ) else {
+                    return;
+                };
+                run(&win, &view, &id);
+            });
+            group.add_action(&action);
+        }
     }
 
     /// Adds [`MAIN_ACTIONS`] to the main window.

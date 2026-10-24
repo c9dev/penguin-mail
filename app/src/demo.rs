@@ -362,6 +362,19 @@ fn samples() -> Vec<Sample> {
         },
         Sample {
             account: 1,
+            thread: "t-forwarded",
+            id: "forwarded-1",
+            from: ("Mara Okafor", "mara.okafor@example.org"),
+            to: &[ME],
+            subject: "Fwd: Cabin booking confirmed",
+            minutes_ago: 5 * HOUR,
+            labels: &["INBOX"],
+            text: "Here's the confirmation the booking site sent, attached as it arrived so you have the original.\n\nMara",
+            attachments: &[("Cabin booking confirmed.eml", "message/rfc822", 1_400)],
+            ..PLAIN
+        },
+        Sample {
+            account: 1,
             thread: "t-crit",
             id: "crit-1",
             from: ("Jonas Weber", "jonas@fernwood.example"),
@@ -2506,6 +2519,9 @@ fn stand_in(attachment_id: &str, mime_type: &str, size: i64) -> Vec<u8> {
     {
         return png;
     }
+    if mime_type == "message/rfc822" {
+        return stand_in_message().into_bytes();
+    }
     // The body reads each file's size off its bytes, so the file runs to
     // the size the sample gives it and the attachment row shows that.
     let mut file =
@@ -2513,6 +2529,35 @@ fn stand_in(attachment_id: &str, mime_type: &str, size: i64) -> Vec<u8> {
             .into_bytes();
     file.resize(file.len().max(size as usize), b'\n');
     file
+}
+
+/// A message forwarded as a file, so the row opens as one: a booking
+/// confirmation with a small file of its own, as a booking site sends it.
+fn stand_in_message() -> String {
+    concat!(
+        "From: Lakeside Cabins <bookings@lakeside.example>\r\n",
+        "To: Mara Okafor <mara.okafor@example.org>\r\n",
+        "Subject: Cabin booking confirmed\r\n",
+        "Date: Mon, 19 Oct 2026 08:12:00 +0000\r\n",
+        "Message-ID: <booking-4471@lakeside.example>\r\n",
+        "MIME-Version: 1.0\r\n",
+        "Content-Type: multipart/mixed; boundary=\"cabin\"\r\n",
+        "\r\n",
+        "--cabin\r\n",
+        "Content-Type: text/html; charset=utf-8\r\n",
+        "\r\n",
+        "<p>Hello Mara,</p>",
+        "<p>Your booking of <b>Cabin 4</b> from 6 to 9 November is confirmed. ",
+        "Check-in is from 15:00; the key box code is in the attached note.</p>",
+        "<p>Lakeside Cabins</p>\r\n",
+        "--cabin\r\n",
+        "Content-Type: text/plain; charset=utf-8\r\n",
+        "Content-Disposition: attachment; filename=\"key-box.txt\"\r\n",
+        "\r\n",
+        "Key box code: 4471\r\n",
+        "--cabin--\r\n",
+    )
+    .to_string()
 }
 
 /// A picture for a demo photo, so the attachment row has something to show

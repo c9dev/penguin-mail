@@ -352,6 +352,23 @@ pub fn part(raw: &[u8], path: &str) -> Option<Vec<u8>> {
     parts(raw)?.find(path)?.data.clone()
 }
 
+/// The body of `raw` and the bytes of each file it lists, in the order
+/// the body lists them, from one parse: what [`read`] and [`files`] give
+/// in two, each decoding every file again. The bytes are taken out of
+/// the parsed tree rather than copied.
+pub fn opened(raw: &[u8]) -> (MessageBody, Vec<Vec<u8>>) {
+    let Some(mut parts) = parts(raw) else {
+        return (MessageBody::default(), Vec::new());
+    };
+    let body = body(&parts);
+    let files = body
+        .attachments
+        .iter()
+        .map(|a| parts.take(&a.part_id).unwrap_or_default())
+        .collect();
+    (body, files)
+}
+
 /// The bytes of each file `read` lists, in the same order.
 pub fn files(raw: &[u8]) -> Vec<Vec<u8>> {
     let Some(parts) = parts(raw) else {
@@ -732,6 +749,20 @@ mod tests {
 
     fn shown(raw: &[u8]) -> String {
         String::from_utf8_lossy(raw).into_owned()
+    }
+
+    /// One parse hands back what `read` and `files` give in two.
+    #[test]
+    fn opened_gives_the_body_and_files_of_a_full_read_in_one_parse() {
+        for raw in SHAPES {
+            let (body, files) = opened(raw);
+            assert_eq!(body, read(raw), "{}", shown(raw));
+            assert_eq!(files, super::files(raw), "{}", shown(raw));
+        }
+        assert_eq!(
+            opened(b"just text, no header\n").0,
+            read(b"just text, no header\n")
+        );
     }
 
     #[test]

@@ -62,18 +62,37 @@ pub fn summary(raw: &[u8]) -> Summary {
     let Some(message) = MessageParser::default().parse_headers(raw) else {
         return Summary::default();
     };
+    // Only the text parts are decoded: a full read would decode every
+    // file in the message, twice over, to learn whether there is one.
+    let body = crate::read::skim(raw)
+        .map(|parts| crate::body(&parts))
+        .unwrap_or_default();
+    envelope(
+        &message,
+        preview(body.text.as_deref()),
+        !body.attachments.is_empty(),
+    )
+}
+
+/// What `raw`'s headers say, and nothing from below them: no snippet and
+/// no word on files, for a caller that reads the body itself. Costs the
+/// header parse alone, whatever the message carries.
+pub fn headers(raw: &[u8]) -> Summary {
+    match MessageParser::default().parse_headers(raw) {
+        Some(message) => envelope(&message, String::new(), false),
+        None => Summary::default(),
+    }
+}
+
+/// The summary of a parsed message's headers, with the `snippet` and
+/// `has_files` the caller learned from the body.
+fn envelope(message: &mail_parser::Message<'_>, snippet: String, has_files: bool) -> Summary {
     let header = |name: &str| {
         message
             .header_raw(name)
             .map(|value| value.split_whitespace().collect::<Vec<_>>().join(" "))
             .filter(|value| !value.is_empty())
     };
-    // Only the text parts are decoded: a full read would decode every
-    // file in the message, twice over, to learn whether there is one.
-    let body = crate::read::skim(raw)
-        .map(|parts| crate::body(&parts))
-        .unwrap_or_default();
-    let snippet = preview(body.text.as_deref());
     Summary {
         message_id: header("Message-ID"),
         from: addresses(message.from()).into_iter().next(),
@@ -93,7 +112,7 @@ pub fn summary(raw: &[u8]) -> Summary {
             .unwrap_or_default(),
         list_unsubscribe: header("List-Unsubscribe"),
         list_unsubscribe_post: header("List-Unsubscribe-Post"),
-        has_files: !body.attachments.is_empty(),
+        has_files,
         snippet,
     }
 }
@@ -111,6 +130,23 @@ pub fn preview(text: Option<&str>) -> String {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    /// The headers alone say who wrote what to whom and when; a file in
+    /// the body is not read for them, so the snippet and the file flag
+    /// stay empty.
+    #[test]
+    fn headers_read_the_envelope_and_nothing_below_it() {
+        let raw = b"From: Ann <ann@example.com>\r\nTo: bob@example.com\r\nSubject: Kites\r\nDate: Tue, 10 Mar 2026 09:00:00 +0000\r\nMessage-ID: <k@example.com>\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"b\"\r\n\r\n--b\r\nContent-Type: text/plain\r\n\r\nHello there\r\n--b\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename=\"n.txt\"\r\n\r\nx\r\n--b--\r\n";
+        let full = summary(raw);
+        let head = headers(raw);
+        assert_eq!(head.from, full.from);
+        assert_eq!(head.to, full.to);
+        assert_eq!(head.subject, "Kites");
+        assert_eq!(head.date, full.date);
+        assert_eq!(head.message_id.as_deref(), Some("<k@example.com>"));
+        assert!(full.has_files && !full.snippet.is_empty());
+        assert!(!head.has_files && head.snippet.is_empty());
+    }
 
     #[test]
     fn a_preview_folds_whitespace_and_stops_on_a_unicode_character() {

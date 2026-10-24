@@ -228,16 +228,16 @@ impl Effects for FakeWindow {
         &self,
         _account_id: AccountId,
         _message_id: String,
-    ) -> Answer<'_, Result<Vec<u8>, String>> {
+    ) -> Answer<'_, Result<std::sync::Arc<Vec<u8>>, String>> {
         self.reached(Step::Fetch);
         let raw = self.with(|screen| screen.raw.clone());
-        Box::pin(async move { raw })
+        Box::pin(async move { raw.map(std::sync::Arc::new) })
     }
 
     fn ask(
         &self,
         _opening: Engine,
-        _raw: Vec<u8>,
+        _raw: std::sync::Arc<Vec<u8>>,
         _body: MessageBody,
     ) -> Answer<'_, Result<Read, String>> {
         self.reached(Step::Ask);

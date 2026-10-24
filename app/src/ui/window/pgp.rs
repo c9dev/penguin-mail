@@ -4,6 +4,7 @@
 //! The [`Ports`] are the thread run's, from `thread.rs`.
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 use gtk::glib;
 use mailrs_domain::{AccountId, MessageBody, Target};
@@ -50,7 +51,11 @@ impl Effects for Ports {
         &self,
         account_id: AccountId,
         message_id: String,
-    ) -> Answer<'_, Result<Vec<u8>, String>> {
+    ) -> Answer<'_, Result<Arc<Vec<u8>>, String>> {
+        // A loose message is its own bytes; nothing else holds them.
+        if let Some(raw) = self.view.find(|open| open.raw_of(&message_id)) {
+            return Box::pin(async move { Ok(raw) });
+        }
         Box::pin(async move {
             let sync = self
                 .core
@@ -62,7 +67,6 @@ impl Effects for Ports {
                     async move { sync.raw_message(&message_id).await },
                 )
                 .await
-                .map(|raw| raw.as_ref().clone())
                 .map_err(|err| err.to_string())
         })
     }
@@ -70,7 +74,7 @@ impl Effects for Ports {
     fn ask(
         &self,
         opening: Engine,
-        raw: Vec<u8>,
+        raw: Arc<Vec<u8>>,
         body: MessageBody,
     ) -> Answer<'_, Result<Read, String>> {
         Box::pin(async move {
@@ -96,6 +100,11 @@ impl Effects for Ports {
     }
 
     fn remember(&self, opening: Engine, message_id: String, read: &Read) {
+        // A loose message goes when its window does, and what was inside
+        // its encryption goes with it rather than staying in the cache.
+        if self.view.find(|open| open.raw_of(&message_id)).is_some() {
+            return;
+        }
         let keyring = self.core.keyring_stamp(opening);
         self.core
             .verdicts

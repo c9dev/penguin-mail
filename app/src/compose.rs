@@ -308,12 +308,13 @@ const FORWARD_MARK: &str = "mailrs-forwarded";
 impl Forwarded {
     /// The header block above the original, as the writer reads it.
     fn header_lines(&self) -> Vec<(&'static str, &str)> {
-        let mut lines = vec![
-            ("From", self.from.as_str()),
-            ("Date", self.date.as_str()),
-            ("Subject", self.subject.as_str()),
-            ("To", self.to.as_str()),
-        ];
+        let mut lines = vec![("From", self.from.as_str())];
+        // A message with no Date header gets no Date line.
+        if !self.date.is_empty() {
+            lines.push(("Date", self.date.as_str()));
+        }
+        lines.push(("Subject", self.subject.as_str()));
+        lines.push(("To", self.to.as_str()));
         if !self.cc.is_empty() {
             lines.push(("Cc", self.cc.as_str()));
         }
@@ -990,20 +991,23 @@ pub fn respond(
             draft.subject = prefixed("Re: ", &original.subject, &["re:"]);
             // Two blank lines to write on, and the quote folded under them.
             draft.markdown = "\n\n".into();
-            draft.quoted = Some(format!(
-                "{}\n{}",
-                fill(
+            let date = full_date(original.date);
+            let attributed = match date.is_empty() {
+                // A message with no Date header is quoted without one.
+                true => fill(&undated_attribution(), &[("sender", sender.display())]),
+                false => fill(
                     &attribution(),
-                    &[
-                        ("date", &full_date(original.date)),
-                        ("sender", sender.display()),
-                    ]
+                    &[("date", &date), ("sender", sender.display())],
                 ),
-                quote(original_text)
-            ));
+            };
+            draft.quoted = Some(format!("{attributed}\n{}", quote(original_text)));
             draft.in_reply_to = original.rfc822_msgid.clone();
             draft.references = references(original, thread);
-            draft.thread_id = Some(original.thread_id.clone());
+            // A loose message's thread id is the app's own, which no server
+            // accepts; the reply starts a thread of its own and still
+            // answers the original by its Message-ID.
+            draft.thread_id = (crate::open_thread::loose_id(&original.thread_id).is_none())
+                .then(|| original.thread_id.clone());
         }
         ReplyKind::Forward => {
             draft.subject = prefixed("Fwd: ", &original.subject, &["fwd:", "fw:"]);
@@ -1224,6 +1228,12 @@ fn signature_block(signature: &str) -> String {
 /// wherever the sentence wants them.
 fn attribution() -> String {
     gettext("On {date}, {sender} wrote:")
+}
+
+/// The line over a quote of a message that carries no date. It ends the
+/// way [`attribution`] does, so [`attribution_tail`] recognizes both.
+fn undated_attribution() -> String {
+    gettext("{sender} wrote:")
 }
 
 /// The words the attribution ends with, which is how one is recognized
@@ -1917,6 +1927,69 @@ mod tests {
             list_unsubscribe: None,
             one_click: false,
         }
+    }
+
+    /// A loose message has a thread id of the app's own, which no server
+    /// accepts, so a reply to it starts a thread of its own while still
+    /// answering the original by its Message-ID.
+    #[test]
+    fn a_reply_to_a_loose_message_names_no_thread() {
+        let mut original = message(
+            "m2",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
+        original.thread_id = "loose:3".into();
+        let draft = respond(
+            ReplyKind::Reply,
+            1,
+            &[me()],
+            &original,
+            "Hi",
+            None,
+            &[original.clone()],
+        );
+        assert_eq!(draft.thread_id, None);
+        assert_eq!(draft.in_reply_to.as_deref(), Some("<m2@mail.example.com>"));
+        assert_eq!(draft.references, ["<m2@mail.example.com>"]);
+    }
+
+    /// A message with no Date header carries 0, which is no date: the
+    /// attribution and the forwarded header leave it out rather than
+    /// naming the start of 1970 or an empty slot.
+    #[test]
+    fn a_message_with_no_date_is_quoted_and_forwarded_without_one() {
+        let mut original = message(
+            "m2",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
+        original.date = 0;
+        let reply = respond(
+            ReplyKind::Reply,
+            1,
+            &[me()],
+            &original,
+            "Hi",
+            None,
+            &[original.clone()],
+        );
+        let quoted = reply.quoted.unwrap_or_default();
+        assert!(quoted.starts_with("Ann wrote:\n"), "{quoted}");
+        let forward = respond(
+            ReplyKind::Forward,
+            1,
+            &[me()],
+            &original,
+            "Hi",
+            None,
+            &[original.clone()],
+        );
+        let plain = forward.forwarded.as_ref().unwrap().to_plain();
+        assert!(!plain.contains("Date:"), "{plain}");
+        assert!(plain.contains("From: Ann <ann@example.com>"), "{plain}");
     }
 
     #[test]

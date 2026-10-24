@@ -16,7 +16,12 @@ pub const PALETTE: [&str; 9] = [
     "#6f8396",
 ];
 
+/// `None` for 0, which a message with no Date header carries: it is no
+/// date at all, not the start of 1970.
 pub fn local(ts: EpochMillis) -> Option<DateTime<Local>> {
+    if ts == 0 {
+        return None;
+    }
     Local.timestamp_millis_opt(ts).single()
 }
 
@@ -457,6 +462,15 @@ mod tests {
         assert_eq!(relative_date(at(2026, 9, 18, 8, 0), now), "Tomorrow");
         assert_eq!(relative_date(at(2026, 9, 21, 8, 0), now), "Monday");
         assert_eq!(relative_date(at(2026, 11, 3, 8, 0), now), "3 Nov");
+    }
+
+    /// A message with no Date header carries 0, which is no date at all,
+    /// not the start of 1970.
+    #[test]
+    fn a_missing_date_shows_as_nothing() {
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        assert_eq!(header_date(0, now), "");
+        assert_eq!(full_date(0), "");
     }
 
     #[test]

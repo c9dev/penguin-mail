@@ -53,6 +53,10 @@ pub enum Holds {
     Message,
     /// A draft, which Edit Draft opens.
     Draft,
+    /// One message from its own bytes, in no mailbox: an `.eml` file or
+    /// a message attached to another. Only the replies apply to it, and
+    /// only while there is an account to answer from.
+    Loose { answerable: bool },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,9 +86,10 @@ pub const CAPSULES: [&[Slot]; 5] = [
 pub fn shows(slot: Slot, on: On) -> bool {
     let any = matches!(on.holds, Holds::Many | Holds::Message | Holds::Draft);
     let wide = !on.compact;
+    let replies = matches!(on.holds, Holds::Message | Holds::Loose { answerable: true });
     match slot {
-        Slot::Reply => on.holds == Holds::Message,
-        Slot::ReplyAll | Slot::Forward => on.holds == Holds::Message && wide,
+        Slot::Reply => replies,
+        Slot::ReplyAll | Slot::Forward => replies && wide,
         Slot::Edit => on.holds == Holds::Draft,
         Slot::Archive | Slot::Trash => any,
         Slot::Junk => any && wide,
@@ -102,7 +107,7 @@ pub fn shows(slot: Slot, on: On) -> bool {
 /// Whether More Actions shows. Only one conversation has a menu of
 /// actions; a draft has Edit, and a selection has the bulk page.
 pub fn more_shows(on: On) -> bool {
-    on.holds == Holds::Message
+    matches!(on.holds, Holds::Message | Holds::Loose { .. })
 }
 
 /// The capsules that show, each with the buttons in it that show.
@@ -189,6 +194,33 @@ mod tests {
         };
         assert!(!shows(Labels, apart));
         assert_eq!(groups(apart).last(), Some(&vec![Flag]));
+    }
+
+    #[test]
+    fn a_loose_message_keeps_only_the_replies() {
+        let loose = On {
+            detached: true,
+            ..on(Holds::Loose { answerable: true })
+        };
+        assert_eq!(groups(loose), vec![vec![Reply, ReplyAll, Forward]]);
+        assert!(more_shows(loose));
+        let narrow = On {
+            compact: true,
+            ..loose
+        };
+        assert_eq!(groups(narrow), vec![vec![Reply]]);
+    }
+
+    /// With no account there is nothing to answer from, so the replies go
+    /// too and only the More menu stays.
+    #[test]
+    fn a_loose_message_with_no_account_has_no_replies() {
+        let alone = On {
+            detached: true,
+            ..on(Holds::Loose { answerable: false })
+        };
+        assert!(groups(alone).is_empty());
+        assert!(more_shows(alone));
     }
 
     #[test]

@@ -41,6 +41,7 @@ mod composing;
 mod dictionaries;
 mod dock_badge;
 mod hidden;
+mod mail_file;
 mod notifications;
 mod reminders;
 mod sending;
@@ -56,6 +57,11 @@ pub struct App {
     pub gio: gio::Application,
     pub core: Rc<Core>,
     window: RefCell<Option<Rc<MainWindow>>>,
+    /// Main windows that closed while a conversation window of theirs
+    /// was still up. Everything such a window does, from Reply to its
+    /// menus, reaches through its main window, so that one is kept until
+    /// the last of them closes.
+    parked: RefCell<Vec<Rc<MainWindow>>>,
     filter: RefCell<Option<crate::web::Filter>>,
     /// The accounts in the store, in the order the store lists them, and
     /// each one's labels. The window's sidebar, list and dialogs all read
@@ -64,6 +70,9 @@ pub struct App {
     /// Whether `accounts` holds what the store does, rather than the empty
     /// list the app starts with.
     accounts_read: Cell<bool>,
+    /// Who is waiting for the first account load to answer: a mail file
+    /// opened before it has. Each is told once, when it does.
+    account_waiters: RefCell<Vec<futures::channel::oneshot::Sender<()>>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     /// Where the person put each account's labels among their siblings.
     label_order: RefCell<HashMap<AccountId, HashMap<String, i64>>>,
@@ -93,7 +102,7 @@ pub struct App {
     pending_compose: RefCell<Option<String>>,
     /// A calendar file requested on the command line, opened on first
     /// activation.
-    pending_file: RefCell<Option<std::path::PathBuf>>,
+    pending_file: RefCell<Option<crate::NamedFile>>,
     tray_started: Cell<bool>,
     /// The unread counts the sidebar, the tray and the Dock badge share.
     unread: Rc<Unread<CoreCounts>>,
@@ -143,7 +152,7 @@ impl App {
         core: Rc<Core>,
         background: bool,
         compose: Option<String>,
-        calendar_file: Option<std::path::PathBuf>,
+        file: Option<crate::NamedFile>,
     ) -> Rc<App> {
         let (chosen, picked) = async_channel::unbounded();
         let core_demo = core.demo;
@@ -166,9 +175,11 @@ impl App {
             gio: gio_app.clone(),
             core,
             window: RefCell::new(None),
+            parked: RefCell::new(Vec::new()),
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
             accounts_read: Cell::new(false),
+            account_waiters: RefCell::new(Vec::new()),
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
@@ -184,7 +195,7 @@ impl App {
             open_windows: Cell::new(0),
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
-            pending_file: RefCell::new(calendar_file),
+            pending_file: RefCell::new(file),
             tray_started: Cell::new(false),
             unread: Unread::new(CoreCounts(counted_by)),
             dock_badge: dock_badge::Badge::new(&app_id),
@@ -287,13 +298,17 @@ impl App {
             });
             return;
         }
-        if let Some(path) = self.pending_file.borrow_mut().take() {
+        if let Some(file) = self.pending_file.borrow_mut().take() {
             self.skip_first_window.set(false);
             // Accounts load asynchronously; give them a moment first, so
-            // the window knows which have a calendar.
+            // the window knows which have a calendar, and a mail file
+            // knows which account answers from it.
             let (this, hold) = (Rc::clone(self), self.gio.hold());
             glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
-                this.open_calendar_file(&path);
+                match file.kind {
+                    crate::FileKind::Calendar => this.open_calendar_file(&file.path),
+                    crate::FileKind::Mail => this.open_mail_file(&file.path),
+                }
                 drop(hold);
             });
             return;
@@ -469,11 +484,42 @@ impl App {
             same
         };
         if forgotten {
+            if window.separate_windows() > 0 {
+                self.park(window);
+            }
             self.window_closed();
         }
     }
 
-    fn window_opened(&self) {
+    /// Keeps a main window that has closed while conversation windows of
+    /// its own are up, since everything they do hangs off it. The last of
+    /// them to close lets it go, in `separate_window_closed`.
+    pub(super) fn park(&self, window: &Rc<MainWindow>) {
+        let mut parked = self.parked.borrow_mut();
+        if !parked.iter().any(|kept| Rc::ptr_eq(kept, window)) {
+            parked.push(Rc::clone(window));
+        }
+    }
+
+    /// A conversation window of `host` closed, `closing` being its view.
+    /// The host is let go once none of its windows is left; `None` when
+    /// the host itself is already gone.
+    pub(crate) fn separate_window_closed(
+        self: &Rc<Self>,
+        host: Option<Rc<MainWindow>>,
+        closing: &crate::ui::conversation::ConversationView,
+    ) {
+        if let Some(host) = host
+            && host.forget_separate(closing) == 0
+        {
+            self.parked
+                .borrow_mut()
+                .retain(|parked| !Rc::ptr_eq(parked, &host));
+        }
+        self.window_closed();
+    }
+
+    pub(crate) fn window_opened(&self) {
         self.open_windows.set(self.open_windows.get() + 1);
         self.shed_generation.set(self.shed_generation.get() + 1);
     }
@@ -483,7 +529,7 @@ impl App {
     /// unloaded, so this is how a closed window gives its memory back.
     /// With no accounts there is nothing to keep running for, and the
     /// process ends instead.
-    fn window_closed(self: &Rc<Self>) {
+    pub(crate) fn window_closed(self: &Rc<Self>) {
         let open = self.open_windows.get().saturating_sub(1);
         self.open_windows.set(open);
         if open == 0 {
@@ -845,6 +891,10 @@ impl App {
         self.storage
             .set_accounts(loaded.iter().map(|(a, _)| a.id).collect());
         self.accounts_read.set(true);
+        for waiting in self.account_waiters.borrow_mut().drain(..) {
+            // A waiter that gave up at its timeout is gone; nothing to tell.
+            let _ = waiting.send(());
+        }
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
         *self.consent.borrow_mut() = consent;
         // A settings change that touches the accounts reloads them too, and
@@ -1297,6 +1347,17 @@ impl App {
             }
         });
         self.gio.add_action(&open_file);
+        let open_mail =
+            gio::SimpleAction::new("open-mail-file", Some(glib::VariantTy::BYTE_STRING));
+        let weak = Rc::downgrade(self);
+        open_mail.connect_activate(move |_, parameter| {
+            if let (Some(app), Some(path)) =
+                (weak.upgrade(), parameter.and_then(crate::path_from_variant))
+            {
+                app.open_mail_file(&path);
+            }
+        });
+        self.gio.add_action(&open_mail);
         add("quit", Box::new(|app| app.quit()));
     }
 

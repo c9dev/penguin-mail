@@ -5,11 +5,12 @@
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::glib;
+use gtk::{gio, glib};
 use mailrs_domain::Target;
 use mailrs_sync::export;
 
 use super::MainWindow;
+use crate::open_thread::OpenThread;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
@@ -18,6 +19,9 @@ impl MainWindow {
     /// `view` shows when nothing is selected. A separate window has no list
     /// of its own, so it writes its conversation.
     pub(super) fn export(self: &Rc<Self>, view: &ConversationView) {
+        if view.read(OpenThread::is_loose) == Some(true) {
+            return self.export_loose(view, None);
+        }
         let rows = match view.detached() {
             true => Vec::new(),
             false => self.list.selected_rows(),
@@ -56,6 +60,9 @@ impl MainWindow {
     /// Writes one message of `view` as the `.eml` file other mail
     /// programs read: the bytes Gmail holds, headers and all.
     pub(super) fn export_message(self: &Rc<Self>, view: &ConversationView, message_id: &str) {
+        if view.read(OpenThread::is_loose) == Some(true) {
+            return self.export_loose(view, Some(message_id));
+        }
         let found = view.find(|open| {
             let meta = open.messages.iter().find(|m| m.id == message_id)?;
             let subject = match meta.subject.trim().is_empty() {
@@ -103,6 +110,52 @@ impl MainWindow {
             match written {
                 Ok(()) => this.toast(&fill(&gettext("Saved {file}"), &[("file", &name)])),
                 Err(err) => this.failed(&gettext("Could not export the mail: {reason}"), &err),
+            }
+        });
+    }
+
+    /// Writes a loose message as the `.eml` file it came from: the bytes
+    /// the window holds, since no account has them. `message_id` names
+    /// the message, or the newest one when `None`.
+    fn export_loose(self: &Rc<Self>, view: &ConversationView, message_id: Option<&str>) {
+        let found = view.find(|open| {
+            let meta = match message_id {
+                Some(id) => open.messages.iter().find(|m| m.id == id)?,
+                None => open.messages.last()?,
+            };
+            let subject = match meta.subject.trim().is_empty() {
+                true => open.subject.clone(),
+                false => meta.subject.clone(),
+            };
+            Some((
+                open.raw_of(&meta.id)?,
+                export::file_name(&subject, meta.date, "eml"),
+            ))
+        });
+        let Some((raw, name)) = found else {
+            return self.toast(&gettext("Open a conversation first"));
+        };
+        let dialog = gtk::FileDialog::builder()
+            .title(gettext("Export Mail"))
+            .initial_name(&name)
+            .build();
+        let parent = view
+            .window()
+            .unwrap_or_else(|| self.window.clone().upcast());
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let Ok(file) = dialog.save_future(Some(&parent)).await else {
+                return;
+            };
+            let Some(path) = file.path() else { return };
+            let written = gio::spawn_blocking(move || std::fs::write(&path, raw.as_slice())).await;
+            match written {
+                Ok(Ok(())) => this.toast(&fill(&gettext("Saved {file}"), &[("file", &name)])),
+                Ok(Err(err)) => this.failed(&gettext("Could not export the mail: {reason}"), &err),
+                Err(_) => this.failed(
+                    &gettext("Could not export the mail: {reason}"),
+                    &gettext("the write was interrupted"),
+                ),
             }
         });
     }
