@@ -11598,75 +11598,75 @@ msgstr "이 스마트 메일함에는 조건이 없습니다"
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account}의 결과는 이 컴퓨터의 메일만 검색합니다"
 
-#: sync/src/mailbox.rs:1742
+#: sync/src/mailbox.rs:1792
 msgid "Returns {when}"
 msgstr "{when}에 다시 표시"
 
-#: sync/src/mailbox.rs:1785 sync/src/mailbox.rs:1887
+#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
 msgid "No recipients"
 msgstr "수신자 없음"
 
-#: sync/src/mailbox.rs:1788 sync/src/mailbox.rs:1890
+#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
 msgid "To {recipients}"
 msgstr "받는 사람 {recipients}"
 
-#: sync/src/mailbox.rs:1831
+#: sync/src/mailbox.rs:1881
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "읽지 않음 {count}개 · {category}"
 
-#: sync/src/mailbox.rs:1836
+#: sync/src/mailbox.rs:1886
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "읽지 않음 {count}개"
 
-#: sync/src/mailbox.rs:1843
+#: sync/src/mailbox.rs:1893
 msgid "Sent yesterday, no reply yet"
 msgstr "어제 보냄, 아직 답장 없음"
 
-#: sync/src/mailbox.rs:1845
+#: sync/src/mailbox.rs:1895
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days}일 전에 보냄, 아직 답장 없음"
 
-#: sync/src/mailbox.rs:1928
+#: sync/src/mailbox.rs:1979
 msgid "The server has not sent this message yet."
 msgstr "서버가 아직 이 메시지를 보내지 않았습니다."
 
-#: sync/src/mailbox.rs:1929
+#: sync/src/mailbox.rs:1980
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail이 서버의 메시지 수신 여부를 확인하지 못했습니다."
 
-#: sync/src/mailbox.rs:1939
+#: sync/src/mailbox.rs:1990
 msgid "Sends {when}."
 msgstr "{when}에 보냅니다."
 
-#: sync/src/mailbox.rs:1940
+#: sync/src/mailbox.rs:1991
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Penguin Mail을 닫아도 서버가 전송합니다."
 
-#: sync/src/mailbox.rs:1942
+#: sync/src/mailbox.rs:1993
 msgid "Sends {when}"
 msgstr "{when}에 보냄"
 
-#: sync/src/mailbox.rs:1949
+#: sync/src/mailbox.rs:2000
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "보낸편지함을 확인하세요. Penguin Mail이 전송 여부를 확인하지 못했습니다."
 
-#: sync/src/mailbox.rs:1952
+#: sync/src/mailbox.rs:2003
 msgid "Canceled in another app."
 msgstr "다른 앱에서 취소했습니다."
 
-#: sync/src/mailbox.rs:1954
+#: sync/src/mailbox.rs:2005
 msgid "Not sent"
 msgstr "보내지 않음"
 
-#: sync/src/mailbox.rs:1961
+#: sync/src/mailbox.rs:2012
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. {when}에 다시 시도"
 
-#: sync/src/mailbox.rs:1968
+#: sync/src/mailbox.rs:2019
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail이 재시도를 중지했습니다"
 

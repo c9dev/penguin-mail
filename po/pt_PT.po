@@ -9837,13 +9837,11 @@ msgid "Unread Only"
 msgstr "Apenas não lidas"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
 #| msgid "Flagged blue"
 msgid "Flagged Only"
 msgstr "Apenas marcadas"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
 #| msgid "Attachments"
 msgid "With Attachments"
 msgstr "Com anexos"
@@ -9853,20 +9851,17 @@ msgid "Match all selected filters"
 msgstr "Corresponder a todos os filtros selecionados"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
 #| msgid "Calendar File"
 msgid "Clear Filters"
 msgstr "Limpar filtros"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
 #| msgid "New Messages"
 msgid "Filter Messages"
 msgstr "Filtrar mensagens"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
 #| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
 msgstr "Filtrar mensagens (ativo)"
@@ -11920,77 +11915,77 @@ msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Os resultados de {account} vêm apenas do correio guardado neste computador"
 
-#: sync/src/mailbox.rs:1742
+#: sync/src/mailbox.rs:1792
 msgid "Returns {when}"
 msgstr "Volta {when}"
 
-#: sync/src/mailbox.rs:1785 sync/src/mailbox.rs:1887
+#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
 msgid "No recipients"
 msgstr "Sem destinatários"
 
-#: sync/src/mailbox.rs:1788 sync/src/mailbox.rs:1890
+#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
 msgid "To {recipients}"
 msgstr "Para {recipients}"
 
-#: sync/src/mailbox.rs:1831
+#: sync/src/mailbox.rs:1881
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} por ler · {category}"
 msgstr[1] "{count} por ler · {category}"
 
-#: sync/src/mailbox.rs:1836
+#: sync/src/mailbox.rs:1886
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
-#: sync/src/mailbox.rs:1843
+#: sync/src/mailbox.rs:1893
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1845
+#: sync/src/mailbox.rs:1895
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Enviada há {days} dia, ainda sem resposta"
 msgstr[1] "Enviada há {days} dias, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1928
+#: sync/src/mailbox.rs:1979
 msgid "The server has not sent this message yet."
 msgstr "O servidor ainda não enviou esta mensagem."
 
-#: sync/src/mailbox.rs:1929
+#: sync/src/mailbox.rs:1980
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "O Penguin Mail não confirmou que o servidor recebeu esta mensagem."
 
-#: sync/src/mailbox.rs:1939
+#: sync/src/mailbox.rs:1990
 msgid "Sends {when}."
 msgstr "Envia {when}."
 
-#: sync/src/mailbox.rs:1940
+#: sync/src/mailbox.rs:1991
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "O servidor envia-a mesmo com o Penguin Mail fechado."
 
-#: sync/src/mailbox.rs:1942
+#: sync/src/mailbox.rs:1993
 msgid "Sends {when}"
 msgstr "Envia {when}"
 
-#: sync/src/mailbox.rs:1949
+#: sync/src/mailbox.rs:2000
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Verifique as Enviadas. O Penguin Mail não conseguiu confirmar o envio."
 
-#: sync/src/mailbox.rs:1952
+#: sync/src/mailbox.rs:2003
 msgid "Canceled in another app."
 msgstr "Cancelada noutra aplicação."
 
-#: sync/src/mailbox.rs:1954
+#: sync/src/mailbox.rs:2005
 msgid "Not sent"
 msgstr "Não enviada"
 
-#: sync/src/mailbox.rs:1961
+#: sync/src/mailbox.rs:2012
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Nova tentativa {when}"
 
-#: sync/src/mailbox.rs:1968
+#: sync/src/mailbox.rs:2019
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 

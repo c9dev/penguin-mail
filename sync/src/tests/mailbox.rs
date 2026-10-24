@@ -1965,11 +1965,7 @@ async fn attachment_filters_keep_queued_messages_with_files() {
     h.fake.seed(meta("plain", "drafts", now - 1, &["DRAFT"]));
     h.bootstrap_all().await;
     let account_id = h.account_id;
-    let raw = b"MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=files\r\n\r\n\
-        --files\r\nContent-Type: text/plain\r\n\r\nSee the file.\r\n\
-        --files\r\nContent-Type: text/plain\r\n\
-        Content-Disposition: attachment; filename=plan.txt\r\n\r\nFly a kite.\r\n\
-        --files--\r\n";
+    let raw = QUEUED_WITH_FILE;
     assert_eq!(mailrs_mime::read(raw).attachments.len(), 1);
     h.db.write(move |c| {
         for problem in [None, Some("Offline")] {
@@ -2032,5 +2028,102 @@ async fn attachment_filters_keep_queued_messages_with_files() {
             ["Local file", "Server file"]
         );
         assert!(!filtered.more);
+    }
+}
+
+const QUEUED_WITH_FILE: &[u8] =
+    b"MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=files\r\n\r\n\
+        --files\r\nContent-Type: text/plain\r\n\r\nSee the file.\r\n\
+        --files\r\nContent-Type: text/plain\r\n\
+        Content-Disposition: attachment; filename=plan.txt\r\n\r\nFly a kite.\r\n\
+        --files--\r\n";
+
+#[tokio::test]
+async fn newly_scheduled_gmail_files_match_before_history_sync() {
+    use mailrs_domain::ListFilter;
+    let h = harness().await;
+    h.fake.keep_sent_copies(h.account_id);
+    let queue = crate::Outbox::new(
+        Arc::new(Connected(HashMap::from([(
+            h.account_id,
+            Arc::clone(&h.sync),
+        )]))),
+        h.db.clone(),
+    );
+    for (subject, raw) in [
+        ("File", QUEUED_WITH_FILE),
+        ("Plain", b"Subject: Plain\r\n\r\nHi".as_slice()),
+    ] {
+        assert!(matches!(
+            queue
+                .schedule(Queued {
+                    account_id: h.account_id,
+                    subject: subject.into(),
+                    raw: Some(raw.to_vec()),
+                    send_at: now_millis() + DAY,
+                    ..Queued::default()
+                })
+                .await
+                .unwrap(),
+            crate::Posted::Waiting(_)
+        ));
+    }
+    let waiting = h.db.read(outbox::scheduled).await.unwrap();
+    assert_eq!(waiting.len(), 2);
+    assert!(
+        waiting
+            .iter()
+            .all(|item| item.raw.is_none() && item.message_id.is_some())
+    );
+    let account_id = h.account_id;
+    let ids = waiting
+        .iter()
+        .filter_map(|item| item.message_id.clone())
+        .collect::<Vec<_>>();
+    assert!(
+        h.db.read(move |c| mailrs_store::messages::by_ids(c, account_id, &ids))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let filtered = View {
+        filter: ListFilter {
+            attachments: true,
+            ..ListFilter::default()
+        },
+        ..view()
+    };
+    for mailbox in [Mailbox::Scheduled, Mailbox::Outbox] {
+        if mailbox == Mailbox::Outbox {
+            h.db.write(move |c| {
+                for item in outbox::scheduled(c)? {
+                    outbox::failed(c, item.id, "Offline", item.send_at)?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        }
+        let all = list(&h, &mailbox, &view()).await;
+        assert_eq!(all.rows.len(), 2);
+        let found = list(&h, &mailbox, &filtered).await;
+        assert_eq!(
+            found
+                .rows
+                .iter()
+                .map(|row| row.subject.as_str())
+                .collect::<Vec<_>>(),
+            ["File"]
+        );
+        assert!(found.notices.is_empty());
+        h.fake
+            .fail_next(mailrs_gmail::GmailError::Network("Offline".into()));
+        let failed = list(&h, &mailbox, &view()).await;
+        assert_eq!(
+            failed.rows.len(),
+            2,
+            "a metadata failure keeps the queued rows"
+        );
+        assert!(!failed.notices.is_empty(), "a metadata failure is visible");
     }
 }

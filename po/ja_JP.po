@@ -11649,74 +11649,74 @@ msgstr "このスマートメールボックスには条件がありません"
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account}の検索結果は、このコンピューター上のメールだけが対象です"
 
-#: sync/src/mailbox.rs:1742
+#: sync/src/mailbox.rs:1792
 msgid "Returns {when}"
 msgstr "{when}に戻ります"
 
-#: sync/src/mailbox.rs:1785 sync/src/mailbox.rs:1887
+#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
 msgid "No recipients"
 msgstr "宛先なし"
 
-#: sync/src/mailbox.rs:1788 sync/src/mailbox.rs:1890
+#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
 msgid "To {recipients}"
 msgstr "宛先: {recipients}"
 
-#: sync/src/mailbox.rs:1831
+#: sync/src/mailbox.rs:1881
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "未読{count}件 · {category}"
 
-#: sync/src/mailbox.rs:1836
+#: sync/src/mailbox.rs:1886
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "未読{count}件"
 
-#: sync/src/mailbox.rs:1843
+#: sync/src/mailbox.rs:1893
 msgid "Sent yesterday, no reply yet"
 msgstr "昨日送信、返信なし"
 
-#: sync/src/mailbox.rs:1845
+#: sync/src/mailbox.rs:1895
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days}日前に送信、返信なし"
 
-#: sync/src/mailbox.rs:1928
+#: sync/src/mailbox.rs:1979
 msgid "The server has not sent this message yet."
 msgstr "サーバーはまだこのメッセージを送信していません。"
 
-#: sync/src/mailbox.rs:1929
+#: sync/src/mailbox.rs:1980
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "サーバーがこのメッセージを受け取ったか確認できていません。"
 
-#: sync/src/mailbox.rs:1939
+#: sync/src/mailbox.rs:1990
 msgid "Sends {when}."
 msgstr "{when}に送信します。"
 
-#: sync/src/mailbox.rs:1940
+#: sync/src/mailbox.rs:1991
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Penguin Mailを閉じていても、サーバーが送信します。"
 
-#: sync/src/mailbox.rs:1942
+#: sync/src/mailbox.rs:1993
 msgid "Sends {when}"
 msgstr "{when}に送信"
 
-#: sync/src/mailbox.rs:1949
+#: sync/src/mailbox.rs:2000
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "送信済みを確認してください。送信したか確認できませんでした。"
 
-#: sync/src/mailbox.rs:1952
+#: sync/src/mailbox.rs:2003
 msgid "Canceled in another app."
 msgstr "別のアプリでキャンセルされました。"
 
-#: sync/src/mailbox.rs:1954
+#: sync/src/mailbox.rs:2005
 msgid "Not sent"
 msgstr "未送信"
 
-#: sync/src/mailbox.rs:1961
+#: sync/src/mailbox.rs:2012
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}。{when}に再試行します"
 
-#: sync/src/mailbox.rs:1968
+#: sync/src/mailbox.rs:2019
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}。再試行を停止しました"
 

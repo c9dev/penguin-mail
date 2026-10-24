@@ -1618,13 +1618,13 @@ impl<A: Accounts> Mailboxes<A> {
     async fn scheduled(
         &self,
         view: &View,
-        base: Listing,
+        mut base: Listing,
         from: usize,
     ) -> Result<Listing, SyncError> {
         if from > 0 {
             return Ok(base);
         }
-        let items = self
+        let mut items = self
             .db
             .read(|c| {
                 outbox::scheduled(c)?
@@ -1636,6 +1636,8 @@ impl<A: Accounts> Mailboxes<A> {
                     .collect::<mailrs_store::Result<Vec<_>>>()
             })
             .await?;
+        self.fill_queued_attachments(&mut items, &mut base.notices)
+            .await;
         let now = view.local_now();
         let rows: Vec<ThreadSummary> = items
             .iter()
@@ -1652,7 +1654,7 @@ impl<A: Accounts> Mailboxes<A> {
                 from: recipients_of(item),
                 recipient: first_recipient(item).map(Box::new),
                 message_count: 1,
-                has_attachments: *has_attachments,
+                has_attachments: has_attachments.unwrap_or(false),
                 scheduled: true,
                 held: crate::outbox::server_holds(item),
                 ..ThreadSummary::default()
@@ -1668,11 +1670,16 @@ impl<A: Accounts> Mailboxes<A> {
     /// The Outbox: what could not go out, why, and when the next try is.
     /// A row is named after its own place in the table rather than after a
     /// Gmail thread, because a message that never reached Gmail has none.
-    async fn outbox(&self, view: &View, base: Listing, from: usize) -> Result<Listing, SyncError> {
+    async fn outbox(
+        &self,
+        view: &View,
+        mut base: Listing,
+        from: usize,
+    ) -> Result<Listing, SyncError> {
         if from > 0 {
             return Ok(base);
         }
-        let items = self
+        let mut items = self
             .db
             .read(|c| {
                 outbox::stuck(c)?
@@ -1684,6 +1691,8 @@ impl<A: Accounts> Mailboxes<A> {
                     .collect::<mailrs_store::Result<Vec<_>>>()
             })
             .await?;
+        self.fill_queued_attachments(&mut items, &mut base.notices)
+            .await;
         let now = view.local_now();
         let rows: Vec<ThreadSummary> = items
             .iter()
@@ -1696,7 +1705,7 @@ impl<A: Accounts> Mailboxes<A> {
                 from: recipients_of(item),
                 recipient: first_recipient(item).map(Box::new),
                 message_count: 1,
-                has_attachments: *has_attachments,
+                has_attachments: has_attachments.unwrap_or(false),
                 ..ThreadSummary::default()
             })
             .collect();
@@ -1705,6 +1714,47 @@ impl<A: Accounts> Mailboxes<A> {
             rows,
             ..base
         })
+    }
+
+    // Gmail can hold a draft before history has brought its metadata here.
+    // Fetch only those missing messages, keeping local bytes authoritative.
+    async fn fill_queued_attachments(
+        &self,
+        items: &mut [(outbox::Queued, Option<bool>)],
+        notices: &mut Vec<String>,
+    ) {
+        let mut missing = HashMap::<AccountId, Vec<String>>::new();
+        for (item, attachments) in items.iter() {
+            if attachments.is_none()
+                && let Some(id) = &item.message_id
+            {
+                missing.entry(item.account_id).or_default().push(id.clone());
+            }
+        }
+        for (account_id, ids) in missing {
+            let found = match self.accounts.account(account_id) {
+                Some(sync) => sync.fetch_metadata(&ids).await,
+                None => Err(SyncError::UnknownAccount(account_id)),
+            };
+            match found {
+                Ok(metas) => {
+                    let files: HashMap<_, _> = metas
+                        .into_iter()
+                        .map(|meta| (meta.id, meta.has_attachments))
+                        .collect();
+                    for (item, attachments) in items.iter_mut() {
+                        if item.account_id == account_id && attachments.is_none() {
+                            *attachments = item
+                                .message_id
+                                .as_ref()
+                                .and_then(|id| files.get(id))
+                                .copied();
+                        }
+                    }
+                }
+                Err(err) => notices.push(err.to_string()),
+            }
+        }
     }
 
     async fn reminders(
@@ -1864,20 +1914,21 @@ pub fn outbox_id(row_id: &str) -> Option<i64> {
 
 // Local bytes describe the queued version; once the server holds it,
 // only that draft's metadata applies, not the rest of its conversation.
+// None means history has not supplied the metadata yet.
 fn queued_has_attachments(
     conn: &rusqlite::Connection,
     item: &outbox::Queued,
-) -> mailrs_store::Result<bool> {
+) -> mailrs_store::Result<Option<bool>> {
     if let Some(raw) = &item.raw {
-        return Ok(mailrs_mime::summary(raw).has_files);
+        return Ok(Some(mailrs_mime::summary(raw).has_files));
     }
     let Some(id) = &item.message_id else {
-        return Ok(false);
+        return Ok(Some(false));
     };
     Ok(
         messages::by_ids(conn, item.account_id, std::slice::from_ref(id))?
-            .iter()
-            .any(|message| message.has_attachments),
+            .first()
+            .map(|message| message.has_attachments),
     )
 }
 
