@@ -18,6 +18,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - A conversation opened in its own window keeps working after the main window closes, instead of vanishing when the app goes to the background a minute later.
 - A message with no Date header shows no date instead of 1 January 1970.
+- With Attachments includes queued messages with files in Send Later and Outbox.
+
 - Screen readers omit hidden message previews when navigating the list with the keyboard.
 - IMAP messages show preview text in the list without needing to open them first.
 - IMAP and POP3 accounts stay signed in while their mail server restarts or updates, and try again every few minutes instead of asking you to sign in ([#79](https://github.com/c9dev/penguin-mail/issues/79)).

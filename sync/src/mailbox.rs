@@ -1624,11 +1624,22 @@ impl<A: Accounts> Mailboxes<A> {
         if from > 0 {
             return Ok(base);
         }
-        let items = self.db.read(outbox::scheduled).await?;
+        let items = self
+            .db
+            .read(|c| {
+                outbox::scheduled(c)?
+                    .into_iter()
+                    .map(|item| {
+                        let has_attachments = queued_has_attachments(c, &item)?;
+                        Ok((item, has_attachments))
+                    })
+                    .collect::<mailrs_store::Result<Vec<_>>>()
+            })
+            .await?;
         let now = view.local_now();
         let rows: Vec<ThreadSummary> = items
             .iter()
-            .map(|item| ThreadSummary {
+            .map(|(item, has_attachments)| ThreadSummary {
                 account_id: item.account_id,
                 id: item
                     .thread_id
@@ -1641,6 +1652,7 @@ impl<A: Accounts> Mailboxes<A> {
                 from: recipients_of(item),
                 recipient: first_recipient(item).map(Box::new),
                 message_count: 1,
+                has_attachments: *has_attachments,
                 scheduled: true,
                 held: crate::outbox::server_holds(item),
                 ..ThreadSummary::default()
@@ -1660,11 +1672,22 @@ impl<A: Accounts> Mailboxes<A> {
         if from > 0 {
             return Ok(base);
         }
-        let items = self.db.read(outbox::stuck).await?;
+        let items = self
+            .db
+            .read(|c| {
+                outbox::stuck(c)?
+                    .into_iter()
+                    .map(|item| {
+                        let has_attachments = queued_has_attachments(c, &item)?;
+                        Ok((item, has_attachments))
+                    })
+                    .collect::<mailrs_store::Result<Vec<_>>>()
+            })
+            .await?;
         let now = view.local_now();
         let rows: Vec<ThreadSummary> = items
             .iter()
-            .map(|item| ThreadSummary {
+            .map(|(item, has_attachments)| ThreadSummary {
                 account_id: item.account_id,
                 id: outbox_row(item.id),
                 last_message_at: item.send_at,
@@ -1673,6 +1696,7 @@ impl<A: Accounts> Mailboxes<A> {
                 from: recipients_of(item),
                 recipient: first_recipient(item).map(Box::new),
                 message_count: 1,
+                has_attachments: *has_attachments,
                 ..ThreadSummary::default()
             })
             .collect();
@@ -1836,6 +1860,25 @@ pub fn outbox_row(id: i64) -> String {
 /// The message an Outbox row stands for, or `None` for an ordinary row.
 pub fn outbox_id(row_id: &str) -> Option<i64> {
     row_id.strip_prefix("outbox:")?.parse().ok()
+}
+
+// Local bytes describe the queued version; once the server holds it,
+// only that draft's metadata applies, not the rest of its conversation.
+fn queued_has_attachments(
+    conn: &rusqlite::Connection,
+    item: &outbox::Queued,
+) -> mailrs_store::Result<bool> {
+    if let Some(raw) = &item.raw {
+        return Ok(mailrs_mime::summary(raw).has_files);
+    }
+    let Some(id) = &item.message_id else {
+        return Ok(false);
+    };
+    Ok(
+        messages::by_ids(conn, item.account_id, std::slice::from_ref(id))?
+            .iter()
+            .any(|message| message.has_attachments),
+    )
 }
 
 /// Who a waiting message goes to, as its row shows it.

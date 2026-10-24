@@ -1953,3 +1953,84 @@ async fn quick_filters_run_before_paging_and_when_rows_change() {
         assert_eq!(ids(&all), ["read", "unread", "attached"]);
     }
 }
+
+#[tokio::test]
+async fn attachment_filters_keep_queued_messages_with_files() {
+    use mailrs_domain::ListFilter;
+    let h = harness().await;
+    let now = now_millis();
+    let mut attached = meta("file", "drafts", now, &["DRAFT"]);
+    attached.has_attachments = true;
+    h.fake.seed(attached);
+    h.fake.seed(meta("plain", "drafts", now - 1, &["DRAFT"]));
+    h.bootstrap_all().await;
+    let account_id = h.account_id;
+    let raw = b"MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=files\r\n\r\n\
+        --files\r\nContent-Type: text/plain\r\n\r\nSee the file.\r\n\
+        --files\r\nContent-Type: text/plain\r\n\
+        Content-Disposition: attachment; filename=plan.txt\r\n\r\nFly a kite.\r\n\
+        --files--\r\n";
+    assert_eq!(mailrs_mime::read(raw).attachments.len(), 1);
+    h.db.write(move |c| {
+        for problem in [None, Some("Offline")] {
+            for (subject, message_id, raw) in [
+                ("Local file", None, Some(raw.to_vec())),
+                (
+                    "Local plain",
+                    Some("file"),
+                    Some(b"Subject: Plain\r\n\r\nHi".to_vec()),
+                ),
+                ("Server file", Some("file"), None),
+                ("Server plain", Some("plain"), None),
+                ("Missing", Some("missing"), None),
+            ] {
+                outbox::put(
+                    c,
+                    &Queued {
+                        account_id,
+                        subject: subject.into(),
+                        message_id: message_id.map(str::to_string),
+                        thread_id: Some("drafts".into()),
+                        send_at: now + DAY,
+                        raw,
+                        problem: problem.map(str::to_string),
+                        ..Queued::default()
+                    },
+                )?;
+            }
+        }
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let mut view = View {
+        filter: ListFilter {
+            attachments: true,
+            ..ListFilter::default()
+        },
+        ..view()
+    };
+    for mailbox in [Mailbox::Scheduled, Mailbox::Outbox] {
+        view.filter.attachments = false;
+        let all = list(&h, &mailbox, &view).await;
+        assert_eq!(all.rows.len(), 5);
+        assert_eq!(
+            all.rows
+                .iter()
+                .map(|row| row.has_attachments)
+                .collect::<Vec<_>>(),
+            [true, false, true, false, false]
+        );
+        view.filter.attachments = true;
+        let filtered = list(&h, &mailbox, &view).await;
+        assert_eq!(
+            filtered
+                .rows
+                .iter()
+                .map(|row| row.subject.as_str())
+                .collect::<Vec<_>>(),
+            ["Local file", "Server file"]
+        );
+        assert!(!filtered.more);
+    }
+}

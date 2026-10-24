@@ -12144,81 +12144,81 @@ msgstr ""
 "Rezultatele pentru {account} provin doar din corespondența de pe acest "
 "calculator"
 
-#: sync/src/mailbox.rs:1718
+#: sync/src/mailbox.rs:1742
 msgid "Returns {when}"
 msgstr "Revine {when}"
 
-#: sync/src/mailbox.rs:1761 sync/src/mailbox.rs:1844
+#: sync/src/mailbox.rs:1785 sync/src/mailbox.rs:1887
 msgid "No recipients"
 msgstr "Niciun destinatar"
 
-#: sync/src/mailbox.rs:1764 sync/src/mailbox.rs:1847
+#: sync/src/mailbox.rs:1788 sync/src/mailbox.rs:1890
 msgid "To {recipients}"
 msgstr "Către {recipients}"
 
-#: sync/src/mailbox.rs:1807
+#: sync/src/mailbox.rs:1831
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} necitit · {category}"
 msgstr[1] "{count} necitite · {category}"
 msgstr[2] "{count} de necitite · {category}"
 
-#: sync/src/mailbox.rs:1812
+#: sync/src/mailbox.rs:1836
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} necitit"
 msgstr[1] "{count} necitite"
 msgstr[2] "{count} de necitite"
 
-#: sync/src/mailbox.rs:1819
+#: sync/src/mailbox.rs:1843
 msgid "Sent yesterday, no reply yet"
 msgstr "Trimis ieri, încă fără răspuns"
 
-#: sync/src/mailbox.rs:1821
+#: sync/src/mailbox.rs:1845
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Trimis acum {days} zi, încă fără răspuns"
 msgstr[1] "Trimis acum {days} zile, încă fără răspuns"
 msgstr[2] "Trimis acum {days} de zile, încă fără răspuns"
 
-#: sync/src/mailbox.rs:1885
+#: sync/src/mailbox.rs:1928
 msgid "The server has not sent this message yet."
 msgstr "Serverul nu a trimis încă acest mesaj."
 
-#: sync/src/mailbox.rs:1886
+#: sync/src/mailbox.rs:1929
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail nu a confirmat că serverul a preluat acest mesaj."
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1939
 msgid "Sends {when}."
 msgstr "Se trimite {when}."
 
-#: sync/src/mailbox.rs:1897
+#: sync/src/mailbox.rs:1940
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Serverul îl trimite chiar dacă Penguin Mail este închis."
 
-#: sync/src/mailbox.rs:1899
+#: sync/src/mailbox.rs:1942
 msgid "Sends {when}"
 msgstr "Se trimite {when}"
 
-#: sync/src/mailbox.rs:1906
+#: sync/src/mailbox.rs:1949
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Verificați în Trimise. Penguin Mail nu a putut confirma că a fost trimis."
 
-#: sync/src/mailbox.rs:1909
+#: sync/src/mailbox.rs:1952
 msgid "Canceled in another app."
 msgstr "Anulat în altă aplicație."
 
-#: sync/src/mailbox.rs:1911
+#: sync/src/mailbox.rs:1954
 msgid "Not sent"
 msgstr "Netrimis"
 
-#: sync/src/mailbox.rs:1918
+#: sync/src/mailbox.rs:1961
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Se încearcă din nou {when}"
 
-#: sync/src/mailbox.rs:1925
+#: sync/src/mailbox.rs:1968
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail nu mai încearcă"
 
