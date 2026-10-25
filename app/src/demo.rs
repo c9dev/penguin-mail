@@ -19,7 +19,7 @@ use mailrs_domain::{
     AccountId, Address, Attachment, EpochMillis, Filter, FilterAction, FilterCriteria, MailSet,
     MessageBody, MessageMeta, Provenance, Role,
 };
-use mailrs_domain::{GmailSignIn, SignInClient};
+use mailrs_domain::GmailSignIn;
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::services::{FoundService, ServiceKind};
@@ -805,60 +805,6 @@ impl DemoMail {
     }
 }
 
-/// Which Gmail accounts the demo asks to choose a new way to sign in, from
-/// `MAILRS_DEMO_GOOGLE_MOVE`. Unset, none does, so no screenshot meets the
-/// banner it did not ask for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MoveStage {
-    /// One account, with its mail still arriving.
-    Banner,
-    /// All three Gmail accounts.
-    Several,
-    /// One account, whose mail has stopped. The engine runs the demo's
-    /// accounts and would set the state back, so the app words the banner
-    /// for a stopped account itself.
-    Paused,
-    /// All three Gmail accounts, and the first-launch sheet over the
-    /// window.
-    Sheet,
-    /// The first account reads its mail over IMAP and holds no calendar
-    /// token, for the Preferences lines of such an account.
-    PrefsImap,
-}
-
-/// Whether the demo counts the first-launch sheet as shown already. Only
-/// the `sheet` stage leaves it to show.
-pub fn sheet_shown_at_start(stage: Option<MoveStage>) -> bool {
-    stage != Some(MoveStage::Sheet)
-}
-
-impl MoveStage {
-    pub fn parse(value: &str) -> Option<MoveStage> {
-        match value {
-            "banner" => Some(MoveStage::Banner),
-            "banner-several" => Some(MoveStage::Several),
-            "banner-paused" => Some(MoveStage::Paused),
-            "sheet" => Some(MoveStage::Sheet),
-            "prefs-imap" => Some(MoveStage::PrefsImap),
-            _ => None,
-        }
-    }
-
-    pub fn asked() -> Option<MoveStage> {
-        std::env::var("MAILRS_DEMO_GOOGLE_MOVE")
-            .ok()
-            .and_then(|value| MoveStage::parse(&value))
-    }
-
-    /// Whether the demo account at `index` waits for a move.
-    fn waits(self, index: usize) -> bool {
-        match self {
-            MoveStage::Banner | MoveStage::Paused | MoveStage::PrefsImap => index == 0,
-            MoveStage::Several | MoveStage::Sheet => true,
-        }
-    }
-}
-
 /// Adds the demo accounts to an empty store, puts the samples in each
 /// one's server, and lets sync fill the store from there. Each Gmail body
 /// the store can hold is read once through sync's cache, so opening a
@@ -876,19 +822,11 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         let account_id = db
             .write(move |c| accounts::insert_account(c, email, now))
             .await?;
-        // The demo's Gmail accounts sign in with their own client, so none
-        // waits for a move unless a stage asks for it.
-        let stage = MoveStage::asked();
-        let client = match stage.is_some_and(|stage| stage.waits(index)) {
-            true => SignInClient::BuiltIn,
-            false => SignInClient::Own,
-        };
-        let sign_in = match stage == Some(MoveStage::PrefsImap) && index == 0 {
-            true => GmailSignIn::AppPassword { google: client },
-            false => GmailSignIn::BuiltInApi.with_google_token(client),
-        };
-        db.write(move |c| accounts::set_gmail_sign_in(c, account_id, &sign_in))
-            .await?;
+        // The demo's Gmail accounts sign in through their own project.
+        db.write(move |c| {
+            accounts::set_gmail_sign_in(c, account_id, &GmailSignIn::OwnProject)
+        })
+        .await?;
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);
         if index == 2 && std::env::var_os("MAILRS_DEMO_FULL_CONSENT").is_none() {
@@ -3036,37 +2974,6 @@ fn eight_weeks_later<Z: chrono::TimeZone>(start: chrono::DateTime<Z>) -> EpochMi
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn a_move_stage_picks_which_accounts_wait() {
-        use super::MoveStage;
-        assert_eq!(MoveStage::parse("banner"), Some(MoveStage::Banner));
-        assert_eq!(MoveStage::parse("other"), None);
-        let waiting = |stage: MoveStage| (0..3).filter(|i| stage.waits(*i)).collect::<Vec<_>>();
-        assert_eq!(waiting(MoveStage::Banner), [0]);
-        assert_eq!(waiting(MoveStage::Paused), [0]);
-        assert_eq!(waiting(MoveStage::Several), [0, 1, 2]);
-    }
-
-    #[tokio::test]
-    async fn the_demo_shows_no_move_unless_asked() {
-        let demo = demo().await;
-        for index in 0..3 {
-            let id = demo.account(index).await;
-            let client = demo
-                .db
-                .read(move |c| accounts::gmail_sign_in(c, id))
-                .await
-                .unwrap()
-                .client();
-            assert_eq!(client, SignInClient::Own, "account {index}");
-        }
-        assert!(sheet_shown_at_start(None));
-        assert!(sheet_shown_at_start(Some(MoveStage::Banner)));
-        assert!(!sheet_shown_at_start(Some(MoveStage::Sheet)));
-        assert_eq!(MoveStage::parse("sheet"), Some(MoveStage::Sheet));
-        assert!((0..3).all(|i| MoveStage::Sheet.waits(i)));
-    }
-
     use mailrs_domain::{Folder, MailSet, Role};
     use mailrs_gmail::labels as gmail;
     use mailrs_store::bodies;

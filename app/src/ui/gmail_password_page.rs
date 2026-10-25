@@ -21,6 +21,9 @@ pub struct GmailPasswordPage {
     pub spinner: adw::Spinner,
     pub help: adw::ExpanderRow,
     pub other_way: gtk::Button,
+    /// The help row that holds `other_way`, which an account signing in
+    /// again does not get.
+    other_row: gtk::ListBoxRow,
     pub error: gtk::Label,
     pub error_buttons: gtk::Box,
 }
@@ -219,6 +222,7 @@ impl GmailPasswordPage {
             spinner,
             help,
             other_way,
+            other_row,
             error,
             error_buttons,
         }
@@ -234,6 +238,7 @@ impl GmailPasswordPage {
             false => self.address.remove_css_class("app-password-locked"),
         }
         self.again_line.set_visible(again);
+        self.other_row.set_visible(!again);
         self.password.set_text("");
         self.clear_failure();
         self.note.set_visible(false);
@@ -260,12 +265,22 @@ impl GmailPasswordPage {
     }
 
     /// Says why the sign-in failed, with the buttons that help, each
-    /// handed to `pressed`.
-    pub fn show_failure(&self, failure: &GmailFailure, pressed: impl Fn(Action) + Clone + 'static) {
+    /// handed to `pressed`. An account that signs in `again` is offered no
+    /// other way to sign in.
+    pub fn show_failure(
+        &self,
+        failure: &GmailFailure,
+        again: bool,
+        pressed: impl Fn(Action) + Clone + 'static,
+    ) {
         self.clear_failure();
         self.error.set_label(&failure.words());
         self.error.set_visible(true);
-        for action in failure.actions() {
+        for action in failure
+            .actions()
+            .into_iter()
+            .filter(|action| !(again && *action == Action::SignInAnotherWay))
+        {
             let button = gtk::Button::builder()
                 .label(action.label())
                 .css_classes(["pill", "post-small-pill"])

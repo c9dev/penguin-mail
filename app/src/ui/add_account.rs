@@ -34,9 +34,7 @@ use crate::core::Core;
 use crate::gmail_password::{self, Action as GmailAction};
 use crate::own_project::{self, Step as OwnStep};
 use crate::permission::Permission;
-use crate::route_choice::{
-    self, Goa, Platform, Ready, Route, footer, ready_now, rows, rows_without_goa,
-};
+use crate::route_choice::{self, Goa, Platform, Ready, Route, footer, other_ways, ready_now, rows};
 use crate::ui::gmail_password_page::GmailPasswordPage;
 use crate::ui::goa_page::{self, GoaPage, PageState};
 use crate::ui::own_project::{Hooks, OwnProject};
@@ -74,23 +72,15 @@ pub enum Opening {
     /// The password page for an IMAP account that needs to sign in again,
     /// or the calendar page for a calendar account that does.
     Again(Account),
-    /// The route page for each of these Gmail accounts in turn, to move
-    /// each to its own sign-in. Closing the dialog ends the walk.
-    Move(Vec<Account>),
-    /// The route page for this account on its own Google project, without
-    /// the own-project rows, to move it to another route.
-    LeaveOwn(Account),
     /// The page that offers this Gmail account its calendar and contacts,
     /// after its mail works.
     Consent(Account),
     /// The own Google project setup, for a new account or, with
-    /// `address`, for that account signing in again. With `moving`, the
-    /// setup ends by moving that existing Gmail account onto the project,
-    /// the way the route choice's walk does.
+    /// `address`, for that existing Gmail account signing in again, which
+    /// keeps its mail and cannot change how it signs in here.
     OwnProject {
         start: OwnStart,
         address: Option<String>,
-        moving: Option<Account>,
     },
     /// A demo stage, for screenshots: see [`preview`].
     Preview(String),
@@ -143,8 +133,6 @@ pub enum Done {
 enum Flow {
     /// A new sign-in, or a sign-in again.
     SignIn,
-    /// A Gmail account's move to its own sign-in.
-    Move(Account),
     /// A Gmail account's calendar consent.
     Consent(Account),
 }
@@ -154,10 +142,7 @@ pub fn present(
     parent: &impl IsA<gtk::Widget>,
     opening: Opening,
     done: impl Fn(Done) + 'static,
-) -> Option<adw::Dialog> {
-    if matches!(&opening, Opening::Move(accounts) if accounts.is_empty()) {
-        return None;
-    }
+) {
     let again = match &opening {
         Opening::Again(account) => Some(account.clone()),
         _ => None,
@@ -169,16 +154,8 @@ pub fn present(
     }
     this.connect();
     this.load_saved_project();
-    if matches!(&opening, Opening::LeaveOwn(_)) {
-        this.leaving_own.set(true);
-    }
-    let routes_first = matches!(
-        &opening,
-        Opening::Move(_) | Opening::LeaveOwn(_) | Opening::Browser(Browser::Google)
-    );
     let root = match &opening {
-        _ if routes_first => route_page::TAG,
-        Opening::Move(_) | Opening::LeaveOwn(_) => route_page::TAG,
+        Opening::Browser(Browser::Google) => route_page::TAG,
         Opening::Consent(_) => route_page::CONSENT_TAG,
         Opening::Pick | Opening::Preview(_) => "pick",
         Opening::Tile(_) | Opening::ByHand => "address",
@@ -231,16 +208,6 @@ pub fn present(
         Opening::ByHand => this.open_address(None, true),
         Opening::Browser(Browser::Google) => this.offer_routes(None),
         Opening::Browser(browser) => this.start_browser(browser, None),
-        Opening::Move(accounts) => {
-            this.moving
-                .replace(Some(add_account::MoveWalk::new(accounts)));
-            this.offer_routes(None);
-        }
-        Opening::LeaveOwn(account) => {
-            this.moving
-                .replace(Some(add_account::MoveWalk::new(vec![account])));
-            this.offer_routes(None);
-        }
         Opening::Consent(_) => {
             // The closed envelope with no stamp, as the route page has.
             this.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
@@ -254,15 +221,9 @@ pub fn present(
         }
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
-        Opening::OwnProject {
-            start,
-            address,
-            moving,
-        } => {
-            if let Some(account) = moving {
-                this.moving
-                    .replace(Some(add_account::MoveWalk::new(vec![account])));
-            }
+        Opening::OwnProject { start, address } => {
+            this.signing_again.set(address.is_some());
+            this.own.signing_again(address.is_some());
             this.route_expected.replace(address);
             let at = this.open_own(start);
             this.window.set_focus(Some(&this.own.first_focus(at)));
@@ -277,7 +238,6 @@ pub fn present(
     {
         this.window.set_focus(Some(&row));
     }
-    Some(this.window.clone())
 }
 
 /// A banded page: a flat header over the band, the page's own column
@@ -928,67 +888,12 @@ struct BrowserPage {
     cancel: gtk::Button,
     /// The row of buttons under the wait, stacked on a narrow window.
     buttons: gtk::Box,
-    /// The title and lede a finishing move replaced, for a failure to
-    /// put back.
-    held: RefCell<Option<(glib::GString, glib::GString)>>,
-    /// Turns beside the lede while a move finishes.
-    spinner: gtk::Spinner,
-}
-
-impl BrowserPage {
-    /// The sign-in came back and a move is finishing: Cancel, Back, the
-    /// close button and Escape no longer stop it, and the countdown has
-    /// nothing left to count. A failure after the dialog closed would
-    /// reach nobody, so `window` stays open until it ends.
-    fn finishing(&self, window: &adw::Dialog) {
-        window.set_can_close(false);
-        self.spinner.set_visible(true);
-        self.spinner.start();
-        self.cancel.set_sensitive(false);
-        self.banded.page.set_can_pop(false);
-        self.left.set_text("");
-        self.progress.set_visible(false);
-        self.held
-            .replace(Some((self.title.text(), self.lede.text())));
-        // The browser has done its part, so nothing on the page points
-        // back to it.
-        self.title.set_text(&gettext("Signing In…"));
-        self.lede
-            .set_text(&gettext("Moving your account. This takes a moment."));
-        self.steps.set_visible(false);
-        self.waiting.set_visible(false);
-        self.again.set_visible(false);
-        self.copy.set_visible(false);
-    }
-
-    /// A move that failed while finishing says again what it asked of the
-    /// browser, above the failure. A page that was not finishing keeps its
-    /// words.
-    fn unfinish(&self, window: &adw::Dialog) {
-        window.set_can_close(true);
-        self.spinner.stop();
-        self.spinner.set_visible(false);
-        if let Some((title, lede)) = self.held.take() {
-            self.title.set_text(&title);
-            self.lede.set_text(&lede);
-        }
-    }
 }
 
 fn browser_page() -> BrowserPage {
     let banded = banded("browser", &gettext("Sign In in Your Browser"));
     let title = heading("");
     let lede = label("", &["post-lede"]);
-    lede.set_hexpand(true);
-    // A 16-pixel spinner: an `adw::Spinner` grows to fill the line.
-    let spinner = gtk::Spinner::builder()
-        .visible(false)
-        .valign(gtk::Align::Center)
-        .css_classes(["post-spinner", "post-moving-spinner"])
-        .build();
-    let lede_line = gtk::Box::builder().spacing(8).build();
-    lede_line.append(&spinner);
-    lede_line.append(&lede);
     let steps = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .css_classes(["post-steps"])
@@ -1051,7 +956,7 @@ fn browser_page() -> BrowserPage {
     }
     let body = &banded.body;
     body.append(&title);
-    body.append(&lede_line);
+    body.append(&lede);
     body.append(&steps);
     body.append(&failed.area);
     body.append(&filler());
@@ -1073,8 +978,6 @@ fn browser_page() -> BrowserPage {
         own_step,
         cancel,
         buttons,
-        held: RefCell::new(None),
-        spinner,
     }
 }
 
@@ -2047,11 +1950,12 @@ struct Dialog {
     /// how many features were left off, which its lede names.
     granting: Cell<Option<(Provider, usize)>>,
     count_timer: RefCell<Option<glib::SourceId>>,
-    /// The Gmail accounts a move walks through, while one does.
-    moving: RefCell<Option<add_account::MoveWalk>>,
-    /// The walk moves an account off its own Google project, so the route
-    /// page leaves the own-project rows out.
-    leaving_own: std::cell::Cell<bool>,
+    /// The own Google project setup is for an account that exists and
+    /// signs in again, so it offers no other way to sign in.
+    signing_again: Cell<bool>,
+    /// Online Accounts was picked before an address was typed, so the page
+    /// for it opens once the address page has one.
+    goa_after_address: Cell<bool>,
     /// The address typed before the route page, for the sign-in it leads
     /// to.
     route_expected: RefCell<Option<String>>,
@@ -2096,7 +2000,7 @@ struct Dialog {
 /// The own Google project setup's pages, whose sign-in and links go
 /// through `dialog`.
 fn own_setup(core: &Rc<Core>, dialog: &std::rc::Weak<Dialog>) -> Rc<OwnProject> {
-    let (signs, opens) = (dialog.clone(), dialog.clone());
+    let (signs, opens, switches) = (dialog.clone(), dialog.clone(), dialog.clone());
     OwnProject::new(
         core,
         Hooks {
@@ -2108,6 +2012,11 @@ fn own_setup(core: &Rc<Core>, dialog: &std::rc::Weak<Dialog>) -> Rc<OwnProject> 
             open_uri: Box::new(move |url| {
                 if let Some(this) = opens.upgrade() {
                     this.open_uri(url);
+                }
+            }),
+            switch: Box::new(move || {
+                if let Some(this) = switches.upgrade() {
+                    this.switch_from_setup();
                 }
             }),
         },
@@ -2200,8 +2109,8 @@ impl Dialog {
             added: Cell::new(None),
             granting: Cell::new(None),
             count_timer: RefCell::new(None),
-            moving: RefCell::new(None),
-            leaving_own: std::cell::Cell::new(false),
+            signing_again: Cell::new(false),
+            goa_after_address: Cell::new(false),
             route_expected: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
             routes: RoutePage::new(),
@@ -2369,16 +2278,7 @@ impl Dialog {
             let expected = this.browser_expected.borrow().clone();
             let chosen = this.browser_chosen.borrow().clone();
             let provider = this.browser_provider.get();
-            let moving = this
-                .moving
-                .borrow()
-                .as_ref()
-                .and_then(|walk| walk.current().cloned());
-            let flow = match moving {
-                Some(account) if provider == Browser::Google => Flow::Move(account),
-                _ => Flow::SignIn,
-            };
-            this.run_browser(provider, expected, flow, chosen);
+            this.run_browser(provider, expected, Flow::SignIn, chosen);
         });
         self.browser.retry.connect_clicked(move |_| retry());
         let back_into_setup = on(|this| {
@@ -2712,6 +2612,10 @@ impl Dialog {
                     this.say(&said);
                 }
                 Next::Closed(_) => this.show_closed(&address),
+                Next::Google if this.goa_after_address.replace(false) => {
+                    this.route_expected.replace(Some(address.full()));
+                    this.choose_goa();
+                }
                 Next::Google => this.offer_routes(Some(address.full())),
                 Next::Microsoft => this.start_browser(Browser::Microsoft, Some(address.full())),
                 Next::Manual { proposal, line } => this.show_manual(&proposal, Some(&line)),
@@ -3941,21 +3845,10 @@ impl Dialog {
             .unwrap_or("pick")
     }
 
-    /// Signs in through `own`, the key the setup was given: a move for
-    /// the Gmail account the walk is on, else a sign-in.
+    /// Signs in through `own`, the key the setup was given.
     fn setup_sign_in(self: &Rc<Self>, own: OwnClient) {
-        let account = self
-            .moving
-            .borrow()
-            .as_ref()
-            .and_then(|walk| walk.current().cloned());
         let expected = self.route_expected.borrow().clone();
-        self.run_browser(
-            Browser::Google,
-            expected,
-            account.map_or(Flow::SignIn, Flow::Move),
-            Some(own),
-        );
+        self.run_browser(Browser::Google, expected, Flow::SignIn, Some(own));
     }
 
     fn open_uri(&self, url: &str) {
@@ -4036,9 +3929,7 @@ impl Dialog {
         }
     }
 
-    /// As [`Dialog::start_browser`]; with `flow` set to a move the page waits for that
-    /// Gmail account's move to its own sign-in, which keeps the page up
-    /// while the account's queued work finishes.
+    /// As [`Dialog::start_browser`], for the `flow` the page waits for.
     fn run_browser(
         self: &Rc<Self>,
         browser: Browser,
@@ -4050,13 +3941,10 @@ impl Dialog {
         self.browser_chosen.replace(chosen.clone());
         self.own_back.replace(None);
         self.browser.own_step.set_visible(false);
-        self.browser.cancel.set_sensitive(true);
-        self.browser.banded.page.set_can_pop(true);
         self.browser.progress.set_visible(true);
         self.browser_provider.set(browser);
         let provider = browser.name();
         let page = &self.browser;
-        page.held.take();
         page.title.set_text(&fill(
             &gettext("Sign in with {provider} in your browser"),
             &[("provider", provider)],
@@ -4131,7 +4019,6 @@ impl Dialog {
                 (Browser::Google, Some(address)) => Wanted::Only(address),
                 (Browser::Microsoft, Some(address)) => Wanted::Suggested(address),
             };
-            let is_move = matches!(flow, Flow::Move(_));
             let is_consent = matches!(flow, Flow::Consent(_));
             let signed = match flow {
                 Flow::Consent(account) => this
@@ -4139,33 +4026,6 @@ impl Dialog {
                     .connect_calendar(account, urls, canceled)
                     .await
                     .map(|a| (a, None)),
-                Flow::Move(account) => {
-                    let (committed, signed_in) = async_channel::bounded::<()>(1);
-                    let ended = Rc::new(Cell::new(false));
-                    let weak = Rc::downgrade(&this);
-                    let still = Rc::clone(&ended);
-                    glib::spawn_future_local(when_committed(
-                        signed_in,
-                        Rc::clone(&ended),
-                        move || {
-                            if let Some(this) = weak.upgrade()
-                                && this.asking.wants(ticket)
-                            {
-                                this.finishing_move();
-                                this.limit_finish(ticket, still);
-                            }
-                        },
-                    ));
-                    let route = crate::core::ChosenRoute::OwnProject {
-                        chosen: chosen.clone(),
-                        urls,
-                        cancel: canceled,
-                    };
-                    let taker = crate::core::Taker::Moving(account);
-                    let moved = this.core.take_route(route, taker, committed).await;
-                    ended.set(true);
-                    moved.map(|a| (a, None))
-                }
                 Flow::SignIn => {
                     this.core
                         .sign_in_in_browser(browser, urls, wanted, canceled, chosen.clone())
@@ -4182,14 +4042,6 @@ impl Dialog {
                         this.window.close();
                     }
                 }
-                Ok((account, _)) if is_move => {
-                    if this.asking.wants(ticket) {
-                        this.moved(account);
-                    } else {
-                        // The dialog moved on, but the account is moved.
-                        (this.done)(Done::SignedInAgain(account));
-                    }
-                }
                 // The account is kept whether or not the dialog is still
                 // open, so the window hears about it either way.
                 Ok((account, name)) => {
@@ -4197,6 +4049,10 @@ impl Dialog {
                         account: account.clone(),
                         name,
                     });
+                    if this.asking.wants(ticket) && this.signing_again.get() {
+                        this.stop_browser();
+                        return this.finish(Done::SignedInAgain(account));
+                    }
                     if this.asking.wants(ticket) {
                         this.stop_browser();
                         this.typed.replace(Address::parse(&account.email));
@@ -4235,26 +4091,6 @@ impl Dialog {
         });
     }
 
-    /// Gives the dialog back with a failure when a finishing move has not
-    /// ended after [`FINISH_LIMIT`]. The move goes on, and the window
-    /// hears of it when it ends, as it does once the dialog has moved on.
-    fn limit_finish(self: &Rc<Self>, ticket: add_account::Ticket, ended: Rc<Cell<bool>>) {
-        let weak = Rc::downgrade(self);
-        glib::timeout_add_local_once(FINISH_LIMIT, move || {
-            let Some(this) = weak.upgrade() else { return };
-            if ended.get() || !this.asking.wants(ticket) {
-                return;
-            }
-            this.asking.forget();
-            this.stop_browser();
-            // Translators: said when moving a Gmail account to a new way of signing in
-            // runs past two minutes; the move carries on without the window.
-            this.browser_failed(&gettext(
-                "Moving the account is taking too long. It goes on after you close this window.",
-            ));
-        });
-    }
-
     fn browser_failed(&self, said: &str) {
         self.browser_failed_with(&Failure {
             line: said.to_string(),
@@ -4269,10 +4105,6 @@ impl Dialog {
 
     fn browser_failed_with(&self, failure: &Failure) {
         let page = &self.browser;
-        // A move that failed while finishing gives its ways out back.
-        page.unfinish(&self.window);
-        page.cancel.set_sensitive(true);
-        page.banded.page.set_can_pop(true);
         page.steps.set_visible(false);
         page.failed.show(
             "trouble",
@@ -4845,12 +4677,6 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 Some(provider),
             );
         }
-        // A move whose browser sign-in came back, while it finishes.
-        "browser-moving" => {
-            this.start_browser(Browser::Google, None);
-            this.asking.forget();
-            this.finishing_move();
-        }
         "lookup" => {
             this.typed.replace(Some(studio.clone()));
             this.checks.replace(Checks::default());
@@ -5084,15 +4910,10 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
         }
         "routes" | "routes-mac" => {
             // Every row is ready, so the screenshots show them all.
-            let everything = |goa| Ready {
-                goa,
-                own_project: true,
-                saved_project: false,
-            };
             if stage == "routes" {
-                this.show_routes(Platform::Linux, everything(Goa::Holds), None);
+                this.show_routes(Platform::Linux, ready_now(Goa::Holds), None);
             } else {
-                this.show_routes(Platform::MacOs, everything(Goa::Absent), None);
+                this.show_routes(Platform::MacOs, ready_now(Goa::Absent), None);
             }
         }
         stage if stage.starts_with("gmail-password") => {
@@ -5243,24 +5064,6 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
     this.show_band();
 }
 
-/// Runs `finish` once a move says its sign-in came back, unless the move's
-/// result arrived first. The word and the result reach the main loop in
-/// either order, and a page that finished after the result would keep
-/// the dialog from closing.
-/// How long a move may finish, once the browser sign-in came back, before
-/// the dialog gives its ways out back.
-const FINISH_LIMIT: Duration = Duration::from_secs(120);
-
-async fn when_committed(
-    signed_in: async_channel::Receiver<()>,
-    ended: Rc<Cell<bool>>,
-    finish: impl FnOnce(),
-) {
-    if signed_in.recv().await.is_ok() && !ended.get() {
-        finish();
-    }
-}
-
 /// Checks that need GTK, run from the one test that starts it
 /// (`composer::richbuffer`'s GTK checks).
 #[cfg(test)]
@@ -5271,54 +5074,6 @@ pub(crate) mod checks {
         the_calendar_password_stays_while_the_browser_leads();
         a_page_without_the_calendar_password_folds_its_list_away();
         unfolding_brings_the_token_switch_back_as_it_was();
-        a_move_cannot_be_left_once_its_sign_in_has_returned();
-        a_move_that_fails_while_finishing_gets_its_words_back();
-    }
-
-    fn a_move_cannot_be_left_once_its_sign_in_has_returned() {
-        let page = browser_page();
-        let dialog = adw::Dialog::new();
-        assert!(page.cancel.is_sensitive() && page.banded.page.can_pop());
-        assert!(!page.spinner.get_visible());
-        page.finishing(&dialog);
-        // Neither the close button nor Escape ends the dialog: a failure
-        // after it closed would reach nobody.
-        assert!(!dialog.can_close());
-        assert!(page.spinner.get_visible() && page.spinner.is_spinning());
-        assert!(!page.cancel.is_sensitive());
-        assert!(!page.banded.page.can_pop());
-        // The browser is done with, so the page stops saying it is open.
-        assert_eq!(page.title.text(), "Signing In…");
-        assert_eq!(
-            page.lede.text(),
-            "Moving your account. This takes a moment."
-        );
-        assert!(!page.steps.get_visible());
-        assert!(!page.waiting.get_visible());
-        assert!(!page.again.get_visible());
-        assert!(!page.copy.get_visible());
-    }
-
-    fn a_move_that_fails_while_finishing_gets_its_words_back() {
-        let page = browser_page();
-        page.title.set_text("Sign in with Google in your browser");
-        page.lede
-            .set_text("Google's sign-in page is open in your browser.");
-        let dialog = adw::Dialog::new();
-        page.finishing(&dialog);
-        page.unfinish(&dialog);
-        assert!(dialog.can_close());
-        assert!(!page.spinner.get_visible());
-        assert_eq!(page.title.text(), "Sign in with Google in your browser");
-        assert_eq!(
-            page.lede.text(),
-            "Google's sign-in page is open in your browser."
-        );
-        // A page that never reached the end keeps what it says.
-        page.title.set_text("Could not sign in");
-        page.unfinish(&dialog);
-        assert_eq!(page.title.text(), "Could not sign in");
-        assert!(dialog.can_close());
     }
 
     fn the_calendar_password_stays_while_the_browser_leads() {
@@ -5348,36 +5103,5 @@ pub(crate) mod checks {
         unfold_token(&page);
         assert!(page.password.get_visible() && page.use_token.get_visible());
         assert!(page.password_list.get_visible() && !page.token_instead.get_visible());
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::cell::Cell;
-    use std::rc::Rc;
-
-    use super::when_committed;
-
-    /// Runs `when_committed` after the move sent its word, and answers
-    /// whether the page went on to finish.
-    fn finished_after(result_first: bool) -> bool {
-        let (committed, signed_in) = async_channel::bounded::<()>(1);
-        committed.try_send(()).unwrap();
-        drop(committed);
-        let ended = Rc::new(Cell::new(result_first));
-        let finished = Rc::new(Cell::new(false));
-        let seen = Rc::clone(&finished);
-        futures::executor::block_on(when_committed(signed_in, ended, move || seen.set(true)));
-        finished.get()
-    }
-
-    #[test]
-    fn a_move_whose_sign_in_came_back_finishes() {
-        assert!(finished_after(false));
-    }
-
-    #[test]
-    fn a_late_word_after_the_move_ended_changes_nothing() {
-        assert!(!finished_after(true));
     }
 }

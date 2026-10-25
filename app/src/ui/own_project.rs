@@ -12,6 +12,7 @@ use mailrs_sync::sign_in::own_client::{FileProblem, OwnClient, from_pasted};
 use super::add_account::{banded, heading, label};
 use crate::core::Core;
 use crate::own_project::{self, Step};
+use crate::route_choice::Platform;
 
 /// What the pages ask of the dialog that hosts them.
 pub struct Hooks {
@@ -19,6 +20,58 @@ pub struct Hooks {
     pub sign_in: Box<dyn Fn(OwnClient)>,
     /// Opens a page in the browser.
     pub open_uri: Box<dyn Fn(&str)>,
+    /// Leaves the setup for the other way to sign in.
+    pub switch: Box<dyn Fn()>,
+}
+
+/// What every page of the setup says about the other way to sign in: a
+/// button that leads to it, or for an account that signs in again, the
+/// line that says how to change the way it signs in.
+struct Other {
+    row: gtk::Box,
+    switch: gtk::Button,
+    line: gtk::Label,
+}
+
+impl Other {
+    fn new() -> Other {
+        let words = switch_words();
+        let switch = gtk::Button::builder()
+            .label(&words)
+            .halign(gtk::Align::Center)
+            .css_classes(["flat", "own-switch"])
+            .build();
+        crate::ui::name(&switch, &words);
+        let line = label(
+            &gettext("To sign in another way, remove this account and add it again."),
+            &["own-note"],
+        );
+        line.set_xalign(0.5);
+        line.set_justify(gtk::Justification::Center);
+        line.set_visible(false);
+        let row = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .css_classes(["own-other"])
+            .build();
+        row.append(&switch);
+        row.append(&line);
+        Other { row, switch, line }
+    }
+
+    fn signing_again(&self, again: bool) {
+        self.switch.set_visible(!again);
+        self.line.set_visible(again);
+    }
+}
+
+/// The button that leaves the setup: Online Accounts where the system has
+/// it, an app password elsewhere.
+fn switch_words() -> String {
+    match Platform::this() {
+        // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+        Platform::Linux => gettext("Use Online Accounts instead"),
+        Platform::MacOs => gettext("Use an app password instead"),
+    }
 }
 
 /// The intro: what the setup gives, and the two ways in.
@@ -26,6 +79,7 @@ struct IntroPage {
     page: adw::NavigationPage,
     start: gtk::Button,
     have_key: gtk::Button,
+    other: Other,
 }
 
 /// One of steps 1 to 5: what to do on one Google Cloud page.
@@ -35,6 +89,7 @@ struct StepPage {
     open: gtk::Button,
     next: gtk::Button,
     start_over: gtk::Button,
+    other: Other,
 }
 
 /// Step 6: the key file, dropped, chosen or pasted.
@@ -51,12 +106,14 @@ struct FilePage {
     ready: gtk::Box,
     sign_in: gtk::Button,
     start_over: gtk::Button,
+    other: Other,
 }
 
 /// The page before Google's: what Google is about to say.
 struct WarningPage {
     page: adw::NavigationPage,
     sign_in: gtk::Button,
+    other: Other,
 }
 
 /// The setup's pages, built once.
@@ -136,6 +193,20 @@ impl OwnProject {
         self.go(at);
     }
 
+    /// Whether the setup is for an account that signs in again, which has
+    /// no other way to sign in to switch to.
+    pub fn signing_again(&self, again: bool) {
+        for other in self.others() {
+            other.signing_again(again);
+        }
+    }
+
+    fn others(&self) -> Vec<&Other> {
+        let mut others = vec![&self.intro.other, &self.file.other, &self.warning.other];
+        others.extend(self.steps.iter().map(|shown| &shown.other));
+        others
+    }
+
     /// Takes `own` as the key the sign-in goes through, as a project kept
     /// from an earlier setup is.
     pub fn use_key(&self, own: OwnClient) {
@@ -206,6 +277,10 @@ impl OwnProject {
 
     fn connect(self: &Rc<Self>) {
         self.connect_file();
+        for other in self.others() {
+            let switch = weakly(self, |this| (this.hooks.switch)());
+            other.switch.connect_clicked(move |_| switch());
+        }
         let sign_in = weakly(self, |this| {
             let found = this.found.borrow().clone();
             match found {
@@ -496,10 +571,13 @@ fn intro_page() -> IntroPage {
     let start = button(&gettext("Start"), true);
     let have_key = button(&gettext("I Already Have a Key"), false);
     banded.body.append(&centered_buttons(&[&start, &have_key]));
+    let other = Other::new();
+    banded.body.append(&other.row);
     IntroPage {
         page: banded.page,
         start,
         have_key,
+        other,
     }
 }
 
@@ -520,9 +598,12 @@ fn warning_page() -> WarningPage {
     }
     let sign_in = button(&gettext("Sign in with Google"), true);
     banded.body.append(&centered_buttons(&[&sign_in]));
+    let other = Other::new();
+    banded.body.append(&other.row);
     WarningPage {
         page: banded.page,
         sign_in,
+        other,
     }
 }
 
@@ -701,6 +782,8 @@ fn step_page(step: Step) -> StepPage {
     next.set_halign(gtk::Align::Center);
     plain.foot.append(&next);
     plain.foot.append(&help_link(step));
+    let other = Other::new();
+    plain.foot.append(&other.row);
     let start_over = gtk::Button::builder()
         .label(gettext("Start over"))
         .visible(false)
@@ -713,6 +796,7 @@ fn step_page(step: Step) -> StepPage {
         open,
         next,
         start_over,
+        other,
     }
 }
 
@@ -800,6 +884,8 @@ fn file_page() -> FilePage {
     sign_in.set_visible(false);
     plain.foot.append(&sign_in);
     plain.foot.append(&help_link(Step::File));
+    let other = Other::new();
+    plain.foot.append(&other.row);
     let start_over = gtk::Button::builder()
         .label(gettext("Start over"))
         .visible(false)
@@ -819,5 +905,6 @@ fn file_page() -> FilePage {
         ready,
         sign_in,
         start_over,
+        other,
     }
 }

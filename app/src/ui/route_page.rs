@@ -1,5 +1,5 @@
 //! The page that asks how a Google account signs in: Add Account's page
-//! after the Google tile, and the page each Gmail account moves through.
+//! after the Google tile.
 
 use std::rc::Rc;
 
@@ -235,7 +235,7 @@ pub(crate) mod checks {
     use std::rc::Rc;
 
     pub fn run() {
-        three_rows_are_named_and_reachable_by_keyboard();
+        the_rows_are_named_and_reachable_by_keyboard();
         a_mac_page_shows_the_tag_and_the_footer();
         an_address_with_an_ampersand_stays_plain();
         showing_again_replaces_the_rows_and_the_answer();
@@ -246,7 +246,6 @@ pub(crate) mod checks {
     fn everything() -> Ready {
         Ready {
             goa: Goa::Holds,
-            own_project: true,
             saved_project: false,
         }
     }
@@ -273,27 +272,24 @@ pub(crate) mod checks {
         found
     }
 
-    fn three_rows_are_named_and_reachable_by_keyboard() {
+    fn the_rows_are_named_and_reachable_by_keyboard() {
         let page = RoutePage::new();
         let shown = rows(Platform::Linux, everything());
         let picked = Rc::new(RefCell::new(Vec::new()));
         let sink = Rc::clone(&picked);
-        page.show(
-            &shown,
-            footer(Platform::Linux, everything()),
-            move |route| sink.borrow_mut().push(route),
-        );
-        assert!(page.list.row_at_index(3).is_none());
+        page.show(&shown, Some(footer()), move |route| {
+            sink.borrow_mut().push(route)
+        });
+        assert!(page.list.row_at_index(2).is_none());
         for (i, wanted) in shown.iter().enumerate() {
             let row = row_at(&page, i as i32);
             assert_eq!(row.title(), wanted.title);
             assert!(row.is_activatable());
             assert!(row.is_focusable());
         }
-        // The own project is listed first, so the line under the list shows.
         assert!(page.footer.get_visible());
-        ActionRowExt::activate(&row_at(&page, 2));
-        assert_eq!(*picked.borrow(), [Route::AppPassword]);
+        ActionRowExt::activate(&row_at(&page, 1));
+        assert_eq!(*picked.borrow(), [Route::Goa]);
     }
 
     fn a_mac_page_shows_the_tag_and_the_footer() {
@@ -303,7 +299,7 @@ pub(crate) mod checks {
             ..everything()
         };
         let shown = rows(Platform::MacOs, ready);
-        page.show(&shown, footer(Platform::MacOs, ready), |_| {});
+        page.show(&shown, Some(footer()), |_| {});
         assert_eq!(tags_in(row_at(&page, 0).upcast_ref()), ["Recommended"]);
         assert!(tags_in(row_at(&page, 1).upcast_ref()).is_empty());
         let words = title_box(row_at(&page, 0).upcast_ref()).expect("the title box");

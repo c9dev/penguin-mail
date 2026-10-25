@@ -9,12 +9,12 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Mutex, PoisonError};
+use std::sync::Mutex;
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, JmapFound, Net, RealNet, Security, SrvRecord};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, GmailSignIn, Provider, SignInClient, Target,
+    Account, AccountId, AccountState, ChangeEvent, Provider, SignInClient, Target,
 };
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
@@ -24,8 +24,10 @@ use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
 use mailrs_sync::read_inbox::InboxesRead;
-use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
+use mailrs_sync::sign_in::app_password::{
+    NewGmailImap, check_gmail, gmail_imap_signed_in, read_pasted,
+};
 use mailrs_sync::sign_in::own_client::{OwnClient, saved_project};
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, KeptClient, NewCalDav,
@@ -48,9 +50,7 @@ use crate::starting::{self, Connected, Starting};
 use mailrs_domain::translate::gettext;
 
 mod goa;
-mod route;
 
-pub use route::{ChosenRoute, Taker};
 
 /// The store could not be updated to this version, and the copy taken
 /// before the attempt was put back. Startup shows this with a way to
@@ -145,8 +145,6 @@ pub struct Core {
     /// The IMAP accounts whose server also speaks JMAP, with the session
     /// to sign in to, as `look_for_jmap` found them.
     switch_offers: RefCell<HashMap<AccountId, JmapFound>>,
-    /// The accounts a move to their own sign-in is running for.
-    move_leases: MoveLeases,
     /// The desktop's Online Accounts, or a stand-in in the demo.
     goa: Arc<dyn mailrs_sync::goa::OnlineAccounts>,
     /// What the app last read from it.
@@ -155,8 +153,6 @@ pub struct Core {
     goa_watch: RefCell<Option<tokio::task::JoinHandle<()>>>,
     /// Whether an account reads through Online Accounts.
     goa_linked: Cell<bool>,
-    /// Whether the route choice is open and may offer Online Accounts.
-    goa_choosing: Cell<bool>,
     /// The accounts `look_for_jmap` has looked at this run, found or not.
     switch_looked: RefCell<HashSet<AccountId>>,
     /// Where each kind of account keeps what signs it in: the keyring, or
@@ -260,13 +256,7 @@ impl Core {
         // A first run has no config file and needs none: new accounts sign
         // in with the client the build carries.
         let config = if demo {
-            // The sheet that asks Gmail accounts to choose a sign-in never
-            // opens over a screenshot unless the `sheet` stage asks; the
-            // banner opens when a stage asks.
-            Config {
-                google_move_shown: demo::sheet_shown_at_start(demo::MoveStage::asked()),
-                ..Config::default()
-            }
+            Config::default()
         } else {
             match Config::load(&config_path()?) {
                 Ok(config) => config,
@@ -346,12 +336,10 @@ impl Core {
             verdicts: RefCell::default(),
             misses: RefCell::new(misses),
             switch_offers: RefCell::default(),
-            move_leases: MoveLeases::default(),
             goa: online_accounts(demo),
             goa_state: Arc::default(),
             goa_watch: RefCell::new(None),
             goa_linked: Cell::new(false),
-            goa_choosing: Cell::new(false),
             switch_looked: RefCell::default(),
             secrets: match demo {
                 true => Secrets::memory(),
@@ -525,29 +513,6 @@ impl Core {
         }
     }
 
-    /// Whether the sheet that asks Gmail accounts to choose a sign-in
-    /// already showed.
-    pub fn google_move_shown(&self) -> bool {
-        self.config.borrow().google_move_shown
-    }
-
-    /// Records that the sheet showed, so it never shows again. Demo mode
-    /// keeps this in memory only.
-    pub fn mark_google_move_shown(&self) -> Result<()> {
-        let updated = {
-            let mut config = self.config.borrow_mut();
-            if config.google_move_shown {
-                return Ok(());
-            }
-            config.google_move_shown = true;
-            config.clone()
-        };
-        if !self.demo {
-            updated.save(&config_path()?)?;
-        }
-        Ok(())
-    }
-
     /// Saves new sync settings and restarts every account's loop with them.
     /// Demo mode keeps them in memory only.
     pub fn update_sync(&self, sync: mailrs_sync::config::SyncConfig) -> Result<()> {
@@ -601,24 +566,15 @@ impl Core {
         );
         let db = self.db.clone();
         self.runtime.spawn(async move {
-            let read = db
-                .read(|c| Ok((accounts::list_accounts(c)?, accounts::google_sign_ins(c)?)))
-                .await;
-            let Ok((all, sign_ins)) = read else {
+            let Ok(all) = db.read(accounts::list_accounts).await else {
                 return;
             };
-            let moves = all
-                .iter()
-                .filter(|a| sign_ins.get(&a.id).is_some_and(GmailSignIn::waits_to_move))
-                .map(|a| a.id)
-                .collect();
             let port = Arc::new(EnginePort {
                 engine,
                 running,
                 db,
                 events,
                 started,
-                moves,
             });
             let connect = move |account: Account| {
                 let reach = Arc::clone(&reach);
@@ -1035,8 +991,8 @@ impl Core {
                     // waits for it, as at any start.
                     mailrs_sync::Connected::NeedsSignIn(_) => {
                         let id = signed.account.id;
-                        let state = missing_token_state(&db, &signed.account).await?;
-                        db.write(move |c| accounts::set_state(c, id, state)).await?;
+                        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+                            .await?;
                     }
                 }
                 // The sign-in may have granted the calendar permission, so the
@@ -1049,6 +1005,44 @@ impl Core {
             self.finish_google_setup();
         }
         Ok(signed)
+    }
+
+    /// Signs in to a Gmail account with the app password `pasted` holds:
+    /// Gmail's servers take the login first, then the account, its servers
+    /// and its password are kept and the account starts. Nothing is kept
+    /// when the login fails.
+    pub async fn sign_in_with_app_password(
+        &self,
+        address: String,
+        pasted: String,
+    ) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("Demo mode cannot add real accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, secrets) = (self.db.clone(), self.secrets.clone());
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        let account = self
+            .call(async move {
+                let pasted = read_pasted(&pasted);
+                let checked = check_gmail(&address, pasted.secret()).await?;
+                let new = NewGmailImap {
+                    address,
+                    servers: checked.servers,
+                    password: pasted.secret().to_string(),
+                };
+                let account = gmail_imap_signed_in(&db, &secrets, new, now_millis()).await?;
+                start_again(&reach, &engine, &db, &account, false).await?;
+                Ok::<_, anyhow::Error>(account)
+            })
+            .await?;
+        Ok(account)
     }
 
     /// The servers for `address`, found the way discovery goes: the
@@ -1904,59 +1898,6 @@ impl Core {
 #[error("{}", gettext("Gave up waiting for the browser after five minutes."))]
 pub struct BrowserTimedOut;
 
-/// Signs in through the browser for a move, or gives up when `cancel`
-/// closes or the wait runs out. Dropping the sign-in closes its loopback
-/// listener.
-async fn authorize_until_canceled(
-    oauth: &mailrs_gmail::OAuthClient,
-    open: impl FnOnce(&str),
-    cancel: async_channel::Receiver<()>,
-) -> Result<mailrs_gmail::Authorized> {
-    let signing = mailrs_gmail::authorize(oauth, mailrs_gmail::GMAIL_API_BASE, open);
-    tokio::select! {
-        waited = tokio::time::timeout(BROWSER_WAIT, signing) => waited
-            .map_err(|_| BrowserTimedOut)?
-            .map_err(|err| BrowserSignInError::Google(err).into()),
-        _ = cancel.recv() => bail!(gettext("Canceled.")),
-    }
-}
-
-/// The accounts with a move running. A lease lasts until its move ends.
-#[derive(Clone, Default)]
-pub(crate) struct MoveLeases(Arc<Mutex<HashSet<AccountId>>>);
-
-struct MoveLease {
-    held: Arc<Mutex<HashSet<AccountId>>>,
-    id: AccountId,
-}
-
-impl MoveLeases {
-    /// The lease for `id`, or None while another move of it runs.
-    fn lease(&self, id: AccountId) -> Option<MoveLease> {
-        let mut held = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        held.insert(id).then(|| MoveLease {
-            held: Arc::clone(&self.0),
-            id,
-        })
-    }
-
-    /// Whether a move of `id` runs now. The move starts the account again
-    /// itself once it ends.
-    fn is_held(&self, id: AccountId) -> bool {
-        self.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .contains(&id)
-    }
-}
-
-impl Drop for MoveLease {
-    fn drop(&mut self) {
-        let mut held = self.held.lock().unwrap_or_else(PoisonError::into_inner);
-        held.remove(&self.id);
-    }
-}
-
 /// Starts `account`'s loop on the services the store names for it now,
 /// or marks it as needing a sign-in when nothing signs it in. Once a
 /// switch went through, its local rules move into the server's Sieve
@@ -1977,24 +1918,11 @@ async fn start_again(
         }
         Connected::NeedsSignIn => {
             let id = account.id;
-            let state = missing_token_state(db, account).await?;
-            db.write(move |c| accounts::set_state(c, id, state)).await?;
+            db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+                .await?;
         }
     }
     Ok(())
-}
-
-/// The state of an account that has no token or password to start on:
-/// mail paused when it has to choose a new route, else sign in again.
-async fn missing_token_state(db: &Db, account: &Account) -> Result<AccountState> {
-    let id = account.id;
-    let sign_in = db
-        .read(move |c| Ok(accounts::google_sign_ins(c)?.remove(&id)))
-        .await?;
-    Ok(match sign_in.is_some_and(|s| s.waits_to_move()) {
-        true => AccountState::MailPaused,
-        false => AccountState::NeedsReauth,
-    })
 }
 
 /// What a search for an IMAP or POP3 account's other servers found in use.
@@ -2181,29 +2109,6 @@ impl Reach {
     }
 }
 
-/// The engine a move stops and starts the account on.
-struct MovePort {
-    engine: Arc<SyncEngine>,
-    reach: Reach,
-    db: Db,
-}
-
-impl route_move::MoveEngine for MovePort {
-    fn running(&self, account: AccountId) -> Option<Arc<AccountSync>> {
-        self.engine.account(account).ok()
-    }
-
-    fn stop(&self, account: AccountId) {
-        self.engine.stop_account(account);
-    }
-
-    async fn start_again(&self, account: &Account) {
-        if let Err(err) = start_again(&self.reach, &self.engine, &self.db, account, false).await {
-            tracing::warn!(account = account.id, error = %err, "could not start the account again after the move");
-        }
-    }
-}
-
 /// Where starting an account lands in the app: the engine it was meant
 /// for, the store, and the window through the change events.
 struct EnginePort {
@@ -2212,8 +2117,6 @@ struct EnginePort {
     db: Db,
     events: async_channel::Sender<ChangeEvent>,
     started: async_channel::Sender<AccountId>,
-    /// The accounts that have to choose a new route, read once at start.
-    moves: HashSet<AccountId>,
 }
 
 impl EnginePort {
@@ -2249,10 +2152,6 @@ impl Starting<AccountServices> for EnginePort {
             .events
             .send(ChangeEvent::AccountStateChanged { account_id, state })
             .await;
-    }
-
-    fn needs_move(&self, account: &Account) -> bool {
-        self.moves.contains(&account.id)
     }
 
     async fn wanted(&self, account_id: AccountId) -> bool {
@@ -2352,48 +2251,10 @@ mod tests {
     use std::sync::{Arc, Mutex, PoisonError};
 
     use super::Core;
-    use mailrs_domain::{AccountState, GmailSignIn, Provider, SignInClient};
-    use mailrs_store::{Db, accounts};
+    use mailrs_domain::{GmailSignIn, Provider};
+    use mailrs_store::accounts;
     use mailrs_sync::sign_in::ClientSource;
     use mailrs_sync::sign_in::own_client::OwnClient;
-
-    #[tokio::test]
-    async fn a_restart_without_a_token_pauses_an_account_that_needs_a_move() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = Db::open(&dir.path().join("mail.db")).unwrap();
-        db.write(|c| accounts::insert_account(c, "me@gmail.com", 0))
-            .await
-            .unwrap();
-        let account = db
-            .read(|c| accounts::account_by_email(c, "me@gmail.com"))
-            .await
-            .unwrap()
-            .unwrap();
-        let id = account.id;
-        assert_eq!(
-            super::missing_token_state(&db, &account).await.unwrap(),
-            AccountState::MailPaused
-        );
-        db.write(move |c| accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject))
-            .await
-            .unwrap();
-        assert_eq!(
-            super::missing_token_state(&db, &account).await.unwrap(),
-            AccountState::NeedsReauth
-        );
-        db.write(move |c| {
-            let app_password = GmailSignIn::AppPassword {
-                google: SignInClient::BuiltIn,
-            };
-            accounts::set_gmail_sign_in(c, id, &app_password)
-        })
-        .await
-        .unwrap();
-        assert_eq!(
-            super::missing_token_state(&db, &account).await.unwrap(),
-            AccountState::NeedsReauth
-        );
-    }
 
     /// Each `Core::open(true)` makes a demo folder of its own
     /// (`DemoFolder::make` numbers them), so the tests here share no file.
@@ -2751,62 +2612,5 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(stored.provider, mailrs_domain::Provider::Imap);
-    }
-
-    /// Cancel before the browser answers ends the move and closes the
-    /// loopback listener the sign-in page would have come back to.
-    #[tokio::test]
-    async fn a_move_canceled_before_the_browser_answers_closes_its_listener() {
-        let oauth = mailrs_gmail::OAuthClient::new("id.apps.googleusercontent.com", "secret");
-        let (urls, opened) = async_channel::unbounded::<String>();
-        let (cancel, canceled) = async_channel::bounded::<()>(1);
-        let waiting = tokio::spawn(async move {
-            let open = move |url: &str| {
-                let _ = urls.try_send(url.to_string());
-            };
-            super::authorize_until_canceled(&oauth, open, canceled)
-                .await
-                .map(|_| ())
-        });
-        let url = opened.recv().await.unwrap();
-        let port: u16 = url
-            .split("127.0.0.1%3A")
-            .nth(1)
-            .and_then(|rest| {
-                rest.chars()
-                    .take_while(char::is_ascii_digit)
-                    .collect::<String>()
-                    .parse()
-                    .ok()
-            })
-            .expect("the redirect names a loopback port");
-        assert!(
-            tokio::net::TcpStream::connect(("127.0.0.1", port))
-                .await
-                .is_ok(),
-            "the listener is up while the browser waits"
-        );
-        drop(cancel);
-        let err = waiting.await.unwrap().unwrap_err();
-        assert_eq!(err.to_string(), "Canceled.");
-        assert!(
-            tokio::net::TcpStream::connect(("127.0.0.1", port))
-                .await
-                .is_err(),
-            "nothing listens once the move is canceled"
-        );
-    }
-
-    #[test]
-    fn a_second_move_of_one_account_is_refused_while_one_runs() {
-        let leases = super::MoveLeases::default();
-        let first = leases.lease(7).expect("the first move starts");
-        assert!(leases.lease(7).is_none());
-        assert!(leases.lease(8).is_some(), "another account moves freely");
-        drop(first);
-        assert!(
-            leases.lease(7).is_some(),
-            "the account moves again once the first ends"
-        );
     }
 }

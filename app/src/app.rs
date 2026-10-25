@@ -936,28 +936,6 @@ impl App {
         self.google_sign_ins.borrow().get(&id).cloned()
     }
 
-    /// Where a press that signs `account` in leads: the route choice, or
-    /// the usual sign-in.
-    pub fn sign_in_path(&self, account: &Account) -> crate::move_banner::Path {
-        crate::move_banner::path(account, self.google_sign_in(account.id).as_ref())
-    }
-
-    /// The Gmail accounts that have to choose how they sign in, as
-    /// `reload_accounts` last read them.
-    pub fn waiting_for_move(&self) -> Vec<crate::move_banner::Waiting> {
-        let mut waiting = crate::move_banner::waiting_for_move(
-            &self.accounts.borrow(),
-            &self.google_sign_ins.borrow(),
-        );
-        if self.core.demo && crate::demo::MoveStage::asked() == Some(crate::demo::MoveStage::Paused)
-        {
-            for w in &mut waiting {
-                w.paused = true;
-            }
-        }
-        waiting
-    }
-
     /// Finds a display name and the send-as addresses for each account
     /// that just arrived, and updates the tray. The name comes from the
     /// send-as addresses Preferences keeps when they hold one, so a restart

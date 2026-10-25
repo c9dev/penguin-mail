@@ -33,7 +33,6 @@ mod language_names;
 mod link_safety;
 mod locale_time;
 mod logging;
-mod move_banner;
 mod notify;
 mod offered;
 mod old_id;

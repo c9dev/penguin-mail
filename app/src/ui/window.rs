@@ -33,7 +33,6 @@ use crate::app::{App, Signature};
 use crate::assistant::ToolRequest;
 use crate::compose::{self, ReplyKind};
 use crate::core::Core;
-use crate::move_banner::Path;
 use crate::offered::Filing;
 use crate::open_thread::OpenThread;
 use crate::permission::{Occasion, Permission};
@@ -66,7 +65,6 @@ mod invitation;
 mod listing;
 mod loose;
 mod message_menu;
-pub(crate) mod move_banner;
 mod notice;
 mod on_screen;
 mod organize;
@@ -136,13 +134,7 @@ pub struct MainWindow {
     /// top of the mail list; see [`crate::permission::wants_banner`].
     /// Rebuilt whenever the accounts are read again.
     grant_banners: gtk::Box,
-    /// The one banner above them that asks Gmail accounts to choose a new
-    /// way to sign in. It is the first child of `grant_banners`.
-    move_banner: move_banner::Bar,
     goa_banner: goa_banner::Bar,
-    /// The Online Accounts list was asked for once this run, so the move
-    /// banner and Preferences know which addresses it holds.
-    goa_asked: Cell<bool>,
     /// Counts the Online Accounts banner's refreshes, so an older one that
     /// ends late does not show a stale notice.
     goa_banner_reads: Cell<u64>,
@@ -931,8 +923,6 @@ impl MainWindow {
             // gives needs the width a pane would cut short.
             let keyring_banner = adw::Banner::builder().revealed(false).build();
             let grant_banners = list.grant_bars.clone();
-            let move_banner = move_banner::Bar::new();
-            grant_banners.prepend(move_banner.widget());
             let goa_banner = goa_banner::Bar::new();
             grant_banners.prepend(goa_banner.widget());
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -1005,8 +995,6 @@ impl MainWindow {
                 update_banner,
                 keyring_banner,
                 grant_banners,
-                move_banner,
-                goa_asked: Cell::new(false),
                 goa_banner_reads: Cell::new(0),
                 goa_banner,
                 grant_banner_widgets: RefCell::new(HashMap::new()),
@@ -1210,20 +1198,14 @@ impl MainWindow {
         let weak = Rc::downgrade(&window);
         window.list.banner.connect_button_clicked(move |_| {
             let Some(win) = weak.upgrade() else { return };
-            let app = win.app.upgrade();
-            let account = win.accounts().into_iter().find(|a| {
-                let sign_in = app.as_ref().and_then(|app| app.google_sign_in(a.id));
-                crate::move_banner::sign_in_banner_wanted(a, sign_in.as_ref())
-            });
+            let account = win
+                .accounts()
+                .into_iter()
+                .find(|a| win.wants_sign_in_banner(a));
             match account {
                 Some(account) => win.sign_in_again(account),
                 None => win.authorize(None),
             }
-        });
-        let weak = Rc::downgrade(&window);
-        window.move_banner.connect_press(move |press| {
-            let Some(win) = weak.upgrade() else { return };
-            win.choose_how_to_sign_in(&press);
         });
         let weak = Rc::downgrade(&window);
         window.goa_banner.connect_press(move |action| {
@@ -1398,9 +1380,6 @@ impl MainWindow {
         self.stack.set_visible_child_name(page);
         let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
         // Any account can need to sign in again, a calendar account too.
-        // An account that needs a move has its own banner, and the
-        // built-in sign-in would hand it a token without its mail scope.
-        let waiting = app.waiting_for_move();
         let linked = data.iter().any(|(a, _)| {
             app.google_sign_in(a.id)
                 .is_some_and(|s| s.on_online_accounts())
@@ -1409,9 +1388,7 @@ impl MainWindow {
         let reauth = data
             .iter()
             .map(|(a, _)| a)
-            .find(|a| {
-                crate::move_banner::sign_in_banner_wanted(a, app.google_sign_in(a.id).as_ref())
-            })
+            .find(|a| self.wants_sign_in_banner(a))
             .cloned();
         // A calendar account has no mailboxes, so the mail sidebar and
         // everything worded by what the accounts offer for mail is built
@@ -1524,8 +1501,7 @@ impl MainWindow {
         // same pass as the accounts themselves, so this costs no round
         // trip of its own and settles with everything else above.
         let mut accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
-        self.rebuild_move_banner(&waiting);
-        self.ask_goa_once(&accounts);
+        self.refresh_goa_banner();
         self.rebuild_grant_banners(&accounts, &app.consent());
         self.rebuild_storage_banners();
         // The mail accounts in the sidebar's order, then the calendar
@@ -1593,7 +1569,9 @@ impl MainWindow {
                     .app
                     .upgrade()
                     .and_then(|a| a.google_sign_in(account.id));
-                if !crate::move_banner::grant_banner_wanted(account, sign_in.as_ref()) {
+                // An Online Accounts account has banners of its own that
+                // name what Online Accounts needs.
+                if sign_in.as_ref().is_some_and(|s| s.on_online_accounts()) {
                     return false;
                 }
                 let withheld = self.withheld(account.id);
@@ -1652,71 +1630,26 @@ impl MainWindow {
         }
     }
 
-    /// Brings the move banner in line with the accounts that wait for a
-    /// move: one banner for all of them, worded for one or several.
-    fn rebuild_move_banner(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
-        let shown = crate::move_banner::banner(waiting);
-        self.move_banner.show(shown);
-        self.show_move_sheet(waiting);
-        self.refresh_goa_banner();
+    /// Whether `account` gets the Sign In banner: it needs to sign in again
+    /// and does not read through Online Accounts, whose banner says what
+    /// that needs.
+    fn wants_sign_in_banner(&self, account: &Account) -> bool {
+        account.state == AccountState::NeedsReauth
+            && !self
+                .app
+                .upgrade()
+                .and_then(|app| app.google_sign_in(account.id))
+                .is_some_and(|sign_in| sign_in.on_online_accounts())
     }
 
-    /// Shows the first thing Online Accounts needs for a linked account,
-    /// or hides the banner. The rest show in turn as each clears.
     /// What the Online Accounts watch calls when something changed.
     fn goa_changed(self: &Rc<Self>) -> impl Fn() + 'static {
         let weak = Rc::downgrade(self);
         move || {
             if let Some(win) = weak.upgrade() {
-                win.goa_list_read();
+                win.refresh_goa_banner();
             }
         }
-    }
-
-    /// Reads Online Accounts' list once a run on Linux, when a Gmail
-    /// account is here, so the move banner's one-click move, the Switch
-    /// line in Preferences and the Calendar page know which addresses it
-    /// holds before anything else has asked.
-    fn ask_goa_once(self: &Rc<Self>, accounts: &[Account]) {
-        if !cfg!(target_os = "linux")
-            || self.core.demo
-            || self.goa_asked.get()
-            || !accounts.iter().any(|a| a.provider == Provider::Gmail)
-        {
-            return;
-        }
-        self.goa_asked.set(true);
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if let Err(err) = this.core.goa_accounts().await {
-                tracing::info!(error = %err, "could not read Online Accounts");
-            }
-            this.goa_list_read();
-        });
-    }
-
-    /// Redraws what depends on Online Accounts' list once a read of it
-    /// ends: the move banner, the Online Accounts banner and the Gmail
-    /// rows of an open Preferences.
-    fn goa_list_read(self: &Rc<Self>) {
-        let Some(app) = self.app.upgrade() else {
-            return self.refresh_goa_banner();
-        };
-        let core = Rc::clone(&self.core);
-        let shown = crate::move_banner::banner(&app.waiting_for_move());
-        self.move_banner.show(shown);
-        for account in self.accounts() {
-            if account.provider == Provider::Gmail {
-                let holds = core.goa_holds(&account.email) == Some(true);
-                super::preferences::google_route::refill_goa(
-                    account.id,
-                    &account,
-                    self.offers(account.id),
-                    holds,
-                );
-            }
-        }
-        self.refresh_goa_banner();
     }
 
     fn refresh_goa_banner(self: &Rc<Self>) {
@@ -1729,56 +1662,8 @@ impl MainWindow {
             if this.goa_banner_reads.get() != generation {
                 return;
             }
-            let accounts = this.accounts();
-            let shown = notices.first().map(|notice| {
-                let address = match notice {
-                    crate::goa_notice::Notice::SignInAgain { address, .. }
-                    | crate::goa_notice::Notice::Removed { address }
-                    | crate::goa_notice::Notice::MailOff { address }
-                    | crate::goa_notice::Notice::ImapRefused { address } => Some(address),
-                    crate::goa_notice::Notice::Unreachable => None,
-                };
-                let account = address
-                    .and_then(|a| {
-                        accounts
-                            .iter()
-                            .find(|acc| acc.email.eq_ignore_ascii_case(a))
-                    })
-                    .map(|acc| acc.id);
-                crate::goa_notice::shown(notice, account)
-            });
+            let shown = notices.first().map(crate::goa_notice::shown);
             this.goa_banner.show(shown);
-        });
-    }
-
-    /// Moves `account` to sign in through the Online Accounts account that
-    /// holds its address, with no dialog.
-    fn switch_to_goa(self: &Rc<Self>, account: Account) {
-        self.move_banner.set_busy(true);
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let list = this.core.goa_accounts().await.unwrap_or_default();
-            let found = mailrs_sync::goa::find(&list, None, &account.email).cloned();
-            let moved = match found {
-                Some(found) => {
-                    let route = crate::core::ChosenRoute::OnlineAccounts(found);
-                    let (committed, _) = async_channel::unbounded();
-                    let taker = crate::core::Taker::Moving(account);
-                    this.core.take_route(route, taker, committed).await
-                }
-                None => Err(anyhow::anyhow!(gettext(
-                    // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
-                    "Can't reach Online Accounts on this computer."
-                ))),
-            };
-            this.move_banner.set_busy(false);
-            match moved {
-                Ok(_) => {
-                    this.toast(&gettext("Signed in with this computer's sign-in."));
-                    this.refresh_accounts(Reload::Yes);
-                }
-                Err(err) => this.toast(&err.to_string()),
-            }
         });
     }
 
@@ -1792,71 +1677,7 @@ impl MainWindow {
                     }
                 });
             }
-            crate::goa_notice::Action::SignInAnotherWay(id) => {
-                if let Some(account) = self.accounts().into_iter().find(|a| a.id == id) {
-                    self.present_add_account(Opening::Move(vec![account]));
-                }
-            }
         }
-    }
-
-    /// Shows the first-launch sheet once.
-    fn show_move_sheet(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
-        if !crate::move_banner::sheet_due(self.core.google_move_shown(), waiting) {
-            return;
-        }
-        // Marked before it shows, so a crash before an answer still shows
-        // it only once. The banner stays either way.
-        if let Err(err) = self.core.mark_google_move_shown() {
-            tracing::warn!(%err, "could not record that the move sheet showed");
-        }
-        let accounts: Vec<Account> = waiting.iter().map(|w| w.account.clone()).collect();
-        let ids: Vec<AccountId> = accounts.iter().map(|a| a.id).collect();
-        let weak = Rc::downgrade(self);
-        super::move_sheet::present(&self.window, &accounts, move || {
-            if let Some(win) = weak.upgrade() {
-                win.choose_how_to_sign_in(&move_banner::Press {
-                    accounts: ids.clone(),
-                    goa_now: false,
-                });
-            }
-        });
-    }
-
-    /// The banner's button: the route choice for each waiting account in
-    /// turn. While the dialog is open the button is off, so a second press
-    /// cannot start a second move of the same accounts.
-    fn choose_how_to_sign_in(self: &Rc<Self>, press: &move_banner::Press) {
-        let Some(app) = self.app.upgrade() else {
-            return;
-        };
-        let waiting = app.waiting_for_move();
-        // The ids come in the banner's order, which is the walk's order.
-        let accounts: Vec<Account> = press
-            .accounts
-            .iter()
-            .filter_map(|id| waiting.iter().find(|w| w.account.id == *id))
-            .map(|w| w.account.clone())
-            .collect();
-        // One account whose address Online Accounts holds moves with one
-        // press, with no dialog.
-        if press.goa_now
-            && let [account] = accounts.as_slice()
-        {
-            self.switch_to_goa(account.clone());
-            return;
-        }
-        self.move_banner.set_busy(true);
-        let Some(dialog) = self.present_add_account(Opening::Move(accounts)) else {
-            self.move_banner.set_busy(false);
-            return;
-        };
-        let weak = Rc::downgrade(self);
-        dialog.connect_closed(move |_| {
-            if let Some(win) = weak.upgrade() {
-                win.move_banner.set_busy(false);
-            }
-        });
     }
 
     /// Asks the app's unread counts again; they come back through
@@ -2353,17 +2174,11 @@ impl MainWindow {
             .into_iter()
             .find(|account| account.email.eq_ignore_ascii_case(&email));
         match account {
-            // The built-in consent refuses an account that needs a move.
-            Some(account) => match self.sign_in_path(&account) {
-                Path::Move => {
-                    self.present_add_account(Opening::Move(vec![account]));
+            Some(account) => {
+                if let Some(browser) = Browser::of(account.provider) {
+                    self.sign_in_in_browser(browser, Some(email));
                 }
-                Path::Usual => {
-                    if let Some(browser) = Browser::of(account.provider) {
-                        self.sign_in_in_browser(browser, Some(email));
-                    }
-                }
-            },
+            }
             // An address no account has yet goes to Google, as before.
             None => self.sign_in_in_browser(Browser::Google, Some(email)),
         }
@@ -2377,7 +2192,7 @@ impl MainWindow {
             // A Gmail account on the IMAP route with no calendar token has
             // nothing to grant again: the calendar consent adds it. One on
             // the API takes its calendar with its mail, so it signs in
-            // again, or chooses a route first when its mail has to move.
+            // again.
             let imap = self.route_of(account_id) == Some(mailrs_domain::MailRoute::Imap);
             if imap
                 && crate::offered::calendar_link(&account, self.offers(account_id)).shows_connect()
@@ -2388,23 +2203,9 @@ impl MainWindow {
         }
     }
 
-    /// Offers `account` its Google calendar and contacts. An account on
-    /// the built-in client that still reads its mail through the API
-    /// chooses a route first: the consent refuses it until then.
+    /// Offers `account` its Google calendar and contacts.
     fn connect_calendar(self: &Rc<Self>, account: Account) {
-        let opening = match self.sign_in_path(&account) {
-            Path::Move => Opening::Move(vec![account]),
-            Path::Usual => Opening::Consent(account),
-        };
-        self.present_add_account(opening);
-    }
-
-    /// [`crate::app::App::sign_in_path`], or the usual sign-in once the app
-    /// is gone.
-    fn sign_in_path(&self, account: &Account) -> Path {
-        self.app
-            .upgrade()
-            .map_or(Path::Usual, |app| app.sign_in_path(account))
+        self.present_add_account(Opening::Consent(account));
     }
 
     /// Says an API is switched off in the Google Cloud project Penguin Mail
@@ -3203,21 +3004,7 @@ impl MainWindow {
         self.present_add_account(Opening::Pick);
     }
 
-    fn present_add_account(self: &Rc<Self>, opening: Opening) -> Option<adw::Dialog> {
-        let dialog = self.present_add_account_dialog(opening);
-        if let Some(dialog) = &dialog {
-            self.core.set_goa_choosing(true, self.goa_changed());
-            let weak = Rc::downgrade(self);
-            dialog.connect_closed(move |_| {
-                if let Some(win) = weak.upgrade() {
-                    win.core.set_goa_choosing(false, win.goa_changed());
-                }
-            });
-        }
-        dialog
-    }
-
-    fn present_add_account_dialog(self: &Rc<Self>, opening: Opening) -> Option<adw::Dialog> {
+    fn present_add_account(self: &Rc<Self>, opening: Opening) {
         let weak = Rc::downgrade(self);
         super::add_account::present(&self.core, &self.window, opening, move |done| {
             let Some(win) = weak.upgrade() else { return };
@@ -3270,7 +3057,7 @@ impl MainWindow {
                     }
                 }
             }
-        })
+        });
     }
 
     /// A calendar account signed in. The accounts are read again, and
@@ -3295,12 +3082,6 @@ impl MainWindow {
     /// provider's page in the browser, step 2 of Another Provider with
     /// its servers, or the calendar page for a calendar account.
     fn sign_in_again(self: &Rc<Self>, account: Account) {
-        // An account that needs a move chooses a route instead: the
-        // built-in sign-in would return a token without its mail scope.
-        if self.sign_in_path(&account) == Path::Move {
-            self.present_add_account(Opening::Move(vec![account]));
-            return;
-        }
         // A Gmail account that reads its mail over IMAP signs in again
         // with a new app password, and one on Online Accounts signs in
         // again there.
@@ -3324,9 +3105,7 @@ impl MainWindow {
         }
         match Browser::of(account.provider) {
             Some(browser) => self.sign_in_in_browser(browser, Some(account.email)),
-            None => {
-                self.present_add_account(Opening::Again(account));
-            }
+            None => self.present_add_account(Opening::Again(account)),
         }
     }
 
@@ -3395,18 +3174,30 @@ impl MainWindow {
         // Without the build's client the browser would open for nothing,
         // so say why at once. An own account signs in again through its
         // own client. The demo goes on to its own message.
-        let own_account = browser == Browser::Google
-            && address.as_deref().is_some_and(|address| {
-                self.app.upgrade().is_some_and(|app| {
-                    app.accounts().iter().any(|account| {
-                        account.email.eq_ignore_ascii_case(address)
-                            && app
-                                .google_sign_in(account.id)
-                                .is_some_and(|sign_in| sign_in.client() == SignInClient::Own)
-                    })
-                })
+        let held = address
+            .as_deref()
+            .filter(|_| browser == Browser::Google)
+            .and_then(|address| {
+                let app = self.app.upgrade()?;
+                let account = app
+                    .accounts()
+                    .into_iter()
+                    .find(|account| account.email.eq_ignore_ascii_case(address))?;
+                app.google_sign_in(account.id)
             });
-        if !self.core.demo && !self.core.built_with_sign_in(browser, own_account) {
+        let own_account = held
+            .as_ref()
+            .is_some_and(|sign_in| sign_in.client() == SignInClient::Own);
+        // The built-in client carries no mail scope, so an account on it
+        // signs in again through a project of the person's own, unless the
+        // environment names one.
+        let built_in_account = held == Some(mailrs_domain::GmailSignIn::BuiltInApi)
+            && !matches!(
+                self.core.google_sign_in_client(None),
+                Ok(mailrs_sync::sign_in::ClientSource::Environment)
+            );
+        if !self.core.demo && (built_in_account || !self.core.built_with_sign_in(browser, own_account))
+        {
             return match browser {
                 // The address signs in through a project of the person's
                 // own, which the setup makes.
@@ -3414,7 +3205,6 @@ impl MainWindow {
                     self.present_add_account(Opening::OwnProject {
                         start: OwnStart::Resume,
                         address,
-                        moving: None,
                     });
                 }
                 Browser::Google => self.no_google_sign_in(),
@@ -3470,7 +3260,6 @@ impl MainWindow {
                     this.present_add_account(Opening::OwnProject {
                         start,
                         address: again,
-                        moving: None,
                     });
                 }
                 Err(err) => this.toast(&err.to_string()),
@@ -3496,7 +3285,6 @@ impl MainWindow {
                 this.present_add_account(Opening::OwnProject {
                     start: OwnStart::Resume,
                     address: None,
-                    moving: None,
                 });
             }
         });
@@ -3541,16 +3329,7 @@ impl MainWindow {
     /// What `account_id` offers, or everything while it has not started.
     pub(super) fn offers(&self, account_id: AccountId) -> Offers {
         let running = self.core.account(account_id);
-        let services = running.as_ref().map(|sync| sync.services());
-        let mut offers = crate::offered::offers_for(services);
-        // A paused account whose calendar Google refused too shows Connect
-        // on it.
-        if let Some(account) = self.account(account_id)
-            && crate::offered::paused_calendar_refused(&account, services)
-        {
-            offers.calendar = false;
-            offers.contacts = false;
-        }
+        let offers = crate::offered::offers_for(running.as_ref().map(|sync| sync.services()));
         // The demo's account on the IMAP route runs on the sample Gmail
         // fake, which reaches everything; the screenshot shows what a real
         // one lacks.
@@ -3752,39 +3531,6 @@ impl MainWindow {
         with_account(
             "account-reconnect",
             Box::new(|win, account| win.sign_in_again(account)),
-        );
-        with_account(
-            "account-choose-route",
-            Box::new(|win, account| {
-                let on_goa = win
-                    .app
-                    .upgrade()
-                    .and_then(|app| app.google_sign_in(account.id))
-                    .is_some_and(|s| s.on_online_accounts());
-                if win.sign_in_path(&account) == Path::Move || on_goa {
-                    win.present_add_account(Opening::Move(vec![account]));
-                }
-            }),
-        );
-        with_account(
-            "account-every-feature",
-            Box::new(|win, account| {
-                win.present_add_account(Opening::OwnProject {
-                    start: OwnStart::Resume,
-                    address: Some(account.email.clone()),
-                    moving: Some(account),
-                });
-            }),
-        );
-        with_account(
-            "account-leave-own-project",
-            Box::new(|win, account| {
-                win.present_add_account(Opening::LeaveOwn(account));
-            }),
-        );
-        with_account(
-            "account-switch-goa",
-            Box::new(|win, account| win.switch_to_goa(account)),
         );
         with_account(
             "account-rules",

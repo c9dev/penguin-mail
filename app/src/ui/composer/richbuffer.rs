@@ -925,8 +925,6 @@ mod tests {
         crate::ui::goa_page::checks::run();
         crate::ui::window::goa_banner::checks::run();
         crate::ui::preferences::google_route::checks::run();
-        crate::ui::window::move_banner::checks::run();
-        crate::ui::move_sheet::checks::run();
         // The extraction script needs a real engine to run in, and this
         // is the one test binary that starts one.
         an_unsubscribe_page_reads_back_as_its_fixture();

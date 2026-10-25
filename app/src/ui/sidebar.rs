@@ -1948,7 +1948,7 @@ fn heading(
         super::name(&image, &tip);
         if matches!(
             account.state,
-            AccountState::NeedsReauth | AccountState::Stopped | AccountState::MailPaused
+            AccountState::NeedsReauth | AccountState::Stopped
         ) {
             image.add_css_class("warning");
         } else {
@@ -1991,9 +1991,12 @@ fn heading(
     look.append_item(&item(&gettext("Move Down"), "win.account-down"));
     menu.append_section(None, &look);
     let access = gio::Menu::new();
-    for (label, action) in access_items() {
-        access.append_item(&item(&label, action));
-    }
+    access.append_item(&item(&gettext("Sign In Again…"), "win.account-reconnect"));
+    access.append_item(&item(&gettext("Switch to JMAP…"), "account.switch-jmap"));
+    access.append_item(&item(
+        &gettext("Messages That Will Not Download…"),
+        "account.not-downloading",
+    ));
     menu.append_section(None, &access);
     let danger = gio::Menu::new();
     danger.append_item(&item(&gettext("Remove Account…"), "win.account-remove"));
@@ -2058,18 +2061,6 @@ fn heading(
     (row, count, own)
 }
 
-/// The menu items that sign the account in or say why it does not sync.
-fn access_items() -> [(String, &'static str); 3] {
-    [
-        (gettext("Sign In Again…"), "win.account-reconnect"),
-        (gettext("Switch to JMAP…"), "account.switch-jmap"),
-        (
-            gettext("Messages That Will Not Download…"),
-            "account.not-downloading",
-        ),
-    ]
-}
-
 /// The icon and the words beside an account's name for its state, or
 /// nothing while it syncs as it should.
 fn status_of(account: &Account) -> Option<(&'static str, String)> {
@@ -2102,12 +2093,6 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
             "dialog-warning-symbolic",
             gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
         )),
-        // Translators: the line beside an account whose mail stopped
-        // arriving; the person picks another way to sign in.
-        AccountState::MailPaused => Some((
-            "dialog-warning-symbolic",
-            gettext("Choose how this account signs in to get new mail"),
-        )),
         AccountState::DownloadLimit => Some((
             "network-offline-symbolic",
             // Translators: the line beside a Gmail account when Gmail
@@ -2127,7 +2112,7 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
 
     use super::{Mailbox, Standard, heading_row_name, label_icon, mailbox_row_name, takes_mail};
-    use super::{access_items, status_of};
+    use super::status_of;
 
     use super::{Offers, account_settings};
 
@@ -2292,40 +2277,6 @@ mod tests {
                 "dialog-password-symbolic",
                 "The keyring is not responding; retrying".to_string()
             ))
-        );
-    }
-
-    #[test]
-    fn a_paused_account_says_how_to_get_mail_back() {
-        let paused = Account {
-            id: 1,
-            email: "me@gmail.com".into(),
-            state: AccountState::MailPaused,
-            provider: Provider::Gmail,
-            provider_name: None,
-        };
-        assert_eq!(
-            status_of(&paused),
-            Some((
-                "dialog-warning-symbolic",
-                "Choose how this account signs in to get new mail".to_string()
-            ))
-        );
-    }
-
-    #[test]
-    fn every_account_offers_sign_in_again_first() {
-        let actions: Vec<_> = access_items()
-            .into_iter()
-            .map(|(_, action)| action)
-            .collect();
-        assert_eq!(
-            actions,
-            [
-                "win.account-reconnect",
-                "account.switch-jmap",
-                "account.not-downloading"
-            ]
         );
     }
 

@@ -1504,11 +1504,6 @@ walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && WALK_SPACE=calendar walk_dem
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-waiting --shown 'button' 'Other ways to sign in' \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-other --shown 'button' 'Use It' \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-snap --shown 'button' 'Copy' \
-    && walk_demo MAILRS_DEMO_GOOGLE_MOVE=sheet --shown 'button' 'Choose Now' \
-    && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-several --shown 'button' 'Choose…' \
-    && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-paused --shown 'button' 'Choose…' \
-    && walk_demo 'MAILRS_DEMO_ACTION=preferences MAILRS_DEMO_GOOGLE_MOVE=prefs-imap' --shown 'button' 'Get Every Feature' \
-    && walk_demo 'MAILRS_DEMO_ACTION=preferences MAILRS_DEMO_GOOGLE_MOVE=banner' --shown 'button' 'Choose…' \
     && walk_demo 'MAILRS_DEMO_ADD_ACCOUNT=own-intro GDK_DEBUG=no-portals' --own-project \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=own-denied --own-denied
 status=\$?

@@ -68,9 +68,6 @@ pub fn account_row(app: &Rc<App>, account: &Account, route: Option<MailRoute>) -
         link.set_child(Some(&content));
         crate::ui::name(&link, &crate::offered::settings_link_label());
         line.add_suffix(&link);
-        line.add_suffix(&crate::ui::preferences::google_route::every_feature_button(
-            account.id,
-        ));
         row.add_row(&line);
     }
     if editable {

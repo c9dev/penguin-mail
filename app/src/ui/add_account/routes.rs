@@ -2,21 +2,19 @@
 //! Accounts page and the app password page.
 
 use super::*;
-use crate::core::{ChosenRoute, Taker};
 
 impl Dialog {
     // ---- The routes --------------------------------------------------------------
 
-    /// Asks how a Google account signs in. On Linux the first question is
-    /// Online Accounts: when it can be reached, its page comes first and
-    /// "Other ways to sign in" leads to the rest. Goes straight to the
-    /// browser page, which says so, when this computer offers no way.
+    /// Asks how a Google account signs in: the route page, with the own
+    /// project first. On Linux the second row names Online Accounts, worded
+    /// by whether it holds the address; elsewhere it is the app password.
     /// `expected` is the address typed, when there was one.
     pub(super) fn offer_routes(self: &Rc<Self>, expected: Option<String>) {
+        self.goa_after_address.set(false);
         let platform = Platform::this();
         if platform != Platform::Linux {
-            let ready = ready_now(Goa::Absent);
-            return self.offer_rows(platform, ready, expected);
+            return self.show_routes(platform, ready_now(Goa::Absent), expected);
         }
         if !self.running.begin() {
             return;
@@ -24,85 +22,11 @@ impl Dialog {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let list = this.core.goa_accounts().await;
-            let plug = match (&list, crate::packaging::BUILT_FOR) {
-                (Err(_), crate::packaging::Packaging::Snap) => {
-                    Some(crate::keyring_plug::accounts_plug().await)
-                }
-                _ => None,
-            };
             this.running.end();
             this.update_buttons();
-            this.offered(expected, list, plug);
+            let goa = route_choice::goa_state(&list, expected.as_deref());
+            this.show_routes(platform, ready_now(goa), expected);
         });
-    }
-
-    /// What `offer_routes` does once Online Accounts has answered.
-    pub(super) fn offered(
-        self: &Rc<Self>,
-        expected: Option<String>,
-        list: Result<Vec<mailrs_sync::goa::GoaAccount>, mailrs_sync::goa::GoaError>,
-        plug: Option<crate::keyring_plug::Plug>,
-    ) {
-        let moving = self
-            .moving
-            .borrow()
-            .as_ref()
-            .and_then(|walk| walk.current().map(|a| a.email.clone()));
-        let address = moving.clone().or_else(|| expected.clone());
-        let goa = route_choice::goa_state(&list, address.as_deref());
-        let ready = ready_now(goa);
-        let platform = Platform::this();
-        // A move walk keeps the route page, with Online Accounts as its
-        // first row, since the person picks for each account.
-        if moving.is_some() {
-            return self.offer_rows(platform, ready, expected);
-        }
-        let Some(address) = address else {
-            return self.offer_rows(platform, ready_now(Goa::Absent), expected);
-        };
-        match (goa, &list) {
-            (Goa::Holds | Goa::Present, Ok(list)) => self.open_goa_page(address, list, expected),
-            (Goa::Absent, _) if plug == Some(crate::keyring_plug::Plug::Disconnected) => {
-                self.goa_address.replace(Some(address.clone()));
-                self.goa.show(PageState::SnapPlug { address });
-                self.set_band(goa_page::TAG, Step::Address, None, None);
-                self.push(goa_page::TAG);
-            }
-            // No Online Accounts on this Linux: say how to get it, with the
-            // other ways to sign in under it.
-            (Goa::Absent, _) if platform == Platform::Linux => {
-                self.goa_address.replace(Some(address.clone()));
-                self.goa.show(PageState::NotInstalled { address });
-                self.set_band(goa_page::TAG, Step::Address, None, None);
-                self.push(goa_page::TAG);
-            }
-            _ => self.offer_rows(platform, ready, expected),
-        }
-    }
-
-    /// `ready` without the own-project rows while the account leaves its
-    /// own project.
-    pub(super) fn without_own(&self, ready: Ready) -> Ready {
-        match self.leaving_own.get() {
-            true => Ready {
-                own_project: false,
-                saved_project: false,
-                ..ready
-            },
-            false => ready,
-        }
-    }
-
-    /// The route page, without the own-project rows while the account
-    /// leaves its own project.
-    pub(super) fn offer_rows(
-        self: &Rc<Self>,
-        platform: Platform,
-        ready: Ready,
-        expected: Option<String>,
-    ) {
-        let ready = self.without_own(ready);
-        self.show_routes(platform, ready, expected);
     }
 
     pub(super) fn show_routes(
@@ -123,22 +47,19 @@ impl Dialog {
         expected: Option<String>,
     ) {
         let saved = self.saved.borrow().is_some();
-        let ready = self.without_own(Ready {
+        let ready = Ready {
             saved_project: ready.saved_project || saved,
             ..ready
-        });
+        };
         self.route_expected.replace(expected);
         self.routes_goa.set(ready.goa);
         let weak = Rc::downgrade(self);
-        self.routes.show(
-            &rows(platform, ready),
-            footer(platform, ready),
-            move |route| {
+        self.routes
+            .show(&rows(platform, ready), Some(footer()), move |route| {
                 if let Some(this) = weak.upgrade() {
                     this.chose_route(route);
                 }
-            },
-        );
+            });
         // The closed envelope with no stamp: no provider is picked yet.
         self.set_band(route_page::TAG, Step::Address, None, None);
     }
@@ -160,6 +81,7 @@ impl Dialog {
     }
 
     pub(super) fn chose_route(self: &Rc<Self>, route: Route) {
+        self.goa_after_address.set(false);
         match route {
             Route::SavedProject => {
                 let saved = self.saved.borrow().clone();
@@ -173,52 +95,65 @@ impl Dialog {
                 self.open_own(OwnStart::Resume);
             }
             Route::OwnProject => {
-                let account = self
-                    .moving
-                    .borrow()
-                    .as_ref()
-                    .and_then(|w| w.current().cloned());
                 let expected = self.route_expected.borrow().clone();
-                self.run_browser(
-                    Browser::Google,
-                    expected,
-                    account.map_or(Flow::SignIn, Flow::Move),
-                    None,
-                );
+                self.run_browser(Browser::Google, expected, Flow::SignIn, None);
             }
-            Route::Goa => {
-                let this = Rc::clone(self);
-                let address = self
-                    .moving
-                    .borrow()
-                    .as_ref()
-                    .and_then(|walk| walk.current().map(|a| a.email.clone()));
-                let expected = self.route_expected.borrow().clone();
-                glib::spawn_future_local(async move {
-                    let list = this.core.goa_accounts().await;
-                    match (address.or_else(|| expected.clone()), list) {
-                        (Some(address), Ok(list)) => this.open_goa_page(address, &list, expected),
-                        _ => this.show_routes(Platform::this(), ready_now(Goa::Absent), expected),
-                    }
-                });
-            }
+            Route::Goa => self.choose_goa(),
             Route::AppPassword => {
-                let account = self
-                    .moving
-                    .borrow()
-                    .as_ref()
-                    .and_then(|w| w.current().cloned());
                 let typed = self.route_expected.borrow().clone();
-                match account {
-                    Some(account) => self.open_gmail_password(Some(account.email), false),
-                    None => self.open_gmail_password(typed, false),
-                }
+                self.open_gmail_password(typed, false);
                 self.push(gmail_password::TAG);
             }
         }
     }
 
+    /// The other way to sign in that the setup's pages offer: Online
+    /// Accounts on Linux, an app password elsewhere.
+    pub(super) fn switch_from_setup(self: &Rc<Self>) {
+        match Platform::this() {
+            Platform::Linux => self.chose_route(Route::Goa),
+            Platform::MacOs => self.chose_route(Route::AppPassword),
+        }
+    }
+
     // ---- Online Accounts -------------------------------------------------------
+
+    /// Opens the Online Accounts page for the address typed, or asks for the
+    /// address first when there is none: the page is about one address.
+    pub(super) fn choose_goa(self: &Rc<Self>) {
+        let expected = self.route_expected.borrow().clone();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let list = this.core.goa_accounts().await;
+            match (expected, list) {
+                (Some(address), Ok(list)) => {
+                    let typed = Some(address.clone());
+                    this.open_goa_page(address, &list, typed);
+                }
+                (None, Ok(_)) => {
+                    this.goa_after_address.set(true);
+                    this.open_address(Some(Tile::Google), false);
+                }
+                (address, Err(_)) => this.goa_unavailable(address.unwrap_or_default()).await,
+            }
+        });
+    }
+
+    /// The Online Accounts page for an Online Accounts that does not answer:
+    /// the snap needs permission, or the computer has none.
+    async fn goa_unavailable(self: &Rc<Self>, address: String) {
+        let plug = match crate::packaging::BUILT_FOR {
+            crate::packaging::Packaging::Snap => Some(crate::keyring_plug::accounts_plug().await),
+            _ => None,
+        };
+        self.goa_address.replace(Some(address.clone()));
+        match plug == Some(crate::keyring_plug::Plug::Disconnected) {
+            true => self.goa.show(PageState::SnapPlug { address }),
+            false => self.goa.show(PageState::NotInstalled { address }),
+        }
+        self.set_band(goa_page::TAG, Step::Address, None, None);
+        self.push(goa_page::TAG);
+    }
 
     /// The Online Accounts page for `address`, in the state `list` puts it
     /// in: the account is there to use, or has to be added.
@@ -234,17 +169,14 @@ impl Dialog {
         self.goa_before
             .replace(list.iter().map(|a| a.id.clone()).collect());
         self.route_expected.replace(expected);
-        // A move takes only the account that holds its own address, so it
-        // offers no other.
-        let others = match self.moving.borrow().is_some() {
-            true => Vec::new(),
-            false => list.to_vec(),
-        };
         match goa::find(list, None, &address) {
             Some(account) => self.goa.show(PageState::Holds {
                 account: account.clone(),
             }),
-            None => self.goa.show(PageState::Add { address, others }),
+            None => self.goa.show(PageState::Add {
+                address,
+                others: list.to_vec(),
+            }),
         }
         self.set_band(
             goa_page::TAG,
@@ -283,22 +215,20 @@ impl Dialog {
         self.goa.connect_other_ways(move || {
             let Some(this) = weak.upgrade() else { return };
             this.stop_goa_wait();
-            let platform = Platform::this();
-            let expected = this.route_expected.borrow().clone();
             let held = this.goa_address.borrow().clone();
-            let state = match held {
+            let goa = match held {
                 Some(address) => route_choice::goa_state(&Ok(Vec::new()), Some(&address)),
                 None => Goa::Absent,
             };
             // The Online Accounts row was this page; the rest are the
             // other ways.
-            let ready = ready_now(state);
-            let rows = rows_without_goa(platform, ready);
-            if rows.is_empty() {
-                return this.start_browser(Browser::Google, expected);
-            }
+            let saved = this.saved.borrow().is_some();
+            let ready = Ready {
+                saved_project: saved,
+                ..ready_now(goa)
+            };
             let weak = Rc::downgrade(&this);
-            this.routes.show(&rows, None, move |route| {
+            this.routes.show(&other_ways(ready), None, move |route| {
                 if let Some(this) = weak.upgrade() {
                     this.chose_route(route);
                 }
@@ -361,9 +291,6 @@ impl Dialog {
             });
             return;
         }
-        if self.moving.borrow().is_some() {
-            return;
-        }
         let before = self.goa_before.borrow().clone();
         if let Some(added) = list.iter().find(|a| !before.contains(&a.id)) {
             self.stop_goa_wait();
@@ -383,31 +310,13 @@ impl Dialog {
         }
     }
 
-    /// Signs in through `account`, or moves the account the walk is at.
+    /// Signs in through the Online Accounts account `account`.
     pub(super) fn goa_use(self: &Rc<Self>, account: mailrs_sync::goa::GoaAccount) {
         self.stop_goa_wait();
         let ticket = self.asking.ask();
-        let moving = self
-            .moving
-            .borrow()
-            .as_ref()
-            .and_then(|walk| walk.current().cloned());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let is_move = moving.is_some();
-            let (route, taker) = (ChosenRoute::OnlineAccounts(account), taker_of(moving, ""));
-            let (committed, _) = async_channel::unbounded();
-            let signed = this.core.take_route(route, taker, committed).await;
-            if is_move {
-                match signed {
-                    Ok(moved) if this.asking.wants(ticket) => this.moved(moved),
-                    Ok(moved) => (this.done)(Done::SignedInAgain(moved)),
-                    Err(err) if this.asking.wants(ticket) => this.goa.failed(&err.to_string()),
-                    Err(_) => {}
-                }
-                return;
-            }
-            match signed {
+            match this.core.link_goa(account).await {
                 Ok(account) => {
                     // The account is kept whether or not the dialog is still
                     // open, so the window hears about it either way.
@@ -441,60 +350,12 @@ impl Dialog {
         ));
     }
 
-    /// Stops the countdown and the ways out while the move finishes.
-    pub(super) fn finishing_move(&self) {
-        let timer = self.browser_timer.borrow_mut().take();
-        if let Some(timer) = timer {
-            timer.remove();
-        }
-        self.browser.finishing(&self.window);
-    }
-
-    /// The account that moved is signed in again, and the walk goes on to
-    /// the next account or ends.
-    pub(super) fn moved(self: &Rc<Self>, account: Account) {
-        self.browser.unfinish(&self.window);
-        self.stop_browser();
-        (self.done)(Done::SignedInAgain(account));
-        let next = self
-            .moving
-            .borrow_mut()
-            .as_mut()
-            .and_then(|walk| walk.advance().map(|a| a.email.clone()));
-        let Some(email) = next else {
-            self.window.close();
-            return;
-        };
-        // Leaving an own project names one account; the next keeps its
-        // own-project rows.
-        self.leaving_own.set(false);
-        // The rows are rebuilt before the page shows again, so the focus
-        // lands on a row that stays. On Linux they follow what Online
-        // Accounts holds for the next account's address.
-        let platform = Platform::this();
-        if platform != Platform::Linux {
-            self.routes_for(platform, ready_now(Goa::Absent), None);
-            self.back_to(route_page::TAG);
-            return;
-        }
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let list = this.core.goa_accounts().await;
-            let goa = route_choice::goa_state(&list, Some(&email));
-            this.routes_for(platform, ready_now(goa), None);
-            this.back_to(route_page::TAG);
-        });
-    }
-
     // ---- The app password page ---------------------------------------------------
 
     /// Shows the app password page for a new sign-in, or for `address` to
-    /// sign in again, and clears what an earlier try left on it. A move
-    /// keeps the address of the account that moves.
+    /// sign in again, and clears what an earlier try left on it.
     pub(super) fn open_gmail_password(self: &Rc<Self>, address: Option<String>, again: bool) {
-        let fixed = again || self.moving.borrow().is_some();
-        self.gmail.open(address.as_deref(), fixed);
-        self.gmail.again_line.set_visible(again);
+        self.gmail.open(address.as_deref(), again);
         self.set_band(gmail_password::TAG, Step::Address, None, None);
         self.update_gmail();
         if again {
@@ -507,22 +368,16 @@ impl Dialog {
         self.gmail.update_sign_in(self.running.is_on());
     }
 
-    /// Back to the ways of signing in. A dialog that opened on the app
-    /// password page, to sign in again, has filled no route page yet, so
-    /// it offers the routes for the address now.
+    /// Back to the ways of signing in.
     pub(super) fn gmail_another_way(self: &Rc<Self>) {
-        if self.again.is_some() || self.routes.first_row().is_none() {
-            let address = self.gmail.address.text().trim().to_string();
-            return self.offer_routes((!address.is_empty()).then_some(address));
-        }
-        match self.nav.find_page(route_page::TAG).is_some() && Platform::this() == Platform::Linux {
+        match self.nav.find_page(route_page::TAG).is_some() {
             true => self.back_to(route_page::TAG),
             false => self.back_to("pick"),
         }
     }
 
     /// The page's Sign In: checks the app password with Gmail, then keeps
-    /// the account, or moves it.
+    /// the account.
     pub(super) fn sign_in_gmail(self: &Rc<Self>) {
         let address = self.gmail.address.text().trim().to_string();
         let pasted = self.gmail.password.text().to_string();
@@ -534,23 +389,14 @@ impl Dialog {
         self.gmail.clear_failure();
         let ticket = self.asking.ask();
         self.update_gmail();
-        let moving = self
-            .moving
-            .borrow()
-            .as_ref()
-            .and_then(|walk| walk.current().cloned());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let route = ChosenRoute::AppPassword { pasted };
-            let (committed, _) = async_channel::unbounded();
-            let taker = taker_of(moving.clone(), &address);
-            let signed = this.core.take_route(route, taker, committed).await;
+            let signed = this.core.sign_in_with_app_password(address, pasted).await;
             // Every way out of the run ends here, so Sign In comes back
             // whether the run signed in, failed or lost its dialog.
             this.running.end();
             this.update_gmail();
             match signed {
-                Ok(account) if moving.is_some() => this.moved(account),
                 Ok(account) => this.gmail_signed_in(account, ticket),
                 Err(err) if this.asking.wants(ticket) => {
                     let failure = gmail_password::failure(&err);
@@ -564,8 +410,8 @@ impl Dialog {
         });
     }
 
-    /// A new Gmail account works: the window hears of it, and the page
-    /// that offers its calendar and contacts follows.
+    /// A Gmail account works: the window hears of it, and the page that
+    /// offers its calendar and contacts follows.
     pub(super) fn gmail_signed_in(self: &Rc<Self>, account: Account, ticket: add_account::Ticket) {
         if self.again.is_some() {
             return self.finish(Done::SignedInAgain(account));
@@ -586,7 +432,9 @@ impl Dialog {
 
     pub(super) fn show_gmail_failure(self: &Rc<Self>, failure: &gmail_password::GmailFailure) {
         let weak = Rc::downgrade(self);
-        self.gmail.show_failure(failure, move |action| {
+        // An account that signs in again cannot change how it signs in.
+        let again = self.again.is_some();
+        self.gmail.show_failure(failure, again, move |action| {
             let Some(this) = weak.upgrade() else {
                 return;
             };
@@ -618,16 +466,5 @@ impl Dialog {
     /// Opens `url` in the browser.
     pub(super) fn open_link(&self, url: &str) {
         gtk::UriLauncher::new(url).launch(gtk::Window::NONE, gio::Cancellable::NONE, |_| {});
-    }
-}
-
-/// Who takes a route: the account the move walk is at, else the address
-/// the person typed.
-fn taker_of(moving: Option<Account>, address: &str) -> Taker {
-    match moving {
-        Some(account) => Taker::Moving(account),
-        None => Taker::New {
-            address: address.to_string(),
-        },
     }
 }

@@ -1,6 +1,6 @@
 //! What a Gmail account's Preferences page says about its sign-in: the
-//! features it has, the move it still has to make, the things only
-//! gmail.com does for it, and a Connect row for a calendar it lacks.
+//! features it has, the things only gmail.com does for it, and a Connect
+//! row for a calendar it lacks.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -13,24 +13,7 @@ use mailrs_domain::{Account, AccountId, GmailSignIn, MailRoute, Provider, SignIn
 use mailrs_sync::Offers;
 
 use crate::app::App;
-use crate::move_banner::{Waiting, banner};
 use crate::offered::{self, calendar_link};
-#[cfg(test)]
-use crate::route_choice::Platform;
-
-/// The window action that opens the route choice for one account, by id.
-pub const CHOOSE_ROUTE: &str = "win.account-choose-route";
-
-/// The window action behind "Get Every Feature" and "Set up your own
-/// Google project": the own project setup for the account.
-pub const EVERY_FEATURE: &str = "win.account-every-feature";
-
-/// The window action that moves one account to Online Accounts, by id.
-pub const SWITCH_TO_GOA: &str = "win.account-switch-goa";
-
-/// The window action that opens the route choice, without the own
-/// project, for one account on its own project, by id.
-pub const LEAVE_OWN_PROJECT: &str = "win.account-leave-own-project";
 
 /// One line of a Gmail account's page.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,19 +21,11 @@ pub enum Line {
     /// What the account's sign-in gives: every Gmail feature, or mail,
     /// calendar and contacts only.
     Features { every: bool },
-    /// The account still has to choose how it signs in: the banner's words
-    /// for one account.
-    Move { title: String },
     /// An account that reads its mail through this computer's sign-in has
     /// no filters, aliases or automatic reply, and says so.
     Limits { text: String },
-    /// Online Accounts holds the address of an account that signs in
-    /// another way: the question, with its Switch button.
-    Switch { title: String },
     /// The account signs in through the person's own Google project.
     OwnProject,
-    /// The row that leaves the own project for another route.
-    StopOwn,
     /// Something the account does on gmail.com only, with the link.
     Gap {
         text: String,
@@ -59,15 +34,8 @@ pub enum Line {
     },
 }
 
-/// The lines under `account`'s address. `platform` is for the GNOME Online
-/// Accounts plan, whose route changes what the Move line offers.
-#[cfg(test)]
-pub fn lines(sign_in: &GmailSignIn, _platform: Platform, account: &Account) -> Vec<Line> {
-    lines_with(sign_in, account, false)
-}
-
-/// [`lines`], knowing whether Online Accounts holds the account's address.
-pub fn lines_with(sign_in: &GmailSignIn, account: &Account, goa_holds: bool) -> Vec<Line> {
+/// The lines under an account's address, from how it signs in.
+pub fn lines(sign_in: &GmailSignIn) -> Vec<Line> {
     let mut lines = Vec::new();
     let on_goa = sign_in.on_online_accounts();
     match sign_in.route() {
@@ -96,26 +64,6 @@ pub fn lines_with(sign_in: &GmailSignIn, account: &Account, goa_holds: bool) -> 
     }
     if sign_in.client() == SignInClient::Own {
         lines.push(Line::OwnProject);
-        lines.push(Line::StopOwn);
-    }
-    if account.provider == Provider::Gmail && sign_in.waits_to_move() {
-        let waiting = Waiting {
-            account: account.clone(),
-            paused: account.state == mailrs_domain::AccountState::MailPaused,
-        };
-        if let Some(banner) = banner(&[waiting]) {
-            lines.push(Line::Move {
-                title: banner.title,
-            });
-        }
-    }
-    if goa_holds && !on_goa && account.provider == Provider::Gmail {
-        lines.push(Line::Switch {
-            title: fill(
-                &gettext("Switch {address} to this computer's sign-in?"),
-                &[("address", &account.email)],
-            ),
-        });
     }
     lines
 }
@@ -133,19 +81,11 @@ pub struct Contacts {
     pub added: bool,
 }
 
-/// What decides an account's Gmail rows: how it signs in, and whether
-/// Online Accounts holds the address.
-#[derive(Clone)]
-struct RouteFacts {
-    sign_in: GmailSignIn,
-    goa_holds: bool,
-}
-
 /// An account's Gmail rows, kept so they can be filled again in place.
 struct RouteRows {
     parent: glib::WeakRef<adw::ExpanderRow>,
     rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
-    facts: RefCell<RouteFacts>,
+    sign_in: GmailSignIn,
     connect: Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
     find_project: FindProject,
@@ -164,9 +104,8 @@ thread_local! {
 }
 
 /// Adds `account`'s Gmail rows to its expander row: the features, the
-/// move, the calendar and contacts that are not connected, and what only
-/// gmail.com does. `connect` opens the calendar consent, or the route
-/// choice for an account that has to move first.
+/// calendar and contacts that are not connected, and what only gmail.com
+/// does. `connect` opens the calendar consent.
 pub fn rows(
     app: &Rc<App>,
     account: &Account,
@@ -189,14 +128,10 @@ pub fn rows(
                 }
             });
         });
-        let facts = RouteFacts {
-            sign_in,
-            goa_holds: app.core.goa_holds(&account.email) == Some(true),
-        };
         register(
             parent,
             account,
-            facts,
+            sign_in,
             offers,
             connect,
             contacts,
@@ -209,7 +144,7 @@ pub fn rows(
 fn register(
     parent: &adw::ExpanderRow,
     account: &Account,
-    facts: RouteFacts,
+    sign_in: GmailSignIn,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
@@ -218,7 +153,7 @@ fn register(
     let shown = Rc::new(RouteRows {
         parent: parent.downgrade(),
         rows: RefCell::default(),
-        facts: RefCell::new(facts),
+        sign_in,
         connect: Rc::clone(connect),
         contacts,
         find_project,
@@ -232,20 +167,6 @@ fn register(
         all.retain(|_, rows| rows.parent.upgrade().is_some());
         all.insert(account.id, shown);
     });
-}
-
-/// [`refill`] once Online Accounts' list says whether it holds the
-/// account's address. False when no open Preferences shows the account.
-pub fn refill_goa(id: AccountId, account: &Account, offers: Offers, goa_holds: bool) -> bool {
-    let shown = ROUTE_ROWS.with(|all| all.borrow().get(&id).cloned());
-    let Some(shown) = shown else {
-        return false;
-    };
-    if shown.facts.borrow().goa_holds == goa_holds {
-        return true;
-    }
-    shown.facts.borrow_mut().goa_holds = goa_holds;
-    refill(id, account, offers)
 }
 
 /// Fills `account`'s Gmail rows again from what it offers now, in the
@@ -292,26 +213,21 @@ pub fn note_calendar_row(id: AccountId, row: &adw::ActionRow, button: &gtk::Butt
 }
 
 /// [`rows`] for a sign-in already read, in the order the mockup draws:
-/// the features and the move, then calendar and contacts, then what only
-/// gmail.com does. Returns the widgets it added.
+/// the features, then calendar and contacts, then what only gmail.com
+/// does. Returns the widgets it added.
 fn fill_rows(
     parent: &adw::ExpanderRow,
     account: &Account,
     offers: Offers,
     shown: &RouteRows,
 ) -> Vec<gtk::Widget> {
-    let facts = shown.facts.borrow().clone();
-    let RouteFacts {
-        ref sign_in,
-        goa_holds,
-    } = facts;
     let (connect, contacts) = (&shown.connect, &shown.contacts);
     let mut added: Vec<gtk::Widget> = Vec::new();
     let mut put = |widget: &gtk::Widget| {
         parent.add_row(widget);
         added.push(widget.clone());
     };
-    let (gaps, own): (Vec<Line>, Vec<Line>) = lines_with(sign_in, account, goa_holds)
+    let (gaps, own): (Vec<Line>, Vec<Line>) = lines(&shown.sign_in)
         .into_iter()
         .partition(|line| matches!(line, Line::Gap { .. }));
     if !own.is_empty() {
@@ -331,38 +247,10 @@ fn fill_rows(
                 };
                 row.add_suffix(&dim(&value));
                 put(row.upcast_ref());
-                // The button sits in a row of its own under the line, as
-                // the mockup draws it: an expander's row has no room for
-                // both the value and a button in its suffix.
-                if !every {
-                    let holder = plain_row("", None);
-                    holder.add_suffix(&every_feature_button(account.id));
-                    put(holder.upcast_ref());
-                }
-            }
-            Line::Move { title } => {
-                let row = plain_row(&title, None);
-                row.add_suffix(&route_button(&gettext("Choose…"), account.id));
-                put(row.upcast_ref());
             }
             Line::Limits { text } => {
                 let row = plain_row(&text, None);
                 row.set_title_lines(0);
-                row.add_suffix(&action_button(
-                    &gettext("Set up your own Google project"),
-                    EVERY_FEATURE,
-                    account.id,
-                ));
-                put(row.upcast_ref());
-            }
-            Line::Switch { title } => {
-                let row = plain_row(&title, None);
-                row.set_title_lines(0);
-                row.add_suffix(&action_button(
-                    &gettext("Switch"),
-                    SWITCH_TO_GOA,
-                    account.id,
-                ));
                 put(row.upcast_ref());
             }
             Line::OwnProject => {
@@ -381,20 +269,6 @@ fn fill_rows(
                 crate::ui::name(&link, &label);
                 (shown.find_project)(&account.email, &link);
                 row.add_suffix(&link);
-                put(row.upcast_ref());
-            }
-            Line::StopOwn => {
-                // Translators: Google is a name; keep it as it is.
-                let row = plain_row(&gettext("Stop using your own Google project"), None);
-                row.set_activatable(true);
-                row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
-                let id = account.id;
-                row.connect_activated(move |row| {
-                    if let Err(err) = row.activate_action(LEAVE_OWN_PROJECT, Some(&id.to_variant()))
-                    {
-                        tracing::warn!(account = id, %err, "the window did not take the action");
-                    }
-                });
                 put(row.upcast_ref());
             }
             Line::Gap { .. } => {}
@@ -521,31 +395,6 @@ fn dim(text: &str) -> gtk::Label {
         .build()
 }
 
-/// "Get Every Feature" for `account`, for the pages that name something an
-/// account on the IMAP route lacks.
-pub fn every_feature_button(account: AccountId) -> gtk::Button {
-    action_button(&gettext("Get Every Feature"), EVERY_FEATURE, account)
-}
-
-/// A button that opens the route choice for `account`.
-fn route_button(label: &str, account: AccountId) -> gtk::Button {
-    action_button(label, CHOOSE_ROUTE, account)
-}
-
-/// A button that runs the window action `action` for `account`.
-fn action_button(label: &str, action: &'static str, account: AccountId) -> gtk::Button {
-    let button = gtk::Button::builder()
-        .label(label)
-        .valign(gtk::Align::Center)
-        .build();
-    button.connect_clicked(move |button| {
-        if let Err(err) = button.activate_action(action, Some(&account.to_variant())) {
-            tracing::warn!(account, action, %err, "the window did not take the action");
-        }
-    });
-    button
-}
-
 fn connect_button(name: &str, account: AccountId, connect: &Rc<dyn Fn(AccountId)>) -> gtk::Button {
     let button = gtk::Button::builder()
         .label(gettext("Connect"))
@@ -560,17 +409,7 @@ fn connect_button(name: &str, account: AccountId, connect: &Rc<dyn Fn(AccountId)
 #[cfg(test)]
 mod tests {
     use super::{Line, lines};
-    use crate::route_choice::Platform;
-    use mailrs_domain::{Account, AccountState, GmailSignIn, MailRoute, Provider, SignInClient};
-    fn account(state: AccountState) -> Account {
-        Account {
-            id: 3,
-            email: "maria.costa@gmail.com".into(),
-            state,
-            provider: Provider::Gmail,
-            provider_name: Some("Gmail".into()),
-        }
-    }
+    use mailrs_domain::{GmailSignIn, MailRoute, SignInClient};
 
     fn sign_in(client: SignInClient, route: MailRoute) -> GmailSignIn {
         match route {
@@ -581,38 +420,25 @@ mod tests {
 
     #[test]
     fn an_api_account_has_every_feature() {
-        let found = lines(
-            &sign_in(SignInClient::Own, MailRoute::GmailApi),
-            Platform::Linux,
-            &account(AccountState::Ok),
-        );
-        assert_eq!(
-            found,
-            [
-                Line::Features { every: true },
-                Line::OwnProject,
-                Line::StopOwn
-            ]
-        );
+        let found = lines(&sign_in(SignInClient::Own, MailRoute::GmailApi));
+        assert_eq!(found, [Line::Features { every: true }, Line::OwnProject]);
     }
 
     #[test]
     fn only_an_account_on_its_own_project_says_so() {
-        let built_in = lines(
-            &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
-            Platform::Linux,
-            &account(AccountState::Ok),
-        );
+        let built_in = lines(&sign_in(SignInClient::BuiltIn, MailRoute::Imap));
         assert!(!built_in.contains(&Line::OwnProject));
     }
 
     #[test]
+    fn a_built_in_api_account_has_every_feature_and_nothing_more_to_say() {
+        let found = lines(&GmailSignIn::BuiltInApi);
+        assert_eq!(found, [Line::Features { every: true }]);
+    }
+
+    #[test]
     fn an_imap_account_points_filters_and_the_reply_to_gmail() {
-        let found = lines(
-            &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
-            Platform::Linux,
-            &account(AccountState::Ok),
-        );
+        let found = lines(&sign_in(SignInClient::BuiltIn, MailRoute::Imap));
         assert_eq!(found[0], Line::Features { every: false });
         assert!(found.contains(&Line::Gap {
             text: "Your Gmail filters still run. Change them on gmail.com.".into(),
@@ -626,37 +452,6 @@ mod tests {
         }));
         assert_eq!(found.len(), 3);
     }
-
-    #[test]
-    fn a_built_in_api_account_repeats_the_banner() {
-        let found = lines(
-            &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
-            Platform::Linux,
-            &account(AccountState::Ok),
-        );
-        assert_eq!(
-            found,
-            [
-                Line::Features { every: true },
-                Line::Move {
-                    title: "Choose how maria.costa@gmail.com signs in to keep your mail arriving."
-                        .into()
-                }
-            ]
-        );
-    }
-
-    #[test]
-    fn a_paused_account_repeats_the_paused_wording() {
-        let found = lines(
-            &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
-            Platform::Linux,
-            &account(AccountState::MailPaused),
-        );
-        assert!(found.contains(&Line::Move {
-            title: "Penguin Mail can't get new mail for maria.costa@gmail.com. Choose how it signs in to get your mail back. Nothing on this computer was lost.".into()
-        }));
-    }
 }
 
 #[cfg(test)]
@@ -668,7 +463,7 @@ pub(crate) mod checks {
 
     pub fn run() {
         an_imap_account_reads_in_the_mockups_order();
-        connect_asks_for_the_account_and_a_paused_one_gets_it_too();
+        connect_asks_for_the_account();
         an_api_account_shows_its_features_and_nothing_to_connect();
         rows_built_again_after_a_connect_read_as_connected();
         refilling_one_accounts_rows_leaves_the_rest_alone();
@@ -721,14 +516,10 @@ pub(crate) mod checks {
             added: offers.calendar,
             ..contacts()
         };
-        let facts = RouteFacts {
-            sign_in,
-            goa_holds: false,
-        };
         register(
             &parent,
             &account(state),
-            facts,
+            sign_in,
             offers,
             &connect,
             kept,
@@ -782,7 +573,6 @@ pub(crate) mod checks {
             [
                 "GMAIL",
                 "Gmail features",
-                "",
                 "CALENDAR AND CONTACTS",
                 "Calendar",
                 "Contacts",
@@ -812,20 +602,9 @@ pub(crate) mod checks {
                 gtk::AccessibleProperty::Label
             ));
         }
-        let mut buttons = Vec::new();
-        buttons_of(parent.upcast_ref(), &mut buttons);
-        let labels: Vec<String> = buttons
-            .iter()
-            .filter_map(|b| b.label())
-            .map(|l| l.to_string())
-            .collect();
-        assert!(
-            labels.contains(&"Get Every Feature".to_string()),
-            "{labels:?}"
-        );
     }
 
-    fn connect_asks_for_the_account_and_a_paused_one_gets_it_too() {
+    fn connect_asks_for_the_account() {
         let (parent, pressed) = filled(AccountState::Ok, imap(), no_calendar());
         let mut buttons = Vec::new();
         buttons_of(parent.upcast_ref(), &mut buttons);
@@ -836,32 +615,6 @@ pub(crate) mod checks {
             button.emit_clicked();
         }
         assert_eq!(*pressed.borrow(), [3, 3]);
-        // The window takes the calendar out of a paused account's offers
-        // when Google refused it too, which shows Connect; the move line
-        // repeats the banner.
-        let built_in_api = GmailSignIn::BuiltInApi;
-        let (paused, _) = filled(
-            AccountState::MailPaused,
-            built_in_api.clone(),
-            no_calendar(),
-        );
-        let found = titles(&paused);
-        assert!(found.contains(&"Calendar".to_string()), "{found:?}");
-        assert!(found.contains(&"Contacts".to_string()), "{found:?}");
-        assert!(
-            found
-                .iter()
-                .any(|t| t.starts_with("Penguin Mail can't get new mail for maria.costa@gmail.com")),
-            "{found:?}"
-        );
-        // Paused by a lost mail scope, its calendar still reads: no Connect.
-        let (granted, _) = filled(AccountState::MailPaused, built_in_api, Offers::EVERYTHING);
-        let found = titles(&granted);
-        assert!(!found.contains(&"Calendar".to_string()), "{found:?}");
-        assert!(
-            !found.contains(&"CALENDAR AND CONTACTS".to_string()),
-            "{found:?}"
-        );
     }
 
     fn an_api_account_shows_its_features_and_nothing_to_connect() {
@@ -872,8 +625,7 @@ pub(crate) mod checks {
             [
                 "GMAIL",
                 "Gmail features",
-                "Signed in through your own Google project",
-                "Stop using your own Google project"
+                "Signed in through your own Google project"
             ]
         );
         let mut buttons = Vec::new();

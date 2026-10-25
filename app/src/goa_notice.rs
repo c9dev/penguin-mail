@@ -1,10 +1,8 @@
 //! What the window says when Online Accounts changes under a linked Gmail
 //! account: which notice shows, and its words. Nothing here touches GTK.
 
-use std::collections::HashSet;
-
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, AccountState};
+use mailrs_domain::{Account, AccountState};
 use mailrs_sync::goa::{self, GoaAccount, GoaError};
 
 /// How many failures in a row make "can't reach" worth saying.
@@ -12,11 +10,9 @@ const FAILURES_BEFORE_SAYING: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Notice {
-    /// Online Accounts wants the person to sign in again. `second` is true
-    /// when it asked twice since the app started.
+    /// Online Accounts wants the person to sign in again.
     SignInAgain {
         address: String,
-        second: bool,
     },
     /// The account is gone from Online Accounts.
     Removed {
@@ -36,7 +32,6 @@ pub enum Notice {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     OpenOnlineAccounts,
-    SignInAnotherWay(AccountId),
 }
 
 /// A notice as the banner shows it: its words and its buttons.
@@ -48,13 +43,10 @@ pub struct NoticeContent {
 
 /// The notices to show, first one first. `linked` holds each account that
 /// reads through Online Accounts with the Online Accounts id it saved.
-/// `refused_twice` names the accounts Online Accounts asked to sign in
-/// again twice since the app started.
 pub fn notices(
     linked: &[(Account, Option<String>)],
     list: &Result<Vec<GoaAccount>, GoaError>,
     failures: u32,
-    refused_twice: &HashSet<AccountId>,
 ) -> Vec<Notice> {
     let list = match list {
         Ok(list) => list,
@@ -69,8 +61,7 @@ pub fn notices(
                 return Some(Notice::Removed { address });
             };
             if found.attention_needed {
-                let second = refused_twice.contains(&account.id);
-                Some(Notice::SignInAgain { address, second })
+                Some(Notice::SignInAgain { address })
             } else if found.mail_disabled {
                 Some(Notice::MailOff { address })
             } else if account.state == AccountState::NeedsReauth {
@@ -82,38 +73,20 @@ pub fn notices(
         .collect()
 }
 
-/// The words and buttons of `notice`. `account` is the one it is about,
-/// for the button that leaves Online Accounts behind.
-pub fn shown(notice: &Notice, account: Option<AccountId>) -> NoticeContent {
-    let another_way = |buttons: &mut Vec<(Action, String)>| {
-        if let Some(id) = account {
-            buttons.push((Action::SignInAnotherWay(id), gettext("Sign In Another Way")));
-        }
-    };
+/// The words and buttons of `notice`.
+pub fn shown(notice: &Notice) -> NoticeContent {
     let mut buttons = Vec::new();
     let title = match notice {
-        Notice::SignInAgain { address, second } => {
+        Notice::SignInAgain { address } => {
             buttons.push((Action::OpenOnlineAccounts, open()));
-            let first = fill(
+            fill(
                 // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
                 &gettext("Sign in to {address} again in Online Accounts."),
                 &[("address", address)],
-            );
-            if *second {
-                another_way(&mut buttons);
-                format!(
-                    "{first} {}",
-                    gettext(
-                        "Your organization may not allow this. Ask your administrator, or sign in another way."
-                    )
-                )
-            } else {
-                first
-            }
+            )
         }
         Notice::Removed { address } => {
             buttons.push((Action::OpenOnlineAccounts, gettext("Add It Again")));
-            another_way(&mut buttons);
             fill(
                 // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
                 &gettext("{address} was removed from Online Accounts. Your mail here is kept."),
@@ -128,13 +101,10 @@ pub fn shown(notice: &Notice, account: Option<AccountId>) -> NoticeContent {
                 &[("address", address)],
             )
         }
-        Notice::ImapRefused { .. } => {
-            another_way(&mut buttons);
-            // Translators: Google and IMAP are names; keep them as they are.
-            gettext(
-                "Google refused this computer's sign-in for mail. Is IMAP turned on for this account?",
-            )
-        }
+        // Translators: Google and IMAP are names; keep them as they are.
+        Notice::ImapRefused { .. } => gettext(
+            "Google refused this computer's sign-in for mail. Is IMAP turned on for this account?",
+        ),
         // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
         Notice::Unreachable => gettext("Can't reach Online Accounts on this computer."),
     };
@@ -149,7 +119,7 @@ fn open() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailrs_domain::Provider;
+    use mailrs_domain::{AccountId, Provider};
 
     fn account(id: AccountId, state: AccountState) -> Account {
         Account {
@@ -175,15 +145,11 @@ mod tests {
         vec![(account(1, AccountState::Ok), Some("account_1_0".into()))]
     }
 
-    fn none() -> HashSet<AccountId> {
-        HashSet::new()
-    }
-
     #[test]
     fn attention_needed_asks_for_a_sign_in_in_online_accounts() {
         let list = Ok(vec![goa("account_1_0", true, false)]);
-        let found = notices(&linked(), &list, 0, &none());
-        let shown = shown(&found[0], Some(1));
+        let found = notices(&linked(), &list, 0);
+        let shown = shown(&found[0]);
         assert_eq!(
             shown.title,
             "Sign in to dana@example.com again in Online Accounts."
@@ -198,45 +164,29 @@ mod tests {
     }
 
     #[test]
-    fn a_second_refusal_names_the_administrator() {
-        let list = Ok(vec![goa("account_1_0", true, false)]);
-        let found = notices(&linked(), &list, 0, &HashSet::from([1]));
-        let shown = shown(&found[0], Some(1));
-        assert!(
-            shown
-                .title
-                .ends_with("Ask your administrator, or sign in another way."),
-            "{}",
-            shown.title
-        );
-        assert_eq!(shown.buttons.len(), 2);
-        assert_eq!(shown.buttons[1].1, "Sign In Another Way");
-    }
-
-    #[test]
     fn a_removed_account_says_its_mail_is_kept() {
-        let found = notices(&linked(), &Ok(Vec::new()), 0, &none());
-        let shown = shown(&found[0], Some(1));
+        let found = notices(&linked(), &Ok(Vec::new()), 0);
+        let shown = shown(&found[0]);
         assert_eq!(
             shown.title,
             "dana@example.com was removed from Online Accounts. Your mail here is kept."
         );
         let labels: Vec<_> = shown.buttons.iter().map(|b| b.1.as_str()).collect();
-        assert_eq!(labels, ["Add It Again", "Sign In Another Way"]);
+        assert_eq!(labels, ["Add It Again"]);
     }
 
     #[test]
     fn the_same_identity_back_with_a_new_id_shows_nothing() {
         let list = Ok(vec![goa("account_9_0", false, false)]);
-        assert_eq!(notices(&linked(), &list, 0, &none()), []);
+        assert_eq!(notices(&linked(), &list, 0), []);
     }
 
     #[test]
     fn mail_off_shows_its_banner() {
         let list = Ok(vec![goa("account_1_0", false, true)]);
-        let found = notices(&linked(), &list, 0, &none());
+        let found = notices(&linked(), &list, 0);
         assert_eq!(
-            shown(&found[0], Some(1)).title,
+            shown(&found[0]).title,
             "Mail is turned off for dana@example.com in Online Accounts."
         );
     }
@@ -248,7 +198,7 @@ mod tests {
             account(1, AccountState::NeedsReauth),
             Some("account_1_0".into()),
         )];
-        let found = notices(&refused, &list, 0, &none());
+        let found = notices(&refused, &list, 0);
         assert_eq!(
             found,
             [Notice::ImapRefused {
@@ -256,7 +206,7 @@ mod tests {
             }]
         );
         assert_eq!(
-            shown(&found[0], Some(1)).title,
+            shown(&found[0]).title,
             "Google refused this computer's sign-in for mail. Is IMAP turned on for this account?"
         );
     }
@@ -264,9 +214,9 @@ mod tests {
     #[test]
     fn online_accounts_unreachable_waits_for_three_failures() {
         let down: Result<Vec<GoaAccount>, GoaError> = Err(GoaError::Unreachable("x".into()));
-        assert_eq!(notices(&linked(), &down, 2, &none()), []);
-        assert_eq!(notices(&linked(), &down, 3, &none()), [Notice::Unreachable]);
-        assert!(shown(&Notice::Unreachable, None).buttons.is_empty());
+        assert_eq!(notices(&linked(), &down, 2), []);
+        assert_eq!(notices(&linked(), &down, 3), [Notice::Unreachable]);
+        assert!(shown(&Notice::Unreachable).buttons.is_empty());
     }
 
     fn every_notice() -> Vec<Notice> {
@@ -274,7 +224,6 @@ mod tests {
         vec![
             Notice::SignInAgain {
                 address: address.clone(),
-                second: true,
             },
             Notice::Removed {
                 address: address.clone(),
@@ -290,7 +239,7 @@ mod tests {
     #[test]
     fn no_notice_names_gnome_or_a_protocol_word() {
         for notice in every_notice() {
-            let shown = shown(&notice, Some(1));
+            let shown = shown(&notice);
             let words = std::iter::once(shown.title.clone())
                 .chain(shown.buttons.iter().map(|b| b.1.clone()));
             for text in words {
@@ -304,7 +253,7 @@ mod tests {
     #[test]
     fn no_notice_gives_a_reason_for_the_sign_in_change() {
         for notice in every_notice() {
-            let shown = shown(&notice, Some(1));
+            let shown = shown(&notice);
             for word in ["verif", "CASA", "review", "free", "cost"] {
                 assert!(!shown.title.contains(word), "{}", shown.title);
             }

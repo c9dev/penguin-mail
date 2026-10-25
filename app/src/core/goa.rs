@@ -1,8 +1,7 @@
 //! What `Core` knows about the desktop's Online Accounts: the list it
-//! last read, linking an account to it, moving an account onto it, and
-//! the watch that restarts an account when Online Accounts changes.
+//! last read, linking an account to it, and the watch that restarts an
+//! account when Online Accounts changes.
 
-use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Mutex, PoisonError};
@@ -11,13 +10,13 @@ use std::time::Duration;
 use anyhow::{Result, anyhow, bail};
 use futures::StreamExt;
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, AccountId};
+use mailrs_domain::Account;
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
 use mailrs_sync::now_millis;
 use mailrs_sync::sign_in::goa_link;
 
-use super::{Core, MoveLeases, Reach, start_again};
+use super::{Core, Reach, start_again};
 use crate::goa_notice::{self, Notice};
 
 /// How long the watch waits before it opens Online Accounts' change stream
@@ -32,9 +31,6 @@ pub(super) struct GoaState {
     list: Mutex<Option<Result<Vec<GoaAccount>, GoaError>>>,
     /// Reads that failed in a row.
     failures: AtomicU32,
-    /// The accounts Online Accounts has asked to sign in again, and those
-    /// it asked twice, since the app started.
-    asked: Mutex<(HashSet<AccountId>, HashSet<AccountId>)>,
 }
 
 impl GoaState {
@@ -63,23 +59,6 @@ impl GoaState {
         {
             Ok(list) => Some(list.clone()),
             Err(_) => None,
-        }
-    }
-
-    /// Counts a sign-in request for each linked account that Online
-    /// Accounts shows as needing one, and forgets the ones it no longer
-    /// does.
-    fn count_attention(&self, linked: &[(Account, Option<String>)], list: &[GoaAccount]) {
-        let mut asked = self.asked.lock().unwrap_or_else(PoisonError::into_inner);
-        for (account, saved) in linked {
-            let needs = goa::find(list, saved.as_deref(), &account.email)
-                .is_some_and(|found| found.attention_needed);
-            if !needs {
-                asked.0.remove(&account.id);
-                asked.1.remove(&account.id);
-            } else if !asked.0.insert(account.id) {
-                asked.1.insert(account.id);
-            }
         }
     }
 }
@@ -132,30 +111,11 @@ impl Core {
         }
     }
 
-    /// Links `goa_account` to Penguin Mail. A new address becomes an
-    /// account and starts; an address already held moves to Online
-    /// Accounts in place, and `committed` hears when that move can no
-    /// longer be canceled.
-    pub(super) async fn link_goa(
-        &self,
-        goa_account: GoaAccount,
-        committed: async_channel::Sender<()>,
-    ) -> Result<Account> {
+    /// Links `goa_account` to Penguin Mail: a new address becomes an
+    /// account and starts. An address already held is refused.
+    pub async fn link_goa(&self, goa_account: GoaAccount) -> Result<Account> {
         if self.demo {
             bail!(gettext("The demo cannot sign in through Online Accounts."));
-        }
-        let address = goa_account.identity.trim().to_lowercase();
-        let lookup = self.db.clone();
-        let held = self
-            .call(async move {
-                lookup
-                    .read(move |c| accounts::account_by_email(c, &address))
-                    .await
-            })
-            .await?;
-        if let Some(held) = held.filter(|a| a.provider == mailrs_domain::Provider::Gmail) {
-            let route = super::route::ChosenRoute::OnlineAccounts(goa_account);
-            return self.move_through(route, held, committed).await;
         }
         let connector = self.connector();
         let (reach, engine, db) = (
@@ -193,14 +153,8 @@ impl Core {
         let Some(list) = list.as_ref() else {
             return Vec::new();
         };
-        let twice = state
-            .asked
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .1
-            .clone();
         let failures = state.failures.load(Ordering::SeqCst);
-        goa_notice::notices(&linked, list, failures, &twice)
+        goa_notice::notices(&linked, list, failures)
     }
 
     /// Records whether an account reads through Online Accounts, and
@@ -210,23 +164,13 @@ impl Core {
         self.match_goa_watch(on_change);
     }
 
-    /// Records whether the route choice is open, and starts or stops the
-    /// watch to match.
-    pub fn set_goa_choosing(self: &Rc<Self>, choosing: bool, on_change: impl Fn() + 'static) {
-        self.goa_choosing.set(choosing);
-        self.match_goa_watch(on_change);
-    }
-
     /// Follows Online Accounts only on Linux, and only while an account
-    /// reads through it or the route choice is open. It stops with the
-    /// last of them, so a person who never uses Online Accounts never
+    /// reads through it, so a person who never uses Online Accounts never
     /// wakes its daemon. When it changes under a linked account, that
     /// account stops and starts again on what it holds now. `on_change`
     /// runs on the main loop after each change and each failure.
     fn match_goa_watch(self: &Rc<Self>, on_change: impl Fn() + 'static) {
-        let wanted = cfg!(target_os = "linux")
-            && !self.demo
-            && (self.goa_linked.get() || self.goa_choosing.get());
+        let wanted = cfg!(target_os = "linux") && !self.demo && self.goa_linked.get();
         let mut watch = self.goa_watch.borrow_mut();
         match (wanted, watch.is_some()) {
             (true, false) => *watch = Some(self.watch_goa(on_change)),
@@ -247,13 +191,11 @@ impl Core {
             demo: None,
         };
         let engine = std::sync::Arc::clone(&self.engine);
-        let leases = self.move_leases.clone();
         let handle = self.runtime.spawn(async move {
             let restarts = Restarts {
                 reach: &reach,
                 engine: &engine,
                 db: &db,
-                leases: &leases,
             };
             let mut wait = RETRY_FIRST;
             // Whether the last read failed. A linked account that started
@@ -262,13 +204,11 @@ impl Core {
             loop {
                 let list = goa.google_accounts().await;
                 state.keep(&list);
-                if let Ok(linked) = linked_accounts(&db).await {
-                    if let Ok(list) = &list {
-                        state.count_attention(&linked, list);
-                    }
-                    if failed && list.is_ok() {
-                        restarts.all(&linked).await;
-                    }
+                if let Ok(linked) = linked_accounts(&db).await
+                    && failed
+                    && list.is_ok()
+                {
+                    restarts.all(&linked).await;
                 }
                 failed = list.is_err();
                 let _ = tx.send(()).await;
@@ -280,9 +220,6 @@ impl Core {
                             let list = goa.google_accounts().await;
                             state.keep(&list);
                             if let Ok(linked) = linked_accounts(&db).await {
-                                if let Ok(list) = &list {
-                                    state.count_attention(&linked, list);
-                                }
                                 if failed && list.is_ok() {
                                     restarts.all(&linked).await;
                                 } else {
@@ -315,13 +252,11 @@ impl Core {
     }
 }
 
-/// What restarting a linked account needs. An account a move holds is
-/// left alone: the move starts it again itself once it ends.
+/// What restarting a linked account needs.
 struct Restarts<'a> {
     reach: &'a Reach,
     engine: &'a super::RunningEngine,
     db: &'a Db,
-    leases: &'a MoveLeases,
 }
 
 impl Restarts<'_> {
@@ -332,9 +267,6 @@ impl Restarts<'_> {
             return;
         };
         for (account, _) in linked {
-            if self.leases.is_held(account.id) {
-                continue;
-            }
             engine.stop_account(account.id);
             if let Err(err) = start_again(self.reach, &engine, self.db, account, false).await {
                 tracing::warn!(account = account.id, error = %err, "could not start the account again once Online Accounts answered");
@@ -355,9 +287,7 @@ impl Restarts<'_> {
             return;
         };
         for (account, saved) in linked {
-            if !concerns(change, before, account, saved.as_deref())
-                || self.leases.is_held(account.id)
-            {
+            if !concerns(change, before, account, saved.as_deref()) {
                 continue;
             }
             engine.stop_account(account.id);
@@ -423,18 +353,6 @@ mod tests {
     }
 
     #[test]
-    fn a_second_request_to_sign_in_is_counted_and_a_cleared_one_is_forgotten() {
-        let state = GoaState::default();
-        state.count_attention(&[dana()], &asking(true));
-        assert!(state.asked.lock().unwrap().1.is_empty());
-        state.count_attention(&[dana()], &asking(true));
-        assert!(state.asked.lock().unwrap().1.contains(&4));
-        state.count_attention(&[dana()], &asking(false));
-        assert!(state.asked.lock().unwrap().0.is_empty());
-        assert!(state.asked.lock().unwrap().1.is_empty());
-    }
-
-    #[test]
     fn a_token_refresh_restarts_nothing_and_a_mail_switch_does() {
         let (account, saved) = dana();
         let before = asking(false);
@@ -446,15 +364,6 @@ mod tests {
         });
         assert!(concerns(&off, Some(&before), &account, saved.as_deref()));
         assert!(concerns(&same, None, &account, saved.as_deref()));
-    }
-
-    #[test]
-    fn a_held_lease_shows_until_its_move_ends() {
-        let leases = MoveLeases::default();
-        let lease = leases.lease(4);
-        assert!(leases.is_held(4));
-        drop(lease);
-        assert!(!leases.is_held(4));
     }
 
     #[test]

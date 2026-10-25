@@ -118,27 +118,24 @@ pub(crate) mod checks {
     use crate::goa_notice::{Notice, shown};
 
     pub fn run() {
-        a_removed_account_shows_two_buttons_and_keeps_one_widget();
+        a_removed_account_shows_its_button_and_keeps_one_widget();
         the_banner_hides_when_no_notice_is_left();
         a_press_carries_the_button_s_action();
     }
 
     fn removed() -> NoticeContent {
-        shown(
-            &Notice::Removed {
-                address: "dana@example.com".into(),
-            },
-            Some(4),
-        )
+        shown(&Notice::Removed {
+            address: "dana@example.com".into(),
+        })
     }
 
-    fn a_removed_account_shows_two_buttons_and_keeps_one_widget() {
+    fn a_removed_account_shows_its_button_and_keeps_one_widget() {
         let bar = Bar::new();
         let before = bar.widget().clone();
         bar.show(Some(removed()));
-        assert_eq!(bar.labels(), ["Add It Again", "Sign In Another Way"]);
+        assert_eq!(bar.labels(), ["Add It Again"]);
         assert!(bar.is_shown());
-        bar.show(Some(shown(&Notice::Unreachable, None)));
+        bar.show(Some(shown(&Notice::Unreachable)));
         assert!(bar.labels().is_empty());
         assert_eq!(&before, bar.widget());
     }
@@ -164,9 +161,6 @@ pub(crate) mod checks {
             }
             child = widget.prev_sibling();
         }
-        assert_eq!(
-            *pressed.borrow(),
-            [Action::SignInAnotherWay(4), Action::OpenOnlineAccounts]
-        );
+        assert_eq!(*pressed.borrow(), [Action::OpenOnlineAccounts]);
     }
 }
