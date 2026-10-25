@@ -16,8 +16,7 @@
 # Account on its tiles and its Other page, opens Switch to JMAP from the
 # Fastmail account's menu, and walks the calendar. Then it starts the demo
 # again for the Add Account page for a calendar without mail, the Gmail
-# route, app password and consent pages, the first-launch sheet, the move
-# banner and the Gmail rows in Preferences, and reads each. Last it goes
+# route, app password and consent pages, and reads each. Last it goes
 # through the own Google project setup with the keyboard alone, and checks
 # that a failed sign-in through it leads back to the step that fixes it.
 #

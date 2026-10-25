@@ -1609,7 +1609,7 @@ headerbar.post-band-header windowcontrols > button > image {
 }
 headerbar.post-band-header windowcontrols > button:hover > image { background-color: #6b6057; }
 
-.post-dialog, .post-first, .move-sheet {
+.post-dialog, .post-first {
   --post-dim: #5f5f67;
   --post-faint: #8a8a93;
   --post-line: #e6e6ea;
@@ -1621,7 +1621,7 @@ headerbar.post-band-header windowcontrols > button:hover > image { background-co
   --dialog-bg-color: #fafafb;
   --card-bg-color: #ffffff;
 }
-.app-dark .post-dialog, .app-dark .post-first, .app-dark .move-sheet {
+.app-dark .post-dialog, .app-dark .post-first {
   --post-dim: #b9b9c2;
   --post-faint: #8e8e98;
   --post-line: #3d3d44;
@@ -1640,8 +1640,7 @@ headerbar.post-band-header windowcontrols > button:hover > image { background-co
 .post-body { background-color: var(--dialog-bg-color); }
 toolbarview.post-opaque { background-color: var(--dialog-bg-color); }
 .post-dialog button.suggested-action,
-.post-first button.suggested-action,
-.move-sheet button.suggested-action { background-color: var(--accent-fill); color: #ffffff; }
+.post-first button.suggested-action { background-color: var(--accent-fill); color: #ffffff; }
 
 .post-title { font-size: 20px; font-weight: 800; }
 .post-body.centered .post-title { font-size: 22px; }
@@ -1720,7 +1719,7 @@ list.post-field > row { min-height: 51px; }
 .post-fields > list.post-field:first-child { margin-top: 13px; }
 .post-fields > .post-card { margin-top: 12px; }
 .post-fields > list.post-list { margin-top: 19px; }
-.post-dialog list.boxed-list, .move-sheet list.boxed-list { box-shadow: 0 0 0 1px var(--post-line); }
+.post-dialog list.boxed-list { box-shadow: 0 0 0 1px var(--post-line); }
 
 .post-card { padding: 13px 16px 8px; border-radius: 12px; margin-top: 16px; }
 .post-fields > .post-card.post-first-card { margin-top: 17px; margin-bottom: 37px; }
@@ -1765,7 +1764,6 @@ list.post-list row > box.header > box.prefixes image { color: var(--post-dim); }
 .post-status > * { min-height: 0; min-width: 0; }
 .post-check-title { font-size: 14.5px; font-weight: 500; }
 .post-spinner { color: var(--post-acc); }
-.post-moving-spinner { margin-top: 5px; }
 list.post-servers > row > box.header { min-height: 0; padding-top: 0; padding-bottom: 0; margin: -3px 12px -3px; }
 list.post-servers > row { min-height: 0; }
 .post-status { color: var(--post-acc); }
@@ -2080,40 +2078,6 @@ button.post-consent-button {
 }
 button.post-consent-button:not(.suggested-action) { background-color: var(--post-pill); }
 .post-route-foot { font-size: 12.5px; color: var(--post-dim); margin-top: 14px; }
-
-/* The move banner for an account whose mail has stopped: the accent's
-   tint, kept while the window is in the background. */
-banner.move-banner-paused > revealer > widget,
-banner.move-banner-paused > revealer > widget:backdrop { background-color: alpha(#ed5b00, 0.10); }
-.app-dark banner.move-banner-paused > revealer > widget,
-.app-dark banner.move-banner-paused > revealer > widget:backdrop { background-color: alpha(#ff7a1a, 0.16); }
-
-/* The first-launch sheet: each address has the accent's dot before it,
-   and the two buttons are rounded rectangles side by side. */
-.move-sheet-dot {
-  min-width: 8px;
-  min-height: 8px;
-  border-radius: 99px;
-  background-color: #ed5b00;
-}
-.app-dark .move-sheet-dot { background-color: #ff7a1a; }
-dialog.move-sheet sheet { background-color: var(--dialog-bg-color); }
-.move-sheet list.boxed-list > row { min-height: 0; padding: 0; }
-.move-sheet-address { font-size: 14px; font-weight: 600; }
-.move-sheet-heading { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
-/* A floating sheet narrower than 440 px (a window under about 510 px)
-   has no room for the heading on one line at 18 px. */
-.move-sheet-cramped .move-sheet-heading { font-size: 17px; font-weight: 700; letter-spacing: 0; }
-.move-sheet-body { font-size: 13.5px; color: var(--post-dim); }
-button.move-sheet-button:not(.suggested-action) { background-color: var(--post-pill); }
-.move-sheet-button {
-  font-size: 13.5px;
-  font-weight: 700;
-  border-radius: 10px;
-  padding: 8px 16px;
-  min-width: 80px;
-  min-height: 18px;
-}
 
 /* The own Google project setup, as its mockup: the intro and warning
    under the band, the steps on a plain page with a numbered list. */
