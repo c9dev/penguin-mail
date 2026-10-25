@@ -1100,10 +1100,8 @@ msgstr ""
 "ξεκίνησε με τις προεπιλογές. Το παλιό αρχείο διατηρείται ως {file}."
 
 #: app/src/app/mail_file.rs:77
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
-msgstr "Αυτό το αρχείο δεν περιέχει κλειδί OpenPGP."
+msgstr "Δεν ήταν δυνατή η ανάγνωση αυτού του αρχείου."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2199,10 +2197,8 @@ msgid "On {date}, {sender} wrote:"
 msgstr "Στις {date}, {sender} έγραψε:"
 
 #: app/src/compose.rs:1236
-#, fuzzy
-#| msgid "On {date}, {sender} wrote:"
 msgid "{sender} wrote:"
-msgstr "Στις {date}, {sender} έγραψε:"
+msgstr "Ο/Η {sender} έγραψε:"
 
 #: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
@@ -4767,18 +4763,16 @@ msgid "Never ask"
 msgstr "Ποτέ ερώτηση"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
-#| msgid "Preview"
 msgid "No Preview"
-msgstr "Προεπισκόπηση"
+msgstr "Χωρίς προεπισκόπηση"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 γραμμή"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 γραμμές"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8631,22 +8625,16 @@ msgid "Could not use that server: {reason}"
 msgstr "Δεν ήταν δυνατή η χρήση αυτού του διακομιστή: {reason}"
 
 #: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
-#, fuzzy
-#| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
-msgstr "Αυτό το αρχείο είναι πολύ μεγάλο για να είναι ημερολόγιο."
+msgstr "Αυτό το αρχείο είναι πολύ μεγάλο για να είναι μήνυμα."
 
 #: app/src/ui/eml_file.rs:41
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
-msgstr "Αυτό το αρχείο δεν περιέχει κλειδί OpenPGP."
+msgstr "Αυτό το αρχείο είναι κενό."
 
 #: app/src/ui/eml_file.rs:53
-#, fuzzy
-#| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
-msgstr "Αυτό το αρχείο δεν περιέχει πιστοποιητικό."
+msgstr "Αυτό το αρχείο δεν περιέχει μήνυμα."
 
 #: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
@@ -9606,45 +9594,38 @@ msgid "Text Size"
 msgstr "Μέγεθος κειμένου"
 
 #: app/src/ui/preferences.rs:244
-#, fuzzy
-#| msgid "Message Source"
 msgid "Message Preview"
-msgstr "Πηγαίος κώδικας μηνύματος"
+msgstr "Προεπισκόπηση μηνύματος"
 
 #: app/src/ui/preferences.rs:245
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "Γραμμές κειμένου του μηνύματος κάτω από το θέμα"
 
 #: app/src/ui/preferences.rs:251
-#, fuzzy
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} μη αναγνωσμένο μήνυμα"
+msgstr "Έντονα τα μη αναγνωσμένα"
 
 #: app/src/ui/preferences.rs:253
 msgid "Use heavier text for unread senders, subjects, and dates"
 msgstr ""
+"Πιο έντονο κείμενο για μη αναγνωσμένους αποστολείς, θέματα και ημερομηνίες"
 
 #: app/src/ui/preferences.rs:260
-#, fuzzy
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "Να φορτώνονται πάντα οι εικόνες;"
+msgstr "Πάντα έντονοι αποστολείς"
 
 #: app/src/ui/preferences.rs:262
 msgid "Use heavier sender text for both read and unread messages"
 msgstr ""
+"Πιο έντονο κείμενο αποστολέα για αναγνωσμένα και μη αναγνωσμένα μηνύματα"
 
 #: app/src/ui/preferences.rs:269
-#, fuzzy
-#| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "Εμφάνιση ημερολογίων"
+msgstr "Εμφάνιση άβαταρ"
 
 #: app/src/ui/preferences.rs:271
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "Εμφάνιση εικόνων ή αρχικών επαφών στη λίστα μηνυμάτων"
 
 #: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
 msgid "Notifications"
@@ -9736,6 +9717,9 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"Χρησιμοποιείται από αυτόν τον λογαριασμό και από διευθύνσεις χωρίς δική τους "
+"υπογραφή. Υποστηρίζεται Markdown. Το <email> γίνεται η διεύθυνση αποστολής, "
+"μαζί με την κατάληξή της· το <domain> γίνεται ο τομέας της."
 
 #: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -10541,22 +10525,20 @@ msgid "Enter a valid address that is not already listed."
 msgstr "Εισαγάγετε μια έγκυρη διεύθυνση που δεν υπάρχει ήδη στη λίστα."
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
-#| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "Χωρίς υπογραφή"
+msgstr "Χρήση υπογραφής λογαριασμού"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
-#| msgid "Signature"
 msgid "Custom Signature"
-msgstr "Υπογραφή"
+msgstr "Προσαρμοσμένη υπογραφή"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"Υποστηρίζεται Markdown. Το <email> γίνεται η διεύθυνση αποστολής, μαζί με "
+"την κατάληξή της· το <domain> γίνεται ο τομέας της."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10628,7 +10610,7 @@ msgstr "Μετακίνηση κάτω"
 
 #: app/src/ui/sidebar.rs:1752
 msgid "Empty Trash…"
-msgstr ""
+msgstr "Άδειασμα κάδου…"
 
 #: app/src/ui/sidebar.rs:1880
 msgid "Automatic Reply…"
@@ -10868,42 +10850,32 @@ msgstr "Αναζήτηση αλληλογραφίας"
 
 #: app/src/ui/thread_list/filters.rs:26
 msgid "Unread Only"
-msgstr ""
+msgstr "Μόνο μη αναγνωσμένα"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
-#| msgid "Flagged blue"
 msgid "Flagged Only"
-msgstr "Σημαία μπλε"
+msgstr "Μόνο με σημαία"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
-#| msgid "Attachments"
 msgid "With Attachments"
-msgstr "Συνημμένα"
+msgstr "Με συνημμένα"
 
 #: app/src/ui/thread_list/filters.rs:34
 msgid "Match all selected filters"
-msgstr ""
+msgstr "Να ισχύουν όλα τα επιλεγμένα φίλτρα"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
-#| msgid "Calendar File"
 msgid "Clear Filters"
-msgstr "Αρχείο ημερολογίου"
+msgstr "Εκκαθάριση φίλτρων"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
-#| msgid "New Messages"
 msgid "Filter Messages"
-msgstr "Νέα μηνύματα"
+msgstr "Φιλτράρισμα μηνυμάτων"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
-msgstr "Νέο μήνυμα (C)"
+msgstr "Φιλτράρισμα μηνυμάτων (ενεργό)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -11329,10 +11301,8 @@ msgstr ""
 "Αυτός ο λογαριασμός δεν έχει ακόμη ετικέτες. Δημιουργήστε μία στο Outlook."
 
 #: app/src/ui/window.rs:2644
-#, fuzzy
-#| msgid "Add an account first"
 msgid "Add an account to reply or forward"
-msgstr "Προσθέστε πρώτα έναν λογαριασμό"
+msgstr "Προσθέστε έναν λογαριασμό για απάντηση ή προώθηση"
 
 #: app/src/ui/window.rs:2748
 msgid "Could not include {file}: {reason}"
@@ -11620,7 +11590,7 @@ msgstr "Δεν ήταν δυνατή η εξαγωγή της αλληλογρα
 
 #: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
-msgstr ""
+msgstr "η εγγραφή διακόπηκε"
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -11775,10 +11745,8 @@ msgid "Replied by email"
 msgstr "Απαντήθηκε με μήνυμα"
 
 #: app/src/ui/window/loose.rs:165
-#, fuzzy
-#| msgid "Read: {subject}"
 msgid "Attached to {subject}"
-msgstr "Αναγνώστηκε: {subject}"
+msgstr "Συνημμένο στο {subject}"
 
 #: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
@@ -12353,7 +12321,7 @@ msgstr "Τα μηνύματα στη γλώσσα {language} δεν θα προ�
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "Άδειασμα κάδου;"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -12362,32 +12330,30 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"Οριστική διαγραφή κάθε μηνύματος στον κάδο αυτών των λογαριασμών, μαζί με "
+"παλαιότερα μηνύματα που δεν είναι αποθηκευμένα σε αυτόν τον υπολογιστή; Αυτό "
+"δεν μπορεί να αναιρεθεί.\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
-#| msgid "Empty"
 msgid "Empty Trash"
-msgstr "Κενό"
+msgstr "Άδειασμα κάδου"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "Άδειασμα κάδου…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "Δεν ήταν δυνατή η φόρτωση αλληλογραφίας για {account}: {reason}"
+msgstr "Δεν ήταν δυνατό το άδειασμα του κάδου για τον {account}: {reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "Διαγράφηκε οριστικά {count} μήνυμα"
-msgstr[1] "Διαγράφηκαν οριστικά {count} μηνύματα"
+msgstr[0] "Διαγράφηκε {count} μήνυμα από τον κάδο του {account}"
+msgstr[1] "Διαγράφηκαν {count} μηνύματα από τον κάδο του {account}"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
@@ -12964,93 +12930,93 @@ msgstr "Όλα τα μηνύματα"
 
 #: sync/src/mailbox.rs:521
 msgid "Change the filters or load more messages if available."
-msgstr ""
+msgstr "Αλλάξτε τα φίλτρα ή φορτώστε περισσότερα μηνύματα, αν υπάρχουν."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "Αυτό το έξυπνο γραμματοκιβώτιο δεν έχει συνθήκες"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Τα αποτελέσματα για {account} προέρχονται μόνο από την αλληλογραφία σε αυτόν "
 "τον υπολογιστή"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Επιστρέφει {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "Χωρίς παραλήπτες"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "Προς {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} μη αναγνωσμένο · {category}"
 msgstr[1] "{count} μη αναγνωσμένα · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} μη αναγνωσμένο"
 msgstr[1] "{count} μη αναγνωσμένα"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Στάλθηκε χθες, χωρίς απάντηση ακόμη"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Στάλθηκε πριν από {days} ημέρα, χωρίς απάντηση ακόμη"
 msgstr[1] "Στάλθηκε πριν από {days} ημέρες, χωρίς απάντηση ακόμη"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "Ο διακομιστής δεν έχει στείλει ακόμη αυτό το μήνυμα."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr ""
 "Το Penguin Mail δεν έχει επιβεβαιώσει ότι ο διακομιστής παρέλαβε αυτό το "
 "μήνυμα."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Αποστολή {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Ο διακομιστής το στέλνει ακόμη κι αν το Penguin Mail είναι κλειστό."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Αποστολή {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Ελέγξτε τα Απεσταλμένα. Το Penguin Mail δεν μπόρεσε να επιβεβαιώσει ότι "
 "στάλθηκε."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Ακυρώθηκε σε άλλη εφαρμογή."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Δεν στάλθηκε"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Νέα προσπάθεια {when}"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Το Penguin Mail σταμάτησε να προσπαθεί"
 

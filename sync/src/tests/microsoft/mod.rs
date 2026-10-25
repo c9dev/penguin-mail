@@ -7,6 +7,7 @@ mod mail;
 mod outgoing;
 mod replies;
 mod rules;
+mod search;
 mod writes;
 
 use std::sync::Arc;

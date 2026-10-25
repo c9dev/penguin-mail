@@ -1037,10 +1037,8 @@ msgstr ""
 "giữ lại tại {file}."
 
 #: app/src/app/mail_file.rs:77
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
-msgstr "Tệp này không có khóa OpenPGP."
+msgstr "Không thể đọc tệp này."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2074,10 +2072,8 @@ msgid "On {date}, {sender} wrote:"
 msgstr "Vào {date}, {sender} đã viết:"
 
 #: app/src/compose.rs:1236
-#, fuzzy
-#| msgid "On {date}, {sender} wrote:"
 msgid "{sender} wrote:"
-msgstr "Vào {date}, {sender} đã viết:"
+msgstr "{sender} đã viết:"
 
 #: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
@@ -4489,18 +4485,16 @@ msgid "Never ask"
 msgstr "Không bao giờ hỏi"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
-#| msgid "Preview"
 msgid "No Preview"
-msgstr "Xem trước"
+msgstr "Không xem trước"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 dòng"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 dòng"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8252,22 +8246,16 @@ msgid "Could not use that server: {reason}"
 msgstr "Không thể dùng máy chủ đó: {reason}"
 
 #: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
-#, fuzzy
-#| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
-msgstr "Tệp này quá lớn để làm tệp lịch."
+msgstr "Tệp này quá lớn để là một thư."
 
 #: app/src/ui/eml_file.rs:41
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
-msgstr "Tệp này không có khóa OpenPGP."
+msgstr "Tệp này trống."
 
 #: app/src/ui/eml_file.rs:53
-#, fuzzy
-#| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
-msgstr "Tệp này không có chứng chỉ."
+msgstr "Tệp này không chứa thư."
 
 #: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
@@ -9175,45 +9163,36 @@ msgid "Text Size"
 msgstr "Cỡ chữ"
 
 #: app/src/ui/preferences.rs:244
-#, fuzzy
-#| msgid "Message Source"
 msgid "Message Preview"
-msgstr "Nguồn thư"
+msgstr "Xem trước thư"
 
 #: app/src/ui/preferences.rs:245
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "Số dòng nội dung thư dưới tiêu đề"
 
 #: app/src/ui/preferences.rs:251
-#, fuzzy
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} thư chưa đọc"
+msgstr "In đậm thư chưa đọc"
 
 #: app/src/ui/preferences.rs:253
 msgid "Use heavier text for unread senders, subjects, and dates"
-msgstr ""
+msgstr "Dùng chữ đậm hơn cho người gửi, tiêu đề và ngày của thư chưa đọc"
 
 #: app/src/ui/preferences.rs:260
-#, fuzzy
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "Luôn tải hình ảnh?"
+msgstr "Luôn in đậm người gửi"
 
 #: app/src/ui/preferences.rs:262
 msgid "Use heavier sender text for both read and unread messages"
-msgstr ""
+msgstr "Dùng chữ đậm hơn cho người gửi ở cả thư đã đọc và chưa đọc"
 
 #: app/src/ui/preferences.rs:269
-#, fuzzy
-#| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "Hiện các lịch"
+msgstr "Hiện ảnh đại diện"
 
 #: app/src/ui/preferences.rs:271
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "Hiện ảnh hoặc chữ viết tắt tên liên hệ trong danh sách thư"
 
 #: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
 msgid "Notifications"
@@ -9298,6 +9277,9 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"Dùng cho tài khoản này và các địa chỉ không có chữ ký riêng. Hỗ trợ "
+"Markdown. <email> trở thành địa chỉ gửi, kể cả hậu tố; <domain> trở thành "
+"tên miền của nó."
 
 #: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -10079,22 +10061,20 @@ msgid "Enter a valid address that is not already listed."
 msgstr "Nhập địa chỉ hợp lệ chưa có trong danh sách."
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
-#| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "Không có chữ ký"
+msgstr "Dùng chữ ký của tài khoản"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
-#| msgid "Signature"
 msgid "Custom Signature"
-msgstr "Chữ ký"
+msgstr "Chữ ký tùy chỉnh"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"Hỗ trợ Markdown. <email> trở thành địa chỉ gửi, kể cả hậu tố; <domain> trở "
+"thành tên miền của nó."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10162,7 +10142,7 @@ msgstr "Chuyển xuống"
 
 #: app/src/ui/sidebar.rs:1752
 msgid "Empty Trash…"
-msgstr ""
+msgstr "Dọn thùng rác…"
 
 #: app/src/ui/sidebar.rs:1880
 msgid "Automatic Reply…"
@@ -10395,42 +10375,32 @@ msgstr "Tìm thư"
 
 #: app/src/ui/thread_list/filters.rs:26
 msgid "Unread Only"
-msgstr ""
+msgstr "Chỉ thư chưa đọc"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
-#| msgid "Flagged blue"
 msgid "Flagged Only"
-msgstr "Đã gắn cờ xanh dương"
+msgstr "Chỉ thư có cờ"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
-#| msgid "Attachments"
 msgid "With Attachments"
-msgstr "Tệp đính kèm"
+msgstr "Có tệp đính kèm"
 
 #: app/src/ui/thread_list/filters.rs:34
 msgid "Match all selected filters"
-msgstr ""
+msgstr "Khớp mọi bộ lọc đã chọn"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
-#| msgid "Calendar File"
 msgid "Clear Filters"
-msgstr "Tệp lịch"
+msgstr "Xóa bộ lọc"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
-#| msgid "New Messages"
 msgid "Filter Messages"
-msgstr "Thư mới"
+msgstr "Lọc thư"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
-msgstr "Thư mới (C)"
+msgstr "Lọc thư (đang bật)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -10831,10 +10801,8 @@ msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Tài khoản này chưa có thẻ. Tạo thẻ trong Outlook."
 
 #: app/src/ui/window.rs:2644
-#, fuzzy
-#| msgid "Add an account first"
 msgid "Add an account to reply or forward"
-msgstr "Thêm tài khoản trước"
+msgstr "Thêm tài khoản để trả lời hoặc chuyển tiếp"
 
 #: app/src/ui/window.rs:2748
 msgid "Could not include {file}: {reason}"
@@ -11113,7 +11081,7 @@ msgstr "Không thể xuất thư: {reason}"
 
 #: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
-msgstr ""
+msgstr "việc ghi bị gián đoạn"
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -11258,10 +11226,8 @@ msgid "Replied by email"
 msgstr "Đã trả lời qua email"
 
 #: app/src/ui/window/loose.rs:165
-#, fuzzy
-#| msgid "Read: {subject}"
 msgid "Attached to {subject}"
-msgstr "Đã đọc: {subject}"
+msgstr "Đính kèm trong {subject}"
 
 #: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
@@ -11809,7 +11775,7 @@ msgstr "Thư bằng {language} sẽ không còn đề nghị dịch"
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "Dọn thùng rác?"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -11818,31 +11784,28 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"Xóa vĩnh viễn mọi thư trong thùng rác của các tài khoản này, kể cả thư cũ "
+"không lưu trên máy tính này? Không thể hoàn tác.\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
-#| msgid "Empty"
 msgid "Empty Trash"
-msgstr "Trống"
+msgstr "Dọn thùng rác"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "Đang dọn thùng rác…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "Không thể tải thư cho {account}: {reason}"
+msgstr "Không thể dọn thùng rác của {account}: {reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "Đã xóa vĩnh viễn {count} thư"
+msgstr[0] "Đã xóa {count} thư khỏi thùng rác của {account}"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
@@ -12392,84 +12355,84 @@ msgstr "Tất cả thư"
 
 #: sync/src/mailbox.rs:521
 msgid "Change the filters or load more messages if available."
-msgstr ""
+msgstr "Hãy đổi bộ lọc hoặc tải thêm thư nếu có."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "Hộp thư thông minh này chưa có điều kiện"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Kết quả cho {account} chỉ đến từ thư trên máy tính này"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Trở lại {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "Không có người nhận"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "Đến {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} chưa đọc · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} chưa đọc"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Gửi hôm qua, chưa có trả lời"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Gửi {days} ngày trước, chưa có trả lời"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "Máy chủ chưa gửi thư này."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail chưa xác nhận máy chủ đã nhận thư này."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Gửi {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Máy chủ gửi kể cả khi Penguin Mail đóng."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Gửi {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Kiểm tra Đã gửi. Penguin Mail chưa xác nhận thư đã được gửi."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Đã hủy trong ứng dụng khác."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Chưa gửi"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Thử lại {when}"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail đã ngừng thử"
 

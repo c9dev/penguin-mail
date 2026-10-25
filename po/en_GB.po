@@ -11552,85 +11552,85 @@ msgstr "All Mail"
 msgid "Change the filters or load more messages if available."
 msgstr "Change the filters or load more messages if available."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "This smart mailbox has no conditions"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Results for {account} come from the mail on this computer alone"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Returns {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "No recipients"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "To {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} unread · {category}"
 msgstr[1] "{count} unread · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} unread"
 msgstr[1] "{count} unread"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Sent yesterday, no reply yet"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Sent {days} day ago, no reply yet"
 msgstr[1] "Sent {days} days ago, no reply yet"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "The server has not sent this message yet."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail has not confirmed that the server took this message."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Sends {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "The server sends it even if Penguin Mail is closed."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Sends {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Check Sent. Penguin Mail could not confirm it went out."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Cancelled in another app."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Not sent"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Trying again {when}"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail stopped trying"
 

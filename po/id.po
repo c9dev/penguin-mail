@@ -1058,10 +1058,8 @@ msgstr ""
 "pengaturan bawaan. Berkas lama disimpan sebagai {file}."
 
 #: app/src/app/mail_file.rs:77
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
-msgstr "Berkas ini tidak mengandung kunci OpenPGP."
+msgstr "File ini tidak dapat dibaca."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2136,10 +2134,8 @@ msgid "On {date}, {sender} wrote:"
 msgstr "Pada {date}, {sender} menulis:"
 
 #: app/src/compose.rs:1236
-#, fuzzy
-#| msgid "On {date}, {sender} wrote:"
 msgid "{sender} wrote:"
-msgstr "Pada {date}, {sender} menulis:"
+msgstr "{sender} menulis:"
 
 #: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
@@ -4626,18 +4622,16 @@ msgid "Never ask"
 msgstr "Jangan tanya"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
-#| msgid "Preview"
 msgid "No Preview"
-msgstr "Pratinjau"
+msgstr "Tanpa Pratinjau"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 Baris"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 Baris"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8452,22 +8446,16 @@ msgid "Could not use that server: {reason}"
 msgstr "Tidak dapat menggunakan server tersebut: {reason}"
 
 #: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
-#, fuzzy
-#| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
-msgstr "Berkas ini terlalu besar untuk menjadi kalender."
+msgstr "File ini terlalu besar untuk sebuah pesan."
 
 #: app/src/ui/eml_file.rs:41
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
-msgstr "Berkas ini tidak mengandung kunci OpenPGP."
+msgstr "File ini kosong."
 
 #: app/src/ui/eml_file.rs:53
-#, fuzzy
-#| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
-msgstr "Berkas ini tidak mengandung sertifikat."
+msgstr "File ini tidak berisi pesan."
 
 #: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
@@ -9399,45 +9387,39 @@ msgid "Text Size"
 msgstr "Ukuran Teks"
 
 #: app/src/ui/preferences.rs:244
-#, fuzzy
-#| msgid "Message Source"
 msgid "Message Preview"
-msgstr "Sumber Pesan"
+msgstr "Pratinjau Pesan"
 
 #: app/src/ui/preferences.rs:245
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "Baris teks pesan di bawah subjek"
 
 #: app/src/ui/preferences.rs:251
-#, fuzzy
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} pesan belum dibaca"
+msgstr "Tebalkan Pesan Belum Dibaca"
 
 #: app/src/ui/preferences.rs:253
 msgid "Use heavier text for unread senders, subjects, and dates"
 msgstr ""
+"Gunakan teks lebih tebal untuk pengirim, subjek, dan tanggal yang belum "
+"dibaca"
 
 #: app/src/ui/preferences.rs:260
-#, fuzzy
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "Selalu Muat Gambar?"
+msgstr "Selalu Tebalkan Pengirim"
 
 #: app/src/ui/preferences.rs:262
 msgid "Use heavier sender text for both read and unread messages"
 msgstr ""
+"Gunakan teks pengirim lebih tebal untuk pesan yang sudah dan belum dibaca"
 
 #: app/src/ui/preferences.rs:269
-#, fuzzy
-#| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "Tampilkan Kalender"
+msgstr "Tampilkan Avatar"
 
 #: app/src/ui/preferences.rs:271
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "Tampilkan foto atau inisial kontak di daftar pesan"
 
 #: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
 msgid "Notifications"
@@ -9525,6 +9507,9 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"Dipakai oleh akun ini dan alamat yang tidak punya tanda tangan sendiri. "
+"Markdown didukung. <email> menjadi alamat pengirim, termasuk akhirannya; "
+"<domain> menjadi domainnya."
 
 #: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -10318,22 +10303,20 @@ msgid "Enter a valid address that is not already listed."
 msgstr "Masukkan alamat valid yang belum tercantum."
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
-#| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "Tanpa tanda tangan"
+msgstr "Gunakan Tanda Tangan Akun"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
-#| msgid "Signature"
 msgid "Custom Signature"
-msgstr "Tanda Tangan"
+msgstr "Tanda Tangan Khusus"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"Markdown didukung. <email> menjadi alamat pengirim, termasuk akhirannya; "
+"<domain> menjadi domainnya."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10405,7 +10388,7 @@ msgstr "Pindahkan ke Bawah"
 
 #: app/src/ui/sidebar.rs:1752
 msgid "Empty Trash…"
-msgstr ""
+msgstr "Kosongkan Sampah…"
 
 #: app/src/ui/sidebar.rs:1880
 msgid "Automatic Reply…"
@@ -10642,42 +10625,32 @@ msgstr "Cari email"
 
 #: app/src/ui/thread_list/filters.rs:26
 msgid "Unread Only"
-msgstr ""
+msgstr "Hanya Belum Dibaca"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
-#| msgid "Flagged blue"
 msgid "Flagged Only"
-msgstr "Diberi bendera biru"
+msgstr "Hanya Berbendera"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
-#| msgid "Attachments"
 msgid "With Attachments"
-msgstr "Lampiran"
+msgstr "Dengan Lampiran"
 
 #: app/src/ui/thread_list/filters.rs:34
 msgid "Match all selected filters"
-msgstr ""
+msgstr "Cocokkan semua filter yang dipilih"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
-#| msgid "Calendar File"
 msgid "Clear Filters"
-msgstr "Berkas Kalender"
+msgstr "Hapus Filter"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
-#| msgid "New Messages"
 msgid "Filter Messages"
-msgstr "Pesan Baru"
+msgstr "Filter Pesan"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
-msgstr "Pesan Baru (C)"
+msgstr "Filter Pesan (Aktif)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -11099,10 +11072,8 @@ msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Akun ini belum memiliki tag. Buat tag di Outlook."
 
 #: app/src/ui/window.rs:2644
-#, fuzzy
-#| msgid "Add an account first"
 msgid "Add an account to reply or forward"
-msgstr "Tambahkan akun terlebih dahulu"
+msgstr "Tambahkan akun untuk membalas atau meneruskan"
 
 #: app/src/ui/window.rs:2748
 msgid "Could not include {file}: {reason}"
@@ -11388,7 +11359,7 @@ msgstr "Tidak dapat mengekspor email: {reason}"
 
 #: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
-msgstr ""
+msgstr "penulisan terputus"
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -11538,10 +11509,8 @@ msgid "Replied by email"
 msgstr "Dibalas melalui email"
 
 #: app/src/ui/window/loose.rs:165
-#, fuzzy
-#| msgid "Read: {subject}"
 msgid "Attached to {subject}"
-msgstr "Dibaca: {subject}"
+msgstr "Terlampir di {subject}"
 
 #: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
@@ -12115,7 +12084,7 @@ msgstr "Pesan dalam bahasa {language} tidak lagi menawarkan terjemahan"
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "Kosongkan Sampah?"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -12124,32 +12093,30 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"Hapus permanen setiap pesan di Sampah untuk akun-akun ini, termasuk email "
+"lama yang tidak tersimpan di komputer ini? Tindakan ini tidak dapat "
+"dibatalkan.\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
-#| msgid "Empty"
 msgid "Empty Trash"
-msgstr "Kosong"
+msgstr "Kosongkan Sampah"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "Mengosongkan Sampah…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "Tidak dapat memuat email untuk {account}: {reason}"
+msgstr "Tidak dapat mengosongkan Sampah untuk {account}: {reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "{count} pesan dihapus permanen"
-msgstr[1] "{count} pesan dihapus permanen"
+msgstr[0] "{count} pesan dihapus dari Sampah untuk {account}"
+msgstr[1] "{count} pesan dihapus dari Sampah untuk {account}"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
@@ -12721,87 +12688,87 @@ msgstr "Semua Email"
 
 #: sync/src/mailbox.rs:521
 msgid "Change the filters or load more messages if available."
-msgstr ""
+msgstr "Ubah filter atau muat lebih banyak pesan jika ada."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "Kotak surat cerdas ini tidak memiliki kondisi"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Hasil untuk {account} hanya berasal dari email di komputer ini"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Kembali {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "Tidak ada penerima"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "Kepada {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} belum dibaca · {category}"
 msgstr[1] "{count} belum dibaca · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} belum dibaca"
 msgstr[1] "{count} belum dibaca"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Dikirim kemarin, belum ada balasan"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Dikirim {days} hari lalu, belum ada balasan"
 msgstr[1] "Dikirim {days} hari lalu, belum ada balasan"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "Server belum mengirim pesan ini."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail belum memastikan bahwa server menerima pesan ini."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Dikirim {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Server tetap mengirimnya meskipun Penguin Mail ditutup."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Dikirim {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Periksa Terkirim. Penguin Mail tidak dapat memastikan pesan terkirim."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Dibatalkan di aplikasi lain."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Tidak dikirim"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Mencoba lagi {when}"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail berhenti mencoba"
 

@@ -1089,10 +1089,8 @@ msgstr ""
 "implicite. Fișierul vechi a fost păstrat ca {file}."
 
 #: app/src/app/mail_file.rs:77
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
-msgstr "Acest fișier nu conține nicio cheie OpenPGP."
+msgstr "Fișierul nu a putut fi citit."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2187,10 +2185,8 @@ msgid "On {date}, {sender} wrote:"
 msgstr "La {date}, {sender} a scris:"
 
 #: app/src/compose.rs:1236
-#, fuzzy
-#| msgid "On {date}, {sender} wrote:"
 msgid "{sender} wrote:"
-msgstr "La {date}, {sender} a scris:"
+msgstr "{sender} a scris:"
 
 #: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
@@ -4714,18 +4710,16 @@ msgid "Never ask"
 msgstr "Nu întreba niciodată"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
-#| msgid "Preview"
 msgid "No Preview"
-msgstr "Previzualizare"
+msgstr "Fără previzualizare"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 rând"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 rânduri"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8576,22 +8570,16 @@ msgid "Could not use that server: {reason}"
 msgstr "Nu s-a putut folosi acel server: {reason}"
 
 #: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
-#, fuzzy
-#| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
-msgstr "Acest fișier este prea mare pentru a fi un calendar."
+msgstr "Fișierul este prea mare pentru a fi un mesaj."
 
 #: app/src/ui/eml_file.rs:41
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
-msgstr "Acest fișier nu conține nicio cheie OpenPGP."
+msgstr "Fișierul este gol."
 
 #: app/src/ui/eml_file.rs:53
-#, fuzzy
-#| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
-msgstr "Acest fișier nu conține niciun certificat."
+msgstr "Fișierul nu conține un mesaj."
 
 #: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
@@ -9551,45 +9539,36 @@ msgid "Text Size"
 msgstr "Dimensiunea textului"
 
 #: app/src/ui/preferences.rs:244
-#, fuzzy
-#| msgid "Message Source"
 msgid "Message Preview"
-msgstr "Sursa mesajului"
+msgstr "Previzualizarea mesajelor"
 
 #: app/src/ui/preferences.rs:245
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "Rânduri din textul mesajului sub subiect"
 
 #: app/src/ui/preferences.rs:251
-#, fuzzy
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} mesaj necitit"
+msgstr "Mesaje necitite îngroșate"
 
 #: app/src/ui/preferences.rs:253
 msgid "Use heavier text for unread senders, subjects, and dates"
-msgstr ""
+msgstr "Text mai gros pentru expeditorii, subiectele și datele necitite"
 
 #: app/src/ui/preferences.rs:260
-#, fuzzy
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "Încărcați întotdeauna imaginile?"
+msgstr "Expeditori mereu îngroșați"
 
 #: app/src/ui/preferences.rs:262
 msgid "Use heavier sender text for both read and unread messages"
-msgstr ""
+msgstr "Text mai gros pentru expeditor la mesajele citite și necitite"
 
 #: app/src/ui/preferences.rs:269
-#, fuzzy
-#| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "Afișează calendarele"
+msgstr "Afișează avatare"
 
 #: app/src/ui/preferences.rs:271
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "Afișează pozele sau inițialele contactelor în lista de mesaje"
 
 #: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
 msgid "Notifications"
@@ -9679,6 +9658,9 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"Folosită de acest cont și de adresele fără semnătură proprie. Se poate "
+"folosi Markdown. <email> devine adresa de trimitere, cu tot cu sufix; "
+"<domain> devine domeniul ei."
 
 #: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -10483,22 +10465,20 @@ msgid "Enter a valid address that is not already listed."
 msgstr "Introduceți o adresă validă care nu este deja în listă."
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
-#| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "Fără semnătură"
+msgstr "Folosește semnătura contului"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
-#| msgid "Signature"
 msgid "Custom Signature"
-msgstr "Semnătură"
+msgstr "Semnătură personalizată"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"Se poate folosi Markdown. <email> devine adresa de trimitere, cu tot cu "
+"sufix; <domain> devine domeniul ei."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10574,7 +10554,7 @@ msgstr "Mută în jos"
 
 #: app/src/ui/sidebar.rs:1752
 msgid "Empty Trash…"
-msgstr ""
+msgstr "Golește coșul de gunoi…"
 
 #: app/src/ui/sidebar.rs:1880
 msgid "Automatic Reply…"
@@ -10812,42 +10792,32 @@ msgstr "Caută în corespondență"
 
 #: app/src/ui/thread_list/filters.rs:26
 msgid "Unread Only"
-msgstr ""
+msgstr "Doar necitite"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
-#| msgid "Flagged blue"
 msgid "Flagged Only"
-msgstr "Marcat cu steguleț albastru"
+msgstr "Doar cu steguleț"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
-#| msgid "Attachments"
 msgid "With Attachments"
-msgstr "Atașamente"
+msgstr "Cu atașamente"
 
 #: app/src/ui/thread_list/filters.rs:34
 msgid "Match all selected filters"
-msgstr ""
+msgstr "Respectă toate filtrele alese"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
-#| msgid "Calendar File"
 msgid "Clear Filters"
-msgstr "Fișier calendar"
+msgstr "Șterge filtrele"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
-#| msgid "New Messages"
 msgid "Filter Messages"
-msgstr "Mesaje noi"
+msgstr "Filtrează mesajele"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
-msgstr "Mesaj nou (C)"
+msgstr "Filtrează mesajele (activ)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -11287,10 +11257,8 @@ msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Acest cont nu are încă etichete. Creați una în Outlook."
 
 #: app/src/ui/window.rs:2644
-#, fuzzy
-#| msgid "Add an account first"
 msgid "Add an account to reply or forward"
-msgstr "Adăugați mai întâi un cont"
+msgstr "Adăugați un cont pentru a răspunde sau a redirecționa"
 
 #: app/src/ui/window.rs:2748
 msgid "Could not include {file}: {reason}"
@@ -11579,7 +11547,7 @@ msgstr "Corespondența nu a putut fi exportată: {reason}"
 
 #: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
-msgstr ""
+msgstr "scrierea a fost întreruptă"
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -11731,10 +11699,8 @@ msgid "Replied by email"
 msgstr "Răspuns trimis prin e-mail"
 
 #: app/src/ui/window/loose.rs:165
-#, fuzzy
-#| msgid "Read: {subject}"
 msgid "Attached to {subject}"
-msgstr "Citit: {subject}"
+msgstr "Atașat la {subject}"
 
 #: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
@@ -12326,7 +12292,7 @@ msgstr "Mesajele în {language} nu vor mai oferi o traducere"
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "Goliți coșul de gunoi?"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -12335,33 +12301,32 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"Ștergeți definitiv fiecare mesaj din coșul de gunoi al acestor conturi, "
+"inclusiv mesajele mai vechi care nu sunt stocate pe acest computer? Acțiunea "
+"nu poate fi anulată.\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
-#| msgid "Empty"
 msgid "Empty Trash"
-msgstr "Gol"
+msgstr "Golește coșul de gunoi"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "Se golește coșul de gunoi…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "Nu s-a putut încărca corespondența pentru {account}: {reason}"
+msgstr "Coșul de gunoi pentru {account} nu a putut fi golit: {reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "{count} mesaj șters definitiv"
-msgstr[1] "{count} mesaje șterse definitiv"
-msgstr[2] "{count} de mesaje șterse definitiv"
+msgstr[0] "A fost șters {count} mesaj din coșul de gunoi pentru {account}"
+msgstr[1] "Au fost șterse {count} mesaje din coșul de gunoi pentru {account}"
+msgstr[2] ""
+"Au fost șterse {count} de mesaje din coșul de gunoi pentru {account}"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
@@ -12943,93 +12908,93 @@ msgstr "Toată corespondența"
 
 #: sync/src/mailbox.rs:521
 msgid "Change the filters or load more messages if available."
-msgstr ""
+msgstr "Schimbați filtrele sau încărcați mai multe mesaje, dacă există."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "Această căsuță inteligentă nu are condiții"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Rezultatele pentru {account} provin doar din corespondența de pe acest "
 "calculator"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Revine {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "Niciun destinatar"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "Către {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} necitit · {category}"
 msgstr[1] "{count} necitite · {category}"
 msgstr[2] "{count} de necitite · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} necitit"
 msgstr[1] "{count} necitite"
 msgstr[2] "{count} de necitite"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Trimis ieri, încă fără răspuns"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Trimis acum {days} zi, încă fără răspuns"
 msgstr[1] "Trimis acum {days} zile, încă fără răspuns"
 msgstr[2] "Trimis acum {days} de zile, încă fără răspuns"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "Serverul nu a trimis încă acest mesaj."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail nu a confirmat că serverul a preluat acest mesaj."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Se trimite {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Serverul îl trimite chiar dacă Penguin Mail este închis."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Se trimite {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Verificați în Trimise. Penguin Mail nu a putut confirma că a fost trimis."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Anulat în altă aplicație."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Netrimis"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Se încearcă din nou {when}"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail nu mai încearcă"
 

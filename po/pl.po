@@ -1086,10 +1086,8 @@ msgstr ""
 "domyślnych. Poprzedni plik zachowano jako {file}."
 
 #: app/src/app/mail_file.rs:77
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
-msgstr "Ten plik nie zawiera klucza OpenPGP."
+msgstr "Nie można odczytać tego pliku."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2183,10 +2181,8 @@ msgid "On {date}, {sender} wrote:"
 msgstr "Dnia {date}, {sender} pisze:"
 
 #: app/src/compose.rs:1236
-#, fuzzy
-#| msgid "On {date}, {sender} wrote:"
 msgid "{sender} wrote:"
-msgstr "Dnia {date}, {sender} pisze:"
+msgstr "{sender} pisze:"
 
 #: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
@@ -4681,18 +4677,16 @@ msgid "Never ask"
 msgstr "Nigdy nie pytaj"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
-#| msgid "Preview"
 msgid "No Preview"
-msgstr "Podgląd"
+msgstr "Bez podglądu"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 wiersz"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 wiersze"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8528,22 +8522,16 @@ msgid "Could not use that server: {reason}"
 msgstr "Nie udało się użyć tego serwera: {reason}"
 
 #: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
-#, fuzzy
-#| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
-msgstr "Ten plik jest zbyt duży, aby być kalendarzem."
+msgstr "Ten plik jest za duży, by był wiadomością."
 
 #: app/src/ui/eml_file.rs:41
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
-msgstr "Ten plik nie zawiera klucza OpenPGP."
+msgstr "Ten plik jest pusty."
 
 #: app/src/ui/eml_file.rs:53
-#, fuzzy
-#| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
-msgstr "Ten plik nie zawiera certyfikatu."
+msgstr "Ten plik nie zawiera wiadomości."
 
 #: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
@@ -9488,45 +9476,36 @@ msgid "Text Size"
 msgstr "Rozmiar tekstu"
 
 #: app/src/ui/preferences.rs:244
-#, fuzzy
-#| msgid "Message Source"
 msgid "Message Preview"
-msgstr "Źródło wiadomości"
+msgstr "Podgląd wiadomości"
 
 #: app/src/ui/preferences.rs:245
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "Wiersze tekstu wiadomości pod tematem"
 
 #: app/src/ui/preferences.rs:251
-#, fuzzy
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} nieprzeczytana wiadomość"
+msgstr "Pogrubiaj nieprzeczytane"
 
 #: app/src/ui/preferences.rs:253
 msgid "Use heavier text for unread senders, subjects, and dates"
-msgstr ""
+msgstr "Grubszy tekst dla nadawców, tematów i dat nieprzeczytanych wiadomości"
 
 #: app/src/ui/preferences.rs:260
-#, fuzzy
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "Zawsze wczytywać obrazy?"
+msgstr "Zawsze pogrubiaj nadawców"
 
 #: app/src/ui/preferences.rs:262
 msgid "Use heavier sender text for both read and unread messages"
-msgstr ""
+msgstr "Grubszy tekst nadawcy w przeczytanych i nieprzeczytanych wiadomościach"
 
 #: app/src/ui/preferences.rs:269
-#, fuzzy
-#| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "Pokaż kalendarze"
+msgstr "Pokazuj awatary"
 
 #: app/src/ui/preferences.rs:271
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "Pokazuj zdjęcia lub inicjały kontaktów na liście wiadomości"
 
 #: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
 msgid "Notifications"
@@ -9613,6 +9592,9 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"Używany przez to konto i adresy bez własnego podpisu. Działa Markdown. "
+"<email> zamienia się w adres nadawcy razem z przyrostkiem, a <domain> w jego "
+"domenę."
 
 #: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -10410,22 +10392,20 @@ msgid "Enter a valid address that is not already listed."
 msgstr "Wpisz prawidłowy adres, którego jeszcze nie ma na liście."
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
-#| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "Bez podpisu"
+msgstr "Użyj podpisu konta"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
-#| msgid "Signature"
 msgid "Custom Signature"
-msgstr "Podpis"
+msgstr "Własny podpis"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"Działa Markdown. <email> zamienia się w adres nadawcy razem z przyrostkiem, "
+"a <domain> w jego domenę."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10501,7 +10481,7 @@ msgstr "Przenieś w dół"
 
 #: app/src/ui/sidebar.rs:1752
 msgid "Empty Trash…"
-msgstr ""
+msgstr "Opróżnij kosz…"
 
 #: app/src/ui/sidebar.rs:1880
 msgid "Automatic Reply…"
@@ -10737,42 +10717,32 @@ msgstr "Szukaj poczty"
 
 #: app/src/ui/thread_list/filters.rs:26
 msgid "Unread Only"
-msgstr ""
+msgstr "Tylko nieprzeczytane"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
-#| msgid "Flagged blue"
 msgid "Flagged Only"
-msgstr "Oznaczono niebieską flagą"
+msgstr "Tylko z flagą"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
-#| msgid "Attachments"
 msgid "With Attachments"
-msgstr "Załączniki"
+msgstr "Z załącznikami"
 
 #: app/src/ui/thread_list/filters.rs:34
 msgid "Match all selected filters"
-msgstr ""
+msgstr "Spełnij wszystkie wybrane filtry"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
-#| msgid "Calendar File"
 msgid "Clear Filters"
-msgstr "Plik kalendarza"
+msgstr "Wyczyść filtry"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
-#| msgid "New Messages"
 msgid "Filter Messages"
-msgstr "Nowe wiadomości"
+msgstr "Filtruj wiadomości"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
-msgstr "Nowa wiadomość (C)"
+msgstr "Filtruj wiadomości (aktywne)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -11209,10 +11179,8 @@ msgid "This account has no tags yet. Make one in Outlook."
 msgstr "To konto nie ma jeszcze znaczników. Utwórz znacznik w Outlooku."
 
 #: app/src/ui/window.rs:2644
-#, fuzzy
-#| msgid "Add an account first"
 msgid "Add an account to reply or forward"
-msgstr "Najpierw dodaj konto"
+msgstr "Dodaj konto, aby odpowiadać lub przekazywać dalej"
 
 #: app/src/ui/window.rs:2748
 msgid "Could not include {file}: {reason}"
@@ -11500,7 +11468,7 @@ msgstr "Nie udało się wyeksportować poczty: {reason}"
 
 #: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
-msgstr ""
+msgstr "zapis został przerwany"
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -11648,10 +11616,8 @@ msgid "Replied by email"
 msgstr "Odpowiedziano e-mailem"
 
 #: app/src/ui/window/loose.rs:165
-#, fuzzy
-#| msgid "Read: {subject}"
 msgid "Attached to {subject}"
-msgstr "Przeczytano: {subject}"
+msgstr "Załączone do {subject}"
 
 #: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
@@ -12240,7 +12206,7 @@ msgstr ""
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "Opróżnić kosz?"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -12249,33 +12215,30 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"Trwale usunąć wszystkie wiadomości z kosza tych kont, także starsze, których "
+"nie ma na tym komputerze? Nie można tego cofnąć.\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
-#| msgid "Empty"
 msgid "Empty Trash"
-msgstr "Pusto"
+msgstr "Opróżnij kosz"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "Opróżnianie kosza…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "Nie udało się wczytać poczty dla {account}: {reason}"
+msgstr "Nie można opróżnić kosza konta {account}: {reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "Trwale usunięto {count} wiadomość"
-msgstr[1] "Trwale usunięto {count} wiadomości"
-msgstr[2] "Trwale usunięto {count} wiadomości"
+msgstr[0] "Usunięto {count} wiadomość z kosza konta {account}"
+msgstr[1] "Usunięto {count} wiadomości z kosza konta {account}"
+msgstr[2] "Usunięto {count} wiadomości z kosza konta {account}"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
@@ -12852,90 +12815,90 @@ msgstr "Wszystka poczta"
 
 #: sync/src/mailbox.rs:521
 msgid "Change the filters or load more messages if available."
-msgstr ""
+msgstr "Zmień filtry lub wczytaj więcej wiadomości, jeśli są."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "Ta inteligentna skrzynka nie ma warunków"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Wyniki dla {account} pochodzą tylko z poczty na tym komputerze"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Wróci {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "Brak odbiorców"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "Do {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} nieprzeczytana · {category}"
 msgstr[1] "{count} nieprzeczytane · {category}"
 msgstr[2] "{count} nieprzeczytanych · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} nieprzeczytana"
 msgstr[1] "{count} nieprzeczytane"
 msgstr[2] "{count} nieprzeczytanych"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Wysłano wczoraj, nadal bez odpowiedzi"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Wysłano {days} dzień temu, nadal bez odpowiedzi"
 msgstr[1] "Wysłano {days} dni temu, nadal bez odpowiedzi"
 msgstr[2] "Wysłano {days} dni temu, nadal bez odpowiedzi"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "Serwer jeszcze nie wysłał tej wiadomości."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail nie potwierdził przyjęcia tej wiadomości przez serwer."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Wysyłka: {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Serwer wyśle ją, nawet jeśli Penguin Mail będzie zamknięty."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Wysyłka: {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Sprawdź Wysłane. Penguin Mail nie mógł potwierdzić wysłania."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Anulowano w innej aplikacji."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Nie wysłano"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Ponowna próba: {when}"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail przestał ponawiać próby"
 

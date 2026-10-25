@@ -40,7 +40,21 @@ pub(super) struct Fetched {
 }
 
 impl Fetched {
-    fn new(found: Found, asked_at: Option<String>, local: bool) -> Fetched {
+    fn new(
+        account_id: AccountId,
+        mut found: Found,
+        asked_at: Option<String>,
+        local: bool,
+    ) -> Fetched {
+        // Adapters can be built before an account has a row. Searches
+        // read their metadata without storing it, so assign its account here.
+        for meta in found
+            .metas
+            .iter_mut()
+            .chain(found.whole.iter_mut().flatten())
+        {
+            meta.account_id = account_id;
+        }
         Fetched {
             metas: found.metas,
             gone: found.gone,
@@ -208,14 +222,24 @@ impl AccountSync {
     pub(super) async fn fetch(&self, wants: Vec<Want>) -> Result<Fetched, SyncError> {
         let asked_at = self.sync_state().await?;
         let found = self.mail.fetch(wants).await?;
-        Ok(Fetched::new(found, asked_at, self.local_threads()))
+        Ok(Fetched::new(
+            self.account_id,
+            found,
+            asked_at,
+            self.local_threads(),
+        ))
     }
 
     /// Every message of each thread.
     pub(super) async fn fetch_whole(&self, threads: Vec<String>) -> Result<Fetched, SyncError> {
         let asked_at = self.sync_state().await?;
         let found = self.mail.fetch_whole(threads).await?;
-        Ok(Fetched::new(found, asked_at, self.local_threads()))
+        Ok(Fetched::new(
+            self.account_id,
+            found,
+            asked_at,
+            self.local_threads(),
+        ))
     }
 
     /// Whether the account's server keeps no threads, so local threading

@@ -1065,10 +1065,8 @@ msgstr ""
 "Eski dosya {file} olarak saklandı."
 
 #: app/src/app/mail_file.rs:77
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file could not be read."
-msgstr "Bu dosyada OpenPGP anahtarı yok."
+msgstr "Bu dosya okunamadı."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -2139,10 +2137,8 @@ msgid "On {date}, {sender} wrote:"
 msgstr "{date} tarihinde {sender} yazdı:"
 
 #: app/src/compose.rs:1236
-#, fuzzy
-#| msgid "On {date}, {sender} wrote:"
 msgid "{sender} wrote:"
-msgstr "{date} tarihinde {sender} yazdı:"
+msgstr "{sender} yazdı:"
 
 #: app/src/compose.rs:1515
 msgid "Penguin Mail could not put the message together."
@@ -4598,18 +4594,16 @@ msgid "Never ask"
 msgstr "Asla sorma"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
-#| msgid "Preview"
 msgid "No Preview"
-msgstr "Önizleme"
+msgstr "Önizleme Yok"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 Satır"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 Satır"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8403,22 +8397,16 @@ msgid "Could not use that server: {reason}"
 msgstr "Bu sunucu kullanılamadı: {reason}"
 
 #: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
-#, fuzzy
-#| msgid "This file is too large to be a calendar."
 msgid "This file is too large to be a message."
-msgstr "Bu dosya takvim olamayacak kadar büyük."
+msgstr "Bu dosya bir ileti olamayacak kadar büyük."
 
 #: app/src/ui/eml_file.rs:41
-#, fuzzy
-#| msgid "This file holds no OpenPGP key."
 msgid "This file is empty."
-msgstr "Bu dosyada OpenPGP anahtarı yok."
+msgstr "Bu dosya boş."
 
 #: app/src/ui/eml_file.rs:53
-#, fuzzy
-#| msgid "This file holds no certificate."
 msgid "This file does not hold a message."
-msgstr "Bu dosyada sertifika yok."
+msgstr "Bu dosyada ileti yok."
 
 #: app/src/ui/eml_file.rs:74 app/src/ui/ics_file.rs:68
 msgid "Could Not Open This File"
@@ -9348,45 +9336,36 @@ msgid "Text Size"
 msgstr "Metin Boyutu"
 
 #: app/src/ui/preferences.rs:244
-#, fuzzy
-#| msgid "Message Source"
 msgid "Message Preview"
-msgstr "İleti Kaynağı"
+msgstr "İleti Önizlemesi"
 
 #: app/src/ui/preferences.rs:245
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "Konunun altındaki ileti metni satırları"
 
 #: app/src/ui/preferences.rs:251
-#, fuzzy
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} okunmamış ileti"
+msgstr "Okunmamış İletileri Kalın Yap"
 
 #: app/src/ui/preferences.rs:253
 msgid "Use heavier text for unread senders, subjects, and dates"
-msgstr ""
+msgstr "Okunmamış gönderen, konu ve tarihler için daha kalın metin kullan"
 
 #: app/src/ui/preferences.rs:260
-#, fuzzy
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "Resimler Her Zaman Yüklensin mi?"
+msgstr "Gönderenleri Her Zaman Kalın Yap"
 
 #: app/src/ui/preferences.rs:262
 msgid "Use heavier sender text for both read and unread messages"
-msgstr ""
+msgstr "Okunmuş ve okunmamış iletilerde gönderen için daha kalın metin kullan"
 
 #: app/src/ui/preferences.rs:269
-#, fuzzy
-#| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "Takvimleri Göster"
+msgstr "Avatarları Göster"
 
 #: app/src/ui/preferences.rs:271
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "İleti listesinde kişi resimlerini veya baş harflerini göster"
 
 #: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
 msgid "Notifications"
@@ -9473,6 +9452,8 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"Bu hesap ve kendi imzası olmayan adresler kullanır. Markdown desteklenir. "
+"<email> eki dahil gönderen adresine, <domain> ise onun alan adına dönüşür."
 
 #: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -10264,22 +10245,20 @@ msgid "Enter a valid address that is not already listed."
 msgstr "Listede bulunmayan geçerli bir adres girin."
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
-#| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "İmza yok"
+msgstr "Hesap İmzasını Kullan"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
-#| msgid "Signature"
 msgid "Custom Signature"
-msgstr "İmza"
+msgstr "Özel İmza"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"Markdown desteklenir. <email> eki dahil gönderen adresine, <domain> ise onun "
+"alan adına dönüşür."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10351,7 +10330,7 @@ msgstr "Aşağı Taşı"
 
 #: app/src/ui/sidebar.rs:1752
 msgid "Empty Trash…"
-msgstr ""
+msgstr "Çöp Kutusunu Boşalt…"
 
 #: app/src/ui/sidebar.rs:1880
 msgid "Automatic Reply…"
@@ -10588,42 +10567,32 @@ msgstr "Posta ara"
 
 #: app/src/ui/thread_list/filters.rs:26
 msgid "Unread Only"
-msgstr ""
+msgstr "Yalnızca Okunmamış"
 
 #: app/src/ui/thread_list/filters.rs:27
-#, fuzzy
-#| msgid "Flagged blue"
 msgid "Flagged Only"
-msgstr "Mavi bayrak eklendi"
+msgstr "Yalnızca Bayraklı"
 
 #: app/src/ui/thread_list/filters.rs:28
-#, fuzzy
-#| msgid "Attachments"
 msgid "With Attachments"
-msgstr "Ekler"
+msgstr "Ekli Olanlar"
 
 #: app/src/ui/thread_list/filters.rs:34
 msgid "Match all selected filters"
-msgstr ""
+msgstr "Seçili tüm filtrelerle eşleş"
 
 #: app/src/ui/thread_list/filters.rs:38
-#, fuzzy
-#| msgid "Calendar File"
 msgid "Clear Filters"
-msgstr "Takvim Dosyası"
+msgstr "Filtreleri Temizle"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#, fuzzy
-#| msgid "New Messages"
 msgid "Filter Messages"
-msgstr "Yeni İletiler"
+msgstr "İletileri Filtrele"
 
 #: app/src/ui/thread_list/filters.rs:99
-#, fuzzy
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
-msgstr "Yeni İleti (C)"
+msgstr "İletileri Filtrele (Etkin)"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -11045,10 +11014,8 @@ msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Bu hesapta henüz işaret etiketi yok. Outlook'ta bir tane oluşturun."
 
 #: app/src/ui/window.rs:2644
-#, fuzzy
-#| msgid "Add an account first"
 msgid "Add an account to reply or forward"
-msgstr "Önce bir hesap ekleyin"
+msgstr "Yanıtlamak veya iletmek için bir hesap ekleyin"
 
 #: app/src/ui/window.rs:2748
 msgid "Could not include {file}: {reason}"
@@ -11335,7 +11302,7 @@ msgstr "Postalar dışa aktarılamadı: {reason}"
 
 #: app/src/ui/window/export.rs:157
 msgid "the write was interrupted"
-msgstr ""
+msgstr "yazma işlemi kesildi"
 
 #: app/src/ui/window/followup.rs:34
 msgid "Review"
@@ -11481,10 +11448,8 @@ msgid "Replied by email"
 msgstr "E-postayla yanıtlandı"
 
 #: app/src/ui/window/loose.rs:165
-#, fuzzy
-#| msgid "Read: {subject}"
 msgid "Attached to {subject}"
-msgstr "Okundu: {subject}"
+msgstr "{subject} iletisine ekli"
 
 #: app/src/ui/window/message_menu.rs:139
 msgid "Flag Color"
@@ -12051,7 +12016,7 @@ msgstr "{language} dilindeki iletiler için artık çeviri önerilmeyecek"
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "Çöp Kutusu boşaltılsın mı?"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -12060,32 +12025,29 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"Bu hesapların Çöp Kutusundaki tüm iletiler, bu bilgisayarda saklanmayan eski "
+"postalar dahil kalıcı olarak silinsin mi? Bu işlem geri alınamaz.\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
-#| msgid "Empty"
 msgid "Empty Trash"
-msgstr "Boş"
+msgstr "Çöp Kutusunu Boşalt"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "Çöp Kutusu boşaltılıyor…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "{account} için postalar yüklenemedi: {reason}"
+msgstr "{account} için Çöp Kutusu boşaltılamadı: {reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "{count} ileti kalıcı olarak silindi"
-msgstr[1] "{count} ileti kalıcı olarak silindi"
+msgstr[0] "{account} için Çöp Kutusundan {count} ileti silindi"
+msgstr[1] "{account} için Çöp Kutusundan {count} ileti silindi"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
@@ -12652,88 +12614,88 @@ msgstr "Tüm Postalar"
 
 #: sync/src/mailbox.rs:521
 msgid "Change the filters or load more messages if available."
-msgstr ""
+msgstr "Filtreleri değiştirin veya varsa daha fazla ileti yükleyin."
 
-#: sync/src/mailbox.rs:1027
+#: sync/src/mailbox.rs:1031
 msgid "This smart mailbox has no conditions"
 msgstr "Bu akıllı posta kutusunun koşulu yok"
 
-#: sync/src/mailbox.rs:1587
+#: sync/src/mailbox.rs:1597
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account} sonuçları yalnızca bu bilgisayardaki postalardan gelir"
 
-#: sync/src/mailbox.rs:1795
+#: sync/src/mailbox.rs:1805
 msgid "Returns {when}"
 msgstr "Dönüş zamanı: {when}"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "No recipients"
 msgstr "Alıcı yok"
 
-#: sync/src/mailbox.rs:1841 sync/src/mailbox.rs:1944
+#: sync/src/mailbox.rs:1851 sync/src/mailbox.rs:1954
 msgid "To {recipients}"
 msgstr "Alıcılar: {recipients}"
 
-#: sync/src/mailbox.rs:1884
+#: sync/src/mailbox.rs:1894
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} okunmamış · {category}"
 msgstr[1] "{count} okunmamış · {category}"
 
-#: sync/src/mailbox.rs:1889
+#: sync/src/mailbox.rs:1899
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} okunmamış"
 msgstr[1] "{count} okunmamış"
 
-#: sync/src/mailbox.rs:1896
+#: sync/src/mailbox.rs:1906
 msgid "Sent yesterday, no reply yet"
 msgstr "Dün gönderildi, henüz yanıt yok"
 
-#: sync/src/mailbox.rs:1898
+#: sync/src/mailbox.rs:1908
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days} gün önce gönderildi, henüz yanıt yok"
 msgstr[1] "{days} gün önce gönderildi, henüz yanıt yok"
 
-#: sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1992
 msgid "The server has not sent this message yet."
 msgstr "Sunucu bu iletiyi henüz göndermedi."
 
-#: sync/src/mailbox.rs:1983
+#: sync/src/mailbox.rs:1993
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail, sunucunun bu iletiyi aldığını doğrulamadı."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}."
 msgstr "Gönderim zamanı: {when}."
 
-#: sync/src/mailbox.rs:1994
+#: sync/src/mailbox.rs:2004
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Penguin Mail kapalı olsa bile sunucu gönderir."
 
-#: sync/src/mailbox.rs:1996
+#: sync/src/mailbox.rs:2006
 msgid "Sends {when}"
 msgstr "Gönderim zamanı: {when}"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Gönderilenler'i kontrol edin. Penguin Mail gönderildiğini doğrulayamadı."
 
-#: sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:2016
 msgid "Canceled in another app."
 msgstr "Başka uygulamada iptal edildi."
 
-#: sync/src/mailbox.rs:2008
+#: sync/src/mailbox.rs:2018
 msgid "Not sent"
 msgstr "Gönderilmedi"
 
-#: sync/src/mailbox.rs:2015
+#: sync/src/mailbox.rs:2025
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. {when} tekrar denenecek"
 
-#: sync/src/mailbox.rs:2022
+#: sync/src/mailbox.rs:2032
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail denemeyi bıraktı"
 
