@@ -7,6 +7,7 @@ mod calendar;
 mod calendar_account;
 mod calendar_attach;
 mod calendar_copy;
+mod calendar_edits;
 mod calendar_list;
 mod calendar_read;
 mod calendar_series;

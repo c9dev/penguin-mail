@@ -834,10 +834,19 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
         if event.all_day {
             let day = chrono::DateTime::from_timestamp_millis(at)
                 .map(|d| d.format("%Y-%m-%d").to_string());
-            json!({ "date": day })
+            let mut value = json!({ "date": day });
+            if !create {
+                // PATCH merges these fields with the old timed value.
+                value["dateTime"] = Value::Null;
+                value["timeZone"] = Value::Null;
+            }
+            value
         } else {
             let at = chrono::DateTime::from_timestamp_millis(at).map(|d| d.to_rfc3339());
             let mut value = json!({ "dateTime": at });
+            if !create {
+                value["date"] = Value::Null;
+            }
             if !event.zone.is_empty() {
                 value["timeZone"] = json!(event.zone);
             }
