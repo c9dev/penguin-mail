@@ -289,13 +289,12 @@ pub fn file_name(subject: &str, date: EpochMillis, extension: &str) -> String {
     }
     // A leading dot hides the file, and a pair of them climbs a directory.
     let name = name.trim_start_matches('.').trim();
-    let day = chrono::DateTime::from_timestamp_millis(date)
-        .unwrap_or_default()
-        .format("%Y-%m-%d");
-    format!(
-        "{} {day}.{extension}",
-        if name.is_empty() { "mail" } else { name }
-    )
+    let name = if name.is_empty() { "mail" } else { name };
+    // A message with no Date header carries 0, which is no date to stamp.
+    match chrono::DateTime::from_timestamp_millis(date).filter(|_| date != 0) {
+        Some(day) => format!("{name} {}.{extension}", day.format("%Y-%m-%d")),
+        None => format!("{name}.{extension}"),
+    }
 }
 
 /// The `From ` line that opens an entry: the sender's address, then the
@@ -375,4 +374,21 @@ fn lines(raw: &[u8]) -> impl Iterator<Item = &[u8]> {
         rest = tail;
         Some(line)
     })
+}
+
+#[cfg(test)]
+mod file_name_tests {
+    use super::file_name;
+
+    /// A message with no Date carries 0, which is no date, so the file is
+    /// named by its subject alone rather than stamped with 1970.
+    #[test]
+    fn a_file_name_leaves_out_a_date_the_message_lacks() {
+        assert_eq!(file_name("Kite plans", 0, "eml"), "Kite plans.eml");
+        assert_eq!(file_name("", 0, "eml"), "mail.eml");
+        assert_eq!(
+            file_name("Kite plans", 1_773_000_000_000, "eml"),
+            "Kite plans 2026-03-08.eml"
+        );
+    }
 }

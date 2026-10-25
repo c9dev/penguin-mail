@@ -13,10 +13,12 @@ mod accounts;
 mod change;
 mod file;
 pub mod mcp;
+mod signatures;
 
 pub use accounts::{AccountChoice, AccountDefaults, AccountUse, accounts_for, preferred_calendar};
 pub use change::{AiChange, Change, Effect, Effects, Setting};
 pub use file::{Opened, Saver};
+pub use signatures::SignatureMode;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -26,6 +28,10 @@ pub struct Settings {
     pub mark_read: MarkRead,
     pub remote_images: RemoteImages,
     pub text_size: TextSize,
+    pub preview_lines: PreviewLines,
+    pub bold_unread: bool,
+    pub bold_senders: bool,
+    pub show_avatars: bool,
     pub color_scheme: ColorScheme,
     /// The locale the interface speaks, such as `pt_PT`. Empty follows the
     /// desktop. Read once at startup, since GTK reads its own locale then
@@ -40,6 +46,8 @@ pub struct Settings {
     pub account_defaults: AccountDefaults,
     /// Markdown signature per account address.
     pub signatures: BTreeMap<String, String>,
+    /// Whether a sender uses the account signature, its own, or none.
+    pub signature_modes: BTreeMap<String, SignatureMode>,
     /// How long Undo stays available after Send.
     pub undo_send: UndoSend,
     /// The colour a new flag gets: the last one chosen.
@@ -464,6 +472,10 @@ impl Default for Settings {
             mark_read: MarkRead::Immediately,
             remote_images: RemoteImages::Ask,
             text_size: TextSize::Normal,
+            preview_lines: PreviewLines::Two,
+            bold_unread: true,
+            bold_senders: false,
+            show_avatars: true,
             color_scheme: ColorScheme::System,
             language: String::new(),
             notifications: true,
@@ -472,6 +484,7 @@ impl Default for Settings {
             default_account: None,
             account_defaults: AccountDefaults::default(),
             signatures: BTreeMap::new(),
+            signature_modes: BTreeMap::new(),
             undo_send: UndoSend::Ten,
             flag_color: mailrs_domain::FlagColor::Red,
             vips: BTreeMap::new(),
@@ -653,6 +666,35 @@ impl Choice for ReadReceipts {
         match self {
             ReadReceipts::Ask => gettext("Ask each time"),
             ReadReceipts::Never => gettext("Never ask"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PreviewLines {
+    None,
+    One,
+    Two,
+}
+
+impl PreviewLines {
+    pub fn count(self) -> i32 {
+        match self {
+            Self::None => 0,
+            Self::One => 1,
+            Self::Two => 2,
+        }
+    }
+}
+
+impl Choice for PreviewLines {
+    const ALL: &'static [Self] = &[Self::None, Self::One, Self::Two];
+    fn label(self) -> String {
+        match self {
+            Self::None => gettext("No Preview"),
+            Self::One => gettext("1 Line"),
+            Self::Two => gettext("2 Lines"),
         }
     }
 }
@@ -1006,27 +1048,6 @@ impl Settings {
         }
     }
 
-    /// What goes below a message sent from `email`. A signature written here
-    /// wins; failing that, the one Gmail keeps for that send-as address.
-    pub fn signature_for(&self, account: &str, email: &str) -> &str {
-        let written = self.signature(email);
-        if !written.is_empty() {
-            return written;
-        }
-        let Some(senders) = self.send_as.get(&account.to_lowercase()) else {
-            return "";
-        };
-        let Some(sender) = crate::compose::sender_for(senders, email) else {
-            return "";
-        };
-        let base = self.signature(&sender.email);
-        if base.is_empty() {
-            &sender.signature
-        } else {
-            base
-        }
-    }
-
     /// Whether the account's send-as addresses are a day old or were
     /// never read.
     pub fn send_as_due(&self, account: &str, now: i64) -> bool {
@@ -1103,6 +1124,18 @@ impl Settings {
                 return false;
             };
             senders.remove(at);
+        }
+        if let Some(old) = was.filter(|old| !old.eq_ignore_ascii_case(&sender.email)) {
+            if let Some(text) = self.signatures.get(&old.to_lowercase()).cloned() {
+                self.signatures
+                    .entry(sender.email.to_lowercase())
+                    .or_insert(text);
+            }
+            if let Some(mode) = self.signature_modes.get(&old.to_lowercase()).copied() {
+                self.signature_modes
+                    .entry(sender.email.to_lowercase())
+                    .or_insert(mode);
+            }
         }
         sender.name = sender
             .name

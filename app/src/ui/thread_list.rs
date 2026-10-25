@@ -3,6 +3,7 @@
 //! Every row is held once, behind an `Rc`, and shared with the list model.
 
 mod entry;
+mod filters;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -45,6 +46,7 @@ pub struct ThreadList {
     pub page: adw::NavigationPage,
     pub sidebar_button: gtk::ToggleButton,
     pub search_button: gtk::ToggleButton,
+    pub filters: filters::Filters,
     /// Where `CategoryBar::install_categories` puts the chips, right under
     /// the header and above the banners, so a sign-in or Grant Access
     /// banner never lands between the header and the chips.
@@ -77,6 +79,7 @@ pub struct ThreadList {
     /// The rows of the drag in progress.
     dragged: Rc<RefCell<Vec<Row>>>,
     show_accounts: Rc<Cell<bool>>,
+    appearance: Rc<Cell<(crate::settings::PreviewLines, bool, bool, bool)>>,
     /// Lower-case VIP addresses; their rows get a star.
     vips: Rc<RefCell<HashSet<String>>>,
     /// Contact photos, read as rows ask for them. None, or none on disk
@@ -162,6 +165,13 @@ impl ThreadList {
             row.add_controller(source);
             item.set_child(Some(&row));
         });
+        let appearance = Rc::new(Cell::new((
+            crate::settings::PreviewLines::Two,
+            true,
+            false,
+            true,
+        )));
+        let row_appearance = Rc::clone(&appearance);
         let shown = Rc::clone(&show_accounts);
         let vips: Rc<RefCell<HashSet<String>>> = Rc::new(RefCell::new(HashSet::new()));
         let starred_people = Rc::clone(&vips);
@@ -179,7 +189,11 @@ impl ThreadList {
             // recipient's, not the sender's own.
             let sender = super::thread_row::person(&thread).1.to_lowercase();
             let vip = starred_people.borrow().contains(&sender);
-            let faces = faces.borrow().clone().filter(|faces| faces.any());
+            let (lines, bold, bold_senders, show_avatars) = row_appearance.get();
+            let faces = faces
+                .borrow()
+                .clone()
+                .filter(|faces| show_avatars && faces.any());
             let photo = faces.as_ref().and_then(|faces| faces.texture(&sender));
             let avatar = match (&faces, &photo) {
                 (None, _) => Avatar::Hidden,
@@ -187,6 +201,7 @@ impl ThreadList {
                 (Some(_), None) => Avatar::Initials,
             };
             row.bind(&thread, shown.get(), vip, avatar);
+            row.set_appearance(&thread, lines, bold, bold_senders);
         });
         let binds = Rc::clone(&bind);
         factory.connect_bind(move |_, item| {
@@ -307,6 +322,8 @@ impl ThreadList {
         header.pack_start(&titles);
         header.pack_end(&compose_button);
         header.pack_end(&search_button);
+        let filters = filters::Filters::new();
+        header.pack_end(&filters.button);
 
         let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let banner = adw::Banner::builder()
@@ -352,6 +369,7 @@ impl ThreadList {
             page,
             sidebar_button,
             search_button,
+            filters,
             categories_slot,
             banner,
             grant_bars,
@@ -374,6 +392,7 @@ impl ThreadList {
             rows,
             dragged,
             show_accounts,
+            appearance,
             vips,
             photos,
             made,
@@ -470,8 +489,10 @@ impl ThreadList {
             // New sits at the outer end with Search inside it, so Search
             // comes off and goes back after New.
             self.header.remove(&self.search_button);
+            self.header.remove(&self.filters.button);
             self.header.pack_end(&self.compose_button);
             self.header.pack_end(&self.search_button);
+            self.header.pack_end(&self.filters.button);
         }
         self.toolbar.set_reveal_bottom_bars(layout.new_below);
     }
@@ -539,6 +560,87 @@ impl ThreadList {
         }
     }
 
+    pub fn set_appearance(
+        &self,
+        lines: crate::settings::PreviewLines,
+        bold: bool,
+        bold_senders: bool,
+        show_avatars: bool,
+    ) {
+        let appearance = (lines, bold, bold_senders, show_avatars);
+        if self.appearance.replace(appearance) != appearance {
+            self.rebind();
+        }
+    }
+
+    /// Checks the viewport rather than all bound rows, which GTK also keeps offscreen.
+    pub fn connect_previews(
+        self: &Rc<Self>,
+        visible: impl Fn(Vec<mailrs_domain::Target>) + 'static,
+    ) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local(std::time::Duration::from_millis(250), move || {
+            let Some(list) = weak.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            let targets = list.visible_previews();
+            visible(targets);
+            glib::ControlFlow::Continue
+        });
+    }
+
+    fn visible_previews(&self) -> Vec<mailrs_domain::Target> {
+        if self.appearance.get().0 == crate::settings::PreviewLines::None || !self.view.is_mapped()
+        {
+            return Vec::new();
+        }
+        let mut visible = Vec::new();
+        for row in self.made.borrow().iter().filter_map(|row| row.upgrade()) {
+            let Some(bounds) = row.compute_bounds(&self.scroller) else {
+                continue;
+            };
+            if bounds.width() <= 0.0
+                || bounds.height() <= 0.0
+                || bounds.y() >= self.scroller.height() as f32
+                || bounds.y() + bounds.height() <= 0.0
+            {
+                continue;
+            }
+            let Some(object) = row
+                .item()
+                .and_then(|item| item.item())
+                .and_downcast::<glib::BoxedAnyObject>()
+            else {
+                continue;
+            };
+            let thread = object.borrow::<Row>();
+            if thread.snippet.is_empty() && !thread.scheduled {
+                visible.push((bounds.y(), mailrs_domain::Target::for_preview(&thread)));
+            }
+        }
+        visible.sort_by(|a, b| a.0.total_cmp(&b.0));
+        visible.into_iter().map(|(_, target)| target).collect()
+    }
+
+    pub fn preview_arrived(&self, target: &mailrs_domain::Target, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        for (index, row) in self.rows.borrow_mut().iter_mut().enumerate() {
+            if mailrs_domain::Target::for_preview(row) == *target && row.snippet.is_empty() {
+                Rc::make_mut(row).snippet = text.to_string();
+                if let Some(object) = self
+                    .store
+                    .item(index as u32)
+                    .and_downcast::<glib::BoxedAnyObject>()
+                {
+                    *object.borrow_mut::<Row>() = Rc::clone(row);
+                }
+            }
+        }
+        self.redraw_made(|row| mailrs_domain::Target::for_preview(row) == *target);
+    }
+
     /// Marks rows from these addresses as VIP mail.
     pub fn set_vips(&self, vips: HashSet<String>) {
         if *self.vips.borrow() != vips {
@@ -574,8 +676,8 @@ impl ThreadList {
         self.stack.set_visible_child_name("loading");
     }
 
-    /// Only cursor-paged server mailboxes need a manual next page: a
-    /// grouped page may be too short to scroll, or may need a retry.
+    /// A grouped or filtered page may be too short to scroll, so its
+    /// next page must also be reachable by a button.
     pub fn show_more(&self, more: bool) {
         self.more.set_visible(more);
     }
@@ -988,6 +1090,8 @@ pub(crate) mod checks {
     use super::*;
 
     pub(crate) fn run() {
+        crate::ui::thread_row::check_appearance();
+        filters::check();
         let list = ThreadList::new(|_| {}, |_| {});
         let calls = Rc::new(Cell::new(0));
         let clicked = Rc::clone(&calls);
@@ -1001,6 +1105,7 @@ pub(crate) mod checks {
         let row = ThreadSummary {
             account_id: 1,
             id: "plans".into(),
+            preview_message_id: Some("matching-message".into()),
             from: "Ann".into(),
             subject: "Project plans".into(),
             snippet: "The updated plans are ready.".into(),
@@ -1015,6 +1120,24 @@ pub(crate) mod checks {
             "No Mail",
             "mail-unread-symbolic",
         );
+        list.selection.select_item(0, false);
+        let mut empty = row.clone();
+        empty.snippet.clear();
+        list.set_rows(vec![Rc::new(empty)], "No Mail", "mail-unread-symbolic");
+        list.preview_arrived(&mailrs_domain::Target::for_preview(&row), "Fetched preview");
+        assert_eq!(list.rows.borrow()[0].snippet, "Fetched preview");
+        assert!(list.selection.is_selected(0));
+        assert_eq!(
+            list.store
+                .item(0)
+                .unwrap()
+                .downcast::<glib::BoxedAnyObject>()
+                .unwrap()
+                .borrow::<Row>()
+                .snippet,
+            "Fetched preview"
+        );
+
         list.selection.select_item(0, false);
         list.set_rows(
             vec![Rc::new(ThreadSummary {

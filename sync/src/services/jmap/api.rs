@@ -68,6 +68,7 @@ pub trait JmapApi: Send + Sync + 'static {
         &self,
         update: &Map<String, Value>,
         destroy: &[String],
+        state: Option<&str>,
     ) -> impl Future<Output = Answer<SetResponse>> + Send;
     fn set_mailbox(&self, write: &MailboxWrite) -> impl Future<Output = Answer<String>> + Send;
     fn download(&self, blob_id: &str, limit: usize)
@@ -194,8 +195,9 @@ impl JmapApi for JmapClient {
         &self,
         update: &Map<String, Value>,
         destroy: &[String],
+        state: Option<&str>,
     ) -> Answer<SetResponse> {
-        JmapClient::set_emails(self, update, destroy).await
+        JmapClient::set_emails(self, update, destroy, state).await
     }
     async fn set_mailbox(&self, write: &MailboxWrite) -> Answer<String> {
         JmapClient::set_mailbox(self, write).await

@@ -239,6 +239,40 @@ fn appearance_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.text_size,
         Change::TextSize,
     ));
+    appearance.add(&combo(
+        app,
+        &gettext("Message Preview"),
+        Some(&gettext("Lines of message text below the subject")),
+        settings.preview_lines,
+        Change::PreviewLines,
+    ));
+    appearance.add(&switch(
+        app,
+        &gettext("Bold Unread Messages"),
+        Some(&gettext(
+            "Use heavier text for unread senders, subjects, and dates",
+        )),
+        settings.bold_unread,
+        Change::BoldUnread,
+    ));
+    appearance.add(&switch(
+        app,
+        &gettext("Always Bold Senders"),
+        Some(&gettext(
+            "Use heavier sender text for both read and unread messages",
+        )),
+        settings.bold_senders,
+        Change::BoldSenders,
+    ));
+    appearance.add(&switch(
+        app,
+        &gettext("Show Avatars"),
+        Some(&gettext(
+            "Show contact pictures or initials in the message list",
+        )),
+        settings.show_avatars,
+        Change::ShowAvatars,
+    ));
     appearance.add(&language_row(app, settings));
     page.add(&appearance);
     page
@@ -493,8 +527,9 @@ fn signature_row(
         .right_margin(12)
         .accepts_tab(false)
         .build();
-    let help =
-        gettext("Added below new messages and above quoted text in replies. Markdown works.");
+    let help = gettext(
+        "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
+    );
     dialog::explain(&row, &help);
     dialog::explain(&view, &help);
     view.buffer().set_text(&text);

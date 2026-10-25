@@ -11,6 +11,31 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Gmail can sign in through this computer's Online Accounts on Linux.
 - Adding a Google account asks how it signs in, and lists only the ways this computer offers.
 - Add a Gmail account with every feature through a Google project of your own, set up step by step inside Penguin Mail.
+- Filter the message list to unread mail, flagged mail, or mail with attachments.
+- Open .eml files from Files or the command line, and messages attached to other messages, in a window of their own, with Reply and Forward.
+- Choose message preview lines, hide avatars, and control bold text for unread messages and senders.
+- Give each sending address its own signature or use the account signature, with `<email>` and `<domain>` filled from the actual sender.
+- Mark all unread inbox mail as read in every account from the tray menu.
+- Empty Trash from its mailbox menu, including older mail outside the local cache, with bounded memory use and a fresh check before each delete batch.
+
+### Fixed
+
+- Message list settings, sender signature settings, and Empty Trash controls now appear in Traditional Chinese.
+- A conversation opened in its own window keeps working after the main window closes, instead of vanishing when the app goes to the background a minute later.
+- A message with no Date header shows no date instead of 1 January 1970.
+- With Attachments includes queued messages with files in Send Later and Outbox, even right after scheduling them.
+
+- Screen readers omit hidden message previews when navigating the list with the keyboard.
+- IMAP messages show preview text in the list without needing to open them first.
+- IMAP and POP3 accounts stay signed in while their mail server restarts or updates, and try again every few minutes instead of asking you to sign in ([#79](https://github.com/c9dev/penguin-mail/issues/79)).
+- Changing From replaces signatures containing quotes, and typing an address suffix no longer rereads the whole message.
+- TLS connections reject distrusted emSign certificates.
+- Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.
+
+## 1.0.10 (2026-10-20)
+
+### New
+
 - Drag the mailbox and message-list dividers to resize their columns; widths are remembered between starts.
 - Choose reasoning separately for assistant chats and email translations in Preferences → AI.
 - Russian and Czech can be selected in Never Translate.

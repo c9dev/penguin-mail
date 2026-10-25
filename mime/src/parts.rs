@@ -99,6 +99,19 @@ impl Parts {
         search(&self.root, path)
     }
 
+    /// Takes the bytes of the part at `path` out of the tree, leaving the
+    /// part without them, so a caller that keeps every file need not copy
+    /// one.
+    pub fn take(&mut self, path: &str) -> Option<Vec<u8>> {
+        fn search<'a>(part: &'a mut Part, path: &str) -> Option<&'a mut Part> {
+            if part.path == path {
+                return Some(part);
+            }
+            part.children.iter_mut().find_map(|c| search(c, path))
+        }
+        search(&mut self.root, path)?.data.take()
+    }
+
     /// Gives the part at `path` bytes fetched after its structure, as a
     /// text part a server sent by reference.
     pub fn set_data(&mut self, path: &str, bytes: Vec<u8>) {

@@ -1105,3 +1105,201 @@ async fn deleting_forever_where_the_server_cannot_is_unsupported() {
         0
     );
 }
+
+#[tokio::test]
+async fn empty_trash_reaches_every_page_and_leaves_other_messages_in_the_same_thread() {
+    let h = harness().await;
+    h.fake.seed(meta("inbox", "t0", now_millis(), &["INBOX"]));
+    h.fake.seed(meta("sent", "t0", now_millis(), &["SENT"]));
+    h.bootstrap_all().await;
+    for n in 0..103 {
+        h.fake
+            .seed(meta(&format!("trash{n}"), &format!("t{n}"), 1, &["TRASH"]));
+    }
+    h.fake.seed(meta("both", "both", 1, &["TRASH", "SPAM"]));
+    h.fake.with(|s| s.page_size = 25);
+    let actions = actions(&h);
+    let Permitted::Done(outcome) = actions.empty_trash(h.account_id).await.unwrap() else {
+        panic!("permission is granted");
+    };
+    assert!(outcome.failed == 0, "{:?}", outcome.failed);
+    assert_eq!(outcome.deleted, 104);
+    assert!(in_gmail(&h, "inbox") && in_gmail(&h, "sent"));
+    assert_eq!(h.fake.with(|s| s.messages.len()), 2);
+    assert!(actions.undo().await.is_none());
+    assert!(matches!(actions.empty_trash(h.account_id).await.unwrap(),
+        Permitted::Done(outcome) if outcome.deleted == 0 && outcome.failed == 0));
+}
+
+#[tokio::test]
+async fn empty_trash_without_delete_permission_keeps_every_message() {
+    let h = harness().await;
+    h.fake.seed(meta("trash", "t", 1, &["TRASH"]));
+    h.fake.with(|s| {
+        s.withheld.insert(mailrs_gmail::DELETE_SCOPE);
+    });
+    assert_eq!(
+        actions(&h).empty_trash(h.account_id).await.unwrap(),
+        Permitted::NeedsPermission
+    );
+    assert!(in_gmail(&h, "trash"));
+}
+
+#[tokio::test]
+async fn empty_trash_finishes_reading_before_it_erases_anything() {
+    for method in ["users.messages.list", "users.messages.get"] {
+        let h = harness().await;
+        h.fake.seed(meta("a", "ta", 1, &["TRASH"]));
+        h.fake.seed(meta("b", "tb", 2, &["TRASH"]));
+        h.fake.with(|s| s.page_size = 1);
+        h.fake.fail_call(
+            method,
+            1,
+            GmailError::Http {
+                status: 400,
+                body: "test failure".into(),
+            },
+        );
+        assert!(actions(&h).empty_trash(h.account_id).await.is_err());
+        assert!(in_gmail(&h, "a") && in_gmail(&h, "b"));
+        assert_eq!(
+            h.fake
+                .with(|s| s.usage.calls_to("users.messages.batchDelete")),
+            0
+        );
+    }
+}
+
+#[tokio::test]
+async fn empty_trash_reports_a_refused_batch_without_claiming_it_was_deleted() {
+    for error in [
+        GmailError::MissingScope,
+        GmailError::Http {
+            status: 400,
+            body: "test failure".into(),
+        },
+    ] {
+        let h = harness().await;
+        for id in ["a", "b", "c"] {
+            h.fake.seed(meta(id, id, 1, &["TRASH"]));
+        }
+        let caps = MailCapabilities {
+            batch_limit: 2,
+            ..h.sync.services().capabilities()
+        };
+        let sync = Arc::new(AccountSync::new(
+            h.account_id,
+            AccountServices::fake_with_capabilities(Arc::clone(&h.fake), caps),
+            h.db.clone(),
+            async_channel::unbounded().0,
+        ));
+        let actions = actions_over(&h, [sync]);
+        h.fake.fail_call("users.messages.batchDelete", 1, error);
+        let Permitted::Done(outcome) = actions.empty_trash(h.account_id).await.unwrap() else {
+            panic!("granted");
+        };
+        assert_eq!(outcome.deleted, 2);
+        assert_eq!(outcome.failed, 1);
+        assert!(!in_gmail(&h, "a") && !in_gmail(&h, "b"));
+        assert!(in_gmail(&h, "c"));
+    }
+}
+
+#[tokio::test]
+async fn empty_trash_leaves_a_message_restored_after_the_listing() {
+    let h = harness().await;
+    h.fake.seed(meta("restored", "t", 1, &["TRASH"]));
+    h.bootstrap_all().await;
+    let mut held = h.fake.hold("users.messages.get");
+    let actions = actions(&h);
+    let emptying = actions.empty_trash(h.account_id);
+    let restore = async {
+        held.entered().await;
+        h.fake.remote_relabel("restored", &["INBOX"], &["TRASH"]);
+        held.release();
+    };
+    let (result, ()) = tokio::join!(emptying, restore);
+    assert!(
+        matches!(result.unwrap(), Permitted::Done(outcome) if outcome.deleted == 0 && outcome.failed == 0)
+    );
+    assert!(in_gmail(&h, "restored"));
+    assert_eq!(
+        h.fake
+            .with(|s| s.usage.calls_to("users.messages.batchDelete")),
+        0
+    );
+}
+
+#[tokio::test]
+async fn empty_trash_rechecks_earlier_mail_after_the_last_preflight_batch() {
+    let h = harness().await;
+    for n in 0..101 {
+        h.fake
+            .seed(meta(&format!("m{n:03}"), &format!("t{n}"), 1, &["TRASH"]));
+    }
+    let mut held = h.fake.hold_after("users.messages.get", 100);
+    let actions = actions(&h);
+    let restore = async {
+        held.entered().await;
+        h.fake.remote_relabel("m000", &["INBOX"], &["TRASH"]);
+        held.release();
+    };
+    let (result, ()) = tokio::join!(actions.empty_trash(h.account_id), restore);
+    let Permitted::Done(result) = result.unwrap() else {
+        panic!("granted")
+    };
+    assert_eq!(result.deleted, 100);
+    assert_eq!(result.failed, 0);
+    assert!(in_gmail(&h, "m000"));
+}
+
+#[tokio::test]
+async fn empty_trash_rechecks_the_next_batch_after_a_delete_answers() {
+    let h = harness().await;
+    for n in 0..101 {
+        h.fake
+            .seed(meta(&format!("m{n:03}"), &format!("t{n}"), 1, &["TRASH"]));
+    }
+    let mut held = h.fake.hold("users.messages.batchDelete");
+    let actions = actions(&h);
+    let restore = async {
+        held.entered().await;
+        h.fake.remote_relabel("m100", &["INBOX"], &["TRASH"]);
+        held.release();
+    };
+    let (result, ()) = tokio::join!(actions.empty_trash(h.account_id), restore);
+    let Permitted::Done(result) = result.unwrap() else {
+        panic!("granted")
+    };
+    assert_eq!(result.deleted, 100);
+    assert!(in_gmail(&h, "m100"));
+}
+
+#[tokio::test]
+async fn empty_trash_continues_with_the_next_account_after_permission_is_refused() {
+    let h = harness().await;
+    h.fake.seed(meta("mine", "t1", 1, &["TRASH"]));
+    h.fake.withhold(mailrs_gmail::DELETE_SCOPE);
+    let other_id =
+        h.db.write(|c| accounts::insert_account(c, "you@example.com", 0))
+            .await
+            .unwrap();
+    let other_fake = Arc::new(FakeGmail::new());
+    other_fake.seed(mailrs_domain::MessageMeta {
+        account_id: other_id,
+        ..meta("theirs", "t2", 1, &["TRASH"])
+    });
+    let other = Arc::new(AccountSync::new(
+        other_id,
+        AccountServices::google(Arc::clone(&other_fake)),
+        h.db.clone(),
+        async_channel::unbounded().0,
+    ));
+    let result = actions_over(&h, [other])
+        .empty_trashes(&[h.account_id, other_id])
+        .await;
+    assert!(matches!(&result[0], Ok(Permitted::NeedsPermission)));
+    assert!(matches!(&result[1], Ok(Permitted::Done(done)) if done.deleted == 1));
+    assert!(in_gmail(&h, "mine"));
+    assert!(other_fake.with(|s| s.messages.is_empty()));
+}

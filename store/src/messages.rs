@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{
-    AccountId, Address, Applied, MailSet, Membership, Memberships, MessageMeta, Role,
+    AccountId, Address, Applied, MailSet, Membership, Memberships, MessageMeta, Role, Target,
 };
 use rusqlite::{Connection, OptionalExtension, params};
 
@@ -32,6 +32,11 @@ pub enum Change {
         meta: Box<MessageMeta>,
         generation: i64,
         links: Links,
+    },
+    /// Fills a missing preview without replacing metadata or changing read state.
+    Preview {
+        message_id: String,
+        snippet: String,
     },
     /// Keeps a stored message as it is under a new sync generation, so the
     /// sweep that ends a relisting keeps it.
@@ -159,18 +164,13 @@ pub struct Touched {
 /// touches no thread.
 pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Result<Touched> {
     let mut touched = Touched::default();
-    // Only an account that has just moved route keeps colour flags to put
-    // back, so every other account skips the lookup per message.
-    let kept = conn
-        .prepare_cached("SELECT EXISTS(SELECT 1 FROM kept_flags WHERE account_id = ?1)")?
-        .query_row(params![account_id], |row| row.get::<_, bool>(0))?;
     let mut applied: BTreeMap<String, Applied> = BTreeMap::new();
     let mut order: Vec<String> = Vec::new();
     let mut whole: Vec<&str> = Vec::new();
     for change in changes {
         match change {
             Change::Upsert { meta, generation } => {
-                upsert_message(conn, meta, *generation, kept)?;
+                upsert_message(conn, meta, *generation, false)?;
                 touched.threads.insert(meta.thread_id.clone());
             }
             Change::UpsertLocal {
@@ -183,9 +183,22 @@ pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Re
                     Some(kept) => kept,
                     None => threading::thread_for(conn, account_id, &meta, links)?,
                 };
-                upsert_message(conn, &meta, *generation, kept)?;
+                // Local threading serves immutable messages whose headers may
+                // carry no preview; keep the one read from their body.
+                upsert_message(conn, &meta, *generation, true)?;
                 threading::remember(conn, account_id, &meta, links)?;
                 touched.threads.insert(meta.thread_id);
+            }
+            Change::Preview { message_id, snippet } => {
+                if !snippet.is_empty()
+                    && conn.execute(
+                        "UPDATE messages SET snippet = ?3 WHERE account_id = ?1 AND id = ?2 AND snippet = ''",
+                        params![account_id, message_id, snippet],
+                    )? > 0
+                    && let Some(thread) = thread_id_of(conn, account_id, message_id)?
+                {
+                    touched.threads.insert(thread);
+                }
             }
             Change::Keep {
                 message_id,
@@ -320,7 +333,12 @@ fn set_membership(
     Ok(Some((thread_id, changed)))
 }
 
-fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64, kept: bool) -> Result<()> {
+fn upsert_message(
+    conn: &Connection,
+    m: &MessageMeta,
+    sync_gen: i64,
+    keep_preview: bool,
+) -> Result<()> {
     let to = serde_json::to_string(&m.to).unwrap_or_else(|_| "[]".into());
     let cc = serde_json::to_string(&m.cc).unwrap_or_else(|_| "[]".into());
     let seen = !m.is_unread();
@@ -331,7 +349,8 @@ fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64, kept: bool)
          ON CONFLICT (account_id, id) DO UPDATE SET thread_id = excluded.thread_id, \
          rfc822_msgid = excluded.rfc822_msgid, from_name = excluded.from_name, \
          from_addr = excluded.from_addr, to_addrs = excluded.to_addrs, cc_addrs = excluded.cc_addrs, \
-         subject = excluded.subject, date = excluded.date, snippet = excluded.snippet, \
+         subject = excluded.subject, date = excluded.date, \
+         snippet = CASE WHEN ?18 AND excluded.snippet = '' THEN messages.snippet ELSE excluded.snippet END, \
          size = excluded.size, has_attachments = excluded.has_attachments, \
          list_unsubscribe = excluded.list_unsubscribe, one_click = excluded.one_click, \
          sync_gen = excluded.sync_gen, seen = excluded.seen",
@@ -353,40 +372,15 @@ fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64, kept: bool)
             m.one_click,
             sync_gen,
             seen,
+            keep_preview,
         ],
     )?;
     replace_memberships(conn, m.account_id, &m.id, &m.held)?;
-    if kept && let Some(msgid) = &m.rfc822_msgid {
-        restore_kept_flag(conn, m.account_id, &m.id, msgid)?;
-    }
     // For Gmail the server's id is the store's own.
     conn.prepare_cached(
         "INSERT OR IGNORE INTO remote_refs (account_id, message_id, remote) VALUES (?1, ?2, ?2)",
     )?
     .execute(params![m.account_id, m.id])?;
-    Ok(())
-}
-
-/// Puts back the colour flag a route move kept for `msgid` onto the
-/// message `id` that brought it back, and forgets the kept one.
-fn restore_kept_flag(
-    conn: &Connection,
-    account_id: AccountId,
-    id: &str,
-    msgid: &str,
-) -> Result<()> {
-    let kept: Option<String> = conn
-        .prepare_cached(
-            "DELETE FROM kept_flags WHERE account_id = ?1 AND rfc822_msgid = ?2 RETURNING color",
-        )?
-        .query_row(params![account_id, msgid], |row| row.get(0))
-        .optional()?;
-    if let Some(color) = kept {
-        conn.prepare_cached(
-            "INSERT OR IGNORE INTO flags (account_id, message_id, color) VALUES (?1, ?2, ?3)",
-        )?
-        .execute(params![account_id, id, color])?;
-    }
     Ok(())
 }
 
@@ -631,6 +625,21 @@ struct MessageRow {
     has_attachments: bool,
     list_unsubscribe: Option<String>,
     one_click: bool,
+}
+
+/// The message a row previews and its stored preview. A conversation uses
+/// the same newest message as its summary; a message row keeps its own.
+pub fn preview_source(conn: &Connection, target: &Target) -> Result<Option<(String, String)>> {
+    Ok(conn
+        .prepare_cached(
+            "SELECT id, snippet FROM messages WHERE account_id = ?1 AND thread_id = ?2 \
+         AND (?3 IS NULL OR id = ?3) ORDER BY date DESC, id DESC LIMIT 1",
+        )?
+        .query_row(
+            params![target.account_id, target.thread_id, target.message_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?)
 }
 
 /// A thread's stored messages, oldest first, with their labels from one

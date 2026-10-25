@@ -346,6 +346,22 @@ impl Effects for Ports {
         })
     }
 
+    fn parse_loose(&self, raw: Arc<Vec<u8>>) -> Answer<'_, crate::open_thread::Parsed> {
+        Box::pin(async move {
+            let shared = Arc::clone(&raw);
+            self.core
+                .call(async move {
+                    tokio::task::spawn_blocking(move || crate::open_thread::loose::parse(&shared))
+                        .await
+                })
+                .await
+                .unwrap_or_else(|err| {
+                    tracing::warn!(error = %err, "could not read the message away from the window");
+                    crate::open_thread::loose::parse(&raw)
+                })
+        })
+    }
+
     fn inline_images(
         &self,
         account_id: AccountId,

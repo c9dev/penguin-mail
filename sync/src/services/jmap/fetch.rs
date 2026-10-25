@@ -3,6 +3,7 @@
 //! the last id the one before it named, so a message another client
 //! removes meanwhile does not shift the rest past the listing.
 
+use mailrs_domain::mailbox::keyword::SEEN;
 use mailrs_domain::{Address, Memberships, MessageMeta, Role};
 use mailrs_jmap::{Email, EmailAddress, EmailQuery, HELD, Hit, JmapError, META, Queried};
 use serde_json::{Value, json};
@@ -310,6 +311,60 @@ impl<J: JmapApi> Jmap<J> {
             },
             mark,
         ))
+    }
+
+    /// A complete mailbox can be paged by position only while its query state holds.
+    pub(super) async fn folder_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+        unread: bool,
+    ) -> Result<Backfill, BackendError> {
+        self.listed().await?;
+        let (state, position) = match cursor {
+            Some(cursor) => {
+                let (folder, state, position): (String, String, u64) =
+                    serde_json::from_str(cursor).map_err(|_| BackendError::StateLost)?;
+                if folder != mailbox {
+                    return Err(BackendError::StateLost);
+                }
+                (Some(state), position)
+            }
+            None => (None, 0),
+        };
+        let found = self
+            .api()
+            .query(&EmailQuery {
+                filter: Some(if unread {
+                    json!({ "inMailbox": mailbox, "notKeyword": SEEN })
+                } else {
+                    json!({ "inMailbox": mailbox })
+                }),
+                position,
+                limit: limit.clamp(1, IDS_PER_CALL),
+                total: false,
+            })
+            .await
+            .map_err(backend)?;
+        if found.position != position || state.is_some_and(|state| state != found.query_state) {
+            return Err(BackendError::StateLost);
+        }
+        let next = if found.hits.is_empty() {
+            None
+        } else {
+            let position = position
+                .checked_add(found.hits.len() as u64)
+                .ok_or(BackendError::StateLost)?;
+            Some(
+                serde_json::to_string(&(mailbox, found.query_state, position))
+                    .expect("a mailbox cursor serializes"),
+            )
+        };
+        Ok(Backfill {
+            refs: found.hits.into_iter().map(remote_ref).collect(),
+            next,
+        })
     }
 
     pub(super) async fn backfill_page(

@@ -95,6 +95,11 @@ impl App {
             let settings = self.settings.borrow();
             Writing {
                 identities,
+                signature: crate::compose::expand_signature(
+                    settings
+                        .signature_for(&self.account_email(draft.account_id), &draft.from.email),
+                    &draft.from.email,
+                ),
                 last_used: settings
                     .last_sender
                     .iter()
@@ -163,7 +168,10 @@ impl App {
         let settings = self.settings.borrow();
         draft.markdown = crate::compose::with_signature(
             &draft.markdown,
-            settings.signature_for(&account, &draft.from.email),
+            &crate::compose::expand_signature(
+                settings.signature_for(&account, &draft.from.email),
+                &draft.from.email,
+            ),
         );
         draft
     }

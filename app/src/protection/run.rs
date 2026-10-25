@@ -21,6 +21,7 @@
 //! and the tests are another.
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 use mailrs_domain::{AccountId, MessageBody, Target};
 
@@ -82,14 +83,14 @@ pub trait Effects {
         &self,
         account_id: AccountId,
         message_id: String,
-    ) -> Answer<'_, Result<Vec<u8>, String>>;
+    ) -> Answer<'_, Result<Arc<Vec<u8>>, String>>;
     /// Runs the call the message needs against the person's gpg or gpgsm,
     /// which may hold a pinentry in front of them for as long as they take
     /// to type.
     fn ask(
         &self,
         opening: Engine,
-        raw: Vec<u8>,
+        raw: Arc<Vec<u8>>,
         body: MessageBody,
     ) -> Answer<'_, Result<Read, String>>;
     /// Puts what the engine said above the message in `target`, the

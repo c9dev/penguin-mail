@@ -16,8 +16,8 @@ use tokio::time::Instant;
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::raw_cache::{RAW_CACHE_BYTES, RawCache};
 use crate::{
-    AccountServices, AccountSync, BackendError, MailBackend, SyncError, WhenGrantEnds, background,
-    backoff_delay, now_millis, poll_offset, with_jitter,
+    AccountServices, AccountSync, AnyMail, BackendError, MailBackend, SyncError, WhenGrantEnds,
+    background, backoff_delay, now_millis, poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -233,13 +233,27 @@ enum Failure {
     },
 }
 
-fn classify(err: &SyncError, when: WhenGrantEnds) -> Failure {
+/// Whether the account signs in with a saved password rather than a token.
+fn signs_in_with_password(services: &AccountServices) -> bool {
+    matches!(services.mail, AnyMail::Imap(_) | AnyMail::Pop3(_))
+}
+
+/// `password` says the account signs in with a saved password. A mail
+/// server refuses every login while it restarts or updates, and the saved
+/// password is still right afterwards, so a refusal there waits and tries
+/// again instead of asking the person to sign in. A refused Google or
+/// Microsoft token stays refused, so those accounts still ask.
+fn classify(err: &SyncError, when: WhenGrantEnds, password: bool) -> Failure {
     match err {
         SyncError::Backend(BackendError::NeedsReauth | BackendError::NeedsPermission)
             if when == WhenGrantEnds::PauseMail =>
         {
             Failure::Paused
         }
+        SyncError::Backend(BackendError::NeedsReauth) if password => Failure::Retry {
+            state: AccountState::BackingOff,
+            retry_after: None,
+        },
         SyncError::Backend(BackendError::NeedsReauth) => Failure::Reauth,
         SyncError::Backend(BackendError::Offline(_)) => Failure::Retry {
             state: AccountState::Offline,
@@ -387,7 +401,11 @@ async fn run_account(
                     }
                 }
             }
-            Err(err) => match classify(&err, sync.services().when_grant_ends) {
+            Err(err) => match classify(
+                &err,
+                sync.services().when_grant_ends,
+                signs_in_with_password(sync.services()),
+            ) {
                 // The loop ends and the account stays in the engine, so its
                 // calendar and contacts still answer.
                 Failure::Paused => {
@@ -532,7 +550,8 @@ mod tests {
             text: "[ALERT] Account exceeded command or bandwidth limits.".into(),
         };
         let err = SyncError::Backend(alert.into());
-        let Failure::Retry { state, retry_after } = classify(&err, WhenGrantEnds::SignInAgain)
+        let Failure::Retry { state, retry_after } =
+            classify(&err, WhenGrantEnds::SignInAgain, false)
         else {
             panic!("the account waits and tries again");
         };
@@ -546,6 +565,22 @@ mod tests {
         assert!(matches!(
             BackendError::from(refused),
             BackendError::Refused(_)
+        ));
+    }
+
+    #[test]
+    fn a_refused_password_waits_and_a_refused_token_asks() {
+        let refused = SyncError::Backend(BackendError::NeedsReauth);
+        assert!(matches!(
+            classify(&refused, WhenGrantEnds::SignInAgain, true),
+            Failure::Retry {
+                state: AccountState::BackingOff,
+                retry_after: None
+            }
+        ));
+        assert!(matches!(
+            classify(&refused, WhenGrantEnds::SignInAgain, false),
+            Failure::Reauth
         ));
     }
 }

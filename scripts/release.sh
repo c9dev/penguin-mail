@@ -135,6 +135,13 @@ echo "Running the gate for $version."
 cargo test --workspace >/dev/null || fail "cargo test failed"
 cargo clippy --workspace --all-targets -- -D warnings >/dev/null 2>&1 || fail "clippy failed"
 scripts/update-po.sh --check || fail "the translation template is stale; run scripts/update-po.sh and commit"
+# A string with no translation shows in English, so every language has to be whole.
+for po in po/*.po; do
+    stats=$(msgfmt --statistics -o /dev/null "$po" 2>&1)
+    case $stats in
+    *fuzzy* | *untranslated*) fail "$po is not fully translated: $stats" ;;
+    esac
+done
 
 if [ -n "$dry" ]; then
     echo

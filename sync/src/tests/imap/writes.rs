@@ -540,3 +540,43 @@ async fn a_failed_move_names_the_folder_its_person_reads() {
     assert!(told[0].contains("Entwürfe"), "{}", told[0]);
     assert!(!told[0].contains("&APw-"), "{}", told[0]);
 }
+
+#[tokio::test]
+async fn empty_trash_lists_old_unsynced_mail_and_keeps_the_sent_reply() {
+    let imap = FakeImap::new();
+    imap.deliver_flagged(
+        "Trash",
+        &raw_message("old", "Kites", days_ago(400), None),
+        &[],
+        days_ago(400),
+    );
+    imap.deliver_flagged(
+        "Sent",
+        &raw_message("reply", "Re: Kites", days_ago(1), Some("old")),
+        &[],
+        days_ago(1),
+    );
+    let h = imap_harness_on(imap, fake_settings()).await;
+    h.bootstrap().await;
+    let result = h.sync.empty_trash(|_| {}).await.unwrap();
+    assert!(
+        matches!(result, crate::Permitted::Done(outcome) if outcome.deleted == 1 && outcome.failed == 0)
+    );
+    assert!(undeleted(&h, "Trash").await.is_empty());
+    assert_eq!(undeleted(&h, "Sent").await.len(), 1);
+}
+
+#[tokio::test]
+async fn empty_trash_resolves_a_message_moved_there_from_the_inbox() {
+    let (h, thread) = one_message_on(FakeImap::new()).await;
+    h.sync
+        .triage_thread(&thread, &TriageAction::Trash)
+        .await
+        .unwrap();
+    let result = h.sync.empty_trash(|_| {}).await.unwrap();
+    assert!(
+        matches!(result, crate::Permitted::Done(outcome) if outcome.deleted == 1 && outcome.failed == 0)
+    );
+    assert!(undeleted(&h, "Trash").await.is_empty());
+    assert!(h.ids().await.is_empty());
+}

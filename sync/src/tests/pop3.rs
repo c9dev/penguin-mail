@@ -621,3 +621,23 @@ async fn a_pop3_message_read_raw_is_not_cached_beside_its_stored_copy() {
         "the store already holds these bytes"
     );
 }
+
+#[tokio::test]
+async fn empty_trash_on_pop3_erases_only_local_trash() {
+    let h = pop3_harness(FakePop3::default(), RemoveSetting::Never).await;
+    let trash = h.keep("u1", &pop3_mail(1), "trash", 1).await;
+    let inbox = h.keep("u2", &pop3_mail(2), "inbox", 1).await;
+    let result = h.sync.empty_trash(|_| {}).await.unwrap();
+    assert!(
+        matches!(result, crate::Permitted::Done(outcome) if outcome.deleted == 1 && outcome.failed == 0)
+    );
+    assert!(h.ids_in(MailSet::Role(Role::Trash)).await.is_empty());
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, [inbox]);
+    let id = h.account_id;
+    assert!(
+        h.db.read(move |c| messages::by_ids(c, id, &[trash]))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}

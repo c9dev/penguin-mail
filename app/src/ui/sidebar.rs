@@ -1157,7 +1157,19 @@ impl Sidebar {
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
     /// for an account's mailboxes, and one more per level of label nesting.
     fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) -> gtk::ListBoxRow {
-        self.add_row(mailbox, name, icon, depth, true)
+        let trash = match &mailbox {
+            Mailbox::Folder {
+                account_id,
+                folder: Folder::Trash,
+            } => Some(*account_id),
+            _ => None,
+        };
+        let row = self.add_row(mailbox, name, icon, depth, true);
+        if let Some(account_id) = trash {
+            let menu = trash_menu(account_id);
+            row_menu(&row, &menu, Filing::Folders, name);
+        }
+        row
     }
 
     /// Adds a row for a group, a server folder that holds only other
@@ -1732,23 +1744,31 @@ fn label_menu(
     label_colors: bool,
 ) {
     let menu = label_menu_model(account_id, label, &filing, moves, label_colors);
-    context_menu(row, &menu);
+    row_menu(row, &menu, filing, &label.name.replace('/', " › "));
+}
 
+fn trash_menu(account_id: Option<AccountId>) -> gio::Menu {
+    let menu = gio::Menu::new();
+    let item = gio::MenuItem::new(Some(&gettext("Empty Trash…")), None);
+    item.set_action_and_target_value(Some("win.empty-trash"), Some(&account_id.to_variant()));
+    menu.append_item(&item);
+    menu
+}
+
+fn row_menu(row: &gtk::ListBoxRow, menu: &gio::Menu, filing: Filing, name: &str) {
+    context_menu(row, menu);
     let Some(content) = row.child().and_downcast::<gtk::Box>() else {
         return;
     };
     let options = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
-        .menu_model(&menu)
+        .menu_model(menu)
         .css_classes(["flat", "circular", "label-options"])
         .valign(gtk::Align::Center)
         .halign(gtk::Align::End)
         .tooltip_text(filing.options_tooltip())
         .build();
-    super::name(
-        &options,
-        &filing.options_name(&label.name.replace('/', " › ")),
-    );
+    super::name(&options, &filing.options_name(name));
     super::name_menu_items_of(&options);
     // `.options-open` keeps the count hidden while the menu is open and
     // the pointer has left the row.
@@ -2152,6 +2172,28 @@ mod tests {
         let without = super::label_menu_model(1, &label, &filing, moves, false);
         assert_eq!(submenu_names(&with), ["Color"]);
         assert_eq!(submenu_names(&without), Vec::<String>::new());
+    }
+
+    #[test]
+    fn trash_menus_keep_the_account_or_unified_scope() {
+        use gtk::gio::prelude::MenuModelExt;
+        for account in [None, Some(7_i64)] {
+            let menu = super::trash_menu(account);
+            assert_eq!(menu.n_items(), 1);
+            assert_eq!(
+                menu.item_attribute_value(0, "action", None)
+                    .unwrap()
+                    .get::<String>()
+                    .as_deref(),
+                Some("win.empty-trash")
+            );
+            assert_eq!(
+                menu.item_attribute_value(0, "target", None)
+                    .unwrap()
+                    .get::<Option<i64>>(),
+                Some(account)
+            );
+        }
     }
 
     #[test]

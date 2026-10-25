@@ -1236,3 +1236,32 @@ async fn a_late_unified_listing_keeps_a_newer_folders_cursor() {
         "the old unified request must not reset this prefix"
     );
 }
+
+#[tokio::test]
+async fn quick_filters_keep_the_cursor_past_an_empty_server_page() {
+    let h = harness().await;
+    for n in 0..30 {
+        deliver(&h, n, OLD + n as i64);
+        if n > 0 {
+            h.imap.set_flags(FOLDER, n as u32 + 1, &["\\Seen"]);
+        }
+    }
+    h.bootstrap().await;
+    let (lists, scope) = listings(&h).await;
+    let mailbox = folder(&h, FOLDER);
+    let mut view = view(false);
+    view.filter.unread = true;
+    let first = lists
+        .list(&mailbox, &scope, &view, Loaded::nothing())
+        .await
+        .unwrap();
+    assert!(first.rows.is_empty());
+    assert!(first.more && first.replace);
+    let next = first.next.unwrap();
+    assert_eq!(next.count, 25);
+    let second = lists.list(&mailbox, &scope, &view, next).await.unwrap();
+    assert_eq!(second.rows.len(), 1);
+    assert_eq!(second.rows[0].subject, "Note 0");
+    assert!(!second.more);
+    assert!(!h.imap.message(FOLDER, 1).unwrap().flags.contains("\\Seen"));
+}

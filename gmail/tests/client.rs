@@ -931,3 +931,29 @@ async fn a_photo_under_the_cap_comes_back_whole() {
         100_000
     );
 }
+
+#[tokio::test]
+async fn a_trash_listing_explicitly_includes_deleted_mail() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/messages")))
+        .and(query_param("labelIds", "TRASH"))
+        .and(query_param("includeSpamTrash", "true"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "messages": [{"id": "a", "threadId": "t"}]
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let page = client(&server).list_labelled("TRASH", "", None, 500).await;
+    let urls: Vec<_> = server
+        .received_requests()
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|r| r.url.to_string())
+        .collect();
+    assert!(page.is_ok(), "{page:?}: {urls:?}");
+    assert_eq!(page.unwrap().messages.len(), 1);
+}

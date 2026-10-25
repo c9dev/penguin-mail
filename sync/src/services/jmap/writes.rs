@@ -2,7 +2,8 @@
 //! only what it changes, so another client's change to the same message
 //! stays. A message never sits in no mailbox: taking it out of its last
 //! one files it in Archive. A write the server takes for some messages and
-//! refuses for one says how many from the front went through.
+//! refuses for one says how many from the front went through. Checked
+//! deletions report each message separately, including later successes.
 
 use std::collections::BTreeSet;
 
@@ -183,6 +184,71 @@ impl<J: JmapApi> Jmap<J> {
         Ok(update)
     }
 
+    pub(super) async fn destroy_in(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> Vec<Result<(), BackendError>> {
+        let limits = match self.api().session().await {
+            Ok(session) => session.limits(),
+            Err(error) => return vec![Err(backend(error)); messages.len()],
+        };
+        let limit = limits
+            .max_objects_in_set
+            .min(limits.max_objects_in_get)
+            .clamp(1, PER_SET);
+        let mut results = Vec::with_capacity(messages.len());
+        for chunk in messages.chunks(limit) {
+            let answer = async {
+                let got = self
+                    .api()
+                    .emails(chunk, &["id", "mailboxIds"])
+                    .await
+                    .map_err(backend)?;
+                if got.state.is_empty()
+                    || got
+                        .list
+                        .iter()
+                        .any(|m| m.mailbox_ids.get(mailbox) != Some(&true))
+                {
+                    return Err(BackendError::Changed);
+                }
+                self.api()
+                    .set_emails(&Map::new(), chunk, Some(&got.state))
+                    .await
+                    .map_err(backend)
+            }
+            .await;
+            let answer = match answer {
+                Ok(answer) => answer,
+                Err(error) => {
+                    results.resize(messages.len(), Err(error));
+                    break;
+                }
+            };
+            let destroyed = answer.destroyed.unwrap_or_default();
+            let refused = answer.not_destroyed.unwrap_or_default();
+            let mut failure = None;
+            for id in chunk {
+                let result = match refused.get(id) {
+                    Some(error) if error.kind == "notFound" => Ok(()),
+                    Some(error) => Err(backend(error.error())),
+                    None if destroyed.contains(id) => Ok(()),
+                    None => Err(BackendError::StateLost),
+                };
+                if let Err(error) = &result {
+                    failure.get_or_insert_with(|| error.clone());
+                }
+                results.push(result);
+            }
+            if let Some(error) = failure {
+                results.resize(messages.len(), Err(error));
+                break;
+            }
+        }
+        results
+    }
+
     pub(super) async fn write(
         &self,
         messages: &[String],
@@ -211,13 +277,13 @@ impl<J: JmapApi> Jmap<J> {
         let mut taken = 0;
         for chunk in messages.chunks(per_set) {
             let answer = match &patch {
-                None => self.api().set_emails(&Map::new(), chunk).await,
+                None => self.api().set_emails(&Map::new(), chunk, None).await,
                 Some(patch) => {
                     let update = self
                         .updates_for(chunk, patch)
                         .await
                         .map_err(|e| unapplied(taken, e))?;
-                    self.api().set_emails(&update, &[]).await
+                    self.api().set_emails(&update, &[], None).await
                 }
             }
             .map_err(|e| unapplied(taken, backend(e)))?;

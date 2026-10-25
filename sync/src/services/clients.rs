@@ -352,7 +352,7 @@ either_client! {
         fn query_after(query: &EmailQuery, anchor: &str) -> Jmapped<Queried>;
         fn emails(ids: &[String], properties: &[&str]) -> Jmapped<Got<Email>>;
         fn threads(ids: &[String]) -> Jmapped<Threads>;
-        fn set_emails(update: &serde_json::Map<String, Value>, destroy: &[String]) -> Jmapped<SetResponse>;
+        fn set_emails(update: &serde_json::Map<String, Value>, destroy: &[String], state: Option<&str>) -> Jmapped<SetResponse>;
         fn set_mailbox(write: &MailboxWrite) -> Jmapped<String>;
         fn download(blob_id: &str, limit: usize) -> Jmapped<Vec<u8>>;
         fn upload(bytes: Vec<u8>) -> Jmapped<String>;

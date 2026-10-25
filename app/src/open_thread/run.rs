@@ -35,6 +35,8 @@ use mailrs_domain::{
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Opened, Spot, outbox_id};
 
+use super::{Loose, Parsed, loose_id};
+
 use super::{Cleaned, InlineImage, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::ui::invitation::strip::Strip;
@@ -152,6 +154,9 @@ pub trait Effects {
     /// Cleans HTML for the page, away from the GTK thread. The one place
     /// cleaning happens: drawing a page never cleans.
     fn clean(&self, html: ToClean) -> Answer<'_, HashMap<String, Cleaned>>;
+    /// Reads a loose message's bytes once, away from the window: a file
+    /// near the size ceiling takes most of a second.
+    fn parse_loose(&self, raw: Arc<Vec<u8>>) -> Answer<'_, Parsed>;
     /// The pictures these bodies name by `cid:`, by message and content
     /// id. Every body asked about is in the answer, with nothing for one
     /// whose pictures would not come.
@@ -322,6 +327,8 @@ pub enum Event {
     EngineOpened,
     /// A queued message went on screen.
     QueuedShown,
+    /// A loose message went on screen, cleaned, from its own bytes.
+    LooseShown,
 }
 
 /// The parts of the window an event leaves stale. The page and the header
@@ -394,6 +401,16 @@ impl Stale {
             // mark, and they carry no invitation. Reading for one takes
             // down the card the thread before left.
             Event::QueuedShown => Stale {
+                invitation: true,
+                ..Stale::default()
+            },
+            // The message itself is all there is: no server copy to fetch
+            // pictures or thumbnails from, no mailbox to mark it read in,
+            // and a receipt would mail about a message in no mailbox. The
+            // cards that read the message itself still come.
+            Event::LooseShown => Stale {
+                translation: true,
+                protection: true,
                 invitation: true,
                 ..Stale::default()
             },
@@ -512,6 +529,10 @@ impl ThreadRun {
         if let Some(id) = outbox_id(&wanted.target().thread_id) {
             return self.refresh_queued(&wanted, id).await;
         }
+        // Nothing holds a loose message but this window.
+        if loose_id(&wanted.target().thread_id).is_some() {
+            return;
+        }
         let target = wanted.target().clone();
         let Some(fresh) = wanted
             .ask(
@@ -537,6 +558,30 @@ impl ThreadRun {
             }
             None => {}
         }
+    }
+
+    /// Shows `loose` from its bytes: cleaned first, as the stored copy
+    /// is, then the cards that read the message itself. The ticket works
+    /// as it does for a thread: a later open wins over this one.
+    pub async fn open_loose(&self, loose: Loose) {
+        let ticket = self.desk.start_loading();
+        let parsed = self.effects.parse_loose(Arc::clone(&loose.raw)).await;
+        if !self.desk.still_loading(ticket) {
+            return;
+        }
+        let me = self.desk.me(loose.account_id);
+        let mut thread = OpenThread::loose(&loose, parsed, me);
+        let html = thread.to_clean();
+        if !html.is_empty() {
+            let cleaned = self.effects.clean(html).await;
+            if !self.desk.still_loading(ticket) {
+                return;
+            }
+            thread.take_cleaned(cleaned);
+        }
+        let wanted = self.wanted(thread.target());
+        self.effects.show(thread);
+        self.follow(&wanted, Event::LooseShown).await;
     }
 
     /// Shows the queued message under outbox row `id`. The ticket works as
@@ -640,6 +685,9 @@ impl ThreadRun {
             return;
         };
         let target = wanted.target().clone();
+        if loose_id(&target.thread_id).is_some() {
+            return;
+        }
         if let Some(color) = wanted
             .ask(
                 |effects| effects.flag_color(target.account_id, target.thread_id.clone()),
@@ -849,11 +897,18 @@ impl ThreadRun {
         let account_id = wanted.target().account_id;
         let asked = (message_id.clone(), ics.clone());
         let carrier = message_id.clone();
-        let Some(opened) = wanted
-            .wait(|effects| effects.open_invitation(account_id, message_id, ics))
-            .await
-        else {
-            return;
+        // A loose message is in no mailbox and its answer could be kept
+        // nowhere, so its events read as a calendar file's: something to
+        // keep, with nobody to answer.
+        let opened = match wanted.on_screen(|_| self.thread(OpenThread::is_loose)) {
+            Some(Some(true)) => Ok(kept_events(&ics)),
+            _ => match wanted
+                .wait(|effects| effects.open_invitation(account_id, message_id, ics))
+                .await
+            {
+                Some(opened) => opened,
+                None => return,
+            },
         };
         // New bodies may have started a second read while this one ran,
         // and whichever answers last would win. The card shows this answer
@@ -957,6 +1012,19 @@ impl ThreadRun {
             wanted.on_screen(|effects| effects.clashes(uid, busy));
         }
     }
+}
+
+/// The events of a loose message's calendar part, as a file's: the first
+/// to show and the rest beside it, with no change and no answer.
+fn kept_events(ics: &str) -> Option<Opened> {
+    let mut events = crate::ui::ics_file::events_of(ics).into_iter();
+    let invitation = events.next()?;
+    Some(Opened {
+        invitation,
+        also: events.collect(),
+        change: None,
+        answer: None,
+    })
 }
 
 /// Whether the card holds a file that only describes events, which Add

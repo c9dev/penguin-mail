@@ -247,7 +247,7 @@ impl JmapClient {
         };
         // Nothing will go out, so the copy must not wait in Drafts.
         if self
-            .set_emails(&Map::new(), std::slice::from_ref(&email_id))
+            .set_emails(&Map::new(), std::slice::from_ref(&email_id), None)
             .await
             .is_err()
         {
@@ -361,7 +361,7 @@ impl JmapClient {
     ) -> Result<(), JmapError> {
         let mut update = Map::new();
         update.insert(email_id.to_string(), Value::Object(patch));
-        let answer = self.set_emails(&update, &[]).await?;
+        let answer = self.set_emails(&update, &[], None).await?;
         match answer.refusal(email_id) {
             Some(refused) => Err(refused.error()),
             None => Ok(()),

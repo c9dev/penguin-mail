@@ -1328,9 +1328,21 @@ pub trait MailBackend: Send + Sync + 'static {
 
     /// One page of an explicit server mailbox, outside the sync window.
     /// The cursor belongs only to this mailbox and becomes `StateLost`
-    /// when its message names no longer hold. Only services advertising
-    /// `paged_mailboxes` are asked; other services keep their local listing.
+    /// when its message names no longer hold. Interactive listings use this
+    /// only with `paged_mailboxes`; Empty Trash uses it for every remote account.
     fn mailbox_page(
+        &self,
+        _mailbox: &str,
+        _cursor: Option<&str>,
+        _limit: usize,
+    ) -> impl Future<Output = Result<Backfill, BackendError>> + Send {
+        async { Err(BackendError::Unsupported) }
+    }
+
+    /// One page of the unread mail in an explicit server mailbox, paged
+    /// as [`Self::mailbox_page`] pages all of it. Mark All as Read lists
+    /// each inbox this way.
+    fn unread_page(
         &self,
         _mailbox: &str,
         _cursor: Option<&str>,
@@ -1402,6 +1414,31 @@ pub trait MailBackend: Send + Sync + 'static {
         messages: &[String],
         ops: &[MailOp],
     ) -> impl Future<Output = Result<Vec<Relocated>, Unapplied>> + Send;
+
+    /// Destroys a freshly checked batch, with one result per message in input order.
+    /// Adapters with conditional writes also reject a server-side change between
+    /// the check and the write. Successes can follow a refusal in the same batch.
+    fn destroy_checked(
+        &self,
+        messages: &[String],
+        _mailbox: &str,
+    ) -> impl Future<Output = Vec<Result<(), BackendError>>> + Send {
+        async move {
+            // shortcut: Without a server precondition, mail can move after the check; add one when the provider supports it.
+            match self.apply(messages, &[MailOp::Destroy]).await {
+                Ok(_) => vec![Ok(()); messages.len()],
+                Err(Unapplied { taken, error, .. }) => (0..messages.len())
+                    .map(|at| {
+                        if at < taken {
+                            Ok(())
+                        } else {
+                            Err(error.clone())
+                        }
+                    })
+                    .collect(),
+            }
+        }
+    }
 
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(

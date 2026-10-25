@@ -64,6 +64,7 @@ mod images;
 mod in_flight;
 mod invitation;
 mod listing;
+mod loose;
 mod message_menu;
 pub(crate) mod move_banner;
 mod notice;
@@ -87,6 +88,7 @@ mod spaces;
 mod storage;
 mod thread;
 mod translation;
+mod trash;
 mod triage;
 mod undo_send;
 
@@ -184,6 +186,7 @@ pub struct MainWindow {
     /// waits for, since the colours come with it.
     accounts_read: RefCell<Option<Shared<LocalBoxFuture<'static, ()>>>>,
     authorizing: Cell<bool>,
+    emptying_trash: Cell<bool>,
     assistant: Rc<super::assistant::AssistantPane>,
     assistant_split: adw::OverlaySplitView,
     assistant_window: RefCell<Option<adw::Window>>,
@@ -1028,6 +1031,7 @@ impl MainWindow {
                 )),
                 accounts_read: RefCell::new(None),
                 authorizing: Cell::new(false),
+                emptying_trash: Cell::new(false),
                 assistant,
                 assistant_split,
                 assistant_window: RefCell::new(None),
@@ -1131,6 +1135,19 @@ impl MainWindow {
         // conversation is drawn again once its senders' photos arrive.
         let photos = app.photos();
         window.list.set_photos(Rc::clone(&photos));
+        let settings = window.settings();
+        window.list.set_appearance(
+            settings.preview_lines,
+            settings.bold_unread,
+            settings.bold_senders,
+            settings.show_avatars,
+        );
+        let weak = Rc::downgrade(&window);
+        window.list.connect_previews(move |targets| {
+            if let Some(window) = weak.upgrade() {
+                window.listing.previews(targets);
+            }
+        });
         let weak = Rc::downgrade(&window);
         photos.on_uri(move |_| match weak.upgrade() {
             Some(win) => {
@@ -1283,7 +1300,7 @@ impl MainWindow {
     }
 
     fn toast(&self, text: &str) {
-        self.toasts.add_toast(
+        self.toast_overlay().add_toast(
             adw::Toast::builder()
                 .title(toast_title(text))
                 .timeout(4)
@@ -1875,6 +1892,7 @@ impl MainWindow {
     fn view_of(&self, mailbox: &Mailbox, category: Category) -> View {
         let category = self.shows_categories(mailbox).then_some(category);
         self.settings_with(|settings| View {
+            filter: Default::default(),
             threading: settings.threading,
             category,
             follow_ups: settings.suggest_follow_ups,
@@ -2820,6 +2838,10 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
+        // A loose message opened with no account has nowhere to go out from.
+        if view.read(|open| open.loose.as_ref().is_some_and(|l| !l.has_account)) == Some(true) {
+            return self.toast(&gettext("Add an account to reply or forward"));
+        }
         let Some(answering) = view.find(|open| open.answering(only, kind == ReplyKind::Forward))
         else {
             return;
@@ -2875,13 +2897,39 @@ impl MainWindow {
             app.open_composer(draft, Signature::Add);
             return;
         }
-        let Some(sync) = self.core.account(account_id) else {
+        // Files the window already holds, by index: a loose message's, or
+        // the ones an engine cut out of an encrypted one. Only the rest
+        // are fetched.
+        // Each file is taken out as it is attached rather than copied: a
+        // loose message can hold tens of megabytes of them.
+        let mut held: Vec<Option<Vec<u8>>> = view
+            .find(|open| open.opened_files.get(&target.id).cloned())
+            .unwrap_or_default()
+            .into_iter()
+            .map(Some)
+            .collect();
+        let sync = self.core.account(account_id);
+        let fetches = attachments
+            .iter()
+            .enumerate()
+            .any(|(index, a)| held.get(index).is_none() && a.attachment_id.is_some());
+        if fetches && sync.is_none() {
             return;
-        };
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            for attachment in attachments {
-                let Some(attachment_id) = attachment.attachment_id.clone() else {
+            for (index, attachment) in attachments.into_iter().enumerate() {
+                if let Some(bytes) = held.get_mut(index).and_then(Option::take) {
+                    draft.attachments.push(compose::forwarded_file(
+                        attachment,
+                        bytes,
+                        forwarded_html.as_deref(),
+                    ));
+                    continue;
+                }
+                let (Some(sync), Some(attachment_id)) =
+                    (sync.as_ref(), attachment.attachment_id.clone())
+                else {
                     continue;
                 };
                 let (s, m) = (sync.clone(), target.id.clone());
@@ -3638,6 +3686,7 @@ impl MainWindow {
         let view = Rc::clone(&self.conversation);
         self.install_outbox_actions(&self.actions, &view);
         self.install_main_actions();
+        self.install_empty_trash();
         let remind_at = gio::SimpleAction::new("remind-at", Some(glib::VariantTy::INT64));
         let weak = Rc::downgrade(self);
         remind_at.connect_activate(move |_, parameter| {
@@ -4081,6 +4130,7 @@ impl MainWindow {
     /// Opens a thread from outside the window, such as a notification, and
     /// answers it when `then` asks for that.
     pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String, then: Reveal) {
+        self.list.filters.clear();
         // Selecting a row before the list's rows land finds nothing, so
         // the feed holds the thread until the first page is on screen.
         self.listing.reveal((account_id, thread_id, then));
@@ -4160,6 +4210,19 @@ impl MainWindow {
                                     && let Ok(position) = position.parse()
                                 {
                                     replier.conversation.ask_message_menu(position);
+                                }
+                                if let Ok(index) = std::env::var("MAILRS_DEMO_OPEN_ATTACHMENT")
+                                    && let Ok(index) = index.parse::<usize>()
+                                    && let Some(id) = replier
+                                        .conversation
+                                        .read(|open| open.messages.last().map(|m| m.id.clone()))
+                                        .flatten()
+                                {
+                                    replier.preview_attachment_from(
+                                        &replier.conversation,
+                                        id,
+                                        index,
+                                    );
                                 }
                                 replier.run_demo_action();
                             },
@@ -4444,6 +4507,17 @@ impl MainWindow {
         match effect {
             Effect::ListShape => self.listing.change(|screen| Some(screen.list_shape())),
             Effect::Accounts => self.refresh_accounts(Reload::Yes),
+            Effect::RowAppearance => {
+                self.list.set_appearance(
+                    settings.preview_lines,
+                    settings.bold_unread,
+                    settings.bold_senders,
+                    settings.show_avatars,
+                );
+                if settings.preview_lines == crate::settings::PreviewLines::None {
+                    self.listing.previews(Vec::new());
+                }
+            }
             Effect::RowColors => {
                 // Rows carry account colours, which come with the accounts
                 // read that Effect::Accounts started just before.

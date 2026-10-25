@@ -12,6 +12,7 @@ use mailrs_domain::{AccountId, Applied, EpochMillis, FlagColor, Folder, MailSet,
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
+use crate::account::Snapshot;
 use crate::ops::undo_ops;
 use crate::{
     AccountServices, AccountSync, BackendError, MailBackend, MailOp, MovedFrom, OneClick,
@@ -144,6 +145,9 @@ pub enum History {
 /// oldest, so a long session cannot grow the stack.
 pub(crate) const DEPTH: usize = 20;
 
+/// How many messages of a staged change one undo call takes back.
+const STAGED_BATCH: usize = 100;
+
 /// What an action or an undo did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Outcome {
@@ -194,6 +198,17 @@ struct Undo {
     reminders: Vec<(Target, Option<Reminder>)>,
     /// Threads the action took out of Follow Up.
     follow_ups: Vec<Target>,
+    /// Mail a whole-mailbox action changed, kept on disk rather than in
+    /// `relabel`, so a mailbox of any size holds one batch in memory.
+    staged: Vec<Staged>,
+}
+
+/// The messages of one account a whole-mailbox action changed, as the
+/// checked rows of its snapshot, and the ops that take the change back.
+pub(crate) struct Staged {
+    pub(crate) account_id: AccountId,
+    pub(crate) snapshot: Snapshot,
+    pub(crate) undo: Vec<MailOp>,
 }
 
 /// One target the action changed, and how to take that change back.
@@ -222,12 +237,26 @@ impl Undo {
         self.follow_ups.retain(|t| !same_thread(t, target));
     }
 
+    /// Drops the staged rows of `erased`, and a staged change with nothing
+    /// left to take back. One that cannot be read stays, and its Undo
+    /// reports the error.
+    fn forget_staged(&mut self, erased: &[Target]) {
+        self.staged.retain(|staged| {
+            let mine = erased.iter().filter(|t| t.account_id == staged.account_id);
+            staged.snapshot.forget(mine).unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "could not drop erased mail from an undo");
+                true
+            })
+        });
+    }
+
     /// Drops whatever would reverse a change in `account_id`.
     fn forget_account(&mut self, account_id: AccountId) {
         self.relabel.retain(|r| r.target.account_id != account_id);
         self.reminders.retain(|(t, _)| t.account_id != account_id);
         self.colors.retain(|(id, _, _)| *id != account_id);
         self.follow_ups.retain(|t| t.account_id != account_id);
+        self.staged.retain(|s| s.account_id != account_id);
     }
 
     /// Whether anything is left to reverse.
@@ -236,6 +265,7 @@ impl Undo {
             && self.reminders.is_empty()
             && self.colors.is_empty()
             && self.follow_ups.is_empty()
+            && self.staged.is_empty()
     }
 }
 
@@ -298,6 +328,7 @@ impl<A: Accounts> MailActions<A> {
             colors: Vec::new(),
             reminders: Vec::new(),
             follow_ups: Vec::new(),
+            staged: Vec::new(),
         };
         let resolved = self.resolve(targets, &action).await;
         // The label change goes first: it fetches threads the store lacks,
@@ -420,17 +451,41 @@ impl<A: Accounts> MailActions<A> {
                 None => {}
             }
         }
-        // Undo cannot bring erased mail back, so the stack lets go of the
-        // erased threads, and of any entry left with nothing to reverse.
+        self.forget_erased(&outcome);
+        Ok(Permitted::Done(outcome))
+    }
+
+    /// Erases every message in this account's Trash after the caller confirms.
+    pub async fn empty_trash(
+        &self,
+        account_id: AccountId,
+    ) -> Result<Permitted<crate::Emptied>, SyncError> {
+        self.sync(account_id)?
+            .empty_trash(|outcome| self.forget_erased(outcome))
+            .await
+    }
+
+    /// Continues through every confirmed account, including after a permission refusal.
+    pub async fn empty_trashes(
+        &self,
+        accounts: &[AccountId],
+    ) -> Vec<Result<Permitted<crate::Emptied>, SyncError>> {
+        let mut results = Vec::with_capacity(accounts.len());
+        for account in accounts {
+            results.push(self.empty_trash(*account).await);
+        }
+        results
+    }
+
+    fn forget_erased(&self, outcome: &Outcome) {
         let mut stack = self.lock();
-        for target in &outcome.done {
-            for undo in stack.iter_mut() {
+        for undo in stack.iter_mut() {
+            for target in &outcome.done {
                 undo.forget(target);
             }
+            undo.forget_staged(&outcome.done);
         }
         stack.retain(|undo| !undo.is_empty());
-        drop(stack);
-        Ok(Permitted::Done(outcome))
     }
 
     /// Applies each target's label change, one Gmail call per account
@@ -603,9 +658,9 @@ impl<A: Accounts> MailActions<A> {
 
     /// What `undo` and `undo_this` share once the entry is off the stack.
     async fn reverse_recorded(&self, undo: Undo) -> Undone {
-        let words = self
-            .words_for(&undo.action, accounts_in(&undo.relabel))
-            .await;
+        let mut accounts = accounts_in(&undo.relabel);
+        accounts.extend(undo.staged.iter().map(|s| s.account_id));
+        let words = self.words_for(&undo.action, accounts).await;
         let mut outcome = Outcome::default();
         let mut reversing = Vec::new();
         let mut left_alone = Vec::new();
@@ -628,6 +683,9 @@ impl<A: Accounts> MailActions<A> {
                     error,
                 }),
             }
+        }
+        for staged in &undo.staged {
+            self.reverse_staged(staged, &mut outcome).await;
         }
         // A flag colour is a mark on this computer rather than a place, so
         // it goes back even on mail that moved. A reminder would put the
@@ -691,6 +749,129 @@ impl<A: Accounts> MailActions<A> {
             words,
             outcome,
         }
+    }
+
+    /// Takes back a staged change a batch at a time. The outcome keeps the
+    /// first batch that went back and the first failure, enough for the
+    /// window to refresh and the toast to say why, so it stays one batch
+    /// in size however many messages went back.
+    async fn reverse_staged(&self, staged: &Staged, outcome: &mut Outcome) {
+        let account_id = staged.account_id;
+        let failure = |target: Target, reason: String| Failure {
+            target,
+            error: fill(&gettext("Could not undo: {reason}"), &[("reason", &reason)]),
+        };
+        let mut after = 0;
+        let mut failed = None;
+        let mut moved = None;
+        loop {
+            let (last, refs) = match staged.snapshot.batch(after, STAGED_BATCH, true) {
+                Ok(batch) => batch,
+                Err(err) => {
+                    let account = Target {
+                        account_id,
+                        thread_id: String::new(),
+                        message_id: None,
+                    };
+                    failed.get_or_insert(failure(account, err.to_string()));
+                    break;
+                }
+            };
+            if refs.is_empty() {
+                break;
+            }
+            let targets: Vec<Target> = refs
+                .into_iter()
+                .map(|r| Target {
+                    account_id,
+                    thread_id: r.thread_id,
+                    message_id: Some(r.id),
+                })
+                .collect();
+            let (targets, left) = self.split_left_inbox(targets).await;
+            if let Some(target) = left.into_iter().next() {
+                moved.get_or_insert(Failure {
+                    target,
+                    error: gettext("This mail has moved since, so Undo left it where it is."),
+                });
+            }
+            if targets.is_empty() {
+                after = last;
+                continue;
+            }
+            let done = match self.sync(account_id) {
+                Ok(sync) => sync
+                    .change_all(&targets, &staged.undo, &gettext("Change labels"), None)
+                    .await
+                    .map(drop),
+                Err(err) => Err(err),
+            };
+            match done {
+                Ok(()) if outcome.done.is_empty() => outcome.done = targets,
+                Ok(()) => {}
+                Err(err) => {
+                    let first = targets.into_iter().next().expect("a batch of one or more");
+                    failed.get_or_insert(failure(first, err.to_string()));
+                }
+            }
+            after = last;
+        }
+        outcome.failed.extend(moved);
+        outcome.failed.extend(failed);
+    }
+
+    /// Splits staged targets into those still in the inbox and those the
+    /// store shows outside it. The snapshot listed inbox mail, so the inbox
+    /// is where the action left all of it, and mail that went elsewhere
+    /// since is left alone as `moved` leaves it. A message the store does
+    /// not hold, or a store that cannot be read, counts as still there.
+    async fn split_left_inbox(&self, targets: Vec<Target>) -> (Vec<Target>, Vec<Target>) {
+        let checking = targets.clone();
+        let split = self
+            .db
+            .read(move |c| {
+                let mut kept = Vec::new();
+                let mut left = Vec::new();
+                for target in checking {
+                    let id = target.message_id.as_deref().expect("message target");
+                    let gone = messages::thread_messages(c, target.account_id, &target.thread_id)?
+                        .iter()
+                        .find(|m| m.id == id)
+                        .is_some_and(|m| !m.in_role(Role::Inbox));
+                    if gone {
+                        left.push(target);
+                    } else {
+                        kept.push(target);
+                    }
+                }
+                Ok((kept, left))
+            })
+            .await;
+        split.unwrap_or_else(|err| {
+            tracing::warn!(error = %err, "could not check where the mail stands now");
+            (targets, Vec::new())
+        })
+    }
+
+    /// Puts a whole-mailbox action on the stack as one entry, its changed
+    /// mail in `staged`. The oldest entry goes when the stack is full.
+    pub(crate) fn record_staged(&self, action: MailAction, staged: Vec<Staged>) -> Recorded {
+        let undo = Undo {
+            id: self.next.fetch_add(1, Ordering::Relaxed),
+            action,
+            relabel: Vec::new(),
+            colors: Vec::new(),
+            reminders: Vec::new(),
+            follow_ups: Vec::new(),
+            staged,
+        };
+        let recorded = Recorded(undo.id);
+        let mut stack = self.lock();
+        while stack.len() >= DEPTH {
+            stack.pop_front();
+        }
+        stack.push_back(undo);
+        recorded
     }
 
     /// Takes back each message's own change in as few calls as the changes

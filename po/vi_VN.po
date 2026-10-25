@@ -24,64 +24,36 @@ msgid "mail;email;gmail;imap;inbox;calendar;contacts;"
 msgstr "thư;email;gmail;imap;hộp thư đến;lịch;danh bạ;"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:15
-msgid ""
-"Penguin Mail reads Gmail, Outlook.com and Microsoft 365 accounts, and any "
-"IMAP or POP3 account with SMTP, such as Fastmail, iCloud and Yahoo, and "
-"finds the server settings for you. It syncs from the system tray, shows your "
-"accounts in one inbox or one at a time, and keeps your mail on your own "
-"computer."
-msgstr ""
-"Penguin Mail đọc các tài khoản Gmail, Outlook.com và Microsoft 365 cùng mọi "
-"tài khoản IMAP hoặc POP3 có SMTP, như Fastmail, iCloud và Yahoo, và tìm cài "
-"đặt máy chủ cho bạn. Ứng dụng đồng bộ từ khay hệ thống, hiển thị các tài "
-"khoản trong một hộp thư đến hoặc từng tài khoản riêng, và lưu thư trên máy "
-"tính của bạn."
+msgid "Penguin Mail reads Gmail, Outlook.com and Microsoft 365 accounts, and any IMAP or POP3 account with SMTP, such as Fastmail, iCloud and Yahoo, and finds the server settings for you. It syncs from the system tray, shows your accounts in one inbox or one at a time, and keeps your mail on your own computer."
+msgstr "Penguin Mail đọc các tài khoản Gmail, Outlook.com và Microsoft 365 cùng mọi tài khoản IMAP hoặc POP3 có SMTP, như Fastmail, iCloud và Yahoo, và tìm cài đặt máy chủ cho bạn. Ứng dụng đồng bộ từ khay hệ thống, hiển thị các tài khoản trong một hộp thư đến hoặc từng tài khoản riêng, và lưu thư trên máy tính của bạn."
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
-msgid ""
-"One inbox for every account, with Gmail's categories, Outlook's Focused and "
-"Other tabs, labels and search"
-msgstr ""
-"Một hộp thư đến cho mọi tài khoản, với các danh mục của Gmail, thẻ Ưu tiên "
-"và Khác của Outlook, nhãn và tìm kiếm"
+msgid "One inbox for every account, with Gmail's categories, Outlook's Focused and Other tabs, labels and search"
+msgstr "Một hộp thư đến cho mọi tài khoản, với các danh mục của Gmail, thẻ Ưu tiên và Khác của Outlook, nhãn và tìm kiếm"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
-msgid ""
-"A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, "
-"Month and Agenda views, invitations answered in the mail, and reminders"
-msgstr ""
-"Lịch với Google Calendar, Outlook và mọi máy chủ CalDAV: chế độ xem Ngày, "
-"Tuần, Tháng và Lịch trình, trả lời lời mời ngay trong thư và lời nhắc"
+msgid "A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders"
+msgstr "Lịch với Google Calendar, Outlook và mọi máy chủ CalDAV: chế độ xem Ngày, Tuần, Tháng và Lịch trình, trả lời lời mời ngay trong thư và lời nhắc"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
-msgid ""
-"Gmail through the Google account your computer's Online Accounts already "
-"holds, on Linux"
-msgstr ""
-"Gmail qua tài khoản Google mà Tài khoản trực tuyến trên máy tính của bạn đã "
-"có, trên Linux"
+msgid "Gmail through the Google account your computer's Online Accounts already holds, on Linux"
+msgstr "Gmail qua tài khoản Google mà Tài khoản trực tuyến trên máy tính của bạn đã có, trên Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
 msgid "Contacts from Google, Outlook and any CardDAV server"
 msgstr "Danh bạ từ Google, Outlook và mọi máy chủ CardDAV"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
-msgid ""
-"A composer that shows formatting as you write, with Undo Send and Send Later"
-msgstr ""
-"Trình soạn thư hiển thị định dạng khi bạn viết, với Hoàn tác gửi và Gửi sau"
+msgid "A composer that shows formatting as you write, with Undo Send and Send Later"
+msgstr "Trình soạn thư hiển thị định dạng khi bạn viết, với Hoàn tác gửi và Gửi sau"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
 msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
 msgstr "Cờ với bảy màu, người quan trọng, hộp thư thông minh và lời nhắc"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
-msgid ""
-"Rules and automatic replies for every account, kept on Gmail, Outlook or a "
-"Sieve server, or run by the app on its own"
-msgstr ""
-"Quy tắc và trả lời tự động cho mọi tài khoản, lưu trên Gmail, Outlook hoặc "
-"máy chủ Sieve, hoặc do ứng dụng tự thực hiện"
+msgid "Rules and automatic replies for every account, kept on Gmail, Outlook or a Sieve server, or run by the app on its own"
+msgstr "Quy tắc và trả lời tự động cho mọi tài khoản, lưu trên Gmail, Outlook hoặc máy chủ Sieve, hoặc do ứng dụng tự thực hiện"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
 msgid "Plus addresses to give out instead of your own"
@@ -96,35 +68,16 @@ msgid "Remote images blocked until you ask for them"
 msgstr "Chặn hình ảnh từ xa cho đến khi bạn cho phép"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
-msgid ""
-"An assistant that runs on a local model or on Claude, off until you pick one"
-msgstr ""
-"Trợ lý chạy bằng mô hình cục bộ hoặc Claude, chỉ bật khi bạn chọn một mô hình"
+msgid "An assistant that runs on a local model or on Claude, off until you pick one"
+msgstr "Trợ lý chạy bằng mô hình cục bộ hoặc Claude, chỉ bật khi bạn chọn một mô hình"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:34
-msgid ""
-"Every control named for screen readers and reachable from the keyboard, in "
-"American English, British English, French, German, Greek, Indonesian, "
-"Italian, Japanese, Korean, Polish, Romanian, Russian, Spanish, European "
-"Portuguese, Simplified Chinese, Traditional Chinese (Taiwan), Turkish, "
-"Ukrainian and Vietnamese"
-msgstr ""
-"Mọi điều khiển đều có tên cho trình đọc màn hình và sử dụng được bằng bàn "
-"phím, bằng tiếng Anh Mỹ, tiếng Anh Anh, tiếng Pháp, tiếng Đức, tiếng Hy Lạp, "
-"tiếng Indonesia, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng "
-"Romania, tiếng Nga, tiếng Tây Ban Nha, tiếng Bồ Đào Nha châu Âu, tiếng Trung "
-"giản thể, tiếng Trung phồn thể (Đài Loan), tiếng Thổ Nhĩ Kỳ, tiếng Ukraina "
-"và tiếng Việt"
+msgid "Every control named for screen readers and reachable from the keyboard, in American English, British English, French, German, Greek, Indonesian, Italian, Japanese, Korean, Polish, Romanian, Russian, Spanish, European Portuguese, Simplified Chinese, Traditional Chinese (Taiwan), Turkish, Ukrainian and Vietnamese"
+msgstr "Mọi điều khiển đều có tên cho trình đọc màn hình và sử dụng được bằng bàn phím, bằng tiếng Anh Mỹ, tiếng Anh Anh, tiếng Pháp, tiếng Đức, tiếng Hy Lạp, tiếng Indonesia, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng Romania, tiếng Nga, tiếng Tây Ban Nha, tiếng Bồ Đào Nha châu Âu, tiếng Trung giản thể, tiếng Trung phồn thể (Đài Loan), tiếng Thổ Nhĩ Kỳ, tiếng Ukraina và tiếng Việt"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:36
-msgid ""
-"Adding a Gmail or Microsoft account takes one sign-in in your browser. "
-"Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it "
-"runs on any Linux desktop."
-msgstr ""
-"Thêm tài khoản Gmail hoặc Microsoft chỉ cần đăng nhập một lần trong trình "
-"duyệt. Penguin Mail được xây dựng với GTK và libadwaita, phù hợp nhất với "
-"GNOME nhưng chạy được trên mọi môi trường Linux."
+msgid "Adding a Gmail or Microsoft account takes one sign-in in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
+msgstr "Thêm tài khoản Gmail hoặc Microsoft chỉ cần đăng nhập một lần trong trình duyệt. Penguin Mail được xây dựng với GTK và libadwaita, phù hợp nhất với GNOME nhưng chạy được trên mọi môi trường Linux."
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
 msgid "gmail"
@@ -189,8 +142,7 @@ msgstr[0] "Xóa sau {count} ngày"
 
 #: app/src/add_account.rs:289
 msgid "This copy of Penguin Mail was built without Microsoft sign-in."
-msgstr ""
-"Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Microsoft."
+msgstr "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Microsoft."
 
 #: app/src/add_account.rs:322
 msgid "{provider} has no IMAP, so other mail apps cannot reach it."
@@ -214,9 +166,7 @@ msgstr "Thư đến qua {protocol}"
 
 #: app/src/add_account.rs:483
 msgid "Penguin Mail found no mail servers for {domain}. Enter them below."
-msgstr ""
-"Penguin Mail không tìm thấy máy chủ thư cho {domain}. Nhập thông tin bên "
-"dưới."
+msgstr "Penguin Mail không tìm thấy máy chủ thư cho {domain}. Nhập thông tin bên dưới."
 
 #: app/src/add_account.rs:508
 msgid "{provider} needs an app password."
@@ -255,11 +205,8 @@ msgid "{hosts} · {security}"
 msgstr "{hosts} · {security}"
 
 #: app/src/add_account.rs:609
-msgid ""
-"Penguin Mail's own list knows this provider. Nothing has left this computer."
-msgstr ""
-"Danh sách của Penguin Mail có nhà cung cấp này. Chưa có thông tin nào rời "
-"khỏi máy tính."
+msgid "Penguin Mail's own list knows this provider. Nothing has left this computer."
+msgstr "Danh sách của Penguin Mail có nhà cung cấp này. Chưa có thông tin nào rời khỏi máy tính."
 
 #: app/src/add_account.rs:611
 msgid "Found by its mail servers. Nothing else was asked."
@@ -389,12 +336,8 @@ msgid "Secure connection failed"
 msgstr "Kết nối bảo mật thất bại"
 
 #: app/src/add_account.rs:878
-msgid ""
-"If you use Proton Mail Bridge, export its TLS certificate and follow the "
-"setup guide, then try signing in again."
-msgstr ""
-"Nếu dùng Proton Mail Bridge, hãy xuất chứng chỉ TLS của nó và làm theo hướng "
-"dẫn thiết lập, rồi thử đăng nhập lại."
+msgid "If you use Proton Mail Bridge, export its TLS certificate and follow the setup guide, then try signing in again."
+msgstr "Nếu dùng Proton Mail Bridge, hãy xuất chứng chỉ TLS của nó và làm theo hướng dẫn thiết lập, rồi thử đăng nhập lại."
 
 #: app/src/add_account.rs:882
 msgid "Set Up Proton Mail Bridge"
@@ -409,17 +352,11 @@ msgid "No answer on port {port}"
 msgstr "Không có phản hồi trên cổng {port}"
 
 #: app/src/add_account.rs:898
-msgid ""
-"The server did not answer. Check the server name and port, or try again when "
-"you are online."
-msgstr ""
-"Máy chủ không phản hồi. Kiểm tra tên và cổng máy chủ, hoặc thử lại khi có "
-"kết nối mạng."
+msgid "The server did not answer. Check the server name and port, or try again when you are online."
+msgstr "Máy chủ không phản hồi. Kiểm tra tên và cổng máy chủ, hoặc thử lại khi có kết nối mạng."
 
 #: app/src/add_account.rs:918
-msgid ""
-"{host} answered but turned down another connection. Try again in a few "
-"minutes."
+msgid "{host} answered but turned down another connection. Try again in a few minutes."
 msgstr "{host} đã phản hồi nhưng từ chối kết nối thêm. Thử lại sau vài phút."
 
 #: app/src/add_account.rs:922
@@ -435,14 +372,8 @@ msgid "This app cannot send these sign-in details to the server."
 msgstr "Ứng dụng không thể gửi thông tin đăng nhập này tới máy chủ."
 
 #: app/src/add_account.rs:956
-msgid ""
-"Penguin Mail cannot save your sign-in until the snap can reach your keyring. "
-"Run this command in a terminal, restart Penguin Mail, then add the account "
-"again."
-msgstr ""
-"Penguin Mail không thể lưu thông tin đăng nhập cho đến khi snap truy cập "
-"được kho khóa. Chạy lệnh này trong thiết bị đầu cuối, khởi động lại Penguin "
-"Mail, rồi thêm lại tài khoản."
+msgid "Penguin Mail cannot save your sign-in until the snap can reach your keyring. Run this command in a terminal, restart Penguin Mail, then add the account again."
+msgstr "Penguin Mail không thể lưu thông tin đăng nhập cho đến khi snap truy cập được kho khóa. Chạy lệnh này trong thiết bị đầu cuối, khởi động lại Penguin Mail, rồi thêm lại tài khoản."
 
 #: app/src/add_account.rs:961
 msgid "Connect Your Keyring"
@@ -457,12 +388,8 @@ msgid "The server refused the password"
 msgstr "Máy chủ từ chối mật khẩu"
 
 #: app/src/add_account.rs:1001
-msgid ""
-"{provider} wants an app password here, not your website password. Make one, "
-"paste it above, then choose Sign In."
-msgstr ""
-"{provider} yêu cầu mật khẩu ứng dụng ở đây, không phải mật khẩu trang web. "
-"Tạo mật khẩu, dán vào bên trên, rồi chọn Đăng nhập."
+msgid "{provider} wants an app password here, not your website password. Make one, paste it above, then choose Sign In."
+msgstr "{provider} yêu cầu mật khẩu ứng dụng ở đây, không phải mật khẩu trang web. Tạo mật khẩu, dán vào bên trên, rồi chọn Đăng nhập."
 
 #: app/src/add_account.rs:1005 app/src/add_account.rs:2078
 msgid "Check the password, then choose Sign In."
@@ -497,29 +424,16 @@ msgid "Could not add the calendar: {reason}"
 msgstr "Không thể thêm lịch: {reason}"
 
 #: app/src/add_account.rs:1385
-msgid ""
-"To see this server's calendars there, open Preferences, then Accounts, open "
-"that account, and type this server's address under Calendar, Contacts and "
-"Rules Servers."
-msgstr ""
-"Để xem lịch của máy chủ này ở đó, hãy mở Tùy chọn, rồi Tài khoản, mở tài "
-"khoản đó và nhập địa chỉ của máy chủ này trong Máy chủ lịch, danh bạ và quy "
-"tắc."
+msgid "To see this server's calendars there, open Preferences, then Accounts, open that account, and type this server's address under Calendar, Contacts and Rules Servers."
+msgstr "Để xem lịch của máy chủ này ở đó, hãy mở Tùy chọn, rồi Tài khoản, mở tài khoản đó và nhập địa chỉ của máy chủ này trong Máy chủ lịch, danh bạ và quy tắc."
 
 #: app/src/add_account.rs:1398
-msgid ""
-"The server did not take that user name and password. Where it uses two-step "
-"sign-in, it needs an app password."
-msgstr ""
-"Máy chủ không nhận tên người dùng và mật khẩu đó. Nếu máy chủ dùng đăng nhập "
-"hai bước, cần có mật khẩu ứng dụng."
+msgid "The server did not take that user name and password. Where it uses two-step sign-in, it needs an app password."
+msgstr "Máy chủ không nhận tên người dùng và mật khẩu đó. Nếu máy chủ dùng đăng nhập hai bước, cần có mật khẩu ứng dụng."
 
 #: app/src/add_account.rs:1402
-msgid ""
-"Penguin Mail could not reach that server. Check the address and your "
-"connection."
-msgstr ""
-"Penguin Mail không thể kết nối tới máy chủ đó. Kiểm tra địa chỉ và kết nối."
+msgid "Penguin Mail could not reach that server. Check the address and your connection."
+msgstr "Penguin Mail không thể kết nối tới máy chủ đó. Kiểm tra địa chỉ và kết nối."
 
 #: app/src/add_account.rs:1407
 msgid "No calendar was found at that address."
@@ -534,69 +448,39 @@ msgid "Your mail is here."
 msgstr "Thư của bạn đã sẵn sàng."
 
 #: app/src/add_account.rs:1443
-msgid ""
-"Your organization did not allow one of the permissions Penguin Mail asked "
-"for, so this feature stays off:"
-msgid_plural ""
-"Your organization did not allow {count} of the permissions Penguin Mail "
-"asked for, so these features stay off:"
-msgstr[0] ""
-"Tổ chức của bạn không cho phép {count} quyền mà Penguin Mail yêu cầu nên các "
-"tính năng này vẫn tắt:"
+msgid "Your organization did not allow one of the permissions Penguin Mail asked for, so this feature stays off:"
+msgid_plural "Your organization did not allow {count} of the permissions Penguin Mail asked for, so these features stay off:"
+msgstr[0] "Tổ chức của bạn không cho phép {count} quyền mà Penguin Mail yêu cầu nên các tính năng này vẫn tắt:"
 
 #: app/src/add_account.rs:1450
 msgid "You left one box unticked on Google's page, so this feature stays off:"
-msgid_plural ""
-"You left {count} boxes unticked on Google's page, so these features stay off:"
-msgstr[0] ""
-"Bạn chưa chọn {count} ô trên trang của Google nên các tính năng này vẫn tắt:"
+msgid_plural "You left {count} boxes unticked on Google's page, so these features stay off:"
+msgstr[0] "Bạn chưa chọn {count} ô trên trang của Google nên các tính năng này vẫn tắt:"
 
 #: app/src/add_account.rs:1457
 msgid "Mail is downloading."
 msgstr "Đang tải thư."
 
 #: app/src/add_account.rs:1477
-msgid ""
-"Newest mail comes first. Older mail keeps coming in the background, even "
-"with the window closed."
-msgstr ""
-"Thư mới nhất được tải trước. Thư cũ tiếp tục được tải trong nền, kể cả khi "
-"đóng cửa sổ."
+msgid "Newest mail comes first. Older mail keeps coming in the background, even with the window closed."
+msgstr "Thư mới nhất được tải trước. Thư cũ tiếp tục được tải trong nền, kể cả khi đóng cửa sổ."
 
 #: app/src/add_account.rs:1480
 msgid "Penguin Mail keeps checking for new mail, even with the window closed."
 msgstr "Penguin Mail tiếp tục kiểm tra thư mới, kể cả khi đóng cửa sổ."
 
 #: app/src/add_account.rs:1491
-msgid ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. Mail stays on the server."
-msgstr ""
-"Penguin Mail tải thư từ máy chủ vào Hộp thư đến và tiếp tục kiểm tra trong "
-"nền, kể cả khi đóng cửa sổ. Thư vẫn được giữ trên máy chủ."
+msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. Mail stays on the server."
+msgstr "Penguin Mail tải thư từ máy chủ vào Hộp thư đến và tiếp tục kiểm tra trong nền, kể cả khi đóng cửa sổ. Thư vẫn được giữ trên máy chủ."
 
 #: app/src/add_account.rs:1494
-msgid ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. It removes each message from "
-"the server after downloading it."
-msgstr ""
-"Penguin Mail tải thư từ máy chủ vào Hộp thư đến và tiếp tục kiểm tra trong "
-"nền, kể cả khi đóng cửa sổ. Mỗi thư được xóa khỏi máy chủ sau khi tải xuống."
+msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server after downloading it."
+msgstr "Penguin Mail tải thư từ máy chủ vào Hộp thư đến và tiếp tục kiểm tra trong nền, kể cả khi đóng cửa sổ. Mỗi thư được xóa khỏi máy chủ sau khi tải xuống."
 
 #: app/src/add_account.rs:1497
-msgid ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. It removes each message from "
-"the server {days} day after downloading it."
-msgid_plural ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. It removes each message from "
-"the server {days} days after downloading it."
-msgstr[0] ""
-"Penguin Mail tải thư từ máy chủ vào Hộp thư đến và tiếp tục kiểm tra trong "
-"nền, kể cả khi đóng cửa sổ. Mỗi thư được xóa khỏi máy chủ {days} ngày sau "
-"khi tải xuống."
+msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} day after downloading it."
+msgid_plural "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} days after downloading it."
+msgstr[0] "Penguin Mail tải thư từ máy chủ vào Hộp thư đến và tiếp tục kiểm tra trong nền, kể cả khi đóng cửa sổ. Mỗi thư được xóa khỏi máy chủ {days} ngày sau khi tải xuống."
 
 #: app/src/add_account.rs:1513
 msgid "Penguin Mail needs the password for {address} again."
@@ -619,12 +503,8 @@ msgid "API Token"
 msgstr "Mã thông báo API"
 
 #: app/src/add_account.rs:1681
-msgid ""
-"Make an API token in {provider}'s settings with this access: {access}. Paste "
-"it here."
-msgstr ""
-"Tạo mã thông báo API trong cài đặt của {provider} với quyền: {access}. Dán "
-"vào đây."
+msgid "Make an API token in {provider}'s settings with this access: {access}. Paste it here."
+msgstr "Tạo mã thông báo API trong cài đặt của {provider} với quyền: {access}. Dán vào đây."
 
 #: app/src/add_account.rs:1686
 msgid "Make an API token in {provider}'s settings and paste it here."
@@ -663,20 +543,12 @@ msgid "Penguin Mail found a JMAP server for {domain}."
 msgstr "Penguin Mail tìm thấy máy chủ JMAP cho {domain}."
 
 #: app/src/add_account.rs:1759
-msgid ""
-"{host} is outside {domain}. Your token goes there only after you check the "
-"box."
-msgstr ""
-"{host} nằm ngoài {domain}. Mã thông báo chỉ được gửi tới đó sau khi bạn chọn "
-"ô xác nhận."
+msgid "{host} is outside {domain}. Your token goes there only after you check the box."
+msgstr "{host} nằm ngoài {domain}. Mã thông báo chỉ được gửi tới đó sau khi bạn chọn ô xác nhận."
 
 #: app/src/add_account.rs:1762
-msgid ""
-"{host} is outside {domain}. Your password goes there only after you check "
-"the box."
-msgstr ""
-"{host} nằm ngoài {domain}. Mật khẩu chỉ được gửi tới đó sau khi bạn chọn ô "
-"xác nhận."
+msgid "{host} is outside {domain}. Your password goes there only after you check the box."
+msgstr "{host} nằm ngoài {domain}. Mật khẩu chỉ được gửi tới đó sau khi bạn chọn ô xác nhận."
 
 #: app/src/add_account.rs:1765
 msgid "Use {host}"
@@ -728,9 +600,7 @@ msgstr "Yêu cầu đăng nhập bị từ chối"
 
 #: app/src/add_account.rs:2020
 msgid "Choose Sign In With Browser and allow access on {provider}'s page."
-msgstr ""
-"Chọn Đăng nhập bằng trình duyệt và cho phép truy cập trên trang của "
-"{provider}."
+msgstr "Chọn Đăng nhập bằng trình duyệt và cho phép truy cập trên trang của {provider}."
 
 #: app/src/add_account.rs:2025 app/src/add_account.rs:2121
 msgid "{provider} does not answer"
@@ -746,8 +616,7 @@ msgstr "Chờ một phút, rồi chọn Đăng nhập bằng trình duyệt."
 
 #: app/src/add_account.rs:2037 app/src/add_account.rs:2138
 msgid "{provider} gave an answer Penguin Mail cannot use. Try again later."
-msgstr ""
-"{provider} đưa ra phản hồi Penguin Mail không thể sử dụng. Thử lại sau."
+msgstr "{provider} đưa ra phản hồi Penguin Mail không thể sử dụng. Thử lại sau."
 
 #: app/src/add_account.rs:2073
 msgid "{provider} refused the token"
@@ -798,12 +667,8 @@ msgid "{host} sends the sign-in elsewhere"
 msgstr "{host} chuyển thông tin đăng nhập tới nơi khác"
 
 #: app/src/add_account.rs:2114
-msgid ""
-"It tried to pass your sign-in on to {other}, and Penguin Mail refused. If "
-"you trust {other}, enter its session URL in Server Settings."
-msgstr ""
-"Máy chủ đã cố chuyển thông tin đăng nhập tới {other} và Penguin Mail từ "
-"chối. Nếu tin tưởng {other}, hãy nhập URL phiên của nó trong Cài đặt máy chủ."
+msgid "It tried to pass your sign-in on to {other}, and Penguin Mail refused. If you trust {other}, enter its session URL in Server Settings."
+msgstr "Máy chủ đã cố chuyển thông tin đăng nhập tới {other} và Penguin Mail từ chối. Nếu tin tưởng {other}, hãy nhập URL phiên của nó trong Cài đặt máy chủ."
 
 #: app/src/add_account.rs:2122
 msgid "Check your connection, then choose Sign In."
@@ -814,12 +679,8 @@ msgid "Wait a minute, then choose Sign In."
 msgstr "Chờ một phút, rồi chọn Đăng nhập."
 
 #: app/src/add_account.rs:2135
-msgid ""
-"{provider} gave an answer Penguin Mail cannot use. Try again later, or use "
-"IMAP instead."
-msgstr ""
-"{provider} đưa ra phản hồi Penguin Mail không thể sử dụng. Thử lại sau hoặc "
-"dùng IMAP."
+msgid "{provider} gave an answer Penguin Mail cannot use. Try again later, or use IMAP instead."
+msgstr "{provider} đưa ra phản hồi Penguin Mail không thể sử dụng. Thử lại sau hoặc dùng IMAP."
 
 #: app/src/add_account/lookup.rs:39
 msgid "Penguin Mail's own list"
@@ -894,12 +755,8 @@ msgid "Choose your {provider} account."
 msgstr "Chọn tài khoản {provider} của bạn."
 
 #: app/src/add_account/post.rs:236
-msgid ""
-"If {provider} says it has not verified the app, choose Advanced, then Go to "
-"Penguin Mail."
-msgstr ""
-"Nếu {provider} báo chưa xác minh ứng dụng, chọn Nâng cao, rồi chọn Truy cập "
-"Penguin Mail."
+msgid "If {provider} says it has not verified the app, choose Advanced, then Go to Penguin Mail."
+msgstr "Nếu {provider} báo chưa xác minh ứng dụng, chọn Nâng cao, rồi chọn Truy cập Penguin Mail."
 
 #: app/src/add_account/post.rs:240
 msgid "Leave every box ticked and choose Continue."
@@ -942,11 +799,8 @@ msgid "{tile}, signs in through your browser"
 msgstr "{tile}, đăng nhập qua trình duyệt"
 
 #: app/src/add_account/post.rs:383
-msgid ""
-"Penguin Mail's own list knows this address. Nothing has left this computer."
-msgstr ""
-"Danh sách của Penguin Mail có địa chỉ này. Chưa có thông tin nào rời khỏi "
-"máy tính."
+msgid "Penguin Mail's own list knows this address. Nothing has left this computer."
+msgstr "Danh sách của Penguin Mail có địa chỉ này. Chưa có thông tin nào rời khỏi máy tính."
 
 #: app/src/add_account/post.rs:401
 msgid "This copy cannot sign in to Microsoft"
@@ -957,32 +811,20 @@ msgid "{provider} has no IMAP"
 msgstr "{provider} không có IMAP"
 
 #: app/src/add_account/post.rs:410
-msgid ""
-"{provider} keeps its mail in its own apps, so other mail apps cannot reach "
-"it. Use another address instead."
-msgstr ""
-"{provider} chỉ cho đọc thư trong ứng dụng của họ nên các ứng dụng thư khác "
-"không thể truy cập. Hãy dùng địa chỉ khác."
+msgid "{provider} keeps its mail in its own apps, so other mail apps cannot reach it. Use another address instead."
+msgstr "{provider} chỉ cho đọc thư trong ứng dụng của họ nên các ứng dụng thư khác không thể truy cập. Hãy dùng địa chỉ khác."
 
 #: app/src/add_account/post.rs:414
 msgid "Penguin Mail cannot reach {provider} yet"
 msgstr "Penguin Mail chưa thể truy cập {provider}"
 
 #: app/src/add_account/post.rs:416
-msgid ""
-"{provider} lets other mail apps in only through an app of its own, which "
-"Penguin Mail does not support yet. Use another address instead."
-msgstr ""
-"{provider} chỉ cho các ứng dụng thư khác truy cập qua ứng dụng riêng của họ "
-"mà Penguin Mail chưa hỗ trợ. Hãy dùng địa chỉ khác."
+msgid "{provider} lets other mail apps in only through an app of its own, which Penguin Mail does not support yet. Use another address instead."
+msgstr "{provider} chỉ cho các ứng dụng thư khác truy cập qua ứng dụng riêng của họ mà Penguin Mail chưa hỗ trợ. Hãy dùng địa chỉ khác."
 
 #: app/src/add_account/post.rs:450
-msgid ""
-"On the next page, paste an API token from {provider}'s settings, not your "
-"{provider} password."
-msgstr ""
-"Ở trang tiếp theo, dán mã thông báo API từ cài đặt của {provider}, không "
-"phải mật khẩu {provider}."
+msgid "On the next page, paste an API token from {provider}'s settings, not your {provider} password."
+msgstr "Ở trang tiếp theo, dán mã thông báo API từ cài đặt của {provider}, không phải mật khẩu {provider}."
 
 #: app/src/add_account/post.rs:462
 msgid "{provider} needs an app password"
@@ -993,24 +835,16 @@ msgid "With two-step sign-in on, {provider} needs an app password"
 msgstr "Khi bật đăng nhập hai bước, {provider} cần mật khẩu ứng dụng"
 
 #: app/src/add_account/post.rs:473
-msgid ""
-"On the next page, paste an app-specific password from your Apple Account "
-"page, not your Apple password."
-msgstr ""
-"Ở trang tiếp theo, dán mật khẩu dành riêng cho ứng dụng từ trang Tài khoản "
-"Apple, không phải mật khẩu Apple."
+msgid "On the next page, paste an app-specific password from your Apple Account page, not your Apple password."
+msgstr "Ở trang tiếp theo, dán mật khẩu dành riêng cho ứng dụng từ trang Tài khoản Apple, không phải mật khẩu Apple."
 
 #: app/src/add_account/post.rs:476
 msgid "Open Apple Account Page"
 msgstr "Mở trang Tài khoản Apple"
 
 #: app/src/add_account/post.rs:484
-msgid ""
-"On the next page, paste an app password from {provider}'s settings, not your "
-"{provider} password."
-msgstr ""
-"Ở trang tiếp theo, dán mật khẩu ứng dụng từ cài đặt của {provider}, không "
-"phải mật khẩu {provider}."
+msgid "On the next page, paste an app password from {provider}'s settings, not your {provider} password."
+msgstr "Ở trang tiếp theo, dán mật khẩu ứng dụng từ cài đặt của {provider}, không phải mật khẩu {provider}."
 
 #: app/src/add_account/post.rs:489
 msgid "Open {provider}'s Settings"
@@ -1025,12 +859,8 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Tiếp tục sẽ mở trang đăng nhập của {provider} trong trình duyệt."
 
 #: app/src/app.rs:424
-msgid ""
-"Your preferences could not be read, so Penguin Mail started from the "
-"defaults. The old file is kept as {file}."
-msgstr ""
-"Không thể đọc tùy chọn nên Penguin Mail dùng cài đặt mặc định. Tệp cũ được "
-"giữ lại tại {file}."
+msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
+msgstr "Không thể đọc tùy chọn nên Penguin Mail dùng cài đặt mặc định. Tệp cũ được giữ lại tại {file}."
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -1104,8 +934,7 @@ msgstr "Chưa có mô hình để dịch. Chọn mô hình trên trang AI trong 
 
 #: app/src/assistant/mod.rs:126
 msgid "Unsubscribing has no model. Choose one in Preferences, on the AI page."
-msgstr ""
-"Chưa có mô hình để hủy đăng ký. Chọn mô hình trên trang AI trong Tùy chọn."
+msgstr "Chưa có mô hình để hủy đăng ký. Chọn mô hình trên trang AI trong Tùy chọn."
 
 #: app/src/assistant/mod.rs:132
 msgid "Choose a model for the local server in Preferences."
@@ -1125,8 +954,7 @@ msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Chuyển {count} cuộc hội thoại vào Thùng rác?"
 
 #: app/src/assistant/run.rs:1272
-msgid ""
-"Don't Allow labels only the mail in accounts that have the label already."
+msgid "Don't Allow labels only the mail in accounts that have the label already."
 msgstr "Không cho phép chỉ gắn nhãn cho thư trong các tài khoản đã có nhãn đó."
 
 #: app/src/assistant/run.rs:1309
@@ -1201,12 +1029,8 @@ msgstr ""
 "{text}"
 
 #: app/src/assistant/run.rs:1793
-msgid ""
-"Hide My Email needs masked addresses or labels, and {provider} offers "
-"neither on this account."
-msgstr ""
-"Ẩn email của tôi cần địa chỉ ẩn hoặc nhãn, nhưng {provider} không cung cấp "
-"cả hai cho tài khoản này."
+msgid "Hide My Email needs masked addresses or labels, and {provider} offers neither on this account."
+msgstr "Ẩn email của tôi cần địa chỉ ẩn hoặc nhãn, nhưng {provider} không cung cấp cả hai cho tài khoản này."
 
 #: app/src/assistant/run.rs:1861
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
@@ -1217,20 +1041,12 @@ msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "Bật lại {address}? Thư gửi đến địa chỉ này sẽ lại được nhận."
 
 #: app/src/assistant/run.rs:1974
-msgid ""
-"Move mail from {sender} to {category} in {account}, and send their future "
-"mail there too?"
-msgstr ""
-"Chuyển thư từ {sender} vào {category} trong {account} và chuyển cả thư sau "
-"này của họ vào đó?"
+msgid "Move mail from {sender} to {category} in {account}, and send their future mail there too?"
+msgstr "Chuyển thư từ {sender} vào {category} trong {account} và chuyển cả thư sau này của họ vào đó?"
 
 #: app/src/assistant/run.rs:1986
-msgid ""
-"Move mail from {sender} to {category} in {account}, and add a {provider} "
-"rule for their future mail?"
-msgstr ""
-"Chuyển thư từ {sender} vào {category} trong {account} và thêm quy tắc "
-"{provider} cho thư sau này của họ?"
+msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
+msgstr "Chuyển thư từ {sender} vào {category} trong {account} và thêm quy tắc {provider} cho thư sau này của họ?"
 
 #: app/src/assistant/run/calendar.rs:239 app/src/assistant/run/calendar.rs:856
 msgid "%a %-d %b %H:%M"
@@ -1595,10 +1411,8 @@ msgstr "Máy chủ của từng tài khoản"
 
 #: app/src/assistant/run/mail.rs:423
 msgid "Delete {count} conversation forever? {provider} cannot bring it back."
-msgid_plural ""
-"Delete {count} conversations forever? {provider} cannot bring them back."
-msgstr[0] ""
-"Xóa vĩnh viễn {count} cuộc hội thoại? {provider} không thể khôi phục chúng."
+msgid_plural "Delete {count} conversations forever? {provider} cannot bring them back."
+msgstr[0] "Xóa vĩnh viễn {count} cuộc hội thoại? {provider} không thể khôi phục chúng."
 
 #: app/src/assistant/run/manage.rs:127
 msgid "Name: {name}"
@@ -1617,49 +1431,27 @@ msgid "Organization: {organisation}"
 msgstr "Tổ chức: {organisation}"
 
 #: app/src/assistant/run/manage.rs:233
-msgid ""
-"Rename the label “{label}” in {account} to “{name}”? Labels nested under it "
-"move along."
-msgstr ""
-"Đổi tên nhãn “{label}” trong {account} thành “{name}”? Các nhãn con cũng "
-"được chuyển theo."
+msgid "Rename the label “{label}” in {account} to “{name}”? Labels nested under it move along."
+msgstr "Đổi tên nhãn “{label}” trong {account} thành “{name}”? Các nhãn con cũng được chuyển theo."
 
 #: app/src/assistant/run/manage.rs:268
 msgid "Color the label “{label}” in {account} {color}?"
 msgstr "Đổi màu nhãn “{label}” trong {account} thành {color}?"
 
 #: app/src/assistant/run/manage.rs:308
-msgid ""
-"Delete the label “{label}” from {account}? {count} conversation carries it. "
-"The mail stays in the account, without the label."
-msgid_plural ""
-"Delete the label “{label}” from {account}? {count} conversations carry it. "
-"The mail stays in the account, without the label."
-msgstr[0] ""
-"Xóa nhãn “{label}” khỏi {account}? Có {count} cuộc hội thoại mang nhãn này. "
-"Thư vẫn ở tài khoản nhưng không còn nhãn."
+msgid "Delete the label “{label}” from {account}? {count} conversation carries it. The mail stays in the account, without the label."
+msgid_plural "Delete the label “{label}” from {account}? {count} conversations carry it. The mail stays in the account, without the label."
+msgstr[0] "Xóa nhãn “{label}” khỏi {account}? Có {count} cuộc hội thoại mang nhãn này. Thư vẫn ở tài khoản nhưng không còn nhãn."
 
 #: app/src/assistant/run/manage.rs:319
-msgid ""
-"Delete the label “{label}” from {account}? {count} conversation carries it. "
-"The mail stays in {provider}, without the label."
-msgid_plural ""
-"Delete the label “{label}” from {account}? {count} conversations carry it. "
-"The mail stays in {provider}, without the label."
-msgstr[0] ""
-"Xóa nhãn “{label}” khỏi {account}? Có {count} cuộc hội thoại mang nhãn này. "
-"Thư vẫn ở {provider} nhưng không còn nhãn."
+msgid "Delete the label “{label}” from {account}? {count} conversation carries it. The mail stays in {provider}, without the label."
+msgid_plural "Delete the label “{label}” from {account}? {count} conversations carry it. The mail stays in {provider}, without the label."
+msgstr[0] "Xóa nhãn “{label}” khỏi {account}? Có {count} cuộc hội thoại mang nhãn này. Thư vẫn ở {provider} nhưng không còn nhãn."
 
 #: app/src/assistant/run/manage.rs:332
-msgid ""
-"Delete the folder “{label}” from {account}? {count} conversation is in it. "
-"The mail in the folder is deleted with it."
-msgid_plural ""
-"Delete the folder “{label}” from {account}? {count} conversations are in it. "
-"The mail in the folder is deleted with it."
-msgstr[0] ""
-"Xóa thư mục “{label}” khỏi {account}? Có {count} cuộc hội thoại trong đó. "
-"Thư trong thư mục bị xóa cùng thư mục."
+msgid "Delete the folder “{label}” from {account}? {count} conversation is in it. The mail in the folder is deleted with it."
+msgid_plural "Delete the folder “{label}” from {account}? {count} conversations are in it. The mail in the folder is deleted with it."
+msgstr[0] "Xóa thư mục “{label}” khỏi {account}? Có {count} cuộc hội thoại trong đó. Thư trong thư mục bị xóa cùng thư mục."
 
 #: app/src/assistant/run/manage.rs:397
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
@@ -1759,8 +1551,7 @@ msgstr "Hủy lời nhắc trên “{subject}” và đưa thư về Hộp thư 
 
 #: app/src/assistant/run/queue.rs:383
 msgid "Cancel {count} reminder and put its conversation back in the Inbox?"
-msgid_plural ""
-"Cancel {count} reminders and put their conversations back in the Inbox?"
+msgid_plural "Cancel {count} reminders and put their conversations back in the Inbox?"
 msgstr[0] "Hủy {count} lời nhắc và đưa các cuộc hội thoại về Hộp thư đến?"
 
 #: app/src/assistant/run/queue.rs:417
@@ -1882,20 +1673,13 @@ msgid "Claude Code"
 msgstr "Claude Code"
 
 #: app/src/assistant/sources/skills/sandbox.rs:250
-msgid ""
-"Skill scripts need bubblewrap, which is not installed. Install the "
-"bubblewrap package to run them."
-msgstr ""
-"Kịch bản kỹ năng cần bubblewrap nhưng chưa được cài đặt. Cài gói bubblewrap "
-"để chạy chúng."
+msgid "Skill scripts need bubblewrap, which is not installed. Install the bubblewrap package to run them."
+msgstr "Kịch bản kỹ năng cần bubblewrap nhưng chưa được cài đặt. Cài gói bubblewrap để chạy chúng."
 
 #: app/src/assistant/sources/skills/sandbox.rs:269
 #: app/src/assistant/sources/skills/sandbox.rs:275
-msgid ""
-"Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
-msgstr ""
-"Không thể chạy kịch bản kỹ năng: bubblewrap không khởi động được môi trường "
-"cách ly ({reason})."
+msgid "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
+msgstr "Không thể chạy kịch bản kỹ năng: bubblewrap không khởi động được môi trường cách ly ({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:181
 msgid "It can reach the internet."
@@ -1911,15 +1695,13 @@ msgid ""
 "\n"
 "{command}\n"
 "\n"
-"It runs in a sandbox with no access to your mail or home folder. {network} "
-"Always Allow covers this exact command only."
+"It runs in a sandbox with no access to your mail or home folder. {network} Always Allow covers this exact command only."
 msgstr ""
 "Chạy lệnh này cho kỹ năng {skill}?\n"
 "\n"
 "{command}\n"
 "\n"
-"Lệnh chạy trong môi trường cách ly, không truy cập được thư hay thư mục nhà "
-"của bạn. {network} Luôn cho phép chỉ áp dụng cho đúng lệnh này."
+"Lệnh chạy trong môi trường cách ly, không truy cập được thư hay thư mục nhà của bạn. {network} Luôn cho phép chỉ áp dụng cho đúng lệnh này."
 
 #: app/src/assistant/sources/web.rs:64
 msgid "Add a Brave Search API key."
@@ -1939,15 +1721,13 @@ msgid ""
 "\n"
 "{address}\n"
 "\n"
-"The site receives the whole address, including anything after a question "
-"mark. Always Allow covers this exact address only."
+"The site receives the whole address, including anything after a question mark. Always Allow covers this exact address only."
 msgstr ""
 "Mở trang web này?\n"
 "\n"
 "{address}\n"
 "\n"
-"Trang web nhận toàn bộ địa chỉ, kể cả phần sau dấu hỏi. Luôn cho phép chỉ áp "
-"dụng cho đúng địa chỉ này."
+"Trang web nhận toàn bộ địa chỉ, kể cả phần sau dấu hỏi. Luôn cho phép chỉ áp dụng cho đúng địa chỉ này."
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -2112,12 +1892,8 @@ msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "Không thể lưu {count} người vào danh bạ của {account}"
 
 #: app/src/core.rs:240
-msgid ""
-"Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
-"mail. Stop it, then open Penguin Mail again."
-msgstr ""
-"Một bản Penguin Mail khác hoặc penguin-mail-cli sync đang đồng bộ thư. Dừng "
-"chương trình đó, rồi mở lại Penguin Mail."
+msgid "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your mail. Stop it, then open Penguin Mail again."
+msgstr "Một bản Penguin Mail khác hoặc penguin-mail-cli sync đang đồng bộ thư. Dừng chương trình đó, rồi mở lại Penguin Mail."
 
 #: app/src/core.rs:252
 msgid "Penguin Mail could not update its mail store, and kept the old one."
@@ -2135,8 +1911,7 @@ msgstr "Đã hủy."
 
 #: app/src/core.rs:1561 app/src/core.rs:1586
 msgid "This account keeps no password a calendar or contacts server takes."
-msgstr ""
-"Tài khoản này không lưu mật khẩu dùng được cho máy chủ lịch hoặc danh bạ."
+msgstr "Tài khoản này không lưu mật khẩu dùng được cho máy chủ lịch hoặc danh bạ."
 
 #: app/src/core.rs:1767 app/src/core.rs:1867 app/src/core/route.rs:131
 msgid "The demo cannot switch accounts."
@@ -2387,23 +2162,15 @@ msgstr "Thử lại"
 
 #: app/src/gmail_password.rs:102
 msgid "Google wants an app password here, not your Google password."
-msgstr ""
-"Google cần mật khẩu ứng dụng ở đây, không phải mật khẩu Google của bạn."
+msgstr "Google cần mật khẩu ứng dụng ở đây, không phải mật khẩu Google của bạn."
 
 #: app/src/gmail_password.rs:106
-msgid ""
-"Google didn't accept that app password. Make a new one and paste it here."
-msgstr ""
-"Google không chấp nhận mật khẩu ứng dụng đó. Hãy tạo một mật khẩu mới và dán "
-"vào đây."
+msgid "Google didn't accept that app password. Make a new one and paste it here."
+msgstr "Google không chấp nhận mật khẩu ứng dụng đó. Hãy tạo một mật khẩu mới và dán vào đây."
 
 #: app/src/gmail_password.rs:109
-msgid ""
-"Your organization turned off this way of signing in. Ask them, or sign in "
-"another way."
-msgstr ""
-"Tổ chức của bạn đã tắt cách đăng nhập này. Hãy hỏi họ, hoặc đăng nhập bằng "
-"cách khác."
+msgid "Your organization turned off this way of signing in. Ask them, or sign in another way."
+msgstr "Tổ chức của bạn đã tắt cách đăng nhập này. Hãy hỏi họ, hoặc đăng nhập bằng cách khác."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/gmail_password.rs:112
@@ -2413,12 +2180,8 @@ msgstr "Đây có vẻ không phải máy chủ của Gmail."
 #. Translators: Gmail and All Mail are names; use the words Gmail's own settings show
 #. in your language for Labels, Show in IMAP and All Mail.
 #: app/src/gmail_password.rs:116
-msgid ""
-"Gmail hides All Mail from apps. In Gmail's settings, open Labels and tick "
-"Show in IMAP next to All Mail."
-msgstr ""
-"Gmail ẩn Tất cả thư khỏi các ứng dụng. Trong cài đặt Gmail, mở Nhãn và đánh "
-"dấu Hiển thị trong IMAP bên cạnh Tất cả thư."
+msgid "Gmail hides All Mail from apps. In Gmail's settings, open Labels and tick Show in IMAP next to All Mail."
+msgstr "Gmail ẩn Tất cả thư khỏi các ứng dụng. Trong cài đặt Gmail, mở Nhãn và đánh dấu Hiển thị trong IMAP bên cạnh Tất cả thư."
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
@@ -2432,12 +2195,8 @@ msgid "Sign in to {address} again in Online Accounts."
 msgstr "Hãy đăng nhập lại {address} trong Tài khoản trực tuyến."
 
 #: app/src/goa_notice.rs:107
-msgid ""
-"Your organization may not allow this. Ask your administrator, or sign in "
-"another way."
-msgstr ""
-"Tổ chức của bạn có thể không cho phép điều này. Hãy hỏi quản trị viên, hoặc "
-"đăng nhập bằng cách khác."
+msgid "Your organization may not allow this. Ask your administrator, or sign in another way."
+msgstr "Tổ chức của bạn có thể không cho phép điều này. Hãy hỏi quản trị viên, hoặc đăng nhập bằng cách khác."
 
 #: app/src/goa_notice.rs:115
 msgid "Add It Again"
@@ -2446,9 +2205,7 @@ msgstr "Thêm lại"
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:119
 msgid "{address} was removed from Online Accounts. Your mail here is kept."
-msgstr ""
-"{address} đã bị xóa khỏi Tài khoản trực tuyến. Thư của bạn ở đây vẫn được "
-"giữ."
+msgstr "{address} đã bị xóa khỏi Tài khoản trực tuyến. Thư của bạn ở đây vẫn được giữ."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/goa_notice.rs:127
@@ -2457,12 +2214,8 @@ msgstr "Thư đang tắt cho {address} trong Tài khoản trực tuyến."
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
-msgid ""
-"Google refused this computer's sign-in for mail. Is IMAP turned on for this "
-"account?"
-msgstr ""
-"Google đã từ chối đăng nhập của máy tính này cho thư. IMAP có đang bật cho "
-"tài khoản này không?"
+msgid "Google refused this computer's sign-in for mail. Is IMAP turned on for this account?"
+msgstr "Google đã từ chối đăng nhập của máy tính này cho thư. IMAP có đang bật cho tài khoản này không?"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/goa_notice.rs:139
@@ -2475,13 +2228,8 @@ msgid "Open Online Accounts"
 msgstr "Mở Tài khoản trực tuyến"
 
 #: app/src/keyring_plug.rs:160
-msgid ""
-"Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run "
-"{command} in a terminal, then restart Penguin Mail."
-msgstr ""
-"Penguin Mail không thể lưu thông tin đăng nhập cho đến khi snap truy cập "
-"được kho khóa. Chạy {command} trong thiết bị đầu cuối, rồi khởi động lại "
-"Penguin Mail."
+msgid "Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run {command} in a terminal, then restart Penguin Mail."
+msgstr "Penguin Mail không thể lưu thông tin đăng nhập cho đến khi snap truy cập được kho khóa. Chạy {command} trong thiết bị đầu cuối, rồi khởi động lại Penguin Mail."
 
 #: app/src/language_names.rs:48
 msgid "{language} ({country})"
@@ -2489,8 +2237,7 @@ msgstr "{language} ({country})"
 
 #: app/src/main.rs:105
 msgid ""
-"Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
-"[FILE.ics]\n"
+"Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] [FILE.ics]\n"
 "\n"
 "  --version      print the version and quit\n"
 "  --background   start in the tray without opening a window\n"
@@ -2499,8 +2246,7 @@ msgid ""
 "  mailto:...     the same as --compose mailto:...\n"
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
-"Cách dùng: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
-"[FILE.ics]\n"
+"Cách dùng: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] [FILE.ics]\n"
 "\n"
 "  --version      in phiên bản rồi thoát\n"
 "  --background   khởi động trong khay hệ thống, không mở cửa sổ\n"
@@ -2522,12 +2268,8 @@ msgid "Report a Problem"
 msgstr "Báo cáo sự cố"
 
 #: app/src/move_banner.rs:61
-msgid ""
-"Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
-"your mail back. Nothing on this computer was lost."
-msgstr ""
-"Penguin Mail không thể nhận thư mới cho {address}. Hãy chọn cách đăng nhập "
-"để lấy lại thư. Không có gì trên máy tính này bị mất."
+msgid "Penguin Mail can't get new mail for {address}. Choose how it signs in to get your mail back. Nothing on this computer was lost."
+msgstr "Penguin Mail không thể nhận thư mới cho {address}. Hãy chọn cách đăng nhập để lấy lại thư. Không có gì trên máy tính này bị mất."
 
 #: app/src/move_banner.rs:68
 msgid "Choose how {address} signs in to keep your mail arriving."
@@ -2535,15 +2277,9 @@ msgstr "Hãy chọn cách {address} đăng nhập để thư tiếp tục đư�
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:78
-msgid ""
-"{count} Gmail account can't get new mail. Choose how each signs in to get "
-"your mail back. Nothing on this computer was lost."
-msgid_plural ""
-"{count} Gmail accounts can't get new mail. Choose how each signs in to get "
-"your mail back. Nothing on this computer was lost."
-msgstr[0] ""
-"{count} tài khoản Gmail không thể nhận thư mới. Hãy chọn cách đăng nhập cho "
-"từng tài khoản để lấy lại thư. Không có gì trên máy tính này bị mất."
+msgid "{count} Gmail account can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost."
+msgid_plural "{count} Gmail accounts can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost."
+msgstr[0] "{count} tài khoản Gmail không thể nhận thư mới. Hãy chọn cách đăng nhập cho từng tài khoản để lấy lại thư. Không có gì trên máy tính này bị mất."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:86
@@ -2732,16 +2468,12 @@ msgid "Could not rename the folder: {reason}"
 msgstr "Không thể đổi tên thư mục: {reason}"
 
 #: app/src/offered.rs:448
-msgid ""
-"Its mail stays in {provider}, without the label. Nested labels stay too."
-msgstr ""
-"Thư vẫn ở {provider} nhưng không còn nhãn. Các nhãn con cũng được giữ lại."
+msgid "Its mail stays in {provider}, without the label. Nested labels stay too."
+msgstr "Thư vẫn ở {provider} nhưng không còn nhãn. Các nhãn con cũng được giữ lại."
 
 #: app/src/offered.rs:453
-msgid ""
-"Its mail stays in the account, without the label. Nested labels stay too."
-msgstr ""
-"Thư vẫn ở tài khoản nhưng không còn nhãn. Các nhãn con cũng được giữ lại."
+msgid "Its mail stays in the account, without the label. Nested labels stay too."
+msgstr "Thư vẫn ở tài khoản nhưng không còn nhãn. Các nhãn con cũng được giữ lại."
 
 #: app/src/offered.rs:455
 msgid "The mail in the folder is deleted with it."
@@ -2776,17 +2508,12 @@ msgid "Your organization does not allow Penguin Mail to change these rules."
 msgstr "Tổ chức của bạn không cho phép Penguin Mail đổi các quy tắc này."
 
 #: app/src/offered.rs:497
-msgid ""
-"Your organization does not allow Penguin Mail to change the automatic reply."
+msgid "Your organization does not allow Penguin Mail to change the automatic reply."
 msgstr "Tổ chức của bạn không cho phép Penguin Mail đổi trả lời tự động."
 
 #: app/src/offered.rs:501
-msgid ""
-"{provider} refused the password for calendars. Some providers need an app "
-"password with access to calendars and contacts."
-msgstr ""
-"{provider} từ chối mật khẩu cho lịch. Một số nhà cung cấp cần mật khẩu ứng "
-"dụng có quyền truy cập lịch và danh bạ."
+msgid "{provider} refused the password for calendars. Some providers need an app password with access to calendars and contacts."
+msgstr "{provider} từ chối mật khẩu cho lịch. Một số nhà cung cấp cần mật khẩu ứng dụng có quyền truy cập lịch và danh bạ."
 
 #: app/src/offered.rs:505
 msgid "Penguin Mail could not reach the calendar server for {provider}."
@@ -2797,12 +2524,8 @@ msgid "Penguin Mail found no calendar server for {provider}."
 msgstr "Penguin Mail không tìm thấy máy chủ lịch của {provider}."
 
 #: app/src/offered.rs:513
-msgid ""
-"{provider} refused the password for contacts. Some providers need an app "
-"password with access to calendars and contacts."
-msgstr ""
-"{provider} từ chối mật khẩu cho danh bạ. Một số nhà cung cấp cần mật khẩu "
-"ứng dụng có quyền truy cập lịch và danh bạ."
+msgid "{provider} refused the password for contacts. Some providers need an app password with access to calendars and contacts."
+msgstr "{provider} từ chối mật khẩu cho danh bạ. Một số nhà cung cấp cần mật khẩu ứng dụng có quyền truy cập lịch và danh bạ."
 
 #: app/src/offered.rs:517
 msgid "Penguin Mail could not reach the contacts server for {provider}."
@@ -2823,20 +2546,12 @@ msgstr "{provider} không thể gửi trả lời tự động."
 #. A calendar or contacts server beside a browser sign-in that
 #. refused its token waits for an app password.
 #: app/src/offered.rs:532
-msgid ""
-"{provider}'s calendar server refused the browser sign-in. Choose Sign In "
-"Again and give an app password for the calendar."
-msgstr ""
-"Máy chủ lịch của {provider} từ chối đăng nhập qua trình duyệt. Chọn Đăng "
-"nhập lại và cung cấp mật khẩu ứng dụng cho lịch."
+msgid "{provider}'s calendar server refused the browser sign-in. Choose Sign In Again and give an app password for the calendar."
+msgstr "Máy chủ lịch của {provider} từ chối đăng nhập qua trình duyệt. Chọn Đăng nhập lại và cung cấp mật khẩu ứng dụng cho lịch."
 
 #: app/src/offered.rs:535
-msgid ""
-"{provider}'s contacts server refused the browser sign-in. Choose Sign In "
-"Again and give an app password for the calendar."
-msgstr ""
-"Máy chủ danh bạ của {provider} từ chối đăng nhập qua trình duyệt. Chọn Đăng "
-"nhập lại và cung cấp mật khẩu ứng dụng cho lịch."
+msgid "{provider}'s contacts server refused the browser sign-in. Choose Sign In Again and give an app password for the calendar."
+msgstr "Máy chủ danh bạ của {provider} từ chối đăng nhập qua trình duyệt. Chọn Đăng nhập lại và cung cấp mật khẩu ứng dụng cho lịch."
 
 #: app/src/offered.rs:540
 msgid "Penguin Mail cannot show {provider}'s calendar over JMAP yet."
@@ -2872,8 +2587,7 @@ msgstr "{provider} không có trả lời tự động mà ứng dụng khác th
 
 #: app/src/offered.rs:560
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
-msgstr ""
-"{provider} không thể xóa thư vĩnh viễn. Xóa sẽ chuyển thư vào Thùng rác."
+msgstr "{provider} không thể xóa thư vĩnh viễn. Xóa sẽ chuyển thư vào Thùng rác."
 
 #: app/src/offered.rs:562
 msgid "{provider} does not sort the inbox into categories."
@@ -2900,12 +2614,8 @@ msgid "Open Gmail Settings"
 msgstr "Mở cài đặt Gmail"
 
 #: app/src/offered.rs:709
-msgid ""
-"{provider} does not let an API token change the automatic reply. Sign in "
-"again through the browser to change it here."
-msgstr ""
-"{provider} không cho mã thông báo API đổi trả lời tự động. Đăng nhập lại qua "
-"trình duyệt để đổi tại đây."
+msgid "{provider} does not let an API token change the automatic reply. Sign in again through the browser to change it here."
+msgstr "{provider} không cho mã thông báo API đổi trả lời tự động. Đăng nhập lại qua trình duyệt để đổi tại đây."
 
 #: app/src/offered.rs:719
 msgid "{address}: {reason}"
@@ -2944,65 +2654,34 @@ msgid "Message {number}: {words}"
 msgstr "Thư {number}: {words}"
 
 #: app/src/offered.rs:776
-msgid ""
-"Removing the account deletes this computer's copy of its mail and the saved "
-"sign-in. Mail still on the server stays there."
-msgstr ""
-"Xóa tài khoản sẽ xóa bản sao thư và thông tin đăng nhập đã lưu trên máy tính "
-"này. Thư còn trên máy chủ vẫn được giữ lại."
+msgid "Removing the account deletes this computer's copy of its mail and the saved sign-in. Mail still on the server stays there."
+msgstr "Xóa tài khoản sẽ xóa bản sao thư và thông tin đăng nhập đã lưu trên máy tính này. Thư còn trên máy chủ vẫn được giữ lại."
 
 #: app/src/offered.rs:780
-msgid ""
-"Mail already removed from the server exists only on this computer, and "
-"removing the account deletes it with the saved sign-in. Mail still on the "
-"server stays there."
-msgstr ""
-"Thư đã xóa khỏi máy chủ chỉ còn trên máy tính này. Xóa tài khoản sẽ xóa cả "
-"thư đó và thông tin đăng nhập đã lưu. Thư còn trên máy chủ vẫn được giữ lại."
+msgid "Mail already removed from the server exists only on this computer, and removing the account deletes it with the saved sign-in. Mail still on the server stays there."
+msgstr "Thư đã xóa khỏi máy chủ chỉ còn trên máy tính này. Xóa tài khoản sẽ xóa cả thư đó và thông tin đăng nhập đã lưu. Thư còn trên máy chủ vẫn được giữ lại."
 
 #: app/src/offered.rs:785
-msgid ""
-"Its calendars and saved sign-in are deleted from this computer. Nothing "
-"changes on the server."
-msgstr ""
-"Lịch và thông tin đăng nhập đã lưu bị xóa khỏi máy tính này. Không có gì "
-"thay đổi trên máy chủ."
+msgid "Its calendars and saved sign-in are deleted from this computer. Nothing changes on the server."
+msgstr "Lịch và thông tin đăng nhập đã lưu bị xóa khỏi máy tính này. Không có gì thay đổi trên máy chủ."
 
 #: app/src/offered.rs:790
-msgid ""
-"Its downloaded mail and saved sign-in are deleted from this computer. "
-"Nothing changes in {provider}."
-msgstr ""
-"Thư đã tải và thông tin đăng nhập đã lưu bị xóa khỏi máy tính này. Không có "
-"gì thay đổi trên {provider}."
+msgid "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in {provider}."
+msgstr "Thư đã tải và thông tin đăng nhập đã lưu bị xóa khỏi máy tính này. Không có gì thay đổi trên {provider}."
 
 #: app/src/offered.rs:804
-msgid ""
-"{count} message waiting in Send Later on the server goes back to Drafts "
-"first."
-msgid_plural ""
-"{count} messages waiting in Send Later on the server go back to Drafts first."
-msgstr[0] ""
-"Trước tiên, {count} thư đang chờ Gửi sau trên máy chủ sẽ trở về Thư nháp."
+msgid "{count} message waiting in Send Later on the server goes back to Drafts first."
+msgid_plural "{count} messages waiting in Send Later on the server go back to Drafts first."
+msgstr[0] "Trước tiên, {count} thư đang chờ Gửi sau trên máy chủ sẽ trở về Thư nháp."
 
 #: app/src/offered.rs:816
-msgid ""
-"Penguin Mail could not call back {count} message waiting on the server. The "
-"server may still send it at its hour."
-msgid_plural ""
-"Penguin Mail could not call back {count} messages waiting on the server. The "
-"server may still send them at their hour."
-msgstr[0] ""
-"Penguin Mail không thể thu hồi {count} thư đang chờ trên máy chủ. Máy chủ có "
-"thể vẫn gửi chúng đúng giờ."
+msgid "Penguin Mail could not call back {count} message waiting on the server. The server may still send it at its hour."
+msgid_plural "Penguin Mail could not call back {count} messages waiting on the server. The server may still send them at their hour."
+msgstr[0] "Penguin Mail không thể thu hồi {count} thư đang chờ trên máy chủ. Máy chủ có thể vẫn gửi chúng đúng giờ."
 
 #: app/src/offered.rs:831
-msgid ""
-"Mail from {address} is kept only on this computer. To keep a copy, quit "
-"Penguin Mail, then back up this file."
-msgstr ""
-"Thư từ {address} chỉ được giữ trên máy tính này. Để giữ bản sao, hãy thoát "
-"Penguin Mail rồi sao lưu tệp này."
+msgid "Mail from {address} is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file."
+msgstr "Thư từ {address} chỉ được giữ trên máy tính này. Để giữ bản sao, hãy thoát Penguin Mail rồi sao lưu tệp này."
 
 #: app/src/offered.rs:882
 msgid "New mail arrives as it is sent"
@@ -3017,12 +2696,8 @@ msgid "Mail is matched over JMAP"
 msgstr "Thư được đối chiếu qua JMAP"
 
 #: app/src/offered.rs:892
-msgid ""
-"Penguin Mail keeps the mail on this computer and downloads again only the "
-"messages it cannot match."
-msgstr ""
-"Penguin Mail giữ thư trên máy tính này và chỉ tải lại những thư không đối "
-"chiếu được."
+msgid "Penguin Mail keeps the mail on this computer and downloads again only the messages it cannot match."
+msgstr "Penguin Mail giữ thư trên máy tính này và chỉ tải lại những thư không đối chiếu được."
 
 #: app/src/offered.rs:899
 msgid "Name, color and place"
@@ -3045,8 +2720,7 @@ msgid "Calendars are read again where JMAP serves them"
 msgstr "Đọc lại lịch ở nơi JMAP cung cấp"
 
 #: app/src/offered.rs:917
-msgid ""
-"If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
+msgid "If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
 msgstr "Nếu {provider} cung cấp lịch qua JMAP, Penguin Mail đọc lịch từ đó."
 
 #: app/src/offered.rs:926
@@ -3107,8 +2781,7 @@ msgstr "{provider} không cung cấp bản nháp của thư đang chờ Gửi sa
 
 #: app/src/offered.rs:1032
 msgid "The mail on {provider} kept changing while Penguin Mail matched it."
-msgstr ""
-"Thư trên {provider} liên tục thay đổi trong lúc Penguin Mail đối chiếu."
+msgstr "Thư trên {provider} liên tục thay đổi trong lúc Penguin Mail đối chiếu."
 
 #: app/src/offered.rs:1058
 msgid "{provider} refused the sign-in in the browser."
@@ -3123,15 +2796,9 @@ msgid "{address} now uses JMAP"
 msgstr "{address} hiện dùng JMAP"
 
 #: app/src/offered.rs:1084
-msgid ""
-"{address} now uses JMAP. {count} rule is off because its folder is not on "
-"the server."
-msgid_plural ""
-"{address} now uses JMAP. {count} rules are off because their folders are not "
-"on the server."
-msgstr[0] ""
-"{address} hiện dùng JMAP. Có {count} quy tắc bị tắt vì thư mục của chúng "
-"không có trên máy chủ."
+msgid "{address} now uses JMAP. {count} rule is off because its folder is not on the server."
+msgid_plural "{address} now uses JMAP. {count} rules are off because their folders are not on the server."
+msgstr[0] "{address} hiện dùng JMAP. Có {count} quy tắc bị tắt vì thư mục của chúng không có trên máy chủ."
 
 #: app/src/open_thread/run/receipt.rs:129
 msgid "Read receipt sent"
@@ -3142,12 +2809,8 @@ msgid "The receipt was not sent, and you can try again: {reason}"
 msgstr "Chưa gửi xác nhận đã đọc và bạn có thể thử lại: {reason}"
 
 #: app/src/open_thread/run/receipt.rs:151
-msgid ""
-"The receipt may have gone out, so Penguin Mail will not send it again: "
-"{reason}"
-msgstr ""
-"Xác nhận đã đọc có thể đã được gửi nên Penguin Mail sẽ không gửi lại: "
-"{reason}"
+msgid "The receipt may have gone out, so Penguin Mail will not send it again: {reason}"
+msgstr "Xác nhận đã đọc có thể đã được gửi nên Penguin Mail sẽ không gửi lại: {reason}"
 
 #: app/src/open_thread/run/translation.rs:158
 msgid "The model sent nothing back to put in the message."
@@ -3173,21 +2836,13 @@ msgstr "Dự án Google của riêng bạn"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:193
-msgid ""
-"A Google project of your own gives Penguin Mail every Gmail feature. It's "
-"free, just for you, takes about 10 minutes, and you do it once."
-msgstr ""
-"Một dự án Google của riêng bạn mang lại cho Penguin Mail mọi tính năng của "
-"Gmail. Miễn phí, chỉ dành cho bạn, mất khoảng 10 phút và chỉ làm một lần."
+msgid "A Google project of your own gives Penguin Mail every Gmail feature. It's free, just for you, takes about 10 minutes, and you do it once."
+msgstr "Một dự án Google của riêng bạn mang lại cho Penguin Mail mọi tính năng của Gmail. Miễn phí, chỉ dành cho bạn, mất khoảng 10 phút và chỉ làm một lần."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:197
-msgid ""
-"You'll use the Google account you want to read mail from. Penguin Mail opens "
-"each page for you and says what to click."
-msgstr ""
-"Bạn sẽ dùng tài khoản Google mà bạn muốn đọc thư. Penguin Mail mở từng trang "
-"cho bạn và nói cần nhấp vào đâu."
+msgid "You'll use the Google account you want to read mail from. Penguin Mail opens each page for you and says what to click."
+msgstr "Bạn sẽ dùng tài khoản Google mà bạn muốn đọc thư. Penguin Mail mở từng trang cho bạn và nói cần nhấp vào đâu."
 
 #: app/src/own_project.rs:203
 msgid "Make a project"
@@ -3199,12 +2854,8 @@ msgid "Google keeps what Penguin Mail needs in a project of its own."
 msgstr "Google giữ những gì Penguin Mail cần trong một dự án riêng."
 
 #: app/src/own_project.rs:210
-msgid ""
-"If Google asks you to agree to its terms first, choose your country and "
-"agree."
-msgstr ""
-"Nếu Google yêu cầu bạn đồng ý với điều khoản trước, hãy chọn quốc gia của "
-"bạn và đồng ý."
+msgid "If Google asks you to agree to its terms first, choose your country and agree."
+msgstr "Nếu Google yêu cầu bạn đồng ý với điều khoản trước, hãy chọn quốc gia của bạn và đồng ý."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:213
@@ -3232,12 +2883,8 @@ msgstr "Penguin Mail đọc thư, lịch và danh bạ của bạn qua những d
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:230
-msgid ""
-"Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
-"and pick Penguin Mail."
-msgstr ""
-"Kiểm tra rằng dự án ở trên cùng là <b>Penguin Mail</b>. Nếu không, hãy nhấp "
-"vào đó và chọn Penguin Mail."
+msgid "Check that the project at the top says <b>Penguin Mail</b>. If not, click it and pick Penguin Mail."
+msgstr "Kiểm tra rằng dự án ở trên cùng là <b>Penguin Mail</b>. Nếu không, hãy nhấp vào đó và chọn Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:233
@@ -3260,23 +2907,13 @@ msgstr "Nhấp vào <b>Bắt đầu</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:246
-msgid ""
-"<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
-"address."
-msgstr ""
-"<b>Tên ứng dụng</b>: <tt>Penguin Mail</tt>. <b>Email hỗ trợ người dùng</b>: "
-"địa chỉ của bạn."
+msgid "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your address."
+msgstr "<b>Tên ứng dụng</b>: <tt>Penguin Mail</tt>. <b>Email hỗ trợ người dùng</b>: địa chỉ của bạn."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:250
-msgid ""
-"<b>Audience</b>: choose <b>External</b>. (A work or school account with an "
-"organization may see <b>Internal</b>; that also works and needs no warning "
-"screen later. Pick it if offered.)"
-msgstr ""
-"<b>Đối tượng</b>: chọn <b>Bên ngoài</b>. (Tài khoản công việc hoặc trường "
-"học thuộc một tổ chức có thể thấy <b>Nội bộ</b>; lựa chọn đó cũng dùng được "
-"và sau này không cần màn hình cảnh báo. Hãy chọn nếu có.)"
+msgid "<b>Audience</b>: choose <b>External</b>. (A work or school account with an organization may see <b>Internal</b>; that also works and needs no warning screen later. Pick it if offered.)"
+msgstr "<b>Đối tượng</b>: chọn <b>Bên ngoài</b>. (Tài khoản công việc hoặc trường học thuộc một tổ chức có thể thấy <b>Nội bộ</b>; lựa chọn đó cũng dùng được và sau này không cần màn hình cảnh báo. Hãy chọn nếu có.)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
@@ -3298,12 +2935,8 @@ msgstr "Xuất bản giúp bạn luôn đăng nhập."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
-msgid ""
-"Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
-"b>."
-msgstr ""
-"Trong <b>Trạng thái xuất bản</b>, nhấp vào <b>Xuất bản ứng dụng</b>, rồi "
-"<b>Xác nhận</b>."
+msgid "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</b>."
+msgstr "Trong <b>Trạng thái xuất bản</b>, nhấp vào <b>Xuất bản ứng dụng</b>, rồi <b>Xác nhận</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:268
@@ -3313,9 +2946,7 @@ msgstr "Bây giờ nó sẽ ghi <b>Đang sản xuất</b>."
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:272
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
-msgstr ""
-"Nếu bạn bỏ qua bước này, Google sẽ đăng xuất bạn khỏi Penguin Mail mỗi 7 "
-"ngày."
+msgstr "Nếu bạn bỏ qua bước này, Google sẽ đăng xuất bạn khỏi Penguin Mail mỗi 7 ngày."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:274
@@ -3349,12 +2980,8 @@ msgstr "Ở màn hình tiếp theo, nhấp vào <b>Tải JSON xuống</b> trư�
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:295
-msgid ""
-"Google shows this only once. If you closed it already, delete that key and "
-"make a new one."
-msgstr ""
-"Google chỉ hiển thị điều này một lần. Nếu bạn đã đóng, hãy xóa khóa đó và "
-"tạo khóa mới."
+msgid "Google shows this only once. If you closed it already, delete that key and make a new one."
+msgstr "Google chỉ hiển thị điều này một lần. Nếu bạn đã đóng, hãy xóa khóa đó và tạo khóa mới."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:301
@@ -3368,16 +2995,8 @@ msgstr "Đăng nhập bằng Google"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:313
-msgid ""
-"Google will say <b>\"Google hasn't verified this app\"</b>. That's expected: "
-"the app is your own project, and you're the only one using it. Click "
-"<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
-"box so every feature works."
-msgstr ""
-"Google sẽ báo <b>\"Google chưa xác minh ứng dụng này\"</b>. Điều đó là bình "
-"thường: ứng dụng là dự án của riêng bạn và chỉ bạn dùng nó. Nhấp vào <b>Nâng "
-"cao</b>, rồi <b>Truy cập Penguin Mail (không an toàn)</b>. Sau đó đánh dấu "
-"mọi ô để mọi tính năng đều hoạt động."
+msgid "Google will say <b>\"Google hasn't verified this app\"</b>. That's expected: the app is your own project, and you're the only one using it. Click <b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every box so every feature works."
+msgstr "Google sẽ báo <b>\"Google chưa xác minh ứng dụng này\"</b>. Điều đó là bình thường: ứng dụng là dự án của riêng bạn và chỉ bạn dùng nó. Nhấp vào <b>Nâng cao</b>, rồi <b>Truy cập Penguin Mail (không an toàn)</b>. Sau đó đánh dấu mọi ô để mọi tính năng đều hoạt động."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:343
@@ -3386,8 +3005,7 @@ msgstr "Bạn đã xuất bản dự án chưa? Nếu vẫn ghi Thử nghiệm, 
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:366
-msgid ""
-"Google doesn't recognize this key. Make a new one and download it again."
+msgid "Google doesn't recognize this key. Make a new one and download it again."
 msgstr "Google không nhận ra khóa này. Hãy tạo khóa mới và tải xuống lại."
 
 #. Translators: Gmail is a name; keep it as it is.
@@ -3408,14 +3026,8 @@ msgid "Drive is turned off in your project."
 msgstr "Drive đang tắt trong dự án của bạn."
 
 #: app/src/own_project.rs:448
-msgid ""
-"The Google Cloud project Penguin Mail signs in with has the {service} "
-"switched off, so Google refuses before it can ask for your permission. Turn "
-"it on, wait a minute, and try again."
-msgstr ""
-"Dự án Google Cloud mà Penguin Mail dùng để đăng nhập đang tắt {service} nên "
-"Google từ chối trước khi hỏi quyền của bạn. Bật dịch vụ, chờ một phút rồi "
-"thử lại."
+msgid "The Google Cloud project Penguin Mail signs in with has the {service} switched off, so Google refuses before it can ask for your permission. Turn it on, wait a minute, and try again."
+msgstr "Dự án Google Cloud mà Penguin Mail dùng để đăng nhập đang tắt {service} nên Google từ chối trước khi hỏi quyền của bạn. Bật dịch vụ, chờ một phút rồi thử lại."
 
 #: app/src/packaging.rs:127
 msgid "Updates come from dnf"
@@ -3450,96 +3062,60 @@ msgid "Allow Changes to {service} Settings"
 msgstr "Cho phép đổi cài đặt {service}"
 
 #: app/src/permission.rs:129
-msgid ""
-"Penguin Mail needs permission to change {service} settings for {account}. "
-"{company} asks you to confirm in your browser."
-msgstr ""
-"Penguin Mail cần quyền đổi cài đặt {service} cho {account}. {company} yêu "
-"cầu bạn xác nhận trong trình duyệt."
+msgid "Penguin Mail needs permission to change {service} settings for {account}. {company} asks you to confirm in your browser."
+msgstr "Penguin Mail cần quyền đổi cài đặt {service} cho {account}. {company} yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:134
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr "Cho phép Penguin Mail xóa thư"
 
 #: app/src/permission.rs:136
-msgid ""
-"Deleting mail for good needs one more permission for {account}. {company} "
-"asks you to confirm in your browser."
-msgstr ""
-"Xóa thư vĩnh viễn cần thêm một quyền cho {account}. {company} yêu cầu bạn "
-"xác nhận trong trình duyệt."
+msgid "Deleting mail for good needs one more permission for {account}. {company} asks you to confirm in your browser."
+msgstr "Xóa thư vĩnh viễn cần thêm một quyền cho {account}. {company} yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:141
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr "Cho phép Penguin Mail đọc danh bạ"
 
 #: app/src/permission.rs:143
-msgid ""
-"Reading the contacts of {account} needs one more permission. {company} asks "
-"you to confirm in your browser. Names and photos stay on this computer."
-msgstr ""
-"Đọc danh bạ của {account} cần thêm một quyền. {company} yêu cầu bạn xác nhận "
-"trong trình duyệt. Tên và ảnh được giữ trên máy tính này."
+msgid "Reading the contacts of {account} needs one more permission. {company} asks you to confirm in your browser. Names and photos stay on this computer."
+msgstr "Đọc danh bạ của {account} cần thêm một quyền. {company} yêu cầu bạn xác nhận trong trình duyệt. Tên và ảnh được giữ trên máy tính này."
 
 #: app/src/permission.rs:149
 msgid "Allow Penguin Mail to Change Your Contacts"
 msgstr "Cho phép Penguin Mail sửa danh bạ"
 
 #: app/src/permission.rs:151
-msgid ""
-"The assistant needs permission to add and change the contacts of {account}. "
-"{company} asks you to confirm in your browser."
-msgstr ""
-"Trợ lý cần quyền thêm và sửa danh bạ của {account}. {company} yêu cầu bạn "
-"xác nhận trong trình duyệt."
+msgid "The assistant needs permission to add and change the contacts of {account}. {company} asks you to confirm in your browser."
+msgstr "Trợ lý cần quyền thêm và sửa danh bạ của {account}. {company} yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:156 app/src/permission.rs:163
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "Cho phép Penguin Mail dùng lịch"
 
 #: app/src/permission.rs:158
-msgid ""
-"The assistant needs permission to read and change events on the calendar for "
-"{account}. {company} asks you to confirm in your browser."
-msgstr ""
-"Trợ lý cần quyền đọc và sửa sự kiện trên lịch của {account}. {company} yêu "
-"cầu bạn xác nhận trong trình duyệt."
+msgid "The assistant needs permission to read and change events on the calendar for {account}. {company} asks you to confirm in your browser."
+msgstr "Trợ lý cần quyền đọc và sửa sự kiện trên lịch của {account}. {company} yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:165
-msgid ""
-"Your reply went to the organizer as mail. With permission to change events "
-"on the calendar for {account}, the meeting is marked on your own calendar "
-"too. {company} asks you to confirm in your browser."
-msgstr ""
-"Câu trả lời đã được gửi qua thư tới người tổ chức. Khi có quyền sửa sự kiện "
-"trên lịch của {account}, cuộc họp cũng được đánh dấu trên lịch của bạn. "
-"{company} yêu cầu bạn xác nhận trong trình duyệt."
+msgid "Your reply went to the organizer as mail. With permission to change events on the calendar for {account}, the meeting is marked on your own calendar too. {company} asks you to confirm in your browser."
+msgstr "Câu trả lời đã được gửi qua thư tới người tổ chức. Khi có quyền sửa sự kiện trên lịch của {account}, cuộc họp cũng được đánh dấu trên lịch của bạn. {company} yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:171
 msgid "Allow Penguin Mail to Manage Your Calendars"
 msgstr "Cho phép Penguin Mail quản lý lịch"
 
 #: app/src/permission.rs:173
-msgid ""
-"Making, renaming and deleting calendars, and subscribing to one, needs one "
-"more permission for {account}. {company} asks you to confirm in your browser."
-msgstr ""
-"Tạo, đổi tên, xóa và đăng ký lịch cần thêm một quyền cho {account}. "
-"{company} yêu cầu bạn xác nhận trong trình duyệt."
+msgid "Making, renaming and deleting calendars, and subscribing to one, needs one more permission for {account}. {company} asks you to confirm in your browser."
+msgstr "Tạo, đổi tên, xóa và đăng ký lịch cần thêm một quyền cho {account}. {company} yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:179
 msgid "Allow Penguin Mail to Add Files to Google Drive"
 msgstr "Cho phép Penguin Mail thêm tệp vào Google Drive"
 
 #: app/src/permission.rs:181
-msgid ""
-"Attaching a file from this computer to an event puts it in Google Drive for "
-"{account}. Penguin Mail can reach only the files it adds there. Google asks "
-"you to confirm in your browser."
-msgstr ""
-"Đính kèm tệp từ máy tính này vào sự kiện sẽ đưa tệp lên Google Drive của "
-"{account}. Penguin Mail chỉ truy cập được tệp do ứng dụng thêm. Google yêu "
-"cầu bạn xác nhận trong trình duyệt."
+msgid "Attaching a file from this computer to an event puts it in Google Drive for {account}. Penguin Mail can reach only the files it adds there. Google asks you to confirm in your browser."
+msgstr "Đính kèm tệp từ máy tính này vào sự kiện sẽ đưa tệp lên Google Drive của {account}. Penguin Mail chỉ truy cập được tệp do ứng dụng thêm. Google yêu cầu bạn xác nhận trong trình duyệt."
 
 #: app/src/permission.rs:256
 msgid "change {service} settings"
@@ -3706,12 +3282,8 @@ msgid "This computer has nothing to encrypt with."
 msgstr "Máy tính này không có khóa hay chứng chỉ để mã hóa."
 
 #: app/src/protection.rs:143
-msgid ""
-"S/MIME names every recipient inside an encrypted message, so a blind copy "
-"would not stay blind."
-msgstr ""
-"S/MIME ghi tên mọi người nhận trong thư mã hóa nên bản sao ẩn sẽ không còn "
-"ẩn."
+msgid "S/MIME names every recipient inside an encrypted message, so a blind copy would not stay blind."
+msgstr "S/MIME ghi tên mọi người nhận trong thư mã hóa nên bản sao ẩn sẽ không còn ẩn."
 
 #: app/src/protection.rs:301
 msgid "Signed"
@@ -3735,24 +3307,19 @@ msgstr "Mã hóa thư này bằng chứng chỉ của người nhận"
 
 #: app/src/protection.rs:339
 msgid "gpg holds no key and gpgsm no trusted certificate for {addresses}."
-msgstr ""
-"gpg không có khóa và gpgsm không có chứng chỉ đáng tin cậy cho {addresses}."
+msgstr "gpg không có khóa và gpgsm không có chứng chỉ đáng tin cậy cho {addresses}."
 
 #: app/src/protection.rs:347
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr "Thư được gửi theo một trong hai tiêu chuẩn. {pgp} {smime}"
 
 #: app/src/protection.rs:612
-msgid ""
-"This key does not name {sender}, the address the message says it is from."
+msgid "This key does not name {sender}, the address the message says it is from."
 msgstr "Khóa này không ghi {sender}, địa chỉ người gửi được ghi trong thư."
 
 #: app/src/protection.rs:616
-msgid ""
-"This certificate does not name {sender}, the address the message says it is "
-"from."
-msgstr ""
-"Chứng chỉ này không ghi {sender}, địa chỉ người gửi được ghi trong thư."
+msgid "This certificate does not name {sender}, the address the message says it is from."
+msgstr "Chứng chỉ này không ghi {sender}, địa chỉ người gửi được ghi trong thư."
 
 #: app/src/protection.rs:625
 msgid "Signed by {signer}"
@@ -3779,8 +3346,7 @@ msgid "Signed by {signer}, whose certificate has run out"
 msgstr "Được ký bởi {signer}, có chứng chỉ đã hết hạn"
 
 #: app/src/protection.rs:654
-msgid ""
-"The text is as it was written, and the certificate behind it has expired."
+msgid "The text is as it was written, and the certificate behind it has expired."
 msgstr "Nội dung vẫn nguyên vẹn nhưng chứng chỉ ký đã hết hạn."
 
 #: app/src/protection.rs:660
@@ -3789,8 +3355,7 @@ msgstr "Được ký bởi {signer}, người đã thu hồi khóa này"
 
 #: app/src/protection.rs:664
 msgid "The owner revoked it, so it says nothing about who wrote this."
-msgstr ""
-"Chủ sở hữu đã thu hồi khóa nên không thể dùng nó để xác định người viết."
+msgstr "Chủ sở hữu đã thu hồi khóa nên không thể dùng nó để xác định người viết."
 
 #: app/src/protection.rs:670
 msgid "Signed by {signer}, whose certificate was taken back"
@@ -3798,8 +3363,7 @@ msgstr "Được ký bởi {signer}, có chứng chỉ đã bị thu hồi"
 
 #: app/src/protection.rs:674
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
-msgstr ""
-"Bên cấp đã thu hồi chứng chỉ nên không thể dùng nó để xác định người viết."
+msgstr "Bên cấp đã thu hồi chứng chỉ nên không thể dùng nó để xác định người viết."
 
 #: app/src/protection.rs:680
 msgid "Signed by {signer}, and the signature has run out"
@@ -3826,9 +3390,7 @@ msgid "Signed by a certificate this computer does not hold"
 msgstr "Được ký bằng chứng chỉ mà máy tính này không có"
 
 #: app/src/protection.rs:706
-msgid ""
-"The message carried none either, so there is nothing here to check it "
-"against."
+msgid "The message carried none either, so there is nothing here to check it against."
 msgstr "Thư cũng không kèm chứng chỉ nên không có gì để đối chiếu."
 
 #: app/src/protection.rs:712
@@ -3916,24 +3478,16 @@ msgid "You have vouched for this key."
 msgstr "Bạn đã xác nhận độ tin cậy của khóa này."
 
 #: app/src/protection.rs:830
-msgid ""
-"Only people you partly trust have vouched for this key, so it is not fully "
-"checked."
-msgstr ""
-"Chỉ những người bạn tin tưởng một phần xác nhận khóa này nên chưa được kiểm "
-"tra đầy đủ."
+msgid "Only people you partly trust have vouched for this key, so it is not fully checked."
+msgstr "Chỉ những người bạn tin tưởng một phần xác nhận khóa này nên chưa được kiểm tra đầy đủ."
 
 #: app/src/protection.rs:833
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr "Chưa ai xác nhận khóa này nên không thể xác định danh tính."
 
 #: app/src/protection.rs:836
-msgid ""
-"Its certificate leads back to an authority you trust, but this computer "
-"could not check whether it was revoked."
-msgstr ""
-"Chứng chỉ dẫn về một cơ quan bạn tin tưởng nhưng máy tính này không kiểm tra "
-"được chứng chỉ có bị thu hồi hay không."
+msgid "Its certificate leads back to an authority you trust, but this computer could not check whether it was revoked."
+msgstr "Chứng chỉ dẫn về một cơ quan bạn tin tưởng nhưng máy tính này không kiểm tra được chứng chỉ có bị thu hồi hay không."
 
 #: app/src/protection.rs:840
 msgid "Its certificate leads back to an authority you trust."
@@ -3941,9 +3495,7 @@ msgstr "Chứng chỉ dẫn về một cơ quan bạn tin tưởng."
 
 #: app/src/protection.rs:843
 msgid "Its certificate leads back to nobody you trust, so it names no one."
-msgstr ""
-"Chứng chỉ không dẫn về cơ quan nào bạn tin tưởng nên không thể xác định danh "
-"tính."
+msgstr "Chứng chỉ không dẫn về cơ quan nào bạn tin tưởng nên không thể xác định danh tính."
 
 #: app/src/protection.rs:846
 msgid "Nothing here says who that certificate belongs to."
@@ -3983,12 +3535,8 @@ msgid "Draft not saved: {reason}"
 msgstr "Chưa lưu thư nháp: {reason}"
 
 #: app/src/protection/draft.rs:128
-msgid ""
-"Draft not saved. An encrypted message waits in Drafts encrypted to your own "
-"key, and this computer holds no key or certificate for {address}."
-msgstr ""
-"Chưa lưu thư nháp. Thư mã hóa được lưu trong Thư nháp với mã hóa bằng khóa "
-"của bạn nhưng máy tính này không có khóa hay chứng chỉ cho {address}."
+msgid "Draft not saved. An encrypted message waits in Drafts encrypted to your own key, and this computer holds no key or certificate for {address}."
+msgstr "Chưa lưu thư nháp. Thư mã hóa được lưu trong Thư nháp với mã hóa bằng khóa của bạn nhưng máy tính này không có khóa hay chứng chỉ cho {address}."
 
 #: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2083
 #: app/src/ui/composer/mod.rs:2086
@@ -4058,12 +3606,8 @@ msgid "Possible phishing links"
 msgstr "Liên kết có thể là lừa đảo"
 
 #: app/src/render.rs:446
-msgid ""
-"This message contains potentially deceptive links. Check the destination "
-"before opening them."
-msgstr ""
-"Thư này chứa các liên kết có thể gây hiểu nhầm. Hãy kiểm tra địa chỉ đích "
-"trước khi mở."
+msgid "This message contains potentially deceptive links. Check the destination before opening them."
+msgstr "Thư này chứa các liên kết có thể gây hiểu nhầm. Hãy kiểm tra địa chỉ đích trước khi mở."
 
 #: app/src/render.rs:499
 msgid "Details"
@@ -4163,11 +3707,8 @@ msgid "Read receipt requested"
 msgstr "Có yêu cầu xác nhận đã đọc"
 
 #: app/src/render/receipt.rs:44
-msgid ""
-"Sending a receipt tells {address} that you opened this message. Nothing is "
-"sent unless you choose."
-msgstr ""
-"Gửi xác nhận sẽ cho {address} biết bạn đã mở thư này. Chỉ gửi khi bạn chọn."
+msgid "Sending a receipt tells {address} that you opened this message. Nothing is sent unless you choose."
+msgstr "Gửi xác nhận sẽ cho {address} biết bạn đã mở thư này. Chỉ gửi khi bạn chọn."
 
 #: app/src/render/receipt.rs:54
 msgid "Read receipt"
@@ -4200,12 +3741,8 @@ msgstr "Chọn cách Penguin Mail đăng nhập vào Gmail"
 
 #. Translators: Gmail and Google are names; keep them as they are.
 #: app/src/route_choice.rs:130
-msgid ""
-"Want every Gmail feature? Your own Google project gives you all of them, "
-"free."
-msgstr ""
-"Muốn có mọi tính năng của Gmail? Dự án Google của riêng bạn mang lại tất cả, "
-"miễn phí."
+msgid "Want every Gmail feature? Your own Google project gives you all of them, free."
+msgstr "Muốn có mọi tính năng của Gmail? Dự án Google của riêng bạn mang lại tất cả, miễn phí."
 
 #: app/src/route_choice.rs:138 app/src/ui/goa_page.rs:289
 msgid "Use the Google account on this computer"
@@ -4257,29 +3794,23 @@ msgstr "Thiết lập dự án Google của riêng bạn"
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:186
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
-msgstr ""
-"Mọi tính năng của Gmail, trên mọi máy tính. Khoảng 10 phút, chỉ một lần."
+msgstr "Mọi tính năng của Gmail, trên mọi máy tính. Khoảng 10 phút, chỉ một lần."
 
 #: app/src/rules.rs:13
 msgid "These rules run on this computer while Penguin Mail is open."
 msgstr "Các quy tắc này chạy trên máy tính này khi Penguin Mail mở."
 
 #: app/src/rules.rs:17
-msgid ""
-"{provider} runs these on new mail as it arrives, even when this computer is "
-"off."
+msgid "{provider} runs these on new mail as it arrives, even when this computer is off."
 msgstr "{provider} áp dụng chúng khi thư mới đến, kể cả khi máy tính này tắt."
 
 #: app/src/rules.rs:29
 msgid "A rule moves, labels or marks mail from a sender or with a subject."
-msgstr ""
-"Quy tắc chuyển, gắn nhãn hoặc đánh dấu thư dựa trên người gửi hoặc tiêu đề."
+msgstr "Quy tắc chuyển, gắn nhãn hoặc đánh dấu thư dựa trên người gửi hoặc tiêu đề."
 
 #: app/src/rules.rs:37
 msgid "{provider} is not answering. Changes wait here and go out when it does."
-msgstr ""
-"{provider} chưa phản hồi. Các thay đổi được giữ tại đây và gửi đi khi có "
-"phản hồi."
+msgstr "{provider} chưa phản hồi. Các thay đổi được giữ tại đây và gửi đi khi có phản hồi."
 
 #: app/src/rules.rs:219
 msgid "From {address}"
@@ -4596,17 +4127,12 @@ msgid "5 years"
 msgstr "5 năm"
 
 #: app/src/settings/mod.rs:838
-msgid ""
-"Every message stays on this computer. A large account takes a lot of disk "
-"space and memory, and its older mail downloads in the background."
-msgstr ""
-"Mọi thư được giữ trên máy tính này. Tài khoản lớn dùng nhiều dung lượng ổ "
-"đĩa và bộ nhớ; thư cũ được tải trong nền."
+msgid "Every message stays on this computer. A large account takes a lot of disk space and memory, and its older mail downloads in the background."
+msgstr "Mọi thư được giữ trên máy tính này. Tài khoản lớn dùng nhiều dung lượng ổ đĩa và bộ nhớ; thư cũ được tải trong nền."
 
 #: app/src/settings/mod.rs:840
 msgid "Everything in your inbox stays too, and older mail remains searchable"
-msgstr ""
-"Mọi thư trong hộp thư đến cũng được giữ lại và thư cũ vẫn tìm kiếm được"
+msgstr "Mọi thư trong hộp thư đến cũng được giữ lại và thư cũ vẫn tìm kiếm được"
 
 #: app/src/settings/mod.rs:847
 msgid "256 MB"
@@ -4625,12 +4151,8 @@ msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr "Thêm người nhận có chứng chỉ được gpgsm tin tưởng."
 
 #: app/src/smime.rs:103
-msgid ""
-"gpgsm holds no trusted certificate for {addresses}. A certificate that only "
-"arrived in mail does not count."
-msgstr ""
-"gpgsm không có chứng chỉ đáng tin cậy cho {addresses}. Chứng chỉ chỉ nhận "
-"được qua thư không được tính."
+msgid "gpgsm holds no trusted certificate for {addresses}. A certificate that only arrived in mail does not count."
+msgstr "gpgsm không có chứng chỉ đáng tin cậy cho {addresses}. Chứng chỉ chỉ nhận được qua thư không được tính."
 
 #: app/src/smime.rs:123
 msgid "gpgsm holds no certificate for any of the addresses you send from."
@@ -4673,8 +4195,7 @@ msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Cụm mật khẩu đó không mở được tệp này. Chưa nhập dữ liệu nào."
 
 #: app/src/smime.rs:283
-msgid ""
-"The file needs its passphrase, and none was given. Nothing was imported."
+msgid "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr "Tệp cần cụm mật khẩu nhưng chưa được cung cấp. Chưa nhập dữ liệu nào."
 
 #: app/src/smime.rs:286
@@ -4754,8 +4275,7 @@ msgid "The message goes to Anthropic, for {model} to read."
 msgstr "Thư được gửi tới Anthropic để {model} đọc."
 
 #: app/src/translation.rs:978
-msgid ""
-"The message goes to Anthropic, for Claude to read through your subscription."
+msgid "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr "Thư được gửi tới Anthropic để Claude đọc qua gói đăng ký của bạn."
 
 #: app/src/tray.rs:24
@@ -5031,12 +4551,8 @@ msgid "App Password for Calendar"
 msgstr "Mật khẩu ứng dụng cho lịch"
 
 #: app/src/ui/add_account.rs:1232
-msgid ""
-"Optional. Make an app password with calendar access in the provider's "
-"settings."
-msgstr ""
-"Không bắt buộc. Tạo mật khẩu ứng dụng có quyền truy cập lịch trong cài đặt "
-"nhà cung cấp."
+msgid "Optional. Make an app password with calendar access in the provider's settings."
+msgstr "Không bắt buộc. Tạo mật khẩu ứng dụng có quyền truy cập lịch trong cài đặt nhà cung cấp."
 
 #: app/src/ui/add_account.rs:1242 app/src/ui/add_account.rs:1871
 msgid "Server Settings"
@@ -5060,12 +4576,8 @@ msgid "Use these servers"
 msgstr "Dùng các máy chủ này"
 
 #: app/src/ui/add_account.rs:1285 app/src/ui/add_account.rs:2888
-msgid ""
-"Penguin Mail guessed these servers. Your password goes to them only after "
-"you check the box."
-msgstr ""
-"Penguin Mail đã đoán các máy chủ này. Mật khẩu chỉ được gửi tới đó sau khi "
-"bạn chọn ô xác nhận."
+msgid "Penguin Mail guessed these servers. Your password goes to them only after you check the box."
+msgstr "Penguin Mail đã đoán các máy chủ này. Mật khẩu chỉ được gửi tới đó sau khi bạn chọn ô xác nhận."
 
 #: app/src/ui/add_account.rs:1291 app/src/ui/add_account.rs:1592
 #: app/src/ui/add_account.rs:1827
@@ -5106,12 +4618,8 @@ msgid "Archive"
 msgstr "Lưu trữ"
 
 #: app/src/ui/add_account.rs:1508
-msgid ""
-"Grant Access opens Google's page again. You can also do it later in "
-"Preferences."
-msgstr ""
-"Cấp quyền sẽ mở lại trang của Google. Bạn cũng có thể thực hiện sau trong "
-"Tùy chọn."
+msgid "Grant Access opens Google's page again. You can also do it later in Preferences."
+msgstr "Cấp quyền sẽ mở lại trang của Google. Bạn cũng có thể thực hiện sau trong Tùy chọn."
 
 #: app/src/ui/add_account.rs:1512
 msgid "Open Inbox"
@@ -5223,12 +4731,8 @@ msgid "Calendar Server"
 msgstr "Máy chủ lịch"
 
 #: app/src/ui/add_account.rs:1917
-msgid ""
-"A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
-"app password for Penguin Mail."
-msgstr ""
-"Một máy chủ CalDAV, chẳng hạn Nextcloud. Nếu máy chủ dùng đăng nhập hai "
-"bước, hãy tạo mật khẩu ứng dụng cho Penguin Mail."
+msgid "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an app password for Penguin Mail."
+msgstr "Một máy chủ CalDAV, chẳng hạn Nextcloud. Nếu máy chủ dùng đăng nhập hai bước, hãy tạo mật khẩu ứng dụng cho Penguin Mail."
 
 #: app/src/ui/add_account.rs:1927 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
@@ -5248,12 +4752,8 @@ msgid "{domain} uses {provider}"
 msgstr "{domain} dùng {provider}"
 
 #: app/src/ui/add_account.rs:2941
-msgid ""
-"Not your {provider} website password. Make one with mail access in "
-"{provider}'s settings and paste it here."
-msgstr ""
-"Không phải mật khẩu trang web {provider}. Tạo mật khẩu có quyền truy cập thư "
-"trong cài đặt của {provider} và dán vào đây."
+msgid "Not your {provider} website password. Make one with mail access in {provider}'s settings and paste it here."
+msgstr "Không phải mật khẩu trang web {provider}. Tạo mật khẩu có quyền truy cập thư trong cài đặt của {provider} và dán vào đây."
 
 #: app/src/ui/add_account.rs:3412
 msgid "Could not reach {host}"
@@ -5281,38 +4781,22 @@ msgid "Sign in with {provider} in your browser"
 msgstr "Đăng nhập với {provider} trong trình duyệt"
 
 #: app/src/ui/add_account.rs:4055 app/src/ui/add_account.rs:4487
-msgid ""
-"{provider}'s sign-in page is open in your browser. When you finish there, "
-"this window moves on."
-msgstr ""
-"Trang đăng nhập của {provider} đang mở trong trình duyệt. Cửa sổ này sẽ tiếp "
-"tục khi bạn hoàn tất ở đó."
+msgid "{provider}'s sign-in page is open in your browser. When you finish there, this window moves on."
+msgstr "Trang đăng nhập của {provider} đang mở trong trình duyệt. Cửa sổ này sẽ tiếp tục khi bạn hoàn tất ở đó."
 
 #: app/src/ui/add_account.rs:4082
-msgid ""
-"This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
-"from github.com/c9dev/penguin-mail/releases."
-msgstr ""
-"Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Microsoft. "
-"Tải bản phát hành từ github.com/c9dev/penguin-mail/releases."
+msgid "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
+msgstr "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Microsoft. Tải bản phát hành từ github.com/c9dev/penguin-mail/releases."
 
 #: app/src/ui/add_account.rs:4095
-msgid ""
-"Signing in with your own Google client. Google's sign-in page is open in "
-"your browser. When you finish there, this window moves on."
-msgstr ""
-"Đang đăng nhập bằng ứng dụng khách Google của bạn. Trang đăng nhập Google "
-"đang mở trong trình duyệt. Cửa sổ này sẽ tiếp tục khi bạn hoàn tất ở đó."
+msgid "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on."
+msgstr "Đang đăng nhập bằng ứng dụng khách Google của bạn. Trang đăng nhập Google đang mở trong trình duyệt. Cửa sổ này sẽ tiếp tục khi bạn hoàn tất ở đó."
 
 #. Translators: said when moving a Gmail account to a new way of signing in
 #. runs past two minutes; the move carries on without the window.
 #: app/src/ui/add_account.rs:4242
-msgid ""
-"Moving the account is taking too long. It goes on after you close this "
-"window."
-msgstr ""
-"Việc chuyển tài khoản đang mất quá nhiều thời gian. Quá trình này vẫn tiếp "
-"tục sau khi bạn đóng cửa sổ này."
+msgid "Moving the account is taking too long. It goes on after you close this window."
+msgstr "Việc chuyển tài khoản đang mất quá nhiều thời gian. Quá trình này vẫn tiếp tục sau khi bạn đóng cửa sổ này."
 
 #: app/src/ui/add_account.rs:4367
 msgid "Link copied"
@@ -5340,12 +4824,8 @@ msgid "Go to Step {number}"
 msgstr "Đến Bước {number}"
 
 #: app/src/ui/add_account.rs:4921
-msgid ""
-"This server cannot tell its messages apart, so Penguin Mail cannot download "
-"from it safely."
-msgstr ""
-"Máy chủ này không phân biệt được các thư nên Penguin Mail không thể tải thư "
-"an toàn."
+msgid "This server cannot tell its messages apart, so Penguin Mail cannot download from it safely."
+msgstr "Máy chủ này không phân biệt được các thư nên Penguin Mail không thể tải thư an toàn."
 
 #: app/src/ui/add_account/routes.rs:440
 msgid "Filters, aliases and the automatic reply aren't available this way."
@@ -5391,12 +4871,8 @@ msgid "New Chat"
 msgstr "Cuộc trò chuyện mới"
 
 #: app/src/ui/assistant.rs:153
-msgid ""
-"Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
-"draft, and change settings."
-msgstr ""
-"Hỏi về thư của bạn hoặc cho tôi biết cần dọn gì. Tôi có thể tìm kiếm, tóm "
-"tắt, phân loại, soạn thư nháp và đổi cài đặt."
+msgid "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, draft, and change settings."
+msgstr "Hỏi về thư của bạn hoặc cho tôi biết cần dọn gì. Tôi có thể tìm kiếm, tóm tắt, phân loại, soạn thư nháp và đổi cài đặt."
 
 #: app/src/ui/assistant.rs:179 app/src/ui/assistant.rs:184
 #: app/src/ui/assistant.rs:552 app/src/ui/calendar/scope.rs:152
@@ -5415,12 +4891,8 @@ msgid "Set Up the Assistant"
 msgstr "Thiết lập trợ lý"
 
 #: app/src/ui/assistant.rs:222
-msgid ""
-"Use a local model from LM Studio, Ollama, or any server with OpenAI's API. "
-"You can also use an Anthropic API key or your Claude subscription."
-msgstr ""
-"Dùng mô hình cục bộ từ LM Studio, Ollama hoặc máy chủ hỗ trợ API OpenAI. Bạn "
-"cũng có thể dùng khóa API Anthropic hoặc gói đăng ký Claude."
+msgid "Use a local model from LM Studio, Ollama, or any server with OpenAI's API. You can also use an Anthropic API key or your Claude subscription."
+msgstr "Dùng mô hình cục bộ từ LM Studio, Ollama hoặc máy chủ hỗ trợ API OpenAI. Bạn cũng có thể dùng khóa API Anthropic hoặc gói đăng ký Claude."
 
 #: app/src/ui/assistant.rs:309
 msgid "This conversation"
@@ -5555,12 +5027,8 @@ msgid "About MCP Servers"
 msgstr "Giới thiệu về máy chủ MCP"
 
 #: app/src/ui/assistant_mcp_prefs.rs:36
-msgid ""
-"Tools from servers you add. The assistant asks before each call, unless you "
-"choose Always Allow. A server gets what the assistant sends it."
-msgstr ""
-"Công cụ từ các máy chủ bạn thêm. Trợ lý hỏi trước mỗi lần gọi trừ khi bạn "
-"chọn Luôn cho phép. Máy chủ nhận những gì trợ lý gửi."
+msgid "Tools from servers you add. The assistant asks before each call, unless you choose Always Allow. A server gets what the assistant sends it."
+msgstr "Công cụ từ các máy chủ bạn thêm. Trợ lý hỏi trước mỗi lần gọi trừ khi bạn chọn Luôn cho phép. Máy chủ nhận những gì trợ lý gửi."
 
 #: app/src/ui/assistant_mcp_prefs.rs:46 app/src/ui/assistant_mcp_prefs.rs:48
 #: app/src/ui/assistant_mcp_prefs.rs:379
@@ -5617,14 +5085,8 @@ msgid "Could not connect: {reason}"
 msgstr "Không thể kết nối: {reason}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:267
-msgid ""
-"A command runs on this computer and talks over its input and output, as in "
-"npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value "
-"in front for the environment. A URL reaches a server over HTTP."
-msgstr ""
-"Lệnh chạy trên máy tính này và giao tiếp qua đầu vào và đầu ra, như npx -y "
-"@modelcontextprotocol/server-filesystem ~/Documents. Đặt NAME=value ở đầu để "
-"thiết lập môi trường. URL kết nối tới máy chủ qua HTTP."
+msgid "A command runs on this computer and talks over its input and output, as in npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value in front for the environment. A URL reaches a server over HTTP."
+msgstr "Lệnh chạy trên máy tính này và giao tiếp qua đầu vào và đầu ra, như npx -y @modelcontextprotocol/server-filesystem ~/Documents. Đặt NAME=value ở đầu để thiết lập môi trường. URL kết nối tới máy chủ qua HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
 #: app/src/ui/composer/mod.rs:2893 app/src/ui/smart_editor.rs:37
@@ -5712,26 +5174,16 @@ msgid "Ask Before Acting"
 msgstr "Hỏi trước khi thực hiện"
 
 #: app/src/ui/assistant_prefs.rs:35
-msgid ""
-"Approve each message the assistant sends and each change to Gmail settings, "
-"such as automatic replies and rules"
-msgstr ""
-"Duyệt từng thư trợ lý gửi và từng thay đổi cài đặt Gmail, như trả lời tự "
-"động và quy tắc"
+msgid "Approve each message the assistant sends and each change to Gmail settings, such as automatic replies and rules"
+msgstr "Duyệt từng thư trợ lý gửi và từng thay đổi cài đặt Gmail, như trả lời tự động và quy tắc"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid "Connections"
 msgstr "Kết nối"
 
 #: app/src/ui/assistant_prefs.rs:55
-msgid ""
-"A local server is LM Studio, Ollama, or any server with OpenAI's API. Local "
-"models keep your mail on this computer. With Anthropic or a Claude "
-"subscription, what a feature reads goes to Anthropic."
-msgstr ""
-"Máy chủ cục bộ là LM Studio, Ollama hoặc máy chủ hỗ trợ API OpenAI. Mô hình "
-"cục bộ giữ thư trên máy tính này. Với Anthropic hoặc gói đăng ký Claude, nội "
-"dung tính năng đọc được gửi tới Anthropic."
+msgid "A local server is LM Studio, Ollama, or any server with OpenAI's API. Local models keep your mail on this computer. With Anthropic or a Claude subscription, what a feature reads goes to Anthropic."
+msgstr "Máy chủ cục bộ là LM Studio, Ollama hoặc máy chủ hỗ trợ API OpenAI. Mô hình cục bộ giữ thư trên máy tính này. Với Anthropic hoặc gói đăng ký Claude, nội dung tính năng đọc được gửi tới Anthropic."
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "API Key (Optional)"
@@ -5747,8 +5199,7 @@ msgstr "Dùng gói đăng ký Claude qua {path}"
 
 #: app/src/ui/assistant_prefs.rs:99
 msgid "Not found. Install Claude Code and sign in by running claude once."
-msgstr ""
-"Không tìm thấy. Cài Claude Code và đăng nhập bằng cách chạy claude một lần."
+msgstr "Không tìm thấy. Cài Claude Code và đăng nhập bằng cách chạy claude một lần."
 
 #: app/src/ui/assistant_prefs.rs:127
 msgid "Removed the key"
@@ -5783,12 +5234,8 @@ msgid "Reasoning"
 msgstr "Suy luận"
 
 #: app/src/ui/assistant_prefs.rs:180
-msgid ""
-"Ask supported models to think before answering. Turning this off can make "
-"replies faster. Claude Code uses its own settings."
-msgstr ""
-"Yêu cầu các mô hình có hỗ trợ suy nghĩ trước khi trả lời. Tắt tùy chọn này "
-"có thể giúp trả lời nhanh hơn. Claude Code dùng thiết lập riêng."
+msgid "Ask supported models to think before answering. Turning this off can make replies faster. Claude Code uses its own settings."
+msgstr "Yêu cầu các mô hình có hỗ trợ suy nghĩ trước khi trả lời. Tắt tùy chọn này có thể giúp trả lời nhanh hơn. Claude Code dùng thiết lập riêng."
 
 #: app/src/ui/assistant_prefs.rs:186
 msgid "Assistant Chats"
@@ -5816,13 +5263,8 @@ msgid "AI Language"
 msgstr "Ngôn ngữ AI"
 
 #: app/src/ui/assistant_prefs.rs:243
-msgid ""
-"Language for assistant responses, summaries, and translations. Email replies "
-"and drafts follow the language of the correspondence unless you ask "
-"otherwise."
-msgstr ""
-"Ngôn ngữ cho câu trả lời của trợ lý, bản tóm tắt và bản dịch. Thư trả lời và "
-"thư nháp theo ngôn ngữ của cuộc trao đổi trừ khi bạn yêu cầu khác."
+msgid "Language for assistant responses, summaries, and translations. Email replies and drafts follow the language of the correspondence unless you ask otherwise."
+msgstr "Ngôn ngữ cho câu trả lời của trợ lý, bản tóm tắt và bản dịch. Thư trả lời và thư nháp theo ngôn ngữ của cuộc trao đổi trừ khi bạn yêu cầu khác."
 
 #: app/src/ui/assistant_prefs.rs:248
 msgid "Same as Interface"
@@ -5837,24 +5279,16 @@ msgid "Language Name"
 msgstr "Tên ngôn ngữ"
 
 #: app/src/ui/assistant_prefs.rs:296
-msgid ""
-"Enter a language name of up to 80 characters, using letters, spaces, "
-"hyphens, apostrophes, or parentheses."
-msgstr ""
-"Nhập tên ngôn ngữ tối đa 80 ký tự, dùng chữ cái, dấu cách, dấu gạch nối, dấu "
-"nháy đơn hoặc dấu ngoặc."
+msgid "Enter a language name of up to 80 characters, using letters, spaces, hyphens, apostrophes, or parentheses."
+msgstr "Nhập tên ngôn ngữ tối đa 80 ký tự, dùng chữ cái, dấu cách, dấu gạch nối, dấu nháy đơn hoặc dấu ngoặc."
 
 #: app/src/ui/assistant_prefs.rs:314
 msgid "Always Allowed"
 msgstr "Luôn được cho phép"
 
 #: app/src/ui/assistant_prefs.rs:316
-msgid ""
-"Tools from outside sources that run without asking. Remove one to be asked "
-"again next time."
-msgstr ""
-"Công cụ từ nguồn bên ngoài chạy mà không hỏi. Xóa công cụ để được hỏi lại "
-"lần sau."
+msgid "Tools from outside sources that run without asking. Remove one to be asked again next time."
+msgstr "Công cụ từ nguồn bên ngoài chạy mà không hỏi. Xóa công cụ để được hỏi lại lần sau."
 
 #: app/src/ui/assistant_prefs.rs:332
 msgid "Ask Again"
@@ -5905,12 +5339,8 @@ msgid "Nothing found"
 msgstr "Không tìm thấy"
 
 #: app/src/ui/assistant_prefs.rs:895
-msgid ""
-"Start LM Studio's server or Ollama, or install Claude Code, then open "
-"Preferences again."
-msgstr ""
-"Khởi động máy chủ LM Studio hoặc Ollama, hoặc cài Claude Code, rồi mở lại "
-"Tùy chọn."
+msgid "Start LM Studio's server or Ollama, or install Claude Code, then open Preferences again."
+msgstr "Khởi động máy chủ LM Studio hoặc Ollama, hoặc cài Claude Code, rồi mở lại Tùy chọn."
 
 #: app/src/ui/assistant_prefs.rs:907
 msgid "{model} and {count} more"
@@ -5930,16 +5360,8 @@ msgid "About Skills"
 msgstr "Giới thiệu về kỹ năng"
 
 #: app/src/ui/assistant_skills_prefs.rs:24
-msgid ""
-"Instructions the assistant follows for one kind of task, found in Penguin "
-"Mail's skills folder and in Claude Code's. Each skill is off until you turn "
-"it on. Scripts in a skill run in a sandbox that cannot reach your mail, keys "
-"or home folder, and the assistant asks before each command."
-msgstr ""
-"Hướng dẫn trợ lý làm một loại tác vụ, tìm trong thư mục kỹ năng của Penguin "
-"Mail và Claude Code. Mỗi kỹ năng tắt cho đến khi bạn bật. Kịch bản của kỹ "
-"năng chạy trong môi trường cách ly, không truy cập được thư, khóa hay thư "
-"mục nhà; trợ lý hỏi trước mỗi lệnh."
+msgid "Instructions the assistant follows for one kind of task, found in Penguin Mail's skills folder and in Claude Code's. Each skill is off until you turn it on. Scripts in a skill run in a sandbox that cannot reach your mail, keys or home folder, and the assistant asks before each command."
+msgstr "Hướng dẫn trợ lý làm một loại tác vụ, tìm trong thư mục kỹ năng của Penguin Mail và Claude Code. Mỗi kỹ năng tắt cho đến khi bạn bật. Kịch bản của kỹ năng chạy trong môi trường cách ly, không truy cập được thư, khóa hay thư mục nhà; trợ lý hỏi trước mỗi lệnh."
 
 #: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:425
 msgid "Not Available"
@@ -5975,13 +5397,8 @@ msgid "Skills Are Off in This Version"
 msgstr "Kỹ năng bị tắt trong phiên bản này"
 
 #: app/src/ui/assistant_skills_prefs.rs:86
-msgid ""
-"Skill scripts run in a sandbox of their own, which cannot start inside the "
-"{sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
-msgstr ""
-"Kịch bản kỹ năng chạy trong môi trường cách ly riêng nhưng không thể khởi "
-"động bên trong môi trường cách ly {sandbox} của Penguin Mail. Bản .deb và "
-"rpm có hỗ trợ kỹ năng."
+msgid "Skill scripts run in a sandbox of their own, which cannot start inside the {sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
+msgstr "Kịch bản kỹ năng chạy trong môi trường cách ly riêng nhưng không thể khởi động bên trong môi trường cách ly {sandbox} của Penguin Mail. Bản .deb và rpm có hỗ trợ kỹ năng."
 
 #: app/src/ui/assistant_skills_prefs.rs:100
 msgid "{origin}: {description}"
@@ -5996,25 +5413,16 @@ msgid "Allow Network"
 msgstr "Cho phép mạng"
 
 #: app/src/ui/assistant_skills_prefs.rs:159
-msgid ""
-"Let this skill's scripts reach the internet. Without it they can only use "
-"what is on this computer."
-msgstr ""
-"Cho kịch bản của kỹ năng truy cập Internet. Nếu không, chúng chỉ dùng được "
-"dữ liệu trên máy tính này."
+msgid "Let this skill's scripts reach the internet. Without it they can only use what is on this computer."
+msgstr "Cho kịch bản của kỹ năng truy cập Internet. Nếu không, chúng chỉ dùng được dữ liệu trên máy tính này."
 
 #: app/src/ui/assistant_web_prefs.rs:18
 msgid "Web Search"
 msgstr "Tìm kiếm web"
 
 #: app/src/ui/assistant_web_prefs.rs:20
-msgid ""
-"Lets the assistant search the web and read pages. Claude searches with "
-"Anthropic's own tools. A local model searches with the engine chosen here, "
-"which receives every query."
-msgstr ""
-"Cho trợ lý tìm trên web và đọc trang. Claude tìm bằng công cụ của Anthropic. "
-"Mô hình cục bộ tìm bằng công cụ chọn tại đây; công cụ đó nhận mọi truy vấn."
+msgid "Lets the assistant search the web and read pages. Claude searches with Anthropic's own tools. A local model searches with the engine chosen here, which receives every query."
+msgstr "Cho trợ lý tìm trên web và đọc trang. Claude tìm bằng công cụ của Anthropic. Mô hình cục bộ tìm bằng công cụ chọn tại đây; công cụ đó nhận mọi truy vấn."
 
 #: app/src/ui/assistant_web_prefs.rs:29
 msgid "Search With"
@@ -6161,12 +5569,8 @@ msgid "Custom Repeat"
 msgstr "Lặp lại tùy chỉnh"
 
 #: app/src/ui/calendar/editor.rs:401
-msgid ""
-"{organizer} organizes this event, so its time, place and guests stay as they "
-"set them."
-msgstr ""
-"{organizer} tổ chức sự kiện này nên thời gian, địa điểm và khách được giữ "
-"theo cài đặt của họ."
+msgid "{organizer} organizes this event, so its time, place and guests stay as they set them."
+msgstr "{organizer} tổ chức sự kiện này nên thời gian, địa điểm và khách được giữ theo cài đặt của họ."
 
 #: app/src/ui/calendar/editor.rs:427 app/src/ui/calendar/quick.rs:190
 msgid "Title"
@@ -6689,14 +6093,11 @@ msgid "{kind}. Declines new and existing meetings."
 msgstr "{kind}. Từ chối cuộc họp mới và hiện có."
 
 #: app/src/ui/calendar/kinds.rs:162
-msgid ""
-"Birthday. Google Calendar makes it from your contacts, so you can only "
-"change it there."
+msgid "Birthday. Google Calendar makes it from your contacts, so you can only change it there."
 msgstr "Sinh nhật. Google Calendar tạo từ danh bạ nên bạn chỉ có thể sửa ở đó."
 
 #: app/src/ui/calendar/kinds.rs:165
-msgid ""
-"Working location. Google Calendar sets it, so you can only change it there."
+msgid "Working location. Google Calendar sets it, so you can only change it there."
 msgstr "Nơi làm việc. Google Calendar thiết lập nên bạn chỉ có thể sửa ở đó."
 
 #: app/src/ui/calendar/manage.rs:35
@@ -6704,15 +6105,9 @@ msgid "The calendar is deleted on every device. This cannot be undone."
 msgstr "Lịch bị xóa trên mọi thiết bị. Không thể hoàn tác."
 
 #: app/src/ui/calendar/manage.rs:37
-msgid ""
-"The calendar and its {count} event are deleted on every device. This cannot "
-"be undone."
-msgid_plural ""
-"The calendar and its {count} events are deleted on every device. This cannot "
-"be undone."
-msgstr[0] ""
-"Lịch và {count} sự kiện trong đó bị xóa trên mọi thiết bị. Không thể hoàn "
-"tác."
+msgid "The calendar and its {count} event are deleted on every device. This cannot be undone."
+msgid_plural "The calendar and its {count} events are deleted on every device. This cannot be undone."
+msgstr[0] "Lịch và {count} sự kiện trong đó bị xóa trên mọi thiết bị. Không thể hoàn tác."
 
 #: app/src/ui/calendar/manage.rs:73
 msgid "A calendar of your own on {account}, on every device."
@@ -6759,12 +6154,8 @@ msgid "Unsubscribe from “{calendar}”?"
 msgstr "Hủy đăng ký “{calendar}”?"
 
 #: app/src/ui/calendar/manage.rs:374
-msgid ""
-"It leaves your calendar list in Google Calendar on every device. You can "
-"subscribe to it again later."
-msgstr ""
-"Lịch sẽ rời khỏi danh sách lịch trong Google Calendar trên mọi thiết bị. Bạn "
-"có thể đăng ký lại sau."
+msgid "It leaves your calendar list in Google Calendar on every device. You can subscribe to it again later."
+msgstr "Lịch sẽ rời khỏi danh sách lịch trong Google Calendar trên mọi thiết bị. Bạn có thể đăng ký lại sau."
 
 #: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:399
 #: app/src/ui/unsubscribe.rs:120
@@ -6795,14 +6186,8 @@ msgid "Subscribe to Calendar"
 msgstr "Đăng ký lịch"
 
 #: app/src/ui/calendar/manage.rs:475
-msgid ""
-"Enter the address of a published calendar, starting with https or webcal. "
-"Google Calendar fetches it from then on and shows it on every device. You "
-"can read it but not change it."
-msgstr ""
-"Nhập địa chỉ lịch công khai bắt đầu bằng https hoặc webcal. Google Calendar "
-"sẽ tải lịch từ đó và hiển thị trên mọi thiết bị. Bạn có thể đọc nhưng không "
-"thể sửa."
+msgid "Enter the address of a published calendar, starting with https or webcal. Google Calendar fetches it from then on and shows it on every device. You can read it but not change it."
+msgstr "Nhập địa chỉ lịch công khai bắt đầu bằng https hoặc webcal. Google Calendar sẽ tải lịch từ đó và hiển thị trên mọi thiết bị. Bạn có thể đọc nhưng không thể sửa."
 
 #: app/src/ui/calendar/manage.rs:485
 msgid "Calendar address"
@@ -6993,12 +6378,8 @@ msgid "Answer"
 msgstr "Trả lời"
 
 #: app/src/ui/calendar/popover.rs:333
-msgid ""
-"This calendar's server sends no replies, so the organizer will not hear your "
-"answer."
-msgstr ""
-"Máy chủ của lịch này không gửi câu trả lời, nên người tổ chức sẽ không biết "
-"câu trả lời của bạn."
+msgid "This calendar's server sends no replies, so the organizer will not hear your answer."
+msgstr "Máy chủ của lịch này không gửi câu trả lời, nên người tổ chức sẽ không biết câu trả lời của bạn."
 
 #: app/src/ui/calendar/popover.rs:342 app/src/ui/invitation.rs:334
 msgid "Add a note"
@@ -7147,8 +6528,7 @@ msgstr "Trả lời sự kiện lặp lại"
 
 #: app/src/ui/calendar/scope.rs:278
 msgid "Keep Old Time saves your other changes at the time the event had."
-msgstr ""
-"Giữ thời gian cũ lưu các thay đổi khác với thời gian trước đó của sự kiện."
+msgstr "Giữ thời gian cũ lưu các thay đổi khác với thời gian trước đó của sự kiện."
 
 #: app/src/ui/calendar/scope.rs:283
 msgid "The guests get a cancellation by mail."
@@ -7322,12 +6702,8 @@ msgid_plural "{count} more events"
 msgstr[0] "{count} sự kiện khác"
 
 #: app/src/ui/calendar/time_grid.rs:347
-msgid ""
-"Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when "
-"it ends."
-msgstr ""
-"Shift+Up hoặc Shift+Down chuyển sự kiện; Shift+Alt+Up hoặc Shift+Alt+Down "
-"đổi thời gian kết thúc."
+msgid "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when it ends."
+msgstr "Shift+Up hoặc Shift+Down chuyển sự kiện; Shift+Alt+Up hoặc Shift+Alt+Down đổi thời gian kết thúc."
 
 #: app/src/ui/calendar/time_grid.rs:353
 msgid "{base} {hint}"
@@ -7480,12 +6856,8 @@ msgid "Describe Picture"
 msgstr "Mô tả hình ảnh"
 
 #: app/src/ui/composer/editor.rs:336
-msgid ""
-"Screen readers read these words in place of the picture, and they show where "
-"the picture does not load."
-msgstr ""
-"Trình đọc màn hình đọc nội dung này thay cho hình ảnh; nội dung cũng được "
-"hiển thị khi hình ảnh không tải được."
+msgid "Screen readers read these words in place of the picture, and they show where the picture does not load."
+msgstr "Trình đọc màn hình đọc nội dung này thay cho hình ảnh; nội dung cũng được hiển thị khi hình ảnh không tải được."
 
 #: app/src/ui/composer/editor.rs:340 app/src/ui/composer/editor.rs:344
 msgid "Description"
@@ -7684,9 +7056,7 @@ msgstr "Gửi dạng đọc được"
 
 #: app/src/ui/composer/mod.rs:1994
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
-msgstr ""
-"Penguin Mail gửi vào thời gian này khi ứng dụng chạy, kể cả trong khay hệ "
-"thống."
+msgstr "Penguin Mail gửi vào thời gian này khi ứng dụng chạy, kể cả trong khay hệ thống."
 
 #: app/src/ui/composer/mod.rs:1995
 msgid "Schedule"
@@ -7878,22 +7248,15 @@ msgstr "Bỏ qua"
 
 #: app/src/ui/composer/mod.rs:3095
 msgid "The draft is kept on this computer, so you can finish it later here."
-msgstr ""
-"Thư nháp được giữ trên máy tính này để bạn có thể hoàn tất sau tại đây."
+msgstr "Thư nháp được giữ trên máy tính này để bạn có thể hoàn tất sau tại đây."
 
 #: app/src/ui/composer/mod.rs:3099
-msgid ""
-"The draft is kept in {provider}, so you can finish it later on any device."
-msgstr ""
-"Thư nháp được giữ trong {provider} để bạn có thể hoàn tất sau trên mọi thiết "
-"bị."
+msgid "The draft is kept in {provider}, so you can finish it later on any device."
+msgstr "Thư nháp được giữ trong {provider} để bạn có thể hoàn tất sau trên mọi thiết bị."
 
 #: app/src/ui/composer/mod.rs:3103
-msgid ""
-"The draft is kept in your account, so you can finish it later on any device."
-msgstr ""
-"Bản nháp được lưu trong tài khoản của bạn để bạn có thể hoàn thành sau trên "
-"bất kỳ thiết bị nào."
+msgid "The draft is kept in your account, so you can finish it later on any device."
+msgstr "Bản nháp được lưu trong tài khoản của bạn để bạn có thể hoàn thành sau trên bất kỳ thiết bị nào."
 
 #: app/src/ui/composer/recipients.rs:57
 msgid "{recipient}, not an address"
@@ -7952,12 +7315,8 @@ msgid "Calendar, Contacts and Rules Servers"
 msgstr "Máy chủ lịch, danh bạ và quy tắc"
 
 #: app/src/ui/contacts_prefs.rs:58
-msgid ""
-"Penguin Mail looks for these when you add an account, and signs in with the "
-"account's password, or the app password you gave for its calendar."
-msgstr ""
-"Penguin Mail tìm các máy chủ này khi bạn thêm tài khoản và đăng nhập bằng "
-"mật khẩu tài khoản hoặc mật khẩu ứng dụng bạn cung cấp cho lịch."
+msgid "Penguin Mail looks for these when you add an account, and signs in with the account's password, or the app password you gave for its calendar."
+msgstr "Penguin Mail tìm các máy chủ này khi bạn thêm tài khoản và đăng nhập bằng mật khẩu tài khoản hoặc mật khẩu ứng dụng bạn cung cấp cho lịch."
 
 #: app/src/ui/contacts_prefs.rs:136 app/src/ui/goa_page.rs:325
 msgid "Use It"
@@ -7977,36 +7336,20 @@ msgid "Edit…"
 msgstr "Sửa…"
 
 #: app/src/ui/contacts_prefs.rs:282
-msgid ""
-"Penguin Mail can read an account's contacts: names, email addresses, photos, "
-"organizations, and phone numbers. It uses them to suggest recipients, to "
-"show faces beside mail, and to fill the card behind a sender's name. What it "
-"reads stays on this computer, and turning an account off deletes its "
-"contacts."
-msgstr ""
-"Penguin Mail có thể đọc danh bạ của tài khoản: tên, địa chỉ email, ảnh, tổ "
-"chức và số điện thoại. Ứng dụng dùng dữ liệu để gợi ý người nhận, hiển thị "
-"ảnh bên cạnh thư và điền thẻ liên hệ sau tên người gửi. Dữ liệu được giữ "
-"trên máy tính này; tắt tài khoản sẽ xóa danh bạ của nó."
+msgid "Penguin Mail can read an account's contacts: names, email addresses, photos, organizations, and phone numbers. It uses them to suggest recipients, to show faces beside mail, and to fill the card behind a sender's name. What it reads stays on this computer, and turning an account off deletes its contacts."
+msgstr "Penguin Mail có thể đọc danh bạ của tài khoản: tên, địa chỉ email, ảnh, tổ chức và số điện thoại. Ứng dụng dùng dữ liệu để gợi ý người nhận, hiển thị ảnh bên cạnh thư và điền thẻ liên hệ sau tên người gửi. Dữ liệu được giữ trên máy tính này; tắt tài khoản sẽ xóa danh bạ của nó."
 
 #: app/src/ui/contacts_prefs.rs:354
-msgid ""
-"Penguin Mail shows each account's meetings and reminds you before they start."
-msgstr ""
-"Penguin Mail hiển thị cuộc họp của từng tài khoản và nhắc bạn trước khi bắt "
-"đầu."
+msgid "Penguin Mail shows each account's meetings and reminds you before they start."
+msgstr "Penguin Mail hiển thị cuộc họp của từng tài khoản và nhắc bạn trước khi bắt đầu."
 
 #: app/src/ui/contacts_prefs.rs:358
 msgid "GNOME Online Accounts"
 msgstr "Tài khoản trực tuyến GNOME"
 
 #: app/src/ui/contacts_prefs.rs:360
-msgid ""
-"Add an account to GNOME Online Accounts to see its meetings in GNOME "
-"Calendar and the clock too."
-msgstr ""
-"Thêm tài khoản vào Tài khoản trực tuyến GNOME để xem cuộc họp trong GNOME "
-"Calendar và đồng hồ."
+msgid "Add an account to GNOME Online Accounts to see its meetings in GNOME Calendar and the clock too."
+msgstr "Thêm tài khoản vào Tài khoản trực tuyến GNOME để xem cuộc họp trong GNOME Calendar và đồng hồ."
 
 #: app/src/ui/contacts_prefs.rs:431
 msgctxt "an account in Online Accounts"
@@ -8259,8 +7602,7 @@ msgstr "URL danh bạ (CardDAV)"
 
 #: app/src/ui/dav_edit.rs:39
 msgid "Penguin Mail signs in to these with {account}'s password."
-msgstr ""
-"Penguin Mail đăng nhập vào các máy chủ này bằng mật khẩu của {account}."
+msgstr "Penguin Mail đăng nhập vào các máy chủ này bằng mật khẩu của {account}."
 
 #: app/src/ui/dav_edit.rs:60
 msgid "Calendar and Contacts Servers"
@@ -8300,13 +7642,8 @@ msgstr "Đăng nhập bằng mật khẩu ứng dụng"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:43
-msgid ""
-"Google gives each app its own password. You make one in your Google account "
-"and paste it here. Your Google password stays with Google."
-msgstr ""
-"Google cấp cho mỗi ứng dụng một mật khẩu riêng. Bạn tạo một mật khẩu trong "
-"tài khoản Google rồi dán vào đây. Mật khẩu Google của bạn vẫn ở lại với "
-"Google."
+msgid "Google gives each app its own password. You make one in your Google account and paste it here. Your Google password stays with Google."
+msgstr "Google cấp cho mỗi ứng dụng một mật khẩu riêng. Bạn tạo một mật khẩu trong tài khoản Google rồi dán vào đây. Mật khẩu Google của bạn vẫn ở lại với Google."
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
@@ -8328,22 +7665,14 @@ msgstr "Tạo một mật khẩu ứng dụng. Đặt tên là Penguin Mail."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:80
-msgid ""
-"Copy the 16 letters Google shows and paste them below. Google shows them "
-"only once."
-msgstr ""
-"Sao chép 16 chữ cái Google hiển thị và dán vào bên dưới. Google chỉ hiển thị "
-"một lần."
+msgid "Copy the 16 letters Google shows and paste them below. Google shows them only once."
+msgstr "Sao chép 16 chữ cái Google hiển thị và dán vào bên dưới. Google chỉ hiển thị một lần."
 
 #. Translators: Google is a name; keep it as it is. App passwords is the name of
 #. Google's page; use the words Google's own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:89
-msgid ""
-"Changing your Google password removes your app passwords. Make a new one to "
-"keep getting mail."
-msgstr ""
-"Đổi mật khẩu Google sẽ xóa các mật khẩu ứng dụng của bạn. Hãy tạo mật khẩu "
-"mới để tiếp tục nhận thư."
+msgid "Changing your Google password removes your app passwords. Make a new one to keep getting mail."
+msgstr "Đổi mật khẩu Google sẽ xóa các mật khẩu ứng dụng của bạn. Hãy tạo mật khẩu mới để tiếp tục nhận thư."
 
 #. Translators: App password is the name of Google's page; use the words Google's own
 #. page shows in your language.
@@ -8391,12 +7720,8 @@ msgstr "Các cách đăng nhập khác"
 
 #. Translators: {address} is an email address.
 #: app/src/ui/goa_page.rs:293
-msgid ""
-"This computer is already signed in to <b>{address}</b>. Penguin Mail can "
-"read your mail through it."
-msgstr ""
-"Máy tính này đã đăng nhập vào <b>{address}</b>. Penguin Mail có thể đọc thư "
-"của bạn qua đó."
+msgid "This computer is already signed in to <b>{address}</b>. Penguin Mail can read your mail through it."
+msgstr "Máy tính này đã đăng nhập vào <b>{address}</b>. Penguin Mail có thể đọc thư của bạn qua đó."
 
 #: app/src/ui/goa_page.rs:297
 msgid "Use This Account"
@@ -8416,21 +7741,13 @@ msgstr "Chờ {address}"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:339
-msgid ""
-"Open <b>Online Accounts</b> from your applications menu, add your Google "
-"account, and come back."
-msgstr ""
-"Mở <b>Tài khoản trực tuyến</b> từ menu ứng dụng, thêm tài khoản Google của "
-"bạn rồi quay lại."
+msgid "Open <b>Online Accounts</b> from your applications menu, add your Google account, and come back."
+msgstr "Mở <b>Tài khoản trực tuyến</b> từ menu ứng dụng, thêm tài khoản Google của bạn rồi quay lại."
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
 #: app/src/ui/goa_page.rs:356
-msgid ""
-"Install Online Accounts from your software center, add your Google account "
-"there, and come back."
-msgstr ""
-"Cài đặt Tài khoản trực tuyến từ trung tâm phần mềm, thêm tài khoản Google "
-"của bạn ở đó rồi quay lại."
+msgid "Install Online Accounts from your software center, add your Google account there, and come back."
+msgstr "Cài đặt Tài khoản trực tuyến từ trung tâm phần mềm, thêm tài khoản Google của bạn ở đó rồi quay lại."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
@@ -8439,36 +7756,20 @@ msgstr "Penguin Mail cần quyền dùng Tài khoản trực tuyến."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
-msgid ""
-"Penguin Mail reads Gmail through your computer's Online Accounts. Add "
-"<b>{address}</b> there, then come back."
-msgstr ""
-"Penguin Mail đọc Gmail qua Tài khoản trực tuyến của máy tính bạn. Hãy thêm "
-"<b>{address}</b> ở đó, rồi quay lại."
+msgid "Penguin Mail reads Gmail through your computer's Online Accounts. Add <b>{address}</b> there, then come back."
+msgstr "Penguin Mail đọc Gmail qua Tài khoản trực tuyến của máy tính bạn. Hãy thêm <b>{address}</b> ở đó, rồi quay lại."
 
 #: app/src/ui/goa_page.rs:415
 msgid "Use {address} instead"
 msgstr "Dùng {address} thay thế"
 
 #: app/src/ui/hide_my_email.rs:24
-msgid ""
-"Gmail delivers mail sent to these addresses to your inbox. Each one shows "
-"which site shared your address, and you can turn one off when the spam "
-"starts. Your real address is part of each one, so anyone who removes the tag "
-"can still reach you, and your replies come from your main address."
-msgstr ""
-"Gmail chuyển thư gửi tới các địa chỉ này vào hộp thư đến. Mỗi địa chỉ cho "
-"biết trang nào đã chia sẻ địa chỉ của bạn; bạn có thể tắt địa chỉ khi có thư "
-"rác. Địa chỉ thật nằm trong mỗi địa chỉ này nên ai bỏ phần thẻ vẫn có thể "
-"liên hệ với bạn; thư trả lời được gửi từ địa chỉ chính."
+msgid "Gmail delivers mail sent to these addresses to your inbox. Each one shows which site shared your address, and you can turn one off when the spam starts. Your real address is part of each one, so anyone who removes the tag can still reach you, and your replies come from your main address."
+msgstr "Gmail chuyển thư gửi tới các địa chỉ này vào hộp thư đến. Mỗi địa chỉ cho biết trang nào đã chia sẻ địa chỉ của bạn; bạn có thể tắt địa chỉ khi có thư rác. Địa chỉ thật nằm trong mỗi địa chỉ này nên ai bỏ phần thẻ vẫn có thể liên hệ với bạn; thư trả lời được gửi từ địa chỉ chính."
 
 #: app/src/ui/hide_my_email.rs:34
-msgid ""
-"Addresses that hide your own. Each one shows which site you gave it to, and "
-"you can turn one off when the spam starts."
-msgstr ""
-"Địa chỉ che giấu địa chỉ thật của bạn. Mỗi địa chỉ cho biết trang bạn đã "
-"cung cấp nó; bạn có thể tắt địa chỉ khi có thư rác."
+msgid "Addresses that hide your own. Each one shows which site you gave it to, and you can turn one off when the spam starts."
+msgstr "Địa chỉ che giấu địa chỉ thật của bạn. Mỗi địa chỉ cho biết trang bạn đã cung cấp nó; bạn có thể tắt địa chỉ khi có thư rác."
 
 #: app/src/ui/hide_my_email.rs:67
 msgid "Off: mail to it is dropped"
@@ -8574,12 +7875,8 @@ msgid "Could not delete the address: {reason}"
 msgstr "Không thể xóa địa chỉ: {reason}"
 
 #: app/src/ui/hide_my_email.rs:599
-msgid ""
-"Mail sent to {address} arrives in your inbox again, without the Hide My "
-"Email label. To stop that mail, turn the address off instead."
-msgstr ""
-"Thư gửi tới {address} lại vào hộp thư đến, không có nhãn Ẩn email của tôi. "
-"Muốn chặn thư đó, hãy tắt địa chỉ."
+msgid "Mail sent to {address} arrives in your inbox again, without the Hide My Email label. To stop that mail, turn the address off instead."
+msgstr "Thư gửi tới {address} lại vào hộp thư đến, không có nhãn Ẩn email của tôi. Muốn chặn thư đó, hãy tắt địa chỉ."
 
 #: app/src/ui/hide_my_email.rs:630
 msgid "Allow Hide My Email"
@@ -8598,37 +7895,24 @@ msgid "Where Did You Use It?"
 msgstr "Bạn đã dùng địa chỉ ở đâu?"
 
 #: app/src/ui/hide_my_email.rs:684
-msgid ""
-"Your provider makes a new address that delivers to you. Give it to one site "
-"only."
-msgstr ""
-"Nhà cung cấp tạo địa chỉ mới chuyển thư tới bạn. Chỉ cung cấp địa chỉ cho "
-"một trang."
+msgid "Your provider makes a new address that delivers to you. Give it to one site only."
+msgstr "Nhà cung cấp tạo địa chỉ mới chuyển thư tới bạn. Chỉ cung cấp địa chỉ cho một trang."
 
 #: app/src/ui/hide_my_email.rs:689
-msgid ""
-"You get a new address that ends in your own, such as "
-"name+kite.fern482@gmail.com. Give it to one site only."
-msgstr ""
-"Bạn nhận địa chỉ mới kết thúc bằng địa chỉ thật, như "
-"name+kite.fern482@gmail.com. Chỉ cung cấp địa chỉ cho một trang."
+msgid "You get a new address that ends in your own, such as name+kite.fern482@gmail.com. Give it to one site only."
+msgstr "Bạn nhận địa chỉ mới kết thúc bằng địa chỉ thật, như name+kite.fern482@gmail.com. Chỉ cung cấp địa chỉ cho một trang."
 
 #: app/src/ui/hide_my_email.rs:751
 msgid "It is on your clipboard. Mail sent to it arrives in your inbox."
-msgstr ""
-"Địa chỉ đã được sao chép vào bộ nhớ tạm. Thư gửi tới sẽ vào hộp thư đến."
+msgstr "Địa chỉ đã được sao chép vào bộ nhớ tạm. Thư gửi tới sẽ vào hộp thư đến."
 
 #: app/src/ui/hide_my_email.rs:756 app/src/ui/hide_my_email.rs:780
 msgid "Could not create the address: {reason}"
 msgstr "Không thể tạo địa chỉ: {reason}"
 
 #: app/src/ui/hide_my_email.rs:769
-msgid ""
-"It is on your clipboard. Mail sent to it gets the Hide My Email label in "
-"Gmail."
-msgstr ""
-"Địa chỉ đã được sao chép vào bộ nhớ tạm. Thư gửi tới được gắn nhãn Ẩn email "
-"của tôi trong Gmail."
+msgid "It is on your clipboard. Mail sent to it gets the Hide My Email label in Gmail."
+msgstr "Địa chỉ đã được sao chép vào bộ nhớ tạm. Thư gửi tới được gắn nhãn Ẩn email của tôi trong Gmail."
 
 #: app/src/ui/hide_my_email.rs:814
 msgid "Your New Address"
@@ -8667,29 +7951,19 @@ msgid "A file has nobody to answer to"
 msgstr "Tệp không có người tổ chức để trả lời"
 
 #: app/src/ui/ics_file.rs:196
-msgid ""
-"No account here has a calendar Penguin Mail can add to. Add an account with "
-"a calendar, or turn one on in Preferences, under Calendar, then open the "
-"file again."
-msgstr ""
-"Không có tài khoản nào có lịch mà Penguin Mail có thể thêm sự kiện vào. Hãy "
-"thêm tài khoản có lịch hoặc bật lịch trong mục Lịch của Tùy chọn, rồi mở lại "
-"tệp."
+msgid "No account here has a calendar Penguin Mail can add to. Add an account with a calendar, or turn one on in Preferences, under Calendar, then open the file again."
+msgstr "Không có tài khoản nào có lịch mà Penguin Mail có thể thêm sự kiện vào. Hãy thêm tài khoản có lịch hoặc bật lịch trong mục Lịch của Tùy chọn, rồi mở lại tệp."
 
 #: app/src/ui/ics_file.rs:275
-msgid ""
-"Nothing in this file can be added, since its events have no id or start time"
-msgstr ""
-"Không thể thêm nội dung trong tệp vì các sự kiện thiếu mã định danh hoặc "
-"thời gian bắt đầu"
+msgid "Nothing in this file can be added, since its events have no id or start time"
+msgstr "Không thể thêm nội dung trong tệp vì các sự kiện thiếu mã định danh hoặc thời gian bắt đầu"
 
 #: app/src/ui/ics_file.rs:281
 msgid "Some events were left out, since they have no id or start time"
 msgstr "Một số sự kiện bị bỏ qua vì thiếu mã định danh hoặc thời gian bắt đầu"
 
 #: app/src/ui/ics_file.rs:291
-msgid ""
-"Penguin Mail has no permission to use this calendar. Allow it in Preferences."
+msgid "Penguin Mail has no permission to use this calendar. Allow it in Preferences."
 msgstr "Penguin Mail chưa có quyền dùng lịch này. Cho phép trong Tùy chọn."
 
 #: app/src/ui/ics_file.rs:294
@@ -8944,11 +8218,8 @@ msgid "gpgsm already holds everything in this file."
 msgstr "gpgsm đã có mọi dữ liệu trong tệp này."
 
 #: app/src/ui/key_import.rs:316
-msgid ""
-"You can sign and decrypt with the secret key now. gpg asks for its "
-"passphrase the first time."
-msgstr ""
-"Bạn có thể ký và giải mã bằng khóa bí mật. gpg sẽ hỏi cụm mật khẩu lần đầu."
+msgid "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
+msgstr "Bạn có thể ký và giải mã bằng khóa bí mật. gpg sẽ hỏi cụm mật khẩu lần đầu."
 
 #: app/src/ui/key_import.rs:319
 msgid "You can sign and decrypt with the secret key now."
@@ -8957,14 +8228,12 @@ msgstr "Bạn có thể ký và giải mã bằng khóa bí mật."
 #: app/src/ui/key_import.rs:321
 msgid "You can encrypt to this person and check their signatures."
 msgid_plural "You can encrypt to these people and check their signatures."
-msgstr[0] ""
-"Bạn có thể mã hóa thư cho những người này và kiểm tra chữ ký của họ."
+msgstr[0] "Bạn có thể mã hóa thư cho những người này và kiểm tra chữ ký của họ."
 
 #: app/src/ui/key_import.rs:327
 msgid "Penguin Mail can check signatures made with this certificate."
 msgid_plural "Penguin Mail can check signatures made with these certificates."
-msgstr[0] ""
-"Penguin Mail có thể kiểm tra chữ ký được tạo bằng các chứng chỉ này."
+msgstr[0] "Penguin Mail có thể kiểm tra chữ ký được tạo bằng các chứng chỉ này."
 
 #: app/src/ui/key_import.rs:350
 msgid "New, with secret key"
@@ -9009,14 +8278,8 @@ msgstr "Xám"
 
 #. Translators: Google and Gmail are names; keep them as they are.
 #: app/src/ui/move_sheet.rs:66
-msgid ""
-"Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-"account below to keep your mail arriving. Your mail and settings stay as "
-"they are."
-msgstr ""
-"Penguin Mail có những cách mới để đăng nhập vào Google. Hãy chọn một cách "
-"cho mỗi tài khoản Gmail bên dưới để thư tiếp tục được gửi đến. Thư và cài "
-"đặt của bạn vẫn giữ nguyên."
+msgid "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail account below to keep your mail arriving. Your mail and settings stay as they are."
+msgstr "Penguin Mail có những cách mới để đăng nhập vào Google. Hãy chọn một cách cho mỗi tài khoản Gmail bên dưới để thư tiếp tục được gửi đến. Thư và cài đặt của bạn vẫn giữ nguyên."
 
 #: app/src/ui/move_sheet.rs:88
 msgid "Later"
@@ -9127,11 +8390,8 @@ msgid "Group Inbox into Categories"
 msgstr "Nhóm Hộp thư đến theo danh mục"
 
 #: app/src/ui/preferences.rs:161
-msgid ""
-"Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
-msgstr ""
-"Phân loại hộp thư đến thành Chính, Cập nhật, Quảng cáo và Mạng xã hội như "
-"Gmail"
+msgid "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
+msgstr "Phân loại hộp thư đến thành Chính, Cập nhật, Quảng cáo và Mạng xã hội như Gmail"
 
 #: app/src/ui/preferences.rs:168
 msgid "Open the Inbox On"
@@ -9218,8 +8478,7 @@ msgid "Event Reminders"
 msgstr "Lời nhắc sự kiện"
 
 #: app/src/ui/preferences.rs:322
-msgid ""
-"A notification before each event, at the times the event or its calendar sets"
+msgid "A notification before each event, at the times the event or its calendar sets"
 msgstr "Thông báo trước mỗi sự kiện, theo thời gian do sự kiện hoặc lịch đặt"
 
 #: app/src/ui/preferences.rs:344 app/src/ui/preferences.rs:351
@@ -9228,11 +8487,8 @@ msgid "Accounts"
 msgstr "Tài khoản"
 
 #: app/src/ui/preferences.rs:352
-msgid ""
-"Signature, addresses you send from, servers, contacts, and the space the "
-"server reports."
-msgstr ""
-"Chữ ký, địa chỉ gửi thư, máy chủ, danh bạ và dung lượng do máy chủ báo cáo."
+msgid "Signature, addresses you send from, servers, contacts, and the space the server reports."
+msgstr "Chữ ký, địa chỉ gửi thư, máy chủ, danh bạ và dung lượng do máy chủ báo cáo."
 
 #: app/src/ui/preferences.rs:357 app/src/ui/preferences.rs:601
 msgid "No Accounts Yet"
@@ -9259,10 +8515,8 @@ msgid "Signature"
 msgstr "Chữ ký"
 
 #: app/src/ui/preferences.rs:497
-msgid ""
-"Added below new messages and above quoted text in replies. Markdown works."
-msgstr ""
-"Thêm dưới thư mới và trên văn bản trích dẫn khi trả lời. Hỗ trợ Markdown."
+msgid "Added below new messages and above quoted text in replies. Markdown works."
+msgstr "Thêm dưới thư mới và trên văn bản trích dẫn khi trả lời. Hỗ trợ Markdown."
 
 #: app/src/ui/preferences.rs:504
 msgid "Signature for {account}"
@@ -9302,8 +8556,7 @@ msgstr "Thư mới bắt đầu ở dạng"
 
 #: app/src/ui/preferences.rs:618
 msgid "Rich text styles the words themselves; Markdown shows its marks"
-msgstr ""
-"Văn bản có định dạng hiển thị kiểu chữ; Markdown hiển thị các dấu định dạng"
+msgstr "Văn bản có định dạng hiển thị kiểu chữ; Markdown hiển thị các dấu định dạng"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
@@ -9329,11 +8582,8 @@ msgid "Signing and Encryption"
 msgstr "Ký và mã hóa"
 
 #: app/src/ui/preferences.rs:672
-msgid ""
-"Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
-"asks for your passphrase itself."
-msgstr ""
-"Penguin Mail ký và mã hóa qua GnuPG, nơi lưu khóa và tự hỏi cụm mật khẩu."
+msgid "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for your passphrase itself."
+msgstr "Penguin Mail ký và mã hóa qua GnuPG, nơi lưu khóa và tự hỏi cụm mật khẩu."
 
 #: app/src/ui/preferences.rs:677
 msgid "Your OpenPGP Keys"
@@ -9378,35 +8628,21 @@ msgstr "Không thể truy vấn gpgsm: {reason}"
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
 #: app/src/ui/preferences.rs:816
-msgid ""
-"Penguin Mail signs and encrypts through {programs}, which holds your keys "
-"and asks for your passphrase itself."
-msgid_plural ""
-"Penguin Mail signs and encrypts through {programs}, which hold your keys and "
-"ask for your passphrase themselves."
-msgstr[0] ""
-"Penguin Mail ký và mã hóa qua {programs}, nơi lưu khóa và tự hỏi cụm mật "
-"khẩu."
+msgid "Penguin Mail signs and encrypts through {programs}, which holds your keys and asks for your passphrase itself."
+msgid_plural "Penguin Mail signs and encrypts through {programs}, which hold your keys and ask for your passphrase themselves."
+msgstr[0] "Penguin Mail ký và mã hóa qua {programs}, nơi lưu khóa và tự hỏi cụm mật khẩu."
 
 #: app/src/ui/preferences.rs:848 app/src/ui/preferences.rs:861
 msgid "Spelling"
 msgstr "Chính tả"
 
 #: app/src/ui/preferences.rs:850
-msgid ""
-"No dictionaries are installed, so Penguin Mail is not checking spelling. "
-"Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
-"reopen the composer."
-msgstr ""
-"Chưa cài từ điển nên Penguin Mail không kiểm tra chính tả. Cài từ điển "
-"Hunspell, như hunspell-en-us hoặc hunspell-pt-pt, rồi mở lại trình soạn thư."
+msgid "No dictionaries are installed, so Penguin Mail is not checking spelling. Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and reopen the composer."
+msgstr "Chưa cài từ điển nên Penguin Mail không kiểm tra chính tả. Cài từ điển Hunspell, như hunspell-en-us hoặc hunspell-pt-pt, rồi mở lại trình soạn thư."
 
 #: app/src/ui/preferences.rs:863
-msgid ""
-"The language each account checks spelling in. Dictionaries installed: "
-"{languages}."
-msgstr ""
-"Ngôn ngữ kiểm tra chính tả của từng tài khoản. Từ điển đã cài: {languages}."
+msgid "The language each account checks spelling in. Dictionaries installed: {languages}."
+msgstr "Ngôn ngữ kiểm tra chính tả của từng tài khoản. Từ điển đã cài: {languages}."
 
 #: app/src/ui/preferences.rs:875
 msgid "System: {language}"
@@ -9582,12 +8818,8 @@ msgid "Default Account"
 msgstr "Tài khoản mặc định"
 
 #: app/src/ui/preferences/accounts.rs:95
-msgid ""
-"Automatic follows this task's context. Use Default Account follows the "
-"choice above."
-msgstr ""
-"Tự động chọn theo ngữ cảnh của tác vụ. Dùng tài khoản mặc định sẽ áp dụng "
-"lựa chọn ở trên."
+msgid "Automatic follows this task's context. Use Default Account follows the choice above."
+msgstr "Tự động chọn theo ngữ cảnh của tác vụ. Dùng tài khoản mặc định sẽ áp dụng lựa chọn ở trên."
 
 #: app/src/ui/preferences/accounts.rs:154
 msgid "Use Default Account"
@@ -9678,12 +8910,8 @@ msgid "Try a different search"
 msgstr "Thử tìm kiếm khác"
 
 #: app/src/ui/preferences/google_route.rs:80
-msgid ""
-"Filters, aliases and the automatic reply need Gmail's own connection, which "
-"this computer's Google sign-in doesn't offer."
-msgstr ""
-"Bộ lọc, bí danh và trả lời tự động cần kết nối riêng của Gmail, mà đăng nhập "
-"Google của máy tính này không có."
+msgid "Filters, aliases and the automatic reply need Gmail's own connection, which this computer's Google sign-in doesn't offer."
+msgstr "Bộ lọc, bí danh và trả lời tự động cần kết nối riêng của Gmail, mà đăng nhập Google của máy tính này không có."
 
 #: app/src/ui/preferences/google_route.rs:115
 msgid "Switch {address} to this computer's sign-in?"
@@ -9767,22 +8995,14 @@ msgstr "Thêm Google Lịch và danh bạ của bạn?"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:130
-msgid ""
-"Penguin Mail asks Google for your calendar, your contacts and the files it "
-"adds to Drive. Google will show its own screen. Your mail is already set up."
-msgstr ""
-"Penguin Mail yêu cầu Google cung cấp lịch, danh bạ của bạn và các tệp nó "
-"thêm vào Drive. Google sẽ hiện màn hình riêng. Thư của bạn đã được thiết lập."
+msgid "Penguin Mail asks Google for your calendar, your contacts and the files it adds to Drive. Google will show its own screen. Your mail is already set up."
+msgstr "Penguin Mail yêu cầu Google cung cấp lịch, danh bạ của bạn và các tệp nó thêm vào Drive. Google sẽ hiện màn hình riêng. Thư của bạn đã được thiết lập."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
 #: app/src/ui/route_page.rs:139
-msgid ""
-"Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
-"to Penguin Mail (unsafe)."
-msgstr ""
-"Google có thể hiện \"Google chưa xác minh ứng dụng này\". Hãy nhấp vào Nâng "
-"cao, rồi Chuyển đến Penguin Mail (không an toàn)."
+msgid "Google may say \"Google hasn't verified this app\". Click Advanced, then Go to Penguin Mail (unsafe)."
+msgstr "Google có thể hiện \"Google chưa xác minh ứng dụng này\". Hãy nhấp vào Nâng cao, rồi Chuyển đến Penguin Mail (không an toàn)."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:153
@@ -9839,8 +9059,7 @@ msgid "Rules Written Elsewhere"
 msgstr "Quy tắc được viết ở nơi khác"
 
 #: app/src/ui/rules.rs:366
-msgid ""
-"Penguin Mail keeps these as they are. Change them where they were written."
+msgid "Penguin Mail keeps these as they are. Change them where they were written."
 msgstr "Penguin Mail giữ nguyên các quy tắc này. Sửa tại nơi đã viết."
 
 #: app/src/ui/rules.rs:397
@@ -9909,9 +9128,7 @@ msgstr "Thực hiện"
 
 #: app/src/ui/rules.rs:520
 msgid "This rule also does things this form can't show. Saving keeps them."
-msgstr ""
-"Quy tắc này còn thực hiện các thao tác biểu mẫu không thể hiển thị. Lưu sẽ "
-"giữ nguyên chúng."
+msgstr "Quy tắc này còn thực hiện các thao tác biểu mẫu không thể hiển thị. Lưu sẽ giữ nguyên chúng."
 
 #: app/src/ui/rules.rs:531
 msgid "Edit Rule"
@@ -9942,13 +9159,8 @@ msgid "Replace “{script}”?"
 msgstr "Thay thế “{script}”?"
 
 #: app/src/ui/rules.rs:722
-msgid ""
-"{provider} runs one set of rules at a time, and it runs “{script}” now. "
-"Penguin Mail's rules would take its place; “{script}” stays on the server, "
-"switched off."
-msgstr ""
-"{provider} chạy một bộ quy tắc mỗi lần và hiện đang chạy “{script}”. Quy tắc "
-"của Penguin Mail sẽ thay thế; “{script}” được giữ trên máy chủ nhưng bị tắt."
+msgid "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
+msgstr "{provider} chạy một bộ quy tắc mỗi lần và hiện đang chạy “{script}”. Quy tắc của Penguin Mail sẽ thay thế; “{script}” được giữ trên máy chủ nhưng bị tắt."
 
 #: app/src/ui/rules.rs:728
 msgid "Replace"
@@ -9963,36 +9175,20 @@ msgid "Allow Penguin Mail's Sandbox"
 msgstr "Cho phép môi trường cách ly của Penguin Mail"
 
 #: app/src/ui/sandbox_setup.rs:39
-msgid ""
-"Penguin Mail opens every message in a sandbox, and this system lets an app "
-"start one only when it is allowed. Run this in a terminal once to allow this "
-"copy, then choose Check Again."
-msgstr ""
-"Penguin Mail mở mọi thư trong một môi trường cách ly, và hệ thống này chỉ "
-"cho một ứng dụng khởi động môi trường đó khi được cho phép. Hãy chạy lệnh "
-"này một lần trong terminal để cho phép bản này, rồi chọn Kiểm tra lại."
+msgid "Penguin Mail opens every message in a sandbox, and this system lets an app start one only when it is allowed. Run this in a terminal once to allow this copy, then choose Check Again."
+msgstr "Penguin Mail mở mọi thư trong một môi trường cách ly, và hệ thống này chỉ cho một ứng dụng khởi động môi trường đó khi được cho phép. Hãy chạy lệnh này một lần trong terminal để cho phép bản này, rồi chọn Kiểm tra lại."
 
 #: app/src/ui/sandbox_setup.rs:48
 msgid "Install the Sandbox Tools"
 msgstr "Cài đặt công cụ cho môi trường cách ly"
 
 #: app/src/ui/sandbox_setup.rs:50
-msgid ""
-"Penguin Mail opens every message in a sandbox made with Bubblewrap. Install "
-"the bubblewrap and xdg-dbus-proxy packages, then choose Check Again."
-msgstr ""
-"Penguin Mail mở mọi thư trong một môi trường cách ly do Bubblewrap tạo. Hãy "
-"cài các gói bubblewrap và xdg-dbus-proxy, rồi chọn Kiểm tra lại."
+msgid "Penguin Mail opens every message in a sandbox made with Bubblewrap. Install the bubblewrap and xdg-dbus-proxy packages, then choose Check Again."
+msgstr "Penguin Mail mở mọi thư trong một môi trường cách ly do Bubblewrap tạo. Hãy cài các gói bubblewrap và xdg-dbus-proxy, rồi chọn Kiểm tra lại."
 
 #: app/src/ui/sandbox_setup.rs:62
-msgid ""
-"Or install Penguin Mail from <a href=\"https://flathub.org/apps/"
-"io.github.c9dev.penguin-mail\">Flathub</a> or the <a href=\"https://"
-"snapcraft.io/penguin-mail\">Snap Store</a>, which need no setup."
-msgstr ""
-"Hoặc cài Penguin Mail từ <a href=\"https://flathub.org/apps/"
-"io.github.c9dev.penguin-mail\">Flathub</a> hay <a href=\"https://"
-"snapcraft.io/penguin-mail\">Snap Store</a>, không cần thiết lập gì."
+msgid "Or install Penguin Mail from <a href=\"https://flathub.org/apps/io.github.c9dev.penguin-mail\">Flathub</a> or the <a href=\"https://snapcraft.io/penguin-mail\">Snap Store</a>, which need no setup."
+msgstr "Hoặc cài Penguin Mail từ <a href=\"https://flathub.org/apps/io.github.c9dev.penguin-mail\">Flathub</a> hay <a href=\"https://snapcraft.io/penguin-mail\">Snap Store</a>, không cần thiết lập gì."
 
 #: app/src/ui/sandbox_setup.rs:94
 msgid "The sandbox still cannot start"
@@ -10001,11 +9197,8 @@ msgstr "Môi trường cách ly vẫn chưa khởi động được"
 #. Translators: Gmail is a name; use the words Gmail's own settings show in your language for
 #. Send mail as.
 #: app/src/ui/sender_prefs.rs:32
-msgid ""
-"Gmail sends only from addresses you added in Gmail's Send mail as setting."
-msgstr ""
-"Gmail chỉ gửi từ các địa chỉ bạn đã thêm trong cài đặt Gửi thư dưới tên của "
-"Gmail."
+msgid "Gmail sends only from addresses you added in Gmail's Send mail as setting."
+msgstr "Gmail chỉ gửi từ các địa chỉ bạn đã thêm trong cài đặt Gửi thư dưới tên của Gmail."
 
 #: app/src/ui/sender_prefs.rs:39
 msgid "Addresses You Send From"
@@ -10024,12 +9217,8 @@ msgid "Sender Address"
 msgstr "Địa chỉ người gửi"
 
 #: app/src/ui/sender_prefs.rs:140
-msgid ""
-"Uses this account's outgoing server. Replies use the address the message was "
-"sent to."
-msgstr ""
-"Dùng máy chủ gửi thư của tài khoản này. Thư trả lời dùng địa chỉ mà thư gốc "
-"được gửi tới."
+msgid "Uses this account's outgoing server. Replies use the address the message was sent to."
+msgstr "Dùng máy chủ gửi thư của tài khoản này. Thư trả lời dùng địa chỉ mà thư gốc được gửi tới."
 
 #: app/src/ui/sender_prefs.rs:151
 msgid "Sender Name"
@@ -10182,12 +9371,8 @@ msgstr "Hãy chọn cách tài khoản này đăng nhập để nhận thư mớ
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
 #: app/src/ui/sidebar.rs:2096
-msgid ""
-"Gmail limits how much mail an app can download each day. Penguin Mail tries "
-"again later."
-msgstr ""
-"Gmail giới hạn lượng thư mà một ứng dụng có thể tải xuống mỗi ngày. Penguin "
-"Mail sẽ thử lại sau."
+msgid "Gmail limits how much mail an app can download each day. Penguin Mail tries again later."
+msgstr "Gmail giới hạn lượng thư mà một ứng dụng có thể tải xuống mỗi ngày. Penguin Mail sẽ thử lại sau."
 
 #: app/src/ui/sidebar/sections.rs:25
 msgid "Favorites"
@@ -10274,14 +9459,8 @@ msgid "Switch to JMAP"
 msgstr "Chuyển sang JMAP"
 
 #: app/src/ui/templates.rs:25
-msgid ""
-"Saved bodies the composer's Templates menu drops into a message. Markdown "
-"works, and {{first_name}}, {{name}}, {{email}}, {{subject}} and {{date}} "
-"fill in when you use one."
-msgstr ""
-"Nội dung đã lưu được trình đơn Mẫu thư của trình soạn đưa vào thư. Hỗ trợ "
-"Markdown; {{first_name}}, {{name}}, {{email}}, {{subject}} và {{date}} được "
-"điền khi bạn dùng mẫu."
+msgid "Saved bodies the composer's Templates menu drops into a message. Markdown works, and {{first_name}}, {{name}}, {{email}}, {{subject}} and {{date}} fill in when you use one."
+msgstr "Nội dung đã lưu được trình đơn Mẫu thư của trình soạn đưa vào thư. Hỗ trợ Markdown; {{first_name}}, {{name}}, {{email}}, {{subject}} và {{date}} được điền khi bạn dùng mẫu."
 
 #: app/src/ui/templates.rs:34
 msgid "Add Template"
@@ -10312,9 +9491,7 @@ msgid "This computer keeps the only copy."
 msgstr "Máy tính này giữ bản sao duy nhất."
 
 #: app/src/ui/templates.rs:197
-msgid ""
-"The subject is optional. A template with one gives it to a message that has "
-"none."
+msgid "The subject is optional. A template with one gives it to a message that has none."
 msgstr "Tiêu đề không bắt buộc. Mẫu có tiêu đề sẽ đặt tiêu đề cho thư chưa có."
 
 #: app/src/ui/templates.rs:213 app/src/ui/templates.rs:215
@@ -10436,8 +9613,7 @@ msgstr[0] "Hủy đăng ký {count} danh sách?"
 
 #: app/src/ui/unsubscribe.rs:243
 msgid "Loading a page tells the sender you acted, as opening it yourself does."
-msgstr ""
-"Tải trang cho người gửi biết bạn đã thao tác, giống khi bạn tự mở trang."
+msgstr "Tải trang cho người gửi biết bạn đã thao tác, giống khi bạn tự mở trang."
 
 #: app/src/ui/unsubscribe.rs:249
 msgid "Reading the page…"
@@ -10520,11 +9696,8 @@ msgid "Your mail server"
 msgstr "Máy chủ thư của bạn"
 
 #: app/src/ui/vacation.rs:213
-msgid ""
-"{provider} answers new mail while you are away, even when this computer is "
-"off"
-msgstr ""
-"{provider} trả lời thư mới khi bạn vắng mặt, kể cả khi máy tính này tắt"
+msgid "{provider} answers new mail while you are away, even when this computer is off"
+msgstr "{provider} trả lời thư mới khi bạn vắng mặt, kể cả khi máy tính này tắt"
 
 #: app/src/ui/vacation.rs:248
 msgid "Send Automatic Replies"
@@ -10563,8 +9736,7 @@ msgid "Add your first account"
 msgstr "Thêm tài khoản đầu tiên"
 
 #: app/src/ui/welcome.rs:40
-msgid ""
-"Choose where your mail lives. You can add more later from the main menu."
+msgid "Choose where your mail lives. You can add more later from the main menu."
 msgstr "Chọn nơi lưu thư. Bạn có thể thêm tài khoản sau từ trình đơn chính."
 
 #: app/src/ui/window.rs:296
@@ -10788,20 +9960,15 @@ msgstr "Tiếp tục trong trình duyệt"
 
 #: app/src/ui/window.rs:3437
 msgid "This copy of Penguin Mail was built without Google sign-in."
-msgstr ""
-"Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google."
+msgstr "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google."
 
 #: app/src/ui/window.rs:3459
 msgid "Get a Release"
 msgstr "Tải bản phát hành"
 
 #: app/src/ui/window.rs:3578
-msgid ""
-"Could not check for messages the server holds to send later, so {account} "
-"stays: {reason}"
-msgstr ""
-"Không thể kiểm tra các thư máy chủ đang giữ để gửi sau, nên tài khoản "
-"{account} được giữ lại: {reason}"
+msgid "Could not check for messages the server holds to send later, so {account} stays: {reason}"
+msgstr "Không thể kiểm tra các thư máy chủ đang giữ để gửi sau, nên tài khoản {account} được giữ lại: {reason}"
 
 #: app/src/ui/window.rs:3589
 msgid "Remove {account}?"
@@ -10877,12 +10044,8 @@ msgid "Messages That Will Not Download"
 msgstr "Thư không thể tải"
 
 #: app/src/ui/window.rs:4599
-msgid ""
-"Penguin Mail could not download these from {address}'s server. It tries "
-"again at each check, except for a message too large to download."
-msgstr ""
-"Penguin Mail không thể tải những thư này từ máy chủ của {address}. Ứng dụng "
-"thử lại mỗi lần kiểm tra, trừ thư quá lớn để tải."
+msgid "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
+msgstr "Penguin Mail không thể tải những thư này từ máy chủ của {address}. Ứng dụng thử lại mỗi lần kiểm tra, trừ thư quá lớn để tải."
 
 #: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:215
 msgid "Delete “{name}”?"
@@ -10897,9 +10060,7 @@ msgid "Name This Account"
 msgstr "Đặt tên tài khoản này"
 
 #: app/src/ui/window/arrange.rs:143
-msgid ""
-"The sidebar shows the name instead of the address. Leave it empty for the "
-"address."
+msgid "The sidebar shows the name instead of the address. Leave it empty for the address."
 msgstr "Thanh bên hiển thị tên thay cho địa chỉ. Để trống để dùng địa chỉ."
 
 #: app/src/ui/window/attachments.rs:59
@@ -10949,11 +10110,8 @@ msgid "Moved mail from {sender} to {category}"
 msgstr "Đã chuyển thư từ {sender} vào {category}"
 
 #: app/src/ui/window/categories.rs:401
-msgid ""
-"Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
-msgstr ""
-"Đã chuyển thư từ {sender} vào {category} nhưng không thể phân loại thư mới: "
-"{reason}"
+msgid "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
+msgstr "Đã chuyển thư từ {sender} vào {category} nhưng không thể phân loại thư mới: {reason}"
 
 #: app/src/ui/window/categories/chip.rs:27
 msgid "{name}, {count} unread"
@@ -10969,12 +10127,8 @@ msgid "Message list width"
 msgstr "Độ rộng danh sách thư"
 
 #: app/src/ui/window/column_width.rs:38
-msgid ""
-"Drag to resize, or use Left and Right. Home and End choose the smallest and "
-"largest widths."
-msgstr ""
-"Kéo để đổi kích thước, hoặc dùng phím Trái và Phải. Home và End chọn độ rộng "
-"nhỏ nhất và lớn nhất."
+msgid "Drag to resize, or use Left and Right. Home and End choose the smallest and largest widths."
+msgstr "Kéo để đổi kích thước, hoặc dùng phím Trái và Phải. Home và End chọn độ rộng nhỏ nhất và lớn nhất."
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124
@@ -11279,23 +10433,13 @@ msgid "The server deletes it from every device and cannot bring it back."
 msgstr "Máy chủ xóa thư khỏi mọi thiết bị và không thể khôi phục."
 
 #: app/src/ui/window/press.rs:417
-msgid ""
-"Each account's server deletes them from every device and cannot bring them "
-"back."
-msgstr ""
-"Máy chủ của từng tài khoản xóa các thư khỏi mọi thiết bị và không thể khôi "
-"phục."
+msgid "Each account's server deletes them from every device and cannot bring them back."
+msgstr "Máy chủ của từng tài khoản xóa các thư khỏi mọi thiết bị và không thể khôi phục."
 
 #: app/src/ui/window/press.rs:425
-msgid ""
-"Mail in {accounts} stays in the Trash, since its server cannot delete mail "
-"for good."
-msgid_plural ""
-"Mail in {accounts} stays in the Trash, since their servers cannot delete "
-"mail for good."
-msgstr[0] ""
-"Thư trong {accounts} vẫn ở Thùng rác vì máy chủ của chúng không thể xóa thư "
-"vĩnh viễn."
+msgid "Mail in {accounts} stays in the Trash, since its server cannot delete mail for good."
+msgid_plural "Mail in {accounts} stays in the Trash, since their servers cannot delete mail for good."
+msgstr[0] "Thư trong {accounts} vẫn ở Thùng rác vì máy chủ của chúng không thể xóa thư vĩnh viễn."
 
 #: app/src/ui/window/press.rs:450
 msgid "Cancel Send (Delete)"
@@ -11326,12 +10470,8 @@ msgid "Dismiss Follow-Up (Delete)"
 msgstr "Bỏ theo dõi (Delete)"
 
 #: app/src/ui/window/reminders.rs:27
-msgid ""
-"The conversation leaves the inbox now and comes back at this time, marked "
-"unread."
-msgstr ""
-"Cuộc hội thoại rời hộp thư đến và trở lại vào thời gian này, được đánh dấu "
-"chưa đọc."
+msgid "The conversation leaves the inbox now and comes back at this time, marked unread."
+msgstr "Cuộc hội thoại rời hộp thư đến và trở lại vào thời gian này, được đánh dấu chưa đọc."
 
 #: app/src/ui/window/reveal.rs:75
 msgid "Could not open the conversation to reply to it"
@@ -11342,12 +10482,8 @@ msgid "Could not cancel: {reason}"
 msgstr "Không thể hủy: {reason}"
 
 #: app/src/ui/window/scheduled.rs:228
-msgid ""
-"The server would not take this message back, so Penguin Mail sends it at its "
-"hour while it runs."
-msgstr ""
-"Máy chủ không thu hồi thư này nên Penguin Mail gửi đúng giờ khi ứng dụng "
-"chạy."
+msgid "The server would not take this message back, so Penguin Mail sends it at its hour while it runs."
+msgstr "Máy chủ không thu hồi thư này nên Penguin Mail gửi đúng giờ khi ứng dụng chạy."
 
 #: app/src/ui/window/scheduled.rs:286
 msgid "This message was canceled in another app."
@@ -11359,24 +10495,17 @@ msgid_plural "{count} messages were canceled in another app."
 msgstr[0] "Có {count} thư bị hủy trong ứng dụng khác."
 
 #: app/src/ui/window/scheduled.rs:297
-msgid ""
-"Penguin Mail could not confirm whether this message went out. Check Sent."
-msgstr ""
-"Penguin Mail không thể xác nhận thư này đã gửi hay chưa. Kiểm tra Đã gửi."
+msgid "Penguin Mail could not confirm whether this message went out. Check Sent."
+msgstr "Penguin Mail không thể xác nhận thư này đã gửi hay chưa. Kiểm tra Đã gửi."
 
 #: app/src/ui/window/scheduled.rs:300
-msgid ""
-"Penguin Mail could not confirm whether {count} message went out. Check Sent."
-msgid_plural ""
-"Penguin Mail could not confirm whether {count} messages went out. Check Sent."
-msgstr[0] ""
-"Penguin Mail không thể xác nhận {count} thư đã gửi hay chưa. Kiểm tra Đã gửi."
+msgid "Penguin Mail could not confirm whether {count} message went out. Check Sent."
+msgid_plural "Penguin Mail could not confirm whether {count} messages went out. Check Sent."
+msgstr[0] "Penguin Mail không thể xác nhận {count} thư đã gửi hay chưa. Kiểm tra Đã gửi."
 
 #: app/src/ui/window/scheduled.rs:310
-msgid ""
-"The server did not answer, so {count} message still goes out at its hour."
-msgid_plural ""
-"The server did not answer, so {count} messages still go out at their hour."
+msgid "The server did not answer, so {count} message still goes out at its hour."
+msgid_plural "The server did not answer, so {count} messages still go out at their hour."
 msgstr[0] "Máy chủ không phản hồi nên {count} thư vẫn sẽ được gửi đúng giờ."
 
 #: app/src/ui/window/scheduled.rs:323
@@ -11385,28 +10514,17 @@ msgid_plural "{count} messages had already gone out."
 msgstr[0] "Có {count} thư đã được gửi."
 
 #: app/src/ui/window/scheduled.rs:336
-msgid ""
-"The server is out of reach and Penguin Mail cannot reopen a message, so it "
-"stays in Send Later."
-msgid_plural ""
-"The server is out of reach and Penguin Mail cannot reopen messages, so they "
-"stay in Send Later."
-msgstr[0] ""
-"Không kết nối được máy chủ và Penguin Mail không thể mở lại thư nên thư vẫn "
-"ở Gửi sau."
+msgid "The server is out of reach and Penguin Mail cannot reopen a message, so it stays in Send Later."
+msgid_plural "The server is out of reach and Penguin Mail cannot reopen messages, so they stay in Send Later."
+msgstr[0] "Không kết nối được máy chủ và Penguin Mail không thể mở lại thư nên thư vẫn ở Gửi sau."
 
 #: app/src/ui/window/scheduled.rs:342
-msgid ""
-"Won't be sent. The server is out of reach, so the message is open for you to "
-"save."
+msgid "Won't be sent. The server is out of reach, so the message is open for you to save."
 msgstr "Sẽ không gửi. Không kết nối được máy chủ nên thư được mở để bạn lưu."
 
 #: app/src/ui/window/scheduled.rs:345
-msgid ""
-"Won't be sent. The server is out of reach, so the messages are open for you "
-"to save."
-msgstr ""
-"Sẽ không gửi. Không kết nối được máy chủ nên các thư được mở để bạn lưu."
+msgid "Won't be sent. The server is out of reach, so the messages are open for you to save."
+msgstr "Sẽ không gửi. Không kết nối được máy chủ nên các thư được mở để bạn lưu."
 
 #: app/src/ui/window/scheduled.rs:347
 msgid "Won't be sent. The message is in Drafts."
@@ -11417,24 +10535,16 @@ msgid "Won't be sent. The messages are in Drafts."
 msgstr "Sẽ không gửi. Các thư ở trong Thư nháp."
 
 #: app/src/ui/window/scheduled.rs:350
-msgid ""
-"Won't be sent. Some are in Drafts, and the ones the server could not take "
-"are open for you to save."
-msgstr ""
-"Sẽ không gửi. Một số thư ở trong Thư nháp; những thư máy chủ không nhận được "
-"mở để bạn lưu."
+msgid "Won't be sent. Some are in Drafts, and the ones the server could not take are open for you to save."
+msgstr "Sẽ không gửi. Một số thư ở trong Thư nháp; những thư máy chủ không nhận được mở để bạn lưu."
 
 #: app/src/ui/window/senders.rs:64
 msgid "This message has no unsubscribe link"
 msgstr "Thư này không có liên kết hủy đăng ký"
 
 #: app/src/ui/window/senders.rs:144
-msgid ""
-"The request to leave {sender} waits in the Outbox. It goes out as soon as it "
-"can."
-msgstr ""
-"Yêu cầu rời danh sách của {sender} đang chờ trong Hộp thư đi. Yêu cầu sẽ "
-"được gửi ngay khi có thể."
+msgid "The request to leave {sender} waits in the Outbox. It goes out as soon as it can."
+msgstr "Yêu cầu rời danh sách của {sender} đang chờ trong Hộp thư đi. Yêu cầu sẽ được gửi ngay khi có thể."
 
 #: app/src/ui/window/senders.rs:210
 msgid "Open Page"
@@ -11453,12 +10563,8 @@ msgid "Block {sender}?"
 msgstr "Chặn {sender}?"
 
 #: app/src/ui/window/senders.rs:274
-msgid ""
-"New mail from {email} goes straight to the Trash. This conversation moves "
-"there now. Remove the rule under Rules to unblock."
-msgstr ""
-"Thư mới từ {email} vào thẳng Thùng rác. Cuộc hội thoại này được chuyển vào "
-"đó ngay. Xóa quy tắc trong Quy tắc để bỏ chặn."
+msgid "New mail from {email} goes straight to the Trash. This conversation moves there now. Remove the rule under Rules to unblock."
+msgstr "Thư mới từ {email} vào thẳng Thùng rác. Cuộc hội thoại này được chuyển vào đó ngay. Xóa quy tắc trong Quy tắc để bỏ chặn."
 
 #: app/src/ui/window/senders.rs:279
 msgid "Block"
@@ -11657,26 +10763,16 @@ msgid "Checking for mail"
 msgstr "Đang kiểm tra thư"
 
 #: app/src/ui/window/spaces.rs:24
-msgid ""
-"“{title}” was saved without “{file}”, which moved or was deleted before it "
-"could upload"
-msgstr ""
-"“{title}” được lưu không có “{file}” vì tệp bị chuyển hoặc xóa trước khi tải "
-"lên"
+msgid "“{title}” was saved without “{file}”, which moved or was deleted before it could upload"
+msgstr "“{title}” được lưu không có “{file}” vì tệp bị chuyển hoặc xóa trước khi tải lên"
 
 #: app/src/ui/window/spaces.rs:33
-msgid ""
-"Someone else changed {field} on “{title}” at the same time; their version "
-"was kept"
-msgstr ""
-"Người khác cũng đổi {field} trên “{title}” cùng lúc; phiên bản của họ được "
-"giữ lại"
+msgid "Someone else changed {field} on “{title}” at the same time; their version was kept"
+msgstr "Người khác cũng đổi {field} trên “{title}” cùng lúc; phiên bản của họ được giữ lại"
 
 #: app/src/ui/window/spaces.rs:43
 msgid "Your change to “{title}” was not saved because it changed elsewhere"
-msgstr ""
-"Thay đổi của bạn cho “{title}” chưa được lưu vì sự kiện đã thay đổi ở nơi "
-"khác"
+msgstr "Thay đổi của bạn cho “{title}” chưa được lưu vì sự kiện đã thay đổi ở nơi khác"
 
 #: app/src/ui/window/spaces.rs:47
 msgid "Your change to “{title}” was not saved: {reason}"
@@ -11777,19 +10873,12 @@ msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr "Penguin Mail không thể kiểm tra chữ ký bản phát hành: {reason}"
 
 #: app/src/update/signature.rs:147
-msgid ""
-"This release is not signed with Penguin Mail's key, so Penguin Mail will not "
-"install it."
-msgstr ""
-"Bản phát hành này không được ký bằng khóa của Penguin Mail nên Penguin Mail "
-"sẽ không cài."
+msgid "This release is not signed with Penguin Mail's key, so Penguin Mail will not install it."
+msgstr "Bản phát hành này không được ký bằng khóa của Penguin Mail nên Penguin Mail sẽ không cài."
 
 #: app/src/update/signature.rs:151
-msgid ""
-"Checking the release's signature needs gpgv or gpg, and neither is installed."
-msgstr ""
-"Kiểm tra chữ ký bản phát hành cần gpgv hoặc gpg nhưng chưa cài chương trình "
-"nào."
+msgid "Checking the release's signature needs gpgv or gpg, and neither is installed."
+msgstr "Kiểm tra chữ ký bản phát hành cần gpgv hoặc gpg nhưng chưa cài chương trình nào."
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
@@ -11970,20 +11059,15 @@ msgid "You didn't allow access"
 msgstr "Bạn chưa cho phép truy cập"
 
 #: domain/src/sign_in_page.rs:44
-msgid ""
-"Penguin Mail has not been signed in. To try again, go back to Penguin Mail "
-"and press Grant Access."
-msgstr ""
-"Penguin Mail chưa được đăng nhập. Để thử lại, trở về Penguin Mail và nhấn "
-"Cấp quyền."
+msgid "Penguin Mail has not been signed in. To try again, go back to Penguin Mail and press Grant Access."
+msgstr "Penguin Mail chưa được đăng nhập. Để thử lại, trở về Penguin Mail và nhấn Cấp quyền."
 
 #: domain/src/sign_in_page.rs:50
 msgid "Sign-in didn't finish"
 msgstr "Đăng nhập chưa hoàn tất"
 
 #: domain/src/sign_in_page.rs:51
-msgid ""
-"Go back to Penguin Mail to see why and try again. You can close this tab."
+msgid "Go back to Penguin Mail to see why and try again. You can close this tab."
 msgstr "Trở về Penguin Mail để xem lý do và thử lại. Bạn có thể đóng thẻ này."
 
 #: domain/src/sign_in_page.rs:56
@@ -12028,13 +11112,10 @@ msgstr "Có cờ"
 
 #: sync/src/account/outbox.rs:97
 msgid "The message was sent, but Penguin Mail could not keep a copy in Sent."
-msgstr ""
-"Thư đã được gửi nhưng Penguin Mail không thể lưu bản sao vào thư mục Đã gửi."
+msgstr "Thư đã được gửi nhưng Penguin Mail không thể lưu bản sao vào thư mục Đã gửi."
 
 #: sync/src/account/outbox.rs:175
-msgid ""
-"The server holds this message to send at its hour. Cancel Send before you "
-"change it."
+msgid "The server holds this message to send at its hour. Cancel Send before you change it."
 msgstr "Máy chủ giữ thư này để gửi đúng giờ. Hủy gửi trước khi sửa."
 
 #: sync/src/account/receipts.rs:31
@@ -12042,12 +11123,8 @@ msgid "Read: {subject}"
 msgstr "Đã đọc: {subject}"
 
 #: sync/src/account/receipts.rs:39
-msgid ""
-"Your message to {address} was shown on screen. This receipt does not say "
-"whether it was read or understood."
-msgstr ""
-"Thư của bạn gửi tới {address} đã được hiển thị trên màn hình. Xác nhận này "
-"không cho biết thư đã được đọc hay hiểu hay chưa."
+msgid "Your message to {address} was shown on screen. This receipt does not say whether it was read or understood."
+msgstr "Thư của bạn gửi tới {address} đã được hiển thị trên màn hình. Xác nhận này không cho biết thư đã được đọc hay hiểu hay chưa."
 
 #: sync/src/account/receipts.rs:192
 msgid "This message asks for no read receipt."
@@ -12062,20 +11139,12 @@ msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} đang bận. Vẫn đang xử lý {conversations}."
 
 #: sync/src/account/writes.rs:788
-msgid ""
-"{provider} is busy, so “{action}” did not go through for {conversations}. "
-"Try again in a moment."
-msgstr ""
-"{provider} đang bận nên “{action}” chưa thực hiện được cho {conversations}. "
-"Thử lại sau một lát."
+msgid "{provider} is busy, so “{action}” did not go through for {conversations}. Try again in a moment."
+msgstr "{provider} đang bận nên “{action}” chưa thực hiện được cho {conversations}. Thử lại sau một lát."
 
 #: sync/src/account/writes.rs:797
-msgid ""
-"{provider} stayed busy for {waited}, so “{action}” did not go through for "
-"{conversations}."
-msgstr ""
-"{provider} vẫn bận sau {waited} nên “{action}” chưa thực hiện được cho "
-"{conversations}."
+msgid "{provider} stayed busy for {waited}, so “{action}” did not go through for {conversations}."
+msgstr "{provider} vẫn bận sau {waited} nên “{action}” chưa thực hiện được cho {conversations}."
 
 #: sync/src/account/writes.rs:804
 msgid "{action} failed: {reason}"
@@ -12121,11 +11190,8 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} sẽ nhận các nhãn mới."
 
 #: sync/src/calendar_copy.rs:1106
-msgid ""
-"this account's calendars moved to another server, which does not have this "
-"event"
-msgstr ""
-"lịch của tài khoản này đã chuyển sang máy chủ khác không có sự kiện này"
+msgid "this account's calendars moved to another server, which does not have this event"
+msgstr "lịch của tài khoản này đã chuyển sang máy chủ khác không có sự kiện này"
 
 #: sync/src/calendar_copy.rs:1275 sync/src/calendar_copy.rs:1416
 #: sync/src/calendar_copy.rs:1473
@@ -12137,12 +11203,8 @@ msgid "the calendar is gone"
 msgstr "lịch không còn tồn tại"
 
 #: sync/src/calendar_copy.rs:2308
-msgid ""
-"Google Calendar offers out of office and focus time only on some work and "
-"school accounts ({reason})"
-msgstr ""
-"Google Calendar chỉ hỗ trợ vắng mặt và thời gian tập trung trên một số tài "
-"khoản cơ quan và trường học ({reason})"
+msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
+msgstr "Google Calendar chỉ hỗ trợ vắng mặt và thời gian tập trung trên một số tài khoản cơ quan và trường học ({reason})"
 
 #: sync/src/error.rs:170
 msgid "{provider} asked Penguin Mail to wait"
@@ -12157,9 +11219,7 @@ msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail dành “{name}” cho nhãn của mình. Chọn tên khác."
 
 #: sync/src/error.rs:209
-msgid ""
-"Google Calendar makes “{title}” itself, so only Google Calendar can change "
-"it."
+msgid "Google Calendar makes “{title}” itself, so only Google Calendar can change it."
 msgstr "Google Calendar tự tạo “{title}” nên chỉ Google Calendar sửa được."
 
 #: sync/src/error.rs:217
@@ -12338,16 +11398,11 @@ msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail đã ngừng thử"
 
 #: sync/src/outbox.rs:120
-msgid ""
-"The server still holds this message and sends it at its hour. Try again "
-"later, or use Cancel Send."
-msgstr ""
-"Máy chủ vẫn giữ thư này và sẽ gửi đúng giờ. Thử lại sau hoặc dùng Hủy gửi."
+msgid "The server still holds this message and sends it at its hour. Try again later, or use Cancel Send."
+msgstr "Máy chủ vẫn giữ thư này và sẽ gửi đúng giờ. Thử lại sau hoặc dùng Hủy gửi."
 
 #: sync/src/outbox.rs:132
-msgid ""
-"The server still holds this message and could not be asked to let it go. Try "
-"again later."
+msgid "The server still holds this message and could not be asked to let it go. Try again later."
 msgstr "Máy chủ vẫn giữ thư này nhưng không thể yêu cầu gửi ngay. Thử lại sau."
 
 #: sync/src/outbox.rs:1760
@@ -12467,12 +11522,8 @@ msgid "The server could not take this request."
 msgstr "Máy chủ không thể nhận yêu cầu này."
 
 #: sync/src/services/jmap/jscal.rs:1556
-msgid ""
-"Penguin Mail cannot read how this event repeats, so it cannot change the "
-"repeat. Change it in the app that set it."
-msgstr ""
-"Penguin Mail không thể đọc cách sự kiện này lặp lại nên không thể đổi quy "
-"tắc lặp. Sửa trong ứng dụng đã đặt quy tắc."
+msgid "Penguin Mail cannot read how this event repeats, so it cannot change the repeat. Change it in the app that set it."
+msgstr "Penguin Mail không thể đọc cách sự kiện này lặp lại nên không thể đổi quy tắc lặp. Sửa trong ứng dụng đã đặt quy tắc."
 
 #: sync/src/services/jmap/jscal.rs:1562
 msgid "Penguin Mail cannot save this repeat to a JMAP calendar."
@@ -12515,20 +11566,15 @@ msgid "The server could not read the message to send it."
 msgstr "Máy chủ không thể đọc thư để gửi."
 
 #: sync/src/services/jmap/outgoing.rs:110
-msgid ""
-"This account can read mail but not send it: its sign-in has no access to "
-"sending."
-msgstr ""
-"Tài khoản này có thể đọc nhưng không thể gửi thư: thông tin đăng nhập không "
-"có quyền gửi."
+msgid "This account can read mail but not send it: its sign-in has no access to sending."
+msgstr "Tài khoản này có thể đọc nhưng không thể gửi thư: thông tin đăng nhập không có quyền gửi."
 
 #: sync/src/services/jmap/outgoing.rs:127
 msgid "This account has no address the server lets it send from."
 msgstr "Tài khoản này không có địa chỉ nào máy chủ cho phép gửi."
 
 #: sync/src/services/jmap/outgoing.rs:152
-msgid ""
-"The server has neither a Drafts nor a Sent mailbox to keep the message in."
+msgid "The server has neither a Drafts nor a Sent mailbox to keep the message in."
 msgstr "Máy chủ không có hộp thư Thư nháp hoặc Đã gửi để lưu thư."
 
 #: sync/src/services/jmap/outgoing.rs:190
@@ -12536,12 +11582,8 @@ msgid "The server has no Drafts mailbox."
 msgstr "Máy chủ không có hộp thư Thư nháp."
 
 #: sync/src/services/jmap/outgoing.rs:202
-msgid ""
-"The server already keeps this exact message outside Drafts, so it cannot "
-"also keep it as a draft."
-msgstr ""
-"Máy chủ đã lưu đúng thư này ngoài Thư nháp nên không thể lưu thêm dưới dạng "
-"thư nháp."
+msgid "The server already keeps this exact message outside Drafts, so it cannot also keep it as a draft."
+msgstr "Máy chủ đã lưu đúng thư này ngoài Thư nháp nên không thể lưu thêm dưới dạng thư nháp."
 
 #: sync/src/services/jmap/sieve.rs:37
 msgid "The server did not take the rules."
@@ -12556,11 +11598,8 @@ msgid "This server does not sort mail into categories."
 msgstr "Máy chủ này không phân loại thư theo danh mục."
 
 #: sync/src/services/jmap/writes.rs:177
-msgid ""
-"A message must stay in at least one mailbox, and this server has no Archive."
-msgstr ""
-"Thư phải nằm trong ít nhất một hộp thư nhưng máy chủ này không có hộp thư "
-"Lưu trữ."
+msgid "A message must stay in at least one mailbox, and this server has no Archive."
+msgstr "Thư phải nằm trong ít nhất một hộp thư nhưng máy chủ này không có hộp thư Lưu trữ."
 
 #: sync/src/services/local.rs:30
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
@@ -12599,12 +11638,8 @@ msgid "Outlook has no other calendars to add."
 msgstr "Outlook không có lịch khác để thêm."
 
 #: sync/src/services/microsoft/errors.rs:18
-msgid ""
-"This mailbox is on your organization's own Exchange server, which Penguin "
-"Mail cannot reach."
-msgstr ""
-"Hộp thư này nằm trên máy chủ Exchange riêng của tổ chức mà Penguin Mail "
-"không thể truy cập."
+msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
+msgstr "Hộp thư này nằm trên máy chủ Exchange riêng của tổ chức mà Penguin Mail không thể truy cập."
 
 #: sync/src/services/microsoft/outgoing.rs:72
 msgid "The message has no Message-ID."
@@ -12615,12 +11650,8 @@ msgid "The message cannot be read."
 msgstr "Không thể đọc thư."
 
 #: sync/src/services/microsoft/outgoing.rs:89
-msgid ""
-"Microsoft cannot send a signed or encrypted message larger than 3 MB. Make "
-"the files smaller or send them apart."
-msgstr ""
-"Microsoft không thể gửi thư có chữ ký hoặc mã hóa lớn hơn 3 MB. Giảm kích "
-"thước tệp hoặc gửi riêng."
+msgid "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
+msgstr "Microsoft không thể gửi thư có chữ ký hoặc mã hóa lớn hơn 3 MB. Giảm kích thước tệp hoặc gửi riêng."
 
 #: sync/src/services/microsoft/rules.rs:119
 msgid "Outlook's rules cannot do that."
@@ -12635,37 +11666,24 @@ msgid "A folder needs a name."
 msgstr "Thư mục cần có tên."
 
 #: sync/src/services/pop3/mod.rs:473
-msgid ""
-"Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
-msgstr ""
-"Penguin Mail giữ nguyên tên của Hộp thư đến, Đã gửi, Thư nháp, Thùng rác, "
-"Thư rác và Lưu trữ."
+msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
+msgstr "Penguin Mail giữ nguyên tên của Hộp thư đến, Đã gửi, Thư nháp, Thùng rác, Thư rác và Lưu trữ."
 
 #: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
-msgstr ""
-"Penguin Mail giữ lại Hộp thư đến, Đã gửi, Thư nháp, Thùng rác, Thư rác và "
-"Lưu trữ."
+msgstr "Penguin Mail giữ lại Hộp thư đến, Đã gửi, Thư nháp, Thùng rác, Thư rác và Lưu trữ."
 
 #: sync/src/services/sieve.rs:156 sync/src/services/sieve.rs:376
 msgid "The rule is read-only."
 msgstr "Quy tắc chỉ đọc."
 
 #: sync/src/services/sieve.rs:256
-msgid ""
-"{provider} offers no encrypted connection for rules, so Penguin Mail does "
-"not send your password there."
-msgstr ""
-"{provider} không cung cấp kết nối mã hóa cho quy tắc nên Penguin Mail không "
-"gửi mật khẩu tới đó."
+msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
+msgstr "{provider} không cung cấp kết nối mã hóa cho quy tắc nên Penguin Mail không gửi mật khẩu tới đó."
 
 #: sync/src/services/sieve.rs:269
-msgid ""
-"{provider} cannot run this rule: its server lacks the Sieve extension "
-"“{extension}”."
-msgstr ""
-"{provider} không thể chạy quy tắc này: máy chủ thiếu phần mở rộng Sieve "
-"“{extension}”."
+msgid "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
+msgstr "{provider} không thể chạy quy tắc này: máy chủ thiếu phần mở rộng Sieve “{extension}”."
 
 #: sync/src/services/sieve.rs:274
 msgid "The folder this rule files into is not on the server yet."
@@ -12692,8 +11710,7 @@ msgid "Choose what the rule does"
 msgstr "Chọn thao tác của quy tắc"
 
 #: sync/src/sign_in.rs:358
-msgid ""
-"You signed in to a different account than {address}, so nothing changed."
+msgid "You signed in to a different account than {address}, so nothing changed."
 msgstr "Bạn đã đăng nhập tài khoản khác với {address} nên chưa có gì thay đổi."
 
 #: sync/src/sign_in.rs:373
@@ -12701,30 +11718,16 @@ msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} đã có trong Penguin Mail dưới dạng tài khoản {provider}."
 
 #: sync/src/sign_in.rs:535
-msgid ""
-"A calendar account named {name} is already here, for the server at "
-"{address}. Remove it to add this server under that name."
-msgstr ""
-"Đã có một tài khoản lịch tên {name}, cho máy chủ tại {address}. Hãy xóa tài "
-"khoản đó để thêm máy chủ này với tên này."
+msgid "A calendar account named {name} is already here, for the server at {address}. Remove it to add this server under that name."
+msgstr "Đã có một tài khoản lịch tên {name}, cho máy chủ tại {address}. Hãy xóa tài khoản đó để thêm máy chủ này với tên này."
 
 #: sync/src/sign_in.rs:544
-msgid ""
-"A calendar account named {name} is already here, signed in to this server as "
-"{user}. Type {user} to sign it in again, or remove it to sign in as someone "
-"else."
-msgstr ""
-"Đã có một tài khoản lịch tên {name}, đăng nhập vào máy chủ này với tên "
-"{user}. Hãy nhập {user} để đăng nhập lại, hoặc xóa tài khoản đó để đăng nhập "
-"bằng người dùng khác."
+msgid "A calendar account named {name} is already here, signed in to this server as {user}. Type {user} to sign it in again, or remove it to sign in as someone else."
+msgstr "Đã có một tài khoản lịch tên {name}, đăng nhập vào máy chủ này với tên {user}. Hãy nhập {user} để đăng nhập lại, hoặc xóa tài khoản đó để đăng nhập bằng người dùng khác."
 
 #: sync/src/sign_in.rs:553
-msgid ""
-"Sign In Again keeps {name} on the server at {address}. To use another server "
-"or user name, add it as a calendar account of its own."
-msgstr ""
-"Đăng nhập lại giữ {name} trên máy chủ tại {address}. Để dùng máy chủ hoặc "
-"tên người dùng khác, hãy thêm nó thành một tài khoản lịch riêng."
+msgid "Sign In Again keeps {name} on the server at {address}. To use another server or user name, add it as a calendar account of its own."
+msgstr "Đăng nhập lại giữ {name} trên máy chủ tại {address}. Để dùng máy chủ hoặc tên người dùng khác, hãy thêm nó thành một tài khoản lịch riêng."
 
 #. The JMAP server publishes no sign-in a browser can run.
 #: sync/src/sign_in/browser.rs:108
@@ -12732,12 +11735,8 @@ msgid "This server does not offer a sign-in in the browser."
 msgstr "Máy chủ này không hỗ trợ đăng nhập trong trình duyệt."
 
 #: sync/src/sign_in/browser.rs:115
-msgid ""
-"The server did not let Penguin Mail stay signed in. Sign in with a password "
-"or a token instead."
-msgstr ""
-"Máy chủ không cho Penguin Mail duy trì đăng nhập. Hãy đăng nhập bằng mật "
-"khẩu hoặc mã thông báo."
+msgid "The server did not let Penguin Mail stay signed in. Sign in with a password or a token instead."
+msgstr "Máy chủ không cho Penguin Mail duy trì đăng nhập. Hãy đăng nhập bằng mật khẩu hoặc mã thông báo."
 
 #. Nobody came back from the browser within the wait.
 #: sync/src/sign_in/browser.rs:126
@@ -12745,51 +11744,33 @@ msgid "Gave up waiting for the browser after ten minutes."
 msgstr "Đã ngừng chờ trình duyệt sau mười phút."
 
 #: sync/src/sign_in/browser.rs:139
-msgid ""
-"Penguin Mail can't find your Google project on this computer. Give it the "
-"key again to sign in."
-msgstr ""
-"Penguin Mail không tìm thấy dự án Google của bạn trên máy tính này. Hãy đưa "
-"lại khóa để đăng nhập."
+msgid "Penguin Mail can't find your Google project on this computer. Give it the key again to sign in."
+msgstr "Penguin Mail không tìm thấy dự án Google của bạn trên máy tính này. Hãy đưa lại khóa để đăng nhập."
 
 #: sync/src/sign_in/browser.rs:151
-msgid ""
-"This copy of Penguin Mail was built without Google sign-in. Get a release "
-"from github.com/c9dev/penguin-mail/releases."
-msgstr ""
-"Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google. Tải "
-"bản phát hành từ github.com/c9dev/penguin-mail/releases."
+msgid "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
+msgstr "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google. Tải bản phát hành từ github.com/c9dev/penguin-mail/releases."
 
 #: sync/src/sign_in/browser.rs:164
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
-msgstr ""
-"Bạn đã đăng nhập là {account}. Chọn {wanted} để kết nối lại tài khoản đó."
+msgstr "Bạn đã đăng nhập là {account}. Chọn {wanted} để kết nối lại tài khoản đó."
 
 #: sync/src/sign_in/browser.rs:174
-msgid ""
-"Penguin Mail cannot work without access to your mail. Sign in again and "
-"leave the Gmail permission ticked."
-msgstr ""
-"Penguin Mail không thể hoạt động nếu không có quyền truy cập thư. Đăng nhập "
-"lại và giữ quyền Gmail được chọn."
+msgid "Penguin Mail cannot work without access to your mail. Sign in again and leave the Gmail permission ticked."
+msgstr "Penguin Mail không thể hoạt động nếu không có quyền truy cập thư. Đăng nhập lại và giữ quyền Gmail được chọn."
 
 #: sync/src/sign_in/browser.rs:184
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "Quản trị viên tổ chức phải phê duyệt Penguin Mail."
 
 #: sync/src/sign_in/browser.rs:187
-msgid ""
-"Penguin Mail cannot work without access to your mail. Sign in again and "
-"allow it."
-msgstr ""
-"Penguin Mail không thể hoạt động nếu không có quyền truy cập thư. Đăng nhập "
-"lại và cho phép truy cập."
+msgid "Penguin Mail cannot work without access to your mail. Sign in again and allow it."
+msgstr "Penguin Mail không thể hoạt động nếu không có quyền truy cập thư. Đăng nhập lại và cho phép truy cập."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. Google is a name.
 #: sync/src/sign_in/goa_link.rs:37
 msgid "Online Accounts couldn't sign in to Google. Sign in again there."
-msgstr ""
-"Tài khoản trực tuyến không thể đăng nhập vào Google. Hãy đăng nhập lại ở đó."
+msgstr "Tài khoản trực tuyến không thể đăng nhập vào Google. Hãy đăng nhập lại ở đó."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: sync/src/sign_in/goa_link.rs:42
@@ -12797,30 +11778,21 @@ msgid "Mail is turned off for this account in Online Accounts."
 msgstr "Thư đang tắt cho tài khoản này trong Tài khoản trực tuyến."
 
 #: sync/src/sign_in/own_client.rs:87
-msgid ""
-"{set} is set but {missing} is not. Set both to sign in with your own Google "
-"client, or neither to use Penguin Mail's."
-msgstr ""
-"Đã đặt {set} nhưng chưa đặt {missing}. Đặt cả hai để đăng nhập bằng ứng dụng "
-"khách Google của bạn hoặc bỏ cả hai để dùng ứng dụng khách của Penguin Mail."
+msgid "{set} is set but {missing} is not. Set both to sign in with your own Google client, or neither to use Penguin Mail's."
+msgstr "Đã đặt {set} nhưng chưa đặt {missing}. Đặt cả hai để đăng nhập bằng ứng dụng khách Google của bạn hoặc bỏ cả hai để dùng ứng dụng khách của Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:187
 msgid "This key is for a website. Go back to step 5 and choose Desktop app."
-msgstr ""
-"Khóa này dành cho trang web. Hãy quay lại bước 5 và chọn Ứng dụng dành cho "
-"máy tính."
+msgstr "Khóa này dành cho trang web. Hãy quay lại bước 5 và chọn Ứng dụng dành cho máy tính."
 
 #: sync/src/sign_in/own_client.rs:189
 msgid "This isn't the file from step 5."
 msgstr "Đây không phải tệp từ bước 5."
 
 #: sync/src/sign_in/own_client.rs:191
-msgid ""
-"This file has no secret. Make a new key in step 5 and download it straight "
-"away."
-msgstr ""
-"Tệp này không có mã bí mật. Hãy tạo khóa mới ở bước 5 và tải xuống ngay."
+msgid "This file has no secret. Make a new key in step 5 and download it straight away."
+msgstr "Tệp này không có mã bí mật. Hãy tạo khóa mới ở bước 5 và tải xuống ngay."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:195
@@ -12829,11 +11801,8 @@ msgstr "Dán cả Mã ứng dụng khách và Mã bí mật của ứng dụng k
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:199
-msgid ""
-"Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
-msgstr ""
-"Sao chép lại Mã ứng dụng khách từ bước 5. Mã kết thúc "
-"bằng .apps.googleusercontent.com."
+msgid "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
+msgstr "Sao chép lại Mã ứng dụng khách từ bước 5. Mã kết thúc bằng .apps.googleusercontent.com."
 
 #. Translators: said under the key file a person chose in the Google project setup.
 #: sync/src/sign_in/own_client.rs:202
@@ -12880,6 +11849,218 @@ msgstr "Đánh dấu không phải thư rác"
 msgid "Move to {folder}"
 msgstr "Chuyển vào {folder}"
 
+#: app/src/app.rs:407
+msgid "Could not mark all mail as read: {reason}"
+msgstr "Không thể đánh dấu tất cả thư là đã đọc: {reason}"
+
+#: app/src/app/mail_file.rs:77
+#, fuzzy
+#| msgid "This file holds no OpenPGP key."
+msgid "This file could not be read."
+msgstr "Tệp này không có khóa OpenPGP."
+
+#: app/src/compose.rs:1236
+#, fuzzy
+#| msgid "On {date}, {sender} wrote:"
+msgid "{sender} wrote:"
+msgstr "Vào {date}, {sender} đã viết:"
+
+#: app/src/settings/mod.rs:695
+#, fuzzy
+#| msgid "Preview"
+msgid "No Preview"
+msgstr "Xem trước"
+
+#: app/src/settings/mod.rs:696
+msgid "1 Line"
+msgstr ""
+
+#: app/src/settings/mod.rs:697
+msgid "2 Lines"
+msgstr ""
+
+#: app/src/tray.rs:239
+msgid "Mark All as Read"
+msgstr "Đánh dấu tất cả đã đọc"
+
+#: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
+#, fuzzy
+#| msgid "This file is too large to be a calendar."
+msgid "This file is too large to be a message."
+msgstr "Tệp này quá lớn để làm tệp lịch."
+
+#: app/src/ui/eml_file.rs:41
+#, fuzzy
+#| msgid "This file holds no OpenPGP key."
+msgid "This file is empty."
+msgstr "Tệp này không có khóa OpenPGP."
+
+#: app/src/ui/eml_file.rs:53
+#, fuzzy
+#| msgid "This file holds no certificate."
+msgid "This file does not hold a message."
+msgstr "Tệp này không có chứng chỉ."
+
+#: app/src/ui/preferences.rs:243
+#, fuzzy
+#| msgid "Message Source"
+msgid "Message Preview"
+msgstr "Nguồn thư"
+
+#: app/src/ui/preferences.rs:244
+msgid "Lines of message text below the subject"
+msgstr ""
+
+#: app/src/ui/preferences.rs:250
+#, fuzzy
+#| msgid "{count} unread message"
+#| msgid_plural "{count} unread messages"
+msgid "Bold Unread Messages"
+msgstr "{count} thư chưa đọc"
+
+#: app/src/ui/preferences.rs:252
+msgid "Use heavier text for unread senders, subjects, and dates"
+msgstr ""
+
+#: app/src/ui/preferences.rs:259
+#, fuzzy
+#| msgid "Always Load Images?"
+msgid "Always Bold Senders"
+msgstr "Luôn tải hình ảnh?"
+
+#: app/src/ui/preferences.rs:261
+msgid "Use heavier sender text for both read and unread messages"
+msgstr ""
+
+#: app/src/ui/preferences.rs:268
+#, fuzzy
+#| msgid "Show Calendars"
+msgid "Show Avatars"
+msgstr "Hiện các lịch"
+
+#: app/src/ui/preferences.rs:270
+msgid "Show contact pictures or initials in the message list"
+msgstr ""
+
+#: app/src/ui/preferences.rs:519
+msgid "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgstr ""
+
+#: app/src/ui/sender_prefs/signature.rs:26
+#, fuzzy
+#| msgid "No signature"
+msgid "Use Account Signature"
+msgstr "Không có chữ ký"
+
+#: app/src/ui/sender_prefs/signature.rs:27
+#, fuzzy
+#| msgid "Signature"
+msgid "Custom Signature"
+msgstr "Chữ ký"
+
+#: app/src/ui/sender_prefs/signature.rs:49
+msgid "Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1729
+msgid "Empty Trash…"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:26
+msgid "Unread Only"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:27
+#, fuzzy
+#| msgid "Flagged blue"
+msgid "Flagged Only"
+msgstr "Đã gắn cờ xanh dương"
+
+#: app/src/ui/thread_list/filters.rs:28
+#, fuzzy
+#| msgid "Attachments"
+msgid "With Attachments"
+msgstr "Tệp đính kèm"
+
+#: app/src/ui/thread_list/filters.rs:34
+msgid "Match all selected filters"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:38
+#, fuzzy
+#| msgid "Calendar File"
+msgid "Clear Filters"
+msgstr "Tệp lịch"
+
+#: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
+#: app/src/ui/thread_list/filters.rs:101
+#, fuzzy
+#| msgid "New Messages"
+msgid "Filter Messages"
+msgstr "Thư mới"
+
+#: app/src/ui/thread_list/filters.rs:99
+#, fuzzy
+#| msgid "New Message (C)"
+msgid "Filter Messages (Active)"
+msgstr "Thư mới (C)"
+
+#: app/src/ui/window.rs:2555
+#, fuzzy
+#| msgid "Add an account first"
+msgid "Add an account to reply or forward"
+msgstr "Thêm tài khoản trước"
+
+#: app/src/ui/window/export.rs:157
+msgid "the write was interrupted"
+msgstr ""
+
+#: app/src/ui/window/loose.rs:165
+#, fuzzy
+#| msgid "Read: {subject}"
+msgid "Attached to {subject}"
+msgstr "Đã đọc: {subject}"
+
+#: app/src/ui/window/trash.rs:43
+msgid "Empty Trash?"
+msgstr ""
+
+#: app/src/ui/window/trash.rs:46
+msgid ""
+"Permanently delete every message in Trash for these accounts, including older mail not stored on this computer? This cannot be undone.\n"
+"\n"
+"{accounts}"
+msgstr ""
+
+#: app/src/ui/window/trash.rs:50
+#, fuzzy
+#| msgid "Empty"
+msgid "Empty Trash"
+msgstr "Trống"
+
+#: app/src/ui/window/trash.rs:56
+msgid "Emptying Trash…"
+msgstr ""
+
+#: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
+#: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
+#, fuzzy
+#| msgid "Could not load mail for {account}: {reason}"
+msgid "Could not empty Trash for {account}: {reason}"
+msgstr "Không thể tải thư cho {account}: {reason}"
+
+#: app/src/ui/window/trash.rs:94
+#, fuzzy
+#| msgid "Deleted {count} message forever"
+#| msgid_plural "Deleted {count} messages forever"
+msgid "Deleted {count} message from Trash for {account}"
+msgid_plural "Deleted {count} messages from Trash for {account}"
+msgstr[0] "Đã xóa vĩnh viễn {count} thư"
+
+#: sync/src/mailbox.rs:521
+msgid "Change the filters or load more messages if available."
+msgstr ""
+
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Cài đặt Bubblewrap"
 
@@ -12901,9 +12082,11 @@ msgstr "Chuyển vào {folder}"
 #~ msgid "Could not send the receipt: {reason}"
 #~ msgstr "Không thể gửi xác nhận: {reason}"
 
-#~ msgid ""
-#~ "The receipt was not sent, and Penguin Mail will not try again: {reason}"
+#~ msgid "The receipt was not sent, and Penguin Mail will not try again: {reason}"
 #~ msgstr "Chưa gửi xác nhận và Penguin Mail sẽ không thử lại: {reason}"
 
 #~ msgid "Sender Addresses"
 #~ msgstr "Địa chỉ người gửi"
+
+#~ msgid "Every control named for screen readers and reachable from the keyboard, in American English, British English, French, German, Indonesian, Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr "Mọi điều khiển đều có tên cho trình đọc màn hình và sử dụng được bằng bàn phím, bằng tiếng Anh Mỹ, tiếng Anh Anh, tiếng Pháp, tiếng Đức, tiếng Indonesia, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng Nga, tiếng Tây Ban Nha, tiếng Bồ Đào Nha châu Âu, tiếng Trung giản thể, tiếng Trung phồn thể (Đài Loan), tiếng Thổ Nhĩ Kỳ và tiếng Việt"

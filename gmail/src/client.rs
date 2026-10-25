@@ -298,6 +298,9 @@ impl GmailClient {
                 .query(&[("q", query), ("maxResults", &max_results.to_string())]);
             if let Some(label_id) = label_id {
                 request = request.query(&[("labelIds", label_id)]);
+                if label_id == crate::labels::TRASH {
+                    request = request.query(&[("includeSpamTrash", "true")]);
+                }
             }
             if let Some(token) = page_token {
                 request = request.query(&[("pageToken", token)]);

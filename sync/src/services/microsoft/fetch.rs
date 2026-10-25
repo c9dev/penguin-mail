@@ -186,7 +186,49 @@ impl<G: GraphApi> Microsoft<G> {
             fields: Fields::Ids,
             ..Listing::default()
         };
-        let page = match self.graph().list_messages(&listing, cursor).await {
+        self.listing_page(&listing, cursor).await
+    }
+
+    pub(super) async fn folder_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+        unread: bool,
+    ) -> Result<Backfill, BackendError> {
+        let link = match cursor {
+            Some(cursor) => {
+                let (folder, link): (String, String) =
+                    serde_json::from_str(cursor).map_err(|_| BackendError::StateLost)?;
+                if folder != mailbox {
+                    return Err(BackendError::StateLost);
+                }
+                Some(link)
+            }
+            None => None,
+        };
+        let listing = Listing {
+            folder: Some(mailbox.to_string()),
+            unread,
+            top: limit.clamp(1, 1000) as u32,
+            fields: Fields::Ids,
+            ..Listing::default()
+        };
+        let page = self.listing_page(&listing, link.as_deref()).await?;
+        Ok(Backfill {
+            refs: page.refs,
+            next: page.next.map(|link| {
+                serde_json::to_string(&(mailbox, link)).expect("a mailbox cursor serializes")
+            }),
+        })
+    }
+
+    async fn listing_page(
+        &self,
+        listing: &Listing,
+        cursor: Option<&str>,
+    ) -> Result<Backfill, BackendError> {
+        let page = match self.graph().list_messages(listing, cursor).await {
             Ok(page) => page,
             // Graph no longer takes the page link it gave.
             Err(

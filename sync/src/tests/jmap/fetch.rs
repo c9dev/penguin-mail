@@ -11,6 +11,66 @@ fn days_ago(days: i64) -> i64 {
 }
 
 #[tokio::test]
+async fn mailbox_pages_pass_the_window_cap_and_keep_old_mail() {
+    let h = over(FakeJmap::new().clamping_queries(17)).await;
+    let mailbox = h.fake.mailbox("trash");
+    let total = crate::services::jmap::MOST_IDS + 3;
+    for n in 0..total {
+        h.fake
+            .deliver("trash", &raw(&format!("old{n}@example.com"), "Old"), 1);
+    }
+    h.fake
+        .deliver("inbox", &raw("kept@example.com", "Inbox"), 1);
+    let mail = h.mail();
+    assert!(matches!(
+        mail.window_ids(crate::ALL_MAIL, Some(&mailbox)).await,
+        Err(crate::BackendError::Unsupported)
+    ));
+    let mut cursor = None;
+    let mut ids = std::collections::BTreeSet::new();
+    loop {
+        let page = mail
+            .mailbox_page(&mailbox, cursor.as_deref(), 100)
+            .await
+            .unwrap();
+        for hit in page.refs {
+            assert!(ids.insert(hit.id), "a page repeated a message");
+        }
+        cursor = page.next;
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(ids.len(), total);
+}
+
+#[tokio::test]
+async fn mailbox_pages_refuse_a_changed_query_or_another_mailbox_s_cursor() {
+    let h = fastmail().await;
+    let mailbox = h.fake.mailbox("trash");
+    for n in 0..3 {
+        h.fake
+            .deliver("trash", &raw(&format!("page{n}@example.com"), "Mail"), 1);
+    }
+    let mail = h.mail();
+    let first = mail.mailbox_page(&mailbox, None, 1).await.unwrap();
+    for (folder, cursor) in [
+        (h.fake.mailbox("inbox"), first.next.as_deref()),
+        (mailbox.clone(), Some("expired")),
+    ] {
+        assert!(matches!(
+            mail.mailbox_page(&folder, cursor, 1).await,
+            Err(crate::BackendError::StateLost)
+        ));
+    }
+    h.fake.destroy(&first.refs[0].id);
+    assert!(matches!(
+        mail.mailbox_page(&mailbox, first.next.as_deref(), 1).await,
+        Err(crate::BackendError::StateLost)
+    ));
+}
+
+#[tokio::test]
 async fn the_window_holds_recent_mail_and_the_whole_inbox() {
     let h = fastmail().await;
     let recent = h

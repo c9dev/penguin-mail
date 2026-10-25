@@ -276,6 +276,17 @@ impl MainWindow {
         self.after_mail(Cause::Did(action, History::Record), outcome, None);
     }
 
+    /// Brings the window in line after the tray marked every inbox read.
+    /// The store's change events redraw what the store lists; a listing
+    /// the server answered asks again.
+    pub(super) fn inboxes_read(self: &Rc<Self>) {
+        if self.shown().is_remote() {
+            self.core.forget_remote();
+            self.listing.reload_remote();
+            self.refresh_counts();
+        }
+    }
+
     /// Brings the window back in line after `cause`. `view` is the
     /// conversation the action was taken from, when there was one.
     pub(super) fn after_mail(

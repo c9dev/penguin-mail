@@ -1001,3 +1001,22 @@ async fn a_server_failure_on_resending_the_server_s_copy_is_unknown() {
         mailrs_jmap::JmapError::SubmitUnknown
     );
 }
+
+#[tokio::test]
+async fn a_conditional_delete_sends_the_state_and_reports_a_mismatch() {
+    let server = MockServer::start().await;
+    answering(
+        &server,
+        json!({"sessionState": "s1", "methodResponses": [
+            ["error", {"type": "stateMismatch"}, "c0"]
+        ]}),
+    )
+    .await;
+    let result = client(&server)
+        .set_emails(&serde_json::Map::new(), &["M1".into()], Some("e1"))
+        .await;
+    assert_eq!(result.unwrap_err(), mailrs_jmap::JmapError::StateMismatch);
+    let body = sent(&server).await;
+    assert_eq!(body["methodCalls"][0][1]["ifInState"], "e1");
+    assert_eq!(body["methodCalls"][0][1]["destroy"], json!(["M1"]));
+}

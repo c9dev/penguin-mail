@@ -636,9 +636,13 @@ impl JmapClient {
         &self,
         update: &Map<String, Value>,
         destroy: &[String],
+        state: Option<&str>,
     ) -> Result<SetResponse, JmapError> {
         let account = self.mail_account().await?;
         let mut args = json!({ "accountId": account });
+        if let Some(state) = state {
+            args["ifInState"] = json!(state);
+        }
         if !update.is_empty() {
             args["update"] = Value::Object(update.clone());
         }
@@ -783,7 +787,7 @@ impl JmapClient {
         }
         let mut update = Map::new();
         update.insert(id.to_string(), Value::Object(patch));
-        let set = self.set_emails(&update, &[]).await?;
+        let set = self.set_emails(&update, &[], None).await?;
         if let Some(refused) = set.refusal(id) {
             return Err(refused.error());
         }
@@ -844,7 +848,9 @@ impl JmapClient {
 
     /// Destroys one message, and says why when the server refuses.
     async fn destroy_email(&self, id: &str) -> Result<(), JmapError> {
-        let set = self.set_emails(&Map::new(), &[id.to_string()]).await?;
+        let set = self
+            .set_emails(&Map::new(), &[id.to_string()], None)
+            .await?;
         match set.refusal(id) {
             Some(refused) => Err(refused.error()),
             None => Ok(()),

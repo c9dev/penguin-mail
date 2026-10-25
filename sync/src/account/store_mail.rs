@@ -368,6 +368,21 @@ impl StoreMail {
         })
     }
 
+    /// One page of the unread mail in an explicit server mailbox, under
+    /// store ids, as [`Self::mailbox_page`] pages all of it.
+    pub(crate) async fn unread_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, SyncError> {
+        let page = self.mail.unread_page(mailbox, cursor, limit).await?;
+        Ok(Backfill {
+            refs: self.refs_as_stored(page.refs).await?,
+            next: page.next,
+        })
+    }
+
     /// The sent message carrying the `Message-ID` header `message_id`.
     pub(crate) async fn find_sent(&self, message_id: &str) -> Result<Option<String>, SyncError> {
         match self.mail.find_sent(message_id).await? {
@@ -611,6 +626,15 @@ impl Moves<'_> {
             .zip(names)
             .map(|(id, name)| Named { id, name })
             .collect())
+    }
+
+    pub(crate) async fn destroy_checked(
+        &self,
+        messages: &[Named],
+        mailbox: &str,
+    ) -> Vec<Result<(), BackendError>> {
+        let names: Vec<String> = messages.iter().map(|m| m.name.clone()).collect();
+        self.mail.mail.destroy_checked(&names, mailbox).await
     }
 
     /// Applies `ops` to `messages`, in order, as

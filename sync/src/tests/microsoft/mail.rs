@@ -221,6 +221,69 @@ async fn a_window_too_large_to_list_is_refused_rather_than_cut() {
         "{:?}",
         listed.map(|l| l.len())
     );
+    let mut cursor = None;
+    let mut ids = std::collections::BTreeSet::new();
+    loop {
+        let page = h
+            .sync
+            .services()
+            .mail
+            .mailbox_page(&inbox, cursor.as_deref(), 1000)
+            .await
+            .unwrap();
+        for hit in page.refs {
+            assert!(ids.insert(hit.id), "a page repeated a message");
+        }
+        cursor = page.next;
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(
+        ids.len(),
+        20_001,
+        "explicit mailbox pages have no window cap"
+    );
+}
+
+#[tokio::test]
+async fn mailbox_pages_keep_old_trash_and_refuse_expired_cursors() {
+    let h = outlook().await;
+    let trash = h.fake.folder_id("deleteditems");
+    let inbox = h.fake.folder_id("inbox");
+    for _ in 0..3 {
+        h.fake.deliver(
+            &trash,
+            FakeMail {
+                at: 1,
+                ..FakeMail::default()
+            },
+        );
+    }
+    h.fake.deliver(&inbox, fresh());
+    let mail = &h.sync.services().mail;
+    let first = mail.mailbox_page(&trash, None, 2).await.unwrap();
+    assert_eq!(first.refs.len(), 2);
+    let second = mail
+        .mailbox_page(&trash, first.next.as_deref(), 2)
+        .await
+        .unwrap();
+    assert_eq!(second.refs.len(), 1);
+    assert!(second.next.is_none());
+    for (folder, cursor) in [(&inbox, first.next.as_deref()), (&trash, Some("expired"))] {
+        assert!(matches!(
+            mail.mailbox_page(folder, cursor, 2).await,
+            Err(crate::BackendError::StateLost)
+        ));
+    }
+    h.fake.refuse(
+        crate::fake::Area::Mail,
+        mailrs_graph::GraphError::SyncStateLost,
+    );
+    assert!(matches!(
+        mail.mailbox_page(&trash, first.next.as_deref(), 2).await,
+        Err(crate::BackendError::StateLost)
+    ));
 }
 
 #[tokio::test]

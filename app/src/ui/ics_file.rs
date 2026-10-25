@@ -51,20 +51,7 @@ fn unreadable(path: &Path) -> Option<String> {
 /// Opens `path` in a window of its own and hands the window back.
 pub fn open(app: &Rc<App>, path: &Path) -> adw::Window {
     crate::ensure_gtk();
-    let window = adw::Window::builder()
-        .title(gettext("Calendar File"))
-        .default_width(520)
-        .default_height(-1)
-        .build();
-    // The card's colors follow the window's light or dark class, which the
-    // main window sets for itself.
-    crate::ui::window::track_dark_class(&window);
-    let toasts = adw::ToastOverlay::new();
-    let header = adw::HeaderBar::new();
-    let toolbar = adw::ToolbarView::new();
-    toolbar.add_top_bar(&header);
-    toolbar.set_content(Some(&toasts));
-    window.set_content(Some(&toolbar));
+    let (window, toasts) = crate::ui::file_window::shell(&gettext("Calendar File"));
 
     let events = match unreadable(path) {
         Some(why) => Err(why),
@@ -85,11 +72,7 @@ pub fn open(app: &Rc<App>, path: &Path) -> adw::Window {
 }
 
 fn status(title: &str, description: &str) -> adw::StatusPage {
-    adw::StatusPage::builder()
-        .icon_name("penguin-mail-calendar-symbolic")
-        .title(glib::markup_escape_text(title).as_str())
-        .description(glib::markup_escape_text(description).as_str())
-        .build()
+    crate::ui::file_window::status("penguin-mail-calendar-symbolic", title, description)
 }
 
 /// The accounts that can take an event: a calendar offered and the

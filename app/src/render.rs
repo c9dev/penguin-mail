@@ -532,7 +532,10 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
     if !meta.cc.is_empty() {
         row(gettext("cc"), escape(&addresses(&meta.cc)));
     }
-    row(gettext("date"), escape(&full_date(meta.date)));
+    let date = full_date(meta.date);
+    if !date.is_empty() {
+        row(gettext("date"), escape(&date));
+    }
     row(gettext("subject"), escape(&meta.subject));
     if let Some(mailed_by) = &provenance.mailed_by {
         row(gettext("mailed-by"), escape(mailed_by));

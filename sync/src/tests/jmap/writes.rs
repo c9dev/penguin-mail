@@ -1,13 +1,14 @@
 //! Moves, marks and Delete Forever over FakeJmap.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::Arc;
 
 use mailrs_domain::Target;
 use mailrs_domain::mailbox::keyword::{FLAGGED, SEEN};
 
 use super::{fastmail, over, raw};
 use crate::fake::FakeJmap;
-use crate::{BackendError, MailBackend, MailOp, TriageAction};
+use crate::{BackendError, History, MailAction, MailActions, MailBackend, MailOp, TriageAction};
 
 fn now() -> i64 {
     chrono::Utc::now().timestamp_millis()
@@ -392,4 +393,82 @@ async fn adding_a_mailbox_and_removing_it_again_still_files_in_archive() {
         h.fake.with(|s| s.emails[&id].mailbox_ids.clone()),
         BTreeSet::from([h.fake.mailbox("archive")])
     );
+}
+
+#[tokio::test]
+async fn empty_trash_keeps_every_successful_deletion_in_a_refused_batch() {
+    for refused in 0..3 {
+        let h = fastmail().await;
+        let ids: Vec<_> = (0..3)
+            .map(|n| {
+                h.fake.deliver(
+                    "trash",
+                    &raw(&format!("trash{n}@example.com"), "Old mail"),
+                    1,
+                )
+            })
+            .collect();
+        h.bootstrap_all().await;
+        let actions = MailActions::new(
+            Arc::new(crate::tests::Connected(HashMap::from([(
+                h.account_id,
+                Arc::clone(&h.sync),
+            )]))),
+            h.db.clone(),
+            crate::OneClick::Fake(Arc::default()),
+        );
+        let targets: Vec<_> = ids
+            .iter()
+            .map(|id| Target {
+                account_id: h.account_id,
+                thread_id: h.fake.with(|s| s.emails[id].thread_id.clone()),
+                message_id: Some(id.clone()),
+            })
+            .collect();
+        let marked = actions
+            .run(
+                &targets,
+                MailAction::Triage(TriageAction::MarkRead),
+                History::Record,
+            )
+            .await;
+        assert_eq!(marked.done.len(), 3);
+        assert!(marked.failed.is_empty());
+        h.fake.with(|s| s.refused.insert(ids[refused].clone()));
+        let crate::Permitted::Done(outcome) = actions.empty_trash(h.account_id).await.unwrap()
+        else {
+            panic!("granted")
+        };
+        assert_eq!(outcome.deleted, 2, "refused position {refused}");
+        assert_eq!(outcome.failed, 1);
+        for (at, id) in ids.iter().enumerate() {
+            assert_eq!(h.fake.with(|s| s.emails.contains_key(id)), at == refused);
+            assert_eq!(h.stored(id).await, at == refused);
+        }
+        h.fake.with(|s| s.refused.clear());
+        let undone = actions
+            .undo()
+            .await
+            .expect("the refused message keeps its Undo");
+        assert_eq!(undone.outcome.done, [targets[refused].clone()]);
+        assert!(undone.outcome.failed.is_empty());
+        assert!(actions.undo().await.is_none());
+    }
+}
+
+#[tokio::test]
+async fn empty_trash_rejects_a_restore_between_the_jmap_check_and_delete() {
+    let h = fastmail().await;
+    let id = h
+        .fake
+        .deliver("trash", &raw("restore@example.com", "Keep me"), 1);
+    h.bootstrap_all().await;
+    h.fake
+        .with(|s| s.move_before_set = Some((id.clone(), "inbox".into())));
+    let crate::Permitted::Done(result) = h.sync.empty_trash(|_| {}).await.unwrap() else {
+        panic!("granted")
+    };
+    assert_eq!(result.deleted, 0);
+    assert_eq!(result.failed, 1);
+    assert!(h.fake.with(|s| s.emails.contains_key(&id)));
 }

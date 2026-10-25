@@ -122,7 +122,11 @@ a good icon look broken.
   step; decide what it leaves stale in `Stale::after`. Window code that
   awaits outside a run, such as a dialog, keeps the target it started
   from and checks `ConversationView::is_showing(&target)` before
-  touching the view.
+  touching the view. The same goes for a window or an account resolved
+  before an `await`: resolve it again after, or move the `await` ahead
+  of it. A main window held across a wait can close in the meantime,
+  and a held `Rc` keeps the struct, not the window's place in the app
+  (`App::open_mail_file` shows the pattern).
 - **The open thread changes through named methods** on
   `ConversationView` (`bodies_arrived`, `translated`, `engine_answered`,
   and so on), and is read through `read` and `find`. Add a named change

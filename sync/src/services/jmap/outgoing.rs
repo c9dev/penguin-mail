@@ -288,7 +288,7 @@ impl<J: JmapApi> Jmap<J> {
         }
         let answer = self
             .api()
-            .set_emails(&Map::new(), &[draft_id.to_string()])
+            .set_emails(&Map::new(), &[draft_id.to_string()], None)
             .await
             .map_err(backend)?;
         match answer.refusal(draft_id) {

@@ -21,43 +21,22 @@ msgstr "Linux 郵件與行事曆"
 
 #: app/data/io.github.c9dev.PenguinMail.desktop:10
 msgid "mail;email;gmail;imap;inbox;calendar;contacts;"
-msgstr ""
-"mail;email;gmail;imap;inbox;calendar;contacts;郵件;電子郵件;收件匣;行事曆;聯"
-"絡人;"
+msgstr "mail;email;gmail;imap;inbox;calendar;contacts;郵件;電子郵件;收件匣;行事曆;聯絡人;"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:15
-msgid ""
-"Penguin Mail reads Gmail, Outlook.com and Microsoft 365 accounts, and any "
-"IMAP or POP3 account with SMTP, such as Fastmail, iCloud and Yahoo, and "
-"finds the server settings for you. It syncs from the system tray, shows your "
-"accounts in one inbox or one at a time, and keeps your mail on your own "
-"computer."
-msgstr ""
-"Penguin Mail 可讀取 Gmail、Outlook.com 和 Microsoft 365 帳號，以及 Fastmail、"
-"iCloud、Yahoo 等搭配 SMTP 的 IMAP 或 POP3 帳號，並自動尋找伺服器設定。程式會"
-"在系統匣中同步，將所有帳號集中顯示在一個收件匣，也可逐一檢視，並將郵件儲存在"
-"自己的電腦上。"
+msgid "Penguin Mail reads Gmail, Outlook.com and Microsoft 365 accounts, and any IMAP or POP3 account with SMTP, such as Fastmail, iCloud and Yahoo, and finds the server settings for you. It syncs from the system tray, shows your accounts in one inbox or one at a time, and keeps your mail on your own computer."
+msgstr "Penguin Mail 可讀取 Gmail、Outlook.com 和 Microsoft 365 帳號，以及 Fastmail、iCloud、Yahoo 等搭配 SMTP 的 IMAP 或 POP3 帳號，並自動尋找伺服器設定。程式會在系統匣中同步，將所有帳號集中顯示在一個收件匣，也可逐一檢視，並將郵件儲存在自己的電腦上。"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
-msgid ""
-"One inbox for every account, with Gmail's categories, Outlook's Focused and "
-"Other tabs, labels and search"
-msgstr ""
-"所有帳號共用一個收件匣，提供 Gmail 分類、Outlook 的 [焦點] 與 [其他] 分頁、標"
-"籤和搜尋"
+msgid "One inbox for every account, with Gmail's categories, Outlook's Focused and Other tabs, labels and search"
+msgstr "所有帳號共用一個收件匣，提供 Gmail 分類、Outlook 的 [焦點] 與 [其他] 分頁、標籤和搜尋"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
-msgid ""
-"A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, "
-"Month and Agenda views, invitations answered in the mail, and reminders"
-msgstr ""
-"行事曆支援 Google 日曆、Outlook 和各種 CalDAV 伺服器，提供日、週、月與行程檢"
-"視、郵件中的邀請回覆及提醒"
+msgid "A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders"
+msgstr "行事曆支援 Google 日曆、Outlook 和各種 CalDAV 伺服器，提供日、週、月與行程檢視、郵件中的邀請回覆及提醒"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
-msgid ""
-"Gmail through the Google account your computer's Online Accounts already "
-"holds, on Linux"
+msgid "Gmail through the Google account your computer's Online Accounts already holds, on Linux"
 msgstr "在 Linux 上，透過你電腦的線上帳號中已有的 Google 帳號使用 Gmail"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
@@ -65,8 +44,7 @@ msgid "Contacts from Google, Outlook and any CardDAV server"
 msgstr "同步 Google、Outlook 和各種 CardDAV 伺服器的聯絡人"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
-msgid ""
-"A composer that shows formatting as you write, with Undo Send and Send Later"
+msgid "A composer that shows formatting as you write, with Undo Send and Send Later"
 msgstr "撰寫郵件時即時顯示格式，並提供 [取消傳送] 和 [排程傳送]"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
@@ -74,12 +52,8 @@ msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
 msgstr "七種顏色的旗標、VIP、智慧信箱及提醒"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
-msgid ""
-"Rules and automatic replies for every account, kept on Gmail, Outlook or a "
-"Sieve server, or run by the app on its own"
-msgstr ""
-"為各帳號設定規則及自動回覆，可儲存在 Gmail、Outlook 或 Sieve 伺服器上，也可由"
-"程式自行執行"
+msgid "Rules and automatic replies for every account, kept on Gmail, Outlook or a Sieve server, or run by the app on its own"
+msgstr "為各帳號設定規則及自動回覆，可儲存在 Gmail、Outlook 或 Sieve 伺服器上，也可由程式自行執行"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
 msgid "Plus addresses to give out instead of your own"
@@ -94,31 +68,16 @@ msgid "Remote images blocked until you ask for them"
 msgstr "封鎖遠端圖片，直到選擇載入為止"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
-msgid ""
-"An assistant that runs on a local model or on Claude, off until you pick one"
+msgid "An assistant that runs on a local model or on Claude, off until you pick one"
 msgstr "助理可使用本機模型或 Claude，選擇模型後才會啟用"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:34
-msgid ""
-"Every control named for screen readers and reachable from the keyboard, in "
-"American English, British English, French, German, Greek, Indonesian, "
-"Italian, Japanese, Korean, Polish, Romanian, Russian, Spanish, European "
-"Portuguese, Simplified Chinese, Traditional Chinese (Taiwan), Turkish, "
-"Ukrainian and Vietnamese"
-msgstr ""
-"所有控制項都有螢幕閱讀器可讀取的名稱，也能以鍵盤操作；介面提供美式英文、英式"
-"英文、法文、德文、希臘文、印尼文、義大利文、日文、韓文、波蘭文、羅馬尼亞文、"
-"俄文、西班牙文、歐洲葡萄牙文、簡體中文、正體中文（台灣）、土耳其文、烏克蘭文"
-"與越南文。"
+msgid "Every control named for screen readers and reachable from the keyboard, in American English, British English, French, German, Greek, Indonesian, Italian, Japanese, Korean, Polish, Romanian, Russian, Spanish, European Portuguese, Simplified Chinese, Traditional Chinese (Taiwan), Turkish, Ukrainian and Vietnamese"
+msgstr "所有控制項都有螢幕閱讀器可讀取的名稱，也能以鍵盤操作；介面提供美式英文、英式英文、法文、德文、希臘文、印尼文、義大利文、日文、韓文、波蘭文、羅馬尼亞文、俄文、西班牙文、歐洲葡萄牙文、簡體中文、正體中文（台灣）、土耳其文、烏克蘭文與越南文。"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:36
-msgid ""
-"Adding a Gmail or Microsoft account takes one sign-in in your browser. "
-"Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it "
-"runs on any Linux desktop."
-msgstr ""
-"新增 Gmail 或 Microsoft 帳號只需在瀏覽器中登入一次。Penguin Mail 採用 GTK 和 "
-"libadwaita，最適合 GNOME，也可在任何 Linux 桌面環境中執行。"
+msgid "Adding a Gmail or Microsoft account takes one sign-in in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
+msgstr "新增 Gmail 或 Microsoft 帳號只需在瀏覽器中登入一次。Penguin Mail 採用 GTK 和 libadwaita，最適合 GNOME，也可在任何 Linux 桌面環境中執行。"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
 msgid "gmail"
@@ -246,8 +205,7 @@ msgid "{hosts} · {security}"
 msgstr "{hosts} · {security}"
 
 #: app/src/add_account.rs:609
-msgid ""
-"Penguin Mail's own list knows this provider. Nothing has left this computer."
+msgid "Penguin Mail's own list knows this provider. Nothing has left this computer."
 msgstr "Penguin Mail 內建清單中已有此服務提供者。未傳送任何資料至電腦外。"
 
 #: app/src/add_account.rs:611
@@ -378,11 +336,8 @@ msgid "Secure connection failed"
 msgstr "安全連線失敗"
 
 #: app/src/add_account.rs:878
-msgid ""
-"If you use Proton Mail Bridge, export its TLS certificate and follow the "
-"setup guide, then try signing in again."
-msgstr ""
-"若使用 Proton Mail Bridge，請先匯出 TLS 憑證，依照設定指南操作後再嘗試登入。"
+msgid "If you use Proton Mail Bridge, export its TLS certificate and follow the setup guide, then try signing in again."
+msgstr "若使用 Proton Mail Bridge，請先匯出 TLS 憑證，依照設定指南操作後再嘗試登入。"
 
 #: app/src/add_account.rs:882
 msgid "Set Up Proton Mail Bridge"
@@ -397,15 +352,11 @@ msgid "No answer on port {port}"
 msgstr "連接埠 {port} 未回應"
 
 #: app/src/add_account.rs:898
-msgid ""
-"The server did not answer. Check the server name and port, or try again when "
-"you are online."
+msgid "The server did not answer. Check the server name and port, or try again when you are online."
 msgstr "伺服器未回應。請檢查伺服器名稱與連接埠，或在連上網路後重試。"
 
 #: app/src/add_account.rs:918
-msgid ""
-"{host} answered but turned down another connection. Try again in a few "
-"minutes."
+msgid "{host} answered but turned down another connection. Try again in a few minutes."
 msgstr "{host} 已回應，但拒絕另一個連線。請稍候幾分鐘再試。"
 
 #: app/src/add_account.rs:922
@@ -421,13 +372,8 @@ msgid "This app cannot send these sign-in details to the server."
 msgstr "此程式無法將這些登入資料傳送至伺服器。"
 
 #: app/src/add_account.rs:956
-msgid ""
-"Penguin Mail cannot save your sign-in until the snap can reach your keyring. "
-"Run this command in a terminal, restart Penguin Mail, then add the account "
-"again."
-msgstr ""
-"此 snap 必須能存取鑰匙圈，Penguin Mail 才能儲存登入資料。請在終端機中執行此指"
-"令，重新啟動 Penguin Mail，再新增帳號。"
+msgid "Penguin Mail cannot save your sign-in until the snap can reach your keyring. Run this command in a terminal, restart Penguin Mail, then add the account again."
+msgstr "此 snap 必須能存取鑰匙圈，Penguin Mail 才能儲存登入資料。請在終端機中執行此指令，重新啟動 Penguin Mail，再新增帳號。"
 
 #: app/src/add_account.rs:961
 msgid "Connect Your Keyring"
@@ -442,12 +388,8 @@ msgid "The server refused the password"
 msgstr "伺服器拒絕此密碼"
 
 #: app/src/add_account.rs:1001
-msgid ""
-"{provider} wants an app password here, not your website password. Make one, "
-"paste it above, then choose Sign In."
-msgstr ""
-"{provider} 在此需要應用程式密碼，而非網站密碼。請建立一組密碼並貼在上方，再選"
-"擇 [登入]。"
+msgid "{provider} wants an app password here, not your website password. Make one, paste it above, then choose Sign In."
+msgstr "{provider} 在此需要應用程式密碼，而非網站密碼。請建立一組密碼並貼在上方，再選擇 [登入]。"
 
 #: app/src/add_account.rs:1005 app/src/add_account.rs:2078
 msgid "Check the password, then choose Sign In."
@@ -482,25 +424,15 @@ msgid "Could not add the calendar: {reason}"
 msgstr "無法新增行事曆：{reason}"
 
 #: app/src/add_account.rs:1385
-msgid ""
-"To see this server's calendars there, open Preferences, then Accounts, open "
-"that account, and type this server's address under Calendar, Contacts and "
-"Rules Servers."
-msgstr ""
-"若要在該帳號查看此伺服器的行事曆，請開啟 [偏好設定]，再前往 [帳號]，展開該帳"
-"號，並在 [行事曆、聯絡人與規則伺服器] 中輸入此伺服器的位址。"
+msgid "To see this server's calendars there, open Preferences, then Accounts, open that account, and type this server's address under Calendar, Contacts and Rules Servers."
+msgstr "若要在該帳號查看此伺服器的行事曆，請開啟 [偏好設定]，再前往 [帳號]，展開該帳號，並在 [行事曆、聯絡人與規則伺服器] 中輸入此伺服器的位址。"
 
 #: app/src/add_account.rs:1398
-msgid ""
-"The server did not take that user name and password. Where it uses two-step "
-"sign-in, it needs an app password."
-msgstr ""
-"伺服器未接受該使用者名稱與密碼。若伺服器使用兩步驟登入，則需要應用程式密碼。"
+msgid "The server did not take that user name and password. Where it uses two-step sign-in, it needs an app password."
+msgstr "伺服器未接受該使用者名稱與密碼。若伺服器使用兩步驟登入，則需要應用程式密碼。"
 
 #: app/src/add_account.rs:1402
-msgid ""
-"Penguin Mail could not reach that server. Check the address and your "
-"connection."
+msgid "Penguin Mail could not reach that server. Check the address and your connection."
 msgstr "Penguin Mail 無法連線至該伺服器。請檢查位址與網路連線。"
 
 #: app/src/add_account.rs:1407
@@ -516,19 +448,13 @@ msgid "Your mail is here."
 msgstr "郵件已下載。"
 
 #: app/src/add_account.rs:1443
-msgid ""
-"Your organization did not allow one of the permissions Penguin Mail asked "
-"for, so this feature stays off:"
-msgid_plural ""
-"Your organization did not allow {count} of the permissions Penguin Mail "
-"asked for, so these features stay off:"
-msgstr[0] ""
-"所屬組織未允許 Penguin Mail 要求的 {count} 項權限，因此下列功能仍未啟用："
+msgid "Your organization did not allow one of the permissions Penguin Mail asked for, so this feature stays off:"
+msgid_plural "Your organization did not allow {count} of the permissions Penguin Mail asked for, so these features stay off:"
+msgstr[0] "所屬組織未允許 Penguin Mail 要求的 {count} 項權限，因此下列功能仍未啟用："
 
 #: app/src/add_account.rs:1450
 msgid "You left one box unticked on Google's page, so this feature stays off:"
-msgid_plural ""
-"You left {count} boxes unticked on Google's page, so these features stay off:"
+msgid_plural "You left {count} boxes unticked on Google's page, so these features stay off:"
 msgstr[0] "Google 頁面上有 {count} 個核取方塊未勾選，因此下列功能仍未啟用："
 
 #: app/src/add_account.rs:1457
@@ -536,9 +462,7 @@ msgid "Mail is downloading."
 msgstr "正在下載郵件。"
 
 #: app/src/add_account.rs:1477
-msgid ""
-"Newest mail comes first. Older mail keeps coming in the background, even "
-"with the window closed."
+msgid "Newest mail comes first. Older mail keeps coming in the background, even with the window closed."
 msgstr "先下載最新的郵件。即使關閉視窗，也會繼續在背景下載較舊的郵件。"
 
 #: app/src/add_account.rs:1480
@@ -546,34 +470,17 @@ msgid "Penguin Mail keeps checking for new mail, even with the window closed."
 msgstr "即使關閉視窗，Penguin Mail 也會繼續檢查新郵件。"
 
 #: app/src/add_account.rs:1491
-msgid ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. Mail stays on the server."
-msgstr ""
-"Penguin Mail 會將伺服器上的郵件下載至 [收件匣]，即使關閉視窗，也會繼續在背景"
-"檢查。郵件會保留在伺服器上。"
+msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. Mail stays on the server."
+msgstr "Penguin Mail 會將伺服器上的郵件下載至 [收件匣]，即使關閉視窗，也會繼續在背景檢查。郵件會保留在伺服器上。"
 
 #: app/src/add_account.rs:1494
-msgid ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. It removes each message from "
-"the server after downloading it."
-msgstr ""
-"Penguin Mail 會將伺服器上的郵件下載至 [收件匣]，即使關閉視窗，也會繼續在背景"
-"檢查。每封郵件下載後，就會從伺服器移除。"
+msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server after downloading it."
+msgstr "Penguin Mail 會將伺服器上的郵件下載至 [收件匣]，即使關閉視窗，也會繼續在背景檢查。每封郵件下載後，就會從伺服器移除。"
 
 #: app/src/add_account.rs:1497
-msgid ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. It removes each message from "
-"the server {days} day after downloading it."
-msgid_plural ""
-"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
-"the background, even with the window closed. It removes each message from "
-"the server {days} days after downloading it."
-msgstr[0] ""
-"Penguin Mail 會將伺服器上的郵件下載至 [收件匣]，即使關閉視窗，也會繼續在背景"
-"檢查。每封郵件下載 {days} 天後，就會從伺服器移除。"
+msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} day after downloading it."
+msgid_plural "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} days after downloading it."
+msgstr[0] "Penguin Mail 會將伺服器上的郵件下載至 [收件匣]，即使關閉視窗，也會繼續在背景檢查。每封郵件下載 {days} 天後，就會從伺服器移除。"
 
 #: app/src/add_account.rs:1513
 msgid "Penguin Mail needs the password for {address} again."
@@ -596,11 +503,8 @@ msgid "API Token"
 msgstr "API 權杖"
 
 #: app/src/add_account.rs:1681
-msgid ""
-"Make an API token in {provider}'s settings with this access: {access}. Paste "
-"it here."
-msgstr ""
-"請在 {provider} 的設定中建立具有以下存取權的 API 權杖：{access}。再貼到這裡。"
+msgid "Make an API token in {provider}'s settings with this access: {access}. Paste it here."
+msgstr "請在 {provider} 的設定中建立具有以下存取權的 API 權杖：{access}。再貼到這裡。"
 
 #: app/src/add_account.rs:1686
 msgid "Make an API token in {provider}'s settings and paste it here."
@@ -639,15 +543,11 @@ msgid "Penguin Mail found a JMAP server for {domain}."
 msgstr "Penguin Mail 找到了 {domain} 的 JMAP 伺服器。"
 
 #: app/src/add_account.rs:1759
-msgid ""
-"{host} is outside {domain}. Your token goes there only after you check the "
-"box."
+msgid "{host} is outside {domain}. Your token goes there only after you check the box."
 msgstr "{host} 不屬於 {domain}。勾選此方塊後，權杖才會傳送到該處。"
 
 #: app/src/add_account.rs:1762
-msgid ""
-"{host} is outside {domain}. Your password goes there only after you check "
-"the box."
+msgid "{host} is outside {domain}. Your password goes there only after you check the box."
 msgstr "{host} 不屬於 {domain}。勾選此方塊後，密碼才會傳送到該處。"
 
 #: app/src/add_account.rs:1765
@@ -767,12 +667,8 @@ msgid "{host} sends the sign-in elsewhere"
 msgstr "{host} 將登入轉往他處"
 
 #: app/src/add_account.rs:2114
-msgid ""
-"It tried to pass your sign-in on to {other}, and Penguin Mail refused. If "
-"you trust {other}, enter its session URL in Server Settings."
-msgstr ""
-"它試圖將您的登入轉交給 {other}，Penguin Mail 已拒絕。若您信任 {other}，請在 "
-"[伺服器設定] 中輸入其工作階段網址。"
+msgid "It tried to pass your sign-in on to {other}, and Penguin Mail refused. If you trust {other}, enter its session URL in Server Settings."
+msgstr "它試圖將您的登入轉交給 {other}，Penguin Mail 已拒絕。若您信任 {other}，請在 [伺服器設定] 中輸入其工作階段網址。"
 
 #: app/src/add_account.rs:2122
 msgid "Check your connection, then choose Sign In."
@@ -783,9 +679,7 @@ msgid "Wait a minute, then choose Sign In."
 msgstr "請等候一分鐘，再選擇 [登入]。"
 
 #: app/src/add_account.rs:2135
-msgid ""
-"{provider} gave an answer Penguin Mail cannot use. Try again later, or use "
-"IMAP instead."
+msgid "{provider} gave an answer Penguin Mail cannot use. Try again later, or use IMAP instead."
 msgstr "{provider} 的回應無法供 Penguin Mail 使用。請稍後再試，或改用 IMAP。"
 
 #: app/src/add_account/lookup.rs:39
@@ -861,11 +755,8 @@ msgid "Choose your {provider} account."
 msgstr "請選擇 {provider} 帳號。"
 
 #: app/src/add_account/post.rs:236
-msgid ""
-"If {provider} says it has not verified the app, choose Advanced, then Go to "
-"Penguin Mail."
-msgstr ""
-"若 {provider} 表示尚未驗證此程式，請選擇 [進階]，再選擇 [前往 Penguin Mail]。"
+msgid "If {provider} says it has not verified the app, choose Advanced, then Go to Penguin Mail."
+msgstr "若 {provider} 表示尚未驗證此程式，請選擇 [進階]，再選擇 [前往 Penguin Mail]。"
 
 #: app/src/add_account/post.rs:240
 msgid "Leave every box ticked and choose Continue."
@@ -908,8 +799,7 @@ msgid "{tile}, signs in through your browser"
 msgstr "{tile}，透過瀏覽器登入"
 
 #: app/src/add_account/post.rs:383
-msgid ""
-"Penguin Mail's own list knows this address. Nothing has left this computer."
+msgid "Penguin Mail's own list knows this address. Nothing has left this computer."
 msgstr "Penguin Mail 內建清單中已有此地址。未傳送任何資料至電腦外。"
 
 #: app/src/add_account/post.rs:401
@@ -921,31 +811,20 @@ msgid "{provider} has no IMAP"
 msgstr "{provider} 不提供 IMAP"
 
 #: app/src/add_account/post.rs:410
-msgid ""
-"{provider} keeps its mail in its own apps, so other mail apps cannot reach "
-"it. Use another address instead."
-msgstr ""
-"{provider} 僅允許自己的應用程式存取郵件，其他郵件程式無法存取。請改用其他地"
-"址。"
+msgid "{provider} keeps its mail in its own apps, so other mail apps cannot reach it. Use another address instead."
+msgstr "{provider} 僅允許自己的應用程式存取郵件，其他郵件程式無法存取。請改用其他地址。"
 
 #: app/src/add_account/post.rs:414
 msgid "Penguin Mail cannot reach {provider} yet"
 msgstr "Penguin Mail 尚無法存取 {provider}"
 
 #: app/src/add_account/post.rs:416
-msgid ""
-"{provider} lets other mail apps in only through an app of its own, which "
-"Penguin Mail does not support yet. Use another address instead."
-msgstr ""
-"{provider} 僅允許其他郵件程式透過其自有程式存取，而 Penguin Mail 尚未支援此方"
-"式。請改用其他地址。"
+msgid "{provider} lets other mail apps in only through an app of its own, which Penguin Mail does not support yet. Use another address instead."
+msgstr "{provider} 僅允許其他郵件程式透過其自有程式存取，而 Penguin Mail 尚未支援此方式。請改用其他地址。"
 
 #: app/src/add_account/post.rs:450
-msgid ""
-"On the next page, paste an API token from {provider}'s settings, not your "
-"{provider} password."
-msgstr ""
-"請在下一頁貼上從 {provider} 設定取得的 API 權杖，而非 {provider} 密碼。"
+msgid "On the next page, paste an API token from {provider}'s settings, not your {provider} password."
+msgstr "請在下一頁貼上從 {provider} 設定取得的 API 權杖，而非 {provider} 密碼。"
 
 #: app/src/add_account/post.rs:462
 msgid "{provider} needs an app password"
@@ -956,9 +835,7 @@ msgid "With two-step sign-in on, {provider} needs an app password"
 msgstr "啟用兩步驟登入後，{provider} 需要應用程式密碼"
 
 #: app/src/add_account/post.rs:473
-msgid ""
-"On the next page, paste an app-specific password from your Apple Account "
-"page, not your Apple password."
+msgid "On the next page, paste an app-specific password from your Apple Account page, not your Apple password."
 msgstr "請在下一頁貼上 Apple 帳號頁面中的應用程式專用密碼，而非 Apple 密碼。"
 
 #: app/src/add_account/post.rs:476
@@ -966,9 +843,7 @@ msgid "Open Apple Account Page"
 msgstr "開啟 Apple 帳號頁面"
 
 #: app/src/add_account/post.rs:484
-msgid ""
-"On the next page, paste an app password from {provider}'s settings, not your "
-"{provider} password."
+msgid "On the next page, paste an app password from {provider}'s settings, not your {provider} password."
 msgstr "請在下一頁貼上 {provider} 設定中的應用程式密碼，而非 {provider} 密碼。"
 
 #: app/src/add_account/post.rs:489
@@ -984,11 +859,8 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "選擇 [繼續] 會在瀏覽器中開啟 {provider} 的登入頁面。"
 
 #: app/src/app.rs:424
-msgid ""
-"Your preferences could not be read, so Penguin Mail started from the "
-"defaults. The old file is kept as {file}."
-msgstr ""
-"無法讀取偏好設定，因此 Penguin Mail 使用預設值啟動。舊檔案保留為 {file}。"
+msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
+msgstr "無法讀取偏好設定，因此 Penguin Mail 使用預設值啟動。舊檔案保留為 {file}。"
 
 #: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
@@ -1082,8 +954,7 @@ msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "是否將 {count} 個對話移至 [垃圾桶]？"
 
 #: app/src/assistant/run.rs:1272
-msgid ""
-"Don't Allow labels only the mail in accounts that have the label already."
+msgid "Don't Allow labels only the mail in accounts that have the label already."
 msgstr "選擇 [不允許] 時，只會在已有該標籤的帳號中為郵件加上標籤。"
 
 #: app/src/assistant/run.rs:1309
@@ -1158,11 +1029,8 @@ msgstr ""
 "{text}"
 
 #: app/src/assistant/run.rs:1793
-msgid ""
-"Hide My Email needs masked addresses or labels, and {provider} offers "
-"neither on this account."
-msgstr ""
-"隱藏電子郵件地址需要遮罩地址或標籤，而 {provider} 在這個帳號上兩者皆未提供。"
+msgid "Hide My Email needs masked addresses or labels, and {provider} offers neither on this account."
+msgstr "隱藏電子郵件地址需要遮罩地址或標籤，而 {provider} 在這個帳號上兩者皆未提供。"
 
 #: app/src/assistant/run.rs:1861
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
@@ -1173,20 +1041,12 @@ msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "是否重新啟用 {address}？寄至該地址的郵件會再次送達。"
 
 #: app/src/assistant/run.rs:1974
-msgid ""
-"Move mail from {sender} to {category} in {account}, and send their future "
-"mail there too?"
-msgstr ""
-"是否將 {sender} 的郵件移至 {category}（帳號：{account}），並將該寄件者日後寄"
-"來的郵件也移至此處？"
+msgid "Move mail from {sender} to {category} in {account}, and send their future mail there too?"
+msgstr "是否將 {sender} 的郵件移至 {category}（帳號：{account}），並將該寄件者日後寄來的郵件也移至此處？"
 
 #: app/src/assistant/run.rs:1986
-msgid ""
-"Move mail from {sender} to {category} in {account}, and add a {provider} "
-"rule for their future mail?"
-msgstr ""
-"是否將 {sender} 的郵件移至 {category}（帳號：{account}），並新增 {provider} "
-"規則，以處理該寄件者日後寄來的郵件？"
+msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
+msgstr "是否將 {sender} 的郵件移至 {category}（帳號：{account}），並新增 {provider} 規則，以處理該寄件者日後寄來的郵件？"
 
 #: app/src/assistant/run/calendar.rs:239 app/src/assistant/run/calendar.rs:856
 msgid "%a %-d %b %H:%M"
@@ -1199,8 +1059,7 @@ msgstr "{first} 至 {last}"
 
 #: app/src/assistant/run/calendar.rs:594
 msgid "Add “{title}” to the calendar “{calendar}” for {account}, {when}?"
-msgstr ""
-"是否將「{title}」加入「{calendar}」行事曆（帳號：{account}），時間為 {when}？"
+msgstr "是否將「{title}」加入「{calendar}」行事曆（帳號：{account}），時間為 {when}？"
 
 #: app/src/assistant/run/calendar.rs:603
 msgid "Add “{title}” to the calendar for {account}, {when}?"
@@ -1552,8 +1411,7 @@ msgstr "各帳號的伺服器"
 
 #: app/src/assistant/run/mail.rs:423
 msgid "Delete {count} conversation forever? {provider} cannot bring it back."
-msgid_plural ""
-"Delete {count} conversations forever? {provider} cannot bring them back."
+msgid_plural "Delete {count} conversations forever? {provider} cannot bring them back."
 msgstr[0] "是否永久刪除 {count} 個對話？{provider} 無法還原。"
 
 #: app/src/assistant/run/manage.rs:127
@@ -1573,49 +1431,27 @@ msgid "Organization: {organisation}"
 msgstr "組織：{organisation}"
 
 #: app/src/assistant/run/manage.rs:233
-msgid ""
-"Rename the label “{label}” in {account} to “{name}”? Labels nested under it "
-"move along."
-msgstr ""
-"是否將「{label}」標籤（帳號：{account}）重新命名為「{name}」？其下的巢狀標籤"
-"也會一起移動。"
+msgid "Rename the label “{label}” in {account} to “{name}”? Labels nested under it move along."
+msgstr "是否將「{label}」標籤（帳號：{account}）重新命名為「{name}」？其下的巢狀標籤也會一起移動。"
 
 #: app/src/assistant/run/manage.rs:268
 msgid "Color the label “{label}” in {account} {color}?"
 msgstr "是否將「{label}」標籤（帳號：{account}）設為 {color}？"
 
 #: app/src/assistant/run/manage.rs:308
-msgid ""
-"Delete the label “{label}” from {account}? {count} conversation carries it. "
-"The mail stays in the account, without the label."
-msgid_plural ""
-"Delete the label “{label}” from {account}? {count} conversations carry it. "
-"The mail stays in the account, without the label."
-msgstr[0] ""
-"是否刪除「{label}」標籤（帳號：{account}）？有 {count} 個對話帶有此標籤。郵件"
-"會保留在帳號中，但不再帶有此標籤。"
+msgid "Delete the label “{label}” from {account}? {count} conversation carries it. The mail stays in the account, without the label."
+msgid_plural "Delete the label “{label}” from {account}? {count} conversations carry it. The mail stays in the account, without the label."
+msgstr[0] "是否刪除「{label}」標籤（帳號：{account}）？有 {count} 個對話帶有此標籤。郵件會保留在帳號中，但不再帶有此標籤。"
 
 #: app/src/assistant/run/manage.rs:319
-msgid ""
-"Delete the label “{label}” from {account}? {count} conversation carries it. "
-"The mail stays in {provider}, without the label."
-msgid_plural ""
-"Delete the label “{label}” from {account}? {count} conversations carry it. "
-"The mail stays in {provider}, without the label."
-msgstr[0] ""
-"是否刪除「{label}」標籤（帳號：{account}）？有 {count} 個對話帶有此標籤。郵件"
-"會保留在 {provider} 中，但不再帶有此標籤。"
+msgid "Delete the label “{label}” from {account}? {count} conversation carries it. The mail stays in {provider}, without the label."
+msgid_plural "Delete the label “{label}” from {account}? {count} conversations carry it. The mail stays in {provider}, without the label."
+msgstr[0] "是否刪除「{label}」標籤（帳號：{account}）？有 {count} 個對話帶有此標籤。郵件會保留在 {provider} 中，但不再帶有此標籤。"
 
 #: app/src/assistant/run/manage.rs:332
-msgid ""
-"Delete the folder “{label}” from {account}? {count} conversation is in it. "
-"The mail in the folder is deleted with it."
-msgid_plural ""
-"Delete the folder “{label}” from {account}? {count} conversations are in it. "
-"The mail in the folder is deleted with it."
-msgstr[0] ""
-"是否刪除「{label}」資料夾（帳號：{account}）？有 {count} 個對話在其中。資料夾"
-"中的郵件也會一併刪除。"
+msgid "Delete the folder “{label}” from {account}? {count} conversation is in it. The mail in the folder is deleted with it."
+msgid_plural "Delete the folder “{label}” from {account}? {count} conversations are in it. The mail in the folder is deleted with it."
+msgstr[0] "是否刪除「{label}」資料夾（帳號：{account}）？有 {count} 個對話在其中。資料夾中的郵件也會一併刪除。"
 
 #: app/src/assistant/run/manage.rs:397
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
@@ -1715,8 +1551,7 @@ msgstr "是否取消「{subject}」的提醒，並移回 [收件匣]？"
 
 #: app/src/assistant/run/queue.rs:383
 msgid "Cancel {count} reminder and put its conversation back in the Inbox?"
-msgid_plural ""
-"Cancel {count} reminders and put their conversations back in the Inbox?"
+msgid_plural "Cancel {count} reminders and put their conversations back in the Inbox?"
 msgstr[0] "是否取消 {count} 個提醒，並將對話移回 [收件匣]？"
 
 #: app/src/assistant/run/queue.rs:417
@@ -1838,15 +1673,12 @@ msgid "Claude Code"
 msgstr "Claude Code"
 
 #: app/src/assistant/sources/skills/sandbox.rs:250
-msgid ""
-"Skill scripts need bubblewrap, which is not installed. Install the "
-"bubblewrap package to run them."
+msgid "Skill scripts need bubblewrap, which is not installed. Install the bubblewrap package to run them."
 msgstr "技能指令稿需要 bubblewrap，但尚未安裝。請安裝 bubblewrap 套件以執行。"
 
 #: app/src/assistant/sources/skills/sandbox.rs:269
 #: app/src/assistant/sources/skills/sandbox.rs:275
-msgid ""
-"Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
+msgid "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr "無法執行技能指令稿：bubblewrap 無法啟動沙箱（{reason}）。"
 
 #: app/src/assistant/sources/skills/shell.rs:181
@@ -1863,15 +1695,13 @@ msgid ""
 "\n"
 "{command}\n"
 "\n"
-"It runs in a sandbox with no access to your mail or home folder. {network} "
-"Always Allow covers this exact command only."
+"It runs in a sandbox with no access to your mail or home folder. {network} Always Allow covers this exact command only."
 msgstr ""
 "是否為 {skill} 技能執行此指令？\n"
 "\n"
 "{command}\n"
 "\n"
-"指令會在沙箱中執行，無法存取郵件或家目錄。{network} [一律允許] 僅適用於此確切"
-"指令。"
+"指令會在沙箱中執行，無法存取郵件或家目錄。{network} [一律允許] 僅適用於此確切指令。"
 
 #: app/src/assistant/sources/web.rs:64
 msgid "Add a Brave Search API key."
@@ -1891,15 +1721,13 @@ msgid ""
 "\n"
 "{address}\n"
 "\n"
-"The site receives the whole address, including anything after a question "
-"mark. Always Allow covers this exact address only."
+"The site receives the whole address, including anything after a question mark. Always Allow covers this exact address only."
 msgstr ""
 "是否開啟此網頁？\n"
 "\n"
 "{address}\n"
 "\n"
-"網站會收到完整網址，包括問號後的所有內容。[一律允許] 只適用於此網址，不包含其"
-"他網址。"
+"網站會收到完整網址，包括問號後的所有內容。[一律允許] 只適用於此網址，不包含其他網址。"
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -2064,12 +1892,8 @@ msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "無法將 {count} 位聯絡人儲存至 {account} 的聯絡人"
 
 #: app/src/core.rs:240
-msgid ""
-"Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
-"mail. Stop it, then open Penguin Mail again."
-msgstr ""
-"另一個 Penguin Mail 或 penguin-mail-cli sync 正在同步郵件。請停止該程式，再重"
-"新開啟 Penguin Mail。"
+msgid "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your mail. Stop it, then open Penguin Mail again."
+msgstr "另一個 Penguin Mail 或 penguin-mail-cli sync 正在同步郵件。請停止該程式，再重新開啟 Penguin Mail。"
 
 #: app/src/core.rs:252
 msgid "Penguin Mail could not update its mail store, and kept the old one."
@@ -2341,14 +2165,11 @@ msgid "Google wants an app password here, not your Google password."
 msgstr "Google 在這裡需要應用程式密碼，而不是你的 Google 密碼。"
 
 #: app/src/gmail_password.rs:106
-msgid ""
-"Google didn't accept that app password. Make a new one and paste it here."
+msgid "Google didn't accept that app password. Make a new one and paste it here."
 msgstr "Google 沒有接受該應用程式密碼。請重新建立一個並貼到這裡。"
 
 #: app/src/gmail_password.rs:109
-msgid ""
-"Your organization turned off this way of signing in. Ask them, or sign in "
-"another way."
+msgid "Your organization turned off this way of signing in. Ask them, or sign in another way."
 msgstr "你的組織已關閉這種登入方式。請詢問組織，或以其他方式登入。"
 
 #. Translators: Gmail is a name; keep it as it is.
@@ -2359,12 +2180,8 @@ msgstr "這看起來不像 Gmail 的伺服器。"
 #. Translators: Gmail and All Mail are names; use the words Gmail's own settings show
 #. in your language for Labels, Show in IMAP and All Mail.
 #: app/src/gmail_password.rs:116
-msgid ""
-"Gmail hides All Mail from apps. In Gmail's settings, open Labels and tick "
-"Show in IMAP next to All Mail."
-msgstr ""
-"Gmail 不會向應用程式顯示「所有郵件」。請在 Gmail 設定中開啟「標籤」，並勾選"
-"「所有郵件」旁的「在 IMAP 中顯示」。"
+msgid "Gmail hides All Mail from apps. In Gmail's settings, open Labels and tick Show in IMAP next to All Mail."
+msgstr "Gmail 不會向應用程式顯示「所有郵件」。請在 Gmail 設定中開啟「標籤」，並勾選「所有郵件」旁的「在 IMAP 中顯示」。"
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
@@ -2378,9 +2195,7 @@ msgid "Sign in to {address} again in Online Accounts."
 msgstr "請在線上帳號中重新登入 {address}。"
 
 #: app/src/goa_notice.rs:107
-msgid ""
-"Your organization may not allow this. Ask your administrator, or sign in "
-"another way."
+msgid "Your organization may not allow this. Ask your administrator, or sign in another way."
 msgstr "你的組織可能不允許這麼做。請詢問管理員，或以其他方式登入。"
 
 #: app/src/goa_notice.rs:115
@@ -2399,9 +2214,7 @@ msgstr "線上帳號中已關閉 {address} 的郵件。"
 
 #. Translators: Google and IMAP are names; keep them as they are.
 #: app/src/goa_notice.rs:135
-msgid ""
-"Google refused this computer's sign-in for mail. Is IMAP turned on for this "
-"account?"
+msgid "Google refused this computer's sign-in for mail. Is IMAP turned on for this account?"
 msgstr "Google 拒絕了這台電腦的郵件登入。這個帳號是否已開啟 IMAP？"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
@@ -2415,12 +2228,8 @@ msgid "Open Online Accounts"
 msgstr "開啟線上帳號"
 
 #: app/src/keyring_plug.rs:160
-msgid ""
-"Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run "
-"{command} in a terminal, then restart Penguin Mail."
-msgstr ""
-"此 snap 必須能存取鑰匙圈，Penguin Mail 才能儲存登入資料。請在終端機中執行 "
-"{command}，再重新啟動 Penguin Mail。"
+msgid "Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run {command} in a terminal, then restart Penguin Mail."
+msgstr "此 snap 必須能存取鑰匙圈，Penguin Mail 才能儲存登入資料。請在終端機中執行 {command}，再重新啟動 Penguin Mail。"
 
 #: app/src/language_names.rs:48
 msgid "{language} ({country})"
@@ -2428,8 +2237,7 @@ msgstr "{language}（{country}）"
 
 #: app/src/main.rs:105
 msgid ""
-"Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
-"[FILE.ics]\n"
+"Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] [FILE.ics]\n"
 "\n"
 "  --version      print the version and quit\n"
 "  --background   start in the tray without opening a window\n"
@@ -2438,8 +2246,7 @@ msgid ""
 "  mailto:...     the same as --compose mailto:...\n"
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
-"用法：penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
-"[FILE.ics]\n"
+"用法：penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] [FILE.ics]\n"
 "\n"
 "  --version      印出版本並結束\n"
 "  --background   在系統匣中啟動，不開啟視窗\n"
@@ -2461,12 +2268,8 @@ msgid "Report a Problem"
 msgstr "回報問題"
 
 #: app/src/move_banner.rs:61
-msgid ""
-"Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
-"your mail back. Nothing on this computer was lost."
-msgstr ""
-"Penguin Mail 無法取得 {address} 的新郵件。請選擇登入方式以找回郵件。這台電腦"
-"上的內容沒有遺失。"
+msgid "Penguin Mail can't get new mail for {address}. Choose how it signs in to get your mail back. Nothing on this computer was lost."
+msgstr "Penguin Mail 無法取得 {address} 的新郵件。請選擇登入方式以找回郵件。這台電腦上的內容沒有遺失。"
 
 #: app/src/move_banner.rs:68
 msgid "Choose how {address} signs in to keep your mail arriving."
@@ -2474,15 +2277,9 @@ msgstr "請選擇 {address} 的登入方式，以便繼續收到郵件。"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:78
-msgid ""
-"{count} Gmail account can't get new mail. Choose how each signs in to get "
-"your mail back. Nothing on this computer was lost."
-msgid_plural ""
-"{count} Gmail accounts can't get new mail. Choose how each signs in to get "
-"your mail back. Nothing on this computer was lost."
-msgstr[0] ""
-"有 {count} 個 Gmail 帳號無法取得新郵件。請為每個帳號選擇登入方式以找回郵件。"
-"這台電腦上的內容沒有遺失。"
+msgid "{count} Gmail account can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost."
+msgid_plural "{count} Gmail accounts can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost."
+msgstr[0] "有 {count} 個 Gmail 帳號無法取得新郵件。請為每個帳號選擇登入方式以找回郵件。這台電腦上的內容沒有遺失。"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/move_banner.rs:86
@@ -2671,13 +2468,11 @@ msgid "Could not rename the folder: {reason}"
 msgstr "無法重新命名資料夾：{reason}"
 
 #: app/src/offered.rs:448
-msgid ""
-"Its mail stays in {provider}, without the label. Nested labels stay too."
+msgid "Its mail stays in {provider}, without the label. Nested labels stay too."
 msgstr "郵件會保留在 {provider} 中，但不再帶有此標籤。巢狀標籤也會保留。"
 
 #: app/src/offered.rs:453
-msgid ""
-"Its mail stays in the account, without the label. Nested labels stay too."
+msgid "Its mail stays in the account, without the label. Nested labels stay too."
 msgstr "郵件會保留在帳號中，但不再帶有此標籤。巢狀標籤也會保留。"
 
 #: app/src/offered.rs:455
@@ -2713,17 +2508,12 @@ msgid "Your organization does not allow Penguin Mail to change these rules."
 msgstr "所屬組織不允許 Penguin Mail 變更這些規則。"
 
 #: app/src/offered.rs:497
-msgid ""
-"Your organization does not allow Penguin Mail to change the automatic reply."
+msgid "Your organization does not allow Penguin Mail to change the automatic reply."
 msgstr "所屬組織不允許 Penguin Mail 變更自動回覆。"
 
 #: app/src/offered.rs:501
-msgid ""
-"{provider} refused the password for calendars. Some providers need an app "
-"password with access to calendars and contacts."
-msgstr ""
-"{provider} 拒絕行事曆密碼。部分服務提供者需要具有行事曆及聯絡人存取權的應用程"
-"式密碼。"
+msgid "{provider} refused the password for calendars. Some providers need an app password with access to calendars and contacts."
+msgstr "{provider} 拒絕行事曆密碼。部分服務提供者需要具有行事曆及聯絡人存取權的應用程式密碼。"
 
 #: app/src/offered.rs:505
 msgid "Penguin Mail could not reach the calendar server for {provider}."
@@ -2734,12 +2524,8 @@ msgid "Penguin Mail found no calendar server for {provider}."
 msgstr "Penguin Mail 找不到 {provider} 的行事曆伺服器。"
 
 #: app/src/offered.rs:513
-msgid ""
-"{provider} refused the password for contacts. Some providers need an app "
-"password with access to calendars and contacts."
-msgstr ""
-"{provider} 拒絕聯絡人密碼。部分服務提供者需要具有行事曆及聯絡人存取權的應用程"
-"式密碼。"
+msgid "{provider} refused the password for contacts. Some providers need an app password with access to calendars and contacts."
+msgstr "{provider} 拒絕聯絡人密碼。部分服務提供者需要具有行事曆及聯絡人存取權的應用程式密碼。"
 
 #: app/src/offered.rs:517
 msgid "Penguin Mail could not reach the contacts server for {provider}."
@@ -2760,20 +2546,12 @@ msgstr "{provider} 無法傳送自動回覆。"
 #. A calendar or contacts server beside a browser sign-in that
 #. refused its token waits for an app password.
 #: app/src/offered.rs:532
-msgid ""
-"{provider}'s calendar server refused the browser sign-in. Choose Sign In "
-"Again and give an app password for the calendar."
-msgstr ""
-"{provider} 的行事曆伺服器拒絕了瀏覽器登入。請選擇 [重新登入]，並輸入行事曆的"
-"應用程式密碼。"
+msgid "{provider}'s calendar server refused the browser sign-in. Choose Sign In Again and give an app password for the calendar."
+msgstr "{provider} 的行事曆伺服器拒絕了瀏覽器登入。請選擇 [重新登入]，並輸入行事曆的應用程式密碼。"
 
 #: app/src/offered.rs:535
-msgid ""
-"{provider}'s contacts server refused the browser sign-in. Choose Sign In "
-"Again and give an app password for the calendar."
-msgstr ""
-"{provider} 的聯絡人伺服器拒絕了瀏覽器登入。請選擇 [重新登入]，並輸入行事曆的"
-"應用程式密碼。"
+msgid "{provider}'s contacts server refused the browser sign-in. Choose Sign In Again and give an app password for the calendar."
+msgstr "{provider} 的聯絡人伺服器拒絕了瀏覽器登入。請選擇 [重新登入]，並輸入行事曆的應用程式密碼。"
 
 #: app/src/offered.rs:540
 msgid "Penguin Mail cannot show {provider}'s calendar over JMAP yet."
@@ -2836,12 +2614,8 @@ msgid "Open Gmail Settings"
 msgstr "開啟 Gmail 設定"
 
 #: app/src/offered.rs:709
-msgid ""
-"{provider} does not let an API token change the automatic reply. Sign in "
-"again through the browser to change it here."
-msgstr ""
-"{provider} 不允許 API 權杖變更自動回覆。請透過瀏覽器重新登入，即可在這裡變"
-"更。"
+msgid "{provider} does not let an API token change the automatic reply. Sign in again through the browser to change it here."
+msgstr "{provider} 不允許 API 權杖變更自動回覆。請透過瀏覽器重新登入，即可在這裡變更。"
 
 #: app/src/offered.rs:719
 msgid "{address}: {reason}"
@@ -2880,60 +2654,34 @@ msgid "Message {number}: {words}"
 msgstr "第 {number} 封郵件：{words}"
 
 #: app/src/offered.rs:776
-msgid ""
-"Removing the account deletes this computer's copy of its mail and the saved "
-"sign-in. Mail still on the server stays there."
-msgstr ""
-"移除帳號會刪除此電腦上的郵件副本與儲存的登入資料。仍在伺服器上的郵件會保留。"
+msgid "Removing the account deletes this computer's copy of its mail and the saved sign-in. Mail still on the server stays there."
+msgstr "移除帳號會刪除此電腦上的郵件副本與儲存的登入資料。仍在伺服器上的郵件會保留。"
 
 #: app/src/offered.rs:780
-msgid ""
-"Mail already removed from the server exists only on this computer, and "
-"removing the account deletes it with the saved sign-in. Mail still on the "
-"server stays there."
-msgstr ""
-"已從伺服器移除的郵件僅存在此電腦上，移除帳號會連同儲存的登入資料一起刪除。仍"
-"在伺服器上的郵件會保留。"
+msgid "Mail already removed from the server exists only on this computer, and removing the account deletes it with the saved sign-in. Mail still on the server stays there."
+msgstr "已從伺服器移除的郵件僅存在此電腦上，移除帳號會連同儲存的登入資料一起刪除。仍在伺服器上的郵件會保留。"
 
 #: app/src/offered.rs:785
-msgid ""
-"Its calendars and saved sign-in are deleted from this computer. Nothing "
-"changes on the server."
+msgid "Its calendars and saved sign-in are deleted from this computer. Nothing changes on the server."
 msgstr "此電腦上的行事曆與儲存的登入資料會刪除。伺服器上的資料不會變更。"
 
 #: app/src/offered.rs:790
-msgid ""
-"Its downloaded mail and saved sign-in are deleted from this computer. "
-"Nothing changes in {provider}."
-msgstr ""
-"此電腦上已下載的郵件與儲存的登入資料會刪除。{provider} 上的資料不會變更。"
+msgid "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in {provider}."
+msgstr "此電腦上已下載的郵件與儲存的登入資料會刪除。{provider} 上的資料不會變更。"
 
 #: app/src/offered.rs:804
-msgid ""
-"{count} message waiting in Send Later on the server goes back to Drafts "
-"first."
-msgid_plural ""
-"{count} messages waiting in Send Later on the server go back to Drafts first."
+msgid "{count} message waiting in Send Later on the server goes back to Drafts first."
+msgid_plural "{count} messages waiting in Send Later on the server go back to Drafts first."
 msgstr[0] "伺服器上「排程傳送」中的 {count} 封郵件會先退回草稿。"
 
 #: app/src/offered.rs:816
-msgid ""
-"Penguin Mail could not call back {count} message waiting on the server. The "
-"server may still send it at its hour."
-msgid_plural ""
-"Penguin Mail could not call back {count} messages waiting on the server. The "
-"server may still send them at their hour."
-msgstr[0] ""
-"Penguin Mail 無法收回伺服器上等待中的 {count} 封郵件。伺服器仍可能在排定時間"
-"寄出。"
+msgid "Penguin Mail could not call back {count} message waiting on the server. The server may still send it at its hour."
+msgid_plural "Penguin Mail could not call back {count} messages waiting on the server. The server may still send them at their hour."
+msgstr[0] "Penguin Mail 無法收回伺服器上等待中的 {count} 封郵件。伺服器仍可能在排定時間寄出。"
 
 #: app/src/offered.rs:831
-msgid ""
-"Mail from {address} is kept only on this computer. To keep a copy, quit "
-"Penguin Mail, then back up this file."
-msgstr ""
-"{address} 的郵件僅儲存在此電腦上。若要保留副本，請結束 Penguin Mail，再備份此"
-"檔案。"
+msgid "Mail from {address} is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file."
+msgstr "{address} 的郵件僅儲存在此電腦上。若要保留副本，請結束 Penguin Mail，再備份此檔案。"
 
 #: app/src/offered.rs:882
 msgid "New mail arrives as it is sent"
@@ -2948,9 +2696,7 @@ msgid "Mail is matched over JMAP"
 msgstr "郵件透過 JMAP 比對"
 
 #: app/src/offered.rs:892
-msgid ""
-"Penguin Mail keeps the mail on this computer and downloads again only the "
-"messages it cannot match."
+msgid "Penguin Mail keeps the mail on this computer and downloads again only the messages it cannot match."
 msgstr "Penguin Mail 會保留這台電腦上的郵件，只重新下載無法比對的訊息。"
 
 #: app/src/offered.rs:899
@@ -2974,8 +2720,7 @@ msgid "Calendars are read again where JMAP serves them"
 msgstr "若 JMAP 提供行事曆，將重新讀取"
 
 #: app/src/offered.rs:917
-msgid ""
-"If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
+msgid "If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
 msgstr "如果 {provider} 透過 JMAP 提供行事曆，Penguin Mail 會從那裡讀取。"
 
 #: app/src/offered.rs:926
@@ -3051,14 +2796,9 @@ msgid "{address} now uses JMAP"
 msgstr "{address} 現在使用 JMAP"
 
 #: app/src/offered.rs:1084
-msgid ""
-"{address} now uses JMAP. {count} rule is off because its folder is not on "
-"the server."
-msgid_plural ""
-"{address} now uses JMAP. {count} rules are off because their folders are not "
-"on the server."
-msgstr[0] ""
-"{address} 現在使用 JMAP。有 {count} 條規則已停用，因為伺服器上沒有其資料夾。"
+msgid "{address} now uses JMAP. {count} rule is off because its folder is not on the server."
+msgid_plural "{address} now uses JMAP. {count} rules are off because their folders are not on the server."
+msgstr[0] "{address} 現在使用 JMAP。有 {count} 條規則已停用，因為伺服器上沒有其資料夾。"
 
 #: app/src/open_thread/run/receipt.rs:129
 msgid "Read receipt sent"
@@ -3069,9 +2809,7 @@ msgid "The receipt was not sent, and you can try again: {reason}"
 msgstr "讀取回條未傳送，您可以再試一次：{reason}"
 
 #: app/src/open_thread/run/receipt.rs:151
-msgid ""
-"The receipt may have gone out, so Penguin Mail will not send it again: "
-"{reason}"
+msgid "The receipt may have gone out, so Penguin Mail will not send it again: {reason}"
 msgstr "讀取回條可能已傳送，因此 Penguin Mail 不會再傳送一次：{reason}"
 
 #: app/src/open_thread/run/translation.rs:158
@@ -3098,21 +2836,13 @@ msgstr "你自己的 Google 專案"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:193
-msgid ""
-"A Google project of your own gives Penguin Mail every Gmail feature. It's "
-"free, just for you, takes about 10 minutes, and you do it once."
-msgstr ""
-"擁有自己的 Google 專案，Penguin Mail 就能使用 Gmail 的所有功能。它免費、只屬"
-"於你、大約需要 10 分鐘，而且只要做一次。"
+msgid "A Google project of your own gives Penguin Mail every Gmail feature. It's free, just for you, takes about 10 minutes, and you do it once."
+msgstr "擁有自己的 Google 專案，Penguin Mail 就能使用 Gmail 的所有功能。它免費、只屬於你、大約需要 10 分鐘，而且只要做一次。"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:197
-msgid ""
-"You'll use the Google account you want to read mail from. Penguin Mail opens "
-"each page for you and says what to click."
-msgstr ""
-"你將使用想要讀取郵件的 Google 帳戶。Penguin Mail 會為你開啟每個頁面，並告訴你"
-"要點選哪裡。"
+msgid "You'll use the Google account you want to read mail from. Penguin Mail opens each page for you and says what to click."
+msgstr "你將使用想要讀取郵件的 Google 帳戶。Penguin Mail 會為你開啟每個頁面，並告訴你要點選哪裡。"
 
 #: app/src/own_project.rs:203
 msgid "Make a project"
@@ -3124,9 +2854,7 @@ msgid "Google keeps what Penguin Mail needs in a project of its own."
 msgstr "Google 會把 Penguin Mail 需要的內容放在一個獨立的專案裡。"
 
 #: app/src/own_project.rs:210
-msgid ""
-"If Google asks you to agree to its terms first, choose your country and "
-"agree."
+msgid "If Google asks you to agree to its terms first, choose your country and agree."
 msgstr "如果 Google 先要求你同意條款，請選擇你的國家/地區並同意。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
@@ -3155,12 +2883,8 @@ msgstr "Penguin Mail 透過它們讀取你的郵件、日曆和聯絡人。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:230
-msgid ""
-"Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
-"and pick Penguin Mail."
-msgstr ""
-"確認上方的專案顯示為 <b>Penguin Mail</b>。如果不是，請點選它並選擇 Penguin "
-"Mail。"
+msgid "Check that the project at the top says <b>Penguin Mail</b>. If not, click it and pick Penguin Mail."
+msgstr "確認上方的專案顯示為 <b>Penguin Mail</b>。如果不是，請點選它並選擇 Penguin Mail。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:233
@@ -3183,22 +2907,13 @@ msgstr "點選<b>開始使用</b>。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:246
-msgid ""
-"<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
-"address."
-msgstr ""
-"<b>應用程式名稱</b>：<tt>Penguin Mail</tt>。<b>使用者支援電子郵件</b>：你的地"
-"址。"
+msgid "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your address."
+msgstr "<b>應用程式名稱</b>：<tt>Penguin Mail</tt>。<b>使用者支援電子郵件</b>：你的地址。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:250
-msgid ""
-"<b>Audience</b>: choose <b>External</b>. (A work or school account with an "
-"organization may see <b>Internal</b>; that also works and needs no warning "
-"screen later. Pick it if offered.)"
-msgstr ""
-"<b>目標對象</b>：選擇<b>外部</b>。（屬於某個機構的公司或學校帳戶可能會看到<b>"
-"內部</b>；這也可以用，之後不需要警告畫面。如果有就選它。）"
+msgid "<b>Audience</b>: choose <b>External</b>. (A work or school account with an organization may see <b>Internal</b>; that also works and needs no warning screen later. Pick it if offered.)"
+msgstr "<b>目標對象</b>：選擇<b>外部</b>。（屬於某個機構的公司或學校帳戶可能會看到<b>內部</b>；這也可以用，之後不需要警告畫面。如果有就選它。）"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
@@ -3220,9 +2935,7 @@ msgstr "發布後就能保持登入。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
-msgid ""
-"Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
-"b>."
+msgid "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</b>."
 msgstr "在<b>發布狀態</b>下，點選<b>發布應用程式</b>，然後點選<b>確認</b>。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
@@ -3267,9 +2980,7 @@ msgstr "在下一個畫面關閉之前，點選<b>下載 JSON</b>。"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:295
-msgid ""
-"Google shows this only once. If you closed it already, delete that key and "
-"make a new one."
+msgid "Google shows this only once. If you closed it already, delete that key and make a new one."
 msgstr "Google 只會顯示一次。如果已經關閉，請刪除該金鑰並建立新的金鑰。"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
@@ -3284,15 +2995,8 @@ msgstr "使用 Google 登入"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:313
-msgid ""
-"Google will say <b>\"Google hasn't verified this app\"</b>. That's expected: "
-"the app is your own project, and you're the only one using it. Click "
-"<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
-"box so every feature works."
-msgstr ""
-"Google 會顯示<b>「Google 尚未驗證這個應用程式」</b>。這是正常的：這個應用程式"
-"是你自己的專案，只有你在使用。點選<b>進階</b>，然後點選<b>前往 Penguin Mail "
-"(不安全)</b>。接著勾選所有方塊，讓所有功能都能運作。"
+msgid "Google will say <b>\"Google hasn't verified this app\"</b>. That's expected: the app is your own project, and you're the only one using it. Click <b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every box so every feature works."
+msgstr "Google 會顯示<b>「Google 尚未驗證這個應用程式」</b>。這是正常的：這個應用程式是你自己的專案，只有你在使用。點選<b>進階</b>，然後點選<b>前往 Penguin Mail (不安全)</b>。接著勾選所有方塊，讓所有功能都能運作。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:343
@@ -3301,8 +3005,7 @@ msgstr "你發布專案了嗎？如果仍顯示「測試」，請前往第 4 步
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:366
-msgid ""
-"Google doesn't recognize this key. Make a new one and download it again."
+msgid "Google doesn't recognize this key. Make a new one and download it again."
 msgstr "Google 無法辨識這個金鑰。請建立新的金鑰並重新下載。"
 
 #. Translators: Gmail is a name; keep it as it is.
@@ -3323,13 +3026,8 @@ msgid "Drive is turned off in your project."
 msgstr "你的專案中已關閉雲端硬碟。"
 
 #: app/src/own_project.rs:448
-msgid ""
-"The Google Cloud project Penguin Mail signs in with has the {service} "
-"switched off, so Google refuses before it can ask for your permission. Turn "
-"it on, wait a minute, and try again."
-msgstr ""
-"Penguin Mail 登入所使用的 Google Cloud 專案尚未啟用 {service}，因此 Google 在"
-"詢問權限前就會拒絕。請啟用服務，稍候一分鐘再試。"
+msgid "The Google Cloud project Penguin Mail signs in with has the {service} switched off, so Google refuses before it can ask for your permission. Turn it on, wait a minute, and try again."
+msgstr "Penguin Mail 登入所使用的 Google Cloud 專案尚未啟用 {service}，因此 Google 在詢問權限前就會拒絕。請啟用服務，稍候一分鐘再試。"
 
 #: app/src/packaging.rs:127
 msgid "Updates come from dnf"
@@ -3364,92 +3062,60 @@ msgid "Allow Changes to {service} Settings"
 msgstr "允許變更 {service} 設定"
 
 #: app/src/permission.rs:129
-msgid ""
-"Penguin Mail needs permission to change {service} settings for {account}. "
-"{company} asks you to confirm in your browser."
-msgstr ""
-"Penguin Mail 需要權限才能變更 {service} 的設定（帳號：{account}）。{company} "
-"會要求在瀏覽器中確認。"
+msgid "Penguin Mail needs permission to change {service} settings for {account}. {company} asks you to confirm in your browser."
+msgstr "Penguin Mail 需要權限才能變更 {service} 的設定（帳號：{account}）。{company} 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:134
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr "允許 Penguin Mail 刪除郵件"
 
 #: app/src/permission.rs:136
-msgid ""
-"Deleting mail for good needs one more permission for {account}. {company} "
-"asks you to confirm in your browser."
-msgstr ""
-"永久刪除郵件需要 {account} 的另一項權限。{company} 會要求在瀏覽器中確認。"
+msgid "Deleting mail for good needs one more permission for {account}. {company} asks you to confirm in your browser."
+msgstr "永久刪除郵件需要 {account} 的另一項權限。{company} 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:141
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr "允許 Penguin Mail 讀取聯絡人"
 
 #: app/src/permission.rs:143
-msgid ""
-"Reading the contacts of {account} needs one more permission. {company} asks "
-"you to confirm in your browser. Names and photos stay on this computer."
-msgstr ""
-"讀取 {account} 的聯絡人需要另一項權限。{company} 會要求在瀏覽器中確認。姓名與"
-"照片會留在此電腦上。"
+msgid "Reading the contacts of {account} needs one more permission. {company} asks you to confirm in your browser. Names and photos stay on this computer."
+msgstr "讀取 {account} 的聯絡人需要另一項權限。{company} 會要求在瀏覽器中確認。姓名與照片會留在此電腦上。"
 
 #: app/src/permission.rs:149
 msgid "Allow Penguin Mail to Change Your Contacts"
 msgstr "允許 Penguin Mail 變更聯絡人"
 
 #: app/src/permission.rs:151
-msgid ""
-"The assistant needs permission to add and change the contacts of {account}. "
-"{company} asks you to confirm in your browser."
-msgstr ""
-"助理需要新增及變更 {account} 聯絡人的權限。{company} 會要求在瀏覽器中確認。"
+msgid "The assistant needs permission to add and change the contacts of {account}. {company} asks you to confirm in your browser."
+msgstr "助理需要新增及變更 {account} 聯絡人的權限。{company} 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:156 app/src/permission.rs:163
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "允許 Penguin Mail 使用行事曆"
 
 #: app/src/permission.rs:158
-msgid ""
-"The assistant needs permission to read and change events on the calendar for "
-"{account}. {company} asks you to confirm in your browser."
-msgstr ""
-"助理需要讀取及變更 {account} 行事曆活動的權限。{company} 會要求在瀏覽器中確"
-"認。"
+msgid "The assistant needs permission to read and change events on the calendar for {account}. {company} asks you to confirm in your browser."
+msgstr "助理需要讀取及變更 {account} 行事曆活動的權限。{company} 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:165
-msgid ""
-"Your reply went to the organizer as mail. With permission to change events "
-"on the calendar for {account}, the meeting is marked on your own calendar "
-"too. {company} asks you to confirm in your browser."
-msgstr ""
-"已以郵件回覆主辦人。取得變更 {account} 行事曆活動的權限後，也會在自己的行事曆"
-"中標記此會議。{company} 會要求在瀏覽器中確認。"
+msgid "Your reply went to the organizer as mail. With permission to change events on the calendar for {account}, the meeting is marked on your own calendar too. {company} asks you to confirm in your browser."
+msgstr "已以郵件回覆主辦人。取得變更 {account} 行事曆活動的權限後，也會在自己的行事曆中標記此會議。{company} 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:171
 msgid "Allow Penguin Mail to Manage Your Calendars"
 msgstr "允許 Penguin Mail 管理行事曆"
 
 #: app/src/permission.rs:173
-msgid ""
-"Making, renaming and deleting calendars, and subscribing to one, needs one "
-"more permission for {account}. {company} asks you to confirm in your browser."
-msgstr ""
-"建立、重新命名、刪除及訂閱行事曆需要 {account} 的另一項權限。{company} 會要求"
-"在瀏覽器中確認。"
+msgid "Making, renaming and deleting calendars, and subscribing to one, needs one more permission for {account}. {company} asks you to confirm in your browser."
+msgstr "建立、重新命名、刪除及訂閱行事曆需要 {account} 的另一項權限。{company} 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:179
 msgid "Allow Penguin Mail to Add Files to Google Drive"
 msgstr "允許 Penguin Mail 新增檔案至 Google 雲端硬碟"
 
 #: app/src/permission.rs:181
-msgid ""
-"Attaching a file from this computer to an event puts it in Google Drive for "
-"{account}. Penguin Mail can reach only the files it adds there. Google asks "
-"you to confirm in your browser."
-msgstr ""
-"將此電腦上的檔案附加至活動時，會上傳至 {account} 的 Google 雲端硬碟。Penguin "
-"Mail 只能存取自己新增的檔案。Google 會要求在瀏覽器中確認。"
+msgid "Attaching a file from this computer to an event puts it in Google Drive for {account}. Penguin Mail can reach only the files it adds there. Google asks you to confirm in your browser."
+msgstr "將此電腦上的檔案附加至活動時，會上傳至 {account} 的 Google 雲端硬碟。Penguin Mail 只能存取自己新增的檔案。Google 會要求在瀏覽器中確認。"
 
 #: app/src/permission.rs:256
 msgid "change {service} settings"
@@ -3616,9 +3282,7 @@ msgid "This computer has nothing to encrypt with."
 msgstr "此電腦沒有可用於加密的金鑰或憑證。"
 
 #: app/src/protection.rs:143
-msgid ""
-"S/MIME names every recipient inside an encrypted message, so a blind copy "
-"would not stay blind."
+msgid "S/MIME names every recipient inside an encrypted message, so a blind copy would not stay blind."
 msgstr "S/MIME 會在加密郵件中列出每位收件者，因此密件副本無法隱藏收件者。"
 
 #: app/src/protection.rs:301
@@ -3650,14 +3314,11 @@ msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr "郵件只能採用其中一種標準傳送。{pgp} {smime}"
 
 #: app/src/protection.rs:612
-msgid ""
-"This key does not name {sender}, the address the message says it is from."
+msgid "This key does not name {sender}, the address the message says it is from."
 msgstr "此金鑰未列出郵件所宣稱的寄件地址 {sender}。"
 
 #: app/src/protection.rs:616
-msgid ""
-"This certificate does not name {sender}, the address the message says it is "
-"from."
+msgid "This certificate does not name {sender}, the address the message says it is from."
 msgstr "此憑證未列出郵件所宣稱的寄件地址 {sender}。"
 
 #: app/src/protection.rs:625
@@ -3685,8 +3346,7 @@ msgid "Signed by {signer}, whose certificate has run out"
 msgstr "由 {signer} 簽署，但憑證已過期"
 
 #: app/src/protection.rs:654
-msgid ""
-"The text is as it was written, and the certificate behind it has expired."
+msgid "The text is as it was written, and the certificate behind it has expired."
 msgstr "文字仍與撰寫時相同，但簽署使用的憑證已過期。"
 
 #: app/src/protection.rs:660
@@ -3730,9 +3390,7 @@ msgid "Signed by a certificate this computer does not hold"
 msgstr "簽署使用的憑證不在此電腦上"
 
 #: app/src/protection.rs:706
-msgid ""
-"The message carried none either, so there is nothing here to check it "
-"against."
+msgid "The message carried none either, so there is nothing here to check it against."
 msgstr "郵件也未附上憑證，因此無法驗證。"
 
 #: app/src/protection.rs:712
@@ -3820,9 +3478,7 @@ msgid "You have vouched for this key."
 msgstr "已為此金鑰的身分作保。"
 
 #: app/src/protection.rs:830
-msgid ""
-"Only people you partly trust have vouched for this key, so it is not fully "
-"checked."
+msgid "Only people you partly trust have vouched for this key, so it is not fully checked."
 msgstr "只有部分信任的人為此金鑰作保，因此尚未充分驗證。"
 
 #: app/src/protection.rs:833
@@ -3830,9 +3486,7 @@ msgid "Nobody has vouched for this key, so it names no one."
 msgstr "沒有人為此金鑰作保，因此無法確認身分。"
 
 #: app/src/protection.rs:836
-msgid ""
-"Its certificate leads back to an authority you trust, but this computer "
-"could not check whether it was revoked."
+msgid "Its certificate leads back to an authority you trust, but this computer could not check whether it was revoked."
 msgstr "憑證可追溯至信任的憑證機構，但此電腦無法檢查憑證是否已撤銷。"
 
 #: app/src/protection.rs:840
@@ -3881,12 +3535,8 @@ msgid "Draft not saved: {reason}"
 msgstr "未儲存草稿：{reason}"
 
 #: app/src/protection/draft.rs:128
-msgid ""
-"Draft not saved. An encrypted message waits in Drafts encrypted to your own "
-"key, and this computer holds no key or certificate for {address}."
-msgstr ""
-"未儲存草稿。加密郵件會以自己的金鑰加密後存放在 [草稿] 中，但此電腦沒有 "
-"{address} 的金鑰或憑證。"
+msgid "Draft not saved. An encrypted message waits in Drafts encrypted to your own key, and this computer holds no key or certificate for {address}."
+msgstr "未儲存草稿。加密郵件會以自己的金鑰加密後存放在 [草稿] 中，但此電腦沒有 {address} 的金鑰或憑證。"
 
 #: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2083
 #: app/src/ui/composer/mod.rs:2086
@@ -3956,9 +3606,7 @@ msgid "Possible phishing links"
 msgstr "可能的網路釣魚連結"
 
 #: app/src/render.rs:446
-msgid ""
-"This message contains potentially deceptive links. Check the destination "
-"before opening them."
+msgid "This message contains potentially deceptive links. Check the destination before opening them."
 msgstr "這封郵件包含可能具有誤導性的連結。開啟前請先確認目的地。"
 
 #: app/src/render.rs:499
@@ -4059,12 +3707,8 @@ msgid "Read receipt requested"
 msgstr "已要求讀取回條"
 
 #: app/src/render/receipt.rs:44
-msgid ""
-"Sending a receipt tells {address} that you opened this message. Nothing is "
-"sent unless you choose."
-msgstr ""
-"傳送回條會讓 {address} 知道您已開啟這封郵件。除非您選擇，否則不會傳送任何內"
-"容。"
+msgid "Sending a receipt tells {address} that you opened this message. Nothing is sent unless you choose."
+msgstr "傳送回條會讓 {address} 知道您已開啟這封郵件。除非您選擇，否則不會傳送任何內容。"
 
 #: app/src/render/receipt.rs:54
 msgid "Read receipt"
@@ -4097,11 +3741,8 @@ msgstr "選擇 Penguin Mail 登入 Gmail 的方式"
 
 #. Translators: Gmail and Google are names; keep them as they are.
 #: app/src/route_choice.rs:130
-msgid ""
-"Want every Gmail feature? Your own Google project gives you all of them, "
-"free."
-msgstr ""
-"想要 Gmail 的全部功能嗎？使用您自己的 Google 專案即可免費取得全部功能。"
+msgid "Want every Gmail feature? Your own Google project gives you all of them, free."
+msgstr "想要 Gmail 的全部功能嗎？使用您自己的 Google 專案即可免費取得全部功能。"
 
 #: app/src/route_choice.rs:138 app/src/ui/goa_page.rs:289
 msgid "Use the Google account on this computer"
@@ -4160,9 +3801,7 @@ msgid "These rules run on this computer while Penguin Mail is open."
 msgstr "Penguin Mail 開啟時，會在此電腦上執行這些規則。"
 
 #: app/src/rules.rs:17
-msgid ""
-"{provider} runs these on new mail as it arrives, even when this computer is "
-"off."
+msgid "{provider} runs these on new mail as it arrives, even when this computer is off."
 msgstr "新郵件送達時，{provider} 就會執行這些規則，即使此電腦已關機也一樣。"
 
 #: app/src/rules.rs:29
@@ -4488,12 +4127,8 @@ msgid "5 years"
 msgstr "5 年"
 
 #: app/src/settings/mod.rs:838
-msgid ""
-"Every message stays on this computer. A large account takes a lot of disk "
-"space and memory, and its older mail downloads in the background."
-msgstr ""
-"每封郵件都會保留在此電腦上。大型帳號會占用大量磁碟空間和記憶體，較舊的郵件會"
-"在背景下載。"
+msgid "Every message stays on this computer. A large account takes a lot of disk space and memory, and its older mail downloads in the background."
+msgstr "每封郵件都會保留在此電腦上。大型帳號會占用大量磁碟空間和記憶體，較舊的郵件會在背景下載。"
 
 #: app/src/settings/mod.rs:840
 msgid "Everything in your inbox stays too, and older mail remains searchable"
@@ -4516,9 +4151,7 @@ msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr "請新增 gpgsm 信任其憑證的收件者。"
 
 #: app/src/smime.rs:103
-msgid ""
-"gpgsm holds no trusted certificate for {addresses}. A certificate that only "
-"arrived in mail does not count."
+msgid "gpgsm holds no trusted certificate for {addresses}. A certificate that only arrived in mail does not count."
 msgstr "gpgsm 中沒有 {addresses} 的可信任憑證。僅隨郵件收到的憑證不算。"
 
 #: app/src/smime.rs:123
@@ -4562,8 +4195,7 @@ msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "此密語無法開啟檔案。未匯入任何內容。"
 
 #: app/src/smime.rs:283
-msgid ""
-"The file needs its passphrase, and none was given. Nothing was imported."
+msgid "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr "此檔案需要密語，但尚未提供。未匯入任何內容。"
 
 #: app/src/smime.rs:286
@@ -4643,8 +4275,7 @@ msgid "The message goes to Anthropic, for {model} to read."
 msgstr "郵件會傳送至 Anthropic，供 {model} 讀取。"
 
 #: app/src/translation.rs:978
-msgid ""
-"The message goes to Anthropic, for Claude to read through your subscription."
+msgid "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr "郵件會傳送至 Anthropic，透過 Claude 訂閱供 Claude 讀取。"
 
 #: app/src/tray.rs:24
@@ -4920,9 +4551,7 @@ msgid "App Password for Calendar"
 msgstr "行事曆的應用程式密碼"
 
 #: app/src/ui/add_account.rs:1232
-msgid ""
-"Optional. Make an app password with calendar access in the provider's "
-"settings."
+msgid "Optional. Make an app password with calendar access in the provider's settings."
 msgstr "選填。請在供應商的設定中建立具有行事曆存取權的應用程式密碼。"
 
 #: app/src/ui/add_account.rs:1242 app/src/ui/add_account.rs:1871
@@ -4947,11 +4576,8 @@ msgid "Use these servers"
 msgstr "使用這些伺服器"
 
 #: app/src/ui/add_account.rs:1285 app/src/ui/add_account.rs:2888
-msgid ""
-"Penguin Mail guessed these servers. Your password goes to them only after "
-"you check the box."
-msgstr ""
-"Penguin Mail 推測使用這些伺服器。勾選核取方塊後，才會將密碼傳送至伺服器。"
+msgid "Penguin Mail guessed these servers. Your password goes to them only after you check the box."
+msgstr "Penguin Mail 推測使用這些伺服器。勾選核取方塊後，才會將密碼傳送至伺服器。"
 
 #: app/src/ui/add_account.rs:1291 app/src/ui/add_account.rs:1592
 #: app/src/ui/add_account.rs:1827
@@ -4992,9 +4618,7 @@ msgid "Archive"
 msgstr "封存"
 
 #: app/src/ui/add_account.rs:1508
-msgid ""
-"Grant Access opens Google's page again. You can also do it later in "
-"Preferences."
+msgid "Grant Access opens Google's page again. You can also do it later in Preferences."
 msgstr "[授予存取權] 會再次開啟 Google 頁面。也可以稍後在 [偏好設定] 中授予。"
 
 #: app/src/ui/add_account.rs:1512
@@ -5107,12 +4731,8 @@ msgid "Calendar Server"
 msgstr "行事曆伺服器"
 
 #: app/src/ui/add_account.rs:1917
-msgid ""
-"A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
-"app password for Penguin Mail."
-msgstr ""
-"CalDAV 伺服器，例如 Nextcloud。若伺服器使用兩步驟登入，請為 Penguin Mail 建立"
-"應用程式密碼。"
+msgid "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an app password for Penguin Mail."
+msgstr "CalDAV 伺服器，例如 Nextcloud。若伺服器使用兩步驟登入，請為 Penguin Mail 建立應用程式密碼。"
 
 #: app/src/ui/add_account.rs:1927 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
@@ -5132,12 +4752,8 @@ msgid "{domain} uses {provider}"
 msgstr "{domain} 使用 {provider}"
 
 #: app/src/ui/add_account.rs:2941
-msgid ""
-"Not your {provider} website password. Make one with mail access in "
-"{provider}'s settings and paste it here."
-msgstr ""
-"請勿使用 {provider} 網站密碼。請在 {provider} 設定中建立具郵件存取權的應用程"
-"式密碼，再貼至此處。"
+msgid "Not your {provider} website password. Make one with mail access in {provider}'s settings and paste it here."
+msgstr "請勿使用 {provider} 網站密碼。請在 {provider} 設定中建立具郵件存取權的應用程式密碼，再貼至此處。"
 
 #: app/src/ui/add_account.rs:3412
 msgid "Could not reach {host}"
@@ -5165,33 +4781,21 @@ msgid "Sign in with {provider} in your browser"
 msgstr "在瀏覽器中以 {provider} 登入"
 
 #: app/src/ui/add_account.rs:4055 app/src/ui/add_account.rs:4487
-msgid ""
-"{provider}'s sign-in page is open in your browser. When you finish there, "
-"this window moves on."
+msgid "{provider}'s sign-in page is open in your browser. When you finish there, this window moves on."
 msgstr "已在瀏覽器中開啟 {provider} 登入頁面。完成登入後，此視窗會繼續下一步。"
 
 #: app/src/ui/add_account.rs:4082
-msgid ""
-"This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
-"from github.com/c9dev/penguin-mail/releases."
-msgstr ""
-"此版本的 Penguin Mail 未包含 Microsoft 登入功能。請從 github.com/c9dev/"
-"penguin-mail/releases 取得發行版本。"
+msgid "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
+msgstr "此版本的 Penguin Mail 未包含 Microsoft 登入功能。請從 github.com/c9dev/penguin-mail/releases 取得發行版本。"
 
 #: app/src/ui/add_account.rs:4095
-msgid ""
-"Signing in with your own Google client. Google's sign-in page is open in "
-"your browser. When you finish there, this window moves on."
-msgstr ""
-"正在使用自己的 Google 用戶端登入。Google 登入頁面已在瀏覽器中開啟，在該處完成"
-"後，此視窗會繼續下一步。"
+msgid "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on."
+msgstr "正在使用自己的 Google 用戶端登入。Google 登入頁面已在瀏覽器中開啟，在該處完成後，此視窗會繼續下一步。"
 
 #. Translators: said when moving a Gmail account to a new way of signing in
 #. runs past two minutes; the move carries on without the window.
 #: app/src/ui/add_account.rs:4242
-msgid ""
-"Moving the account is taking too long. It goes on after you close this "
-"window."
+msgid "Moving the account is taking too long. It goes on after you close this window."
 msgstr "移動帳號花費的時間過長。關閉此視窗後，移動仍會繼續。"
 
 #: app/src/ui/add_account.rs:4367
@@ -5220,9 +4824,7 @@ msgid "Go to Step {number}"
 msgstr "前往第 {number} 步"
 
 #: app/src/ui/add_account.rs:4921
-msgid ""
-"This server cannot tell its messages apart, so Penguin Mail cannot download "
-"from it safely."
+msgid "This server cannot tell its messages apart, so Penguin Mail cannot download from it safely."
 msgstr "此伺服器無法區分郵件，因此 Penguin Mail 無法安全下載。"
 
 #: app/src/ui/add_account/routes.rs:440
@@ -5269,12 +4871,8 @@ msgid "New Chat"
 msgstr "新增聊天"
 
 #: app/src/ui/assistant.rs:153
-msgid ""
-"Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
-"draft, and change settings."
-msgstr ""
-"可以詢問郵件相關問題，或指定要整理的內容。我可以搜尋、摘要、分類、撰寫草稿及"
-"變更設定。"
+msgid "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, draft, and change settings."
+msgstr "可以詢問郵件相關問題，或指定要整理的內容。我可以搜尋、摘要、分類、撰寫草稿及變更設定。"
 
 #: app/src/ui/assistant.rs:179 app/src/ui/assistant.rs:184
 #: app/src/ui/assistant.rs:552 app/src/ui/calendar/scope.rs:152
@@ -5293,12 +4891,8 @@ msgid "Set Up the Assistant"
 msgstr "設定助理"
 
 #: app/src/ui/assistant.rs:222
-msgid ""
-"Use a local model from LM Studio, Ollama, or any server with OpenAI's API. "
-"You can also use an Anthropic API key or your Claude subscription."
-msgstr ""
-"可使用 LM Studio、Ollama 或任何提供 OpenAI API 的伺服器上的本機模型。也可使"
-"用 Anthropic API 金鑰或 Claude 訂閱。"
+msgid "Use a local model from LM Studio, Ollama, or any server with OpenAI's API. You can also use an Anthropic API key or your Claude subscription."
+msgstr "可使用 LM Studio、Ollama 或任何提供 OpenAI API 的伺服器上的本機模型。也可使用 Anthropic API 金鑰或 Claude 訂閱。"
 
 #: app/src/ui/assistant.rs:309
 msgid "This conversation"
@@ -5433,12 +5027,8 @@ msgid "About MCP Servers"
 msgstr "關於 MCP 伺服器"
 
 #: app/src/ui/assistant_mcp_prefs.rs:36
-msgid ""
-"Tools from servers you add. The assistant asks before each call, unless you "
-"choose Always Allow. A server gets what the assistant sends it."
-msgstr ""
-"使用新增伺服器提供的工具。除非選擇 [一律允許]，否則助理會在每次呼叫前詢問。伺"
-"服器會收到助理傳送的內容。"
+msgid "Tools from servers you add. The assistant asks before each call, unless you choose Always Allow. A server gets what the assistant sends it."
+msgstr "使用新增伺服器提供的工具。除非選擇 [一律允許]，否則助理會在每次呼叫前詢問。伺服器會收到助理傳送的內容。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:46 app/src/ui/assistant_mcp_prefs.rs:48
 #: app/src/ui/assistant_mcp_prefs.rs:379
@@ -5495,14 +5085,8 @@ msgid "Could not connect: {reason}"
 msgstr "無法連線：{reason}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:267
-msgid ""
-"A command runs on this computer and talks over its input and output, as in "
-"npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value "
-"in front for the environment. A URL reaches a server over HTTP."
-msgstr ""
-"指令會在此電腦上執行，並透過標準輸入及輸出通訊，例如 npx -y "
-"@modelcontextprotocol/server-filesystem ~/Documents。可在前方加上 NAME=value "
-"設定環境變數。URL 則透過 HTTP 連線至伺服器。"
+msgid "A command runs on this computer and talks over its input and output, as in npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value in front for the environment. A URL reaches a server over HTTP."
+msgstr "指令會在此電腦上執行，並透過標準輸入及輸出通訊，例如 npx -y @modelcontextprotocol/server-filesystem ~/Documents。可在前方加上 NAME=value 設定環境變數。URL 則透過 HTTP 連線至伺服器。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
 #: app/src/ui/composer/mod.rs:2893 app/src/ui/smart_editor.rs:37
@@ -5590,9 +5174,7 @@ msgid "Ask Before Acting"
 msgstr "執行前詢問"
 
 #: app/src/ui/assistant_prefs.rs:35
-msgid ""
-"Approve each message the assistant sends and each change to Gmail settings, "
-"such as automatic replies and rules"
+msgid "Approve each message the assistant sends and each change to Gmail settings, such as automatic replies and rules"
 msgstr "核准助理傳送的每封郵件，以及自動回覆、規則等 Gmail 設定的每項變更"
 
 #: app/src/ui/assistant_prefs.rs:53
@@ -5600,14 +5182,8 @@ msgid "Connections"
 msgstr "連線"
 
 #: app/src/ui/assistant_prefs.rs:55
-msgid ""
-"A local server is LM Studio, Ollama, or any server with OpenAI's API. Local "
-"models keep your mail on this computer. With Anthropic or a Claude "
-"subscription, what a feature reads goes to Anthropic."
-msgstr ""
-"本機伺服器可以是 LM Studio、Ollama 或任何提供 OpenAI API 的伺服器。本機模型會"
-"讓郵件留在此電腦上。使用 Anthropic 或 Claude 訂閱時，功能讀取的內容會傳送至 "
-"Anthropic。"
+msgid "A local server is LM Studio, Ollama, or any server with OpenAI's API. Local models keep your mail on this computer. With Anthropic or a Claude subscription, what a feature reads goes to Anthropic."
+msgstr "本機伺服器可以是 LM Studio、Ollama 或任何提供 OpenAI API 的伺服器。本機模型會讓郵件留在此電腦上。使用 Anthropic 或 Claude 訂閱時，功能讀取的內容會傳送至 Anthropic。"
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "API Key (Optional)"
@@ -5658,12 +5234,8 @@ msgid "Reasoning"
 msgstr "推理"
 
 #: app/src/ui/assistant_prefs.rs:180
-msgid ""
-"Ask supported models to think before answering. Turning this off can make "
-"replies faster. Claude Code uses its own settings."
-msgstr ""
-"要求支援此功能的模型在回答前思考。關閉此選項可能會加快回覆。Claude Code 使用"
-"自己的設定。"
+msgid "Ask supported models to think before answering. Turning this off can make replies faster. Claude Code uses its own settings."
+msgstr "要求支援此功能的模型在回答前思考。關閉此選項可能會加快回覆。Claude Code 使用自己的設定。"
 
 #: app/src/ui/assistant_prefs.rs:186
 msgid "Assistant Chats"
@@ -5691,13 +5263,8 @@ msgid "AI Language"
 msgstr "AI 語言"
 
 #: app/src/ui/assistant_prefs.rs:243
-msgid ""
-"Language for assistant responses, summaries, and translations. Email replies "
-"and drafts follow the language of the correspondence unless you ask "
-"otherwise."
-msgstr ""
-"助理回答、摘要及翻譯使用的語言。除非另有要求，郵件回覆與草稿會沿用往來郵件的"
-"語言。"
+msgid "Language for assistant responses, summaries, and translations. Email replies and drafts follow the language of the correspondence unless you ask otherwise."
+msgstr "助理回答、摘要及翻譯使用的語言。除非另有要求，郵件回覆與草稿會沿用往來郵件的語言。"
 
 #: app/src/ui/assistant_prefs.rs:248
 msgid "Same as Interface"
@@ -5712,9 +5279,7 @@ msgid "Language Name"
 msgstr "語言名稱"
 
 #: app/src/ui/assistant_prefs.rs:296
-msgid ""
-"Enter a language name of up to 80 characters, using letters, spaces, "
-"hyphens, apostrophes, or parentheses."
+msgid "Enter a language name of up to 80 characters, using letters, spaces, hyphens, apostrophes, or parentheses."
 msgstr "請輸入最多 80 個字元的語言名稱，可使用字母、空格、連字號、撇號或括號。"
 
 #: app/src/ui/assistant_prefs.rs:314
@@ -5722,9 +5287,7 @@ msgid "Always Allowed"
 msgstr "一律允許"
 
 #: app/src/ui/assistant_prefs.rs:316
-msgid ""
-"Tools from outside sources that run without asking. Remove one to be asked "
-"again next time."
+msgid "Tools from outside sources that run without asking. Remove one to be asked again next time."
 msgstr "無須詢問即可執行的外部工具。移除工具後，下次執行前會再次詢問。"
 
 #: app/src/ui/assistant_prefs.rs:332
@@ -5776,11 +5339,8 @@ msgid "Nothing found"
 msgstr "未找到"
 
 #: app/src/ui/assistant_prefs.rs:895
-msgid ""
-"Start LM Studio's server or Ollama, or install Claude Code, then open "
-"Preferences again."
-msgstr ""
-"請啟動 LM Studio 伺服器或 Ollama，或安裝 Claude Code，再重新開啟 [偏好設定]。"
+msgid "Start LM Studio's server or Ollama, or install Claude Code, then open Preferences again."
+msgstr "請啟動 LM Studio 伺服器或 Ollama，或安裝 Claude Code，再重新開啟 [偏好設定]。"
 
 #: app/src/ui/assistant_prefs.rs:907
 msgid "{model} and {count} more"
@@ -5800,15 +5360,8 @@ msgid "About Skills"
 msgstr "關於技能"
 
 #: app/src/ui/assistant_skills_prefs.rs:24
-msgid ""
-"Instructions the assistant follows for one kind of task, found in Penguin "
-"Mail's skills folder and in Claude Code's. Each skill is off until you turn "
-"it on. Scripts in a skill run in a sandbox that cannot reach your mail, keys "
-"or home folder, and the assistant asks before each command."
-msgstr ""
-"助理處理特定任務時遵循的指示，來自 Penguin Mail 與 Claude Code 的技能資料夾。"
-"各技能必須手動啟用。技能中的指令稿會在沙箱中執行，無法存取郵件、金鑰或家目"
-"錄，且助理會在每次執行指令前詢問。"
+msgid "Instructions the assistant follows for one kind of task, found in Penguin Mail's skills folder and in Claude Code's. Each skill is off until you turn it on. Scripts in a skill run in a sandbox that cannot reach your mail, keys or home folder, and the assistant asks before each command."
+msgstr "助理處理特定任務時遵循的指示，來自 Penguin Mail 與 Claude Code 的技能資料夾。各技能必須手動啟用。技能中的指令稿會在沙箱中執行，無法存取郵件、金鑰或家目錄，且助理會在每次執行指令前詢問。"
 
 #: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:425
 msgid "Not Available"
@@ -5844,12 +5397,8 @@ msgid "Skills Are Off in This Version"
 msgstr "此版本未啟用技能"
 
 #: app/src/ui/assistant_skills_prefs.rs:86
-msgid ""
-"Skill scripts run in a sandbox of their own, which cannot start inside the "
-"{sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
-msgstr ""
-"技能指令稿會在獨立沙箱中執行，但無法在 Penguin Mail 所在的 {sandbox} 沙箱內啟"
-"動。.deb 與 rpm 版本提供技能。"
+msgid "Skill scripts run in a sandbox of their own, which cannot start inside the {sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
+msgstr "技能指令稿會在獨立沙箱中執行，但無法在 Penguin Mail 所在的 {sandbox} 沙箱內啟動。.deb 與 rpm 版本提供技能。"
 
 #: app/src/ui/assistant_skills_prefs.rs:100
 msgid "{origin}: {description}"
@@ -5864,9 +5413,7 @@ msgid "Allow Network"
 msgstr "允許網路"
 
 #: app/src/ui/assistant_skills_prefs.rs:159
-msgid ""
-"Let this skill's scripts reach the internet. Without it they can only use "
-"what is on this computer."
+msgid "Let this skill's scripts reach the internet. Without it they can only use what is on this computer."
 msgstr "允許此技能的指令稿連線至網際網路。未允許時，只能使用此電腦上的資源。"
 
 #: app/src/ui/assistant_web_prefs.rs:18
@@ -5874,13 +5421,8 @@ msgid "Web Search"
 msgstr "網頁搜尋"
 
 #: app/src/ui/assistant_web_prefs.rs:20
-msgid ""
-"Lets the assistant search the web and read pages. Claude searches with "
-"Anthropic's own tools. A local model searches with the engine chosen here, "
-"which receives every query."
-msgstr ""
-"讓助理搜尋網頁及讀取頁面。Claude 使用 Anthropic 內建工具搜尋。本機模型使用此"
-"處選擇的搜尋引擎，每筆查詢都會傳送至該引擎。"
+msgid "Lets the assistant search the web and read pages. Claude searches with Anthropic's own tools. A local model searches with the engine chosen here, which receives every query."
+msgstr "讓助理搜尋網頁及讀取頁面。Claude 使用 Anthropic 內建工具搜尋。本機模型使用此處選擇的搜尋引擎，每筆查詢都會傳送至該引擎。"
 
 #: app/src/ui/assistant_web_prefs.rs:29
 msgid "Search With"
@@ -6027,9 +5569,7 @@ msgid "Custom Repeat"
 msgstr "自訂重複"
 
 #: app/src/ui/calendar/editor.rs:401
-msgid ""
-"{organizer} organizes this event, so its time, place and guests stay as they "
-"set them."
+msgid "{organizer} organizes this event, so its time, place and guests stay as they set them."
 msgstr "此活動由 {organizer} 主辦，時間、地點及參與者均依主辦人的設定。"
 
 #: app/src/ui/calendar/editor.rs:427 app/src/ui/calendar/quick.rs:190
@@ -6553,14 +6093,11 @@ msgid "{kind}. Declines new and existing meetings."
 msgstr "{kind}。婉拒新舊會議。"
 
 #: app/src/ui/calendar/kinds.rs:162
-msgid ""
-"Birthday. Google Calendar makes it from your contacts, so you can only "
-"change it there."
+msgid "Birthday. Google Calendar makes it from your contacts, so you can only change it there."
 msgstr "生日。Google 日曆會根據聯絡人建立，僅能在該處變更。"
 
 #: app/src/ui/calendar/kinds.rs:165
-msgid ""
-"Working location. Google Calendar sets it, so you can only change it there."
+msgid "Working location. Google Calendar sets it, so you can only change it there."
 msgstr "工作地點。由 Google 日曆設定，僅能在該處變更。"
 
 #: app/src/ui/calendar/manage.rs:35
@@ -6568,12 +6105,8 @@ msgid "The calendar is deleted on every device. This cannot be undone."
 msgstr "所有裝置上的此行事曆都會刪除。此操作無法復原。"
 
 #: app/src/ui/calendar/manage.rs:37
-msgid ""
-"The calendar and its {count} event are deleted on every device. This cannot "
-"be undone."
-msgid_plural ""
-"The calendar and its {count} events are deleted on every device. This cannot "
-"be undone."
+msgid "The calendar and its {count} event are deleted on every device. This cannot be undone."
+msgid_plural "The calendar and its {count} events are deleted on every device. This cannot be undone."
 msgstr[0] "所有裝置上的此行事曆及其 {count} 個活動都會刪除。此操作無法復原。"
 
 #: app/src/ui/calendar/manage.rs:73
@@ -6621,9 +6154,7 @@ msgid "Unsubscribe from “{calendar}”?"
 msgstr "是否取消訂閱「{calendar}」？"
 
 #: app/src/ui/calendar/manage.rs:374
-msgid ""
-"It leaves your calendar list in Google Calendar on every device. You can "
-"subscribe to it again later."
+msgid "It leaves your calendar list in Google Calendar on every device. You can subscribe to it again later."
 msgstr "所有裝置的 Google 日曆清單都會移除此行事曆。之後仍可重新訂閱。"
 
 #: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:399
@@ -6655,13 +6186,8 @@ msgid "Subscribe to Calendar"
 msgstr "訂閱行事曆"
 
 #: app/src/ui/calendar/manage.rs:475
-msgid ""
-"Enter the address of a published calendar, starting with https or webcal. "
-"Google Calendar fetches it from then on and shows it on every device. You "
-"can read it but not change it."
-msgstr ""
-"請輸入已發佈行事曆的網址，網址須以 https 或 webcal 開頭。Google 日曆會持續擷"
-"取內容，並在所有裝置上顯示。可檢視此行事曆，但無法變更內容。"
+msgid "Enter the address of a published calendar, starting with https or webcal. Google Calendar fetches it from then on and shows it on every device. You can read it but not change it."
+msgstr "請輸入已發佈行事曆的網址，網址須以 https 或 webcal 開頭。Google 日曆會持續擷取內容，並在所有裝置上顯示。可檢視此行事曆，但無法變更內容。"
 
 #: app/src/ui/calendar/manage.rs:485
 msgid "Calendar address"
@@ -6852,9 +6378,7 @@ msgid "Answer"
 msgstr "回覆"
 
 #: app/src/ui/calendar/popover.rs:333
-msgid ""
-"This calendar's server sends no replies, so the organizer will not hear your "
-"answer."
+msgid "This calendar's server sends no replies, so the organizer will not hear your answer."
 msgstr "此行事曆的伺服器不會傳送回覆，因此主辦人不會收到您的回覆。"
 
 #: app/src/ui/calendar/popover.rs:342 app/src/ui/invitation.rs:334
@@ -7178,12 +6702,8 @@ msgid_plural "{count} more events"
 msgstr[0] "還有 {count} 個活動"
 
 #: app/src/ui/calendar/time_grid.rs:347
-msgid ""
-"Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when "
-"it ends."
-msgstr ""
-"Shift+Up 或 Shift+Down 可移動活動；Shift+Alt+Up 或 Shift+Alt+Down 可變更結束"
-"時間。"
+msgid "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when it ends."
+msgstr "Shift+Up 或 Shift+Down 可移動活動；Shift+Alt+Up 或 Shift+Alt+Down 可變更結束時間。"
 
 #: app/src/ui/calendar/time_grid.rs:353
 msgid "{base} {hint}"
@@ -7336,9 +6856,7 @@ msgid "Describe Picture"
 msgstr "描述圖片"
 
 #: app/src/ui/composer/editor.rs:336
-msgid ""
-"Screen readers read these words in place of the picture, and they show where "
-"the picture does not load."
+msgid "Screen readers read these words in place of the picture, and they show where the picture does not load."
 msgstr "螢幕閱讀器會讀出這些文字以代替圖片；圖片未載入時，也會顯示這些文字。"
 
 #: app/src/ui/composer/editor.rs:340 app/src/ui/composer/editor.rs:344
@@ -7733,13 +7251,11 @@ msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "草稿會留在此電腦上，稍後可在這裡繼續撰寫。"
 
 #: app/src/ui/composer/mod.rs:3099
-msgid ""
-"The draft is kept in {provider}, so you can finish it later on any device."
+msgid "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr "草稿會保留在 {provider} 中，稍後可在任何裝置上繼續撰寫。"
 
 #: app/src/ui/composer/mod.rs:3103
-msgid ""
-"The draft is kept in your account, so you can finish it later on any device."
+msgid "The draft is kept in your account, so you can finish it later on any device."
 msgstr "草稿會保存在您的帳號中，方便您稍後在任何裝置上完成。"
 
 #: app/src/ui/composer/recipients.rs:57
@@ -7799,12 +7315,8 @@ msgid "Calendar, Contacts and Rules Servers"
 msgstr "行事曆、聯絡人與規則伺服器"
 
 #: app/src/ui/contacts_prefs.rs:58
-msgid ""
-"Penguin Mail looks for these when you add an account, and signs in with the "
-"account's password, or the app password you gave for its calendar."
-msgstr ""
-"新增帳號時，Penguin Mail 會尋找這些伺服器，並以帳號的密碼或您為其行事曆提供的"
-"應用程式密碼登入。"
+msgid "Penguin Mail looks for these when you add an account, and signs in with the account's password, or the app password you gave for its calendar."
+msgstr "新增帳號時，Penguin Mail 會尋找這些伺服器，並以帳號的密碼或您為其行事曆提供的應用程式密碼登入。"
 
 #: app/src/ui/contacts_prefs.rs:136 app/src/ui/goa_page.rs:325
 msgid "Use It"
@@ -7824,20 +7336,11 @@ msgid "Edit…"
 msgstr "編輯…"
 
 #: app/src/ui/contacts_prefs.rs:282
-msgid ""
-"Penguin Mail can read an account's contacts: names, email addresses, photos, "
-"organizations, and phone numbers. It uses them to suggest recipients, to "
-"show faces beside mail, and to fill the card behind a sender's name. What it "
-"reads stays on this computer, and turning an account off deletes its "
-"contacts."
-msgstr ""
-"Penguin Mail 可讀取帳號的聯絡人，包括姓名、電子郵件地址、照片、組織及電話號"
-"碼。這些資料會用於建議收件者、在郵件旁顯示照片，以及填寫寄件者姓名背後的名"
-"片。讀取的資料會留在此電腦上，停用帳號的聯絡人功能時就會刪除。"
+msgid "Penguin Mail can read an account's contacts: names, email addresses, photos, organizations, and phone numbers. It uses them to suggest recipients, to show faces beside mail, and to fill the card behind a sender's name. What it reads stays on this computer, and turning an account off deletes its contacts."
+msgstr "Penguin Mail 可讀取帳號的聯絡人，包括姓名、電子郵件地址、照片、組織及電話號碼。這些資料會用於建議收件者、在郵件旁顯示照片，以及填寫寄件者姓名背後的名片。讀取的資料會留在此電腦上，停用帳號的聯絡人功能時就會刪除。"
 
 #: app/src/ui/contacts_prefs.rs:354
-msgid ""
-"Penguin Mail shows each account's meetings and reminds you before they start."
+msgid "Penguin Mail shows each account's meetings and reminds you before they start."
 msgstr "Penguin Mail 會顯示各帳號的會議，並在開始前提醒。"
 
 #: app/src/ui/contacts_prefs.rs:358
@@ -7845,9 +7348,7 @@ msgid "GNOME Online Accounts"
 msgstr "GNOME 線上帳號"
 
 #: app/src/ui/contacts_prefs.rs:360
-msgid ""
-"Add an account to GNOME Online Accounts to see its meetings in GNOME "
-"Calendar and the clock too."
+msgid "Add an account to GNOME Online Accounts to see its meetings in GNOME Calendar and the clock too."
 msgstr "將帳號加入 GNOME 線上帳號，即可在 GNOME 行事曆與時鐘中檢視會議。"
 
 #: app/src/ui/contacts_prefs.rs:431
@@ -8141,12 +7642,8 @@ msgstr "使用應用程式密碼登入"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:43
-msgid ""
-"Google gives each app its own password. You make one in your Google account "
-"and paste it here. Your Google password stays with Google."
-msgstr ""
-"Google 為每個應用程式提供專屬密碼。你在 Google 帳號中建立一個，再貼到這裡。你"
-"的 Google 密碼仍只保存在 Google。"
+msgid "Google gives each app its own password. You make one in your Google account and paste it here. Your Google password stays with Google."
+msgstr "Google 為每個應用程式提供專屬密碼。你在 Google 帳號中建立一個，再貼到這裡。你的 Google 密碼仍只保存在 Google。"
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
@@ -8168,17 +7665,13 @@ msgstr "建立一個應用程式密碼，並將它命名為 Penguin Mail。"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/gmail_password_page.rs:80
-msgid ""
-"Copy the 16 letters Google shows and paste them below. Google shows them "
-"only once."
+msgid "Copy the 16 letters Google shows and paste them below. Google shows them only once."
 msgstr "複製 Google 顯示的 16 個字母，並貼到下方。Google 只會顯示一次。"
 
 #. Translators: Google is a name; keep it as it is. App passwords is the name of
 #. Google's page; use the words Google's own page shows in your language.
 #: app/src/ui/gmail_password_page.rs:89
-msgid ""
-"Changing your Google password removes your app passwords. Make a new one to "
-"keep getting mail."
+msgid "Changing your Google password removes your app passwords. Make a new one to keep getting mail."
 msgstr "變更 Google 密碼會移除你的應用程式密碼。請建立新的密碼，以便繼續收信。"
 
 #. Translators: App password is the name of Google's page; use the words Google's own
@@ -8227,9 +7720,7 @@ msgstr "其他登入方式"
 
 #. Translators: {address} is an email address.
 #: app/src/ui/goa_page.rs:293
-msgid ""
-"This computer is already signed in to <b>{address}</b>. Penguin Mail can "
-"read your mail through it."
+msgid "This computer is already signed in to <b>{address}</b>. Penguin Mail can read your mail through it."
 msgstr "這台電腦已登入 <b>{address}</b>。Penguin Mail 可以透過它讀取你的郵件。"
 
 #: app/src/ui/goa_page.rs:297
@@ -8250,16 +7741,12 @@ msgstr "等待 {address}"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:339
-msgid ""
-"Open <b>Online Accounts</b> from your applications menu, add your Google "
-"account, and come back."
+msgid "Open <b>Online Accounts</b> from your applications menu, add your Google account, and come back."
 msgstr "從應用程式選單開啟<b>線上帳號</b>，新增你的 Google 帳號，然後回來。"
 
 #. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
 #: app/src/ui/goa_page.rs:356
-msgid ""
-"Install Online Accounts from your software center, add your Google account "
-"there, and come back."
+msgid "Install Online Accounts from your software center, add your Google account there, and come back."
 msgstr "從軟體中心安裝「線上帳號」，在其中新增你的 Google 帳號，然後回來。"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
@@ -8269,35 +7756,20 @@ msgstr "Penguin Mail 需要取得使用線上帳號的權限。"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
 #: app/src/ui/goa_page.rs:392
-msgid ""
-"Penguin Mail reads Gmail through your computer's Online Accounts. Add "
-"<b>{address}</b> there, then come back."
-msgstr ""
-"Penguin Mail 透過你電腦的線上帳號讀取 Gmail。請在那裡新增 <b>{address}</b>，"
-"然後回來。"
+msgid "Penguin Mail reads Gmail through your computer's Online Accounts. Add <b>{address}</b> there, then come back."
+msgstr "Penguin Mail 透過你電腦的線上帳號讀取 Gmail。請在那裡新增 <b>{address}</b>，然後回來。"
 
 #: app/src/ui/goa_page.rs:415
 msgid "Use {address} instead"
 msgstr "改用 {address}"
 
 #: app/src/ui/hide_my_email.rs:24
-msgid ""
-"Gmail delivers mail sent to these addresses to your inbox. Each one shows "
-"which site shared your address, and you can turn one off when the spam "
-"starts. Your real address is part of each one, so anyone who removes the tag "
-"can still reach you, and your replies come from your main address."
-msgstr ""
-"Gmail 會將寄至這些地址的郵件送至收件匣。每個地址都能看出是哪個網站分享了地"
-"址，開始收到垃圾郵件時可以停用。每個地址都包含真實地址，因此移除標記後仍能寄"
-"信，而回覆也會使用主要地址寄出。"
+msgid "Gmail delivers mail sent to these addresses to your inbox. Each one shows which site shared your address, and you can turn one off when the spam starts. Your real address is part of each one, so anyone who removes the tag can still reach you, and your replies come from your main address."
+msgstr "Gmail 會將寄至這些地址的郵件送至收件匣。每個地址都能看出是哪個網站分享了地址，開始收到垃圾郵件時可以停用。每個地址都包含真實地址，因此移除標記後仍能寄信，而回覆也會使用主要地址寄出。"
 
 #: app/src/ui/hide_my_email.rs:34
-msgid ""
-"Addresses that hide your own. Each one shows which site you gave it to, and "
-"you can turn one off when the spam starts."
-msgstr ""
-"用來隱藏真實地址的地址。每個地址都能看出提供給了哪個網站，開始收到垃圾郵件時"
-"可以停用。"
+msgid "Addresses that hide your own. Each one shows which site you gave it to, and you can turn one off when the spam starts."
+msgstr "用來隱藏真實地址的地址。每個地址都能看出提供給了哪個網站，開始收到垃圾郵件時可以停用。"
 
 #: app/src/ui/hide_my_email.rs:67
 msgid "Off: mail to it is dropped"
@@ -8403,12 +7875,8 @@ msgid "Could not delete the address: {reason}"
 msgstr "無法刪除地址：{reason}"
 
 #: app/src/ui/hide_my_email.rs:599
-msgid ""
-"Mail sent to {address} arrives in your inbox again, without the Hide My "
-"Email label. To stop that mail, turn the address off instead."
-msgstr ""
-"寄至 {address} 的郵件會再次送達收件匣，且不會帶有 [隱藏電子郵件地址] 標籤。若"
-"要阻擋這些郵件，請改為停用地址。"
+msgid "Mail sent to {address} arrives in your inbox again, without the Hide My Email label. To stop that mail, turn the address off instead."
+msgstr "寄至 {address} 的郵件會再次送達收件匣，且不會帶有 [隱藏電子郵件地址] 標籤。若要阻擋這些郵件，請改為停用地址。"
 
 #: app/src/ui/hide_my_email.rs:630
 msgid "Allow Hide My Email"
@@ -8427,19 +7895,12 @@ msgid "Where Did You Use It?"
 msgstr "使用於何處？"
 
 #: app/src/ui/hide_my_email.rs:684
-msgid ""
-"Your provider makes a new address that delivers to you. Give it to one site "
-"only."
-msgstr ""
-"郵件服務商會建立一個新地址，郵件會送達給你。請只將此地址提供給一個網站。"
+msgid "Your provider makes a new address that delivers to you. Give it to one site only."
+msgstr "郵件服務商會建立一個新地址，郵件會送達給你。請只將此地址提供給一個網站。"
 
 #: app/src/ui/hide_my_email.rs:689
-msgid ""
-"You get a new address that ends in your own, such as "
-"name+kite.fern482@gmail.com. Give it to one site only."
-msgstr ""
-"新地址會以自己的地址結尾，例如 name+kite.fern482@gmail.com。請只將此地址提供"
-"給一個網站。"
+msgid "You get a new address that ends in your own, such as name+kite.fern482@gmail.com. Give it to one site only."
+msgstr "新地址會以自己的地址結尾，例如 name+kite.fern482@gmail.com。請只將此地址提供給一個網站。"
 
 #: app/src/ui/hide_my_email.rs:751
 msgid "It is on your clipboard. Mail sent to it arrives in your inbox."
@@ -8450,11 +7911,8 @@ msgid "Could not create the address: {reason}"
 msgstr "無法建立地址：{reason}"
 
 #: app/src/ui/hide_my_email.rs:769
-msgid ""
-"It is on your clipboard. Mail sent to it gets the Hide My Email label in "
-"Gmail."
-msgstr ""
-"已複製至剪貼簿。寄至此地址的郵件會在 Gmail 中加上 [隱藏電子郵件地址] 標籤。"
+msgid "It is on your clipboard. Mail sent to it gets the Hide My Email label in Gmail."
+msgstr "已複製至剪貼簿。寄至此地址的郵件會在 Gmail 中加上 [隱藏電子郵件地址] 標籤。"
 
 #: app/src/ui/hide_my_email.rs:814
 msgid "Your New Address"
@@ -8493,17 +7951,11 @@ msgid "A file has nobody to answer to"
 msgstr "檔案沒有可回覆的對象"
 
 #: app/src/ui/ics_file.rs:196
-msgid ""
-"No account here has a calendar Penguin Mail can add to. Add an account with "
-"a calendar, or turn one on in Preferences, under Calendar, then open the "
-"file again."
-msgstr ""
-"目前沒有帳號提供可讓 Penguin Mail 新增事件的行事曆。請新增具有行事曆的帳號，"
-"或在偏好設定的「行事曆」中啟用行事曆，然後重新開啟檔案。"
+msgid "No account here has a calendar Penguin Mail can add to. Add an account with a calendar, or turn one on in Preferences, under Calendar, then open the file again."
+msgstr "目前沒有帳號提供可讓 Penguin Mail 新增事件的行事曆。請新增具有行事曆的帳號，或在偏好設定的「行事曆」中啟用行事曆，然後重新開啟檔案。"
 
 #: app/src/ui/ics_file.rs:275
-msgid ""
-"Nothing in this file can be added, since its events have no id or start time"
+msgid "Nothing in this file can be added, since its events have no id or start time"
 msgstr "此檔案的活動沒有識別碼或開始時間，因此無法新增"
 
 #: app/src/ui/ics_file.rs:281
@@ -8511,8 +7963,7 @@ msgid "Some events were left out, since they have no id or start time"
 msgstr "部分活動沒有識別碼或開始時間，已略過"
 
 #: app/src/ui/ics_file.rs:291
-msgid ""
-"Penguin Mail has no permission to use this calendar. Allow it in Preferences."
+msgid "Penguin Mail has no permission to use this calendar. Allow it in Preferences."
 msgstr "Penguin Mail 沒有使用此行事曆的權限。請在 [偏好設定] 中允許。"
 
 #: app/src/ui/ics_file.rs:294
@@ -8767,9 +8218,7 @@ msgid "gpgsm already holds everything in this file."
 msgstr "gpgsm 中已有此檔案的全部內容。"
 
 #: app/src/ui/key_import.rs:316
-msgid ""
-"You can sign and decrypt with the secret key now. gpg asks for its "
-"passphrase the first time."
+msgid "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
 msgstr "現在可使用私密金鑰簽署與解密。首次使用時，gpg 會要求輸入密語。"
 
 #: app/src/ui/key_import.rs:319
@@ -8829,13 +8278,8 @@ msgstr "灰色"
 
 #. Translators: Google and Gmail are names; keep them as they are.
 #: app/src/ui/move_sheet.rs:66
-msgid ""
-"Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-"account below to keep your mail arriving. Your mail and settings stay as "
-"they are."
-msgstr ""
-"Penguin Mail 提供了登入 Google 的新方式。請為下方每個 Gmail 帳號選擇一種，以"
-"便繼續收到郵件。您的郵件和設定維持不變。"
+msgid "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail account below to keep your mail arriving. Your mail and settings stay as they are."
+msgstr "Penguin Mail 提供了登入 Google 的新方式。請為下方每個 Gmail 帳號選擇一種，以便繼續收到郵件。您的郵件和設定維持不變。"
 
 #: app/src/ui/move_sheet.rs:88
 msgid "Later"
@@ -8946,8 +8390,7 @@ msgid "Group Inbox into Categories"
 msgstr "將收件匣分成類別"
 
 #: app/src/ui/preferences.rs:161
-msgid ""
-"Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
+msgid "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
 msgstr "依 Gmail 的方式將收件匣分成主要、更新、促銷及社交"
 
 #: app/src/ui/preferences.rs:168
@@ -9035,8 +8478,7 @@ msgid "Event Reminders"
 msgstr "活動提醒"
 
 #: app/src/ui/preferences.rs:322
-msgid ""
-"A notification before each event, at the times the event or its calendar sets"
+msgid "A notification before each event, at the times the event or its calendar sets"
 msgstr "依活動或行事曆設定的時間，在每個活動開始前通知"
 
 #: app/src/ui/preferences.rs:344 app/src/ui/preferences.rs:351
@@ -9045,9 +8487,7 @@ msgid "Accounts"
 msgstr "帳號"
 
 #: app/src/ui/preferences.rs:352
-msgid ""
-"Signature, addresses you send from, servers, contacts, and the space the "
-"server reports."
+msgid "Signature, addresses you send from, servers, contacts, and the space the server reports."
 msgstr "簽名、寄件地址、伺服器、聯絡人，以及伺服器回報的儲存空間。"
 
 #: app/src/ui/preferences.rs:357 app/src/ui/preferences.rs:601
@@ -9075,8 +8515,7 @@ msgid "Signature"
 msgstr "簽名"
 
 #: app/src/ui/preferences.rs:497
-msgid ""
-"Added below new messages and above quoted text in replies. Markdown works."
+msgid "Added below new messages and above quoted text in replies. Markdown works."
 msgstr "新增至新郵件底部及回覆的引用文字上方。支援 Markdown。"
 
 #: app/src/ui/preferences.rs:504
@@ -9143,11 +8582,8 @@ msgid "Signing and Encryption"
 msgstr "簽署與加密"
 
 #: app/src/ui/preferences.rs:672
-msgid ""
-"Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
-"asks for your passphrase itself."
-msgstr ""
-"Penguin Mail 透過 GnuPG 簽署與加密。GnuPG 會保管金鑰，並自行要求輸入密語。"
+msgid "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for your passphrase itself."
+msgstr "Penguin Mail 透過 GnuPG 簽署與加密。GnuPG 會保管金鑰，並自行要求輸入密語。"
 
 #: app/src/ui/preferences.rs:677
 msgid "Your OpenPGP Keys"
@@ -9192,33 +8628,20 @@ msgstr "無法查詢 gpgsm：{reason}"
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
 #: app/src/ui/preferences.rs:816
-msgid ""
-"Penguin Mail signs and encrypts through {programs}, which holds your keys "
-"and asks for your passphrase itself."
-msgid_plural ""
-"Penguin Mail signs and encrypts through {programs}, which hold your keys and "
-"ask for your passphrase themselves."
-msgstr[0] ""
-"Penguin Mail 透過 {programs} 簽署與加密。這些程式會保管金鑰，並自行要求輸入密"
-"語。"
+msgid "Penguin Mail signs and encrypts through {programs}, which holds your keys and asks for your passphrase itself."
+msgid_plural "Penguin Mail signs and encrypts through {programs}, which hold your keys and ask for your passphrase themselves."
+msgstr[0] "Penguin Mail 透過 {programs} 簽署與加密。這些程式會保管金鑰，並自行要求輸入密語。"
 
 #: app/src/ui/preferences.rs:848 app/src/ui/preferences.rs:861
 msgid "Spelling"
 msgstr "拼字"
 
 #: app/src/ui/preferences.rs:850
-msgid ""
-"No dictionaries are installed, so Penguin Mail is not checking spelling. "
-"Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
-"reopen the composer."
-msgstr ""
-"尚未安裝字典，因此 Penguin Mail 不會檢查拼字。請安裝 hunspell-en-us 或 "
-"hunspell-pt-pt 等 Hunspell 字典，再重新開啟郵件編輯器。"
+msgid "No dictionaries are installed, so Penguin Mail is not checking spelling. Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and reopen the composer."
+msgstr "尚未安裝字典，因此 Penguin Mail 不會檢查拼字。請安裝 hunspell-en-us 或 hunspell-pt-pt 等 Hunspell 字典，再重新開啟郵件編輯器。"
 
 #: app/src/ui/preferences.rs:863
-msgid ""
-"The language each account checks spelling in. Dictionaries installed: "
-"{languages}."
+msgid "The language each account checks spelling in. Dictionaries installed: {languages}."
 msgstr "各帳號的拼字檢查語言。已安裝的字典：{languages}。"
 
 #: app/src/ui/preferences.rs:875
@@ -9395,9 +8818,7 @@ msgid "Default Account"
 msgstr "預設帳號"
 
 #: app/src/ui/preferences/accounts.rs:95
-msgid ""
-"Automatic follows this task's context. Use Default Account follows the "
-"choice above."
+msgid "Automatic follows this task's context. Use Default Account follows the choice above."
 msgstr "「自動」會依工作情境選擇帳號。「使用預設帳號」則會採用上方的選擇。"
 
 #: app/src/ui/preferences/accounts.rs:154
@@ -9489,12 +8910,8 @@ msgid "Try a different search"
 msgstr "請嘗試其他搜尋字詞"
 
 #: app/src/ui/preferences/google_route.rs:80
-msgid ""
-"Filters, aliases and the automatic reply need Gmail's own connection, which "
-"this computer's Google sign-in doesn't offer."
-msgstr ""
-"篩選器、別名和自動回覆需要 Gmail 自己的連線，而這台電腦的 Google 登入不提供這"
-"種連線。"
+msgid "Filters, aliases and the automatic reply need Gmail's own connection, which this computer's Google sign-in doesn't offer."
+msgstr "篩選器、別名和自動回覆需要 Gmail 自己的連線，而這台電腦的 Google 登入不提供這種連線。"
 
 #: app/src/ui/preferences/google_route.rs:115
 msgid "Switch {address} to this computer's sign-in?"
@@ -9578,22 +8995,14 @@ msgstr "要新增您的 Google 日曆和聯絡人嗎？"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:130
-msgid ""
-"Penguin Mail asks Google for your calendar, your contacts and the files it "
-"adds to Drive. Google will show its own screen. Your mail is already set up."
-msgstr ""
-"Penguin Mail 會向 Google 要求您的行事曆、聯絡人，以及它新增到 Drive 的檔案。"
-"Google 會顯示它自己的畫面。您的郵件已設定完成。"
+msgid "Penguin Mail asks Google for your calendar, your contacts and the files it adds to Drive. Google will show its own screen. Your mail is already set up."
+msgstr "Penguin Mail 會向 Google 要求您的行事曆、聯絡人，以及它新增到 Drive 的檔案。Google 會顯示它自己的畫面。您的郵件已設定完成。"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
 #: app/src/ui/route_page.rs:139
-msgid ""
-"Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
-"to Penguin Mail (unsafe)."
-msgstr ""
-"Google 可能會顯示「Google 尚未驗證這個應用程式」。請按一下「進階」，然後按一"
-"下「前往 Penguin Mail (不安全)」。"
+msgid "Google may say \"Google hasn't verified this app\". Click Advanced, then Go to Penguin Mail (unsafe)."
+msgstr "Google 可能會顯示「Google 尚未驗證這個應用程式」。請按一下「進階」，然後按一下「前往 Penguin Mail (不安全)」。"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:153
@@ -9650,8 +9059,7 @@ msgid "Rules Written Elsewhere"
 msgstr "在其他程式撰寫的規則"
 
 #: app/src/ui/rules.rs:366
-msgid ""
-"Penguin Mail keeps these as they are. Change them where they were written."
+msgid "Penguin Mail keeps these as they are. Change them where they were written."
 msgstr "Penguin Mail 會保留這些規則。請至原先撰寫規則的程式變更。"
 
 #: app/src/ui/rules.rs:397
@@ -9751,13 +9159,8 @@ msgid "Replace “{script}”?"
 msgstr "是否取代「{script}」？"
 
 #: app/src/ui/rules.rs:722
-msgid ""
-"{provider} runs one set of rules at a time, and it runs “{script}” now. "
-"Penguin Mail's rules would take its place; “{script}” stays on the server, "
-"switched off."
-msgstr ""
-"{provider} 一次只執行一組規則，目前執行的是「{script}」。Penguin Mail 的規則"
-"將取而代之；「{script}」會保留在伺服器上，但停用。"
+msgid "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
+msgstr "{provider} 一次只執行一組規則，目前執行的是「{script}」。Penguin Mail 的規則將取而代之；「{script}」會保留在伺服器上，但停用。"
 
 #: app/src/ui/rules.rs:728
 msgid "Replace"
@@ -9772,35 +9175,20 @@ msgid "Allow Penguin Mail's Sandbox"
 msgstr "允許 Penguin Mail 的沙箱"
 
 #: app/src/ui/sandbox_setup.rs:39
-msgid ""
-"Penguin Mail opens every message in a sandbox, and this system lets an app "
-"start one only when it is allowed. Run this in a terminal once to allow this "
-"copy, then choose Check Again."
-msgstr ""
-"Penguin Mail 會在沙箱中開啟每封郵件，而這個系統只讓獲得允許的應用程式啟動沙"
-"箱。請在終端機中執行一次以下指令來允許這份副本，然後選擇「再次檢查」。"
+msgid "Penguin Mail opens every message in a sandbox, and this system lets an app start one only when it is allowed. Run this in a terminal once to allow this copy, then choose Check Again."
+msgstr "Penguin Mail 會在沙箱中開啟每封郵件，而這個系統只讓獲得允許的應用程式啟動沙箱。請在終端機中執行一次以下指令來允許這份副本，然後選擇「再次檢查」。"
 
 #: app/src/ui/sandbox_setup.rs:48
 msgid "Install the Sandbox Tools"
 msgstr "安裝沙箱工具"
 
 #: app/src/ui/sandbox_setup.rs:50
-msgid ""
-"Penguin Mail opens every message in a sandbox made with Bubblewrap. Install "
-"the bubblewrap and xdg-dbus-proxy packages, then choose Check Again."
-msgstr ""
-"Penguin Mail 會在以 Bubblewrap 建立的沙箱中開啟每封郵件。請安裝 bubblewrap "
-"與 xdg-dbus-proxy 套件，然後選擇「再次檢查」。"
+msgid "Penguin Mail opens every message in a sandbox made with Bubblewrap. Install the bubblewrap and xdg-dbus-proxy packages, then choose Check Again."
+msgstr "Penguin Mail 會在以 Bubblewrap 建立的沙箱中開啟每封郵件。請安裝 bubblewrap 與 xdg-dbus-proxy 套件，然後選擇「再次檢查」。"
 
 #: app/src/ui/sandbox_setup.rs:62
-msgid ""
-"Or install Penguin Mail from <a href=\"https://flathub.org/apps/"
-"io.github.c9dev.penguin-mail\">Flathub</a> or the <a href=\"https://"
-"snapcraft.io/penguin-mail\">Snap Store</a>, which need no setup."
-msgstr ""
-"或從 <a href=\"https://flathub.org/apps/io.github.c9dev.penguin-"
-"mail\">Flathub</a> 或 <a href=\"https://snapcraft.io/penguin-mail\">Snap "
-"Store</a> 安裝 Penguin Mail，不需任何設定。"
+msgid "Or install Penguin Mail from <a href=\"https://flathub.org/apps/io.github.c9dev.penguin-mail\">Flathub</a> or the <a href=\"https://snapcraft.io/penguin-mail\">Snap Store</a>, which need no setup."
+msgstr "或從 <a href=\"https://flathub.org/apps/io.github.c9dev.penguin-mail\">Flathub</a> 或 <a href=\"https://snapcraft.io/penguin-mail\">Snap Store</a> 安裝 Penguin Mail，不需任何設定。"
 
 #: app/src/ui/sandbox_setup.rs:94
 msgid "The sandbox still cannot start"
@@ -9809,8 +9197,7 @@ msgstr "沙箱仍然無法啟動"
 #. Translators: Gmail is a name; use the words Gmail's own settings show in your language for
 #. Send mail as.
 #: app/src/ui/sender_prefs.rs:32
-msgid ""
-"Gmail sends only from addresses you added in Gmail's Send mail as setting."
+msgid "Gmail sends only from addresses you added in Gmail's Send mail as setting."
 msgstr "Gmail 只會從你在 Gmail「以其他地址傳送郵件」設定中新增的地址寄信。"
 
 #: app/src/ui/sender_prefs.rs:39
@@ -9830,9 +9217,7 @@ msgid "Sender Address"
 msgstr "寄件地址"
 
 #: app/src/ui/sender_prefs.rs:140
-msgid ""
-"Uses this account's outgoing server. Replies use the address the message was "
-"sent to."
+msgid "Uses this account's outgoing server. Replies use the address the message was sent to."
 msgstr "使用此帳號的寄件伺服器。回覆時會以原郵件的收件地址寄出。"
 
 #: app/src/ui/sender_prefs.rs:151
@@ -9986,9 +9371,7 @@ msgstr "請選擇這個帳號的登入方式，以取得新郵件"
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
 #: app/src/ui/sidebar.rs:2096
-msgid ""
-"Gmail limits how much mail an app can download each day. Penguin Mail tries "
-"again later."
+msgid "Gmail limits how much mail an app can download each day. Penguin Mail tries again later."
 msgstr "Gmail 限制應用程式每天可下載的郵件量。Penguin Mail 稍後會再試一次。"
 
 #: app/src/ui/sidebar/sections.rs:25
@@ -10076,13 +9459,8 @@ msgid "Switch to JMAP"
 msgstr "切換至 JMAP"
 
 #: app/src/ui/templates.rs:25
-msgid ""
-"Saved bodies the composer's Templates menu drops into a message. Markdown "
-"works, and {{first_name}}, {{name}}, {{email}}, {{subject}} and {{date}} "
-"fill in when you use one."
-msgstr ""
-"儲存的內文可從郵件編輯器的 [範本] 選單加入郵件。支援 Markdown，使用時會填入 "
-"{{first_name}}、{{name}}、{{email}}、{{subject}} 和 {{date}}。"
+msgid "Saved bodies the composer's Templates menu drops into a message. Markdown works, and {{first_name}}, {{name}}, {{email}}, {{subject}} and {{date}} fill in when you use one."
+msgstr "儲存的內文可從郵件編輯器的 [範本] 選單加入郵件。支援 Markdown，使用時會填入 {{first_name}}、{{name}}、{{email}}、{{subject}} 和 {{date}}。"
 
 #: app/src/ui/templates.rs:34
 msgid "Add Template"
@@ -10113,9 +9491,7 @@ msgid "This computer keeps the only copy."
 msgstr "唯一的副本儲存在此電腦上。"
 
 #: app/src/ui/templates.rs:197
-msgid ""
-"The subject is optional. A template with one gives it to a message that has "
-"none."
+msgid "The subject is optional. A template with one gives it to a message that has none."
 msgstr "主旨可留空。若範本有主旨，會填入尚無主旨的郵件。"
 
 #: app/src/ui/templates.rs:213 app/src/ui/templates.rs:215
@@ -10320,9 +9696,7 @@ msgid "Your mail server"
 msgstr "郵件伺服器"
 
 #: app/src/ui/vacation.rs:213
-msgid ""
-"{provider} answers new mail while you are away, even when this computer is "
-"off"
+msgid "{provider} answers new mail while you are away, even when this computer is off"
 msgstr "外出時，{provider} 會回覆新郵件，即使此電腦已關機也一樣"
 
 #: app/src/ui/vacation.rs:248
@@ -10362,8 +9736,7 @@ msgid "Add your first account"
 msgstr "新增第一個帳號"
 
 #: app/src/ui/welcome.rs:40
-msgid ""
-"Choose where your mail lives. You can add more later from the main menu."
+msgid "Choose where your mail lives. You can add more later from the main menu."
 msgstr "請選擇郵件服務。之後可從主選單新增其他帳號。"
 
 #: app/src/ui/window.rs:296
@@ -10594,9 +9967,7 @@ msgid "Get a Release"
 msgstr "取得發行版本"
 
 #: app/src/ui/window.rs:3578
-msgid ""
-"Could not check for messages the server holds to send later, so {account} "
-"stays: {reason}"
+msgid "Could not check for messages the server holds to send later, so {account} stays: {reason}"
 msgstr "無法檢查伺服器保留待稍後寄出的郵件，因此保留 {account}：{reason}"
 
 #: app/src/ui/window.rs:3589
@@ -10673,12 +10044,8 @@ msgid "Messages That Will Not Download"
 msgstr "無法下載的郵件"
 
 #: app/src/ui/window.rs:4599
-msgid ""
-"Penguin Mail could not download these from {address}'s server. It tries "
-"again at each check, except for a message too large to download."
-msgstr ""
-"Penguin Mail 無法從 {address} 的伺服器下載這些郵件。除了超過下載大小上限的郵"
-"件外，每次檢查時都會重試。"
+msgid "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
+msgstr "Penguin Mail 無法從 {address} 的伺服器下載這些郵件。除了超過下載大小上限的郵件外，每次檢查時都會重試。"
 
 #: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:215
 msgid "Delete “{name}”?"
@@ -10693,9 +10060,7 @@ msgid "Name This Account"
 msgstr "為此帳號命名"
 
 #: app/src/ui/window/arrange.rs:143
-msgid ""
-"The sidebar shows the name instead of the address. Leave it empty for the "
-"address."
+msgid "The sidebar shows the name instead of the address. Leave it empty for the address."
 msgstr "側邊欄會顯示名稱而非地址。留空即可顯示地址。"
 
 #: app/src/ui/window/attachments.rs:59
@@ -10745,8 +10110,7 @@ msgid "Moved mail from {sender} to {category}"
 msgstr "已將 {sender} 的郵件移至 {category}"
 
 #: app/src/ui/window/categories.rs:401
-msgid ""
-"Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
+msgid "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr "已將 {sender} 的郵件移至 {category}，但無法為新郵件分類：{reason}"
 
 #: app/src/ui/window/categories/chip.rs:27
@@ -10763,12 +10127,8 @@ msgid "Message list width"
 msgstr "郵件列表寬度"
 
 #: app/src/ui/window/column_width.rs:38
-msgid ""
-"Drag to resize, or use Left and Right. Home and End choose the smallest and "
-"largest widths."
-msgstr ""
-"拖曳以調整大小，或使用向左鍵和向右鍵。Home 鍵和 End 鍵分別選擇最小寬度和最大"
-"寬度。"
+msgid "Drag to resize, or use Left and Right. Home and End choose the smallest and largest widths."
+msgstr "拖曳以調整大小，或使用向左鍵和向右鍵。Home 鍵和 End 鍵分別選擇最小寬度和最大寬度。"
 
 #: app/src/ui/window/detached.rs:39 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:124
@@ -11073,18 +10433,12 @@ msgid "The server deletes it from every device and cannot bring it back."
 msgstr "伺服器會從所有裝置刪除郵件，且無法還原。"
 
 #: app/src/ui/window/press.rs:417
-msgid ""
-"Each account's server deletes them from every device and cannot bring them "
-"back."
+msgid "Each account's server deletes them from every device and cannot bring them back."
 msgstr "各帳號的伺服器會從所有裝置刪除這些郵件，且無法還原。"
 
 #: app/src/ui/window/press.rs:425
-msgid ""
-"Mail in {accounts} stays in the Trash, since its server cannot delete mail "
-"for good."
-msgid_plural ""
-"Mail in {accounts} stays in the Trash, since their servers cannot delete "
-"mail for good."
+msgid "Mail in {accounts} stays in the Trash, since its server cannot delete mail for good."
+msgid_plural "Mail in {accounts} stays in the Trash, since their servers cannot delete mail for good."
 msgstr[0] "{accounts} 的郵件會留在垃圾桶中，因為伺服器無法永久刪除郵件。"
 
 #: app/src/ui/window/press.rs:450
@@ -11116,9 +10470,7 @@ msgid "Dismiss Follow-Up (Delete)"
 msgstr "解除追蹤（Delete）"
 
 #: app/src/ui/window/reminders.rs:27
-msgid ""
-"The conversation leaves the inbox now and comes back at this time, marked "
-"unread."
+msgid "The conversation leaves the inbox now and comes back at this time, marked unread."
 msgstr "對話會立即離開收件匣，並在此時間移回，標示為未讀。"
 
 #: app/src/ui/window/reveal.rs:75
@@ -11130,11 +10482,8 @@ msgid "Could not cancel: {reason}"
 msgstr "無法取消：{reason}"
 
 #: app/src/ui/window/scheduled.rs:228
-msgid ""
-"The server would not take this message back, so Penguin Mail sends it at its "
-"hour while it runs."
-msgstr ""
-"伺服器未能重新收下這封郵件，因此 Penguin Mail 會在執行期間於排定時間寄出。"
+msgid "The server would not take this message back, so Penguin Mail sends it at its hour while it runs."
+msgstr "伺服器未能重新收下這封郵件，因此 Penguin Mail 會在執行期間於排定時間寄出。"
 
 #: app/src/ui/window/scheduled.rs:286
 msgid "This message was canceled in another app."
@@ -11146,22 +10495,17 @@ msgid_plural "{count} messages were canceled in another app."
 msgstr[0] "{count} 封郵件已在其他應用程式中取消。"
 
 #: app/src/ui/window/scheduled.rs:297
-msgid ""
-"Penguin Mail could not confirm whether this message went out. Check Sent."
+msgid "Penguin Mail could not confirm whether this message went out. Check Sent."
 msgstr "Penguin Mail 無法確認這封郵件是否已寄出。請查看寄件備份。"
 
 #: app/src/ui/window/scheduled.rs:300
-msgid ""
-"Penguin Mail could not confirm whether {count} message went out. Check Sent."
-msgid_plural ""
-"Penguin Mail could not confirm whether {count} messages went out. Check Sent."
+msgid "Penguin Mail could not confirm whether {count} message went out. Check Sent."
+msgid_plural "Penguin Mail could not confirm whether {count} messages went out. Check Sent."
 msgstr[0] "Penguin Mail 無法確認 {count} 封郵件是否已寄出。請查看寄件備份。"
 
 #: app/src/ui/window/scheduled.rs:310
-msgid ""
-"The server did not answer, so {count} message still goes out at its hour."
-msgid_plural ""
-"The server did not answer, so {count} messages still go out at their hour."
+msgid "The server did not answer, so {count} message still goes out at its hour."
+msgid_plural "The server did not answer, so {count} messages still go out at their hour."
 msgstr[0] "伺服器沒有回應，因此 {count} 封郵件仍會在排定的時間寄出。"
 
 #: app/src/ui/window/scheduled.rs:323
@@ -11170,26 +10514,16 @@ msgid_plural "{count} messages had already gone out."
 msgstr[0] "{count} 封郵件已經寄出。"
 
 #: app/src/ui/window/scheduled.rs:336
-msgid ""
-"The server is out of reach and Penguin Mail cannot reopen a message, so it "
-"stays in Send Later."
-msgid_plural ""
-"The server is out of reach and Penguin Mail cannot reopen messages, so they "
-"stay in Send Later."
-msgstr[0] ""
-"無法連線至伺服器，且 Penguin Mail 無法重新開啟郵件，因此郵件仍留在 [排程傳"
-"送] 中。"
+msgid "The server is out of reach and Penguin Mail cannot reopen a message, so it stays in Send Later."
+msgid_plural "The server is out of reach and Penguin Mail cannot reopen messages, so they stay in Send Later."
+msgstr[0] "無法連線至伺服器，且 Penguin Mail 無法重新開啟郵件，因此郵件仍留在 [排程傳送] 中。"
 
 #: app/src/ui/window/scheduled.rs:342
-msgid ""
-"Won't be sent. The server is out of reach, so the message is open for you to "
-"save."
+msgid "Won't be sent. The server is out of reach, so the message is open for you to save."
 msgstr "郵件將不會傳送。無法連線至伺服器，因此已開啟郵件供手動儲存。"
 
 #: app/src/ui/window/scheduled.rs:345
-msgid ""
-"Won't be sent. The server is out of reach, so the messages are open for you "
-"to save."
+msgid "Won't be sent. The server is out of reach, so the messages are open for you to save."
 msgstr "這些郵件將不會傳送。無法連線至伺服器，因此已開啟郵件供手動儲存。"
 
 #: app/src/ui/window/scheduled.rs:347
@@ -11201,20 +10535,15 @@ msgid "Won't be sent. The messages are in Drafts."
 msgstr "這些郵件將不會傳送，已移至 [草稿]。"
 
 #: app/src/ui/window/scheduled.rs:350
-msgid ""
-"Won't be sent. Some are in Drafts, and the ones the server could not take "
-"are open for you to save."
-msgstr ""
-"郵件將不會傳送。部分已移至 [草稿]，伺服器無法接收的郵件則已開啟供手動儲存。"
+msgid "Won't be sent. Some are in Drafts, and the ones the server could not take are open for you to save."
+msgstr "郵件將不會傳送。部分已移至 [草稿]，伺服器無法接收的郵件則已開啟供手動儲存。"
 
 #: app/src/ui/window/senders.rs:64
 msgid "This message has no unsubscribe link"
 msgstr "此郵件沒有取消訂閱連結"
 
 #: app/src/ui/window/senders.rs:144
-msgid ""
-"The request to leave {sender} waits in the Outbox. It goes out as soon as it "
-"can."
+msgid "The request to leave {sender} waits in the Outbox. It goes out as soon as it can."
 msgstr "取消訂閱 {sender} 的請求正在寄件匣中等候，能傳送時就會送出。"
 
 #: app/src/ui/window/senders.rs:210
@@ -11234,12 +10563,8 @@ msgid "Block {sender}?"
 msgstr "是否封鎖 {sender}？"
 
 #: app/src/ui/window/senders.rs:274
-msgid ""
-"New mail from {email} goes straight to the Trash. This conversation moves "
-"there now. Remove the rule under Rules to unblock."
-msgstr ""
-"來自 {email} 的新郵件會直接移至垃圾桶，此對話現在也會移至垃圾桶。若要解除封"
-"鎖，請在 [規則] 中移除該規則。"
+msgid "New mail from {email} goes straight to the Trash. This conversation moves there now. Remove the rule under Rules to unblock."
+msgstr "來自 {email} 的新郵件會直接移至垃圾桶，此對話現在也會移至垃圾桶。若要解除封鎖，請在 [規則] 中移除該規則。"
 
 #: app/src/ui/window/senders.rs:279
 msgid "Block"
@@ -11438,15 +10763,11 @@ msgid "Checking for mail"
 msgstr "正在檢查郵件"
 
 #: app/src/ui/window/spaces.rs:24
-msgid ""
-"“{title}” was saved without “{file}”, which moved or was deleted before it "
-"could upload"
+msgid "“{title}” was saved without “{file}”, which moved or was deleted before it could upload"
 msgstr "已儲存「{title}」，但未包含「{file}」；檔案在上傳前已移動或刪除"
 
 #: app/src/ui/window/spaces.rs:33
-msgid ""
-"Someone else changed {field} on “{title}” at the same time; their version "
-"was kept"
+msgid "Someone else changed {field} on “{title}” at the same time; their version was kept"
 msgstr "其他人同時變更了「{title}」的{field}，已保留對方的版本"
 
 #: app/src/ui/window/spaces.rs:43
@@ -11552,14 +10873,11 @@ msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr "Penguin Mail 無法驗證發行版本的簽章：{reason}"
 
 #: app/src/update/signature.rs:147
-msgid ""
-"This release is not signed with Penguin Mail's key, so Penguin Mail will not "
-"install it."
+msgid "This release is not signed with Penguin Mail's key, so Penguin Mail will not install it."
 msgstr "此發行版本未以 Penguin Mail 的金鑰簽署，因此 Penguin Mail 不會安裝。"
 
 #: app/src/update/signature.rs:151
-msgid ""
-"Checking the release's signature needs gpgv or gpg, and neither is installed."
+msgid "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr "驗證發行版本簽章需要 gpgv 或 gpg，但兩者都未安裝。"
 
 #. A leading zero on the hour would read "03:05 PM" where every
@@ -11741,19 +11059,15 @@ msgid "You didn't allow access"
 msgstr "未允許存取"
 
 #: domain/src/sign_in_page.rs:44
-msgid ""
-"Penguin Mail has not been signed in. To try again, go back to Penguin Mail "
-"and press Grant Access."
-msgstr ""
-"Penguin Mail 尚未登入。若要重試，請回到 Penguin Mail 並按下 [授予存取權]。"
+msgid "Penguin Mail has not been signed in. To try again, go back to Penguin Mail and press Grant Access."
+msgstr "Penguin Mail 尚未登入。若要重試，請回到 Penguin Mail 並按下 [授予存取權]。"
 
 #: domain/src/sign_in_page.rs:50
 msgid "Sign-in didn't finish"
 msgstr "登入未完成"
 
 #: domain/src/sign_in_page.rs:51
-msgid ""
-"Go back to Penguin Mail to see why and try again. You can close this tab."
+msgid "Go back to Penguin Mail to see why and try again. You can close this tab."
 msgstr "請回到 Penguin Mail 查看原因並重試。可以關閉此分頁。"
 
 #: domain/src/sign_in_page.rs:56
@@ -11801,9 +11115,7 @@ msgid "The message was sent, but Penguin Mail could not keep a copy in Sent."
 msgstr "郵件已寄出，但 Penguin Mail 無法在寄件備份中保留副本。"
 
 #: sync/src/account/outbox.rs:175
-msgid ""
-"The server holds this message to send at its hour. Cancel Send before you "
-"change it."
+msgid "The server holds this message to send at its hour. Cancel Send before you change it."
 msgstr "伺服器正保留這封郵件，將於排定時間寄出。請先取消傳送再修改。"
 
 #: sync/src/account/receipts.rs:31
@@ -11811,9 +11123,7 @@ msgid "Read: {subject}"
 msgstr "已讀：{subject}"
 
 #: sync/src/account/receipts.rs:39
-msgid ""
-"Your message to {address} was shown on screen. This receipt does not say "
-"whether it was read or understood."
+msgid "Your message to {address} was shown on screen. This receipt does not say whether it was read or understood."
 msgstr "寄給 {address} 的郵件已顯示在螢幕上。此回條不表示已閱讀或理解內容。"
 
 #: sync/src/account/receipts.rs:192
@@ -11829,18 +11139,12 @@ msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} 忙碌中。仍在處理 {conversations}。"
 
 #: sync/src/account/writes.rs:788
-msgid ""
-"{provider} is busy, so “{action}” did not go through for {conversations}. "
-"Try again in a moment."
-msgstr ""
-"{provider} 忙碌中，因此「{action}」未能套用至 {conversations}。請稍後重試。"
+msgid "{provider} is busy, so “{action}” did not go through for {conversations}. Try again in a moment."
+msgstr "{provider} 忙碌中，因此「{action}」未能套用至 {conversations}。請稍後重試。"
 
 #: sync/src/account/writes.rs:797
-msgid ""
-"{provider} stayed busy for {waited}, so “{action}” did not go through for "
-"{conversations}."
-msgstr ""
-"{provider} 持續忙碌了 {waited}，因此「{action}」未能套用至 {conversations}。"
+msgid "{provider} stayed busy for {waited}, so “{action}” did not go through for {conversations}."
+msgstr "{provider} 持續忙碌了 {waited}，因此「{action}」未能套用至 {conversations}。"
 
 #: sync/src/account/writes.rs:804
 msgid "{action} failed: {reason}"
@@ -11886,9 +11190,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "將為 {accounts} 新增標籤。"
 
 #: sync/src/calendar_copy.rs:1106
-msgid ""
-"this account's calendars moved to another server, which does not have this "
-"event"
+msgid "this account's calendars moved to another server, which does not have this event"
 msgstr "此帳號的行事曆已移到另一台伺服器，那裡沒有這個活動"
 
 #: sync/src/calendar_copy.rs:1275 sync/src/calendar_copy.rs:1416
@@ -11901,9 +11203,7 @@ msgid "the calendar is gone"
 msgstr "行事曆已不存在"
 
 #: sync/src/calendar_copy.rs:2308
-msgid ""
-"Google Calendar offers out of office and focus time only on some work and "
-"school accounts ({reason})"
+msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google 日曆僅為部分工作及學校帳號提供外出與專注時間（{reason}）"
 
 #: sync/src/error.rs:170
@@ -11919,9 +11219,7 @@ msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail 保留「{name}」作為自己的標籤。請選擇其他名稱。"
 
 #: sync/src/error.rs:209
-msgid ""
-"Google Calendar makes “{title}” itself, so only Google Calendar can change "
-"it."
+msgid "Google Calendar makes “{title}” itself, so only Google Calendar can change it."
 msgstr "Google 日曆會自行建立「{title}」，因此僅能由 Google 日曆變更。"
 
 #: sync/src/error.rs:217
@@ -12100,15 +11398,11 @@ msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}。Penguin Mail 已停止重試"
 
 #: sync/src/outbox.rs:120
-msgid ""
-"The server still holds this message and sends it at its hour. Try again "
-"later, or use Cancel Send."
+msgid "The server still holds this message and sends it at its hour. Try again later, or use Cancel Send."
 msgstr "伺服器仍保留這封郵件，並將於排定時間寄出。請稍後再試，或取消傳送。"
 
 #: sync/src/outbox.rs:132
-msgid ""
-"The server still holds this message and could not be asked to let it go. Try "
-"again later."
+msgid "The server still holds this message and could not be asked to let it go. Try again later."
 msgstr "伺服器仍保留這封郵件，且無法要求它釋出。請稍後再試。"
 
 #: sync/src/outbox.rs:1760
@@ -12228,12 +11522,8 @@ msgid "The server could not take this request."
 msgstr "伺服器無法接受此請求。"
 
 #: sync/src/services/jmap/jscal.rs:1556
-msgid ""
-"Penguin Mail cannot read how this event repeats, so it cannot change the "
-"repeat. Change it in the app that set it."
-msgstr ""
-"Penguin Mail 無法讀取此活動的重複方式，因此無法變更重複設定。請在設定它的應用"
-"程式中變更。"
+msgid "Penguin Mail cannot read how this event repeats, so it cannot change the repeat. Change it in the app that set it."
+msgstr "Penguin Mail 無法讀取此活動的重複方式，因此無法變更重複設定。請在設定它的應用程式中變更。"
 
 #: sync/src/services/jmap/jscal.rs:1562
 msgid "Penguin Mail cannot save this repeat to a JMAP calendar."
@@ -12276,9 +11566,7 @@ msgid "The server could not read the message to send it."
 msgstr "伺服器無法讀取要寄送的郵件。"
 
 #: sync/src/services/jmap/outgoing.rs:110
-msgid ""
-"This account can read mail but not send it: its sign-in has no access to "
-"sending."
+msgid "This account can read mail but not send it: its sign-in has no access to sending."
 msgstr "此帳號可以讀取郵件，但無法寄件：其登入未取得寄件權限。"
 
 #: sync/src/services/jmap/outgoing.rs:127
@@ -12286,8 +11574,7 @@ msgid "This account has no address the server lets it send from."
 msgstr "此帳號沒有伺服器允許用來寄件的地址。"
 
 #: sync/src/services/jmap/outgoing.rs:152
-msgid ""
-"The server has neither a Drafts nor a Sent mailbox to keep the message in."
+msgid "The server has neither a Drafts nor a Sent mailbox to keep the message in."
 msgstr "伺服器沒有 [草稿] 或 [寄件備份] 信箱可存放此郵件。"
 
 #: sync/src/services/jmap/outgoing.rs:190
@@ -12295,9 +11582,7 @@ msgid "The server has no Drafts mailbox."
 msgstr "伺服器沒有 [草稿] 信箱。"
 
 #: sync/src/services/jmap/outgoing.rs:202
-msgid ""
-"The server already keeps this exact message outside Drafts, so it cannot "
-"also keep it as a draft."
+msgid "The server already keeps this exact message outside Drafts, so it cannot also keep it as a draft."
 msgstr "伺服器已在草稿以外保存了這封完全相同的郵件，因此無法再將它保存為草稿。"
 
 #: sync/src/services/jmap/sieve.rs:37
@@ -12313,8 +11598,7 @@ msgid "This server does not sort mail into categories."
 msgstr "此伺服器不會將郵件分成類別。"
 
 #: sync/src/services/jmap/writes.rs:177
-msgid ""
-"A message must stay in at least one mailbox, and this server has no Archive."
+msgid "A message must stay in at least one mailbox, and this server has no Archive."
 msgstr "郵件必須至少留在一個信箱中，而此伺服器沒有 [封存] 信箱。"
 
 #: sync/src/services/local.rs:30
@@ -12354,9 +11638,7 @@ msgid "Outlook has no other calendars to add."
 msgstr "Outlook 沒有可新增的其他行事曆。"
 
 #: sync/src/services/microsoft/errors.rs:18
-msgid ""
-"This mailbox is on your organization's own Exchange server, which Penguin "
-"Mail cannot reach."
+msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
 msgstr "此信箱位於所屬組織的 Exchange 伺服器上，Penguin Mail 無法存取。"
 
 #: sync/src/services/microsoft/outgoing.rs:72
@@ -12368,9 +11650,7 @@ msgid "The message cannot be read."
 msgstr "無法讀取郵件。"
 
 #: sync/src/services/microsoft/outgoing.rs:89
-msgid ""
-"Microsoft cannot send a signed or encrypted message larger than 3 MB. Make "
-"the files smaller or send them apart."
+msgid "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
 msgstr "Microsoft 無法傳送超過 3 MB 的簽署或加密郵件。請縮小檔案或分開傳送。"
 
 #: sync/src/services/microsoft/rules.rs:119
@@ -12386,10 +11666,8 @@ msgid "A folder needs a name."
 msgstr "資料夾需要名稱。"
 
 #: sync/src/services/pop3/mod.rs:473
-msgid ""
-"Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
-msgstr ""
-"Penguin Mail 保留收件匣、寄件備份、草稿、垃圾桶、垃圾郵件及封存的名稱。"
+msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
+msgstr "Penguin Mail 保留收件匣、寄件備份、草稿、垃圾桶、垃圾郵件及封存的名稱。"
 
 #: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
@@ -12400,16 +11678,11 @@ msgid "The rule is read-only."
 msgstr "此為唯讀規則。"
 
 #: sync/src/services/sieve.rs:256
-msgid ""
-"{provider} offers no encrypted connection for rules, so Penguin Mail does "
-"not send your password there."
-msgstr ""
-"{provider} 未提供規則的加密連線，因此 Penguin Mail 不會將密碼傳送至該處。"
+msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
+msgstr "{provider} 未提供規則的加密連線，因此 Penguin Mail 不會將密碼傳送至該處。"
 
 #: sync/src/services/sieve.rs:269
-msgid ""
-"{provider} cannot run this rule: its server lacks the Sieve extension "
-"“{extension}”."
+msgid "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 msgstr "{provider} 無法執行此規則：伺服器缺少 Sieve 擴充功能「{extension}」。"
 
 #: sync/src/services/sieve.rs:274
@@ -12437,8 +11710,7 @@ msgid "Choose what the rule does"
 msgstr "請選擇規則執行的操作"
 
 #: sync/src/sign_in.rs:358
-msgid ""
-"You signed in to a different account than {address}, so nothing changed."
+msgid "You signed in to a different account than {address}, so nothing changed."
 msgstr "您登入的帳號不是 {address}，因此未做任何變更。"
 
 #: sync/src/sign_in.rs:373
@@ -12446,29 +11718,16 @@ msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} 已是 Penguin Mail 中的 {provider} 帳號。"
 
 #: sync/src/sign_in.rs:535
-msgid ""
-"A calendar account named {name} is already here, for the server at "
-"{address}. Remove it to add this server under that name."
-msgstr ""
-"已有名為 {name} 的行事曆帳號，對應位於 {address} 的伺服器。請先移除它，才能以"
-"這個名稱新增此伺服器。"
+msgid "A calendar account named {name} is already here, for the server at {address}. Remove it to add this server under that name."
+msgstr "已有名為 {name} 的行事曆帳號，對應位於 {address} 的伺服器。請先移除它，才能以這個名稱新增此伺服器。"
 
 #: sync/src/sign_in.rs:544
-msgid ""
-"A calendar account named {name} is already here, signed in to this server as "
-"{user}. Type {user} to sign it in again, or remove it to sign in as someone "
-"else."
-msgstr ""
-"已有名為 {name} 的行事曆帳號，以 {user} 的身分登入此伺服器。請輸入 {user} 來"
-"重新登入，或先移除它，再以其他使用者身分登入。"
+msgid "A calendar account named {name} is already here, signed in to this server as {user}. Type {user} to sign it in again, or remove it to sign in as someone else."
+msgstr "已有名為 {name} 的行事曆帳號，以 {user} 的身分登入此伺服器。請輸入 {user} 來重新登入，或先移除它，再以其他使用者身分登入。"
 
 #: sync/src/sign_in.rs:553
-msgid ""
-"Sign In Again keeps {name} on the server at {address}. To use another server "
-"or user name, add it as a calendar account of its own."
-msgstr ""
-"[重新登入] 會讓 {name} 繼續使用位於 {address} 的伺服器。若要使用其他伺服器或"
-"使用者名稱，請將它新增為獨立的行事曆帳號。"
+msgid "Sign In Again keeps {name} on the server at {address}. To use another server or user name, add it as a calendar account of its own."
+msgstr "[重新登入] 會讓 {name} 繼續使用位於 {address} 的伺服器。若要使用其他伺服器或使用者名稱，請將它新增為獨立的行事曆帳號。"
 
 #. The JMAP server publishes no sign-in a browser can run.
 #: sync/src/sign_in/browser.rs:108
@@ -12476,9 +11735,7 @@ msgid "This server does not offer a sign-in in the browser."
 msgstr "此伺服器不提供在瀏覽器中登入。"
 
 #: sync/src/sign_in/browser.rs:115
-msgid ""
-"The server did not let Penguin Mail stay signed in. Sign in with a password "
-"or a token instead."
+msgid "The server did not let Penguin Mail stay signed in. Sign in with a password or a token instead."
 msgstr "伺服器未讓 Penguin Mail 保持登入。請改用密碼或權杖登入。"
 
 #. Nobody came back from the browser within the wait.
@@ -12487,39 +11744,27 @@ msgid "Gave up waiting for the browser after ten minutes."
 msgstr "已等候瀏覽器十分鐘，停止等候。"
 
 #: sync/src/sign_in/browser.rs:139
-msgid ""
-"Penguin Mail can't find your Google project on this computer. Give it the "
-"key again to sign in."
-msgstr ""
-"Penguin Mail 在這台電腦上找不到你的 Google 專案。請再次提供金鑰以登入。"
+msgid "Penguin Mail can't find your Google project on this computer. Give it the key again to sign in."
+msgstr "Penguin Mail 在這台電腦上找不到你的 Google 專案。請再次提供金鑰以登入。"
 
 #: sync/src/sign_in/browser.rs:151
-msgid ""
-"This copy of Penguin Mail was built without Google sign-in. Get a release "
-"from github.com/c9dev/penguin-mail/releases."
-msgstr ""
-"此版本的 Penguin Mail 未包含 Google 登入功能。請從 github.com/c9dev/penguin-"
-"mail/releases 取得發行版本。"
+msgid "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
+msgstr "此版本的 Penguin Mail 未包含 Google 登入功能。請從 github.com/c9dev/penguin-mail/releases 取得發行版本。"
 
 #: sync/src/sign_in/browser.rs:164
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr "已以 {account} 登入。請選擇 {wanted} 以重新連線至該帳號。"
 
 #: sync/src/sign_in/browser.rs:174
-msgid ""
-"Penguin Mail cannot work without access to your mail. Sign in again and "
-"leave the Gmail permission ticked."
-msgstr ""
-"Penguin Mail 需要郵件存取權才能運作。請重新登入，並保留勾選 Gmail 權限。"
+msgid "Penguin Mail cannot work without access to your mail. Sign in again and leave the Gmail permission ticked."
+msgstr "Penguin Mail 需要郵件存取權才能運作。請重新登入，並保留勾選 Gmail 權限。"
 
 #: sync/src/sign_in/browser.rs:184
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "所屬組織的管理員必須核准 Penguin Mail。"
 
 #: sync/src/sign_in/browser.rs:187
-msgid ""
-"Penguin Mail cannot work without access to your mail. Sign in again and "
-"allow it."
+msgid "Penguin Mail cannot work without access to your mail. Sign in again and allow it."
 msgstr "Penguin Mail 需要郵件存取權才能運作。請重新登入並允許存取。"
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. Google is a name.
@@ -12533,12 +11778,8 @@ msgid "Mail is turned off for this account in Online Accounts."
 msgstr "線上帳號中已關閉這個帳號的郵件。"
 
 #: sync/src/sign_in/own_client.rs:87
-msgid ""
-"{set} is set but {missing} is not. Set both to sign in with your own Google "
-"client, or neither to use Penguin Mail's."
-msgstr ""
-"已設定 {set}，但未設定 {missing}。兩者都設定即可使用自己的 Google 用戶端登"
-"入，兩者都不設定則使用 Penguin Mail 的用戶端。"
+msgid "{set} is set but {missing} is not. Set both to sign in with your own Google client, or neither to use Penguin Mail's."
+msgstr "已設定 {set}，但未設定 {missing}。兩者都設定即可使用自己的 Google 用戶端登入，兩者都不設定則使用 Penguin Mail 的用戶端。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:187
@@ -12550,9 +11791,7 @@ msgid "This isn't the file from step 5."
 msgstr "這不是第 5 步的檔案。"
 
 #: sync/src/sign_in/own_client.rs:191
-msgid ""
-"This file has no secret. Make a new key in step 5 and download it straight "
-"away."
+msgid "This file has no secret. Make a new key in step 5 and download it straight away."
 msgstr "這個檔案沒有密鑰。請在第 5 步建立新的金鑰並立即下載。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
@@ -12562,8 +11801,7 @@ msgstr "請同時貼上用戶端 ID 和用戶端密鑰"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:199
-msgid ""
-"Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
+msgid "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
 msgstr "請重新從第 5 步複製用戶端 ID。它以 .apps.googleusercontent.com 結尾。"
 
 #. Translators: said under the key file a person chose in the Google project setup.
@@ -12611,15 +11849,213 @@ msgstr "標示為非垃圾郵件"
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
 
-#~ msgid ""
-#~ "Every control named for screen readers and reachable from the keyboard, "
-#~ "in American English, British English, French, German, Indonesian, "
-#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
-#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
-#~ msgstr ""
-#~ "所有控制項都有螢幕閱讀器可讀取的名稱，也能以鍵盤操作；介面提供美式英文、英"
-#~ "式英文、法文、德文、印尼文、義大利文、日文、韓文、波蘭文、俄文、西班牙文、"
-#~ "歐洲葡萄牙文、簡體中文、正體中文（台灣）、土耳其文與越南文。"
+#: app/src/app.rs:407
+msgid "Could not mark all mail as read: {reason}"
+msgstr "無法將所有郵件標示為已讀：{reason}"
+
+#: app/src/app/mail_file.rs:77
+#, fuzzy
+#| msgid "This file holds no OpenPGP key."
+msgid "This file could not be read."
+msgstr "此檔案沒有 OpenPGP 金鑰。"
+
+#: app/src/compose.rs:1236
+#, fuzzy
+#| msgid "On {date}, {sender} wrote:"
+msgid "{sender} wrote:"
+msgstr "{date}，{sender} 寫道："
+
+#: app/src/settings/mod.rs:695
+#| msgid "Preview"
+msgid "No Preview"
+msgstr "不顯示預覽"
+
+#: app/src/settings/mod.rs:696
+msgid "1 Line"
+msgstr "1 行"
+
+#: app/src/settings/mod.rs:697
+msgid "2 Lines"
+msgstr "2 行"
+
+#: app/src/tray.rs:239
+msgid "Mark All as Read"
+msgstr "全部標示為已讀"
+
+#: app/src/ui/eml_file.rs:31 app/src/ui/eml_file.rs:38
+#, fuzzy
+#| msgid "This file is too large to be a calendar."
+msgid "This file is too large to be a message."
+msgstr "此檔案過大，無法作為行事曆。"
+
+#: app/src/ui/eml_file.rs:41
+#, fuzzy
+#| msgid "This file holds no OpenPGP key."
+msgid "This file is empty."
+msgstr "此檔案沒有 OpenPGP 金鑰。"
+
+#: app/src/ui/eml_file.rs:53
+#, fuzzy
+#| msgid "This file holds no certificate."
+msgid "This file does not hold a message."
+msgstr "此檔案沒有憑證。"
+
+#: app/src/ui/preferences.rs:243
+#| msgid "Message Source"
+msgid "Message Preview"
+msgstr "郵件預覽"
+
+#: app/src/ui/preferences.rs:244
+msgid "Lines of message text below the subject"
+msgstr "主旨下方顯示的郵件內文行數"
+
+#: app/src/ui/preferences.rs:250
+#| msgid "{count} unread message"
+#| msgid_plural "{count} unread messages"
+msgid "Bold Unread Messages"
+msgstr "未讀郵件使用粗體"
+
+#: app/src/ui/preferences.rs:252
+msgid "Use heavier text for unread senders, subjects, and dates"
+msgstr "未讀郵件的寄件者、主旨與日期使用粗體"
+
+#: app/src/ui/preferences.rs:259
+#| msgid "Always Load Images?"
+msgid "Always Bold Senders"
+msgstr "寄件者一律使用粗體"
+
+#: app/src/ui/preferences.rs:261
+msgid "Use heavier sender text for both read and unread messages"
+msgstr "已讀與未讀郵件的寄件者皆使用粗體"
+
+#: app/src/ui/preferences.rs:268
+#| msgid "Show Calendars"
+msgid "Show Avatars"
+msgstr "顯示大頭貼"
+
+#: app/src/ui/preferences.rs:270
+msgid "Show contact pictures or initials in the message list"
+msgstr "在郵件列表中顯示聯絡人照片或姓名縮寫"
+
+#: app/src/ui/preferences.rs:519
+msgid "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgstr "此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址的網域。"
+
+#: app/src/ui/sender_prefs/signature.rs:26
+#| msgid "No signature"
+msgid "Use Account Signature"
+msgstr "使用帳號簽名"
+
+#: app/src/ui/sender_prefs/signature.rs:27
+#| msgid "Signature"
+msgid "Custom Signature"
+msgstr "自訂簽名"
+
+#: app/src/ui/sender_prefs/signature.rs:49
+msgid "Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgstr "支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址的網域。"
+
+#: app/src/ui/sidebar.rs:1729
+msgid "Empty Trash…"
+msgstr "清空垃圾桶…"
+
+#: app/src/ui/thread_list/filters.rs:26
+msgid "Unread Only"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:27
+#, fuzzy
+#| msgid "Flagged blue"
+msgid "Flagged Only"
+msgstr "已加上藍色旗標"
+
+#: app/src/ui/thread_list/filters.rs:28
+#, fuzzy
+#| msgid "Attachments"
+msgid "With Attachments"
+msgstr "附件"
+
+#: app/src/ui/thread_list/filters.rs:34
+msgid "Match all selected filters"
+msgstr ""
+
+#: app/src/ui/thread_list/filters.rs:38
+#, fuzzy
+#| msgid "Calendar File"
+msgid "Clear Filters"
+msgstr "行事曆檔案"
+
+#: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
+#: app/src/ui/thread_list/filters.rs:101
+#, fuzzy
+#| msgid "New Messages"
+msgid "Filter Messages"
+msgstr "新郵件"
+
+#: app/src/ui/thread_list/filters.rs:99
+#, fuzzy
+#| msgid "New Message (C)"
+msgid "Filter Messages (Active)"
+msgstr "新增郵件（C）"
+
+#: app/src/ui/window.rs:2555
+#, fuzzy
+#| msgid "Add an account first"
+msgid "Add an account to reply or forward"
+msgstr "請先新增帳號"
+
+#: app/src/ui/window/export.rs:157
+msgid "the write was interrupted"
+msgstr ""
+
+#: app/src/ui/window/loose.rs:165
+#, fuzzy
+#| msgid "Read: {subject}"
+msgid "Attached to {subject}"
+msgstr "已讀：{subject}"
+
+#: app/src/ui/window/trash.rs:43
+msgid "Empty Trash?"
+msgstr "是否清空垃圾桶？"
+
+#: app/src/ui/window/trash.rs:46
+msgid ""
+"Permanently delete every message in Trash for these accounts, including older mail not stored on this computer? This cannot be undone.\n"
+"\n"
+"{accounts}"
+msgstr ""
+"是否永久刪除下列帳號的 [垃圾桶] 中所有郵件，包括未儲存在這部電腦上的舊郵件？此操作無法復原。\n"
+"\n"
+"{accounts}"
+
+#: app/src/ui/window/trash.rs:50
+#| msgid "Empty"
+msgid "Empty Trash"
+msgstr "清空垃圾桶"
+
+#: app/src/ui/window/trash.rs:56
+msgid "Emptying Trash…"
+msgstr "正在清空垃圾桶…"
+
+#: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
+#: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
+#| msgid "Could not load mail for {account}: {reason}"
+msgid "Could not empty Trash for {account}: {reason}"
+msgstr "無法清空 {account} 的垃圾桶：{reason}"
+
+#: app/src/ui/window/trash.rs:94
+#| msgid "Deleted {count} message forever"
+#| msgid_plural "Deleted {count} messages forever"
+msgid "Deleted {count} message from Trash for {account}"
+msgid_plural "Deleted {count} messages from Trash for {account}"
+msgstr[0] "已從 [垃圾桶] 刪除 {count} 封郵件（帳號：{account}）"
+
+#: sync/src/mailbox.rs:521
+msgid "Change the filters or load more messages if available."
+msgstr ""
+
+#~ msgid "Every control named for screen readers and reachable from the keyboard, in American English, British English, French, German, Indonesian, Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr "所有控制項都有螢幕閱讀器可讀取的名稱，也能以鍵盤操作；介面提供美式英文、英式英文、法文、德文、印尼文、義大利文、日文、韓文、波蘭文、俄文、西班牙文、歐洲葡萄牙文、簡體中文、正體中文（台灣）、土耳其文與越南文。"
 
 #~ msgid "Install Bubblewrap"
 #~ msgstr "安裝 Bubblewrap"
@@ -12651,14 +12087,8 @@ msgstr "移至 {folder}"
 #~ msgid "Hide My Email works with Gmail accounts."
 #~ msgstr "[隱藏電子郵件地址] 可用於 Gmail 帳號。"
 
-#~ msgid ""
-#~ "{provider} does not let an API token change the automatic reply. Change "
-#~ "it on {provider}'s website."
-#~ msgstr ""
-#~ "{provider} 不允許 API 權杖變更自動回覆。請到 {provider} 的網站上變更。"
+#~ msgid "{provider} does not let an API token change the automatic reply. Change it on {provider}'s website."
+#~ msgstr "{provider} 不允許 API 權杖變更自動回覆。請到 {provider} 的網站上變更。"
 
-#~ msgid ""
-#~ "Penguin Mail looks for these when you add an account. The login is the "
-#~ "account's own."
-#~ msgstr ""
-#~ "新增帳號時，Penguin Mail 會尋找這些伺服器。登入時使用帳號本身的資料。"
+#~ msgid "Penguin Mail looks for these when you add an account. The login is the account's own."
+#~ msgstr "新增帳號時，Penguin Mail 會尋找這些伺服器。登入時使用帳號本身的資料。"

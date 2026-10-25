@@ -14,8 +14,8 @@ use serde_json::{Value, json};
 use super::mcp::McpServer;
 
 use super::{
-    Choice, ColorScheme, ComposeFormat, Feature, MarkRead, ReadReceipts, RemoteImages, Settings,
-    TextSize, UndoSend, Use, WebSearch,
+    Choice, ColorScheme, ComposeFormat, Feature, MarkRead, PreviewLines, ReadReceipts,
+    RemoteImages, Settings, TextSize, UndoSend, Use, WebSearch,
 };
 
 /// One named change to the preferences.
@@ -25,6 +25,10 @@ pub enum Change {
     MarkRead(MarkRead),
     RemoteImages(RemoteImages),
     TextSize(TextSize),
+    PreviewLines(PreviewLines),
+    BoldUnread(bool),
+    BoldSenders(bool),
+    ShowAvatars(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
     ColorScheme(ColorScheme),
@@ -102,6 +106,12 @@ pub enum Change {
     /// An account's signature. Blank text removes it.
     Signature {
         email: String,
+        text: String,
+    },
+    /// A sender's signature choice and its saved Markdown.
+    SenderSignature {
+        email: String,
+        mode: super::SignatureMode,
         text: String,
     },
     /// Adds the address when it is not a VIP yet, removes it when it is.
@@ -274,6 +284,10 @@ impl Change {
             Change::MarkRead(when) => settings.mark_read = when,
             Change::RemoteImages(when) => settings.remote_images = when,
             Change::TextSize(size) => settings.text_size = size,
+            Change::PreviewLines(lines) => settings.preview_lines = lines,
+            Change::BoldUnread(on) => settings.bold_unread = on,
+            Change::BoldSenders(on) => settings.bold_senders = on,
+            Change::ShowAvatars(on) => settings.show_avatars = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
                     TextSize::Normal
@@ -341,6 +355,12 @@ impl Change {
                 }
             }
             Change::Signature { email, text } => settings.set_signature(&email, &text),
+            Change::SenderSignature { email, mode, text } => {
+                settings.signature_modes.insert(email.to_lowercase(), mode);
+                settings
+                    .signatures
+                    .insert(email.to_lowercase(), text.trim_end().to_string());
+            }
             Change::ToggleVip { email, name } => {
                 settings.toggle_vip(&email, &name);
             }
@@ -609,6 +629,10 @@ settable! {
         MarkRead => mark_read,
         RemoteImages => remote_images,
         TextSize => text_size,
+        PreviewLines => preview_lines,
+        BoldUnread => bold_unread,
+        BoldSenders => bold_senders,
+        ShowAvatars => show_avatars,
         ColorScheme => color_scheme,
         Notifications => notifications,
         NotificationPreviews => notification_previews,
@@ -687,6 +711,7 @@ settable! {
         show_declined_events,
         sign_by_default,
         signatures,
+        signature_modes,
         smart_mailboxes,
         space,
         spell_languages,
@@ -720,6 +745,8 @@ pub enum Effect {
     Accounts,
     /// Rows carry an account's colour, so draw them again.
     RowColors,
+    /// Preview length and unread weight, without fetching the list again.
+    RowAppearance,
     /// A smart mailbox's conditions, which the one on screen holds a copy of.
     SmartMailboxes,
     /// Who counts as a VIP, which the open conversation marks.
@@ -752,10 +779,11 @@ pub enum Effect {
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 14] = [
+    pub const ALL: [Effect; 15] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
+        Effect::RowAppearance,
         Effect::SmartMailboxes,
         Effect::Vips,
         Effect::FollowUps,
@@ -842,6 +870,10 @@ impl Effects {
             mark_read,
             remote_images,
             text_size,
+            preview_lines,
+            bold_unread,
+            bold_senders,
+            show_avatars,
             color_scheme,
             language,
             notifications,
@@ -849,6 +881,7 @@ impl Effects {
             default_account,
             account_defaults,
             signatures,
+            signature_modes,
             undo_send,
             flag_color,
             vips,
@@ -906,6 +939,7 @@ impl Effects {
             default_account,
             account_defaults,
             signatures,
+            signature_modes,
             undo_send,
             flag_color,
             notify_vips_only,
@@ -976,6 +1010,12 @@ impl Effects {
                         || *account_names != before.account_names
                 }
                 Effect::RowColors => colors_changed,
+                Effect::RowAppearance => {
+                    *preview_lines != before.preview_lines
+                        || *bold_unread != before.bold_unread
+                        || *bold_senders != before.bold_senders
+                        || *show_avatars != before.show_avatars
+                }
                 Effect::SmartMailboxes => smart_changed,
                 Effect::Vips => vips_changed,
                 Effect::FollowUps => *suggest_follow_ups != before.suggest_follow_ups,
@@ -1012,6 +1052,46 @@ impl Effects {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn message_list_preferences_round_trip_and_only_redraw_rows() {
+        use super::{Change, Effect, Effects};
+        use crate::settings::{PreviewLines, Settings};
+        let before: Settings = toml::from_str("").unwrap();
+        assert_eq!(before.preview_lines, PreviewLines::Two);
+        assert!(before.bold_unread);
+        assert!(!before.bold_senders);
+        assert!(before.show_avatars);
+        for lines in [PreviewLines::None, PreviewLines::One] {
+            let mut after = before.clone();
+            Change::PreviewLines(lines).apply_to(&mut after);
+            Change::BoldUnread(false).apply_to(&mut after);
+            let saved: Settings = toml::from_str(&toml::to_string(&after).unwrap()).unwrap();
+            assert_eq!(saved.preview_lines, lines);
+            assert!(!saved.bold_unread);
+            assert_eq!(
+                Effects::between(&before, &saved).iter().collect::<Vec<_>>(),
+                vec![Effect::RowAppearance]
+            );
+        }
+    }
+
+    #[test]
+    fn sender_appearance_changes_persist_and_only_redraw_rows() {
+        use super::{Change, Effect, Effects};
+        use crate::settings::Settings;
+        let before = Settings::default();
+        for change in [Change::BoldSenders(true), Change::ShowAvatars(false)] {
+            let mut after = before.clone();
+            change.apply_to(&mut after);
+            let saved: Settings = toml::from_str(&toml::to_string(&after).unwrap()).unwrap();
+            assert_eq!(saved, after);
+            assert_eq!(
+                Effects::between(&before, &saved).iter().collect::<Vec<_>>(),
+                vec![Effect::RowAppearance]
+            );
+        }
+    }
+
     #[test]
     fn column_widths_are_bounded_and_round_trip_without_refreshing_mail() {
         use crate::settings::{MailColumn, Settings};
@@ -1522,6 +1602,7 @@ mod tests {
         after.inbox_categories = !before.inbox_categories;
         after.ai.provider = AiProvider::Local;
         after.text_size = TextSize::Small;
+        after.bold_unread = false;
         after.contact_accounts = vec!["ann@example.com".into()];
         after.color_scheme = ColorScheme::Dark;
         after.language = "pt_PT".into();
@@ -1667,6 +1748,7 @@ mod tests {
         // A window arm nothing can reach is dead code; this catches it.
         let changes = [
             Change::Threading(false),
+            Change::BoldUnread(false),
             Change::AccountName {
                 email: "ann@example.com".into(),
                 name: "Ann".into(),

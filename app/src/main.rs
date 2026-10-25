@@ -201,7 +201,7 @@ fn main() -> glib::ExitCode {
         .or_else(|| args.iter().any(|a| a == "--compose").then(String::new));
     let file = std::env::current_dir()
         .ok()
-        .and_then(|here| calendar_file(&raw_args, &here));
+        .and_then(|here| named_file(&raw_args, &here));
     let demo = args.iter().any(|a| a == "--demo");
     let background = args.iter().any(|a| a == "--background");
     if !demo {
@@ -232,8 +232,13 @@ fn main() -> glib::ExitCode {
         .as_ref()
         .map(|to| ("compose-to", to.to_variant()))
         .or_else(|| {
-            file.as_ref()
-                .map(|path| ("open-calendar-file", path.to_variant()))
+            file.as_ref().map(|file| {
+                let action = match file.kind {
+                    FileKind::Calendar => "open-calendar-file",
+                    FileKind::Mail => "open-mail-file",
+                };
+                (action, file.path.to_variant())
+            })
         });
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
@@ -292,13 +297,27 @@ fn main() -> glib::ExitCode {
     code
 }
 
-/// The calendar file the desktop asked this launch to open: the first
-/// argument that is neither a flag nor a `mailto:` link, as a path or as
-/// the `file://` URI Files passes for `%u`. A relative path is taken from
+/// The file the desktop asked this launch to open, and what it is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NamedFile {
+    pub kind: FileKind,
+    pub path: std::path::PathBuf,
+}
+
+/// What a file handed to the app holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileKind {
+    Calendar,
+    Mail,
+}
+
+/// The file the desktop asked this launch to open: the first argument
+/// that is neither a flag nor a `mailto:` link, as a path or as the
+/// `file://` URI Files passes for `%u`. A relative path is taken from
 /// `here`, the folder the launch started in, since a copy already running
 /// would read it from its own. The argument's bytes are kept as they are,
 /// so a name that is not UTF-8 still opens.
-fn calendar_file(args: &[OsString], here: &std::path::Path) -> Option<std::path::PathBuf> {
+fn named_file(args: &[OsString], here: &std::path::Path) -> Option<NamedFile> {
     let named = args.iter().skip(1).find(|a| {
         let a = a.to_string_lossy();
         !a.starts_with('-') && !a.starts_with("mailto:")
@@ -307,11 +326,48 @@ fn calendar_file(args: &[OsString], here: &std::path::Path) -> Option<std::path:
         Some(uri) => gio::File::for_uri(uri).path()?,
         None => std::path::PathBuf::from(named),
     };
-    Some(here.join(path))
+    let path = here.join(path);
+    Some(NamedFile {
+        kind: file_kind(&path),
+        path,
+    })
 }
 
-/// The calendar file in the `open-calendar-file` action's parameter, a
-/// byte string so a path that is not UTF-8 arrives whole.
+/// What `path` holds: `.ics` and `.eml` say so by name; otherwise a file
+/// whose first bytes, after a byte-order mark and any white space, are
+/// `BEGIN:VCALENDAR` in any case is a calendar, and anything else is
+/// mail, since the desktop hands over only the types the entry names.
+pub fn file_kind(path: &std::path::Path) -> FileKind {
+    let extension = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase());
+    match extension.as_deref() {
+        Some("ics") => return FileKind::Calendar,
+        Some("eml") => return FileKind::Mail,
+        _ => {}
+    }
+    let mut head = [0u8; 512];
+    let read = std::fs::File::open(path)
+        .and_then(|mut file| std::io::Read::read(&mut file, &mut head))
+        .unwrap_or(0);
+    let head = &head[..read];
+    let head = head.strip_prefix(b"\xef\xbb\xbf").unwrap_or(head);
+    let start = head
+        .iter()
+        .position(|b| !b.is_ascii_whitespace())
+        .unwrap_or(head.len());
+    let calendar = head[start..]
+        .get(..b"BEGIN:VCALENDAR".len())
+        .is_some_and(|first| first.eq_ignore_ascii_case(b"BEGIN:VCALENDAR"));
+    match calendar {
+        true => FileKind::Calendar,
+        false => FileKind::Mail,
+    }
+}
+
+/// The file in the `open-calendar-file` or `open-mail-file` action's
+/// parameter, a byte string so a path that is not UTF-8 arrives whole.
 fn path_from_variant(parameter: &glib::Variant) -> Option<std::path::PathBuf> {
     parameter.get::<std::path::PathBuf>()
 }
@@ -424,7 +480,7 @@ mod tests {
     use std::ffi::OsString;
     use std::path::{Path, PathBuf};
 
-    use super::{calendar_file, mailto_recipient, path_from_variant};
+    use super::{FileKind, NamedFile, file_kind, mailto_recipient, named_file, path_from_variant};
 
     fn args(list: &[&str]) -> Vec<OsString> {
         std::iter::once("penguin-mail")
@@ -436,15 +492,55 @@ mod tests {
     /// The folder the launch was typed in.
     const HERE: &str = "/home/ann/Downloads";
 
-    fn file(list: &[&str]) -> Option<PathBuf> {
-        calendar_file(&args(list), Path::new(HERE))
+    fn file(list: &[&str]) -> Option<NamedFile> {
+        named_file(&args(list), Path::new(HERE))
+    }
+
+    fn named(kind: FileKind, path: &str) -> Option<NamedFile> {
+        Some(NamedFile {
+            kind,
+            path: PathBuf::from(path),
+        })
     }
 
     #[test]
     fn files_hands_over_a_calendar_file_as_a_path_or_a_uri() {
-        let path = Some(PathBuf::from("/tmp/my ticket.ics"));
+        let path = named(FileKind::Calendar, "/tmp/my ticket.ics");
         assert_eq!(file(&["/tmp/my ticket.ics"]), path);
         assert_eq!(file(&["file:///tmp/my%20ticket.ics"]), path);
+    }
+
+    #[test]
+    fn files_hands_over_a_mail_file_as_a_path_or_a_uri() {
+        let path = named(FileKind::Mail, "/tmp/fwd.eml");
+        assert_eq!(file(&["/tmp/fwd.eml"]), path);
+        assert_eq!(file(&["file:///tmp/fwd.eml"]), path);
+    }
+
+    #[test]
+    fn a_file_is_told_by_its_extension_then_by_its_first_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        let ics = dir.path().join("a.ics");
+        std::fs::write(&ics, "x").unwrap();
+        let eml = dir.path().join("a.eml");
+        std::fs::write(&eml, "x").unwrap();
+        let cal = dir.path().join("ticket");
+        std::fs::write(&cal, "\n\nBEGIN:VCALENDAR\n").unwrap();
+        let mail = dir.path().join("message");
+        std::fs::write(&mail, "From: a@example.com\n").unwrap();
+        assert_eq!(file_kind(&ics), FileKind::Calendar);
+        assert_eq!(file_kind(&eml), FileKind::Mail);
+        assert_eq!(file_kind(&cal), FileKind::Calendar);
+        assert_eq!(file_kind(&mail), FileKind::Mail);
+        assert_eq!(file_kind(&dir.path().join("missing")), FileKind::Mail);
+        // Outlook writes a byte-order mark first, and RFC 5545 names are
+        // case-insensitive.
+        let bom = dir.path().join("invite.ical");
+        std::fs::write(&bom, b"\xef\xbb\xbfBEGIN:VCALENDAR\r\n").unwrap();
+        assert_eq!(file_kind(&bom), FileKind::Calendar);
+        let lower = dir.path().join("booking");
+        std::fs::write(&lower, "begin:vcalendar\n").unwrap();
+        assert_eq!(file_kind(&lower), FileKind::Calendar);
     }
 
     #[test]
@@ -453,11 +549,11 @@ mod tests {
         // name would point at a file that is not there.
         assert_eq!(
             file(&["invite.ics"]),
-            Some(PathBuf::from("/home/ann/Downloads/invite.ics"))
+            named(FileKind::Calendar, "/home/ann/Downloads/invite.ics")
         );
         assert_eq!(
             file(&["./trips/invite.ics"]),
-            Some(PathBuf::from("/home/ann/Downloads/trips/invite.ics"))
+            named(FileKind::Calendar, "/home/ann/Downloads/trips/invite.ics")
         );
     }
 
@@ -467,14 +563,16 @@ mod tests {
         let name = std::ffi::OsStr::from_bytes(b"/tmp/f\xe9rias.ics");
         let mut list = args(&[]);
         list.push(name.to_os_string());
-        let path = calendar_file(&list, Path::new(HERE)).expect("a calendar file");
+        let file = named_file(&list, Path::new(HERE)).expect("a calendar file");
+        assert_eq!(file.kind, FileKind::Calendar);
+        let path = file.path;
         assert_eq!(path.as_os_str(), name);
         let handed = gtk::glib::prelude::ToVariant::to_variant(&path);
         assert_eq!(path_from_variant(&handed), Some(path));
     }
 
     #[test]
-    fn flags_and_mail_links_are_no_calendar_file() {
+    fn flags_and_mail_links_are_no_file() {
         assert_eq!(file(&[]), None);
         assert_eq!(file(&["--background", "--demo"]), None);
         assert_eq!(file(&["mailto:ann@example.com"]), None);

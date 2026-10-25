@@ -110,6 +110,42 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.10" date="2026-10-20">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.10</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Drag the mailbox and message-list dividers to resize their columns; widths are remembered between starts.</li>
+          <li>Choose reasoning separately for assistant chats and email translations in Preferences → AI.</li>
+          <li>Russian and Czech can be selected in Never Translate.</li>
+          <li>Choose Simplified Chinese, Russian, Italian, Japanese, Korean, Polish, Turkish, or Indonesian in Preferences.</li>
+          <li>Show or hide the mailbox sidebar with Ctrl+B, or Cmd+B on macOS.</li>
+          <li>An AppImage bundles the current runtime for Ubuntu 22.04 and newer, and Debian 13.</li>
+          <li>Choose Greek, Romanian or Ukrainian in Preferences.</li>
+          <li>Build and install Penguin Mail with Nix, or enter its development environment with <code>nix develop</code>.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>The tray shows one orange unread dot, including on hosts that recolor symbolic icons (#41).</li>
+          <li>Gmail Sent, Drafts, and custom labels show older server mail as you scroll, even outside the sync period.</li>
+          <li>Mail translations ask compatible local models to skip reasoning by default for faster replies.</li>
+          <li>IMAP folders, including nested folders, Sent, and Drafts, show older server mail as you scroll. Failed first loads can be retried without restarting (#60). Thanks to zwnk for the reproductions and patches.</li>
+          <li>Upgrading an Outlook account keeps pending deletions and moves, without notifications for old mail found during repair (#66).</li>
+          <li>Outlook unread counts update when older inbox messages are read in another app (#66).</li>
+          <li>The Snap can access the graphics devices it needs at startup (#62).</li>
+          <li>macOS notifications use temporary banners by default, offer all selected buttons, and keep mail actions in the background.</li>
+          <li>Setting Language back to Follow System and pressing Restart shows your system's language again, instead of the language you had picked before.</li>
+          <li>Assistant skill scripts can run with the Nix package, including on NixOS.</li>
+          <li>Microsoft messages with attachments open without the contentId request error.</li>
+          <li>IMAP Junk and Trash show messages on the server even when they have not synced to this computer.</li>
+          <li>A deleted or archived message no longer flashes back into the list before the server has it, on any account (#58).</li>
+          <li>The Undo toast shows as soon as you act, and its Undo takes back the action it names. Undo pressed while the action is still on its way waits for it. Quick deletes or archives share one toast, such as "Moved 3 conversations to Trash" (#54, #57).</li>
+          <li>On macOS the shortcuts use Command: Cmd+W closes the window, Cmd+Z undoes, Cmd+F finds, and the rest follow (#55).</li>
+          <li>Pressing the Preferences or About shortcut again no longer opens a second dialog (#53).</li>
+          <li>On macOS the sidebar title shows "Mailboxes" in full beside the window buttons (#56).</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.9" date="2026-10-16">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.9</url>
       <description translate="no">

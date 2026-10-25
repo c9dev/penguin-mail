@@ -38,6 +38,8 @@ pub enum Call {
     Loading,
     Select,
     Failed,
+    Preview,
+    PreviewArrived,
 }
 
 /// What a test reaches into a call with, while the call is out.
@@ -67,6 +69,9 @@ pub struct Shown {
     pub accounts: HashMap<AccountId, Arc<()>>,
     pub labels: HashMap<String, Vec<ThreadSummary>>,
     pub failures: Vec<String>,
+    pub previews: Vec<Target>,
+    pub preview_answers: VecDeque<anyhow::Result<Option<String>>>,
+    pub preview_arrivals: Vec<Target>,
     /// What the run asked for, oldest first.
     pub calls: Vec<Call>,
     during: HashMap<Call, During>,
@@ -246,9 +251,9 @@ impl Pane for Fake {
         });
     }
 
-    fn append(&self, rows: Vec<ThreadSummary>) {
+    fn append(&self, listing: Listing) {
         self.call(Call::Append);
-        self.with(|s| s.rows.extend(rows));
+        self.with(|s| s.rows.extend(listing.rows));
     }
 
     fn replace(&self, changed: &[Named], rows: Vec<ThreadSummary>, _title: &str, _subtitle: &str) {
@@ -269,6 +274,20 @@ impl Pane for Fake {
     fn drop_rows(&self, gone: &[Target]) {
         self.call(Call::DropRows);
         self.with(|s| s.rows.retain(|r| !gone.contains(&Target::from_row(r))));
+    }
+
+    fn preview_arrived(&self, target: &Target, text: &str) {
+        self.call(Call::PreviewArrived);
+        self.with(|s| {
+            s.preview_arrivals.push(target.clone());
+            if let Some(row) = s
+                .rows
+                .iter_mut()
+                .find(|r| Target::for_preview(r) == *target)
+            {
+                row.snippet = text.to_string();
+            }
+        });
     }
 
     fn loading(&self) {
@@ -390,6 +409,16 @@ impl Lists for Fake {
             }
         });
         self.answer(Call::Follow, answer)
+    }
+
+    fn preview(&self, target: Target) -> Answer<'_, anyhow::Result<Option<String>>> {
+        let answer = self.with(|s| {
+            s.previews.push(target);
+            s.preview_answers
+                .pop_front()
+                .unwrap_or(Ok(Some("Preview".into())))
+        });
+        self.answer(Call::Preview, answer)
     }
 
     fn sleep(&self, _time: Duration) -> Answer<'_, ()> {

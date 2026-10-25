@@ -135,6 +135,7 @@ fn date_wins(start_rows: i64, all_rows: i64, wanted: i64) -> bool {
 /// describe without callers building filters it has not planned for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ThreadFilter {
+    list_filter: mailrs_domain::ListFilter,
     account_id: Option<AccountId>,
     /// `None` means any mail.
     set: Option<MailSet>,
@@ -493,6 +494,11 @@ impl ThreadFilter {
         self
     }
 
+    pub fn with_list_filter(mut self, filter: mailrs_domain::ListFilter) -> Self {
+        self.list_filter = filter;
+        self
+    }
+
     pub fn with_flag(mut self, flag: FlagColor) -> Self {
         self.flag = Some(flag);
         self
@@ -733,6 +739,17 @@ impl ThreadFilter {
             sql.push(" AND NOT ");
             rows.holds_any(sql, &resolved.none);
         }
+        if self.list_filter.unread {
+            sql.push(" AND ");
+            rows.holds(sql, &Named::Unread);
+        }
+        if self.list_filter.flagged {
+            sql.push(" AND ");
+            rows.holds(sql, &Named::Keyword(FLAGGED.into()));
+        }
+        if self.list_filter.attachments {
+            sql.push(&format!(" AND {row}.has_attachments = 1"));
+        }
         if let Some(flag) = self.flag {
             if let Rows::Threads = rows {
                 // Only a thread with a starred message can match, and
@@ -968,7 +985,9 @@ const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snipp
                        EXISTS (SELECT 1 FROM messages im CROSS JOIN invitations i \
                                ON i.account_id = im.account_id AND i.message_id = im.id \
                                WHERE im.account_id = t.account_id AND im.thread_id = t.id \
-                               AND i.cancelled = 0)";
+                               AND i.cancelled = 0), \
+                       (SELECT MAX(pm.id) FROM messages pm WHERE pm.account_id = t.account_id \
+                        AND pm.thread_id = t.id AND pm.date = t.last_message_at)";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -981,6 +1000,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         account_id: row.get(0)?,
         id: row.get(1)?,
         message_id: None,
+        preview_message_id: row.get(14)?,
         last_message_at: row.get(2)?,
         subject: row.get(3)?,
         snippet: row.get(4)?,
@@ -1174,6 +1194,7 @@ fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         account_id: row.get(0)?,
         id: row.get(1)?,
         message_id: Some(row.get(2)?),
+        preview_message_id: Some(row.get(2)?),
         last_message_at: row.get(3)?,
         subject: row.get(4)?,
         snippet: row.get(5)?,
@@ -1236,6 +1257,30 @@ fn messages_walking(
     Rows::Messages.order(&mut sql, page);
     let mut stmt = conn.prepare_cached(&sql.text)?;
     let rows = stmt.query_map(params_from_iter(&sql.params), to_message_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// At most `limit` unread messages in the account's inbox whose id sorts
+/// after `after`, as thread and message ids in id order. It reads no row's
+/// subject or sender, so a large inbox with a few unread messages costs a
+/// few rows.
+pub fn unread_inbox_ids(
+    conn: &Connection,
+    account_id: AccountId,
+    after: &str,
+    limit: i64,
+) -> Result<Vec<(String, String)>> {
+    let filter = ThreadFilter::account(account_id, MailSet::Role(Role::Inbox));
+    let mut sql = filter.counting(conn, Rows::Messages, "SELECT m.thread_id, m.id", true)?;
+    sql.push(MESSAGE_UNREAD)
+        .push(" AND m.id > ")
+        .bind(after.to_string())
+        .push(" ORDER BY m.id LIMIT ")
+        .bind(limit);
+    let mut stmt = conn.prepare_cached(&sql.text)?;
+    let rows = stmt.query_map(params_from_iter(&sql.params), |row| {
+        Ok((row.get(0)?, row.get(1)?))
+    })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 

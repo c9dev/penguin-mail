@@ -4,8 +4,8 @@
 use mailrs_domain::Target;
 
 use super::fake::{
-    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
-    opened_cancellation, opened_invitation, opened_occurrence, opened_publish, personal,
+    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, ics, invited, loose, loose_with,
+    meta, opened_cancellation, opened_invitation, opened_occurrence, opened_publish, personal,
     portuguese, queued, row, spot, strip, with_inline_picture, with_picture,
 };
 use super::{Card, Event, ReceiptCard, Stale};
@@ -1622,4 +1622,137 @@ async fn the_card_comes_up_once_the_account_connects() {
     );
     run.account_ready(ACCOUNT).await;
     assert_eq!(window.with(|s| s.receipt_cards.len()), 1);
+}
+
+#[tokio::test]
+async fn a_loose_message_shows_from_its_bytes_without_asking_the_store_or_gmail() {
+    let window = FakeWindow::new();
+    window.run().open_loose(loose()).await;
+    // Cleaning happens before Show, as `open` does it, so there is no
+    // Cleaned step.
+    for step in [Step::Clean, Step::Show, Step::Card, Step::Engines] {
+        assert!(window.took(step), "{step:?} not taken");
+    }
+    for step in [
+        Step::Stored,
+        Step::Ensure,
+        Step::Messages,
+        Step::Bodies,
+        Step::Images,
+        Step::Thumbnails,
+        Step::Sleep,
+        Step::MarkRead,
+        Step::ReceiptAnswered,
+    ] {
+        assert!(!window.took(step), "{step:?} was taken");
+    }
+    assert_eq!(window.open(|open| open.is_loose()), Some(true));
+    // The picture came from the bytes, so the page does not wait for it.
+    let id = window.open(|open| open.messages[0].id.clone()).unwrap();
+    assert_eq!(
+        window.open(|open| open.inline_images.contains_key(&id)),
+        Some(true)
+    );
+}
+
+#[tokio::test]
+async fn a_loose_message_naming_a_picture_it_lacks_settles_without_a_fetch() {
+    let raw = b"From: a@example.com\r\nSubject: x\r\nContent-Type: text/html\r\n\r\n<img src=\"cid:nowhere\">\r\n".to_vec();
+    let window = FakeWindow::new();
+    window.run().open_loose(loose_with(raw)).await;
+    assert!(!window.took(Step::Images));
+    let id = window.open(|open| open.messages[0].id.clone()).unwrap();
+    assert_eq!(
+        window.open(|open| open.inline_images.get(&id).map(|p| p.len())),
+        Some(Some(0))
+    );
+}
+
+#[tokio::test]
+async fn a_refresh_leaves_a_loose_message_as_it_is() {
+    let window = FakeWindow::new();
+    window.run().open_loose(loose()).await;
+    window.run().refresh().await;
+    window.run().refresh_flag_color().await;
+    assert!(!window.took(Step::Messages));
+    assert!(!window.took(Step::Clear));
+    assert!(!window.took(Step::FlagColor));
+    assert_eq!(window.open(|open| open.messages.len()), Some(1));
+}
+
+#[tokio::test]
+async fn an_invitation_in_a_loose_message_shows_as_an_event_to_keep() {
+    let raw = format!(
+        "From: ann@example.com\r\nSubject: Kites\r\nContent-Type: text/calendar; method=REQUEST\r\n\r\n{}",
+        ics()
+    )
+    .into_bytes();
+    let window = FakeWindow::new();
+    window.run().open_loose(loose_with(raw)).await;
+    assert!(
+        !window.took(Step::OpenInvitation),
+        "nothing is remembered in the store"
+    );
+    let shown = window
+        .0
+        .borrow()
+        .event_cards
+        .last()
+        .cloned()
+        .expect("a card");
+    assert_eq!(
+        shown.invitation.method,
+        mailrs_domain::invitation::Method::Publish
+    );
+    assert!(shown.answer.is_none());
+}
+
+/// A loose message whose sender asked for a receipt, as a file.
+fn loose_asking() -> crate::open_thread::Loose {
+    loose_with(
+        b"From: Ann <ann@example.com>\r\nTo: me@example.com\r\nSubject: Kites\r\nDisposition-Notification-To: ann@example.com\r\n\r\nhi\r\n"
+            .to_vec(),
+    )
+}
+
+/// A receipt would mail about a message in no mailbox and remember the
+/// answer under an id the store never saw, so the card stays down even
+/// when the account connects after the window opened.
+#[tokio::test]
+async fn a_loose_message_gets_no_receipt_card_when_its_account_connects() {
+    let window = FakeWindow::new();
+    window.with(|s| s.receipt_answered = Ok(false));
+    let run = window.run();
+    run.open_loose(loose_asking()).await;
+    run.account_ready(ACCOUNT).await;
+    assert!(!window.took(Step::ReceiptAnswered));
+    assert!(window.with(|s| s.receipt_cards.is_empty()));
+}
+
+#[tokio::test]
+async fn the_engine_opening_a_loose_message_brings_no_receipt_card() {
+    let window = FakeWindow::new();
+    window.with(|s| s.receipt_answered = Ok(false));
+    let run = window.run();
+    run.open_loose(loose_asking()).await;
+    let (target, id) = window
+        .open(|open| (open.target(), open.messages[0].id.clone()))
+        .unwrap();
+    let mut inside = body("hi");
+    inside.receipt_to = Some("ann@example.com".into());
+    run.engine_answered(target, id, opened(inside)).await;
+    assert!(!window.took(Step::ReceiptAnswered));
+    assert!(window.with(|s| s.receipt_cards.is_empty()));
+}
+
+/// Parsing a file near the size ceiling takes most of a second, so it
+/// goes through the effects, away from the window, before the thread
+/// is built; a later open still wins over it.
+#[tokio::test]
+async fn a_loose_message_is_parsed_away_from_the_window_before_it_shows() {
+    let window = FakeWindow::new();
+    window.run().open_loose(loose()).await;
+    let steps = window.steps();
+    let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
+    assert!(at(Step::Parse) < at(Step::Show));
 }

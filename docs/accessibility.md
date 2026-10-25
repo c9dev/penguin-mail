@@ -46,6 +46,16 @@ The widths are remembered between starts. In a narrow window, the
 existing sidebar overlay and one-page mail navigation take over, and
 hidden dividers leave the keyboard focus order.
 
+## Message list previews
+
+Appearance preferences offer zero, one, or two preview lines and a switch for
+bold unread messages. Turning off bold keeps the unread dot and the screen
+reader's unread announcement. Turning off previews also removes their text
+from the row's accessible name. Send Later keeps its scheduled time visible,
+and Outbox keeps its sending status. A separate switch keeps senders bold in
+both read and unread messages. Avatars can be hidden to leave more room for
+message text; sender names remain visible and announced.
+
 ## The message
 
 Hovering over a web or email link, or focusing it with Tab, shows its destination at the bottom-right of the reading pane. The preview is a status region for screen readers. It names the destination site before the full address and explains any signs of deception. A message with such links also has a warning above its body, outside the sender's styles. These local checks compare displayed addresses with destinations and look for disguised hosts and hidden characters. They make no network requests and do not certify that a site is safe.
@@ -91,6 +101,13 @@ card that says the copy cannot sign in to Microsoft. The page that waits
 for the browser lists each provider's own steps, two for Microsoft and
 three for Google, and the band above it is read as "Waiting for your
 browser, Microsoft".
+
+## Sender signatures
+
+Each additional address under Addresses You Send From has a Signature button.
+Its dialog offers the account signature, a custom signature, or no signature.
+The custom text field is named for the address and describes the Markdown and
+sender placeholders. Save applies the choice; Cancel leaves it unchanged.
 
 ## The composer from the keyboard
 
@@ -245,3 +262,14 @@ chip. Write a new gap down here when you find one, with why it was left.
 Preferences uses a single page-list Tab stop, with arrow keys to choose a page and Enter to open it. Search also finds controls inside folded account, Skills and MCP sections and expands the path to the selected control. Account drag handles have named Move Up and Move Down alternatives; after a move, focus stays on an available move button for that account.
 
 The model menu in the assistant's question box and the Tools menu in its header work from the keyboard. File chips have a named Remove button. What it did is one disclosure per turn, with nested thought and tool disclosures whose input and result remain selectable. Detach and Dock move the same widgets and return focus to the question field. Closing a detached assistant preserves the chat in the mail window.
+
+Trash rows offer Empty Trash in their Options menu, through right-click, Menu or Shift+F10. A confirmation names the accounts whose Trash will be emptied and warns that deletion cannot be undone.
+
+## Message list filters
+
+The Filter Messages button opens named checkboxes for Unread Only, Flagged Only
+and With Attachments. All selected conditions apply together. Clear Filters
+unchecks them. The button announces when filters are active. More remains
+reachable when filters leave a server page empty; No Matching Mail explains
+that another page may still contain matches. Conditions stay selected when
+switching mailboxes and reset when the window closes.

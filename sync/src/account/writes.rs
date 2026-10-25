@@ -59,31 +59,57 @@ impl AccountSync {
             return Err(BackendError::Unsupported.into());
         }
         let ids = self.erasable(targets).await?;
+        let moves = self.mail.hold_moves().await;
+        self.erase_ids(targets, ids, &moves, None).await
+    }
+
+    pub(super) async fn erase_ids(
+        &self,
+        targets: &[Target],
+        ids: Vec<Vec<String>>,
+        moves: &Moves<'_>,
+        mailbox: Option<&str>,
+    ) -> Result<Vec<Result<(), SyncError>>, SyncError> {
         let mut all: Vec<String> = ids.iter().flatten().cloned().collect();
         all.sort();
         all.dedup();
         let mut refused: BTreeMap<String, BackendError> = BTreeMap::new();
         let limit = self.mail.capabilities().batch_limit;
-        let moves = self.mail.hold_moves().await;
         let named = moves.named(&all).await?;
-        for chunk in named.chunks(limit) {
-            if let Err(Unapplied { error: err, .. }) = moves.apply(chunk, &[MailOp::Destroy]).await
-            {
-                // Gmail refuses a missing permission before it erases
-                // anything, so no later batch would fare better.
-                let stop = matches!(err, BackendError::NeedsPermission);
-                refused.extend(chunk.iter().map(|m| (m.id().to_string(), err.clone())));
-                if stop {
-                    for id in &all {
-                        refused
-                            .entry(id.clone())
-                            .or_insert(BackendError::NeedsPermission);
-                    }
-                    break;
-                }
+        let mut chunks = named.chunks(limit);
+        while let Some(chunk) = chunks.next() {
+            let results = match mailbox {
+                Some(mailbox) => moves.destroy_checked(chunk, mailbox).await,
+                None => match moves.apply(chunk, &[MailOp::Destroy]).await {
+                    Ok(_) => vec![Ok(()); chunk.len()],
+                    Err(Unapplied { taken, error, .. }) => (0..chunk.len())
+                        .map(|at| {
+                            if at < taken {
+                                Ok(())
+                            } else {
+                                Err(error.clone())
+                            }
+                        })
+                        .collect(),
+                },
+            };
+            let needs_permission = results
+                .iter()
+                .any(|r| matches!(r, Err(BackendError::NeedsPermission)));
+            refused.extend(chunk.iter().zip(results).filter_map(|(message, result)| {
+                result.err().map(|error| (message.id().to_string(), error))
+            }));
+            // A missing permission stops later batches, but preserves deletions already made.
+            if needs_permission {
+                refused.extend(
+                    chunks
+                        .flatten()
+                        .map(|m| (m.id().to_string(), BackendError::NeedsPermission)),
+                );
+                break;
             }
         }
-        drop(moves);
+
         let erased: Vec<String> = all
             .iter()
             .filter(|id| !refused.contains_key(*id))

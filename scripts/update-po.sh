@@ -66,7 +66,18 @@ msgstr ""
 HEADER
 cat "$work/header.pot" "$work/merged.pot" > "$work/penguin-mail.pot"
 
+# POTFILES.in is what the extraction reads, so a file left out of it may be
+# a file whose words nobody can translate. Say so loudly, and fail the check.
+grep -rlE '(gettext|fill_plural)\(' --include='*.rs' app/src domain/src sync/src |
+    LC_ALL=C sort > "$work/rust.txt"
+forgotten=$(LC_ALL=C comm -13 <(echo "$listed") "$work/rust.txt")
+if [ -n "$forgotten" ]; then
+    echo "po/POTFILES.in is missing, and their words go untranslated:" >&2
+    echo "$forgotten" | sed 's/^/  /' >&2
+fi
+
 if [ "${1:-}" = --check ]; then
+    [ -z "$forgotten" ] || exit 1
     if ! diff -q "$pot" "$work/penguin-mail.pot" >/dev/null; then
         echo "$pot is stale; run scripts/update-po.sh" >&2
         exit 1
@@ -86,16 +97,6 @@ mv "$work/penguin-mail.pot" "$pot"
 # British English comes from the template and the spelling rules in
 # scripts/en-gb.py, never by hand, so every string has it.
 python3 scripts/en-gb.py "$pot" po/en_GB.po
-
-# POTFILES.in is what the extraction reads, so a file left out of it is a
-# file whose words nobody can translate. Say so loudly.
-grep -rlE '(gettext|fill_plural)\(' --include='*.rs' app/src domain/src sync/src |
-    LC_ALL=C sort > "$work/rust.txt"
-forgotten=$(LC_ALL=C comm -13 <(echo "$listed") "$work/rust.txt")
-if [ -n "$forgotten" ]; then
-    echo "po/POTFILES.in is missing, and their words go untranslated:" >&2
-    echo "$forgotten" | sed 's/^/  /' >&2
-fi
 
 # LINGUAS names the languages that exist. msgfmt reads it to put the
 # translated Name and Comment into the desktop entry.

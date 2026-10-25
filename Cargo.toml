@@ -4,7 +4,7 @@ members = ["domain", "mime", "gmail", "graph", "jmap", "discover", "imap", "dav"
 exclude = ["vendor/ksni"]
 
 [workspace.package]
-version = "1.0.9"
+version = "1.0.10"
 edition = "2024"
 rust-version = "1.98"
 license = "GPL-3.0-or-later"

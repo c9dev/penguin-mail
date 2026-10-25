@@ -1882,3 +1882,248 @@ async fn a_jmap_inbox_counts_unread_threads_not_messages() {
     assert_eq!(counts.mailboxes[&inbox], 1, "one conversation");
     assert_eq!(counts.mailboxes[&all], 1);
 }
+
+#[tokio::test]
+async fn quick_filters_run_before_paging_and_when_rows_change() {
+    use mailrs_domain::ListFilter;
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("read", "read", now, &["INBOX"]));
+    h.fake
+        .seed(meta("unread", "unread", now - 1, &["INBOX", "UNREAD"]));
+    let mut attached = meta(
+        "attached",
+        "attached",
+        now - 2,
+        &["INBOX", "UNREAD", "STARRED"],
+    );
+    attached.has_attachments = true;
+    h.fake.seed(attached);
+    h.fake
+        .seed(meta("outside", "outside", now - 3, &["UNREAD", "STARRED"]));
+    h.bootstrap_all().await;
+    let inbox = Mailbox::Unified(Standard::Inbox);
+    for threading in [true, false] {
+        let mut view = View {
+            filter: ListFilter {
+                unread: true,
+                ..ListFilter::default()
+            },
+            threading,
+            limit: Some(1),
+            ..view()
+        };
+        let first = list(&h, &inbox, &view).await;
+        assert_eq!(ids(&first), ["unread"]);
+        assert!(first.more);
+        assert_eq!(first.unread, 2);
+        let second = lists(&h)
+            .list(&inbox, &scope(&h), &view, first.next.unwrap())
+            .await
+            .unwrap();
+        assert_eq!(ids(&second), ["attached"]);
+        assert!(!second.more);
+        view.filter.flagged = true;
+        view.filter.attachments = true;
+        assert_eq!(ids(&list(&h, &inbox, &view).await), ["attached"]);
+        let changed = lists(&h)
+            .changed(
+                &inbox,
+                &[
+                    (h.account_id, "read".into()),
+                    (h.account_id, "attached".into()),
+                ],
+                &view,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(changed.rows.len(), 1);
+        assert_eq!(changed.rows[0].id, "attached");
+        let all = list(
+            &h,
+            &inbox,
+            &View {
+                filter: ListFilter::default(),
+                limit: None,
+                ..view
+            },
+        )
+        .await;
+        assert_eq!(ids(&all), ["read", "unread", "attached"]);
+    }
+}
+
+#[tokio::test]
+async fn attachment_filters_keep_queued_messages_with_files() {
+    use mailrs_domain::ListFilter;
+    let h = harness().await;
+    let now = now_millis();
+    let mut attached = meta("file", "drafts", now, &["DRAFT"]);
+    attached.has_attachments = true;
+    h.fake.seed(attached);
+    h.fake.seed(meta("plain", "drafts", now - 1, &["DRAFT"]));
+    h.bootstrap_all().await;
+    let account_id = h.account_id;
+    let raw = QUEUED_WITH_FILE;
+    assert_eq!(mailrs_mime::read(raw).attachments.len(), 1);
+    h.db.write(move |c| {
+        for problem in [None, Some("Offline")] {
+            for (subject, message_id, raw) in [
+                ("Local file", None, Some(raw.to_vec())),
+                (
+                    "Local plain",
+                    Some("file"),
+                    Some(b"Subject: Plain\r\n\r\nHi".to_vec()),
+                ),
+                ("Server file", Some("file"), None),
+                ("Server plain", Some("plain"), None),
+                ("Missing", Some("missing"), None),
+            ] {
+                outbox::put(
+                    c,
+                    &Queued {
+                        account_id,
+                        subject: subject.into(),
+                        message_id: message_id.map(str::to_string),
+                        thread_id: Some("drafts".into()),
+                        send_at: now + DAY,
+                        raw,
+                        problem: problem.map(str::to_string),
+                        ..Queued::default()
+                    },
+                )?;
+            }
+        }
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let mut view = View {
+        filter: ListFilter {
+            attachments: true,
+            ..ListFilter::default()
+        },
+        ..view()
+    };
+    for mailbox in [Mailbox::Scheduled, Mailbox::Outbox] {
+        view.filter.attachments = false;
+        let all = list(&h, &mailbox, &view).await;
+        assert_eq!(all.rows.len(), 5);
+        assert_eq!(
+            all.rows
+                .iter()
+                .map(|row| row.has_attachments)
+                .collect::<Vec<_>>(),
+            [true, false, true, false, false]
+        );
+        view.filter.attachments = true;
+        let filtered = list(&h, &mailbox, &view).await;
+        assert_eq!(
+            filtered
+                .rows
+                .iter()
+                .map(|row| row.subject.as_str())
+                .collect::<Vec<_>>(),
+            ["Local file", "Server file"]
+        );
+        assert!(!filtered.more);
+    }
+}
+
+const QUEUED_WITH_FILE: &[u8] =
+    b"MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=files\r\n\r\n\
+        --files\r\nContent-Type: text/plain\r\n\r\nSee the file.\r\n\
+        --files\r\nContent-Type: text/plain\r\n\
+        Content-Disposition: attachment; filename=plan.txt\r\n\r\nFly a kite.\r\n\
+        --files--\r\n";
+
+#[tokio::test]
+async fn newly_scheduled_gmail_files_match_before_history_sync() {
+    use mailrs_domain::ListFilter;
+    let h = harness().await;
+    h.fake.keep_sent_copies(h.account_id);
+    let queue = crate::Outbox::new(
+        Arc::new(Connected(HashMap::from([(
+            h.account_id,
+            Arc::clone(&h.sync),
+        )]))),
+        h.db.clone(),
+    );
+    for (subject, raw) in [
+        ("File", QUEUED_WITH_FILE),
+        ("Plain", b"Subject: Plain\r\n\r\nHi".as_slice()),
+    ] {
+        assert!(matches!(
+            queue
+                .schedule(Queued {
+                    account_id: h.account_id,
+                    subject: subject.into(),
+                    raw: Some(raw.to_vec()),
+                    send_at: now_millis() + DAY,
+                    ..Queued::default()
+                })
+                .await
+                .unwrap(),
+            crate::Posted::Waiting(_)
+        ));
+    }
+    let waiting = h.db.read(outbox::scheduled).await.unwrap();
+    assert_eq!(waiting.len(), 2);
+    assert!(
+        waiting
+            .iter()
+            .all(|item| item.raw.is_none() && item.message_id.is_some())
+    );
+    let account_id = h.account_id;
+    let ids = waiting
+        .iter()
+        .filter_map(|item| item.message_id.clone())
+        .collect::<Vec<_>>();
+    assert!(
+        h.db.read(move |c| mailrs_store::messages::by_ids(c, account_id, &ids))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let filtered = View {
+        filter: ListFilter {
+            attachments: true,
+            ..ListFilter::default()
+        },
+        ..view()
+    };
+    for mailbox in [Mailbox::Scheduled, Mailbox::Outbox] {
+        if mailbox == Mailbox::Outbox {
+            h.db.write(move |c| {
+                for item in outbox::scheduled(c)? {
+                    outbox::failed(c, item.id, "Offline", item.send_at)?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        }
+        let all = list(&h, &mailbox, &view()).await;
+        assert_eq!(all.rows.len(), 2);
+        let found = list(&h, &mailbox, &filtered).await;
+        assert_eq!(
+            found
+                .rows
+                .iter()
+                .map(|row| row.subject.as_str())
+                .collect::<Vec<_>>(),
+            ["File"]
+        );
+        assert!(found.notices.is_empty());
+        h.fake
+            .fail_next(mailrs_gmail::GmailError::Network("Offline".into()));
+        let failed = list(&h, &mailbox, &view()).await;
+        assert_eq!(
+            failed.rows.len(),
+            2,
+            "a metadata failure keeps the queued rows"
+        );
+        assert!(!failed.notices.is_empty(), "a metadata failure is visible");
+    }
+}

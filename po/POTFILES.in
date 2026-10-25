@@ -4,6 +4,7 @@ app/src/add_account.rs
 app/src/add_account/lookup.rs
 app/src/add_account/post.rs
 app/src/app.rs
+app/src/app/mail_file.rs
 app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs
@@ -93,6 +94,7 @@ app/src/ui/contact_card.rs
 app/src/ui/contacts_prefs.rs
 app/src/ui/copied.rs
 app/src/ui/conversation.rs
+app/src/ui/eml_file.rs
 app/src/ui/link_preview.rs
 app/src/ui/find.rs
 app/src/ui/gmail_password_page.rs
@@ -113,9 +115,11 @@ app/src/ui/preferences/dialog.rs
 app/src/ui/preferences/accounts.rs
 app/src/ui/preferences/google_route.rs
 app/src/ui/sender_prefs.rs
+app/src/ui/sender_prefs/signature.rs
 app/src/ui/queued.rs
 app/src/ui/route_page.rs
 app/src/ui/rules.rs
+app/src/ui/sandbox_setup.rs
 app/src/ui/sidebar.rs
 app/src/ui/sidebar/sections.rs
 app/src/ui/smart_editor.rs
@@ -139,7 +143,9 @@ app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs
 app/src/ui/window/images.rs
+app/src/ui/window/in_flight.rs
 app/src/ui/window/invitation.rs
+app/src/ui/window/loose.rs
 app/src/ui/window/message_menu.rs
 app/src/ui/window/notice.rs
 app/src/ui/window/on_screen.rs
@@ -220,3 +226,5 @@ sync/src/account/space.rs
 app/src/core/route.rs
 app/src/ui/sandbox_setup.rs
 app/src/ui/window/in_flight.rs
+app/src/ui/window/trash.rs
+app/src/ui/thread_list/filters.rs

@@ -7,6 +7,7 @@ mod follow;
 mod gmail;
 mod mailboxes;
 mod moves;
+mod previews;
 mod search;
 mod sending;
 mod uidvalidity;

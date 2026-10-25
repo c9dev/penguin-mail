@@ -21,6 +21,8 @@ pub enum Notice<'a> {
         action: &'a MailAction,
         outcome: &'a Outcome,
     },
+    /// The tray marked every inbox read.
+    InboxesRead,
     /// A saved settings change left these to bring back in line.
     SettingsChanged(&'a Effects),
     /// Where an update stands, for the menu, the banner and About.
@@ -68,6 +70,7 @@ impl MainWindow {
         match notice {
             Notice::Engine(event) => self.handle(event),
             Notice::MailChanged { action, outcome } => self.mail_changed(action, outcome),
+            Notice::InboxesRead => self.inboxes_read(),
             Notice::SettingsChanged(effects) => {
                 for effect in effects.iter() {
                     self.apply_effect(effect);

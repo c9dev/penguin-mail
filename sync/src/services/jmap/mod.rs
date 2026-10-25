@@ -373,6 +373,24 @@ impl<J: JmapApi> MailBackend for Jmap<J> {
         self.inbox_listing().await
     }
 
+    async fn mailbox_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        self.folder_page(mailbox, cursor, limit, false).await
+    }
+
+    async fn unread_page(
+        &self,
+        mailbox: &str,
+        cursor: Option<&str>,
+        limit: usize,
+    ) -> Result<Backfill, BackendError> {
+        self.folder_page(mailbox, cursor, limit, true).await
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,
@@ -439,6 +457,16 @@ impl<J: JmapApi> MailBackend for Jmap<J> {
         // asked while the write was on its way does not count as after it.
         self.known().writes += 1;
         written
+    }
+
+    async fn destroy_checked(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> Vec<Result<(), BackendError>> {
+        let result = self.destroy_in(messages, mailbox).await;
+        self.known().writes += 1;
+        result
     }
 
     async fn send(&self, raw: &[u8], _thread_id: Option<&str>) -> Result<String, BackendError> {

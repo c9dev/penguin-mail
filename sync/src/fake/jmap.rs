@@ -112,6 +112,8 @@ pub struct JmapState {
     pub flat_mailbox_filters: bool,
     /// Messages the server refuses to change or destroy, as `forbidden`.
     pub refused: BTreeSet<String>,
+    /// Another client moves this message just before the next Email/set.
+    pub move_before_set: Option<(String, String)>,
     /// The error type the server gives every submission, after the import
     /// it rides with was made.
     pub submission_refusal: Option<String>,
@@ -545,6 +547,7 @@ impl FakeJmap {
             query_clamp: None,
             flat_mailbox_filters: false,
             refused: BTreeSet::new(),
+            move_before_set: None,
             submission_refusal: None,
             lose_submission_answer: false,
             unclear_submission_answer: false,
@@ -1280,6 +1283,7 @@ impl JmapApi for FakeJmap {
         &self,
         update: &Map<String, Value>,
         destroy: &[String],
+        state: Option<&str>,
     ) -> Answer<SetResponse> {
         self.called("Email/set");
         let too_many =
@@ -1287,7 +1291,13 @@ impl JmapApi for FakeJmap {
         if too_many {
             return Err(JmapError::RequestTooLarge);
         }
-        Ok(self.with(|s| {
+        if let Some((id, mailbox)) = self.with(|s| s.move_before_set.take()) {
+            self.move_to(&id, &mailbox);
+        }
+        self.with(|s| {
+            if state.is_some_and(|state| state != s.state.to_string()) {
+                return Err(JmapError::StateMismatch);
+            }
             let mut answer = SetResponse::default();
             let (mut updated, mut not_updated) = (BTreeMap::new(), BTreeMap::new());
             for (id, patch) in update {
@@ -1397,8 +1407,8 @@ impl JmapApi for FakeJmap {
             answer.not_updated = (!not_updated.is_empty()).then_some(not_updated);
             answer.destroyed = Some(destroyed);
             answer.new_state = Some(s.state.to_string());
-            answer
-        }))
+            Ok(answer)
+        })
     }
 
     async fn set_mailbox(&self, write: &MailboxWrite) -> Answer<String> {
@@ -2224,7 +2234,7 @@ mod tests {
             id.clone(),
             json!({ format!("mailboxIds/{}", fake.mailbox("inbox")): null }),
         );
-        let set = fake.set_emails(&update, &[]).await.unwrap();
+        let set = fake.set_emails(&update, &[], None).await.unwrap();
         assert_eq!(set.refusal(&id).unwrap().kind, "invalidProperties");
     }
 
@@ -2344,7 +2354,7 @@ mod tests {
     async fn set(fake: &FakeJmap, id: &str, patch: Value) -> SetResponse {
         let mut update = Map::new();
         update.insert(id.to_string(), patch);
-        fake.set_emails(&update, &[]).await.unwrap()
+        fake.set_emails(&update, &[], None).await.unwrap()
     }
 
     #[tokio::test]
@@ -2461,7 +2471,7 @@ mod tests {
     async fn destroying_an_unknown_id_answers_not_found() {
         let fake = FakeJmap::new();
         let set = fake
-            .set_emails(&Map::new(), &["gone".into()])
+            .set_emails(&Map::new(), &["gone".into()], None)
             .await
             .unwrap();
         assert_eq!(set.refusal("gone").unwrap().kind, "notFound");

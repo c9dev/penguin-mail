@@ -27,6 +27,12 @@ impl MainWindow {
     /// listing run.
     pub(super) fn install_search_typing(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
+        self.list.filters.connect_changed(move || {
+            if let Some(win) = weak.upgrade() {
+                win.listing.reload();
+            }
+        });
+        let weak = Rc::downgrade(self);
         self.list.search_entry.connect_changed(move |entry| {
             if let Some(win) = weak.upgrade() {
                 win.listing.typed(&entry.text());
@@ -64,7 +70,10 @@ impl Pane for ListPane {
 
     fn view(&self, mailbox: &Mailbox, category: Category) -> View {
         self.window()
-            .map(|win| win.view_of(mailbox, category))
+            .map(|win| View {
+                filter: win.list.filters.get(),
+                ..win.view_of(mailbox, category)
+            })
             .unwrap_or_default()
     }
 
@@ -97,7 +106,8 @@ impl Pane for ListPane {
         for notice in &listing.notices {
             win.toast(notice);
         }
-        win.list.show_more(listing.replace && listing.more);
+        win.list
+            .show_more(listing.more && (listing.replace || listing.next.is_some()));
         let rows = win
             .in_flight
             .keep_out(listing.rows)
@@ -111,9 +121,11 @@ impl Pane for ListPane {
         win.list.set_title(&listing.title, &listing.subtitle);
     }
 
-    fn append(&self, rows: Vec<ThreadSummary>) {
+    fn append(&self, listing: Listing) {
         if let Some(win) = self.window() {
-            let rows = win.in_flight.keep_out(rows);
+            win.list
+                .show_more(listing.more && (listing.replace || listing.next.is_some()));
+            let rows = win.in_flight.keep_out(listing.rows);
             win.list.append(rows.into_iter().map(Rc::new).collect());
         }
     }
@@ -132,6 +144,12 @@ impl Pane for ListPane {
             .retain(|row| !gone.contains(&Target::from_row(row)));
         if win.conversation.read(|o| o.among(gone)) == Some(true) {
             win.conversation.clear();
+        }
+    }
+
+    fn preview_arrived(&self, target: &Target, text: &str) {
+        if let Some(win) = self.window() {
+            win.list.preview_arrived(target, text);
         }
     }
 
@@ -276,6 +294,11 @@ impl Lists for CoreLists {
                 .call(async move { account.follow_mailbox(&server_mailbox).await })
                 .await
         })
+    }
+
+    fn preview(&self, target: Target) -> Answer<'_, anyhow::Result<Option<String>>> {
+        let lists = self.0.lists();
+        Box::pin(self.0.call(async move { lists.preview(target).await }))
     }
 
     fn sleep(&self, time: Duration) -> Answer<'_, ()> {
