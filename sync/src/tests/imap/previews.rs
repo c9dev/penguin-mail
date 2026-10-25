@@ -8,7 +8,8 @@ use mailrs_store::{bodies, messages, threads};
 
 use super::{days_ago, message};
 use crate::Mailboxes;
-use crate::tests::{Connected, ImapHarness, imap_harness};
+use crate::fake::FakeImap;
+use crate::tests::{Connected, ImapHarness, gmail_imap_harness_on, imap_harness};
 
 fn lists(h: &ImapHarness) -> Mailboxes<Connected> {
     Mailboxes::new(
@@ -241,4 +242,21 @@ async fn grouped_search_and_folder_previews_use_the_matching_message() {
         stored.snippet.is_empty(),
         "the inbox conversation still previews its newest message"
     );
+}
+
+#[tokio::test]
+async fn gmail_over_imap_previews_a_row_from_its_body() {
+    let imap = FakeImap::gmail();
+    let id = format!(
+        "{:x}",
+        imap.deliver_gmail(&["\\Inbox"], message("a", "Kites", ""), days_ago(1))
+    );
+    let h = gmail_imap_harness_on(imap).await;
+    h.bootstrap().await;
+    let target = target(&h, &id).await;
+    assert_eq!(
+        lists(&h).preview(target).await.unwrap().as_deref(),
+        Some("Hi.")
+    );
+    assert_eq!(h.stored(&id).await.unwrap().snippet, "Hi.");
 }
