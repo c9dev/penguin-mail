@@ -35,22 +35,18 @@ It is built with GTK and libadwaita and fits best on GNOME. It also runs on
 other Linux desktops and macOS. On macOS, Settings lives in the native app
 menu.
 
-Gmail accounts sign in in up to three ways, and you pick one for each
-account:
+A new Gmail account signs in one of two ways, and you pick one for it:
 
 - **Set up your own Google project.** Every Gmail feature, on Linux and
   macOS: Gmail filters, the automatic reply, send-as aliases and
   signatures, and label colours. It takes about 10 minutes, once:
   Penguin Mail opens each Google page for you and says what to click.
-- **Use the Google account on this computer** (Linux). Mail, calendar and
-  contacts, signed in through your computer's Online Accounts, with no
-  new password. It has no Gmail filters, automatic reply, aliases or
-  label colours.
-- **Use a password from Google.** Quick. You get mail, calendar and
-  contacts, without those four.
+- **Use the Google account on this computer** (Linux), signed in through
+  your computer's Online Accounts, or **a password from Google** elsewhere.
+  Mail, calendar and contacts, without those four.
 
-Preferences shows what each account has. Get Every Feature there lets an
-account switch to your own Google project later.
+Preferences shows what each account has. An account keeps the way it signed
+in. To change it, remove the account and add it again.
 
 [![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://youtu.be/0PyJCsw1FSE)
 
@@ -135,7 +131,7 @@ and an IMAP account its rules over ManageSieve.
 
 Gmail runs all four, so they work with your computer off.
 
-With a password from Google, you change filters and the automatic reply on
+With Online Accounts or a password from Google, you change filters and the automatic reply on
 gmail.com. Your Gmail filters still run, and Penguin Mail links to the page.
 
 ### Calendar

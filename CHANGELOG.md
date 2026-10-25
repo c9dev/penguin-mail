@@ -7,10 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
-- New ways to sign in to Gmail. Gmail users: update, then choose one for each account.
-- Gmail can sign in through this computer's Online Accounts on Linux.
-- Adding a Google account asks how it signs in, and lists only the ways this computer offers.
-- Add a Gmail account with every feature through a Google project of your own, set up step by step inside Penguin Mail.
+- New ways to sign in to Gmail: a Google project of your own, set up step by step inside Penguin Mail, or this computer's Online Accounts on Linux or a password from Google.
+- Adding a Google account asks how it signs in, and lists the ways this computer offers.
+- A Gmail account made before keeps working, and signs in again through your own Google project when it has to.
 - Filter the message list to unread mail, flagged mail, or mail with attachments.
 - Open .eml files from Files or the command line, and messages attached to other messages, in a window of their own, with Reply and Forward.
 - Choose message preview lines, hide avatars, and control bold text for unread messages and senders.
