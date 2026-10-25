@@ -3937,18 +3937,17 @@ msgid "Never ask"
 msgstr "永不詢問"
 
 #: app/src/settings/mod.rs:695
-#, fuzzy
 #| msgid "Preview"
 msgid "No Preview"
-msgstr "預覽"
+msgstr "不顯示預覽"
 
 #: app/src/settings/mod.rs:696
 msgid "1 Line"
-msgstr ""
+msgstr "1 行"
 
 #: app/src/settings/mod.rs:697
 msgid "2 Lines"
-msgstr ""
+msgstr "2 行"
 
 #: app/src/settings/mod.rs:731
 msgid "Small"
@@ -8319,45 +8318,41 @@ msgid "Text Size"
 msgstr "文字大小"
 
 #: app/src/ui/preferences.rs:243
-#, fuzzy
 #| msgid "Message Source"
 msgid "Message Preview"
-msgstr "郵件原始碼"
+msgstr "郵件預覽"
 
 #: app/src/ui/preferences.rs:244
 msgid "Lines of message text below the subject"
-msgstr ""
+msgstr "主旨下方顯示的郵件內文行數"
 
 #: app/src/ui/preferences.rs:250
-#, fuzzy
 #| msgid "{count} unread message"
 #| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
-msgstr "{count} 封未讀郵件"
+msgstr "未讀郵件使用粗體"
 
 #: app/src/ui/preferences.rs:252
 msgid "Use heavier text for unread senders, subjects, and dates"
-msgstr ""
+msgstr "未讀郵件的寄件者、主旨與日期使用粗體"
 
 #: app/src/ui/preferences.rs:259
-#, fuzzy
 #| msgid "Always Load Images?"
 msgid "Always Bold Senders"
-msgstr "是否一律載入圖片？"
+msgstr "寄件者一律使用粗體"
 
 #: app/src/ui/preferences.rs:261
 msgid "Use heavier sender text for both read and unread messages"
-msgstr ""
+msgstr "已讀與未讀郵件的寄件者皆使用粗體"
 
 #: app/src/ui/preferences.rs:268
-#, fuzzy
 #| msgid "Show Calendars"
 msgid "Show Avatars"
-msgstr "顯示行事曆"
+msgstr "顯示大頭貼"
 
 #: app/src/ui/preferences.rs:270
 msgid "Show contact pictures or initials in the message list"
-msgstr ""
+msgstr "在郵件列表中顯示聯絡人照片或姓名縮寫"
 
 #: app/src/ui/preferences.rs:282 app/src/ui/preferences.rs:287
 msgid "Notifications"
@@ -8441,6 +8436,8 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
+"此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含"
+"字尾的寄件地址；<domain> 則替換為該地址的網域。"
 
 #: app/src/ui/preferences.rs:527 app/src/ui/sender_prefs.rs:87
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -9125,22 +9122,22 @@ msgid "Enter a valid address that is not already listed."
 msgstr "請輸入有效且尚未加入清單的地址。"
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#, fuzzy
 #| msgid "No signature"
 msgid "Use Account Signature"
-msgstr "無簽名"
+msgstr "使用帳號簽名"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#, fuzzy
 #| msgid "Signature"
 msgid "Custom Signature"
-msgstr "簽名"
+msgstr "自訂簽名"
 
 #: app/src/ui/sender_prefs/signature.rs:49
 msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
+"支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址"
+"的網域。"
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -9208,7 +9205,7 @@ msgstr "下移"
 
 #: app/src/ui/sidebar.rs:1729
 msgid "Empty Trash…"
-msgstr ""
+msgstr "清空垃圾桶…"
 
 #: app/src/ui/sidebar.rs:1857
 msgid "Automatic Reply…"
@@ -10824,7 +10821,7 @@ msgstr "不再提供翻譯 {language} 郵件的選項"
 
 #: app/src/ui/window/trash.rs:43
 msgid "Empty Trash?"
-msgstr ""
+msgstr "是否清空垃圾桶？"
 
 #: app/src/ui/window/trash.rs:46
 msgid ""
@@ -10833,31 +10830,32 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
+"是否永久刪除下列帳號的 [垃圾桶] 中所有郵件，包括未儲存在這部電腦上的舊郵"
+"件？此操作無法復原。\n"
+"\n"
+"{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#, fuzzy
 #| msgid "Empty"
 msgid "Empty Trash"
-msgstr "空白"
+msgstr "清空垃圾桶"
 
 #: app/src/ui/window/trash.rs:56
 msgid "Emptying Trash…"
-msgstr ""
+msgstr "正在清空垃圾桶…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#, fuzzy
 #| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
-msgstr "無法載入 {account} 的郵件：{reason}"
+msgstr "無法清空 {account} 的垃圾桶：{reason}"
 
 #: app/src/ui/window/trash.rs:94
-#, fuzzy
 #| msgid "Deleted {count} message forever"
 #| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
-msgstr[0] "已永久刪除 {count} 封郵件"
+msgstr[0] "已從 [垃圾桶] 刪除 {count} 封郵件（帳號：{account}）"
 
 #: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
