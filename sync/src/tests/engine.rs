@@ -13,7 +13,7 @@ use crate::calendar_copy::CalendarCopy;
 use crate::fake::{FakeGmail, fill_store, meta};
 use crate::{
     AccountServices, AccountSync, Accounts, BackendError, CalendarService, EngineConfig,
-    SyncEngine, WhenGrantEnds, now_millis,
+    SyncEngine, now_millis,
 };
 
 struct Setup {
@@ -380,93 +380,6 @@ async fn opening_the_window_looks_for_mail_at_once() {
     wait_for(&s.events, |e| matches!(e, ChangeEvent::NewMail { .. })).await;
 }
 
-fn built_in_gmail(s: &Setup) -> AccountServices {
-    AccountServices::google(Arc::clone(&s.fake)).with_when_grant_ends(WhenGrantEnds::PauseMail)
-}
-
-#[tokio::test]
-async fn a_refresh_without_mail_scopes_pauses_mail() {
-    let s = setup().await;
-    s.fake.withhold(mailrs_gmail::DELETE_SCOPE);
-    s.fake.withhold(mailrs_gmail::GMAIL_SCOPE);
-    s.engine.start_account(1, built_in_gmail(&s));
-    wait_for(&s.events, reached(AccountState::MailPaused)).await;
-    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
-}
-
-#[tokio::test]
-async fn an_insufficient_permissions_answer_pauses_mail() {
-    let s = setup().await;
-    s.fake.fail_next(GmailError::MissingScope);
-    s.engine.start_account(1, built_in_gmail(&s));
-    wait_for(&s.events, reached(AccountState::MailPaused)).await;
-    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
-}
-
-/// What the code logs at warning level while `run` runs, on this thread.
-async fn warnings<F: std::future::Future>(run: F) -> String {
-    #[derive(Clone, Default)]
-    struct Log(Arc<std::sync::Mutex<Vec<u8>>>);
-    impl std::io::Write for Log {
-        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-            self.0.lock().unwrap().extend_from_slice(bytes);
-            Ok(bytes.len())
-        }
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-    let log = Log::default();
-    let writer = log.clone();
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::WARN)
-        .with_ansi(false)
-        .with_writer(move || writer.clone())
-        .finish();
-    let _guard = tracing::subscriber::set_default(subscriber);
-    run.await;
-    String::from_utf8(log.0.lock().unwrap().clone()).unwrap()
-}
-
-#[tokio::test]
-async fn the_pause_line_says_what_google_answered() {
-    let s = setup().await;
-    s.fake.fail_next(GmailError::NeedsReauth);
-    let said = warnings(async {
-        s.engine.start_account(1, built_in_gmail(&s));
-        wait_for(&s.events, reached(AccountState::MailPaused)).await;
-    })
-    .await;
-    let line = said
-        .lines()
-        .find(|line| line.contains("mail is paused"))
-        .unwrap_or_else(|| panic!("no pause line in {said:?}"));
-    assert!(line.contains("error="), "{line}");
-}
-
-#[tokio::test]
-async fn an_invalid_grant_pauses_mail() {
-    let s = setup().await;
-    s.fake.fail_next(GmailError::NeedsReauth);
-    s.engine.start_account(1, built_in_gmail(&s));
-    wait_for(&s.events, reached(AccountState::MailPaused)).await;
-    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
-}
-
-#[tokio::test]
-async fn a_paused_account_still_answers_for_its_calendar() {
-    let s = setup().await;
-    s.fake.fail_next(GmailError::NeedsReauth);
-    s.engine.start_account(1, built_in_gmail(&s));
-    wait_for(&s.events, reached(AccountState::MailPaused)).await;
-    let sync = s
-        .engine
-        .account(1)
-        .expect("the account stays in the engine");
-    assert!(sync.services().calendar.is_some());
-    assert!(sync.services().contacts.is_some());
-}
-
 #[tokio::test]
 async fn an_own_account_whose_token_is_refused_needs_reauth() {
     let s = setup().await;
@@ -475,42 +388,4 @@ async fn an_own_account_whose_token_is_refused_needs_reauth() {
         .start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::NeedsReauth)).await;
     assert_eq!(stored_state(&s).await, AccountState::NeedsReauth);
-}
-
-#[tokio::test]
-async fn a_paused_account_still_has_its_calendar_read_and_stays_paused() {
-    use mailrs_domain::calendar::{Access, Calendar};
-
-    let s = setup().await;
-    s.fake.with(|f| {
-        f.calendars = vec![Calendar {
-            id: "primary".into(),
-            name: "Personal".into(),
-            color: "#3584e4".into(),
-            access: Access::Owner,
-            zone: "UTC".into(),
-            primary: true,
-            shown: true,
-            hidden: false,
-            reminders: Vec::new(),
-            all_day_reminders: None,
-        }]
-    });
-    s.fake.fail_next(GmailError::NeedsReauth);
-    s.engine.start_account(1, built_in_gmail(&s));
-    wait_for(&s.events, reached(AccountState::MailPaused)).await;
-    let copy = CalendarCopy::new(Arc::clone(&s.engine), s.db.clone());
-    copy.refresh_due(&[1], NOW, true).await.unwrap();
-    let calendars =
-        s.db.read(|c| mailrs_store::calendar::calendars(c, 1))
-            .await
-            .unwrap();
-    assert_eq!(
-        calendars
-            .iter()
-            .map(|c| c.name.as_str())
-            .collect::<Vec<_>>(),
-        ["Personal"]
-    );
-    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
 }

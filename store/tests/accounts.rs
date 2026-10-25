@@ -347,7 +347,7 @@ fn a_new_online_accounts_id_lands_only_on_the_link_it_replaces() {
             goa_id: "account_2".into()
         }
     );
-    // A move off Online Accounts committed in between keeps its sign-in.
+    // An account that left Online Accounts in between keeps its sign-in.
     accounts::set_gmail_sign_in(&conn, id, &GmailSignIn::OwnProject).unwrap();
     accounts::relink_goa(&conn, id, "account_2", "account_3").unwrap();
     assert_eq!(
@@ -357,27 +357,11 @@ fn a_new_online_accounts_id_lands_only_on_the_link_it_replaces() {
 }
 
 #[test]
-fn committing_a_sign_in_restarts_the_sync_and_keeps_the_generation() {
+fn recording_a_sign_in_keeps_the_sync_cursor() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
     accounts::set_sync_state(&conn, id, "12345").unwrap();
-    let before = accounts::sync_cursor(&conn, id).unwrap().sync_gen;
-    let imap = GmailSignIn::AppPassword {
-        google: SignInClient::BuiltIn,
-    };
-    accounts::commit_sign_in(&conn, id, &imap, true).unwrap();
-    let cursor = accounts::sync_cursor(&conn, id).unwrap();
-    assert_eq!(cursor.state, None);
-    assert_eq!(cursor.sync_gen, before);
-    assert_eq!(accounts::gmail_sign_in(&conn, id).unwrap(), imap);
-}
-
-#[test]
-fn committing_a_sign_in_without_a_restart_keeps_the_cursor() {
-    let conn = open_in_memory().unwrap();
-    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
-    accounts::set_sync_state(&conn, id, "12345").unwrap();
-    accounts::commit_sign_in(&conn, id, &GmailSignIn::OwnProject, false).unwrap();
+    accounts::set_gmail_sign_in(&conn, id, &GmailSignIn::OwnProject).unwrap();
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap().state.as_deref(),
         Some("12345")
@@ -416,5 +400,4 @@ fn an_online_accounts_row_reads_its_mail_over_imap_whatever_its_route_column_say
     .unwrap();
     let sign_in = accounts::gmail_sign_in(&conn, id).unwrap();
     assert_eq!(sign_in.route(), MailRoute::Imap);
-    assert!(!sign_in.waits_to_move());
 }

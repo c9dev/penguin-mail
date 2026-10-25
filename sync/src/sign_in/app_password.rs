@@ -202,7 +202,7 @@ mod tests {
     use mailrs_discover::google_servers;
     use mailrs_imap::{Capabilities, Listed, SpecialUse};
 
-    use mailrs_domain::{AccountState, GmailSignIn, SignInClient};
+    use mailrs_domain::{AccountState, GmailSignIn};
     use mailrs_store::servers;
 
     use super::*;
@@ -316,7 +316,7 @@ mod tests {
             .unwrap();
         let id = account.id;
         assert_eq!(account.provider, Provider::Gmail);
-        assert_eq!(sign_in(&db, id).await.route(), MailRoute::Imap);
+        assert_eq!(sign_in(&db, id).await.route(), mailrs_domain::MailRoute::Imap);
         assert_eq!(
             db.read(move |c| servers::load(c, id)).await.unwrap(),
             Some(servers())
@@ -391,44 +391,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn an_online_accounts_account_taking_an_app_password_keeps_its_own_project() {
+    async fn an_online_accounts_address_is_taken_and_stays_as_it_signs_in() {
         let (_dir, db) = store();
-        let secrets = Secrets::memory();
-        let id = on_online_accounts(&db).await;
-        let own = super::super::own_client::OwnClient::new("own-cid", "own-secret");
-        secrets.google_clients.save(id, &own.encode()).unwrap();
-
-        gmail_imap_signed_in(&db, &secrets, new_account("abcdefghijklmnop"), 5)
-            .await
-            .unwrap();
-
-        assert_eq!(
-            sign_in(&db, id).await,
-            GmailSignIn::AppPassword {
-                google: SignInClient::Own
-            }
-        );
-        assert_eq!(
-            secrets.google_clients.load(id).unwrap(),
-            Some(own.encode()),
-            "the project stays for the calendar"
-        );
-    }
-
-    #[tokio::test]
-    async fn an_online_accounts_account_with_no_project_takes_the_built_in_client() {
-        let (_dir, db) = store();
-        let secrets = Secrets::memory();
         let id = on_online_accounts(&db).await;
 
-        gmail_imap_signed_in(&db, &secrets, new_account("abcdefghijklmnop"), 5)
+        let err = gmail_imap_signed_in(&db, &Secrets::memory(), new_account("abcdefghijklmnop"), 5)
             .await
-            .unwrap();
+            .unwrap_err();
 
+        assert!(matches!(err, ImapSignInError::Taken { .. }));
         assert_eq!(
             sign_in(&db, id).await,
-            GmailSignIn::AppPassword {
-                google: SignInClient::BuiltIn
+            GmailSignIn::OnlineAccounts {
+                goa_id: "account_1_0".into()
             }
         );
     }

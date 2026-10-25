@@ -21,7 +21,7 @@ use crate::sign_in::{
     Browser, BrowserSignInError, ClientSource, Wanted, calendar_consent, google_sign_in,
     google_signed_in, in_browser,
 };
-use crate::{Clients, Connected, Connector, Lacks, WhenGrantEnds};
+use crate::{Clients, Connected, Connector, Lacks};
 
 pub(super) async fn store() -> (Db, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
@@ -161,61 +161,6 @@ async fn a_google_account_with_its_token_connects_to_google() {
 }
 
 #[tokio::test]
-async fn a_built_in_gmail_account_on_the_api_route_pauses_mail_when_its_grant_ends() {
-    let (db, _dir) = store().await;
-    let me = gmail_account(&db).await;
-    let reach = connector(&db, both_clients());
-    reach.secrets.google.save(&me.email, "rt").unwrap();
-    let Connected::Ready(services) = reach.connect(&me).await.unwrap() else {
-        panic!("the account connects");
-    };
-    assert_eq!(services.when_grant_ends, WhenGrantEnds::PauseMail);
-}
-
-#[tokio::test]
-async fn a_gmail_account_on_its_own_client_signs_in_again_when_its_grant_ends() {
-    let (db, _dir) = store().await;
-    let me = gmail_account(&db).await;
-    let id = me.id;
-    db.write(move |c| accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject))
-        .await
-        .unwrap();
-    let reach = connector(&db, Clients::default());
-    reach.secrets.google.save(&me.email, "rt").unwrap();
-    reach
-        .secrets
-        .google_clients
-        .save(me.id, &OwnClient::new("own", "secret").encode())
-        .unwrap();
-    let Connected::Ready(services) = reach.connect(&me).await.unwrap() else {
-        panic!("the account connects");
-    };
-    assert_eq!(services.when_grant_ends, WhenGrantEnds::SignInAgain);
-}
-
-#[tokio::test]
-async fn a_gmail_account_on_the_imap_route_signs_in_again_when_its_grant_ends() {
-    let (db, _dir) = store().await;
-    let me = gmail_account(&db).await;
-    let id = me.id;
-    db.write(move |c| {
-        accounts::set_gmail_sign_in(
-            c,
-            id,
-            &GmailSignIn::AppPassword {
-                google: SignInClient::BuiltIn,
-            },
-        )
-    })
-    .await
-    .unwrap();
-    // No servers row and no app password are saved, so the route has no
-    // mail to build.
-    let connected = connector(&db, both_clients()).connect(&me).await.unwrap();
-    assert!(matches!(connected, Connected::NeedsSignIn(Lacks::Secret)));
-}
-
-#[tokio::test]
 async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
@@ -254,26 +199,6 @@ async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
     assert!(matches!(services.mail, AnyMail::GmailImap(_)));
     assert!(services.capabilities().labels);
     assert!(!services.offers().label_colors);
-}
-
-#[tokio::test]
-async fn accounts_of_other_providers_sign_in_again_when_their_secret_ends() {
-    let (db, _dir) = store().await;
-    let dana = microsoft_account(&db).await;
-    let reach = connector(&db, both_clients());
-    reach.secrets.microsoft.save(dana.id, "refresh").unwrap();
-    let Connected::Ready(microsoft) = reach.connect(&dana).await.unwrap() else {
-        panic!("the Microsoft account connects");
-    };
-    let fastmail = imap_account(&db).await;
-    reach.secrets.passwords.save(fastmail.id, "secret").unwrap();
-    let Connected::Ready(imap) = reach.connect(&fastmail).await.unwrap() else {
-        panic!("the IMAP account connects");
-    };
-    assert_eq!(
-        (microsoft.when_grant_ends, imap.when_grant_ends),
-        (WhenGrantEnds::SignInAgain, WhenGrantEnds::SignInAgain)
-    );
 }
 
 #[tokio::test]

@@ -42,16 +42,6 @@ pub fn forget(conn: &Connection, account_id: AccountId, draft_id: &str) -> Resul
     Ok(())
 }
 
-/// Drops every pair the account holds. An account that reads its mail over
-/// IMAP has no draft ids, only messages.
-pub fn forget_account(conn: &Connection, account_id: AccountId) -> Result<()> {
-    conn.execute(
-        "DELETE FROM drafts WHERE account_id = ?1",
-        params![account_id],
-    )?;
-    Ok(())
-}
-
 /// Everything Gmail listed, as the account's whole set of pairs. Each one
 /// is a draft id with the message inside it. Rows for drafts the listing
 /// left out go, since the listing is Gmail's own answer to what the

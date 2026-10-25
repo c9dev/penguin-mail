@@ -327,12 +327,6 @@ mod tests {
         google: SignInClient::BuiltIn,
     };
 
-    fn goa() -> GmailSignIn {
-        GmailSignIn::OnlineAccounts {
-            goa_id: "account_1_0".into(),
-        }
-    }
-
     fn servers_row() -> Servers {
         let saved = |host: &str, port| Saved {
             host: host.into(),

@@ -817,7 +817,7 @@ pub struct Vacation {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::{AccountState, MailRoute};
+    use crate::MailRoute;
 
     #[test]
     fn mail_routes_round_trip_through_their_names() {

@@ -5,8 +5,6 @@
 use std::sync::Arc;
 
 use mailrs_domain::Target;
-use mailrs_store::mailboxes;
-use mailrs_store::messages::{self, Change};
 
 use super::{days_ago, message};
 use crate::fake::{FakeImap, FakeSmtp};
@@ -241,60 +239,6 @@ async fn a_new_uidvalidity_on_all_mail_downloads_no_body() {
     assert_eq!(h.ids().await, [hex(id)]);
     assert!(h.location(&hex(id)).await.is_some());
     assert_eq!(h.imap.calls_to("body"), bodies);
-}
-
-#[tokio::test]
-async fn a_moved_account_lists_its_mail_again_from_imap() {
-    let imap = FakeImap::gmail();
-    let id = imap.deliver_gmail(
-        &["\\Inbox", "Work/Clients"],
-        message("a", "Kites", ""),
-        days_ago(1),
-    );
-    let h = gmail_on(imap).await;
-    // What the Gmail API left in the store: the hex id and its label by
-    // number, then the move, which empties it.
-    let account = h.account_id;
-    let stored = hex(id);
-    h.db.write(move |c| {
-        mailboxes::upsert(
-            c,
-            account,
-            &mailrs_domain::RemoteMailbox {
-                id: "Label_3".into(),
-                name: "Work/Clients".into(),
-                kind: mailrs_domain::MailboxKind::Label,
-                role: None,
-                color: None,
-                hidden: false,
-            },
-        )?;
-        let mut meta = crate::fake::meta(&stored, &stored, days_ago(1), &["INBOX", "Label_3"]);
-        meta.account_id = account;
-        messages::apply(
-            c,
-            account,
-            &[Change::Upsert {
-                meta: Box::new(meta),
-                generation: 1,
-            }],
-        )?;
-        crate::route_move::empty_for_imap(c, account)
-    })
-    .await
-    .unwrap();
-
-    h.sync.bootstrap().await.unwrap();
-    while h.sync.backfill_step().await.unwrap() {}
-    h.sync.incremental().await.unwrap();
-
-    assert_eq!(h.ids().await, [hex(id)]);
-    let held = mailboxes_of(&h, &hex(id)).await;
-    assert!(held.contains(&"Work/Clients".to_string()), "{held:?}");
-    assert!(
-        h.location(&hex(id)).await.is_some(),
-        "the first look gave it a ref"
-    );
 }
 
 // ---- Writes ------------------------------------------------------------------
