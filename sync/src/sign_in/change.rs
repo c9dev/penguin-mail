@@ -473,7 +473,7 @@ mod tests {
         let before = held(&db, &secrets, id).await;
         // Saving the servers row fails without its table, so the one
         // transaction of the change fails.
-        db.write(|c| Ok(c.execute_batch("DROP TABLE servers")?))
+        db.write(|c| Ok(c.execute_batch("DROP TABLE account_servers")?))
             .await
             .unwrap();
         let to = Change {

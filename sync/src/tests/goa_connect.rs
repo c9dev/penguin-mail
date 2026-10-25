@@ -124,7 +124,7 @@ async fn linking_refuses_an_account_with_mail_turned_off() {
 }
 
 #[tokio::test]
-async fn linking_an_address_the_store_holds_changes_nothing_and_answers_it() {
+async fn linking_an_address_the_store_holds_is_refused_and_changes_nothing() {
     let (db, _dir) = store().await;
     let held = gmail_account(&db).await;
     let goa = FakeAccounts::new();
@@ -134,15 +134,16 @@ async fn linking_an_address_the_store_holds_changes_nothing_and_answers_it() {
     };
     goa.add(same.clone());
 
-    let account = link(&reach(&db, &goa, Clients::default()), &same, NOW)
-        .await
-        .unwrap();
+    let refused = link(&reach(&db, &goa, Clients::default()), &same, NOW).await;
 
-    assert_eq!(account.id, held.id);
+    assert!(
+        matches!(refused, Err(LinkError::Taken { .. })),
+        "{refused:?}"
+    );
     assert_eq!(
         sign_in(&db, held.id).await,
         GmailSignIn::BuiltInApi,
-        "the move changes it, not the link"
+        "removing the account and adding it again changes the sign-in"
     );
 }
 
