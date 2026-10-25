@@ -57,11 +57,6 @@ pub struct Google<G> {
     capabilities: Option<MailCapabilities>,
     /// Whether only the tray runs, which slows the history polls.
     tray_only: Arc<AtomicBool>,
-    /// Changes a fake account adds to what the history answers, for a test
-    /// of how the engine meets a server unlike Gmail. Tests only, so no
-    /// Google look in the app takes its lock.
-    #[cfg(test)]
-    extra_changes: Arc<Mutex<Vec<crate::RemoteChange>>>,
 }
 
 /// How often the history is read while only the tray runs. With the window
@@ -86,7 +81,6 @@ const GMAIL: MailCapabilities = MailCapabilities {
     focus: false,
     local_mailboxes: false,
     files_muted_replies: true,
-    gone_draft_is_sent: true,
 };
 
 impl<G> Google<G> {
@@ -96,18 +90,7 @@ impl<G> Google<G> {
             handles: Arc::new(Mutex::new(Handles::default())),
             capabilities: None,
             tray_only: Arc::default(),
-            #[cfg(test)]
-            extra_changes: Arc::default(),
         }
-    }
-
-    /// Adds `changes` to the next answer of the history, once.
-    #[cfg(test)]
-    pub fn report(&self, changes: Vec<crate::RemoteChange>) {
-        self.extra_changes
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .extend(changes);
     }
 
     /// Answers `caps` instead of Gmail's, for a fake account whose server
@@ -143,8 +126,6 @@ impl<G> Clone for Google<G> {
             handles: Arc::clone(&self.handles),
             capabilities: self.capabilities,
             tray_only: Arc::clone(&self.tray_only),
-            #[cfg(test)]
-            extra_changes: Arc::clone(&self.extra_changes),
         }
     }
 }
@@ -194,12 +175,6 @@ impl<G: GmailApi> Google<G> {
     /// What this account's own client believes Google withholds.
     pub fn withheld(&self) -> Withheld {
         withheld(self.gmail.granted().as_ref())
-    }
-
-    /// Whether the last scopes this account was granted are known and
-    /// leave out mail.
-    pub fn mail_grant_lost(&self) -> bool {
-        self.gmail.granted().is_some_and(|g| !g.reads_mail())
     }
 
     /// Whether the account is on Google Workspace, which keeps out of
@@ -528,16 +503,7 @@ impl<G: GmailApi> MailBackend for Google<G> {
     }
 
     async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
-        #[cfg_attr(not(test), allow(unused_mut))]
-        let mut found = self.history_changes(since).await?;
-        #[cfg(test)]
-        found.changes.append(
-            &mut self
-                .extra_changes
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner),
-        );
-        Ok(found)
+        self.history_changes(since).await
     }
 
     async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
@@ -969,7 +935,6 @@ mod tests {
                 focus: false,
                 local_mailboxes: false,
                 files_muted_replies: true,
-                gone_draft_is_sent: true,
             }
         );
     }

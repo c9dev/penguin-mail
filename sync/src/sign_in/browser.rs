@@ -118,7 +118,7 @@ pub enum BrowserSignInError {
     NoRefreshToken,
     /// The built-in client signs in no account that reads its mail through
     /// the API, and adds none: its token carries no mail, and would replace
-    /// one that does.
+    /// one that does. An account on the IMAP route keeps its route too.
     // Translators: Gmail is a name; keep it as it is.
     #[error("{}", gettext("Choose how Penguin Mail signs in to Gmail"))]
     NeedsRoute,
@@ -279,20 +279,6 @@ pub fn google_sign_in(
     }
 }
 
-/// The own client a built-in account moves to: the one the setup chose,
-/// else the one the environment names. Half an own client in the
-/// environment is an error, as for [`google_sign_in`].
-// The setup's client wins over half a pair in the environment here, since
-// the person just chose it for this move.
-pub fn move_choice(clients: &Clients) -> Result<ClientChoice, BrowserSignInError> {
-    match (&clients.chosen_google, &clients.own_google) {
-        (Some(chosen), _) => Ok(ClientChoice::own(chosen, ClientSource::Setup)),
-        (None, Some(Ok(own))) => Ok(ClientChoice::own(own, ClientSource::Environment)),
-        (None, Some(Err(half))) => Err(half.clone().into()),
-        (None, None) => Err(BrowserSignInError::NoClient(Browser::Google)),
-    }
-}
-
 /// Keeps the setup's client as the person's project, for any later Google
 /// account, once an account signed in through it. A client from the
 /// environment or an account's keyring entry is never kept. A keyring that
@@ -373,8 +359,8 @@ pub(crate) async fn signed_in_through(
 ) -> Result<Account, BrowserSignInError> {
     wanted.check(&authorized.email)?;
     // Whoever signs in may be an account on the IMAP route, which this
-    // token would move off it without emptying its mail. It moves through
-    // the route choice instead.
+    // token would move onto the API. It keeps its route: removing the
+    // account and adding it again changes that.
     if held_on_imap(&connector.db, Some(&authorized.email))
         .await?
         .is_some()

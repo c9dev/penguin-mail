@@ -347,15 +347,19 @@ fn encode_sign_in(sign_in: &GmailSignIn) -> (&'static str, &'static str, Option<
     }
 }
 
-/// Records how `id` signs in, all three columns in one statement. The sync
-/// state stays.
+/// Records how `id` signs in, all three columns in one statement, so a
+/// failure leaves none of them changed. The sync state stays.
 pub fn set_gmail_sign_in(conn: &Connection, id: AccountId, sign_in: &GmailSignIn) -> Result<()> {
-    commit_sign_in(conn, id, sign_in, false)
+    let (client, route, goa_id) = encode_sign_in(sign_in);
+    conn.execute(
+        "UPDATE accounts SET oauth_client = ?2, mail_route = ?3, goa_id = ?4 WHERE id = ?1",
+        params![id, client, route, goa_id],
+    )?;
+    Ok(())
 }
 
 /// Points the Online Accounts account `id` links to at `new`, while it
-/// still links to `old`. A move off Online Accounts that committed since
-/// the caller read `old` keeps its sign-in.
+/// still links to `old`.
 pub fn relink_goa(conn: &Connection, id: AccountId, old: &str, new: &str) -> Result<()> {
     conn.execute(
         "UPDATE accounts SET goa_id = ?3 \
@@ -399,29 +403,6 @@ pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GmailSign
         }
     }
     Ok(all)
-}
-
-/// Writes `sign_in` in one statement, so a failure leaves none of its
-/// columns changed. With `restart_sync`, the account's sync starts over,
-/// because a new route has no cursor the old one's would fit; stored mail
-/// stays, and so does `sync_gen`, as in a switch of folders.
-pub fn commit_sign_in(
-    conn: &Connection,
-    id: AccountId,
-    sign_in: &GmailSignIn,
-    restart_sync: bool,
-) -> Result<()> {
-    let (client, route, goa_id) = encode_sign_in(sign_in);
-    conn.execute(
-        "UPDATE accounts SET oauth_client = ?2, mail_route = ?3, goa_id = ?4, \
-         sync_state = CASE WHEN ?5 THEN NULL ELSE sync_state END, \
-         backfill_cursor = CASE WHEN ?5 THEN NULL ELSE backfill_cursor END, \
-         backfill_done = CASE WHEN ?5 THEN 0 ELSE backfill_done END, \
-         backfill_extends = CASE WHEN ?5 THEN 0 ELSE backfill_extends END \
-         WHERE id = ?1",
-        params![id, client, route, goa_id, restart_sync],
-    )?;
-    Ok(())
 }
 
 /// When the account's inbox was last checked against Gmail's, if ever.
@@ -469,10 +450,6 @@ pub fn set_sync_state(conn: &Connection, id: AccountId, state: &str) -> Result<(
     Ok(())
 }
 
-/// how long a color flag waits for its message after a route move, in
-/// milliseconds: 90 days.
-pub const KEEP_FLAGS_FOR: i64 = 90 * 24 * 60 * 60 * 1000;
-
 pub fn set_backfill(
     conn: &Connection,
     id: AccountId,
@@ -484,17 +461,6 @@ pub fn set_backfill(
          backfill_extends = backfill_extends AND NOT ?3 WHERE id = ?1",
         params![id, cursor, done],
     )?;
-    // A color flag waits for its message after a route move: mail older
-    // than the sync window comes back only when the person opens or finds
-    // it, and a pass of the old route can still end after the move. One
-    // kept longer than `KEEP_FLAGS_FOR` has nothing left to go on.
-    if done {
-        conn.execute(
-            "DELETE FROM kept_flags WHERE account_id = ?1 \
-             AND kept_at < CAST(strftime('%s', 'now') AS INTEGER) * 1000 - ?2",
-            params![id, KEEP_FLAGS_FOR],
-        )?;
-    }
     Ok(())
 }
 

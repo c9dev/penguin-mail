@@ -10,10 +10,9 @@ pub mod goa_link;
 mod jmap_browser;
 pub mod own_client;
 
-pub(crate) use browser::other_address;
 pub use browser::{
     Browser, BrowserSignInError, ClientChoice, ClientSource, SignedIn, Wanted, calendar_consent,
-    consent_through_built_in, google_sign_in, in_browser, keep_chosen_project, move_choice,
+    consent_through_built_in, google_sign_in, in_browser, keep_chosen_project,
 };
 pub use browser_grant::{BrowserGrant, browser_grant};
 pub use jmap_browser::{BROWSER_WAIT, BrowserReady, JmapBrowser, browser_ready, jmap_in_browser};
@@ -247,10 +246,7 @@ pub async fn google_signed_in_as(
             provider,
         })?;
     let (whose, to) = match held {
-        Some((id, from)) => {
-            let to = to(&from);
-            (Whose::Held { id, from }, to)
-        }
+        Some((id, from)) => (Whose::Held(id), to(&from)),
         None => {
             let email = email.to_string();
             (Whose::New { email, now }, to(&GmailSignIn::BuiltInApi))
@@ -2032,43 +2028,6 @@ mod tests {
             .await
             .unwrap();
         assert!(matches!(found, KeptClient::NotOwn));
-    }
-
-    #[test]
-    fn a_move_takes_the_setup_client_over_the_environment() {
-        let env = Clients {
-            own_google: Some(Ok(own_client::OwnClient::new("env-cid", "s"))),
-            ..Clients::default()
-        };
-        let chosen = env
-            .clone()
-            .with_chosen(Some(own_client::OwnClient::new("setup-cid", "s")));
-        let choice = move_choice(&chosen).unwrap();
-        assert_eq!(
-            (choice.source, choice.oauth.id()),
-            (ClientSource::Setup, "setup-cid")
-        );
-        let choice = move_choice(&env).unwrap();
-        assert_eq!(
-            (choice.source, choice.oauth.id()),
-            (ClientSource::Environment, "env-cid")
-        );
-        assert!(matches!(
-            move_choice(&Clients::default()),
-            Err(BrowserSignInError::NoClient(Browser::Google))
-        ));
-        let half = own_client::OwnClientError::Half {
-            set: own_client::ID_VAR,
-            missing: own_client::SECRET_VAR,
-        };
-        let halved = Clients {
-            own_google: Some(Err(half.clone())),
-            ..Clients::default()
-        };
-        assert!(matches!(
-            move_choice(&halved),
-            Err(BrowserSignInError::OwnClient(err)) if err == half
-        ));
     }
 
     #[tokio::test]

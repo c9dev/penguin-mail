@@ -43,7 +43,6 @@ mod pop3_look;
 mod priority;
 mod quota;
 mod read_inbox;
-mod route_move;
 mod rsvp;
 mod rule_queue;
 mod search;
@@ -409,7 +408,6 @@ pub(crate) async fn gmail_imap_harness_on(imap: FakeImap) -> ImapHarness {
         rules: None,
         auto_reply: None,
         identities,
-        when_grant_ends: crate::WhenGrantEnds::SignInAgain,
     };
     harness_of(imap, smtp, services).await
 }

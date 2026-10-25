@@ -240,13 +240,6 @@ impl AccountSync {
         &self.services
     }
 
-    /// Waits for every write and sync pass under way to finish. A move
-    /// that stopped the account's loop calls this, so the old route has
-    /// what the person did before the new one starts.
-    pub async fn settle_writes(&self) {
-        drop(self.mail.hold_moves().await);
-    }
-
     /// The account's mail service, spoken to in store ids.
     pub(crate) fn mail(&self) -> &StoreMail {
         &self.mail

@@ -179,12 +179,6 @@ impl AccountSync {
         Ok(())
     }
 
-    /// Whether a draft [`AccountSync::send_draft`] found gone counts as
-    /// sent, as the account's mail service says.
-    pub(crate) fn gone_draft_is_sent(&self) -> bool {
-        self.mail.capabilities().gone_draft_is_sent
-    }
-
     /// Sends a draft as the server holds it, as a scheduled send does.
     /// Returns `None` when the draft is gone, sent or deleted elsewhere. A
     /// server that does not file what it sends gets a copy of the draft in

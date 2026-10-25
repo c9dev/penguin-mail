@@ -114,7 +114,6 @@ impl<I: ImapApi, S: Submit> MailBackend for GmailImap<I, S> {
             files_muted_replies: false,
             // A Gmail account on this route may have come through a move,
             // which cannot tell a sent draft from a deleted one.
-            gone_draft_is_sent: false,
         }
     }
 

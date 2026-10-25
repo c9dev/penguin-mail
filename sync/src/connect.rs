@@ -24,7 +24,7 @@ use crate::sign_in::account_client;
 use crate::sign_in::own_client::{self, OwnClient, OwnClientError};
 use crate::{
     AccountClient, AccountServices, BackendError, ImapSettings, JmapSettings, LocalRules,
-    MicrosoftSettings, Pop3Settings, SyncError, WhenGrantEnds,
+    MicrosoftSettings, Pop3Settings, SyncError,
 };
 
 /// How long starting an account waits on one step, such as a keyring
@@ -271,18 +271,7 @@ impl Connector {
                 match connect_account(oauth, Arc::clone(&self.secrets.google), account, &self.db)
                     .await
                 {
-                    Ok(client) => {
-                        // Signing in again through the built-in client
-                        // cannot bring API mail back, so such an account
-                        // pauses its mail instead.
-                        let ends = match sign_in.waits_to_move() {
-                            true => WhenGrantEnds::PauseMail,
-                            false => WhenGrantEnds::SignInAgain,
-                        };
-                        Ok(Ok(
-                            AccountServices::google(client).with_when_grant_ends(ends)
-                        ))
-                    }
+                    Ok(client) => Ok(Ok(AccountServices::google(client))),
                     Err(SyncError::Backend(BackendError::NeedsReauth)) => Ok(Err(Lacks::Secret)),
                     Err(err) => Err(err),
                 }

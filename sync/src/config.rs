@@ -43,10 +43,6 @@ pub struct Config {
     pub oauth: Option<OAuthConfig>,
     #[serde(default, skip_serializing_if = "SyncConfig::is_default")]
     pub sync: SyncConfig,
-    /// Whether the window already showed the sheet that asks a Gmail
-    /// account to choose how it signs in. It shows once.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub google_move_shown: bool,
     /// The step of the own Google project setup the person reached, so
     /// closing the setup partway reopens it there.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -261,20 +257,6 @@ mod tests {
         std::fs::set_permissions(&old, std::fs::Permissions::from_mode(0o755)).unwrap();
         super::private_dir(&old).unwrap();
         assert_eq!(mode(&old), 0o700);
-    }
-
-    #[test]
-    fn google_move_shown_round_trips_and_stays_out_of_a_default_file() {
-        assert!(!Config::default().google_move_shown);
-        let text = toml::to_string(&Config::default()).unwrap();
-        assert!(!text.contains("google_move_shown"), "{text}");
-        let shown = Config {
-            google_move_shown: true,
-            ..Config::default()
-        };
-        let text = toml::to_string(&shown).unwrap();
-        assert!(Config::parse(&text).unwrap().google_move_shown);
-        assert!(!Config::parse("").unwrap().google_move_shown);
     }
 
     #[test]

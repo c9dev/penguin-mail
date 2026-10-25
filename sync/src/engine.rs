@@ -16,8 +16,8 @@ use tokio::time::Instant;
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::raw_cache::{RAW_CACHE_BYTES, RawCache};
 use crate::{
-    AccountServices, AccountSync, AnyMail, BackendError, MailBackend, SyncError, WhenGrantEnds,
-    background, backoff_delay, now_millis, poll_offset, with_jitter,
+    AccountServices, AccountSync, AnyMail, BackendError, MailBackend, SyncError, background,
+    backoff_delay, now_millis, poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -225,8 +225,6 @@ impl Drop for SyncEngine {
 
 enum Failure {
     Reauth,
-    /// The mail grant ended and signing in again cannot bring it back.
-    Paused,
     Retry {
         state: AccountState,
         retry_after: Option<Duration>,
@@ -243,13 +241,8 @@ fn signs_in_with_password(services: &AccountServices) -> bool {
 /// password is still right afterwards, so a refusal there waits and tries
 /// again instead of asking the person to sign in. A refused Google or
 /// Microsoft token stays refused, so those accounts still ask.
-fn classify(err: &SyncError, when: WhenGrantEnds, password: bool) -> Failure {
+fn classify(err: &SyncError, password: bool) -> Failure {
     match err {
-        SyncError::Backend(BackendError::NeedsReauth | BackendError::NeedsPermission)
-            if when == WhenGrantEnds::PauseMail =>
-        {
-            Failure::Paused
-        }
         SyncError::Backend(BackendError::NeedsReauth) if password => Failure::Retry {
             state: AccountState::BackingOff,
             retry_after: None,
@@ -401,22 +394,7 @@ async fn run_account(
                     }
                 }
             }
-            Err(err) => match classify(
-                &err,
-                sync.services().when_grant_ends,
-                signs_in_with_password(sync.services()),
-            ) {
-                // The loop ends and the account stays in the engine, so its
-                // calendar and contacts still answer.
-                Failure::Paused => {
-                    tracing::warn!(
-                        account = sync.account_id(),
-                        error = %err,
-                        "Google ended the mail grant; mail is paused"
-                    );
-                    report(&sync, AccountState::MailPaused).await;
-                    return;
-                }
+            Err(err) => match classify(&err, signs_in_with_password(sync.services())) {
                 Failure::Reauth => {
                     tracing::warn!(
                         account = sync.account_id(),
@@ -463,12 +441,6 @@ pub(crate) async fn tick(
     stagger: &mut Duration,
     config: &EngineConfig,
 ) -> Result<bool, SyncError> {
-    // Mail the old grant served cannot be asked for, so no call goes out.
-    if sync.services().when_grant_ends == WhenGrantEnds::PauseMail
-        && sync.services().mail.mail_grant_lost()
-    {
-        return Err(BackendError::NeedsPermission.into());
-    }
     // An account whose mailboxes live only in the store is never pruned,
     // relisted or paged: the store is its only copy. It lists its
     // mailboxes once an hour, the first time before anything else, so the
@@ -550,9 +522,7 @@ mod tests {
             text: "[ALERT] Account exceeded command or bandwidth limits.".into(),
         };
         let err = SyncError::Backend(alert.into());
-        let Failure::Retry { state, retry_after } =
-            classify(&err, WhenGrantEnds::SignInAgain, false)
-        else {
+        let Failure::Retry { state, retry_after } = classify(&err, false) else {
             panic!("the account waits and tries again");
         };
         assert_eq!(state, AccountState::DownloadLimit);
@@ -572,15 +542,12 @@ mod tests {
     fn a_refused_password_waits_and_a_refused_token_asks() {
         let refused = SyncError::Backend(BackendError::NeedsReauth);
         assert!(matches!(
-            classify(&refused, WhenGrantEnds::SignInAgain, true),
+            classify(&refused, true),
             Failure::Retry {
                 state: AccountState::BackingOff,
                 retry_after: None
             }
         ));
-        assert!(matches!(
-            classify(&refused, WhenGrantEnds::SignInAgain, false),
-            Failure::Reauth
-        ));
+        assert!(matches!(classify(&refused, false), Failure::Reauth));
     }
 }

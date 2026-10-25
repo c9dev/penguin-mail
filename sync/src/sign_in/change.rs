@@ -1,26 +1,26 @@
-//! Changing how a Gmail account signs in. Every first sign-in, sign-in
-//! again, calendar consent, Online Accounts link and move writes the
-//! account's sign-in through [`change_sign_in`], which keeps the store's
-//! columns, the servers row, the stored mail and the keyring entries in
-//! step, and puts the keyring back when the store refuses the change.
+//! Writing how a Gmail account signs in. Every first sign-in, sign-in
+//! again, calendar consent and Online Accounts link goes through
+//! [`change_sign_in`], which keeps the store's columns, the servers row and
+//! the keyring entries in step, and puts the keyring back when the store
+//! refuses the change. An account never changes its mail route here: that
+//! takes removing it and adding it again.
 
 use std::sync::Arc;
 
-use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn, MailRoute};
+use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn};
 use mailrs_store::servers::{self, Servers};
-use mailrs_store::{Db, StoreError, accounts, outbox, switch};
+use mailrs_store::{Db, StoreError, accounts};
 use rusqlite::Connection;
 
 use super::own_client::OwnClient;
-use crate::connect::{STEP_WAIT, read_secret};
 use crate::passwords::{PasswordError, PasswordStore, Secrets};
 
 /// The account whose sign-in changes.
 pub(crate) enum Whose {
     /// An address the store does not hold yet.
     New { email: String, now: EpochMillis },
-    /// The account `id`, which signs in as `from` now.
-    Held { id: AccountId, from: GmailSignIn },
+    /// The account `id`.
+    Held(AccountId),
 }
 
 /// A Google refresh token a sign-in brought back. No `Debug`: the token
@@ -53,8 +53,7 @@ pub(crate) struct Change {
 }
 
 impl Change {
-    /// A change of sign-in that brings no secret, as a link to Online
-    /// Accounts.
+    /// A sign-in that brings no secret, as a link to Online Accounts.
     pub fn to(to: GmailSignIn) -> Change {
         Change {
             to,
@@ -81,15 +80,12 @@ pub(crate) enum ChangeError {
     Store(#[from] StoreError),
 }
 
-/// Changes how the account `whose` names signs in to `change.to`, and
-/// gives back its id.
+/// Writes how the account `whose` names signs in as `change.to`, and gives
+/// back its id.
 ///
 /// A held account's secrets go into the keyring first. Then one
-/// transaction writes the sign-in, the consent, the servers row and,
-/// when the route changes, empties the stored mail and starts the sync
-/// over. When the store refuses, the keyring gets back what it held. An
-/// app password the change leaves behind goes last, once nothing reads
-/// it. A new address is written first, since the keyring keeps its
+/// transaction writes the sign-in, the consent and the servers row. When
+/// the store refuses, the keyring gets back what it held. A new address is written first, since the keyring keeps its
 /// secrets under its id, and is deleted again when the keyring refuses.
 ///
 /// A Google token from the built-in client deletes any own client the
@@ -109,7 +105,7 @@ pub(crate) async fn change_sign_in(
     } = change;
     match whose {
         Whose::New { email, now } => {
-            let stored = Stored::of(None, to, token.as_ref(), password.as_ref(), false);
+            let stored = Stored::of(to, token.as_ref(), password.as_ref(), false);
             // The check and the insert share the write, so an account added
             // for the address since the caller looked is refused, never
             // written over or deleted below.
@@ -131,148 +127,51 @@ pub(crate) async fn change_sign_in(
             }
             Ok(id)
         }
-        Whose::Held { id, from } => {
-            let leaves_password = from.on_app_password() && !to.on_app_password();
-            let stored = Stored::of(
-                Some(&from),
-                to,
-                token.as_ref(),
-                password.as_ref(),
-                signed_in_again,
-            );
+        Whose::Held(id) => {
+            let stored = Stored::of(to, token.as_ref(), password.as_ref(), signed_in_again);
             let earlier = keep_secrets(secrets, id, token, password).await?;
             if let Err(err) = db.write(move |c| stored.write(c, id)).await {
                 earlier.put_back(secrets, id).await;
                 return Err(err.into());
-            }
-            if leaves_password {
-                forget_password(secrets, id).await;
             }
             Ok(id)
         }
     }
 }
 
-/// What a Gmail account signs in as once its mail signs in with an app
-/// password, from `from`, how it signs in now (`None` for a new address).
-///
-/// An account leaving Online Accounts keeps the own client the keyring
-/// keeps for it, since its Google token is that client's while the
-/// keyring keeps it ([`change_sign_in`] deletes the client when a
-/// built-in token replaces the token). Taking the built-in client instead
-/// would leave the calendar refreshing through a client that never issued
-/// its token, and the next calendar consent would delete the project. An
-/// account leaving its own project on the API takes the built-in client:
-/// the person chose to stop using the project.
-pub(crate) async fn with_app_password(
-    secrets: &Secrets,
-    id: Option<AccountId>,
-    from: Option<&GmailSignIn>,
-) -> Result<GmailSignIn, ChangeError> {
-    let Some(from) = from else {
-        return Ok(GmailSignIn::BuiltInApi.with_app_password(false));
-    };
-    let keeps_own = match (from, id) {
-        (GmailSignIn::OnlineAccounts { .. }, Some(id)) => {
-            read_secret(Arc::clone(&secrets.google_clients), id, STEP_WAIT)
-                .await
-                .map_err(|err| ChangeError::Token(err.to_string()))?
-                .is_some()
-        }
-        _ => false,
-    };
-    Ok(from.with_app_password(keeps_own))
-}
-
-/// Empties the account's stored mail for Gmail's IMAP, which lists it all
-/// again, and names each outbox row by its draft's message id, which is
-/// the draft's id on IMAP. The outbox, the local rules and the settings
-/// stay.
-pub fn empty_for_imap(c: &Connection, id: AccountId) -> mailrs_store::Result<()> {
-    outbox::draft_ids_to_message_ids(c, id)?;
-    switch::empty_mail(c, id)
-}
-
-/// The servers row after the change.
-enum ServersRow {
-    Keep,
-    Save(Servers),
-    Forget,
-}
-
-/// The stored mail after the change.
-enum StoredMail {
-    Keep,
-    /// From the API to IMAP: [`empty_for_imap`].
-    ForImap,
-    /// From IMAP to the API, whose ids nothing stored shares. The outbox
-    /// lets go of its IMAP draft ids, and a row whose bytes are only in
-    /// such a draft asks the person to check Sent rather than count the
-    /// draft's absence on the API as sent.
-    ForApi,
-}
-
 /// The store's half of a change, owned so it can cross into the write.
 struct Stored {
     to: GmailSignIn,
-    restart_sync: bool,
     consent: Option<(Option<String>, String)>,
-    servers: ServersRow,
-    mail: StoredMail,
+    servers: Option<Servers>,
     signed_in_again: bool,
 }
 
 impl Stored {
     fn of(
-        from: Option<&GmailSignIn>,
         to: GmailSignIn,
         token: Option<&NewToken>,
         password: Option<&NewPassword>,
         signed_in_again: bool,
     ) -> Stored {
-        let routes = from.map(|from| (from.route(), to.route()));
-        let mail = match routes {
-            Some((MailRoute::GmailApi, MailRoute::Imap)) => StoredMail::ForImap,
-            Some((MailRoute::Imap, MailRoute::GmailApi)) => StoredMail::ForApi,
-            _ => StoredMail::Keep,
-        };
-        let servers = match password {
-            Some(new) => ServersRow::Save(new.servers.clone()),
-            None if from.is_some_and(GmailSignIn::on_app_password) && !to.on_app_password() => {
-                ServersRow::Forget
-            }
-            None => ServersRow::Keep,
-        };
         Stored {
-            restart_sync: routes.is_some_and(|(from, to)| from != to),
             consent: token.map(|token| (token.granted.clone(), token.asked.clone())),
             to,
-            servers,
-            mail,
+            servers: password.map(|new| new.servers.clone()),
             signed_in_again,
         }
     }
 
     fn write(&self, c: &Connection, id: AccountId) -> mailrs_store::Result<()> {
-        accounts::commit_sign_in(c, id, &self.to, self.restart_sync)?;
+        accounts::set_gmail_sign_in(c, id, &self.to)?;
         if let Some((granted, asked)) = &self.consent {
             if let Some(granted) = granted {
                 accounts::set_granted(c, id, granted)?;
             }
             accounts::set_asked(c, id, asked)?;
         }
-        match &self.servers {
-            ServersRow::Keep => {}
-            ServersRow::Save(saved) => servers::save(c, id, saved)?,
-            ServersRow::Forget => servers::forget(c, id)?,
-        }
-        match self.mail {
-            StoredMail::Keep => {}
-            StoredMail::ForImap => empty_for_imap(c, id)?,
-            StoredMail::ForApi => {
-                outbox::draft_ids_off_imap(c, id, &crate::outbox::check_sent())?;
-                switch::empty_mail(c, id)?
-            }
+        if let Some(saved) = &self.servers {
+            servers::save(c, id, saved)?;
         }
         if self.signed_in_again
             && accounts::account(c, id)?.is_some_and(|held| held.state == AccountState::NeedsReauth)
@@ -404,23 +303,6 @@ impl Earlier {
     }
 }
 
-/// Deletes the app password `id` kept, once nothing reads it. A keyring
-/// that fails leaves it, unread, and says so in the log.
-async fn forget_password(secrets: &Secrets, id: AccountId) {
-    let kept = Arc::clone(&secrets.passwords);
-    let gone = blocking(move || {
-        kept.delete(id)?;
-        kept.delete_outgoing(id)
-    })
-    .await;
-    if gone.is_err() {
-        tracing::warn!(
-            account = id,
-            "could not delete the app password the change left behind"
-        );
-    }
-}
-
 /// Runs a keyring call off the runtime.
 async fn blocking<T: Send + 'static>(
     call: impl FnOnce() -> Result<T, PasswordError> + Send + 'static,
@@ -547,66 +429,26 @@ mod tests {
         }
     }
 
-    async fn change(db: &Db, secrets: &Secrets, id: AccountId, from: GmailSignIn, change: Change) {
-        change_sign_in(db, secrets, Whose::Held { id, from }, change)
+    async fn change(db: &Db, secrets: &Secrets, id: AccountId, change: Change) {
+        change_sign_in(db, secrets, Whose::Held(id), change)
             .await
             .unwrap();
     }
 
     #[tokio::test]
-    async fn from_the_api_to_an_app_password_the_mail_goes_and_the_sync_starts_over() {
+    async fn signing_in_again_through_the_own_project_keeps_the_mail_and_takes_the_token() {
         let (_dir, db, secrets, id) = account_on(&GmailSignIn::BuiltInApi).await;
-        let to = Change {
-            password: Some(new_password("new-password")),
-            ..Change::to(APP_PASSWORD)
-        };
-        change(&db, &secrets, id, GmailSignIn::BuiltInApi, to).await;
-        assert_eq!(
-            held(&db, &secrets, id).await,
-            Held {
-                sign_in: APP_PASSWORD,
-                sync_state: None,
-                drafts: 0,
-                servers: true,
-                password: Some("new-password".into()),
-                own_client: false,
-                token: None,
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn from_an_app_password_to_online_accounts_the_mail_stays_and_the_password_goes() {
-        let (_dir, db, secrets, id) = account_on(&APP_PASSWORD).await;
-        change(&db, &secrets, id, APP_PASSWORD, Change::to(goa())).await;
-        assert_eq!(
-            held(&db, &secrets, id).await,
-            Held {
-                sign_in: goa(),
-                sync_state: Some("777".into()),
-                drafts: 1,
-                servers: false,
-                password: None,
-                own_client: false,
-                token: None,
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn from_an_app_password_to_the_own_project_the_mail_goes_and_the_token_comes() {
-        let (_dir, db, secrets, id) = account_on(&APP_PASSWORD).await;
         let to = Change {
             token: Some(token("own-token", Some(own()))),
             ..Change::to(GmailSignIn::OwnProject)
         };
-        change(&db, &secrets, id, APP_PASSWORD, to).await;
+        change(&db, &secrets, id, to).await;
         assert_eq!(
             held(&db, &secrets, id).await,
             Held {
                 sign_in: GmailSignIn::OwnProject,
-                sync_state: None,
-                drafts: 0,
+                sync_state: Some("777".into()),
+                drafts: 1,
                 servers: false,
                 password: None,
                 own_client: true,
@@ -625,7 +467,7 @@ mod tests {
             token: Some(token("built-in-token", None)),
             ..Change::to(GmailSignIn::BuiltInApi)
         };
-        change(&db, &secrets, id, GmailSignIn::OwnProject, to).await;
+        change(&db, &secrets, id, to).await;
         assert!(!held(&db, &secrets, id).await.own_client);
     }
 
@@ -635,9 +477,9 @@ mod tests {
         secrets.google_clients.save(id, &own().encode()).unwrap();
         secrets.google.save(ADDRESS, "own-token").unwrap();
         let before = held(&db, &secrets, id).await;
-        // Emptying the stored mail fails without its table, so the one
-        // transaction of the move fails.
-        db.write(|c| Ok(c.execute_batch("DROP TABLE drafts")?))
+        // Saving the servers row fails without its table, so the one
+        // transaction of the change fails.
+        db.write(|c| Ok(c.execute_batch("DROP TABLE servers")?))
             .await
             .unwrap();
         let to = Change {
@@ -645,36 +487,21 @@ mod tests {
             ..Change::to(APP_PASSWORD)
         };
 
-        let refused = change_sign_in(
-            &db,
-            &secrets,
-            Whose::Held {
-                id,
-                from: GmailSignIn::OwnProject,
-            },
-            to,
-        )
-        .await;
+        let refused = change_sign_in(&db, &secrets, Whose::Held(id), to).await;
 
         assert!(matches!(refused, Err(ChangeError::Store(_))), "{refused:?}");
-        let (sign_in, sync_state) = db
-            .read(move |c| {
-                Ok((
-                    accounts::gmail_sign_in(c, id)?,
-                    accounts::sync_cursor(c, id)?.state,
-                ))
-            })
+        let sign_in = db
+            .read(move |c| accounts::gmail_sign_in(c, id))
             .await
             .unwrap();
         assert_eq!(sign_in, before.sign_in);
-        assert_eq!(sync_state, before.sync_state);
         assert_eq!(secrets.passwords.load(id).unwrap(), None);
         assert!(secrets.google_clients.load(id).unwrap().is_some());
     }
 
     #[tokio::test]
     async fn a_keyring_that_refuses_the_token_changes_nothing() {
-        let (_dir, db, secrets, id) = account_on(&APP_PASSWORD).await;
+        let (_dir, db, secrets, id) = account_on(&GmailSignIn::BuiltInApi).await;
         let before = held(&db, &secrets, id).await;
         let Passwords::Memory(clients) = &*secrets.google_clients else {
             unreachable!("Secrets::memory keeps clients in memory")
@@ -685,16 +512,7 @@ mod tests {
             ..Change::to(GmailSignIn::OwnProject)
         };
 
-        let refused = change_sign_in(
-            &db,
-            &secrets,
-            Whose::Held {
-                id,
-                from: APP_PASSWORD,
-            },
-            to,
-        )
-        .await;
+        let refused = change_sign_in(&db, &secrets, Whose::Held(id), to).await;
 
         assert!(matches!(refused, Err(ChangeError::Token(_))), "{refused:?}");
         assert_eq!(held(&db, &secrets, id).await, before);
@@ -769,30 +587,5 @@ mod tests {
         assert_eq!(kept.id, other);
         assert_eq!(kept.provider, mailrs_domain::Provider::Imap);
         assert_eq!(secrets.passwords.load(other).unwrap(), None);
-    }
-
-    #[tokio::test]
-    async fn an_account_leaving_online_accounts_keeps_the_project_the_keyring_keeps() {
-        let (_dir, _db, secrets, id) = account_on(&goa()).await;
-        secrets.google_clients.save(id, &own().encode()).unwrap();
-        let to = with_app_password(&secrets, Some(id), Some(&goa()))
-            .await
-            .unwrap();
-        assert_eq!(
-            to,
-            GmailSignIn::AppPassword {
-                google: SignInClient::Own
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn an_account_leaving_its_own_project_takes_the_built_in_client() {
-        let (_dir, _db, secrets, id) = account_on(&GmailSignIn::OwnProject).await;
-        secrets.google_clients.save(id, &own().encode()).unwrap();
-        let to = with_app_password(&secrets, Some(id), Some(&GmailSignIn::OwnProject))
-            .await
-            .unwrap();
-        assert_eq!(to, APP_PASSWORD);
     }
 }

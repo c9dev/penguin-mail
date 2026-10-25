@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, EpochMillis, GmailSignIn, Provider};
+use mailrs_domain::{Account, EpochMillis, GmailSignIn};
 use mailrs_store::{StoreError, accounts};
 
 use super::change::{Change, ChangeError, Whose, change_sign_in};
@@ -78,7 +78,7 @@ pub fn usable(goa_account: &GoaAccount) -> Result<(), LinkError> {
 /// Links `goa_account` to Penguin Mail. An account Online Accounts has
 /// switched off or wants signed in again is refused. A new address becomes
 /// an account on `Goa` and the IMAP route; an address the store already
-/// holds is left as it is, for the caller to move.
+/// holds is taken.
 pub async fn link(
     connector: &Connector,
     goa_account: &GoaAccount,
@@ -94,15 +94,11 @@ pub async fn link(
         .db
         .read(move |c| accounts::account_by_email(c, &email))
         .await?;
-    match held {
-        Some(held) if held.provider == Provider::Gmail => return Ok(held),
-        Some(held) => {
-            return Err(LinkError::Taken {
-                address: goa_account.identity.trim().to_string(),
-                provider: held.provider_name().to_string(),
-            });
-        }
-        None => {}
+    if let Some(held) = held {
+        return Err(LinkError::Taken {
+            address: goa_account.identity.trim().to_string(),
+            provider: held.provider_name().to_string(),
+        });
     }
     let to = GmailSignIn::OnlineAccounts {
         goa_id: goa_account.id.clone(),

@@ -78,7 +78,6 @@ pub(super) fn capabilities_of(labels: bool) -> MailCapabilities {
         focus: false,
         local_mailboxes: false,
         files_muted_replies: false,
-        gone_draft_is_sent: true,
     }
 }
 

@@ -230,7 +230,6 @@ async fn without_mail(
         rules: None,
         auto_reply: None,
         identities: AnyIdentities::NoMail(NoMail),
-        when_grant_ends: crate::WhenGrantEnds::SignInAgain,
     })
 }
 

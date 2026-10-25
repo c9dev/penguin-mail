@@ -22,15 +22,15 @@
 //! the outbox asks it first, and when no answer settles that, the person
 //! is asked to check Sent.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn, Target};
+use mailrs_domain::{AccountId, EpochMillis, Target};
 use mailrs_gmail::GmailError;
+use mailrs_store::Db;
 use mailrs_store::messages;
 use mailrs_store::outbox::{self, Queued};
-use mailrs_store::{Db, accounts};
 
 use crate::account::message_id_header;
 use crate::backoff::{MOST_TRIES, retry_delay};
@@ -62,18 +62,8 @@ fn mark(since: EpochMillis, message_id: &str) -> String {
 }
 
 /// What the row of a message the server may or may not have sent says.
-pub(crate) fn check_sent() -> String {
+fn check_sent() -> String {
     gettext("Penguin Mail could not confirm whether this message went out. Check Sent.")
-}
-
-/// What a row that would not go out says. A message whose bytes live
-/// only in a draft that is gone may or may not have gone out, so it asks
-/// the person to look in Sent.
-fn problem_of(message: &Queued, err: &SyncError) -> String {
-    match err {
-        SyncError::Backend(BackendError::NotFound) if message.raw.is_none() => check_sent(),
-        other => other.to_string(),
-    }
 }
 
 /// When a row's hold lost its answer, and the `Message-ID` it waits to
@@ -331,10 +321,6 @@ impl<A: Accounts> Outbox<A> {
             }
             None => false,
         };
-        let moving = self.moving().await?;
-        if moving.paused.contains(&message.account_id) {
-            return self.wait_for_move(message).await;
-        }
         if message.id > 0 && self.claim(message.id).await?.is_none() {
             return Ok(Posted::Waiting(message.id));
         }
@@ -370,9 +356,6 @@ impl<A: Accounts> Outbox<A> {
                 self.release(message.id).await?;
                 Ok(Posted::Waiting(message.id))
             }
-            Err(err) if moving.refused(message.account_id, &err) => {
-                self.wait_for_move(message).await
-            }
             Err(err) if worth_retrying(&err) => {
                 message.attempts += 1;
                 Ok(Posted::Waiting(self.keep(message, &err).await?.id))
@@ -380,12 +363,11 @@ impl<A: Accounts> Outbox<A> {
             Err(err) => {
                 // A message already waiting keeps its place, so the Outbox
                 // goes on showing it and saying what is wrong with it.
-                let problem = problem_of(&message, &err);
                 if message.id > 0 {
                     message.attempts = MOST_TRIES;
                     self.keep(message, &err).await?;
                 }
-                Ok(Posted::Refused(problem))
+                Ok(Posted::Refused(err.to_string()))
             }
         }
     }
@@ -488,7 +470,6 @@ impl<A: Accounts> Outbox<A> {
         // A hold still hours from its hour is asked about once an hour, so
         // one another app called back leaves Send Later before its hour.
         let early = move |m: &Queued| m.send_at > now && m.problem.is_none() && server_holds(m);
-        let mut moving = self.moving().await?;
         let listed = self.db.read(outbox::list).await?;
         let waiting: Vec<Queued> = listed
             .into_iter()
@@ -499,9 +480,6 @@ impl<A: Accounts> Outbox<A> {
             })
             .collect();
         for due in waiting {
-            if moving.paused.contains(&due.account_id) {
-                continue;
-            }
             if retry_delay(due.attempts).is_none()
                 || (due.held.is_some() && !early(&due) && !self.look_due(due.id, now))
             {
@@ -550,13 +528,6 @@ impl<A: Accounts> Outbox<A> {
                 Ok(_) => {
                     self.forget_sent(&message).await;
                     drained.sent.push(message);
-                }
-                // The rest of the account's mail would meet the same
-                // refusal, so it all waits for the move.
-                Err(err) if moving.refused(message.account_id, &err) => {
-                    moving.paused.insert(message.account_id);
-                    self.wait_for_move(message).await?;
-                    continue;
                 }
                 Err(err) => {
                     message.attempts = if worth_retrying(&err) {
@@ -921,47 +892,6 @@ impl<A: Accounts> Outbox<A> {
             .await?)
     }
 
-    /// The Gmail accounts whose mail waits for a move to a new sign-in.
-    async fn moving(&self) -> Result<Moving, SyncError> {
-        Ok(self
-            .db
-            .read(|c| {
-                let sign_ins = accounts::google_sign_ins(c)?;
-                let mut moving = Moving::default();
-                for account in accounts::list_accounts(c)? {
-                    if sign_ins
-                        .get(&account.id)
-                        .is_some_and(GmailSignIn::waits_to_move)
-                    {
-                        moving.needs.insert(account.id);
-                        if account.state == AccountState::MailPaused {
-                            moving.paused.insert(account.id);
-                        }
-                    }
-                }
-                Ok(moving)
-            })
-            .await?)
-    }
-
-    /// Keeps `message` as it was before anything tried it, for the route
-    /// its account moves to: the old one counts no try against it.
-    async fn wait_for_move(&self, message: Queued) -> Result<Posted, SyncError> {
-        tracing::info!(
-            account = message.account_id,
-            "the message waits for its account to move to a new sign-in"
-        );
-        let id = self
-            .db
-            .write(move |c| {
-                let id = outbox::put(c, &message)?;
-                outbox::release(c, id)?;
-                Ok(id)
-            })
-            .await?;
-        Ok(Posted::Waiting(id))
-    }
-
     async fn release(&self, id: i64) -> Result<(), SyncError> {
         self.db.write(move |c| outbox::release(c, id)).await?;
         Ok(())
@@ -981,10 +911,10 @@ impl<A: Accounts> Outbox<A> {
     ///
     /// A message tried before may have reached Gmail on a try whose answer
     /// was lost, so its bytes are looked for in Sent first. A draft is
-    /// checked by the provider: Gmail's API deletes a draft it sends, so a
-    /// draft that has gone counts as sent. On a Gmail account moved to
-    /// IMAP a gone draft never counts as sent: the row stays, and
-    /// [`problem_of`] asks the person to check Sent.
+    /// checked by the provider: Gmail deletes a draft it sends, so sending
+    /// one that has gone answers that it is gone, which counts as sent;
+    /// IMAP looks in Sent for the draft's Message-ID, and Graph sees that
+    /// the message is no longer a draft.
     async fn attempt(&self, message: &Queued) -> Result<String, SyncError> {
         let sync = self
             .accounts
@@ -1027,23 +957,10 @@ impl<A: Accounts> Outbox<A> {
                 sync.send(raw.clone(), message.thread_id.clone(), draft_id.clone())
                     .await
             }
-            // A draft that is gone may have gone out on a try whose
-            // answer was lost, or may have been deleted, or may sit under
-            // an id the account no longer uses. Nothing here can tell
-            // which, so the row stays and asks the person to check Sent.
-            (None, Some(draft_id)) => {
-                let sent = sync.send_draft(draft_id).await?;
-                if let Some(sent) = sent {
-                    return Ok(sent);
-                }
-                // The adapter says whether a draft that is gone counts as
-                // sent: Gmail over IMAP cannot tell a sent draft from one
-                // a move left deleted.
-                match sync.gone_draft_is_sent() {
-                    true => Ok(draft_id.clone()),
-                    false => Err(BackendError::NotFound.into()),
-                }
-            }
+            (None, Some(draft_id)) => Ok(sync
+                .send_draft(draft_id)
+                .await?
+                .unwrap_or_else(|| draft_id.clone())),
             (None, None) => Err(BackendError::NotFound.into()),
         }
     }
@@ -1091,7 +1008,7 @@ impl<A: Accounts> Outbox<A> {
     /// again, and gives back the row as it now stands. `message.attempts`
     /// already counts this try.
     async fn keep(&self, mut message: Queued, err: &SyncError) -> Result<Queued, SyncError> {
-        message.problem = Some(problem_of(&message, err));
+        message.problem = Some(err.to_string());
         message.send_at = now_millis()
             + retry_delay(message.attempts)
                 .unwrap_or_default()
@@ -1816,27 +1733,6 @@ fn names(target: &Target, item: &Queued) -> bool {
         && (outbox_id(&target.thread_id) == Some(item.id)
             || item.thread_id.as_deref() == Some(target.thread_id.as_str())
             || (item.message_id.is_some() && target.message_id == item.message_id))
-}
-
-/// The Gmail accounts that read their mail through the built-in client,
-/// whose mail goes nowhere until they move to a new sign-in.
-#[derive(Default)]
-struct Moving {
-    needs: HashSet<AccountId>,
-    /// Those whose mail has stopped: nothing is tried for them.
-    paused: HashSet<AccountId>,
-}
-
-impl Moving {
-    /// Whether `err` is the old sign-in turning `account_id` away. Its mail
-    /// waits for the move rather than counting the refusal.
-    fn refused(&self, account_id: AccountId, err: &SyncError) -> bool {
-        self.needs.contains(&account_id)
-            && matches!(
-                err,
-                SyncError::Backend(BackendError::NeedsReauth | BackendError::NeedsPermission)
-            )
-    }
 }
 
 /// Whether a message that would not go out is worth trying again. No

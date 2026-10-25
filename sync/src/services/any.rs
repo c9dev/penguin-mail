@@ -236,15 +236,6 @@ impl AnyMail {
         }
     }
 
-    /// Whether a Google account's last grant is known and carries no mail
-    /// scope. No other adapter has such a grant.
-    pub fn mail_grant_lost(&self) -> bool {
-        match self {
-            AnyMail::Google(adapter) => adapter.mail_grant_lost(),
-            _ => false,
-        }
-    }
-
     /// The services an organization refused a Microsoft account this run.
     /// No other provider learns of such a refusal.
     pub fn refused(&self) -> Refused {

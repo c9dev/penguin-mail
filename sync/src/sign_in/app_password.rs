@@ -1,12 +1,12 @@
 //! Signing in to Gmail with an app password: reading what was pasted,
 //! checking Gmail's servers took it, and keeping the account.
 
-use mailrs_domain::{Account, EpochMillis, MailRoute, Provider};
+use mailrs_domain::{Account, EpochMillis, GmailSignIn, Provider, SignInClient};
 use mailrs_imap::{CheckError, Checked, ImapClient, Login};
 use mailrs_store::servers::{Saved, Security, Servers};
 use mailrs_store::{Db, accounts};
 
-use super::change::{self, Change, NewPassword, Whose, change_sign_in};
+use super::change::{Change, NewPassword, Whose, change_sign_in};
 use super::{ImapSignInError, taken_error};
 use crate::passwords::Secrets;
 
@@ -139,14 +139,13 @@ pub struct NewGmailImap {
     pub password: String,
 }
 
-/// Keeps a Gmail account that reads its mail over IMAP. A new address
-/// becomes a Gmail account on the IMAP route. An address a Gmail account
-/// on that route holds already is a sign-in again: the new password and
-/// servers replace the old, and Needs Sign-In ends. Any other holder
-/// makes the address taken, a Gmail account on the API route included:
-/// that one changes route through the move. An account on Online Accounts
-/// leaves it, whose token it would otherwise go on reading, and keeps the
-/// client [`change::with_app_password`] names.
+/// Keeps a Gmail account that reads its mail with an app password. A new
+/// address becomes a Gmail account on the IMAP route. An address a Gmail
+/// account on an app password holds already is a sign-in again: the new
+/// password and servers replace the old, and Needs Sign-In ends. Any other
+/// holder makes the address taken, an account on the Gmail API or on
+/// Online Accounts included: those sign in another way, and changing it
+/// takes removing the account and adding it again.
 pub async fn gmail_imap_signed_in(
     db: &Db,
     secrets: &Secrets,
@@ -169,25 +168,21 @@ pub async fn gmail_imap_signed_in(
             Ok((held, sign_in))
         })
         .await?;
-    let whose = match before {
-        (Some(held), Some(from))
-            if held.provider == Provider::Gmail && from.route() == MailRoute::Imap =>
-        {
-            Whose::Held { id: held.id, from }
+    let (whose, to) = match before {
+        (Some(held), Some(from)) if held.provider == Provider::Gmail && from.on_app_password() => {
+            (Whose::Held(held.id), from)
         }
         (Some(held), _) => {
             return Err(taken_error(&address, held.provider_name()));
         }
-        (None, _) => Whose::New {
-            email: address.clone(),
-            now,
-        },
-    };
-    let to = match &whose {
-        Whose::Held { id, from } => {
-            change::with_app_password(secrets, Some(*id), Some(from)).await?
+        (None, _) => {
+            let new = Whose::New {
+                email: address.clone(),
+                now,
+            };
+            let google = SignInClient::BuiltIn;
+            (new, GmailSignIn::AppPassword { google })
         }
-        Whose::New { .. } => change::with_app_password(secrets, None, None).await?,
     };
     let change = Change {
         password: Some(NewPassword { servers, password }),

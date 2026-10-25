@@ -63,16 +63,13 @@ pub enum AccountState {
     /// Starting the account gave up on a keyring read that did not
     /// answer, and tries again later. The provider is not at fault.
     WaitingForKeyring,
-    /// A Gmail account on the built-in client whose token no longer reads
-    /// mail. Stored mail stays, and the window offers the route choice.
-    MailPaused,
     /// A Gmail account on the IMAP route that downloaded as much as Gmail
     /// allows in a day. It tries again later.
     DownloadLimit,
 }
 
 impl AccountState {
-    pub const ALL: [AccountState; 9] = [
+    pub const ALL: [AccountState; 8] = [
         AccountState::Ok,
         AccountState::Bootstrapping,
         AccountState::NeedsReauth,
@@ -80,7 +77,6 @@ impl AccountState {
         AccountState::Offline,
         AccountState::Stopped,
         AccountState::WaitingForKeyring,
-        AccountState::MailPaused,
         AccountState::DownloadLimit,
     ];
 
@@ -93,7 +89,6 @@ impl AccountState {
             AccountState::Offline => "offline",
             AccountState::Stopped => "stopped",
             AccountState::WaitingForKeyring => "waiting_for_keyring",
-            AccountState::MailPaused => "mail_paused",
             AccountState::DownloadLimit => "download_limit",
         }
     }
@@ -188,8 +183,9 @@ impl FromStr for SignInClient {
 /// disagree.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum GmailSignIn {
-    /// The Gmail API through the built-in client, whose token no longer
-    /// reads mail: the account waits to move.
+    /// The Gmail API through the client built into Penguin Mail, as every
+    /// Gmail account signed in before routes existed. It signs in again
+    /// through the person's own Google project.
     BuiltInApi,
     /// The Gmail API through the person's own Google project.
     OwnProject,
@@ -220,12 +216,6 @@ impl GmailSignIn {
         }
     }
 
-    /// The account has to choose a new route before its mail arrives
-    /// again.
-    pub fn waits_to_move(&self) -> bool {
-        matches!(self, GmailSignIn::BuiltInApi)
-    }
-
     /// The Online Accounts account the mail reads through, if it does.
     pub fn goa_id(&self) -> Option<&str> {
         match self {
@@ -247,19 +237,6 @@ impl GmailSignIn {
             (MailRoute::GmailApi, SignInClient::BuiltIn) => GmailSignIn::BuiltInApi,
             (MailRoute::Imap, google) => GmailSignIn::AppPassword { google },
         }
-    }
-
-    /// The sign-in once the mail signs in with an app password. An account
-    /// already on one keeps its client. One leaving Online Accounts takes
-    /// its own client when `keeps_own` says the keyring still keeps the one
-    /// that issued its Google token; any other takes the built-in client.
-    pub fn with_app_password(&self, keeps_own: bool) -> GmailSignIn {
-        let google = match self {
-            GmailSignIn::AppPassword { google } => *google,
-            GmailSignIn::OnlineAccounts { .. } if keeps_own => SignInClient::Own,
-            _ => SignInClient::BuiltIn,
-        };
-        GmailSignIn::AppPassword { google }
     }
 
     /// The mail signs in with an app password the keyring keeps beside a
@@ -861,48 +838,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn only_the_built_in_client_on_the_api_waits_to_move() {
-        use crate::{GmailSignIn, SignInClient};
-        let waiting: Vec<bool> = [
-            GmailSignIn::BuiltInApi,
-            GmailSignIn::OwnProject,
-            GmailSignIn::AppPassword {
-                google: SignInClient::BuiltIn,
-            },
-            GmailSignIn::OnlineAccounts {
-                goa_id: "account_1_0".into(),
-            },
-        ]
-        .iter()
-        .map(GmailSignIn::waits_to_move)
-        .collect();
-        assert_eq!(waiting, [true, false, false, false]);
-    }
-
-    #[test]
-    fn an_app_password_keeps_the_client_only_an_online_accounts_account_kept() {
-        use crate::{GmailSignIn, SignInClient};
-        let goa = GmailSignIn::OnlineAccounts {
-            goa_id: "account_1_0".into(),
-        };
-        let own_imap = GmailSignIn::AppPassword {
-            google: SignInClient::Own,
-        };
-        let client = |from: &GmailSignIn, keeps_own| from.with_app_password(keeps_own).client();
-        assert_eq!(client(&goa, true), SignInClient::Own);
-        assert_eq!(client(&goa, false), SignInClient::BuiltIn);
-        assert_eq!(
-            client(&GmailSignIn::OwnProject, true),
-            SignInClient::BuiltIn
-        );
-        assert_eq!(
-            client(&GmailSignIn::BuiltInApi, true),
-            SignInClient::BuiltIn
-        );
-        assert_eq!(client(&own_imap, false), SignInClient::Own);
-    }
-
-    #[test]
     fn an_online_accounts_sign_in_refreshes_its_google_token_through_the_built_in_client() {
         use crate::{GmailSignIn, SignInClient};
         let goa = GmailSignIn::OnlineAccounts {
@@ -912,15 +847,6 @@ pub(crate) mod tests {
             (goa.route(), goa.client(), goa.goa_id()),
             (MailRoute::Imap, SignInClient::BuiltIn, Some("account_1_0"))
         );
-    }
-
-    #[test]
-    fn mail_paused_is_a_state_of_its_own() {
-        assert_eq!(
-            "mail_paused".parse::<AccountState>(),
-            Ok(AccountState::MailPaused)
-        );
-        assert!(AccountState::ALL.contains(&AccountState::MailPaused));
     }
 
     #[test]
