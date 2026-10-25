@@ -2111,8 +2111,8 @@ mod tests {
     use gtk::prelude::*;
     use mailrs_domain::{Account, AccountState, Provider};
 
-    use super::{Mailbox, Standard, heading_row_name, label_icon, mailbox_row_name, takes_mail};
     use super::status_of;
+    use super::{Mailbox, Standard, heading_row_name, label_icon, mailbox_row_name, takes_mail};
 
     use super::{Offers, account_settings};
 

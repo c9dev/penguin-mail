@@ -1076,8 +1076,8 @@ mod tests {
 
     use super::{
         Calendar, calendar_link, failing_lines, held_back_line, hides_addresses, kept_here_lines,
-        offers_for, reason, reason_on, remove_account_body,
-        shows_space_switch, still_held_line, withheld_for,
+        offers_for, reason, reason_on, remove_account_body, shows_space_switch, still_held_line,
+        withheld_for,
     };
     use crate::settings::Space;
     use mailrs_domain::MailRoute;

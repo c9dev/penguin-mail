@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::GmailSignIn;
 use mailrs_domain::calendar::{
     Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Reminder,
     ReminderMethod, Status as CalendarStatus,
@@ -19,7 +20,6 @@ use mailrs_domain::{
     AccountId, Address, Attachment, EpochMillis, Filter, FilterAction, FilterCriteria, MailSet,
     MessageBody, MessageMeta, Provenance, Role,
 };
-use mailrs_domain::GmailSignIn;
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::services::{FoundService, ServiceKind};
@@ -823,10 +823,8 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
             .write(move |c| accounts::insert_account(c, email, now))
             .await?;
         // The demo's Gmail accounts sign in through their own project.
-        db.write(move |c| {
-            accounts::set_gmail_sign_in(c, account_id, &GmailSignIn::OwnProject)
-        })
-        .await?;
+        db.write(move |c| accounts::set_gmail_sign_in(c, account_id, &GmailSignIn::OwnProject))
+            .await?;
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);
         if index == 2 && std::env::var_os("MAILRS_DEMO_FULL_CONSENT").is_none() {

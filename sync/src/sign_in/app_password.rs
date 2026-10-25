@@ -316,7 +316,10 @@ mod tests {
             .unwrap();
         let id = account.id;
         assert_eq!(account.provider, Provider::Gmail);
-        assert_eq!(sign_in(&db, id).await.route(), mailrs_domain::MailRoute::Imap);
+        assert_eq!(
+            sign_in(&db, id).await.route(),
+            mailrs_domain::MailRoute::Imap
+        );
         assert_eq!(
             db.read(move |c| servers::load(c, id)).await.unwrap(),
             Some(servers())

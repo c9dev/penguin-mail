@@ -3196,7 +3196,8 @@ impl MainWindow {
                 self.core.google_sign_in_client(None),
                 Ok(mailrs_sync::sign_in::ClientSource::Environment)
             );
-        if !self.core.demo && (built_in_account || !self.core.built_with_sign_in(browser, own_account))
+        if !self.core.demo
+            && (built_in_account || !self.core.built_with_sign_in(browser, own_account))
         {
             return match browser {
                 // The address signs in through a project of the person's

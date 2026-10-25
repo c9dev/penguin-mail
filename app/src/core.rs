@@ -8,8 +8,8 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, JmapFound, Net, RealNet, Security, SrvRecord};
@@ -50,7 +50,6 @@ use crate::starting::{self, Connected, Starting};
 use mailrs_domain::translate::gettext;
 
 mod goa;
-
 
 /// The store could not be updated to this version, and the copy taken
 /// before the attempt was put back. Startup shows this with a way to

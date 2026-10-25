@@ -9,8 +9,8 @@ use std::time::Duration;
 
 use anyhow::{Result, anyhow, bail};
 use futures::StreamExt;
-use mailrs_domain::translate::gettext;
 use mailrs_domain::Account;
+use mailrs_domain::translate::gettext;
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
 use mailrs_sync::now_millis;
