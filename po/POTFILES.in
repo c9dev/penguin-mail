@@ -34,7 +34,6 @@ app/src/goa_notice.rs
 app/src/keyring_plug.rs
 app/src/language_names.rs
 app/src/main.rs
-app/src/move_banner.rs
 app/src/notify.rs
 app/src/offered.rs
 app/src/open_thread/run/receipt.rs
@@ -105,7 +104,6 @@ app/src/ui/invitation.rs
 app/src/ui/invitation/strip.rs
 app/src/ui/key_import.rs
 app/src/ui/mod.rs
-app/src/ui/move_sheet.rs
 app/src/ui/moving.rs
 app/src/ui/own_project.rs
 app/src/ui/permission.rs
@@ -223,8 +221,5 @@ app/src/ui/preferences/space.rs
 app/src/ui/assistant/controls.rs
 app/src/ui/assistant/files.rs
 sync/src/account/space.rs
-app/src/core/route.rs
-app/src/ui/sandbox_setup.rs
-app/src/ui/window/in_flight.rs
 app/src/ui/window/trash.rs
 app/src/ui/thread_list/filters.rs
