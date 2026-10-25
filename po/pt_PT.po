@@ -9837,12 +9837,10 @@ msgid "Unread Only"
 msgstr "Apenas não lidas"
 
 #: app/src/ui/thread_list/filters.rs:27
-#| msgid "Flagged blue"
 msgid "Flagged Only"
 msgstr "Apenas marcadas"
 
 #: app/src/ui/thread_list/filters.rs:28
-#| msgid "Attachments"
 msgid "With Attachments"
 msgstr "Com anexos"
 
@@ -9851,18 +9849,15 @@ msgid "Match all selected filters"
 msgstr "Corresponder a todos os filtros selecionados"
 
 #: app/src/ui/thread_list/filters.rs:38
-#| msgid "Calendar File"
 msgid "Clear Filters"
 msgstr "Limpar filtros"
 
 #: app/src/ui/thread_list/filters.rs:49 app/src/ui/thread_list/filters.rs:52
 #: app/src/ui/thread_list/filters.rs:101
-#| msgid "New Messages"
 msgid "Filter Messages"
 msgstr "Filtrar mensagens"
 
 #: app/src/ui/thread_list/filters.rs:99
-#| msgid "New Message (C)"
 msgid "Filter Messages (Active)"
 msgstr "Filtrar mensagens (ativo)"
 
@@ -11906,86 +11901,86 @@ msgid "Change the filters or load more messages if available."
 msgstr ""
 "Altere os filtros ou carregue mais mensagens, se estiverem disponíveis."
 
-#: sync/src/mailbox.rs:1024
+#: sync/src/mailbox.rs:1028
 msgid "This smart mailbox has no conditions"
 msgstr "Esta caixa inteligente não tem condições"
 
-#: sync/src/mailbox.rs:1584
+#: sync/src/mailbox.rs:1594
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Os resultados de {account} vêm apenas do correio guardado neste computador"
 
-#: sync/src/mailbox.rs:1792
+#: sync/src/mailbox.rs:1802
 msgid "Returns {when}"
 msgstr "Volta {when}"
 
-#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
+#: sync/src/mailbox.rs:1845 sync/src/mailbox.rs:1948
 msgid "No recipients"
 msgstr "Sem destinatários"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "To {recipients}"
 msgstr "Para {recipients}"
 
-#: sync/src/mailbox.rs:1881
+#: sync/src/mailbox.rs:1891
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} por ler · {category}"
 msgstr[1] "{count} por ler · {category}"
 
-#: sync/src/mailbox.rs:1886
+#: sync/src/mailbox.rs:1896
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
-#: sync/src/mailbox.rs:1893
+#: sync/src/mailbox.rs:1903
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1895
+#: sync/src/mailbox.rs:1905
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Enviada há {days} dia, ainda sem resposta"
 msgstr[1] "Enviada há {days} dias, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1979
+#: sync/src/mailbox.rs:1989
 msgid "The server has not sent this message yet."
 msgstr "O servidor ainda não enviou esta mensagem."
 
-#: sync/src/mailbox.rs:1980
+#: sync/src/mailbox.rs:1990
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "O Penguin Mail não confirmou que o servidor recebeu esta mensagem."
 
-#: sync/src/mailbox.rs:1990
+#: sync/src/mailbox.rs:2000
 msgid "Sends {when}."
 msgstr "Envia {when}."
 
-#: sync/src/mailbox.rs:1991
+#: sync/src/mailbox.rs:2001
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "O servidor envia-a mesmo com o Penguin Mail fechado."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}"
 msgstr "Envia {when}"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2010
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Verifique as Enviadas. O Penguin Mail não conseguiu confirmar o envio."
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Canceled in another app."
 msgstr "Cancelada noutra aplicação."
 
-#: sync/src/mailbox.rs:2005
+#: sync/src/mailbox.rs:2015
 msgid "Not sent"
 msgstr "Não enviada"
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2022
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Nova tentativa {when}"
 
-#: sync/src/mailbox.rs:2019
+#: sync/src/mailbox.rs:2029
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 

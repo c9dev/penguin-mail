@@ -11390,82 +11390,82 @@ msgstr "所有邮件"
 msgid "Change the filters or load more messages if available."
 msgstr ""
 
-#: sync/src/mailbox.rs:1024
+#: sync/src/mailbox.rs:1028
 msgid "This smart mailbox has no conditions"
 msgstr "此智能邮箱没有条件"
 
-#: sync/src/mailbox.rs:1584
+#: sync/src/mailbox.rs:1594
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account} 的结果仅来自此电脑上的邮件"
 
-#: sync/src/mailbox.rs:1792
+#: sync/src/mailbox.rs:1802
 msgid "Returns {when}"
 msgstr "于 {when} 移回"
 
-#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
+#: sync/src/mailbox.rs:1845 sync/src/mailbox.rs:1948
 msgid "No recipients"
 msgstr "没有收件人"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "To {recipients}"
 msgstr "收件人：{recipients}"
 
-#: sync/src/mailbox.rs:1881
+#: sync/src/mailbox.rs:1891
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} 封未读 · {category}"
 
-#: sync/src/mailbox.rs:1886
+#: sync/src/mailbox.rs:1896
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} 封未读"
 
-#: sync/src/mailbox.rs:1893
+#: sync/src/mailbox.rs:1903
 msgid "Sent yesterday, no reply yet"
 msgstr "昨天发送，尚未收到回复"
 
-#: sync/src/mailbox.rs:1895
+#: sync/src/mailbox.rs:1905
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days} 天前发送，尚未收到回复"
 
-#: sync/src/mailbox.rs:1979
+#: sync/src/mailbox.rs:1989
 msgid "The server has not sent this message yet."
 msgstr "服务器尚未发送这封邮件。"
 
-#: sync/src/mailbox.rs:1980
+#: sync/src/mailbox.rs:1990
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail 尚未确认服务器已收下这封邮件。"
 
-#: sync/src/mailbox.rs:1990
+#: sync/src/mailbox.rs:2000
 msgid "Sends {when}."
 msgstr "于 {when} 发送。"
 
-#: sync/src/mailbox.rs:1991
+#: sync/src/mailbox.rs:2001
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "即使 Penguin Mail 已关闭，服务器仍会发送。"
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}"
 msgstr "于 {when} 发送"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2010
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "请查看已发送。Penguin Mail 无法确认是否已发送。"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Canceled in another app."
 msgstr "已在其他应用中取消。"
 
-#: sync/src/mailbox.rs:2005
+#: sync/src/mailbox.rs:2015
 msgid "Not sent"
 msgstr "未发送"
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2022
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}。将于 {when} 重试"
 
-#: sync/src/mailbox.rs:2019
+#: sync/src/mailbox.rs:2029
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}。Penguin Mail 已停止重试"
 

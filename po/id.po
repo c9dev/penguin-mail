@@ -11922,85 +11922,85 @@ msgstr "Semua Email"
 msgid "Change the filters or load more messages if available."
 msgstr ""
 
-#: sync/src/mailbox.rs:1024
+#: sync/src/mailbox.rs:1028
 msgid "This smart mailbox has no conditions"
 msgstr "Kotak surat cerdas ini tidak memiliki kondisi"
 
-#: sync/src/mailbox.rs:1584
+#: sync/src/mailbox.rs:1594
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Hasil untuk {account} hanya berasal dari email di komputer ini"
 
-#: sync/src/mailbox.rs:1792
+#: sync/src/mailbox.rs:1802
 msgid "Returns {when}"
 msgstr "Kembali {when}"
 
-#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
+#: sync/src/mailbox.rs:1845 sync/src/mailbox.rs:1948
 msgid "No recipients"
 msgstr "Tidak ada penerima"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "To {recipients}"
 msgstr "Kepada {recipients}"
 
-#: sync/src/mailbox.rs:1881
+#: sync/src/mailbox.rs:1891
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} belum dibaca · {category}"
 msgstr[1] "{count} belum dibaca · {category}"
 
-#: sync/src/mailbox.rs:1886
+#: sync/src/mailbox.rs:1896
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} belum dibaca"
 msgstr[1] "{count} belum dibaca"
 
-#: sync/src/mailbox.rs:1893
+#: sync/src/mailbox.rs:1903
 msgid "Sent yesterday, no reply yet"
 msgstr "Dikirim kemarin, belum ada balasan"
 
-#: sync/src/mailbox.rs:1895
+#: sync/src/mailbox.rs:1905
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Dikirim {days} hari lalu, belum ada balasan"
 msgstr[1] "Dikirim {days} hari lalu, belum ada balasan"
 
-#: sync/src/mailbox.rs:1979
+#: sync/src/mailbox.rs:1989
 msgid "The server has not sent this message yet."
 msgstr "Server belum mengirim pesan ini."
 
-#: sync/src/mailbox.rs:1980
+#: sync/src/mailbox.rs:1990
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail belum memastikan bahwa server menerima pesan ini."
 
-#: sync/src/mailbox.rs:1990
+#: sync/src/mailbox.rs:2000
 msgid "Sends {when}."
 msgstr "Dikirim {when}."
 
-#: sync/src/mailbox.rs:1991
+#: sync/src/mailbox.rs:2001
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Server tetap mengirimnya meskipun Penguin Mail ditutup."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}"
 msgstr "Dikirim {when}"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2010
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Periksa Terkirim. Penguin Mail tidak dapat memastikan pesan terkirim."
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Canceled in another app."
 msgstr "Dibatalkan di aplikasi lain."
 
-#: sync/src/mailbox.rs:2005
+#: sync/src/mailbox.rs:2015
 msgid "Not sent"
 msgstr "Tidak dikirim"
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2022
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Mencoba lagi {when}"
 
-#: sync/src/mailbox.rs:2019
+#: sync/src/mailbox.rs:2029
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail berhenti mencoba"
 

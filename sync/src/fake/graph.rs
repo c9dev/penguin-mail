@@ -122,6 +122,8 @@ pub struct GraphState {
     /// The most messages one listing page holds, below what was asked, as
     /// Graph may answer a short page with a next link.
     pub listing_page: Option<usize>,
+    /// Search can return REST ids despite the immutable-id preference.
+    pub search_rest_ids: bool,
     /// Mail that arrives right after the next delta read, in the folder
     /// named: how a test lands a message between two reads of one look.
     pub deliver_after_delta: Option<(String, mail::FakeMail)>,

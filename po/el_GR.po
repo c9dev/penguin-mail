@@ -12130,91 +12130,91 @@ msgstr "Όλα τα μηνύματα"
 msgid "Change the filters or load more messages if available."
 msgstr ""
 
-#: sync/src/mailbox.rs:1024
+#: sync/src/mailbox.rs:1028
 msgid "This smart mailbox has no conditions"
 msgstr "Αυτό το έξυπνο γραμματοκιβώτιο δεν έχει συνθήκες"
 
-#: sync/src/mailbox.rs:1584
+#: sync/src/mailbox.rs:1594
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Τα αποτελέσματα για {account} προέρχονται μόνο από την αλληλογραφία σε αυτόν "
 "τον υπολογιστή"
 
-#: sync/src/mailbox.rs:1792
+#: sync/src/mailbox.rs:1802
 msgid "Returns {when}"
 msgstr "Επιστρέφει {when}"
 
-#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
+#: sync/src/mailbox.rs:1845 sync/src/mailbox.rs:1948
 msgid "No recipients"
 msgstr "Χωρίς παραλήπτες"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "To {recipients}"
 msgstr "Προς {recipients}"
 
-#: sync/src/mailbox.rs:1881
+#: sync/src/mailbox.rs:1891
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} μη αναγνωσμένο · {category}"
 msgstr[1] "{count} μη αναγνωσμένα · {category}"
 
-#: sync/src/mailbox.rs:1886
+#: sync/src/mailbox.rs:1896
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} μη αναγνωσμένο"
 msgstr[1] "{count} μη αναγνωσμένα"
 
-#: sync/src/mailbox.rs:1893
+#: sync/src/mailbox.rs:1903
 msgid "Sent yesterday, no reply yet"
 msgstr "Στάλθηκε χθες, χωρίς απάντηση ακόμη"
 
-#: sync/src/mailbox.rs:1895
+#: sync/src/mailbox.rs:1905
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Στάλθηκε πριν από {days} ημέρα, χωρίς απάντηση ακόμη"
 msgstr[1] "Στάλθηκε πριν από {days} ημέρες, χωρίς απάντηση ακόμη"
 
-#: sync/src/mailbox.rs:1979
+#: sync/src/mailbox.rs:1989
 msgid "The server has not sent this message yet."
 msgstr "Ο διακομιστής δεν έχει στείλει ακόμη αυτό το μήνυμα."
 
-#: sync/src/mailbox.rs:1980
+#: sync/src/mailbox.rs:1990
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr ""
 "Το Penguin Mail δεν έχει επιβεβαιώσει ότι ο διακομιστής παρέλαβε αυτό το "
 "μήνυμα."
 
-#: sync/src/mailbox.rs:1990
+#: sync/src/mailbox.rs:2000
 msgid "Sends {when}."
 msgstr "Αποστολή {when}."
 
-#: sync/src/mailbox.rs:1991
+#: sync/src/mailbox.rs:2001
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Ο διακομιστής το στέλνει ακόμη κι αν το Penguin Mail είναι κλειστό."
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}"
 msgstr "Αποστολή {when}"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2010
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Ελέγξτε τα Απεσταλμένα. Το Penguin Mail δεν μπόρεσε να επιβεβαιώσει ότι "
 "στάλθηκε."
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Canceled in another app."
 msgstr "Ακυρώθηκε σε άλλη εφαρμογή."
 
-#: sync/src/mailbox.rs:2005
+#: sync/src/mailbox.rs:2015
 msgid "Not sent"
 msgstr "Δεν στάλθηκε"
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2022
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Νέα προσπάθεια {when}"
 
-#: sync/src/mailbox.rs:2019
+#: sync/src/mailbox.rs:2029
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Το Penguin Mail σταμάτησε να προσπαθεί"
 

@@ -530,7 +530,13 @@ pub(super) fn list_messages(
         .iter()
         .skip(offset)
         .take(top)
-        .map(|m| m.message.clone())
+        .map(|m| {
+            let mut message = m.message.clone();
+            if listing.search.is_some() && s.search_rest_ids {
+                message.id = format!("rest:{}", message.id);
+            }
+            message
+        })
         .collect();
     let more = offset + value.len() < found.len();
     let next_link = if more {
@@ -550,7 +556,14 @@ pub(super) fn messages(s: &mut GraphState, ids: &[String]) -> Answer<Vec<Answer<
     s.meta_fetches.push(ids.to_vec());
     Ok(ids
         .iter()
-        .map(|id| held(s, id).map(|m| m.message.clone()))
+        .map(|id| {
+            let id = if s.search_rest_ids {
+                id.strip_prefix("rest:").unwrap_or(id)
+            } else {
+                id
+            };
+            held(s, id).map(|m| m.message.clone())
+        })
         .collect())
 }
 

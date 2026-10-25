@@ -3937,7 +3937,6 @@ msgid "Never ask"
 msgstr "永不詢問"
 
 #: app/src/settings/mod.rs:695
-#| msgid "Preview"
 msgid "No Preview"
 msgstr "不顯示預覽"
 
@@ -8318,7 +8317,6 @@ msgid "Text Size"
 msgstr "文字大小"
 
 #: app/src/ui/preferences.rs:243
-#| msgid "Message Source"
 msgid "Message Preview"
 msgstr "郵件預覽"
 
@@ -8327,8 +8325,6 @@ msgid "Lines of message text below the subject"
 msgstr "主旨下方顯示的郵件內文行數"
 
 #: app/src/ui/preferences.rs:250
-#| msgid "{count} unread message"
-#| msgid_plural "{count} unread messages"
 msgid "Bold Unread Messages"
 msgstr "未讀郵件使用粗體"
 
@@ -8337,7 +8333,6 @@ msgid "Use heavier text for unread senders, subjects, and dates"
 msgstr "未讀郵件的寄件者、主旨與日期使用粗體"
 
 #: app/src/ui/preferences.rs:259
-#| msgid "Always Load Images?"
 msgid "Always Bold Senders"
 msgstr "寄件者一律使用粗體"
 
@@ -8346,7 +8341,6 @@ msgid "Use heavier sender text for both read and unread messages"
 msgstr "已讀與未讀郵件的寄件者皆使用粗體"
 
 #: app/src/ui/preferences.rs:268
-#| msgid "Show Calendars"
 msgid "Show Avatars"
 msgstr "顯示大頭貼"
 
@@ -8436,8 +8430,8 @@ msgid ""
 "works. <email> becomes the sending address, including its suffix; <domain> "
 "becomes its domain."
 msgstr ""
-"此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含"
-"字尾的寄件地址；<domain> 則替換為該地址的網域。"
+"此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含字尾"
+"的寄件地址；<domain> 則替換為該地址的網域。"
 
 #: app/src/ui/preferences.rs:527 app/src/ui/sender_prefs.rs:87
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -9122,12 +9116,10 @@ msgid "Enter a valid address that is not already listed."
 msgstr "請輸入有效且尚未加入清單的地址。"
 
 #: app/src/ui/sender_prefs/signature.rs:26
-#| msgid "No signature"
 msgid "Use Account Signature"
 msgstr "使用帳號簽名"
 
 #: app/src/ui/sender_prefs/signature.rs:27
-#| msgid "Signature"
 msgid "Custom Signature"
 msgstr "自訂簽名"
 
@@ -9136,8 +9128,8 @@ msgid ""
 "Markdown works. <email> becomes the sending address, including its suffix; "
 "<domain> becomes its domain."
 msgstr ""
-"支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址"
-"的網域。"
+"支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址的"
+"網域。"
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
@@ -10830,13 +10822,12 @@ msgid ""
 "\n"
 "{accounts}"
 msgstr ""
-"是否永久刪除下列帳號的 [垃圾桶] 中所有郵件，包括未儲存在這部電腦上的舊郵"
-"件？此操作無法復原。\n"
+"是否永久刪除下列帳號的 [垃圾桶] 中所有郵件，包括未儲存在這部電腦上的舊郵件？"
+"此操作無法復原。\n"
 "\n"
 "{accounts}"
 
 #: app/src/ui/window/trash.rs:50
-#| msgid "Empty"
 msgid "Empty Trash"
 msgstr "清空垃圾桶"
 
@@ -10846,13 +10837,10 @@ msgstr "正在清空垃圾桶…"
 
 #: app/src/ui/window/trash.rs:74 app/src/ui/window/trash.rs:90
 #: app/src/ui/window/trash.rs:106 app/src/ui/window/trash.rs:118
-#| msgid "Could not load mail for {account}: {reason}"
 msgid "Could not empty Trash for {account}: {reason}"
 msgstr "無法清空 {account} 的垃圾桶：{reason}"
 
 #: app/src/ui/window/trash.rs:94
-#| msgid "Deleted {count} message forever"
-#| msgid_plural "Deleted {count} messages forever"
 msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "已從 [垃圾桶] 刪除 {count} 封郵件（帳號：{account}）"
@@ -11394,82 +11382,82 @@ msgstr "所有郵件"
 msgid "Change the filters or load more messages if available."
 msgstr ""
 
-#: sync/src/mailbox.rs:1024
+#: sync/src/mailbox.rs:1028
 msgid "This smart mailbox has no conditions"
 msgstr "此智慧信箱沒有條件"
 
-#: sync/src/mailbox.rs:1584
+#: sync/src/mailbox.rs:1594
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account} 的結果僅來自此電腦上的郵件"
 
-#: sync/src/mailbox.rs:1792
+#: sync/src/mailbox.rs:1802
 msgid "Returns {when}"
 msgstr "於 {when} 移回"
 
-#: sync/src/mailbox.rs:1835 sync/src/mailbox.rs:1938
+#: sync/src/mailbox.rs:1845 sync/src/mailbox.rs:1948
 msgid "No recipients"
 msgstr "沒有收件者"
 
-#: sync/src/mailbox.rs:1838 sync/src/mailbox.rs:1941
+#: sync/src/mailbox.rs:1848 sync/src/mailbox.rs:1951
 msgid "To {recipients}"
 msgstr "收件者：{recipients}"
 
-#: sync/src/mailbox.rs:1881
+#: sync/src/mailbox.rs:1891
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} 封未讀 · {category}"
 
-#: sync/src/mailbox.rs:1886
+#: sync/src/mailbox.rs:1896
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} 封未讀"
 
-#: sync/src/mailbox.rs:1893
+#: sync/src/mailbox.rs:1903
 msgid "Sent yesterday, no reply yet"
 msgstr "昨天傳送，尚未收到回覆"
 
-#: sync/src/mailbox.rs:1895
+#: sync/src/mailbox.rs:1905
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days} 天前傳送，尚未收到回覆"
 
-#: sync/src/mailbox.rs:1979
+#: sync/src/mailbox.rs:1989
 msgid "The server has not sent this message yet."
 msgstr "伺服器尚未寄出這封郵件。"
 
-#: sync/src/mailbox.rs:1980
+#: sync/src/mailbox.rs:1990
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail 尚未確認伺服器已收下這封郵件。"
 
-#: sync/src/mailbox.rs:1990
+#: sync/src/mailbox.rs:2000
 msgid "Sends {when}."
 msgstr "於 {when} 傳送。"
 
-#: sync/src/mailbox.rs:1991
+#: sync/src/mailbox.rs:2001
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "即使 Penguin Mail 已關閉，伺服器仍會寄出。"
 
-#: sync/src/mailbox.rs:1993
+#: sync/src/mailbox.rs:2003
 msgid "Sends {when}"
 msgstr "於 {when} 傳送"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2010
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "請查看寄件備份。Penguin Mail 無法確認是否已寄出。"
 
-#: sync/src/mailbox.rs:2003
+#: sync/src/mailbox.rs:2013
 msgid "Canceled in another app."
 msgstr "已在其他應用程式中取消。"
 
-#: sync/src/mailbox.rs:2005
+#: sync/src/mailbox.rs:2015
 msgid "Not sent"
 msgstr "未傳送"
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2022
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}。將於 {when} 重試"
 
-#: sync/src/mailbox.rs:2019
+#: sync/src/mailbox.rs:2029
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}。Penguin Mail 已停止重試"
 

@@ -151,7 +151,7 @@ impl AccountSync {
 
     /// Typed search text on a server that reads no Gmail syntax: the
     /// store's matches, newest first, then what the server finds past
-    /// them, at most `limit` in all. A typed `label:` takes the name of the
+    /// them, at most `limit` from each. A typed `label:` takes the name of the
     /// mailbox Gmail would spell that way. A server search that fails
     /// leaves the store's answer, marked `store_only` as one the server
     /// cannot run is, so the person still sees what this computer holds.
@@ -178,7 +178,8 @@ impl AccountSync {
         };
         let held: HashSet<String> = refs.iter().map(|hit| hit.id.clone()).collect();
         refs.extend(past.refs.into_iter().filter(|hit| !held.contains(&hit.id)));
-        refs.truncate(limit);
+        // A server alias may resolve to a stored match when metadata is read.
+        // Keep both bounded sets until the listing can count unique messages.
         self.keep_hits(&refs);
         Ok(Searched {
             refs,
@@ -276,14 +277,17 @@ impl AccountSync {
             .db
             .read(move |c| messages::by_ids(c, account_id, &wanted))
             .await?;
-        let held: HashSet<String> = metas.iter().map(|m| m.id.clone()).collect();
+        let mut held: HashSet<String> = metas.iter().map(|m| m.id.clone()).collect();
         let wants: Vec<Want> = refs
             .iter()
             .filter(|r| !held.contains(&r.id))
             .cloned()
             .map(Want::from)
             .collect();
-        let fetched = self.fetch(wants).await?;
+        let mut fetched = self.fetch(wants).await?;
+        // Graph search can return REST ids even when sync uses immutable
+        // ids. The metadata fetch resolves them, so merge by its returned ids.
+        fetched.metas.retain(|meta| held.insert(meta.id.clone()));
         if self.local_threads() {
             if !fetched.metas.is_empty() {
                 let (stored, touched) = self

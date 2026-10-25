@@ -5,7 +5,7 @@
 //! Remind Me, Send Later, and the Outbox build their rows.
 
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -646,10 +646,14 @@ impl RemoteListing {
             && self.at.elapsed() < REMOTE_FRESH
     }
 
-    /// Whether every account has metadata for its first `wanted` ids, or
+    /// Whether every account has metadata for `wanted` distinct messages, or
     /// has no more ids to fetch.
     fn complete(&self, wanted: usize) -> bool {
-        !self.pages.is_empty() && self.pages.iter().all(|p| p.done() || p.fetched >= wanted)
+        !self.pages.is_empty()
+            && self
+                .pages
+                .iter()
+                .all(|p| p.done() || p.metas.len() >= wanted)
     }
 }
 
@@ -1530,7 +1534,7 @@ impl<A: Accounts> Mailboxes<A> {
         })
     }
 
-    /// Fetches metadata up to the `wanted`th id of every account, listing
+    /// Fetches metadata toward `wanted` distinct messages per account, listing
     /// the ids first for an account that has none yet. An account whose
     /// server did not run the search says so once, when it is listed.
     async fn fetch_page(
@@ -1564,10 +1568,16 @@ impl<A: Accounts> Mailboxes<A> {
                         store_only = found.store_only;
                         page.listed = true;
                     }
-                    let take = wanted.min(page.ids.len());
+                    let take = (page.fetched + wanted.saturating_sub(page.metas.len()))
+                        .min(page.ids.len());
                     if take > page.fetched && !stop.stopped() {
                         let next = sync.metadata_of(&page.ids[page.fetched..take]).await?;
-                        page.metas.extend(next);
+                        // An alias on this page can resolve to a message an earlier
+                        // page already holds. Keep row offsets based on unique mail.
+                        let mut held: HashSet<String> =
+                            page.metas.iter().map(|meta| meta.id.clone()).collect();
+                        page.metas
+                            .extend(next.into_iter().filter(|meta| held.insert(meta.id.clone())));
                         page.fetched = take;
                     }
                     Ok((page, store_only))
