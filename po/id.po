@@ -2193,7 +2193,7 @@ msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "Tidak dapat menyimpan {count} orang ke kontak di {account}"
 msgstr[1] "Tidak dapat menyimpan {count} orang ke kontak di {account}"
 
-#: app/src/core.rs:237
+#: app/src/core.rs:236
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2201,37 +2201,37 @@ msgstr ""
 "Salinan Penguin Mail lain, atau penguin-mail-cli sync, sedang menyinkronkan "
 "email Anda. Hentikan, lalu buka kembali Penguin Mail."
 
-#: app/src/core.rs:249
+#: app/src/core.rs:248
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "Penguin Mail tidak dapat memperbarui penyimpanan email dan mempertahankan "
 "salinan lama."
 
-#: app/src/core.rs:965 app/src/core.rs:1020 app/src/core.rs:1096
-#: app/src/core.rs:1225 app/src/core.rs:1239 app/src/core.rs:1304
-#: app/src/core.rs:1400
+#: app/src/core.rs:964 app/src/core.rs:1019 app/src/core.rs:1095
+#: app/src/core.rs:1224 app/src/core.rs:1238 app/src/core.rs:1303
+#: app/src/core.rs:1399
 msgid "Demo mode cannot add real accounts."
 msgstr "Mode demo tidak dapat menambahkan akun sungguhan."
 
-#: app/src/core.rs:983 app/src/core.rs:1852
+#: app/src/core.rs:982 app/src/core.rs:1851
 msgid "Canceled."
 msgstr "Dibatalkan."
 
-#: app/src/core.rs:1572 app/src/core.rs:1597
+#: app/src/core.rs:1571 app/src/core.rs:1596
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Akun ini tidak menyimpan sandi yang dapat digunakan server kalender atau "
 "kontak."
 
-#: app/src/core.rs:1778 app/src/core.rs:1878
+#: app/src/core.rs:1777 app/src/core.rs:1877
 msgid "The demo cannot switch accounts."
 msgstr "Demo tidak dapat beralih akun."
 
-#: app/src/core.rs:1832
+#: app/src/core.rs:1831
 msgid "The demo cannot connect a calendar."
 msgstr "Mode demo tidak dapat menghubungkan kalender."
 
-#: app/src/core.rs:1898
+#: app/src/core.rs:1897
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Berhenti menunggu peramban setelah lima menit."
 
@@ -4353,7 +4353,7 @@ msgid "Set up a different project"
 msgstr "Siapkan proyek lain"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3279
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3280
 msgid "Set up your own Google project"
 msgstr "Siapkan proyek Google Anda sendiri"
 
@@ -4534,8 +4534,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Langganan Claude"
 
-#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3652
-#: app/src/ui/window.rs:3732
+#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3653
+#: app/src/ui/window.rs:3733
 msgid "Assistant"
 msgstr "Asisten"
 
@@ -4928,7 +4928,7 @@ msgstr "Buka Penguin Mail"
 msgid "New Message"
 msgstr "Pesan Baru"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1972 app/src/ui/window.rs:3658
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1972 app/src/ui/window.rs:3659
 msgid "Check for Mail"
 msgstr "Periksa Email"
 
@@ -4946,7 +4946,7 @@ msgstr "Yang Baru di {version}"
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3671
+#: app/src/tray.rs:266 app/src/ui/window.rs:3672
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Keluar"
@@ -4967,7 +4967,7 @@ msgstr "Yang Baru"
 msgid "Website"
 msgstr "Situs Web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3670
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3671
 msgid "Donate"
 msgstr "Donasi"
 
@@ -4975,7 +4975,7 @@ msgstr "Donasi"
 msgid "License"
 msgstr "Lisensi"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3669
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3670
 msgid "About Penguin Mail"
 msgstr "Tentang Penguin Mail"
 
@@ -5479,7 +5479,7 @@ msgstr ""
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr "Filter, alias, dan balasan otomatis tidak tersedia dengan cara ini."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3818
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3819
 msgid "Summarize this conversation"
 msgstr "Ringkas percakapan ini"
 
@@ -5504,13 +5504,13 @@ msgstr "Buat draf balasan untuk percakapan yang terbuka"
 msgid "Choose a Model"
 msgstr "Pilih Model"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3779
-#: app/src/ui/window.rs:3780
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3780
+#: app/src/ui/window.rs:3781
 msgid "Detach"
 msgstr "Pisahkan"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4446
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4447
 msgid "Close"
 msgstr "Tutup"
 
@@ -5721,7 +5721,7 @@ msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3422
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3423
 msgid "Remove"
 msgstr "Hapus"
 
@@ -8791,7 +8791,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Izinkan Sembunyikan Email Saya"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3869
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3870
 msgid "Add an account first"
 msgstr "Tambahkan akun terlebih dahulu"
 
@@ -9926,7 +9926,7 @@ msgstr "Pindahkan {account} ke Bawah"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3667 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3668 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferensi"
 
@@ -10415,7 +10415,7 @@ msgstr "Balasan Otomatis…"
 msgid "Rules…"
 msgstr "Aturan…"
 
-#: app/src/ui/sidebar.rs:1883 app/src/ui/window.rs:3661
+#: app/src/ui/sidebar.rs:1883 app/src/ui/window.rs:3662
 msgid "Hide My Email…"
 msgstr "Sembunyikan Email Saya…"
 
@@ -11132,19 +11132,19 @@ msgstr "Buka"
 msgid "Could not save {file}: {reason}"
 msgstr "Tidak dapat menyimpan {file}: {reason}"
 
-#: app/src/ui/window.rs:3226
+#: app/src/ui/window.rs:3227
 msgid "Continue in your browser"
 msgstr "Lanjutkan di peramban Anda"
 
-#: app/src/ui/window.rs:3276
+#: app/src/ui/window.rs:3277
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Salinan Penguin Mail ini dibuat tanpa dukungan masuk Google."
 
-#: app/src/ui/window.rs:3298
+#: app/src/ui/window.rs:3299
 msgid "Get a Release"
 msgstr "Dapatkan Rilis"
 
-#: app/src/ui/window.rs:3408
+#: app/src/ui/window.rs:3409
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11152,80 +11152,80 @@ msgstr ""
 "Tidak dapat memeriksa pesan yang ditahan server untuk dikirim nanti, "
 "sehingga {account} tetap ada: {reason}"
 
-#: app/src/ui/window.rs:3419
+#: app/src/ui/window.rs:3420
 msgid "Remove {account}?"
 msgstr "Hapus {account}?"
 
-#: app/src/ui/window.rs:3438
+#: app/src/ui/window.rs:3439
 msgid "Remove Anyway"
 msgstr "Tetap Hapus"
 
-#: app/src/ui/window.rs:3451
+#: app/src/ui/window.rs:3452
 msgid "Removed {account}"
 msgstr "{account} dihapus"
 
-#: app/src/ui/window.rs:3453
+#: app/src/ui/window.rs:3454
 msgid "Could not remove {account}: {reason}"
 msgstr "Tidak dapat menghapus {account}: {reason}"
 
-#: app/src/ui/window.rs:3639
+#: app/src/ui/window.rs:3640
 msgid "Refresh"
 msgstr "Segarkan"
 
-#: app/src/ui/window.rs:3643
+#: app/src/ui/window.rs:3644
 msgid "Show Declined Events"
 msgstr "Tampilkan Acara yang Ditolak"
 
-#: app/src/ui/window.rs:3659
+#: app/src/ui/window.rs:3660
 msgid "Add Account…"
 msgstr "Tambahkan Akun…"
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3661
 msgid "New Smart Mailbox…"
 msgstr "Kotak Surat Cerdas Baru…"
 
-#: app/src/ui/window.rs:3668
+#: app/src/ui/window.rs:3669
 msgid "Keyboard Shortcuts"
 msgstr "Pintasan Papan Ketik"
 
-#: app/src/ui/window.rs:3677 app/src/ui/window.rs:3679
+#: app/src/ui/window.rs:3678 app/src/ui/window.rs:3680
 msgid "Main Menu"
 msgstr "Menu Utama"
 
-#: app/src/ui/window.rs:3744 app/src/ui/window.rs:3745
+#: app/src/ui/window.rs:3745 app/src/ui/window.rs:3746
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:3870
+#: app/src/ui/window.rs:3871
 msgid "Add a mail account first"
 msgstr "Tambahkan akun email terlebih dahulu"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4121
+#: app/src/ui/window.rs:4122
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Kalender dan kontak {account} telah terhubung."
 
-#: app/src/ui/window.rs:4237
+#: app/src/ui/window.rs:4238
 msgid "Open a message from the person first"
 msgstr "Buka pesan dari orang tersebut terlebih dahulu"
 
-#: app/src/ui/window.rs:4329
+#: app/src/ui/window.rs:4330
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/window.rs:4331 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4332 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Mulai Ulang"
 
-#: app/src/ui/window.rs:4395
+#: app/src/ui/window.rs:4396
 msgid "Show Rules"
 msgstr "Tampilkan Aturan"
 
-#: app/src/ui/window.rs:4421
+#: app/src/ui/window.rs:4422
 msgid "Messages That Will Not Download"
 msgstr "Pesan yang Tidak Dapat Diunduh"
 
-#: app/src/ui/window.rs:4423
+#: app/src/ui/window.rs:4424
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
