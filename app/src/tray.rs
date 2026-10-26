@@ -301,10 +301,7 @@ mod tests {
     fn one_unread_message_puts_a_dot_on_the_envelope_and_1_beside_it() {
         use ksni::Tray;
         let tray = tray(1);
-        assert_eq!(
-            tray.icon_name(),
-            format!("{}-unread", crate::APP_ID)
-        );
+        assert_eq!(tray.icon_name(), format!("{}-unread", crate::APP_ID));
         assert_eq!(tray.overlay_icon_name(), "");
         assert_eq!(tray.x_ayatana_label(), "1");
         assert_eq!(tray.x_ayatana_label_guide(), "1");
@@ -320,10 +317,7 @@ mod tests {
     fn a_large_count_is_written_out_in_full() {
         use ksni::Tray;
         let tray = tray(120);
-        assert_eq!(
-            tray.icon_name(),
-            format!("{}-unread", crate::APP_ID)
-        );
+        assert_eq!(tray.icon_name(), format!("{}-unread", crate::APP_ID));
         assert_eq!(tray.x_ayatana_label(), "120");
         assert_eq!(tray.tool_tip().title, "Penguin Mail: 120 unread messages");
     }
