@@ -2174,6 +2174,7 @@ pub fn failure_kind(err: &anyhow::Error) -> &'static str {
         return match browser {
             BrowserSignInError::NoClient(_) => "no client",
             BrowserSignInError::NeedsRoute => "needs route",
+            BrowserSignInError::AlreadyHeld => "already held",
             BrowserSignInError::OtherAddress { .. } => "other address",
             BrowserSignInError::Google(_) => "google",
             BrowserSignInError::Microsoft(_) => "microsoft",

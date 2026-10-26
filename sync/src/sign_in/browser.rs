@@ -84,6 +84,14 @@ pub struct SignedIn {
     pub services: Connected,
 }
 
+fn already_held() -> String {
+    format!(
+        "{} {}",
+        gettext("This address is already in Penguin Mail."),
+        super::remove_and_add_again()
+    )
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum BrowserSignInError {
     /// This build has no client for the provider, so no page was opened.
@@ -122,6 +130,10 @@ pub enum BrowserSignInError {
     // Translators: Gmail is a name; keep it as it is.
     #[error("{}", gettext("Choose how Penguin Mail signs in to Gmail"))]
     NeedsRoute,
+    /// The address already belongs to an account that signs in another
+    /// way, and this sign-in would change it.
+    #[error("{}", already_held())]
+    AlreadyHeld,
     /// Nobody came back from the browser within the wait.
     #[error("{}", gettext("Gave up waiting for the browser after ten minutes."))]
     GaveUp,
@@ -359,13 +371,13 @@ pub(crate) async fn signed_in_through(
 ) -> Result<Account, BrowserSignInError> {
     wanted.check(&authorized.email)?;
     // Whoever signs in may be an account on the IMAP route, which this
-    // token would move onto the API. It keeps its route: removing the
+    // token would put on the API. It keeps its route: removing the
     // account and adding it again changes that.
     if held_on_imap(&connector.db, Some(&authorized.email))
         .await?
         .is_some()
     {
-        return Err(BrowserSignInError::NeedsRoute);
+        return Err(BrowserSignInError::AlreadyHeld);
     }
     let granted = authorized.granted.as_ref().map(Granted::to_scope);
     let account = google_signed_in(

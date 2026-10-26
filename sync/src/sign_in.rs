@@ -205,12 +205,25 @@ pub async fn google_signed_in(
 
 /// What a Google sign-in brought back: the address, its refresh token,
 /// the scopes Google granted and the ones the sign-in asked for.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct GoogleToken<'a> {
     pub email: &'a str,
     pub refresh_token: &'a str,
     pub granted: Option<&'a str>,
     pub asked: &'a str,
+}
+
+// The refresh token signs in as the person, so Debug output, which can end
+// up in a log or a panic message, hides it.
+impl std::fmt::Debug for GoogleToken<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GoogleToken")
+            .field("email", &self.email)
+            .field("refresh_token", &"<hidden>")
+            .field("granted", &self.granted)
+            .field("asked", &self.asked)
+            .finish()
+    }
 }
 
 /// [`google_signed_in`] with `to` saying what the account's sign-in becomes
@@ -365,10 +378,16 @@ fn taken_error(address: &str, provider: &str) -> ImapSignInError {
 }
 
 fn taken(address: &str, provider: &str) -> String {
-    fill(
+    let held = fill(
         &gettext("{address} is already in Penguin Mail as a {provider} account."),
         &[("address", address), ("provider", provider)],
-    )
+    );
+    format!("{held} {}", remove_and_add_again())
+}
+
+/// What to do to sign an account in another way than it is.
+fn remove_and_add_again() -> String {
+    gettext("To sign in another way, remove it and add it again.")
 }
 
 /// Keeps an IMAP account whose login worked: adds it, or finds the one
@@ -1359,6 +1378,19 @@ mod tests {
         Arc::new(MemoryPasswords::default())
     }
 
+    #[test]
+    fn google_token_debug_hides_the_refresh_token() {
+        let token = GoogleToken {
+            email: "a@gmail.com",
+            refresh_token: "1//secret-refresh",
+            granted: None,
+            asked: "scope",
+        };
+        let shown = format!("{token:?}");
+        assert!(!shown.contains("secret-refresh"));
+        assert!(shown.contains("a@gmail.com"));
+    }
+
     fn built_in() -> Option<mailrs_gmail::OAuthClient> {
         client_from(
             Some("built.apps.googleusercontent.com"),
@@ -1495,7 +1527,7 @@ mod tests {
         .expect_err("an IMAP account holds the address");
         assert_eq!(
             refused.to_string(),
-            "dana@fastmail.com is already in Penguin Mail as a Fastmail account."
+            "dana@fastmail.com is already in Penguin Mail as a Fastmail account. To sign in another way, remove it and add it again."
         );
         let kept = db
             .read(|c| accounts::account_by_email(c, "dana@fastmail.com"))
@@ -2099,7 +2131,7 @@ mod tests {
         .expect_err("Gmail holds the address");
         assert_eq!(
             refused.to_string(),
-            "dana@contoso.com is already in Penguin Mail as a Gmail account."
+            "dana@contoso.com is already in Penguin Mail as a Gmail account. To sign in another way, remove it and add it again."
         );
         assert_eq!(tokens.load(1).unwrap(), None);
     }
@@ -2165,7 +2197,7 @@ mod tests {
         .await;
 
         assert!(
-            matches!(refused, Err(BrowserSignInError::NeedsRoute)),
+            matches!(refused, Err(BrowserSignInError::AlreadyHeld)),
             "{:?}",
             refused.err()
         );
