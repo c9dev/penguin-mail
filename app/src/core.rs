@@ -1032,7 +1032,7 @@ impl Core {
                 let pasted = read_pasted(&pasted);
                 let checked = check_gmail(&address, pasted.secret()).await?;
                 let new = NewGmailImap {
-                    address,
+                    address: address.trim().to_lowercase(),
                     servers: checked.servers,
                     password: pasted.secret().to_string(),
                 };

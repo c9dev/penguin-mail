@@ -157,6 +157,9 @@ pub async fn gmail_imap_signed_in(
         servers,
         password,
     } = new;
+    // Lower case, as every other sign-in does, so a mixed-case spelling of a
+    // held address is found and refused, not added beside it.
+    let address = address.trim().to_lowercase();
     let email = address.clone();
     let before = db
         .read(move |c| {
@@ -361,6 +364,22 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, ImapSignInError::Taken { .. }));
+    }
+
+    #[tokio::test]
+    async fn a_mixed_case_spelling_of_a_held_address_is_taken() {
+        let (_dir, db) = store();
+        db.write(|c| accounts::insert_account(c, "me@gmail.com", 0))
+            .await
+            .unwrap();
+        let mut spelled = new_account("abcdefghijklmnop");
+        spelled.address = "Me@Gmail.com".into();
+        let err = gmail_imap_signed_in(&db, &Secrets::memory(), spelled, 5)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ImapSignInError::Taken { .. }));
+        let held = db.read(accounts::list_accounts).await.unwrap();
+        assert_eq!(held.len(), 1);
     }
 
     #[tokio::test]

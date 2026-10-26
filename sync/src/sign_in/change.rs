@@ -5,12 +5,14 @@
 //! refuses the change. An account never changes its mail route here: that
 //! takes removing it and adding it again.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, LazyLock, Mutex, Weak};
 
 use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn};
 use mailrs_store::servers::{self, Servers};
 use mailrs_store::{Db, StoreError, accounts};
 use rusqlite::Connection;
+use tokio::sync::Mutex as AsyncMutex;
 
 use super::own_client::OwnClient;
 use crate::passwords::{PasswordError, PasswordStore, Secrets};
@@ -80,6 +82,28 @@ pub(crate) enum ChangeError {
     Store(#[from] StoreError),
 }
 
+/// One lock per account being changed, so two overlapping sign-ins write
+/// the keyring and the store one after the other. Keyed by the id of a
+/// held account or the address of a new one; an entry lives as long as a
+/// change holds its lock.
+static LOCKS: LazyLock<Mutex<HashMap<String, Weak<AsyncMutex<()>>>>> =
+    LazyLock::new(Mutex::default);
+
+fn lock_for(whose: &Whose) -> Arc<AsyncMutex<()>> {
+    let key = match whose {
+        Whose::New { email, .. } => format!("new:{}", email.to_lowercase()),
+        Whose::Held(id) => format!("held:{id}"),
+    };
+    let mut locks = LOCKS.lock().unwrap_or_else(|e| e.into_inner());
+    locks.retain(|_, lock| lock.strong_count() > 0);
+    if let Some(lock) = locks.get(&key).and_then(Weak::upgrade) {
+        return lock;
+    }
+    let lock = Arc::new(AsyncMutex::new(()));
+    locks.insert(key, Arc::downgrade(&lock));
+    lock
+}
+
 /// Writes how the account `whose` names signs in as `change.to`, and gives
 /// back its id.
 ///
@@ -103,9 +127,16 @@ pub(crate) async fn change_sign_in(
         password,
         signed_in_again,
     } = change;
+    let lock = lock_for(&whose);
+    let _one_at_a_time = lock.lock().await;
     match whose {
         Whose::New { email, now } => {
             let stored = Stored::of(to, token.as_ref(), password.as_ref(), false);
+            // The row exists before its secrets do. A crash between the two
+            // would leave an account that looks signed in and holds nothing,
+            // so the row starts as Needs Sign-In and turns Ok only after the
+            // keyring has the secrets. Signing in again then finishes the add.
+            let has_secrets = token.is_some() || password.is_some();
             // The check and the insert share the write, so an account added
             // for the address since the caller looked is refused, never
             // written over or deleted below.
@@ -117,6 +148,9 @@ pub(crate) async fn change_sign_in(
                     }
                     let id = accounts::insert_account(c, &email, now)?;
                     stored.write(c, id)?;
+                    if has_secrets {
+                        accounts::set_state(c, id, AccountState::NeedsReauth)?;
+                    }
                     Ok(Ok(id))
                 })
                 .await?
@@ -124,6 +158,10 @@ pub(crate) async fn change_sign_in(
             if let Err(err) = keep_secrets(secrets, id, token, password).await {
                 db.write(move |c| accounts::delete_account(c, id)).await?;
                 return Err(err);
+            }
+            if has_secrets {
+                db.write(move |c| accounts::set_state(c, id, AccountState::Ok))
+                    .await?;
             }
             Ok(id)
         }
@@ -510,6 +548,43 @@ mod tests {
 
         assert!(matches!(refused, Err(ChangeError::Token(_))), "{refused:?}");
         assert_eq!(held(&db, &secrets, id).await, before);
+    }
+
+    #[tokio::test]
+    async fn a_new_address_with_its_secrets_ends_signed_in() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("mail.db")).unwrap();
+        let secrets = Secrets::memory();
+        let whose = Whose::New {
+            email: ADDRESS.into(),
+            now: 0,
+        };
+        let to = Change {
+            password: Some(new_password("new-password")),
+            ..Change::to(APP_PASSWORD)
+        };
+
+        let id = change_sign_in(&db, &secrets, whose, to).await.unwrap();
+
+        let kept = db.read(move |c| accounts::account(c, id)).await.unwrap();
+        assert_eq!(kept.unwrap().state, AccountState::Ok);
+        assert_eq!(
+            secrets.passwords.load(id).unwrap().as_deref(),
+            Some("new-password")
+        );
+    }
+
+    #[tokio::test]
+    async fn overlapping_changes_to_one_account_run_one_after_the_other() {
+        let whose = || Whose::Held(4242);
+        let first = lock_for(&whose());
+        let held = first.lock().await;
+        let second = lock_for(&whose());
+        assert!(Arc::ptr_eq(&first, &second));
+        assert!(second.try_lock().is_err());
+        drop(held);
+        assert!(second.try_lock().is_ok());
+        assert!(!Arc::ptr_eq(&first, &lock_for(&Whose::Held(4243))));
     }
 
     #[tokio::test]
