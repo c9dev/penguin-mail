@@ -254,12 +254,14 @@ async fn a_restarted_bus_is_dialed_again() {
         eprintln!("dbus-daemon is missing; skipping");
         return;
     };
-    let accounts = DbusAccounts::at(&first.address);
+    // Without the bus's GUID, which a new daemon does not share.
+    let address = format!("unix:path={}", socket.display());
+    let accounts = DbusAccounts::at(&address);
     assert!(matches!(
         accounts.google_accounts().await,
         Err(GoaError::Unreachable(_))
     ));
-    let server = zbus::connection::Builder::address(first.address.as_str())
+    let server = zbus::connection::Builder::address(address.as_str())
         .unwrap()
         .name("org.gnome.OnlineAccounts")
         .unwrap()
@@ -278,10 +280,10 @@ async fn a_restarted_bus_is_dialed_again() {
     assert!(accounts.google_accounts().await.is_err());
     let _ = std::fs::remove_file(&socket);
 
-    let Some(second) = start_bus_listening(&config) else {
+    let Some(_second) = start_bus_listening(&config) else {
         panic!("the bus did not start again");
     };
-    let server = zbus::connection::Builder::address(second.address.as_str())
+    let server = zbus::connection::Builder::address(address.as_str())
         .unwrap()
         .name("org.gnome.OnlineAccounts")
         .unwrap()
