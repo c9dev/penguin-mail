@@ -69,6 +69,8 @@ pub struct SyncConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body_cache_mb: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_prefetch_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub window_days: Option<i64>,
 }
 
@@ -129,6 +131,10 @@ impl Config {
                 .body_cache_mb
                 .map(|mb| mb * 1024 * 1024)
                 .unwrap_or(defaults.body_cache_bytes),
+            body_prefetch_count: self
+                .sync
+                .body_prefetch_count
+                .unwrap_or(defaults.body_prefetch_count),
             window_days: self.sync.window_days.unwrap_or(defaults.window_days),
             ..defaults
         }
@@ -249,17 +255,19 @@ mod tests {
         let engine = config.engine_config();
         assert_eq!(engine.poll_interval, Duration::from_secs(30));
         assert_eq!(engine.window_days, 30);
+        assert_eq!(engine.body_prefetch_count, 0);
     }
 
     #[test]
     fn sync_settings_override_the_defaults() {
         let config = Config::parse(
-            "[oauth]\nclient_id = \"id\"\nclient_secret = \"s\"\n[sync]\npoll_seconds = 10\nbody_cache_mb = 5\nwindow_days = 7\n",
+            "[oauth]\nclient_id = \"id\"\nclient_secret = \"s\"\n[sync]\npoll_seconds = 10\nbody_cache_mb = 5\nbody_prefetch_count = 300\nwindow_days = 7\n",
         )
         .unwrap();
         let engine = config.engine_config();
         assert_eq!(engine.poll_interval, Duration::from_secs(10));
         assert_eq!(engine.body_cache_bytes, 5 * 1024 * 1024);
+        assert_eq!(engine.body_prefetch_count, 300);
         assert_eq!(engine.window_days, 7);
     }
 

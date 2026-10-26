@@ -12,6 +12,11 @@ use mailrs_store::StoreError;
 /// naming a provider. The window names the account when it has one.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum BackendError {
+    /// A structure read left out required text. Background prefetch retries
+    /// with backoff rather than keeping or abandoning the incomplete body.
+    #[error("{}", gettext("Message text could not be fetched completely"))]
+    IncompleteBody,
+
     /// The server no longer accepts the account's sign-in.
     #[error("authorization expired or was revoked; add the account again")]
     NeedsReauth,
@@ -63,7 +68,9 @@ impl BackendError {
     /// Failures worth retrying after a delay.
     pub fn is_transient(&self) -> bool {
         match self {
-            BackendError::Offline(_) | BackendError::RateLimited(_) => true,
+            BackendError::Offline(_)
+            | BackendError::RateLimited(_)
+            | BackendError::IncompleteBody => true,
             BackendError::Gmail(err) => err.is_transient(),
             _ => false,
         }

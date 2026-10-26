@@ -1,5 +1,6 @@
 use base64::Engine;
 use mailrs_imap::ImapError;
+use mailrs_store::bodies;
 
 use super::{days_ago, message};
 use crate::RAW_LIMIT;
@@ -38,6 +39,39 @@ async fn a_small_message_is_read_whole_and_kept_for_its_files() {
 
     assert_eq!(body.text.as_deref().map(str::trim), Some("Hi."));
     assert!(h.sync.cached_raw("INBOX/1001/1").is_some());
+}
+
+#[tokio::test]
+async fn prefetch_keeps_an_inbox_message_unread_and_leaves_its_file_on_the_server() {
+    let h = imap_harness().await;
+    h.imap
+        .deliver_flagged("INBOX", &with_file(100), &[], days_ago(1));
+    h.bootstrap().await;
+
+    assert!(!h.sync.prefetch_bodies_step(1).await.unwrap());
+
+    let stored = h.imap.message("INBOX", 1).unwrap();
+    assert!(
+        !stored
+            .flags
+            .iter()
+            .any(|flag| flag.eq_ignore_ascii_case("\\Seen"))
+    );
+    let account_id = h.account_id;
+    let cached =
+        h.db.read(move |c| bodies::peek_body(c, account_id, "INBOX/1001/1"))
+            .await
+            .unwrap();
+    assert!(cached.is_some());
+    let calls = h.imap.calls();
+    assert!(
+        !calls.iter().any(|call| call == "body INBOX 1 "),
+        "{calls:?}"
+    );
+    assert!(
+        !calls.iter().any(|call| call == "body INBOX 1 2"),
+        "{calls:?}"
+    );
 }
 
 #[tokio::test]
