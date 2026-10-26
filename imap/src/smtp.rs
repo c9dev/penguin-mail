@@ -992,11 +992,18 @@ mod tests {
                 other => xoauth2_server(other),
             }
         }
-        let stream = smtp_pipe("220 ready", SmtpSeen::default(), challenges);
-        let client = SmtpClient::with_dial(
-            Pipes::of(vec![(stream, false)]),
-            Login::bearer("ann@example.com", "tok"),
-        );
+        // A refused token is asked for once more, so the server is dialed twice.
+        let dial = Pipes::of(vec![
+            (
+                smtp_pipe("220 ready", SmtpSeen::default(), challenges),
+                false,
+            ),
+            (
+                smtp_pipe("220 ready", SmtpSeen::default(), challenges),
+                false,
+            ),
+        ]);
+        let client = SmtpClient::with_dial(dial, Login::bearer("ann@example.com", "tok"));
         let err = client.check().await.unwrap_err();
         assert!(matches!(err, ImapError::Auth { .. }), "{err:?}");
     }
