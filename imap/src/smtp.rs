@@ -179,10 +179,11 @@ where
         let credentials = Credentials::new(login.user.clone(), login.password.clone());
         conn.auth(mechanisms, &credentials).await.map_err(|err| {
             // A rejected token gets a 334 challenge that XOAUTH2 cannot
-            // answer, which lettre reports as its own error, not a 535.
-            // Any other client-side error is a fault of the exchange, not
-            // of the token.
-            if login.oauth && err.is_client() && err.to_string().contains(XOAUTH2_CHALLENGED) {
+            // answer, which lettre reports as a client error of its own,
+            // not a 535. The challenge is the only exchange XOAUTH2 has
+            // that lettre can fail on its side, so on an OAuth login any
+            // client error here is the server refusing the token.
+            if login.oauth && err.is_client() {
                 ImapError::Auth {
                     text: login.hide(&err.to_string()),
                 }
@@ -193,10 +194,6 @@ where
         Ok(conn)
     }
 }
-
-/// What lettre's error says when the server answers an XOAUTH2 token with
-/// a 334 challenge, as Gmail answers a token it refuses.
-const XOAUTH2_CHALLENGED: &str = "does not expect a challenge";
 
 /// MAIL, RCPT for each recipient, DATA, the message and QUIT. lettre's own
 /// `send` copies the whole message before it writes; this hands it the
@@ -983,6 +980,25 @@ mod tests {
         let commands = seen.commands();
         let want = BASE64.encode("user=ann@example.com\x01auth=Bearer tok\x01\x01");
         assert_eq!(commands[1], format!("AUTH XOAUTH2 {want}"));
+    }
+
+    #[tokio::test]
+    async fn a_challenged_xoauth2_token_is_an_auth_refusal() {
+        fn challenges(command: &str) -> Vec<String> {
+            match command {
+                c if c.starts_with("AUTH XOAUTH2 ") => {
+                    vec!["334 eyJzdGF0dXMiOiI0MDAifQ==".into()]
+                }
+                other => xoauth2_server(other),
+            }
+        }
+        let stream = smtp_pipe("220 ready", SmtpSeen::default(), challenges);
+        let client = SmtpClient::with_dial(
+            Pipes::of(vec![(stream, false)]),
+            Login::bearer("ann@example.com", "tok"),
+        );
+        let err = client.check().await.unwrap_err();
+        assert!(matches!(err, ImapError::Auth { .. }), "{err:?}");
     }
 
     #[tokio::test]

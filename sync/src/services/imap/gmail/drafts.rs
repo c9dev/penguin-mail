@@ -89,7 +89,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let Some(message_id) = mailrs_mime::head::message_id(raw) else {
             return Ok(None);
         };
-        if message_id.contains(['"', '\r', '\n', '\\']) {
+        if message_id.contains(['"', '\r', '\n', '\\', '\0']) {
             return Ok(None);
         }
         self.select(drafts, None).await?;
