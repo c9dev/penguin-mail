@@ -154,8 +154,7 @@ keeps syncing throughout.
 
 Accounts you added through the old setup page signed in with a Google Cloud
 client of your own, kept in `~/.config/penguin-mail/config.toml`. They keep
-working. The next time one of them signs in again, it moves to the app's own
-client, and the `[oauth]` section can go once none of them uses it.
+working, and signing one in again keeps its client.
 
 ## The config file
 
@@ -218,7 +217,7 @@ project, then:
    Drive APIs.
 2. Under Google Auth Platform, Branding, set the app name (`Penguin Mail` is
    fine) and your own address as the support and developer contact. Leave the
-   logo out: uploading one sends the app toward Google's verification.
+   logo out.
 3. Under Audience, choose **External** and leave the publishing status at
    **Testing**. Under Test users, add the Google address you will sign in
    with. Only test users can sign in to an app in testing.
@@ -238,9 +237,8 @@ project, then:
 
 Google ends a sign-in made through an app in testing after seven days, and
 the account then asks you to sign in again. To avoid that, choose
-**Publish app** under Audience instead of adding test users. Don't submit it
-for verification: you click through Google's "unverified app" notice once
-per account.
+**Publish app** under Audience instead of adding test users. You click
+through Google's "unverified app" notice once per account.
 
 ### Signing in with it
 
@@ -309,10 +307,8 @@ An account added this way keeps its client in the keyring beside its
 refresh token, under the service `penguin-mail-google-client` (in the
 Flatpak's own store through the Secret portal), and refreshes through that
 client at every start, with or without the variables. You need them again
-only to add another account, or to sign an account in again: a sign-in
-without them moves the account to the project's client. Removing the
-account deletes its client from the keyring. Accounts added before keep the
-project's client.
+only to add another account. Signing an account in again keeps its client.
+Removing the account deletes its client from the keyring.
 
 Your shell's history, a script that sets the variables, and Flatpak's
 override file (`~/.local/share/flatpak/overrides/io.github.c9dev.penguin-mail`)

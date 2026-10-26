@@ -38,9 +38,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         };
         let mut state = ImapState::read(since)?;
         let mut changes = Vec::new();
-        // The first look says where the window's messages sit, so an
-        // account moved from the Gmail API gets its refs without fetching
-        // a header.
+        // The first look says where the window's messages sit, so the refs
+        // of mail the store already holds are right without fetching a
+        // header.
         if !state.located {
             for mailbox in &order {
                 self.gm_locate_window(mailbox, &mut changes).await?;

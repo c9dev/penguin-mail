@@ -111,9 +111,9 @@ impl<I: ImapApi, S: Submit> MailBackend for GmailImap<I, S> {
             tags: false,
             focus: false,
             local_mailboxes: false,
+            // Gmail's own mute filter is not reachable over IMAP, so the
+            // engine files each muted reply as it arrives.
             files_muted_replies: false,
-            // A Gmail account on this route may have come through a move,
-            // which cannot tell a sent draft from a deleted one.
         }
     }
 

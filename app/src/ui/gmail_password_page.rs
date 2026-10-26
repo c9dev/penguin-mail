@@ -325,9 +325,7 @@ fn step(number: u32, text: &str, link: Option<(String, &str)>) -> gtk::ListBoxRo
     column.append(&words);
     if let Some((label_text, url)) = link {
         // The words come first and the arrow after them, as the mockup has it.
-        let content = gtk::Box::builder().spacing(5).build();
-        content.append(&gtk::Label::new(Some(&label_text)));
-        content.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+        let content = crate::ui::external_link_content(&label_text, 5);
         let button = gtk::LinkButton::builder()
             .uri(url)
             .halign(gtk::Align::Start)

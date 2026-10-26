@@ -83,12 +83,6 @@ impl RoutePage {
 /// The page's tag in the dialog's navigation view.
 pub const CONSENT_TAG: &str = "consent";
 
-/// Whether the consent page warns that Google may call the app
-/// unverified. A build with the flag set was verified.
-pub fn note_shown(verified: bool) -> bool {
-    !verified
-}
-
 /// The page that offers a Gmail account its calendar and contacts after
 /// its mail works.
 pub struct ConsentPage {
@@ -104,11 +98,10 @@ pub struct ConsentPage {
 
 impl ConsentPage {
     /// Shows the note about Google's warning screen only to an account
-    /// whose consent goes through the built-in client, while that client
-    /// is unverified. It stays hidden until the account is known.
+    /// whose consent goes through the built-in client. It stays hidden
+    /// until the account is known.
     pub fn fit_note(&self, built_in: bool) {
-        let verified = option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some();
-        self.note.set_visible(built_in && note_shown(verified));
+        self.note.set_visible(built_in);
     }
 
     pub fn new() -> ConsentPage {
@@ -141,9 +134,6 @@ impl ConsentPage {
             &["post-lede", "post-consent-text", "post-consent-note"],
         );
         centered(&note);
-        note.set_visible(note_shown(
-            option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some(),
-        ));
         let not_now = gtk::Button::builder()
             .label(gettext("Not Now"))
             .css_classes(["post-consent-button"])
@@ -240,7 +230,7 @@ pub(crate) mod checks {
         an_address_with_an_ampersand_stays_plain();
         showing_again_replaces_the_rows_and_the_answer();
         the_consent_page_names_both_buttons();
-        the_consent_page_keeps_its_note_until_verified();
+        the_consent_page_shows_its_note();
     }
 
     fn everything() -> Ready {
@@ -357,14 +347,11 @@ pub(crate) mod checks {
         );
     }
 
-    fn the_consent_page_keeps_its_note_until_verified() {
-        assert!(note_shown(false));
-        assert!(!note_shown(true));
+    fn the_consent_page_shows_its_note() {
         let page = ConsentPage::new();
-        assert_eq!(
-            page.note.get_visible(),
-            note_shown(option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some())
-        );
+        assert!(page.note.get_visible());
+        page.fit_note(false);
+        assert!(!page.note.get_visible());
         assert_eq!(
             page.note.label(),
             "Google may say \"Google hasn't verified this app\". Click Advanced, then Go to Penguin Mail (unsafe)."

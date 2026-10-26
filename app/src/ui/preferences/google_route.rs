@@ -257,9 +257,7 @@ fn fill_rows(
                 // Translators: Google is a name; keep it as it is.
                 let row = plain_row(&gettext("Signed in through your own Google project"), None);
                 let label = gettext("Open Google Cloud");
-                let inside = gtk::Box::builder().spacing(6).build();
-                inside.append(&gtk::Label::new(Some(&label)));
-                inside.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+                let inside = crate::ui::external_link_content(&label, 6);
                 let link = gtk::LinkButton::builder()
                     .uri(crate::own_project::PROJECT_PAGE)
                     .child(&inside)
@@ -346,9 +344,7 @@ fn gap_row(text: &str, link: &str, label: &str) -> adw::PreferencesRow {
         .wrap(true)
         .xalign(0.0)
         .build();
-    let inside = gtk::Box::builder().spacing(6).build();
-    inside.append(&gtk::Label::new(Some(label)));
-    inside.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+    let inside = crate::ui::external_link_content(label, 6);
     let button = gtk::LinkButton::builder()
         .uri(link)
         .child(&inside)
