@@ -37,9 +37,13 @@ const CONFIG: &str = r#"<busconfig>
 </busconfig>"#;
 
 fn start_bus() -> Option<Bus> {
+    start_bus_listening(CONFIG)
+}
+
+fn start_bus_listening(config_text: &str) -> Option<Bus> {
     use std::io::Write;
     let mut config = tempfile::NamedTempFile::new().ok()?;
-    config.write_all(CONFIG.as_bytes()).ok()?;
+    config.write_all(config_text.as_bytes()).ok()?;
     let mut child = Command::new("dbus-daemon")
         .arg(format!("--config-file={}", config.path().display()))
         .args(["--print-address", "--nofork"])
@@ -234,4 +238,60 @@ async fn a_bus_with_no_online_accounts_is_unreachable() {
         accounts.google_accounts().await,
         Err(GoaError::Unreachable(_))
     ));
+}
+
+/// The session bus goes away and comes back at the same address: the next
+/// call dials again instead of failing on the dead connection.
+#[tokio::test]
+async fn a_restarted_bus_is_dialed_again() {
+    let dir = tempfile::tempdir().unwrap();
+    let socket = dir.path().join("bus");
+    let config = CONFIG.replace(
+        "unix:tmpdir=/tmp",
+        &format!("unix:path={}", socket.display()),
+    );
+    let Some(first) = start_bus_listening(&config) else {
+        eprintln!("dbus-daemon is missing; skipping");
+        return;
+    };
+    let accounts = DbusAccounts::at(&first.address);
+    assert!(matches!(
+        accounts.google_accounts().await,
+        Err(GoaError::Unreachable(_))
+    ));
+    let server = zbus::connection::Builder::address(first.address.as_str())
+        .unwrap()
+        .name("org.gnome.OnlineAccounts")
+        .unwrap()
+        .build()
+        .await
+        .unwrap();
+    server
+        .object_server()
+        .at(ROOT, zbus::fdo::ObjectManager)
+        .await
+        .unwrap();
+    assert!(accounts.google_accounts().await.unwrap().is_empty());
+
+    drop(first);
+    drop(server);
+    assert!(accounts.google_accounts().await.is_err());
+    let _ = std::fs::remove_file(&socket);
+
+    let Some(second) = start_bus_listening(&config) else {
+        panic!("the bus did not start again");
+    };
+    let server = zbus::connection::Builder::address(second.address.as_str())
+        .unwrap()
+        .name("org.gnome.OnlineAccounts")
+        .unwrap()
+        .build()
+        .await
+        .unwrap();
+    server
+        .object_server()
+        .at(ROOT, zbus::fdo::ObjectManager)
+        .await
+        .unwrap();
+    assert!(accounts.google_accounts().await.unwrap().is_empty());
 }
