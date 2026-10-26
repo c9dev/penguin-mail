@@ -1571,3 +1571,91 @@ async fn a_new_event_goes_out_with_its_attachments() {
         .await
         .unwrap();
 }
+
+/// PATCH merges nested objects, so switching the time representation must
+/// remove the old one before the server validates the event.
+#[tokio::test]
+async fn edits_switch_between_timed_and_all_day_without_losing_the_title() {
+    use mailrs_domain::calendar::Event;
+    use std::sync::{Arc, Mutex};
+
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    let held = Arc::new(Mutex::new(json!({
+        "id": "review", "etag": "\"1\"", "summary": "Review",
+        "start": {"dateTime": "2026-10-06T12:00:00Z", "timeZone": "UTC"},
+        "end": {"dateTime": "2026-10-06T13:00:00Z", "timeZone": "UTC"}
+    })));
+    let read = Arc::clone(&held);
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .respond_with(move |_: &Request| {
+            ResponseTemplate::new(200).set_body_json(read.lock().unwrap().clone())
+        })
+        .mount(&server)
+        .await;
+    let written = Arc::clone(&held);
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .respond_with(move |request: &Request| {
+            let patch: Value = request.body_json().unwrap();
+            let mut event = written.lock().unwrap().clone();
+            for (key, value) in patch.as_object().unwrap() {
+                if matches!(key.as_str(), "start" | "end") {
+                    let time = event[key].as_object_mut().unwrap();
+                    for (field, value) in value.as_object().unwrap() {
+                        if value.is_null() { time.remove(field); }
+                        else { time.insert(field.clone(), value.clone()); }
+                    }
+                } else { event[key] = value.clone(); }
+            }
+            if ["start", "end"].into_iter().any(|key|
+                event[key].get("date").is_some() == event[key].get("dateTime").is_some()) {
+                return ResponseTemplate::new(400).set_body_json(json!({
+                    "error": {"code": 400, "message": "Invalid start time.", "errors": [{"reason": "invalid"}]}
+                }));
+            }
+            event["etag"] = json!("\"2\"");
+            *written.lock().unwrap() = event.clone();
+            ResponseTemplate::new(200).set_body_json(event)
+        }).expect(3).mount(&server).await;
+    let gmail = client(&server);
+    let mut event = Event {
+        calendar: "work".into(),
+        id: "review".into(),
+        title: "Review".into(),
+        start: 1_791_244_800_000,
+        end: 1_791_331_200_000,
+        all_day: true,
+        zone: "UTC".into(),
+        ..Event::default()
+    };
+    let saved = gmail
+        .put_event(&event, None, false, Notify::Nobody)
+        .await
+        .unwrap();
+    assert!(saved.all_day);
+    event = Event {
+        title: "Review with Ann".into(),
+        ..saved
+    };
+    let saved = gmail
+        .put_event(&event, None, false, Notify::Nobody)
+        .await
+        .unwrap();
+    assert_eq!(saved.title, "Review with Ann");
+    assert!(saved.all_day);
+    event = Event {
+        all_day: false,
+        start: 1_791_288_000_000,
+        end: 1_791_291_600_000,
+        ..saved
+    };
+    let saved = gmail
+        .put_event(&event, None, false, Notify::Nobody)
+        .await
+        .unwrap();
+    assert!(!saved.all_day);
+    assert_eq!(saved.title, "Review with Ann");
+    assert_eq!(held.lock().unwrap()["summary"], "Review with Ann");
+}
