@@ -387,7 +387,7 @@ fn taken(address: &str, provider: &str) -> String {
 
 /// What to do to sign an account in another way than it is.
 fn remove_and_add_again() -> String {
-    gettext("To sign in another way, remove it and add it again.")
+    gettext("To sign in another way, remove this account and add it again.")
 }
 
 /// Keeps an IMAP account whose login worked: adds it, or finds the one
@@ -1527,7 +1527,7 @@ mod tests {
         .expect_err("an IMAP account holds the address");
         assert_eq!(
             refused.to_string(),
-            "dana@fastmail.com is already in Penguin Mail as a Fastmail account. To sign in another way, remove it and add it again."
+            "dana@fastmail.com is already in Penguin Mail as a Fastmail account. To sign in another way, remove this account and add it again."
         );
         let kept = db
             .read(|c| accounts::account_by_email(c, "dana@fastmail.com"))
@@ -2131,7 +2131,7 @@ mod tests {
         .expect_err("Gmail holds the address");
         assert_eq!(
             refused.to_string(),
-            "dana@contoso.com is already in Penguin Mail as a Gmail account. To sign in another way, remove it and add it again."
+            "dana@contoso.com is already in Penguin Mail as a Gmail account. To sign in another way, remove this account and add it again."
         );
         assert_eq!(tokens.load(1).unwrap(), None);
     }

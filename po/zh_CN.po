@@ -4241,7 +4241,7 @@ msgstr "{host} 拒绝登录：{reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:281
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1516
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4249,7 +4249,7 @@ msgstr "日历"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:285
+#: app/src/ui/preferences/google_route.rs:283
 msgid "Contacts"
 msgstr "联系人"
 
@@ -4975,7 +4975,7 @@ msgid "Add Another Account"
 msgstr "添加其他账号"
 
 #: app/src/ui/add_account.rs:1430 app/src/ui/confirm.rs:46
-#: app/src/ui/route_page.rs:148
+#: app/src/ui/route_page.rs:138
 msgid "Not Now"
 msgstr "暂时不要"
 
@@ -7041,7 +7041,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail 无法查看此账号的日历"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:289
+#: app/src/ui/preferences/google_route.rs:287
 msgid "Not connected"
 msgstr "未连接"
 
@@ -7058,12 +7058,12 @@ msgid "Options for {calendar}"
 msgstr "{calendar} 的选项"
 
 #: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:400
+#: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "连接"
 
 #: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:282
+#: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "连接 {account} 的日历"
 
@@ -8809,7 +8809,7 @@ msgstr "这个网址包含可能掩饰目的地的用户名。"
 msgid "This link contains hidden or direction-changing characters."
 msgstr "这个链接包含隐藏字符或更改文本方向的字符。"
 
-#: app/src/ui/mod.rs:506
+#: app/src/ui/mod.rs:515
 msgid "Gray"
 msgstr "灰色"
 
@@ -9542,17 +9542,17 @@ msgstr "邮件、日历和联系人"
 msgid "Signed in through your own Google project"
 msgstr "已通过你自己的 Google 项目登录"
 
-#: app/src/ui/preferences/google_route.rs:278
+#: app/src/ui/preferences/google_route.rs:276
 msgid "Calendar and contacts"
 msgstr "日历和联系人"
 
-#: app/src/ui/preferences/google_route.rs:286
+#: app/src/ui/preferences/google_route.rs:284
 msgid "Connect the contacts for {account}"
 msgstr "连接 {account} 的联系人"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:304
+#: app/src/ui/preferences/google_route.rs:302
 msgid "On gmail.com"
 msgstr "在 gmail.com 上"
 
@@ -9573,12 +9573,12 @@ msgid "This message is waiting to be sent"
 msgstr "此邮件正在等待发送"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:117 app/src/ui/route_page.rs:124
+#: app/src/ui/route_page.rs:110 app/src/ui/route_page.rs:117
 msgid "Add your Google Calendar and contacts?"
 msgstr "添加您的 Google 日历和联系人？"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:130
+#: app/src/ui/route_page.rs:123
 msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
@@ -9588,7 +9588,7 @@ msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
-#: app/src/ui/route_page.rs:139
+#: app/src/ui/route_page.rs:132
 msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
@@ -9597,11 +9597,11 @@ msgstr ""
 "Penguin Mail（不安全）”。"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:153
+#: app/src/ui/route_page.rs:143
 msgid "Continue to Google"
 msgstr "继续前往 Google"
 
-#: app/src/ui/route_page.rs:197
+#: app/src/ui/route_page.rs:187
 msgid "Recommended"
 msgstr "推荐"
 
@@ -12532,16 +12532,16 @@ msgstr "请指定此规则适用的邮件"
 msgid "Choose what the rule does"
 msgstr "请选择规则运行的操作"
 
-#: sync/src/sign_in.rs:354
+#: sync/src/sign_in.rs:367
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr "您登录的账号不是 {address}，因此未做任何更改。"
 
-#: sync/src/sign_in.rs:369
+#: sync/src/sign_in.rs:382
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} 已是 Penguin Mail 中的 {provider} 账号。"
 
-#: sync/src/sign_in.rs:531
+#: sync/src/sign_in.rs:550
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -12549,7 +12549,7 @@ msgstr ""
 "已有名为 {name} 的日历账号，对应位于 {address} 的服务器。请先移除它，才能以这"
 "个名称添加此服务器。"
 
-#: sync/src/sign_in.rs:540
+#: sync/src/sign_in.rs:559
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -12558,7 +12558,7 @@ msgstr ""
 "已有名为 {name} 的日历账号，以 {user} 的身份登录此服务器。请输入 {user} 来重"
 "新登录，或先移除它，再以其他用户身份登录。"
 
-#: sync/src/sign_in.rs:549
+#: sync/src/sign_in.rs:568
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -12566,30 +12566,34 @@ msgstr ""
 "[重新登录] 会让 {name} 继续使用位于 {address} 的服务器。若要使用其他服务器或"
 "用户名，请将它添加为独立的日历账号。"
 
+#: sync/src/sign_in/browser.rs:90
+msgid "This address is already in Penguin Mail."
+msgstr "此地址已在 Penguin Mail 中。"
+
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:108
+#: sync/src/sign_in/browser.rs:116
 msgid "This server does not offer a sign-in in the browser."
 msgstr "此服务器不提供在浏览器中登录。"
 
-#: sync/src/sign_in/browser.rs:115
+#: sync/src/sign_in/browser.rs:123
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
 msgstr "服务器未让 Penguin Mail 保持登录。请改用密码或令牌登录。"
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:126
+#: sync/src/sign_in/browser.rs:138
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "已等待浏览器十分钟，停止等待。"
 
-#: sync/src/sign_in/browser.rs:139
+#: sync/src/sign_in/browser.rs:151
 msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
 "Penguin Mail 在这台电脑上找不到你的 Google 项目。请再次提供密钥以登录。"
 
-#: sync/src/sign_in/browser.rs:151
+#: sync/src/sign_in/browser.rs:163
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -12597,22 +12601,22 @@ msgstr ""
 "此版本的 Penguin Mail 未包含 Google 登录功能。请从 github.com/c9dev/penguin-"
 "mail/releases 取得发行版本。"
 
-#: sync/src/sign_in/browser.rs:164
+#: sync/src/sign_in/browser.rs:176
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr "已以 {account} 登录。请选择 {wanted} 以重新连接至该账号。"
 
-#: sync/src/sign_in/browser.rs:174
+#: sync/src/sign_in/browser.rs:186
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 "Penguin Mail 需要邮件访问权限才能运作。请重新登录，并保留勾选 Gmail 权限。"
 
-#: sync/src/sign_in/browser.rs:184
+#: sync/src/sign_in/browser.rs:196
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "所属组织的管理员必须批准 Penguin Mail。"
 
-#: sync/src/sign_in/browser.rs:187
+#: sync/src/sign_in/browser.rs:199
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."

@@ -4520,7 +4520,7 @@ msgstr "{host} ha rechazado el inicio de sesión: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:281
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1516
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4528,7 +4528,7 @@ msgstr "Calendario"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:285
+#: app/src/ui/preferences/google_route.rs:283
 msgid "Contacts"
 msgstr "Contactos"
 
@@ -5279,7 +5279,7 @@ msgid "Add Another Account"
 msgstr "Añadir otra cuenta"
 
 #: app/src/ui/add_account.rs:1430 app/src/ui/confirm.rs:46
-#: app/src/ui/route_page.rs:148
+#: app/src/ui/route_page.rs:138
 msgid "Not Now"
 msgstr "Ahora no"
 
@@ -7411,7 +7411,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail no puede ver los calendarios de esta cuenta"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:289
+#: app/src/ui/preferences/google_route.rs:287
 msgid "Not connected"
 msgstr "No conectado"
 
@@ -7428,12 +7428,12 @@ msgid "Options for {calendar}"
 msgstr "Opciones de {calendar}"
 
 #: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:400
+#: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "Conectar"
 
 #: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:282
+#: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "Conectar el calendario de {account}"
 
@@ -9256,7 +9256,7 @@ msgid "This link contains hidden or direction-changing characters."
 msgstr ""
 "Este enlace contiene caracteres ocultos o que cambian la dirección del texto."
 
-#: app/src/ui/mod.rs:506
+#: app/src/ui/mod.rs:515
 msgid "Gray"
 msgstr "Gris"
 
@@ -10015,17 +10015,17 @@ msgstr "Correo, calendario y contactos"
 msgid "Signed in through your own Google project"
 msgstr "Sesión iniciada con tu propio proyecto de Google"
 
-#: app/src/ui/preferences/google_route.rs:278
+#: app/src/ui/preferences/google_route.rs:276
 msgid "Calendar and contacts"
 msgstr "Calendario y contactos"
 
-#: app/src/ui/preferences/google_route.rs:286
+#: app/src/ui/preferences/google_route.rs:284
 msgid "Connect the contacts for {account}"
 msgstr "Conectar los contactos de {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:304
+#: app/src/ui/preferences/google_route.rs:302
 msgid "On gmail.com"
 msgstr "En gmail.com"
 
@@ -10046,12 +10046,12 @@ msgid "This message is waiting to be sent"
 msgstr "Este mensaje está pendiente de envío"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:117 app/src/ui/route_page.rs:124
+#: app/src/ui/route_page.rs:110 app/src/ui/route_page.rs:117
 msgid "Add your Google Calendar and contacts?"
 msgstr "¿Añadir tu Google Calendar y tus contactos?"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:130
+#: app/src/ui/route_page.rs:123
 msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
@@ -10062,7 +10062,7 @@ msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
-#: app/src/ui/route_page.rs:139
+#: app/src/ui/route_page.rs:132
 msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
@@ -10071,11 +10071,11 @@ msgstr ""
 "Avanzado y después en Ir a Penguin Mail (no seguro)."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:153
+#: app/src/ui/route_page.rs:143
 msgid "Continue to Google"
 msgstr "Continuar a Google"
 
-#: app/src/ui/route_page.rs:197
+#: app/src/ui/route_page.rs:187
 msgid "Recommended"
 msgstr "Recomendado"
 
@@ -13187,18 +13187,18 @@ msgstr "Indica a qué correo se aplica la regla"
 msgid "Choose what the rule does"
 msgstr "Elige qué hace la regla"
 
-#: sync/src/sign_in.rs:354
+#: sync/src/sign_in.rs:367
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr ""
 "Has iniciado sesión en una cuenta distinta de {address}, así que no ha "
 "cambiado nada."
 
-#: sync/src/sign_in.rs:369
+#: sync/src/sign_in.rs:382
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} ya está en Penguin Mail como cuenta de {provider}."
 
-#: sync/src/sign_in.rs:531
+#: sync/src/sign_in.rs:550
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -13206,7 +13206,7 @@ msgstr ""
 "Ya hay una cuenta de calendario llamada {name}, para el servidor de "
 "{address}. Quítala para añadir este servidor con ese nombre."
 
-#: sync/src/sign_in.rs:540
+#: sync/src/sign_in.rs:559
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -13216,7 +13216,7 @@ msgstr ""
 "este servidor como {user}. Escribe {user} para volver a iniciar sesión en "
 "ella, o quítala para iniciar sesión como otra persona."
 
-#: sync/src/sign_in.rs:549
+#: sync/src/sign_in.rs:568
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -13225,12 +13225,16 @@ msgstr ""
 "usar otro servidor u otro usuario, añádelo como una cuenta de calendario "
 "propia."
 
+#: sync/src/sign_in/browser.rs:90
+msgid "This address is already in Penguin Mail."
+msgstr "Esta dirección ya está en Penguin Mail."
+
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:108
+#: sync/src/sign_in/browser.rs:116
 msgid "This server does not offer a sign-in in the browser."
 msgstr "Este servidor no ofrece iniciar sesión en el navegador."
 
-#: sync/src/sign_in/browser.rs:115
+#: sync/src/sign_in/browser.rs:123
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -13239,11 +13243,11 @@ msgstr ""
 "Inicia sesión con una contraseña o un token."
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:126
+#: sync/src/sign_in/browser.rs:138
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "Se ha dejado de esperar al navegador tras diez minutos."
 
-#: sync/src/sign_in/browser.rs:139
+#: sync/src/sign_in/browser.rs:151
 msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
@@ -13251,7 +13255,7 @@ msgstr ""
 "Penguin Mail no encuentra tu proyecto de Google en este equipo. Vuelve a "
 "darle la clave para iniciar sesión."
 
-#: sync/src/sign_in/browser.rs:151
+#: sync/src/sign_in/browser.rs:163
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -13259,13 +13263,13 @@ msgstr ""
 "Esta copia de Penguin Mail se compiló sin inicio de sesión de Google. "
 "Descarga una versión publicada en github.com/c9dev/penguin-mail/releases."
 
-#: sync/src/sign_in/browser.rs:164
+#: sync/src/sign_in/browser.rs:176
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Has iniciado sesión como {account}. Elige {wanted} para volver a conectar "
 "esa cuenta."
 
-#: sync/src/sign_in/browser.rs:174
+#: sync/src/sign_in/browser.rs:186
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -13273,11 +13277,11 @@ msgstr ""
 "Penguin Mail no puede funcionar sin acceso a tu correo. Vuelve a iniciar "
 "sesión y deja marcado el permiso de Gmail."
 
-#: sync/src/sign_in/browser.rs:184
+#: sync/src/sign_in/browser.rs:196
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "El administrador de tu organización tiene que aprobar Penguin Mail."
 
-#: sync/src/sign_in/browser.rs:187
+#: sync/src/sign_in/browser.rs:199
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."

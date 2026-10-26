@@ -4578,7 +4578,7 @@ msgstr "{host} a refuzat autentificarea: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:281
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1516
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4586,7 +4586,7 @@ msgstr "Calendar"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:285
+#: app/src/ui/preferences/google_route.rs:283
 msgid "Contacts"
 msgstr "Contacte"
 
@@ -5345,7 +5345,7 @@ msgid "Add Another Account"
 msgstr "Adaugă alt cont"
 
 #: app/src/ui/add_account.rs:1430 app/src/ui/confirm.rs:46
-#: app/src/ui/route_page.rs:148
+#: app/src/ui/route_page.rs:138
 msgid "Not Now"
 msgstr "Nu acum"
 
@@ -7483,7 +7483,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail nu poate vedea calendarele acestui cont"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:289
+#: app/src/ui/preferences/google_route.rs:287
 msgid "Not connected"
 msgstr "Neconectat"
 
@@ -7500,12 +7500,12 @@ msgid "Options for {calendar}"
 msgstr "Opțiuni pentru {calendar}"
 
 #: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:400
+#: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "Conectează"
 
 #: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:282
+#: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "Conectează calendarul pentru {account}"
 
@@ -9363,7 +9363,7 @@ msgstr ""
 "Această legătură conține caractere ascunse sau care schimbă direcția "
 "textului."
 
-#: app/src/ui/mod.rs:506
+#: app/src/ui/mod.rs:515
 msgid "Gray"
 msgstr "Gri"
 
@@ -10127,17 +10127,17 @@ msgstr "Corespondență, calendar și contacte"
 msgid "Signed in through your own Google project"
 msgstr "Conectat prin propriul proiect Google"
 
-#: app/src/ui/preferences/google_route.rs:278
+#: app/src/ui/preferences/google_route.rs:276
 msgid "Calendar and contacts"
 msgstr "Calendar și contacte"
 
-#: app/src/ui/preferences/google_route.rs:286
+#: app/src/ui/preferences/google_route.rs:284
 msgid "Connect the contacts for {account}"
 msgstr "Conectează contactele pentru {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:304
+#: app/src/ui/preferences/google_route.rs:302
 msgid "On gmail.com"
 msgstr "Pe gmail.com"
 
@@ -10158,12 +10158,12 @@ msgid "This message is waiting to be sent"
 msgstr "Acest mesaj așteaptă să fie trimis"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:117 app/src/ui/route_page.rs:124
+#: app/src/ui/route_page.rs:110 app/src/ui/route_page.rs:117
 msgid "Add your Google Calendar and contacts?"
 msgstr "Adăugați Google Calendar și contactele?"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:130
+#: app/src/ui/route_page.rs:123
 msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
@@ -10174,7 +10174,7 @@ msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
-#: app/src/ui/route_page.rs:139
+#: app/src/ui/route_page.rs:132
 msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
@@ -10183,11 +10183,11 @@ msgstr ""
 "Avansat, apoi pe Accesați Penguin Mail (nesigur)."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:153
+#: app/src/ui/route_page.rs:143
 msgid "Continue to Google"
 msgstr "Continuă la Google"
 
-#: app/src/ui/route_page.rs:197
+#: app/src/ui/route_page.rs:187
 msgid "Recommended"
 msgstr "Recomandat"
 
@@ -13368,17 +13368,17 @@ msgstr "Spuneți pentru ce mesaje este regula"
 msgid "Choose what the rule does"
 msgstr "Alegeți ce face regula"
 
-#: sync/src/sign_in.rs:354
+#: sync/src/sign_in.rs:367
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr ""
 "V-ați conectat la alt cont decât {address}, așa că nu s-a schimbat nimic."
 
-#: sync/src/sign_in.rs:369
+#: sync/src/sign_in.rs:382
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} este deja în Penguin Mail ca un cont {provider}."
 
-#: sync/src/sign_in.rs:531
+#: sync/src/sign_in.rs:550
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -13386,7 +13386,7 @@ msgstr ""
 "Există deja un cont de calendar numit {name}, pentru serverul de la "
 "{address}. Eliminați-l pentru a adăuga acest server sub acest nume."
 
-#: sync/src/sign_in.rs:540
+#: sync/src/sign_in.rs:559
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -13396,7 +13396,7 @@ msgstr ""
 "{user}. Tastați {user} pentru a-l reconecta sau eliminați-l pentru a vă "
 "conecta ca altcineva."
 
-#: sync/src/sign_in.rs:549
+#: sync/src/sign_in.rs:568
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -13405,12 +13405,16 @@ msgstr ""
 "folosi alt server sau alt nume de utilizator, adăugați-l ca un cont de "
 "calendar separat."
 
+#: sync/src/sign_in/browser.rs:90
+msgid "This address is already in Penguin Mail."
+msgstr "Această adresă este deja în Penguin Mail."
+
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:108
+#: sync/src/sign_in/browser.rs:116
 msgid "This server does not offer a sign-in in the browser."
 msgstr "Acest server nu oferă conectare în navigator."
 
-#: sync/src/sign_in/browser.rs:115
+#: sync/src/sign_in/browser.rs:123
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -13419,11 +13423,11 @@ msgstr ""
 "parolă sau un token."
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:126
+#: sync/src/sign_in/browser.rs:138
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "S-a renunțat la așteptarea navigatorului după zece minute."
 
-#: sync/src/sign_in/browser.rs:139
+#: sync/src/sign_in/browser.rs:151
 msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
@@ -13431,7 +13435,7 @@ msgstr ""
 "Penguin Mail nu găsește proiectul dvs. Google pe acest computer. Dați-i din "
 "nou cheia ca să vă conectați."
 
-#: sync/src/sign_in/browser.rs:151
+#: sync/src/sign_in/browser.rs:163
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -13439,12 +13443,12 @@ msgstr ""
 "Această copie a Penguin Mail a fost compilată fără conectare Google. "
 "Descărcați o versiune de la github.com/c9dev/penguin-mail/releases."
 
-#: sync/src/sign_in/browser.rs:164
+#: sync/src/sign_in/browser.rs:176
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "V-ați conectat ca {account}. Alegeți {wanted} pentru a reconecta acel cont."
 
-#: sync/src/sign_in/browser.rs:174
+#: sync/src/sign_in/browser.rs:186
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -13452,12 +13456,12 @@ msgstr ""
 "Penguin Mail nu poate funcționa fără acces la corespondența dumneavoastră. "
 "Conectați-vă din nou și lăsați bifată permisiunea Gmail."
 
-#: sync/src/sign_in/browser.rs:184
+#: sync/src/sign_in/browser.rs:196
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr ""
 "Administratorul organizației dumneavoastră trebuie să aprobe Penguin Mail."
 
-#: sync/src/sign_in/browser.rs:187
+#: sync/src/sign_in/browser.rs:199
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."

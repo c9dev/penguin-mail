@@ -4345,7 +4345,7 @@ msgstr "{host}에서 로그인을 거부했습니다: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:281
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1516
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4353,7 +4353,7 @@ msgstr "캘린더"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:285
+#: app/src/ui/preferences/google_route.rs:283
 msgid "Contacts"
 msgstr "연락처"
 
@@ -5088,7 +5088,7 @@ msgid "Add Another Account"
 msgstr "다른 계정 추가"
 
 #: app/src/ui/add_account.rs:1430 app/src/ui/confirm.rs:46
-#: app/src/ui/route_page.rs:148
+#: app/src/ui/route_page.rs:138
 msgid "Not Now"
 msgstr "나중에"
 
@@ -7176,7 +7176,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "이 계정의 캘린더를 볼 수 없습니다"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:289
+#: app/src/ui/preferences/google_route.rs:287
 msgid "Not connected"
 msgstr "연결되지 않음"
 
@@ -7193,12 +7193,12 @@ msgid "Options for {calendar}"
 msgstr "{calendar} 옵션"
 
 #: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:400
+#: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "연결"
 
 #: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:282
+#: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "{account}의 캘린더 연결"
 
@@ -8969,7 +8969,7 @@ msgstr "목적지를 숨길 수 있는 사용자 이름이 이 주소에 포함�
 msgid "This link contains hidden or direction-changing characters."
 msgstr "이 링크에 숨겨진 문자나 방향 전환 문자가 있습니다."
 
-#: app/src/ui/mod.rs:506
+#: app/src/ui/mod.rs:515
 msgid "Gray"
 msgstr "회색"
 
@@ -9706,17 +9706,17 @@ msgstr "메일, 캘린더, 연락처"
 msgid "Signed in through your own Google project"
 msgstr "내 Google 프로젝트로 로그인됨"
 
-#: app/src/ui/preferences/google_route.rs:278
+#: app/src/ui/preferences/google_route.rs:276
 msgid "Calendar and contacts"
 msgstr "캘린더 및 연락처"
 
-#: app/src/ui/preferences/google_route.rs:286
+#: app/src/ui/preferences/google_route.rs:284
 msgid "Connect the contacts for {account}"
 msgstr "{account}의 연락처 연결"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:304
+#: app/src/ui/preferences/google_route.rs:302
 msgid "On gmail.com"
 msgstr "gmail.com에서"
 
@@ -9737,12 +9737,12 @@ msgid "This message is waiting to be sent"
 msgstr "이 메시지가 전송을 기다리고 있습니다"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:117 app/src/ui/route_page.rs:124
+#: app/src/ui/route_page.rs:110 app/src/ui/route_page.rs:117
 msgid "Add your Google Calendar and contacts?"
 msgstr "Google 캘린더와 연락처를 추가할까요?"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:130
+#: app/src/ui/route_page.rs:123
 msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
@@ -9752,7 +9752,7 @@ msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
 #. button names are the ones Google's own page shows.
-#: app/src/ui/route_page.rs:139
+#: app/src/ui/route_page.rs:132
 msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
@@ -9761,11 +9761,11 @@ msgstr ""
 "릭한 다음 Penguin Mail(안전하지 않음)으로 이동을 클릭하세요."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/route_page.rs:153
+#: app/src/ui/route_page.rs:143
 msgid "Continue to Google"
 msgstr "Google로 계속"
 
-#: app/src/ui/route_page.rs:197
+#: app/src/ui/route_page.rs:187
 msgid "Recommended"
 msgstr "권장"
 
@@ -12776,16 +12776,16 @@ msgstr "규칙을 적용할 메일을 지정하세요"
 msgid "Choose what the rule does"
 msgstr "규칙이 수행할 작업을 선택하세요"
 
-#: sync/src/sign_in.rs:354
+#: sync/src/sign_in.rs:367
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr "{address}이(가) 아닌 다른 계정으로 로그인하여 변경하지 않았습니다."
 
-#: sync/src/sign_in.rs:369
+#: sync/src/sign_in.rs:382
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address}은(는) 이미 Penguin Mail에 {provider} 계정으로 있습니다."
 
-#: sync/src/sign_in.rs:531
+#: sync/src/sign_in.rs:550
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -12793,7 +12793,7 @@ msgstr ""
 "{address} 서버의 {name} 캘린더 계정이 이미 있습니다. 이 이름으로 서버를 추가"
 "하려면 해당 계정을 제거하세요."
 
-#: sync/src/sign_in.rs:540
+#: sync/src/sign_in.rs:559
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -12802,7 +12802,7 @@ msgstr ""
 "이 서버에 {user}(으)로 로그인한 {name} 캘린더 계정이 이미 있습니다. 다시 로그"
 "인하려면 {user}을(를) 입력하고, 다른 사용자로 로그인하려면 계정을 제거하세요."
 
-#: sync/src/sign_in.rs:549
+#: sync/src/sign_in.rs:568
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -12810,12 +12810,16 @@ msgstr ""
 "다시 로그인하면 {address} 서버의 {name} 계정을 유지합니다. 다른 서버나 사용"
 "자 이름을 사용하려면 별도의 캘린더 계정으로 추가하세요."
 
+#: sync/src/sign_in/browser.rs:90
+msgid "This address is already in Penguin Mail."
+msgstr "이 주소는 이미 Penguin Mail에 있습니다."
+
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:108
+#: sync/src/sign_in/browser.rs:116
 msgid "This server does not offer a sign-in in the browser."
 msgstr "이 서버는 브라우저 로그인을 제공하지 않습니다."
 
-#: sync/src/sign_in/browser.rs:115
+#: sync/src/sign_in/browser.rs:123
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -12824,11 +12828,11 @@ msgstr ""
 "으로 로그인하세요."
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:126
+#: sync/src/sign_in/browser.rs:138
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "10분이 지나 브라우저 응답 대기를 중지했습니다."
 
-#: sync/src/sign_in/browser.rs:139
+#: sync/src/sign_in/browser.rs:151
 msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
@@ -12836,7 +12840,7 @@ msgstr ""
 "이 컴퓨터에서 Google 프로젝트를 찾을 수 없습니다. 로그인하려면 키를 다시 넘겨"
 "주세요."
 
-#: sync/src/sign_in/browser.rs:151
+#: sync/src/sign_in/browser.rs:163
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -12844,13 +12848,13 @@ msgstr ""
 "이 Penguin Mail은 Google 로그인 기능 없이 빌드되었습니다. github.com/c9dev/"
 "penguin-mail/releases에서 배포 버전을 받으세요."
 
-#: sync/src/sign_in/browser.rs:164
+#: sync/src/sign_in/browser.rs:176
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "{account}(으)로 로그인했습니다. 해당 계정을 다시 연결하려면 {wanted}을(를) 선"
 "택하세요."
 
-#: sync/src/sign_in/browser.rs:174
+#: sync/src/sign_in/browser.rs:186
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -12858,11 +12862,11 @@ msgstr ""
 "Penguin Mail을 사용하려면 메일 접근 권한이 필요합니다. 다시 로그인하고 Gmail "
 "권한을 선택한 상태로 두세요."
 
-#: sync/src/sign_in/browser.rs:184
+#: sync/src/sign_in/browser.rs:196
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "조직의 관리자가 Penguin Mail을 승인해야 합니다."
 
-#: sync/src/sign_in/browser.rs:187
+#: sync/src/sign_in/browser.rs:199
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
