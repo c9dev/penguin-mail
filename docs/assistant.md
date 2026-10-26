@@ -300,6 +300,12 @@ message. Pick how under **Web Search** on the AI page:
   trust. Enter its address, such as `http://localhost:8080`. Penguin Mail
   asks SearXNG for JSON, which a fresh install does not serve: add `json`
   under `search.formats` in its `settings.yml`.
+- **Keenable**: a local model searches with the Keenable API, with no key
+  and no server to run. Without a key it allows 1,000 searches an hour
+  from one IP address. A key from
+  [app.keenable.ai/console](https://app.keenable.ai/console) lifts that
+  limit: paste it into **Keenable API Key (Optional)**. It goes into the
+  keyring.
 
 **Test** runs one search and shows the first result's title, or what went
 wrong.
@@ -319,9 +325,9 @@ for every redirect. A page download skips any proxy your system sets,
 because a proxy would look the name up out of Penguin Mail's sight.
 
 A search runs without asking. Its query goes to the search provider you
-chose: Brave, your SearXNG server, or Anthropic for Claude. The model is
-told that search results and pages are written by strangers and that it
-must not follow instructions in them.
+chose: Brave, your SearXNG server, Keenable, or Anthropic for Claude. The
+model is told that search results and pages are written by strangers and
+that it must not follow instructions in them.
 
 ## Add MCP servers
 
@@ -494,8 +500,9 @@ what the assistant sends it in each call, which can include text from your
 mail.
 
 A web search sends its words to the search engine in use: Anthropic for
-Claude, or Brave or your SearXNG server for a local model. Those words come
-from your request and can include what the assistant read in your mail.
+Claude, or Brave, your SearXNG server or Keenable for a local model. Those
+words come from your request and can include what the assistant read in
+your mail.
 
 Skill scripts run on this computer, in the sandbox described under
 Scripts, and send nothing anywhere unless you allowed that skill the

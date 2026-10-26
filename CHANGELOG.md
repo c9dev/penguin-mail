@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- A local model can search the web with Keenable, with no API key or server to set up.
 - Filter the message list to unread mail, flagged mail, or mail with attachments.
 - Open .eml files from Files or the command line, and messages attached to other messages, in a window of their own, with Reply and Forward.
 - Choose message preview lines, hide avatars, and control bold text for unread messages and senders.

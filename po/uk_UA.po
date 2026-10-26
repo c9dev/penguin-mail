@@ -1141,30 +1141,30 @@ msgstr "У вас найновіша версія Penguin Mail {version}"
 msgid "Could not reach GitHub to check for updates"
 msgstr "Не вдалося під'єднатися до GitHub для перевірки оновлень"
 
-#: app/src/assistant/mod.rs:121
+#: app/src/assistant/mod.rs:122
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr "Асистента вимкнено. Виберіть модель у «Параметрах»."
 
-#: app/src/assistant/mod.rs:123
+#: app/src/assistant/mod.rs:124
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 "Для перекладу не вибрано модель. Виберіть її у «Параметрах», на сторінці "
 "«ШІ»."
 
-#: app/src/assistant/mod.rs:126
+#: app/src/assistant/mod.rs:127
 msgid "Unsubscribing has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 "Для відписки не вибрано модель. Виберіть її у «Параметрах», на сторінці «ШІ»."
 
-#: app/src/assistant/mod.rs:132
+#: app/src/assistant/mod.rs:133
 msgid "Choose a model for the local server in Preferences."
 msgstr "Виберіть модель для локального сервера у «Параметрах»."
 
-#: app/src/assistant/mod.rs:144
+#: app/src/assistant/mod.rs:145
 msgid "Add an Anthropic API key in Preferences."
 msgstr "Додайте ключ API Anthropic у «Параметрах»."
 
-#: app/src/assistant/mod.rs:151
+#: app/src/assistant/mod.rs:152
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "Claude Code не встановлено. Встановіть його й увійдіть, потім спробуйте "
@@ -2028,19 +2028,19 @@ msgstr ""
 "Вона виконується в пісочниці без доступу до вашої пошти й домашньої теки. "
 "{network} «Завжди дозволяти» стосується лише саме цієї команди."
 
-#: app/src/assistant/sources/web.rs:64
+#: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
 msgstr "Додайте ключ API Brave Search."
 
-#: app/src/assistant/sources/web.rs:66
+#: app/src/assistant/sources/web.rs:80
 msgid "Enter the address of a SearXNG server."
 msgstr "Введіть адресу сервера SearXNG."
 
-#: app/src/assistant/sources/web.rs:70
+#: app/src/assistant/sources/web.rs:90
 msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr "Виберіть Brave Search або SearXNG, щоб локальна модель могла шукати."
 
-#: app/src/assistant/sources/web.rs:333
+#: app/src/assistant/sources/web.rs:354
 msgid ""
 "Open this web page?\n"
 "\n"
@@ -4007,7 +4007,7 @@ msgstr "Менше за {size}"
 msgid "Larger than {size}"
 msgstr "Більше за {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:859
+#: app/src/rules.rs:251 app/src/settings/mod.rs:864
 msgid "All mail"
 msgstr "Уся пошта"
 
@@ -4103,8 +4103,8 @@ msgstr "На цьому комп'ютері, поки відкрито Penguin M
 msgid "On the server"
 msgstr "На сервері"
 
-#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
-#: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:402
+#: app/src/settings/mod.rs:776 app/src/ui/assistant_mcp_prefs.rs:202
 msgid "Off"
 msgstr "Вимкнено"
 
@@ -4153,159 +4153,163 @@ msgstr "Читає сторінку відписки від розсилки, к
 msgid "Same as the Assistant"
 msgstr "Як в асистента"
 
-#: app/src/settings/mod.rs:399
+#: app/src/settings/mod.rs:403
 msgid "Claude's own only"
 msgstr "Лише власний пошук Claude"
 
-#: app/src/settings/mod.rs:400
+#: app/src/settings/mod.rs:404
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:401
+#: app/src/settings/mod.rs:405
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:571
+#: app/src/settings/mod.rs:406
+msgid "Keenable"
+msgstr ""
+
+#: app/src/settings/mod.rs:576
 msgid "Rich text"
 msgstr "Форматований текст"
 
-#: app/src/settings/mod.rs:572
+#: app/src/settings/mod.rs:577
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:591 app/src/ui/preferences/accounts.rs:150
+#: app/src/settings/mod.rs:596 app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Автоматично"
 
-#: app/src/settings/mod.rs:592 app/src/ui/calendar/editor.rs:2163
+#: app/src/settings/mod.rs:597 app/src/ui/calendar/editor.rs:2163
 msgid "Monday"
 msgstr "понеділок"
 
-#: app/src/settings/mod.rs:593 app/src/ui/calendar/editor.rs:2169
+#: app/src/settings/mod.rs:598 app/src/ui/calendar/editor.rs:2169
 msgid "Sunday"
 msgstr "неділя"
 
-#: app/src/settings/mod.rs:631
+#: app/src/settings/mod.rs:636
 msgid "When opened"
 msgstr "Під час відкриття"
 
-#: app/src/settings/mod.rs:632
+#: app/src/settings/mod.rs:637
 msgid "After 2 seconds"
 msgstr "Через 2 секунди"
 
-#: app/src/settings/mod.rs:633
+#: app/src/settings/mod.rs:638
 msgid "Only when I choose"
 msgstr "Лише коли я виберу"
 
-#: app/src/settings/mod.rs:649 app/src/settings/mod.rs:667
+#: app/src/settings/mod.rs:654 app/src/settings/mod.rs:672
 msgid "Ask each time"
 msgstr "Питати щоразу"
 
-#: app/src/settings/mod.rs:650
+#: app/src/settings/mod.rs:655
 msgid "Always load"
 msgstr "Завжди завантажувати"
 
-#: app/src/settings/mod.rs:668
+#: app/src/settings/mod.rs:673
 msgid "Never ask"
 msgstr "Ніколи не питати"
 
-#: app/src/settings/mod.rs:695
+#: app/src/settings/mod.rs:700
 #, fuzzy
 #| msgid "Preview"
 msgid "No Preview"
 msgstr "Попередній перегляд"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:701
 msgid "1 Line"
 msgstr ""
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:702
 msgid "2 Lines"
 msgstr ""
 
-#: app/src/settings/mod.rs:731
+#: app/src/settings/mod.rs:736
 msgid "Small"
 msgstr "Малий"
 
-#: app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:737
 msgid "Default"
 msgstr "Типовий"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:738
 msgid "Large"
 msgstr "Великий"
 
-#: app/src/settings/mod.rs:734
+#: app/src/settings/mod.rs:739
 msgid "Larger"
 msgstr "Більший"
 
-#: app/src/settings/mod.rs:772
+#: app/src/settings/mod.rs:777
 msgid "5 seconds"
 msgstr "5 секунд"
 
-#: app/src/settings/mod.rs:773
+#: app/src/settings/mod.rs:778
 msgid "10 seconds"
 msgstr "10 секунд"
 
-#: app/src/settings/mod.rs:774
+#: app/src/settings/mod.rs:779
 msgid "20 seconds"
 msgstr "20 секунд"
 
-#: app/src/settings/mod.rs:775
+#: app/src/settings/mod.rs:780
 msgid "30 seconds"
 msgstr "30 секунд"
 
-#: app/src/settings/mod.rs:792
+#: app/src/settings/mod.rs:797
 msgid "Follow system"
 msgstr "Як у системі"
 
-#: app/src/settings/mod.rs:793
+#: app/src/settings/mod.rs:798
 msgid "Light"
 msgstr "Світла"
 
-#: app/src/settings/mod.rs:794
+#: app/src/settings/mod.rs:799
 msgid "Dark"
 msgstr "Темна"
 
-#: app/src/settings/mod.rs:828
+#: app/src/settings/mod.rs:833
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Кожну {count} секунду"
 msgstr[1] "Кожні {count} секунди"
 msgstr[2] "Кожні {count} секунд"
 
-#: app/src/settings/mod.rs:836
+#: app/src/settings/mod.rs:841
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Кожну {count} хвилину"
 msgstr[1] "Кожні {count} хвилини"
 msgstr[2] "Кожні {count} хвилин"
 
-#: app/src/settings/mod.rs:853
+#: app/src/settings/mod.rs:858
 msgid "2 weeks"
 msgstr "2 тижні"
 
-#: app/src/settings/mod.rs:854
+#: app/src/settings/mod.rs:859
 msgid "30 days"
 msgstr "30 днів"
 
-#: app/src/settings/mod.rs:855
+#: app/src/settings/mod.rs:860
 msgid "90 days"
 msgstr "90 днів"
 
-#: app/src/settings/mod.rs:856
+#: app/src/settings/mod.rs:861
 msgid "1 year"
 msgstr "1 рік"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:862
 msgid "2 years"
 msgstr "2 роки"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:863
 msgid "5 years"
 msgstr "5 років"
 
-#: app/src/settings/mod.rs:880
+#: app/src/settings/mod.rs:885
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4314,20 +4318,20 @@ msgstr ""
 "займає багато місця на диску й пам'яті, а старіша пошта завантажується у "
 "фоновому режимі."
 
-#: app/src/settings/mod.rs:882
+#: app/src/settings/mod.rs:887
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Усе у «Вхідних» теж залишається, а старішу пошту й далі можна знайти пошуком"
 
-#: app/src/settings/mod.rs:889
+#: app/src/settings/mod.rs:894
 msgid "256 MB"
 msgstr "256 МБ"
 
-#: app/src/settings/mod.rs:890
+#: app/src/settings/mod.rs:895
 msgid "1 GB"
 msgstr "1 ГБ"
 
-#: app/src/settings/mod.rs:891
+#: app/src/settings/mod.rs:896
 msgid "4 GB"
 msgstr "4 ГБ"
 
@@ -5377,7 +5381,7 @@ msgid "Test the Server"
 msgstr "Перевірити сервер"
 
 #: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:373
-#: app/src/ui/assistant_web_prefs.rs:59
+#: app/src/ui/assistant_web_prefs.rs:70
 msgid "Test"
 msgstr "Перевірити"
 
@@ -5593,7 +5597,7 @@ msgstr "Знову питати перед {tool}"
 msgid "Test the Connection"
 msgstr "Перевірити з'єднання"
 
-#: app/src/ui/assistant_prefs.rs:404 app/src/ui/assistant_web_prefs.rs:90
+#: app/src/ui/assistant_prefs.rs:404 app/src/ui/assistant_web_prefs.rs:101
 msgid "No answer: {reason}"
 msgstr "Немає відповіді: {reason}"
 
@@ -5750,33 +5754,45 @@ msgstr ""
 msgid "Search With"
 msgstr "Шукати за допомогою"
 
-#: app/src/ui/assistant_web_prefs.rs:47
+#: app/src/ui/assistant_web_prefs.rs:58
 msgid "SearXNG Server Address"
 msgstr "Адреса сервера SearXNG"
 
-#: app/src/ui/assistant_web_prefs.rs:63
+#: app/src/ui/assistant_web_prefs.rs:74
 msgid "Test the Search"
 msgstr "Перевірити пошук"
 
-#: app/src/ui/assistant_web_prefs.rs:64
+#: app/src/ui/assistant_web_prefs.rs:75
 msgid "Runs one search and shows the first result"
 msgstr "Виконує один пошук і показує перший результат"
 
-#: app/src/ui/assistant_web_prefs.rs:79
+#: app/src/ui/assistant_web_prefs.rs:90
 msgid "Searching…"
 msgstr "Пошук…"
 
-#: app/src/ui/assistant_web_prefs.rs:88
+#: app/src/ui/assistant_web_prefs.rs:99
 msgid "First result: {title}"
 msgstr "Перший результат: {title}"
 
-#: app/src/ui/assistant_web_prefs.rs:126
+#: app/src/ui/assistant_web_prefs.rs:147
 msgid "Brave Search API Key (Saved)"
 msgstr "Ключ API Brave Search (збережено)"
 
-#: app/src/ui/assistant_web_prefs.rs:127
+#: app/src/ui/assistant_web_prefs.rs:148
 msgid "Brave Search API Key"
 msgstr "Ключ API Brave Search"
+
+#: app/src/ui/assistant_web_prefs.rs:155
+#, fuzzy
+#| msgid "Brave Search API Key (Saved)"
+msgid "Keenable API Key (Saved)"
+msgstr "Ключ API Brave Search (збережено)"
+
+#: app/src/ui/assistant_web_prefs.rs:156
+#, fuzzy
+#| msgid "API Key (Optional)"
+msgid "Keenable API Key (Optional)"
+msgstr "Ключ API (необов'язково)"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50
