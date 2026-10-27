@@ -106,11 +106,8 @@ impl ksni::Tray for Count {
 async fn check_labels() {
     let (registered, mut registrations) = mpsc::unbounded_channel();
     let host = zbus::connection::Builder::session()
-        .unwrap()
         .name("org.kde.StatusNotifierWatcher")
-        .unwrap()
         .serve_at("/StatusNotifierWatcher", Watcher(registered))
-        .unwrap()
         .build()
         .await
         .unwrap();
@@ -131,11 +128,8 @@ async fn check_labels() {
                 .unwrap();
             let item = zbus::proxy::Builder::<zbus::Proxy<'_>>::new(&host)
                 .destination(name.as_str())
-                .unwrap()
                 .path(path.as_str())
-                .unwrap()
                 .interface("org.kde.StatusNotifierItem")
-                .unwrap()
                 .cache_properties(zbus::proxy::CacheProperties::No)
                 .build()
                 .await
@@ -145,7 +139,7 @@ async fn check_labels() {
                 if restart { "" } else { "1" }
             );
             let menu = item
-                .get_property::<zbus::zvariant::OwnedObjectPath>("Menu")
+                .get_property::<zbus::OwnedObjectPath>("Menu")
                 .await
                 .unwrap();
             let menu = zbus::Proxy::new(
