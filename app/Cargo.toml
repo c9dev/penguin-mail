@@ -85,7 +85,7 @@ tempfile.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 wiremock.workspace = true
 # The tray regression uses a private bus and a host that reads its signals.
-zbus = { version = "5", default-features = false, features = ["tokio"] }
+zbus = { version = "6", default-features = false, features = ["tokio", "proxy", "service"] }
 
 # The kind of package a build is for; see src/packaging.rs. A plain build
 # is the .deb or the tarball.
