@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::GmailSignIn;
 use mailrs_domain::calendar::{
     Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Reminder,
     ReminderMethod, Status as CalendarStatus,
@@ -820,6 +821,9 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         let email = account.email;
         let account_id = db
             .write(move |c| accounts::insert_account(c, email, now))
+            .await?;
+        // The demo's Gmail accounts sign in through their own project.
+        db.write(move |c| accounts::set_gmail_sign_in(c, account_id, &GmailSignIn::OwnProject))
             .await?;
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);

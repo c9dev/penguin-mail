@@ -7,13 +7,11 @@
 
 use std::time::Duration;
 
-use mailrs_domain::Role;
 use mailrs_imap::Woke;
 use tokio::time::Instant;
 
 use super::{Imap, ImapApi, Submit};
 use crate::BackendError;
-use crate::services::MailBackend;
 
 /// How often the Inbox is looked at on a server without IDLE.
 const INBOX_POLL: Duration = Duration::from_secs(60);
@@ -99,7 +97,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// budget ends the watch at once, so the engine syncs what the server
     /// reported, and counts as a failure: the next watch waits before it
     /// issues IDLE again. A change or a timeout forgets the failures.
-    pub(super) async fn watch_inbox(&self) {
+    pub(super) async fn watch_inbox(
+        &self,
+        inbox: impl Future<Output = Result<String, BackendError>>,
+    ) {
         let pause = self.known().idle_pause.take();
         if let Some(pause) = pause {
             tokio::time::sleep(pause).await;
@@ -115,9 +116,14 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if !idle {
             return std::future::pending().await;
         }
-        let inbox = self
-            .mailbox_for(Role::Inbox)
-            .unwrap_or_else(|| "INBOX".into());
+        let inbox = match inbox.await {
+            Ok(inbox) => inbox,
+            Err(err) => {
+                tracing::warn!(%err, "could not find the mailbox to watch");
+                tokio::time::sleep(WATCH_RETRY).await;
+                return;
+            }
+        };
         loop {
             match self.api.idle(&inbox, IDLE_FOR).await {
                 Ok(Woke::Dropped) => {

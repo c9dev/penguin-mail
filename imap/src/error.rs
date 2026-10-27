@@ -31,6 +31,11 @@ pub enum ImapError {
     /// The call needs an extension the server lacks.
     #[error("the server does not offer {0}")]
     Unsupported(&'static str),
+    /// Gmail turned a command down with its "bandwidth limits" alert: the
+    /// account downloaded as much as Gmail lets an app download in a day.
+    /// Waiting is the cure, not trying again at once.
+    #[error("the server says the account is over its limit: {text}")]
+    BandwidthLimit { text: String },
     /// Any other refusal, in the server's words: over quota, a message too
     /// large, a name already taken.
     #[error("the server refused: {0}")]
@@ -69,6 +74,7 @@ impl ImapError {
             ImapError::Protocol(text) => ImapError::Protocol(hide(text)),
             ImapError::NoMailbox(name) => ImapError::NoMailbox(hide(name)),
             ImapError::Unsupported(what) => ImapError::Unsupported(what),
+            ImapError::BandwidthLimit { text } => ImapError::BandwidthLimit { text: hide(text) },
             ImapError::Refused(text) => ImapError::Refused(hide(text)),
             ImapError::Invalid(text) => ImapError::Invalid(hide(text)),
         }
@@ -104,6 +110,12 @@ mod tests {
             .is_transient()
         );
         assert!(!ImapError::NoMailbox("x".into()).is_transient());
+        assert!(
+            !ImapError::BandwidthLimit {
+                text: String::new()
+            }
+            .is_transient()
+        );
     }
 
     #[test]
@@ -119,6 +131,12 @@ mod tests {
         );
         assert!(!ImapError::NoMailbox("x".into()).drops_connection());
         assert!(!ImapError::Unsupported("MOVE").drops_connection());
+        assert!(
+            !ImapError::BandwidthLimit {
+                text: String::new()
+            }
+            .drops_connection()
+        );
     }
 
     /// A value the client refused never reached the server, so the

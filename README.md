@@ -35,6 +35,19 @@ It is built with GTK and libadwaita and fits best on GNOME. It also runs on
 other Linux desktops and macOS. On macOS, Settings lives in the native app
 menu.
 
+A new Gmail account signs in one of two ways, and you pick one for it:
+
+- **Set up your own Google project.** Every Gmail feature, on Linux and
+  macOS: Gmail filters, the automatic reply, send-as aliases and
+  signatures, and label colours. It takes about 10 minutes, once:
+  Penguin Mail opens each Google page for you and says what to click.
+- **Use the Google account on this computer** (Linux), signed in through
+  your computer's Online Accounts, or **a password from Google** elsewhere.
+  Mail, calendar and contacts, without those four.
+
+Preferences shows what each account has. An account keeps the way it signed
+in. To change it, remove the account and add it again.
+
 [![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://youtu.be/0PyJCsw1FSE)
 
 ## Features
@@ -117,6 +130,9 @@ and an IMAP account its rules over ManageSieve.
   it, so this stops lazy spam, not a determined sender.
 
 Gmail runs all four, so they work with your computer off.
+
+With Online Accounts or a password from Google, you change filters and the automatic reply on
+gmail.com. Your Gmail filters still run, and Penguin Mail links to the page.
 
 ### Calendar
 
@@ -379,13 +395,13 @@ sign-in.
 
 ### First run
 
-The first screen signs you in with Google. **Sign In with Google** opens
-Google's sign-in page in your browser, and **Add Account** in the sidebar adds
-each account after that.
+The first window offers **Add your first account**. Pick a provider and
+follow the steps; **Add Account** in the sidebar adds each account after that.
 
-Until Google finishes verifying Penguin Mail, that page warns that Google has
-not verified the app. The warning means Google has not yet reviewed the app's
-request for Gmail access; choose **Advanced**, then continue.
+For a Gmail account, Penguin Mail asks **Choose how Penguin Mail signs in to
+Gmail** and lists the ways it offers. Pick one. If you pick one that opens
+Google's page in your browser, Google may show a warning page first; choose
+**Advanced**, then continue to Penguin Mail.
 
 ### Updates
 

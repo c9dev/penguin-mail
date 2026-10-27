@@ -259,6 +259,7 @@ impl AccountSync {
     /// mail programs. Gmail and Outlook keep no such keyword. The record on
     /// this computer is what this app reads, so a refusal only goes to the log.
     async fn mark_mdn_sent(&self, message_id: &str) {
+        // Gmail over IMAP keeps no such keyword either.
         if !matches!(
             self.mail.untranslated(),
             AnyMail::Imap(_) | AnyMail::Jmap(_)

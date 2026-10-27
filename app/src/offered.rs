@@ -2,7 +2,7 @@
 //! the account's services, and the words for what an account lacks.
 
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
-use mailrs_domain::{Account, AccountId, Category, Provider, RemoveSetting};
+use mailrs_domain::{Account, AccountId, Category, MailRoute, Provider, RemoveSetting};
 use mailrs_store::pop3::{FailReason, Failing};
 use mailrs_store::services::Miss;
 use mailrs_sync::{AccountServices, BackendError, Mailbox, Missing, Offers, SyncError, Withheld};
@@ -563,25 +563,115 @@ pub fn reason(account: &Account, missing: Missing, missed: Option<Miss>) -> Stri
     fill(&template, &[("provider", &provider)])
 }
 
+/// Where Gmail keeps the filters and the automatic reply, for an account
+/// that reads its mail over IMAP and so cannot change either.
+pub const FILTERS_LINK: &str = "https://mail.google.com/mail/#settings/filters";
+pub const SETTINGS_LINK: &str = "https://mail.google.com/mail/#settings/general";
+
+/// What an IMAP-route Gmail account says of its filters.
+pub fn filters_gap() -> String {
+    // Translators: Gmail and gmail.com are names; keep them as they are.
+    gettext("Your Gmail filters still run. Change them on gmail.com.")
+}
+
+/// What an IMAP-route Gmail account says of its automatic reply.
+pub fn reply_gap() -> String {
+    // Translators: gmail.com is a name; keep it as it is.
+    gettext("Set your automatic reply on gmail.com.")
+}
+
+/// The link under [`filters_gap`].
+pub fn filters_link_label() -> String {
+    // Translators: Gmail is a name; keep it as it is.
+    gettext("Open Gmail Filters")
+}
+
+/// The link under [`reply_gap`].
+pub fn settings_link_label() -> String {
+    // Translators: Gmail is a name; keep it as it is.
+    gettext("Open Gmail Settings")
+}
+
+/// [`reason`] for an account that may read its mail over IMAP. A Gmail
+/// account on that route has no rules or automatic reply to change
+/// here, and its words point to gmail.com; every other case reads as
+/// [`reason`] does.
+pub fn reason_on(
+    account: &Account,
+    route: MailRoute,
+    missing: Missing,
+    missed: Option<Miss>,
+) -> String {
+    if account.provider == Provider::Gmail && route == MailRoute::Imap {
+        match missing {
+            Missing::Rules => return filters_gap(),
+            Missing::AutoReply => return reply_gap(),
+            _ => {}
+        }
+    }
+    reason(account, missing, missed)
+}
+
+/// Whether a Gmail account's calendar and contacts reach Penguin Mail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Calendar {
+    /// They read, or the account is not a Gmail account.
+    Reads,
+    /// The account holds no calendar token, as an account whose mail
+    /// comes over IMAP does until its calendar consent.
+    NotConnected,
+}
+
+impl Calendar {
+    pub fn shows_connect(self) -> bool {
+        self != Calendar::Reads
+    }
+}
+
+/// How `account`'s Google calendar and contacts stand, from what its
+/// services offer.
+pub fn calendar_link(account: &Account, offers: Offers) -> Calendar {
+    match account.provider {
+        Provider::Gmail if !offers.calendar => Calendar::NotConnected,
+        _ => Calendar::Reads,
+    }
+}
+
 /// The rows Preferences shows under Not Available: one for each account
 /// that lacks something, as its address and one reason for each thing it
 /// lacks. The category bar needs no reason because it is not there.
 /// `missed` says why the search for an account's calendar or contacts
 /// server failed, where the store kept a reason.
+/// Each Gmail account's route says where its calendar, contacts, filters
+/// and automatic reply are: on the IMAP route they have rows of their own
+/// in Preferences, so they stay out of the account's Not Available row.
 pub fn missing_lines(
     accounts: &[(Account, Offers)],
     missed: impl Fn(AccountId, Missing) -> Option<Miss>,
+    route_of: impl Fn(AccountId) -> Option<MailRoute>,
 ) -> Vec<(String, Vec<String>)> {
     accounts
         .iter()
         .filter_map(|(account, offers)| {
+            let route = route_of(account.id).unwrap_or_default();
+            let own_rows = account.provider == Provider::Gmail && route == MailRoute::Imap;
             let mut reasons: Vec<String> = offers
                 .missing()
                 .into_iter()
                 .filter(|m| *m != Missing::Categories)
+                .filter(|m| {
+                    !(own_rows
+                        && matches!(
+                            m,
+                            Missing::Calendar
+                                | Missing::Contacts
+                                | Missing::Rules
+                                | Missing::AutoReply
+                        ))
+                })
                 .map(|m| match (m, offers.auto_reply_needs_sign_in) {
                     (Missing::AutoReply, true) => sign_in_reason(account),
-                    _ => reason(account, m, missed(account.id, m)),
+                    _ => reason_on(account, route, m, missed(account.id, m)),
                 })
                 .collect();
             reasons.dedup();
@@ -985,10 +1075,85 @@ mod tests {
     use mailrs_sync::{Missing, Offers};
 
     use super::{
-        failing_lines, held_back_line, hides_addresses, kept_here_lines, offers_for, reason,
-        remove_account_body, shows_space_switch, still_held_line, withheld_for,
+        Calendar, calendar_link, failing_lines, held_back_line, hides_addresses, kept_here_lines,
+        offers_for, reason, reason_on, remove_account_body, shows_space_switch, still_held_line,
+        withheld_for,
     };
     use crate::settings::Space;
+    use mailrs_domain::MailRoute;
+
+    fn gmail_in(state: AccountState) -> Account {
+        Account {
+            id: 8,
+            email: "maria.costa@gmail.com".into(),
+            state,
+            provider: Provider::Gmail,
+            provider_name: Some("Gmail".into()),
+        }
+    }
+
+    #[test]
+    fn the_reply_gap_reads_the_same_in_the_window() {
+        let account = gmail_in(AccountState::Ok);
+        assert_eq!(
+            reason_on(&account, MailRoute::Imap, Missing::AutoReply, None),
+            "Set your automatic reply on gmail.com."
+        );
+        assert_eq!(
+            reason_on(&account, MailRoute::Imap, Missing::Rules, None),
+            "Your Gmail filters still run. Change them on gmail.com."
+        );
+    }
+
+    #[test]
+    fn the_api_route_and_other_gaps_keep_their_old_words() {
+        let account = gmail_in(AccountState::Ok);
+        assert_eq!(
+            reason_on(&account, MailRoute::GmailApi, Missing::AutoReply, None),
+            reason(&account, Missing::AutoReply, None)
+        );
+        assert_eq!(
+            reason_on(&account, MailRoute::Imap, Missing::DeleteForever, None),
+            reason(&account, Missing::DeleteForever, None)
+        );
+    }
+
+    #[test]
+    fn an_account_without_a_calendar_asks_to_connect_it() {
+        assert_eq!(
+            calendar_link(&gmail_in(AccountState::Ok), NO_CALENDAR),
+            Calendar::NotConnected
+        );
+        assert_eq!(
+            calendar_link(&gmail_in(AccountState::Ok), Offers::EVERYTHING),
+            Calendar::Reads
+        );
+        assert_eq!(calendar_link(&pop3_account(), NO_CALENDAR), Calendar::Reads);
+    }
+
+    #[test]
+    fn an_imap_route_account_leaves_what_its_own_rows_say_out_of_not_available() {
+        let account = gmail_in(AccountState::Ok);
+        let lacking = Offers {
+            calendar: false,
+            contacts: false,
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        let on_imap = missing_lines(
+            &[(account.clone(), lacking)],
+            |_, _| None,
+            |_| Some(MailRoute::Imap),
+        );
+        assert_eq!(on_imap, []);
+        let on_api = missing_lines(
+            &[(account, lacking)],
+            |_, _| None,
+            |_| Some(MailRoute::GmailApi),
+        );
+        assert_eq!(on_api.len(), 1);
+    }
 
     const NO_CALENDAR: Offers = Offers {
         calendar: false,
@@ -1564,9 +1729,11 @@ mod tests {
             contacts: false,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(fastmail(), imap)], |_, missing| {
-            (missing == Missing::Calendar).then_some(Miss::Refused)
-        });
+        let lines = missing_lines(
+            &[(fastmail(), imap)],
+            |_, missing| (missing == Missing::Calendar).then_some(Miss::Refused),
+            |_| None,
+        );
         let reasons = &lines[0].1;
         assert!(
             reasons[0].starts_with("Fastmail refused the password for calendars."),
@@ -1980,6 +2147,7 @@ mod tests {
         let lines = missing_lines(
             &[(gmail(), Offers::EVERYTHING), (bare.clone(), lacking)],
             |_, _| None,
+            |_| None,
         );
         assert_eq!(
             lines,
@@ -2010,7 +2178,11 @@ mod tests {
             auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(fastmail(), lacking), (pop3, lacking)], |_, _| None);
+        let lines = missing_lines(
+            &[(fastmail(), lacking), (pop3, lacking)],
+            |_, _| None,
+            |_| None,
+        );
         let addresses: Vec<&str> = lines.iter().map(|(address, _)| address.as_str()).collect();
         assert_eq!(addresses, ["dana@fastmail.com", "dana@reyes-home.example"]);
         assert_eq!(lines[1].1.len(), 3, "{lines:?}");
@@ -2028,7 +2200,7 @@ mod tests {
             auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(fastmail(), imap)], |_, _| None);
+        let lines = missing_lines(&[(fastmail(), imap)], |_, _| None, |_| None);
         assert_eq!(
             lines[0].1,
             [
@@ -2194,7 +2366,7 @@ mod tests {
             auto_reply_needs_sign_in: true,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(jmap, lacking)], |_, _| None);
+        let lines = missing_lines(&[(jmap, lacking)], |_, _| None, |_| None);
         assert_eq!(
             lines[0].1,
             [

@@ -28,6 +28,10 @@ pub enum BackendError {
     /// when the window knows it.
     #[error("{}", rate_limited(.0))]
     RateLimited(Option<Duration>),
+    /// Gmail's IMAP will not hand out more mail today; the account waits
+    /// an hour before it asks again.
+    #[error("{}", download_limit())]
+    DownloadLimit,
     #[error("not found")]
     NotFound,
     /// The server no longer knows the sync state it was handed, and the
@@ -70,6 +74,7 @@ impl BackendError {
         match self {
             BackendError::Offline(_)
             | BackendError::RateLimited(_)
+            | BackendError::DownloadLimit
             | BackendError::IncompleteBody => true,
             BackendError::Gmail(err) => err.is_transient(),
             _ => false,
@@ -179,6 +184,16 @@ impl SyncError {
 /// through `SyncError::for_person` when it has one.
 fn rate_limited(_: &Option<Duration>) -> String {
     gettext("The server asked Penguin Mail to wait")
+}
+
+/// How long an account waits after Gmail's daily download limit.
+pub const DOWNLOAD_LIMIT_WAIT: Duration = Duration::from_secs(3600);
+
+pub(crate) fn download_limit() -> String {
+    // Translators: shown beside a Gmail account that reads its mail over IMAP when Gmail stopped handing out mail for the day.
+    gettext(
+        "Gmail limits how much mail an app can download each day. Penguin Mail tries again later.",
+    )
 }
 
 /// Lets `?` take a Gmail error where a sync error is due.

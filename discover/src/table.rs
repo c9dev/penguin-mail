@@ -215,6 +215,28 @@ impl Table {
     }
 }
 
+/// Google's mail servers and the page that makes an app password.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GoogleServers {
+    pub imap: Server,
+    pub smtp: Server,
+    pub app_password_url: String,
+}
+
+/// The servers a Gmail account reads and sends mail through with an app
+/// password, from the table's `google` entry.
+pub fn google_servers() -> Option<GoogleServers> {
+    let entry = Table::built_in()
+        .entries
+        .iter()
+        .find(|entry| entry.id == "google")?;
+    Some(GoogleServers {
+        imap: entry.imap.clone()?,
+        smtp: entry.smtp.first()?.clone(),
+        app_password_url: entry.app_password_url.clone()?,
+    })
+}
+
 /// The built-in table's facts about the IMAP provider whose display name
 /// is `name`, such as `"Fastmail"`, or `None` when the table lists no IMAP
 /// provider by that name. An account stores the name; reading the rest
@@ -394,6 +416,10 @@ mod tests {
                     "{}",
                     entry.id
                 );
+            } else if entry.kind == Kind::Google {
+                // Google's servers serve the app-password route only.
+                assert!(entry.imap.is_some(), "{}", entry.id);
+                assert!(!entry.smtp.is_empty(), "{}", entry.id);
             } else {
                 assert!(servers_of(entry).is_empty(), "{}", entry.id);
                 assert!(entry.password.is_none(), "{}", entry.id);
@@ -749,6 +775,29 @@ mod tests {
             services_of("imap.fastmail.com")
         );
         assert_eq!(services_of("Fastmail"), ProviderServices::default());
+    }
+
+    #[test]
+    fn google_serves_mail_over_imap_and_stays_a_google_verdict() {
+        let google = google_servers().expect("the table lists Google's servers");
+        assert_eq!(
+            (google.imap.host.as_str(), google.imap.port),
+            ("imap.gmail.com", 993)
+        );
+        assert_eq!(
+            (
+                google.smtp.host.as_str(),
+                google.smtp.port,
+                google.smtp.security
+            ),
+            ("smtp.gmail.com", 465, Security::Tls)
+        );
+        assert_eq!(
+            google.app_password_url,
+            "https://myaccount.google.com/apppasswords"
+        );
+        let entry = Table::built_in().by_domain("gmail.com").unwrap();
+        assert_eq!(entry.found(Source::Table, false).verdict, Verdict::Google);
     }
 
     #[test]

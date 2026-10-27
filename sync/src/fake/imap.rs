@@ -96,6 +96,11 @@ pub struct ImapState {
     pub answered: u64,
     /// The UIDVALIDITY the next new or reset mailbox gets.
     next_uidvalidity: u32,
+    /// The server is Gmail: it names its mailboxes `[Gmail]/...` and keeps
+    /// every message once, in All Mail, Trash or Spam.
+    pub gmail: bool,
+    /// The X-GM-MSGID the next delivery gets.
+    next_msgid: u64,
 }
 
 pub struct FakeMailbox {
@@ -130,6 +135,20 @@ pub struct FakeMessage {
     pub flags: BTreeSet<String>,
     pub internal_date: EpochMillis,
     pub modseq: u64,
+    /// What Gmail adds (X-GM-EXT-1); `None` on any other server.
+    pub gmail: Option<FakeGmail>,
+}
+
+/// A Gmail message's own ids and labels.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FakeGmail {
+    pub msgid: u64,
+    pub thrid: u64,
+    /// Decoded, system labels with their backslash: `\Inbox`, `\Sent`.
+    pub labels: BTreeSet<String>,
+    /// The inbox tab Gmail sorts it into: `social`, `promotions`,
+    /// `updates` or `forums`. `None` is the personal tab.
+    pub category: Option<String>,
 }
 
 /// The most calls the log keeps. The demo runs on this fake for a whole
@@ -210,6 +229,7 @@ impl FakeMailbox {
                 flags,
                 internal_date,
                 modseq: self.highestmodseq,
+                gmail: None,
             },
         );
         uid
@@ -277,6 +297,8 @@ impl FakeImap {
                 omit_uidnext: false,
                 answered: 0,
                 next_uidvalidity: 1000,
+                gmail: false,
+                next_msgid: 0x18c2_f0a1_b2c3_d4e5,
             }),
             changed: Notify::new(),
         };
@@ -291,6 +313,158 @@ impl FakeImap {
             fake.add_mailbox(name, Some(use_));
         }
         fake
+    }
+
+    /// A Gmail server: INBOX, `[Gmail]/All Mail`, Trash, Spam, Sent Mail,
+    /// Drafts, Important and Starred. Condstore, move and UIDPLUS are on,
+    /// QRESYNC is off, and X-GM-EXT-1 is offered, as Gmail does.
+    pub fn gmail() -> Self {
+        let fake = FakeImap::new();
+        fake.with(|s| {
+            s.gmail = true;
+            s.capabilities.gmail = true;
+            s.capabilities.qresync = false;
+            s.mailboxes.clear();
+        });
+        fake.add_mailbox("INBOX", None);
+        for (name, use_) in [
+            ("[Gmail]/All Mail", Some(SpecialUse::All)),
+            ("[Gmail]/Trash", Some(SpecialUse::Trash)),
+            ("[Gmail]/Spam", Some(SpecialUse::Junk)),
+            ("[Gmail]/Sent Mail", Some(SpecialUse::Sent)),
+            ("[Gmail]/Drafts", Some(SpecialUse::Drafts)),
+            ("[Gmail]/Important", None),
+            ("[Gmail]/Starred", Some(SpecialUse::Flagged)),
+        ] {
+            fake.add_mailbox(name, use_);
+        }
+        fake
+    }
+
+    /// Mail arriving in Gmail's All Mail, unread, carrying `labels` (decoded
+    /// names, system ones with their backslash such as `\Inbox`). A label
+    /// no mailbox has yet gets its own listed folder. Returns the message's
+    /// X-GM-MSGID, which is also its thread's.
+    pub fn deliver_gmail(&self, labels: &[&str], raw: Vec<u8>, date: EpochMillis) -> u64 {
+        self.deliver_gmail_in(None, labels, raw, date)
+    }
+
+    /// As [`Self::deliver_gmail`], as a reply in the thread of `parent`.
+    pub fn deliver_gmail_reply(
+        &self,
+        parent: u64,
+        labels: &[&str],
+        raw: Vec<u8>,
+        date: EpochMillis,
+    ) -> u64 {
+        self.deliver_gmail_in(Some(parent), labels, raw, date)
+    }
+
+    fn deliver_gmail_in(
+        &self,
+        parent: Option<u64>,
+        labels: &[&str],
+        raw: Vec<u8>,
+        date: EpochMillis,
+    ) -> u64 {
+        let msgid = self.with(|s| {
+            let msgid = s.next_msgid;
+            s.next_msgid += 0x1001;
+            let thrid = parent
+                .and_then(|parent| {
+                    s.mailboxes
+                        .values()
+                        .flat_map(|m| m.messages.values())
+                        .find_map(|m| m.gmail.as_ref().filter(|g| g.msgid == parent))
+                        .map(|g| g.thrid)
+                })
+                .unwrap_or(msgid);
+            for label in labels.iter().filter(|l| !l.starts_with('\\')) {
+                let name = mailrs_imap::utf7::encode(label);
+                if !s.mailboxes.contains_key(&name) {
+                    s.mailbox_mut(&name);
+                }
+            }
+            let all = s.all_mail().to_string();
+            let mailbox = s.mailbox_mut(&all);
+            let uid = mailbox.add(raw, BTreeSet::new(), date);
+            if let Some(message) = mailbox.messages.get_mut(&uid) {
+                message.gmail = Some(FakeGmail {
+                    msgid,
+                    thrid,
+                    labels: labels.iter().map(|l| l.to_string()).collect(),
+                    category: None,
+                });
+            }
+            msgid
+        });
+        self.changed.notify_waiters();
+        msgid
+    }
+
+    /// Gmail files message `msgid` under the inbox tab `category`.
+    pub fn set_category(&self, msgid: u64, category: Option<&str>) {
+        self.with(|s| {
+            if let Some((mailbox, uid, _)) = s.find_msgid(msgid)
+                && let Some(g) = s
+                    .mailbox_mut(&mailbox)
+                    .messages
+                    .get_mut(&uid)
+                    .and_then(|m| m.gmail.as_mut())
+            {
+                g.category = category.map(str::to_string);
+            }
+        });
+    }
+
+    /// Another client adds or takes off a label, a change with its own
+    /// MODSEQ. Wakes an IDLE.
+    pub fn remote_label(&self, msgid: u64, label: &str, add: bool) {
+        self.with(|s| {
+            if let Some((mailbox, uid, _)) = s.find_msgid(msgid) {
+                let m = s.mailbox_mut(&mailbox);
+                m.highestmodseq += 1;
+                let modseq = m.highestmodseq;
+                if let Some(message) = m.messages.get_mut(&uid) {
+                    message.modseq = modseq;
+                    if let Some(g) = message.gmail.as_mut() {
+                        match add {
+                            true => g.labels.insert(label.to_string()),
+                            false => g.labels.remove(label),
+                        };
+                    }
+                }
+            }
+        });
+        self.changed.notify_waiters();
+    }
+
+    /// Another client moves message `msgid` to Trash.
+    pub fn remote_trash(&self, msgid: u64) {
+        self.remote_move(msgid, |s| s.trash().to_string());
+    }
+
+    /// Another client moves message `msgid` from Trash back to All Mail.
+    pub fn remote_untrash(&self, msgid: u64) {
+        self.remote_move(msgid, |s| s.all_mail().to_string());
+    }
+
+    fn remote_move(&self, msgid: u64, to: impl FnOnce(&ImapState) -> String) {
+        self.with(|s| {
+            let Some((from, uid, _)) = s.find_msgid(msgid) else {
+                return;
+            };
+            let to = to(s);
+            let source = s.mailbox_mut(&from);
+            if let Some(message) = source.remove(uid) {
+                let target = s.mailbox_mut(&to);
+                let new = target.add(message.raw, message.flags, message.internal_date);
+                if let Some(moved) = target.messages.get_mut(&new) {
+                    moved.gmail = message.gmail;
+                }
+            }
+        });
+        self.changed.notify_waiters();
     }
 
     pub fn with<R>(&self, f: impl FnOnce(&mut ImapState) -> R) -> R {
@@ -526,6 +700,113 @@ impl FakeImap {
 }
 
 impl ImapState {
+    /// The mailbox Gmail keeps all mail in.
+    pub fn all_mail(&self) -> &str {
+        self.special("[Gmail]/All Mail", SpecialUse::All)
+    }
+
+    pub fn trash(&self) -> &str {
+        self.special("[Gmail]/Trash", SpecialUse::Trash)
+    }
+
+    fn special(&self, default: &'static str, use_: SpecialUse) -> &str {
+        self.mailboxes
+            .iter()
+            .find(|(_, m)| m.special_use == Some(use_))
+            .map(|(name, _)| name.as_str())
+            .unwrap_or(default)
+    }
+
+    /// Where the message with X-GM-MSGID `msgid` is: its mailbox, UID and
+    /// labels.
+    pub fn find_msgid(&self, msgid: u64) -> Option<(String, u32, BTreeSet<String>)> {
+        self.mailboxes.iter().find_map(|(name, m)| {
+            m.messages.iter().find_map(|(uid, message)| {
+                let g = message.gmail.as_ref().filter(|g| g.msgid == msgid)?;
+                Some((name.clone(), *uid, g.labels.clone()))
+            })
+        })
+    }
+
+    /// Whether `mailbox` is one of the three Gmail keeps messages in.
+    fn is_gmail_store(&self, mailbox: &str) -> bool {
+        mailbox == self.all_mail()
+            || mailbox == self.trash()
+            || self.mailboxes.get(mailbox).and_then(|m| m.special_use) == Some(SpecialUse::Junk)
+    }
+
+    /// An APPEND to a label's folder on Gmail: the message gets its ids and
+    /// the folder's label, and sits in All Mail as well. The fake keeps the
+    /// folder's own copy too, which a later change to All Mail leaves be.
+    fn gmail_append(&mut self, mailbox: &str, flags: &[String], raw: &[u8]) -> Option<AppendUid> {
+        let msgid = self.next_msgid;
+        self.next_msgid += 0x1001;
+        let label = match mailbox {
+            "[Gmail]/Drafts" => "\\Draft".to_string(),
+            "[Gmail]/Sent Mail" => "\\Sent".to_string(),
+            "INBOX" => "\\Inbox".to_string(),
+            other => mailrs_imap::utf7::decode(other),
+        };
+        let gmail = FakeGmail {
+            msgid,
+            thrid: msgid,
+            labels: BTreeSet::from([label]),
+            category: None,
+        };
+        let date = Utc::now().timestamp_millis();
+        let flags: BTreeSet<String> = flags.iter().cloned().collect();
+        let all = self.all_mail().to_string();
+        for target in [all.as_str(), mailbox] {
+            let m = self.mailbox_mut(target);
+            let uid = m.add(raw.to_vec(), flags.clone(), date);
+            if let Some(message) = m.messages.get_mut(&uid) {
+                message.gmail = Some(gmail.clone());
+            }
+        }
+        let m = self.mailbox_mut(mailbox);
+        let uid = m.uidnext - 1;
+        Some(AppendUid {
+            uidvalidity: m.uidvalidity,
+            uid,
+        })
+    }
+
+    /// STATUS UNSEEN as Gmail answers it: a label's folder counts the
+    /// unseen messages carrying that label, whichever mailbox holds them.
+    fn gmail_unread(&self, mailbox: &str) -> u32 {
+        let own = |name: &str| self.mailboxes.get(name).map(|m| (name.to_string(), m));
+        let label = match mailbox {
+            "INBOX" => Some("\\Inbox".to_string()),
+            "[Gmail]/Sent Mail" => Some("\\Sent".to_string()),
+            "[Gmail]/Drafts" => Some("\\Draft".to_string()),
+            "[Gmail]/Important" => Some("\\Important".to_string()),
+            "[Gmail]/Starred" => Some("\\Starred".to_string()),
+            "[Gmail]/Trash" | "[Gmail]/Spam" | "[Gmail]/All Mail" => None,
+            other => Some(mailrs_imap::utf7::decode(other)),
+        };
+        fn unseen(m: &FakeMailbox) -> impl Iterator<Item = &FakeMessage> {
+            m.messages
+                .values()
+                .filter(|message| !message.flags.contains("\\Seen"))
+        }
+        match label {
+            None => own(mailbox).map_or(0, |(_, m)| unseen(m).count() as u32),
+            Some(label) => {
+                let all = self.mailboxes.get(self.all_mail()).map_or(0, |m| {
+                    unseen(m)
+                        .filter(|message| {
+                            message
+                                .gmail
+                                .as_ref()
+                                .is_some_and(|g| g.labels.contains(&label))
+                        })
+                        .count()
+                });
+                all as u32
+            }
+        }
+    }
+
     fn fresh_uidvalidity(&mut self) -> u32 {
         self.next_uidvalidity += 1;
         self.next_uidvalidity
@@ -612,6 +893,9 @@ impl ImapApi for FakeImap {
             hold.wait().await;
         }
         self.call(format!("unread {mailbox}"), |s| {
+            if s.gmail {
+                return Ok(s.gmail_unread(mailbox));
+            }
             let folder = s
                 .mailboxes
                 .get(mailbox)
@@ -791,6 +1075,96 @@ impl ImapApi for FakeImap {
         })
     }
 
+    async fn gmail_headers(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<Fetched>, ImapError> {
+        if uids.is_empty() {
+            return Ok(Vec::new());
+        }
+        check_name(mailbox)?;
+        self.call(format!("gmail_headers {mailbox} {uids}"), |s| {
+            let condstore = s.capabilities.condstore;
+            let m = s.selectable(mailbox)?;
+            Ok(m.messages
+                .iter()
+                .filter(|(uid, _)| uids.contains(**uid))
+                .map(|(uid, message)| Fetched {
+                    flags: message.flags.iter().cloned().collect(),
+                    internal_date: Some(message.internal_date),
+                    size: Some(message.raw.len() as u64),
+                    modseq: condstore.then_some(message.modseq),
+                    gmail: message.gmail.as_ref().map(meta_of),
+                    ..Fetched::from_header(*uid, &message.raw)
+                })
+                .collect())
+        })
+    }
+
+    async fn gmail_flags(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        changed_since: Option<u64>,
+    ) -> Result<Vec<FlagsOf>, ImapError> {
+        if uids.is_empty() {
+            return Ok(Vec::new());
+        }
+        check_name(mailbox)?;
+        let since = changed_since
+            .map(|m| format!(" changedsince {m}"))
+            .unwrap_or_default();
+        self.call(format!("gmail_flags {mailbox} {uids}{since}"), |s| {
+            let m = s.selectable(mailbox)?;
+            within_answers(
+                m.messages
+                    .iter()
+                    .filter(|(uid, message)| {
+                        uids.contains(**uid) && changed_since.is_none_or(|c| message.modseq > c)
+                    })
+                    .map(|(uid, message)| FlagsOf {
+                        gmail: message.gmail.as_ref().map(meta_of),
+                        ..flags_of(*uid, message, true)
+                    })
+                    .collect(),
+            )
+        })
+    }
+
+    async fn store_labels(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        add: bool,
+        labels: &[String],
+    ) -> Result<(), ImapError> {
+        if uids.is_empty() || labels.is_empty() {
+            return Ok(());
+        }
+        check_name(mailbox)?;
+        let sign = if add { '+' } else { '-' };
+        self.change(
+            format!("store_labels {mailbox} {uids} {sign} {}", labels.join(" ")),
+            |s| {
+                let m = s.selectable(mailbox)?;
+                m.highestmodseq += 1;
+                let modseq = m.highestmodseq;
+                for (uid, message) in m.messages.iter_mut() {
+                    if !uids.contains(*uid) {
+                        continue;
+                    }
+                    message.modseq = modseq;
+                    if let Some(g) = message.gmail.as_mut() {
+                        for label in labels {
+                            match add {
+                                true => g.labels.insert(label.clone()),
+                                false => g.labels.remove(label),
+                            };
+                        }
+                    }
+                }
+                Ok(())
+            },
+        )
+    }
+
     async fn body(
         &self,
         mailbox: &str,
@@ -957,6 +1331,9 @@ impl ImapApi for FakeImap {
         check_flags(flags)?;
         self.change(format!("append {mailbox} {}", flags.join(" ")), |s| {
             let uidplus = s.capabilities.uidplus;
+            if s.gmail && !s.is_gmail_store(mailbox) {
+                return Ok(s.gmail_append(mailbox, flags, raw).filter(|_| uidplus));
+            }
             let m = s.selectable(mailbox)?;
             // Dovecot's first APPEND into a mailbox it listed but had not
             // made answers a UIDVALIDITY one past what SELECT reports.
@@ -1094,14 +1471,24 @@ impl ImapState {
         let pairs: Vec<(u32, u32)> = moving
             .into_iter()
             .map(|(uid, message)| {
-                (
-                    uid,
-                    target.add(message.raw, message.flags, message.internal_date),
-                )
+                let new = target.add(message.raw, message.flags, message.internal_date);
+                if let Some(moved) = target.messages.get_mut(&new) {
+                    moved.gmail = message.gmail;
+                }
+                (uid, new)
             })
             .collect();
         let uidvalidity = target.uidvalidity;
         Ok((uidplus && !pairs.is_empty()).then_some(CopyUid { uidvalidity, pairs }))
+    }
+}
+
+/// What the client reads from a Gmail message's three extra items.
+fn meta_of(g: &FakeGmail) -> mailrs_imap::GmailMeta {
+    mailrs_imap::GmailMeta {
+        msgid: g.msgid,
+        thrid: g.thrid,
+        labels: g.labels.iter().cloned().collect(),
     }
 }
 
@@ -1110,6 +1497,7 @@ fn flags_of(uid: u32, message: &FakeMessage, condstore: bool) -> FlagsOf {
         uid,
         flags: message.flags.iter().cloned().collect(),
         modseq: condstore.then_some(message.modseq),
+        gmail: None,
     }
 }
 
@@ -1176,6 +1564,10 @@ mod search {
         Larger(u64),
         Smaller(u64),
         Uid(UidSet),
+        GmLabel(String),
+        GmMsgid(u64),
+        GmThrid(u64),
+        GmRaw(String),
         Not(Box<Key>),
         Or(Box<Key>, Box<Key>),
         And(Vec<Key>),
@@ -1245,6 +1637,10 @@ mod search {
             "LARGER" => Key::Larger(number(arg()?)?),
             "SMALLER" => Key::Smaller(number(arg()?)?),
             "UID" => Key::Uid(uid_set(&arg()?)?),
+            "X-GM-LABELS" => Key::GmLabel(mailrs_imap::utf7::decode(&arg()?)),
+            "X-GM-MSGID" => Key::GmMsgid(number(arg()?)?),
+            "X-GM-THRID" => Key::GmThrid(number(arg()?)?),
+            "X-GM-RAW" => Key::GmRaw(arg()?),
             "NOT" => Key::Not(Box::new(key(tokens)?)),
             "OR" => {
                 let left = key(tokens)?;
@@ -1381,6 +1777,13 @@ mod search {
                         || (uid == highest
                             && set.ranges().last().is_some_and(|r| *r.end() == u32::MAX))
                 }
+                Key::GmLabel(label) => message
+                    .gmail
+                    .as_ref()
+                    .is_some_and(|g| g.labels.iter().any(|l| l.eq_ignore_ascii_case(label))),
+                Key::GmMsgid(id) => message.gmail.as_ref().is_some_and(|g| g.msgid == *id),
+                Key::GmThrid(id) => message.gmail.as_ref().is_some_and(|g| g.thrid == *id),
+                Key::GmRaw(text) => gm_raw_matches(text, message),
                 Key::Not(inner) => !inner.matches(uid, highest, message),
                 Key::Or(left, right) => {
                     left.matches(uid, highest, message) || right.matches(uid, highest, message)
@@ -1389,6 +1792,26 @@ mod search {
             }
         }
     }
+}
+
+/// Gmail's search box on the few operators the tests use: `in:inbox`,
+/// `category:<tab>`, `label:<name>` with Gmail's spelling of the name, and
+/// plain words in the subject. Anything else matches.
+fn gm_raw_matches(text: &str, message: &FakeMessage) -> bool {
+    let Some(g) = message.gmail.as_ref() else {
+        return false;
+    };
+    let spell = |name: &str| name.to_lowercase().replace([' ', '/'], "-");
+    let subject = Fetched::from_header(0, &message.raw).subject.to_lowercase();
+    text.split_whitespace()
+        .all(|term| match term.split_once(':') {
+            Some(("in", "inbox")) => g.labels.contains("\\Inbox"),
+            Some(("category", tab)) => g.category.as_deref() == Some(tab),
+            Some(("-category", tab)) => g.category.as_deref() != Some(tab),
+            Some(("label", name)) => g.labels.iter().any(|l| spell(l) == spell(name)),
+            Some(_) => true,
+            None => subject.contains(&term.to_lowercase()),
+        })
 }
 
 /// An SMTP submission server that keeps what it is handed.

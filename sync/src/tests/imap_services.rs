@@ -490,3 +490,65 @@ async fn a_caldav_calendar_that_refuses_the_login_leaves_the_mail_accounts_state
         "its mail still works, and its loop says how the account is"
     );
 }
+
+fn gmail_over_imap_mail(h: &crate::tests::ImapHarness) -> (crate::AnyMail, crate::AnyIdentities) {
+    let services = h.sync.services();
+    (services.mail.clone(), services.identities.clone())
+}
+
+fn fake_google(gmail: &Arc<crate::fake::FakeGmail>) -> crate::Google<crate::AnyGmail> {
+    crate::Google::new(Arc::new(crate::AnyGmail::from(Arc::clone(gmail))))
+}
+
+#[tokio::test]
+async fn gmail_over_imap_takes_local_rules_and_no_automatic_reply() {
+    let h = imap_harness().await;
+    let (mail, identities) = gmail_over_imap_mail(&h);
+    let gmail = Arc::new(crate::fake::FakeGmail::new());
+    let services = crate::AccountServices::gmail_imap(crate::GmailImapParts {
+        mail,
+        identities,
+        rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),
+        google: Some(fake_google(&gmail)),
+    });
+    assert!(services.auto_reply.is_none());
+    assert!(matches!(services.rules, Some(AnyRules::Local(_))));
+    assert!(services.calendar.is_some() && services.contacts.is_some());
+    assert_eq!(
+        services.offers().missing(),
+        vec![crate::Missing::AutoReply, crate::Missing::Categories]
+    );
+}
+
+#[tokio::test]
+async fn gmail_over_imap_without_a_calendar_token_has_mail_only() {
+    let h = imap_harness().await;
+    let (mail, identities) = gmail_over_imap_mail(&h);
+    let services = crate::AccountServices::gmail_imap(crate::GmailImapParts {
+        mail,
+        identities,
+        rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),
+        google: None,
+    });
+    assert!(services.calendar.is_none());
+    assert!(services.contacts.is_none());
+    assert!(services.withheld().is_empty());
+}
+
+#[tokio::test]
+async fn gmail_over_imap_withholds_no_mail_scope() {
+    let h = imap_harness().await;
+    let (mail, identities) = gmail_over_imap_mail(&h);
+    let gmail = Arc::new(crate::fake::FakeGmail::new());
+    gmail.withhold(mailrs_gmail::DELETE_SCOPE);
+    gmail.withhold(mailrs_gmail::SETTINGS_SCOPE);
+    let google = fake_google(&gmail);
+    assert!(google.withheld().settings && google.withheld().delete);
+    let services = crate::AccountServices::gmail_imap(crate::GmailImapParts {
+        mail,
+        identities,
+        rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),
+        google: Some(google),
+    });
+    assert_eq!(services.withheld(), crate::Withheld::NONE);
+}

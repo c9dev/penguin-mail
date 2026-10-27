@@ -931,6 +931,7 @@ fn failure_given(err: &anyhow::Error, proposal: &Proposal, plug: Plug) -> Failur
             Failure::plain(line.clone(), could_not.clone(), line)
         }
         ImapError::Refused(reason) | ImapError::NoMailbox(reason) => could_not_sign_in(reason),
+        ImapError::BandwidthLimit { text } => could_not_sign_in(text),
         ImapError::Unsupported(what) => could_not_sign_in(what),
         // A value the client refused before it went anywhere: the
         // proposal itself could not carry a login, which is not a
@@ -2172,6 +2173,8 @@ pub fn failure_kind(err: &anyhow::Error) -> &'static str {
     if let Some(browser) = err.downcast_ref::<BrowserSignInError>() {
         return match browser {
             BrowserSignInError::NoClient(_) => "no client",
+            BrowserSignInError::NeedsRoute => "needs route",
+            BrowserSignInError::AlreadyHeld => "already held",
             BrowserSignInError::OtherAddress { .. } => "other address",
             BrowserSignInError::Google(_) => "google",
             BrowserSignInError::Microsoft(_) => "microsoft",
@@ -2183,6 +2186,7 @@ pub fn failure_kind(err: &anyhow::Error) -> &'static str {
             | BrowserSignInError::KeptJmap(_) => "keeping the account",
             BrowserSignInError::Connect(_) => "connect",
             BrowserSignInError::OwnClient(_) => "own client",
+            BrowserSignInError::OwnClientMissing => "own client missing",
             BrowserSignInError::Jmap(_) => "jmap",
             BrowserSignInError::NotOffered => "not offered",
             BrowserSignInError::NoRefreshToken => "no refresh token",

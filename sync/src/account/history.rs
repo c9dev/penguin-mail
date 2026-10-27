@@ -4,7 +4,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::ops::RangeInclusive;
 
-use mailrs_domain::{ChangeEvent, EpochMillis, Membership, MessageMeta, Role};
+use mailrs_domain::{ChangeEvent, EpochMillis, Location, Membership, MessageMeta, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages, remote_refs};
 
@@ -128,6 +128,26 @@ impl AccountSync {
             )
         });
         changes.extend(compared);
+        // Where messages sit now is written before the fetch, which reads
+        // each message's server name from its ref: a message that moved
+        // would otherwise be asked for at the place it left.
+        let located: Vec<(String, Location)> = changes
+            .iter()
+            .filter_map(|change| match change {
+                RemoteChange::Located { id, at } => Some((id.clone(), at.clone())),
+                _ => None,
+            })
+            .collect();
+        if !located.is_empty() {
+            self.db
+                .write(move |c| {
+                    for (id, at) in &located {
+                        remote_refs::locate(c, account_id, id, at)?;
+                    }
+                    Ok(())
+                })
+                .await?;
+        }
         let (fetched, placing) = self.fetch_for_history(&changes).await?;
         let mail = &self.mail;
         let named_mailboxes: BTreeSet<String> = changes
@@ -164,6 +184,14 @@ impl AccountSync {
                     })
                     .collect();
                 let stored = messages::existing_ids(c, account_id, &named)?;
+                // Where messages sit now comes before any read of the refs,
+                // so a message that moved between mailboxes is not read as
+                // gone from the one it left.
+                for change in &changes {
+                    if let RemoteChange::Located { id, at } = change {
+                        remote_refs::locate(c, account_id, id, at)?;
+                    }
+                }
                 let mut batch = Vec::new();
                 let mut new_mail = Vec::new();
                 for change in &changes {
@@ -251,6 +279,8 @@ impl AccountSync {
                                     .map(|message_id| Change::Gone { message_id }),
                             );
                         }
+                        // Written above.
+                        RemoteChange::Located { .. } => {}
                         // Relisted and compared above.
                         RemoteChange::StateLost { .. } | RemoteChange::CompareKeywords { .. } => {}
                     }

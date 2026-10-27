@@ -8,20 +8,40 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, Provider};
+use mailrs_domain::{Account, MailRoute, Provider};
 
 use crate::app::App;
 use crate::compose::{SendAsAddress, Suffixes};
 use crate::settings::Change;
 
-pub fn account_row(app: &Rc<App>, account: &Account) -> adw::ExpanderRow {
+/// Whether the account's addresses can be edited here. A Gmail account
+/// that reads its mail over IMAP can: Gmail sends only from the ones the
+/// person added in its own settings, which the line under the row says.
+pub fn is_editable(provider: Provider, route: Option<MailRoute>) -> bool {
+    matches!(provider, Provider::Imap | Provider::Pop3) || is_gmail_over_imap(provider, route)
+}
+
+/// Whether `provider`'s account on `route` is a Gmail account that reads
+/// its mail over IMAP.
+pub fn is_gmail_over_imap(provider: Provider, route: Option<MailRoute>) -> bool {
+    provider == Provider::Gmail && route == Some(MailRoute::Imap)
+}
+
+/// The line under the addresses of a Gmail account on the IMAP route.
+fn send_as_line() -> String {
+    // Translators: Gmail is a name; use the words Gmail's own settings show in your language for
+    // Send mail as.
+    gettext("Gmail sends only from addresses you added in Gmail's Send mail as setting.")
+}
+
+pub fn account_row(app: &Rc<App>, account: &Account, route: Option<MailRoute>) -> adw::ExpanderRow {
     let row = crate::ui::disclosure::row(
         adw::ExpanderRow::builder()
             .use_markup(false)
             .title(gettext("Addresses You Send From"))
             .build(),
     );
-    let editable = matches!(account.provider, Provider::Imap | Provider::Pop3);
+    let editable = is_editable(account.provider, route);
     let list = Rc::new(List {
         app: Rc::downgrade(app),
         group: row.downgrade(),
@@ -30,6 +50,26 @@ pub fn account_row(app: &Rc<App>, account: &Account) -> adw::ExpanderRow {
         rows: RefCell::new(Vec::new()),
     });
     list.fill();
+    if is_gmail_over_imap(account.provider, route) {
+        let line = adw::ActionRow::builder()
+            .use_markup(false)
+            .title(send_as_line())
+            .title_lines(0)
+            .css_classes(["dim-label"])
+            .build();
+        let content = adw::ButtonContent::builder()
+            .icon_name("adw-external-link-symbolic")
+            .label(crate::offered::settings_link_label())
+            .build();
+        let link = gtk::LinkButton::builder()
+            .uri(crate::gmail_password::SEND_AS_URL)
+            .valign(gtk::Align::Center)
+            .build();
+        link.set_child(Some(&content));
+        crate::ui::name(&link, &crate::offered::settings_link_label());
+        line.add_suffix(&link);
+        row.add_row(&line);
+    }
     if editable {
         let add = gtk::Button::builder()
             .label(gettext("Add Address"))
@@ -261,5 +301,31 @@ impl List {
             list.fill();
         });
         dialog.present(Some(&parent));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::{MailRoute, Provider};
+
+    use super::{is_editable, is_gmail_over_imap};
+
+    #[test]
+    fn the_send_as_line_shows_only_on_the_imap_route() {
+        assert!(is_gmail_over_imap(Provider::Gmail, Some(MailRoute::Imap)));
+        assert!(!is_gmail_over_imap(
+            Provider::Gmail,
+            Some(MailRoute::GmailApi)
+        ));
+        assert!(!is_gmail_over_imap(Provider::Imap, Some(MailRoute::Imap)));
+        assert!(!is_gmail_over_imap(Provider::Gmail, None));
+    }
+
+    #[test]
+    fn a_gmail_account_is_editable_on_the_imap_route_alone() {
+        assert!(is_editable(Provider::Gmail, Some(MailRoute::Imap)));
+        assert!(!is_editable(Provider::Gmail, Some(MailRoute::GmailApi)));
+        assert!(is_editable(Provider::Pop3, None));
+        assert!(!is_editable(Provider::Microsoft, None));
     }
 }

@@ -17,7 +17,8 @@ use mailrs_domain::EpochMillis;
 use crate::guard::{BODY_BYTES, COMMAND_BYTES, SEARCH_BYTES, SELECT_BYTES};
 use crate::structure::BodyStructure;
 use crate::{
-    AppendUid, CopyUid, Fetched, FlagsOf, ImapError, Listed, QuotaUse, Selected, SpecialUse, UidSet,
+    AppendUid, CopyUid, Fetched, FlagsOf, GmailMeta, ImapError, Listed, QuotaUse, Selected,
+    SpecialUse, UidSet,
 };
 
 /// The most answers one command may keep: messages, mailboxes, or pairs
@@ -415,16 +416,38 @@ fn flags_of(attributes: &[AttributeValue<'_>]) -> Option<Result<FlagsOf, ImapErr
     let mut uid = None;
     let mut flags = None;
     let mut modseq = None;
+    let (mut msgid, mut thrid, mut labels) = (None, None, None);
     for attribute in attributes {
         match attribute {
             AttributeValue::Uid(u) => uid = Some(*u),
             AttributeValue::Flags(list) => flags = Some(list),
             AttributeValue::ModSeq(m) => modseq = Some(*m),
+            AttributeValue::GmailMsgId(id) => msgid = Some(*id),
+            AttributeValue::GmailThrId(id) => thrid = Some(*id),
+            AttributeValue::GmailLabels(list) => labels = Some(list),
             _ => {}
         }
     }
     let (uid, flags) = (uid?, flags?);
-    Some(flag_strings(flags).map(|flags| FlagsOf { uid, flags, modseq }))
+    Some(flag_strings(flags).and_then(|flags| {
+        let gmail = match (msgid, thrid) {
+            (Some(msgid), Some(thrid)) => Some(GmailMeta {
+                msgid,
+                thrid,
+                labels: labels
+                    .map(|l| label_strings(l))
+                    .transpose()?
+                    .unwrap_or_default(),
+            }),
+            _ => None,
+        };
+        Ok(FlagsOf {
+            uid,
+            flags,
+            modseq,
+            gmail,
+        })
+    }))
 }
 
 /// A message's flags as strings, refused past [`MAX_FLAGS`].
@@ -438,6 +461,38 @@ fn flag_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
     }
 }
 
+/// A message's Gmail labels decoded from modified UTF-7, refused past
+/// [`MAX_FLAGS`] as flags are.
+fn label_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
+    match list.len() > MAX_FLAGS {
+        true => Err(ImapError::Protocol(format!(
+            "the server gave a message {} labels, more than {MAX_FLAGS}",
+            list.len()
+        ))),
+        false => Ok(list
+            .iter()
+            .map(|l| crate::utf7::decode(&unescaped(l)))
+            .collect()),
+    }
+}
+
+/// A label as Gmail meant it. imap-proto hands a quoted label over with
+/// its escapes still in, and Gmail quotes its own labels too:
+/// `X-GM-LABELS ("\\\\Inbox")` on the wire arrives as two backslashes
+/// before `Inbox`, which would match no system label. An atom (`\\Inbox`)
+/// has no escapes to undo.
+fn unescaped(label: &str) -> String {
+    let mut out = String::with_capacity(label.len());
+    let mut chars = label.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek()) {
+            ('\\', Some('\\' | '"')) => out.extend(chars.next()),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 /// The items a FETCH answer carries besides the header section.
 #[derive(Default)]
 struct Meta {
@@ -445,6 +500,9 @@ struct Meta {
     internal_date: Option<EpochMillis>,
     size: Option<u64>,
     modseq: Option<u64>,
+    gmail_msgid: Option<u64>,
+    gmail_thrid: Option<u64>,
+    gmail_labels: Option<Vec<String>>,
 }
 
 impl Meta {
@@ -456,6 +514,11 @@ impl Meta {
                 AttributeValue::InternalDate(date) => meta.internal_date = internal_date(date),
                 AttributeValue::Rfc822Size(size) => meta.size = Some(u64::from(*size)),
                 AttributeValue::ModSeq(m) => meta.modseq = Some(*m),
+                AttributeValue::GmailMsgId(id) => meta.gmail_msgid = Some(*id),
+                AttributeValue::GmailThrId(id) => meta.gmail_thrid = Some(*id),
+                AttributeValue::GmailLabels(list) => {
+                    meta.gmail_labels = Some(label_strings(list)?);
+                }
                 _ => {}
             }
         }
@@ -468,6 +531,9 @@ impl Meta {
         self.internal_date = later.internal_date.or(self.internal_date);
         self.size = later.size.or(self.size);
         self.modseq = later.modseq.or(self.modseq);
+        self.gmail_msgid = later.gmail_msgid.or(self.gmail_msgid);
+        self.gmail_thrid = later.gmail_thrid.or(self.gmail_thrid);
+        self.gmail_labels = later.gmail_labels.or(self.gmail_labels.take());
     }
 
     fn put_on(self, fetched: &mut Fetched) {
@@ -477,6 +543,17 @@ impl Meta {
         fetched.internal_date = self.internal_date.or(fetched.internal_date);
         fetched.size = self.size.or(fetched.size);
         fetched.modseq = self.modseq.or(fetched.modseq);
+        if let (Some(msgid), Some(thrid)) = (self.gmail_msgid, self.gmail_thrid) {
+            let labels = self
+                .gmail_labels
+                .or_else(|| fetched.gmail.take().map(|g| g.labels))
+                .unwrap_or_default();
+            fetched.gmail = Some(GmailMeta {
+                msgid,
+                thrid,
+                labels,
+            });
+        }
     }
 
     fn flag_count(&self) -> usize {
@@ -988,7 +1065,8 @@ pub(crate) mod tests {
             [FlagsOf {
                 uid: 117,
                 flags: vec!["\\Seen".into(), "\\Answered".into()],
-                modseq: Some(90060115194045001)
+                modseq: Some(90060115194045001),
+                gmail: None
             }]
         );
     }
@@ -1035,6 +1113,77 @@ pub(crate) mod tests {
         let selected = reader.finish().unwrap();
         assert_eq!(selected.highestmodseq, None);
         assert!(selected.vanished.is_empty());
+    }
+
+    fn gmail_of(line: &str) -> Option<crate::GmailMeta> {
+        let mut reader = HeadersReader::new(&UidSet::from_uids([7]));
+        feed(&mut reader, &[line]);
+        reader.finish().remove(0).gmail
+    }
+
+    const GMAIL_HEAD: &str = "BODY[HEADER.FIELDS (SUBJECT)] {14}\r\nSubject: x\r\n\r\n)\r\n";
+
+    #[test]
+    fn a_gmail_fetch_reads_ids_and_labels() {
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1278455344230334865 X-GM-THRID 1278455344230334865 X-GM-LABELS (\\Inbox \\Important \"Work Stuff\") FLAGS (\\Seen) {GMAIL_HEAD}"
+        );
+        let gmail = gmail_of(&line).unwrap();
+        assert_eq!(gmail.msgid, 1_278_455_344_230_334_865);
+        assert_eq!(gmail.thrid, 1_278_455_344_230_334_865);
+        assert_eq!(gmail.labels, ["\\Inbox", "\\Important", "Work Stuff"]);
+        assert_eq!(gmail.id(), "11bdfc5cae0c8191");
+        assert_eq!(gmail.thread_id(), "11bdfc5cae0c8191");
+    }
+
+    #[test]
+    fn gmails_quoted_system_labels_lose_their_escapes() {
+        // What Gmail itself sends, captured from a live FETCH.
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS (\"\\\\Important\" \"\\\\Inbox\" \"say \\\"hi\\\"\") {GMAIL_HEAD}"
+        );
+        assert_eq!(
+            gmail_of(&line).unwrap().labels,
+            ["\\Important", "\\Inbox", "say \"hi\""]
+        );
+    }
+
+    #[test]
+    fn a_utf7_label_is_decoded() {
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS (\"Fam&AO0-lia/F&AOk-rias 2026\") {GMAIL_HEAD}"
+        );
+        assert_eq!(
+            gmail_of(&line).unwrap().labels,
+            ["Fam\u{ed}lia/F\u{e9}rias 2026"]
+        );
+    }
+
+    #[test]
+    fn an_empty_label_list_reads_empty() {
+        let line =
+            format!("* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS () {GMAIL_HEAD}");
+        assert_eq!(gmail_of(&line).unwrap().labels, Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_plain_fetch_has_no_gmail_meta() {
+        let line = format!("* 1 FETCH (UID 7 FLAGS (\\Seen) {GMAIL_HEAD}");
+        assert_eq!(gmail_of(&line), None);
+    }
+
+    #[test]
+    fn a_label_list_past_the_flag_cap_is_refused() {
+        let labels = (0..=MAX_FLAGS)
+            .map(|i| format!("L{i}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS ({labels}) {GMAIL_HEAD}"
+        );
+        let mut reader = HeadersReader::new(&UidSet::from_uids([7]));
+        feed(&mut reader, &[&line]);
+        assert!(reader.check().is_err());
     }
 
     #[test]
@@ -1102,7 +1251,8 @@ pub(crate) mod tests {
             [FlagsOf {
                 uid: 12,
                 flags: vec!["\\Seen".into(), "$Muted".into()],
-                modseq: Some(90)
+                modseq: Some(90),
+                gmail: None
             }]
         );
     }

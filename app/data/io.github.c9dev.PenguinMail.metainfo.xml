@@ -22,6 +22,7 @@
     <ul>
       <li>One inbox for every account, with Gmail's categories, Outlook's Focused and Other tabs, labels and search</li>
       <li>A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders</li>
+      <li>Gmail through the Google account your computer's Online Accounts already holds, on Linux</li>
       <li>Contacts from Google, Outlook and any CardDAV server</li>
       <li>A composer that shows formatting as you write, with Undo Send and Send Later</li>
       <li>Flags in seven colors, VIPs, smart mailboxes and reminders</li>

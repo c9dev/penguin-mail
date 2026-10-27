@@ -23,6 +23,8 @@ pub mod disclosure;
 pub mod eml_file;
 pub mod file_window;
 pub mod find;
+pub mod gmail_password_page;
+pub mod goa_page;
 pub mod hide_my_email;
 pub mod ics_file;
 pub mod invitation;
@@ -31,11 +33,13 @@ pub mod link_preview;
 pub mod list_feed;
 pub mod moving;
 pub mod narrow_header;
+pub mod own_project;
 pub mod permission;
 pub mod pgp;
 pub mod post_band;
 pub mod preferences;
 pub mod queued;
+pub mod route_page;
 pub mod roving;
 pub mod rules;
 #[cfg(feature = "packaging-appimage")]
@@ -203,6 +207,15 @@ pub fn name(widget: &impl IsA<gtk::Widget>, spoken: &str) {
     widget
         .as_ref()
         .update_property(&[gtk::accessible::Property::Label(spoken)]);
+}
+
+/// What a link button holds when it opens a page in the browser: the
+/// words, then the external-link arrow `spacing` pixels after them.
+pub fn external_link_content(words: &str, spacing: i32) -> gtk::Box {
+    let content = gtk::Box::builder().spacing(spacing).build();
+    content.append(&gtk::Label::new(Some(words)));
+    content.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+    content
 }
 
 /// Names `widget` after a tooltip whose last words are its keyboard

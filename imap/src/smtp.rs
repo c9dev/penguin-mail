@@ -11,6 +11,7 @@
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
@@ -25,7 +26,7 @@ use tokio::io::{AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, R
 use crate::client::Dial;
 use crate::refusal::clipped;
 use crate::tls::{self, Tls};
-use crate::{ImapError, Login};
+use crate::{ImapError, Login, LoginSource};
 
 /// Connecting, TLS, EHLO and AUTH together.
 const OPEN_LIMIT: Duration = Duration::from_secs(60);
@@ -49,6 +50,10 @@ const HELLO: ClientId = ClientId::Ipv4(Ipv4Addr::LOCALHOST);
 /// without it.
 const MECHANISMS: [Mechanism; 2] = [Mechanism::Plain, Mechanism::Login];
 
+/// An access token signs in with XOAUTH2 and nothing else: a server that
+/// lacks it must never be sent the token as a password.
+const OAUTH_MECHANISMS: [Mechanism; 1] = [Mechanism::Xoauth2];
+
 /// The most lines one reply before TLS may have. An EHLO reply lists a
 /// dozen extensions.
 const MAX_REPLY_LINES: usize = 100;
@@ -57,7 +62,7 @@ const MAX_REPLY_LINES: usize = 100;
 #[derive(Clone, Debug)]
 pub struct SmtpClient<D: Dial = SmtpTls> {
     dial: D,
-    login: Login,
+    source: Arc<dyn LoginSource>,
 }
 
 /// Dials the account's submission server over implicit TLS or STARTTLS.
@@ -97,6 +102,15 @@ impl SmtpClient<SmtpTls> {
     pub fn new(server: &Server, login: &Login) -> Result<SmtpClient, ImapError> {
         Ok(SmtpClient::with_dial(SmtpTls::new(server)?, login.clone()))
     }
+
+    /// As [`SmtpClient::new`], asking `source` for a login on each
+    /// connection.
+    pub fn from_source(
+        server: &Server,
+        source: Arc<dyn LoginSource>,
+    ) -> Result<SmtpClient, ImapError> {
+        Ok(SmtpClient::with_source(SmtpTls::new(server)?, source))
+    }
 }
 
 impl<D: Dial> SmtpClient<D>
@@ -106,7 +120,13 @@ where
     /// A client that reaches its server through `dial`, as a test does
     /// with an in-memory pipe.
     pub fn with_dial(dial: D, login: Login) -> Self {
-        SmtpClient { dial, login }
+        SmtpClient::with_source(dial, Arc::new(login))
+    }
+
+    /// As [`SmtpClient::with_dial`], asking `source` for a login on each
+    /// connection.
+    pub fn with_source(dial: D, source: Arc<dyn LoginSource>) -> Self {
+        SmtpClient { dial, source }
     }
 
     /// Hands `raw` to the server for `to`, with `from` as the envelope
@@ -114,32 +134,63 @@ where
     /// alone, so a Bcc address goes in `to` and not in `raw`.
     pub async fn submit(&self, from: &str, to: &[String], raw: &[u8]) -> Result<(), ImapError> {
         let envelope = envelope(from, to)?;
-        let mut conn = within(OPEN_LIMIT, self.open()).await?;
-        send(&mut conn, &envelope, raw, &self.login).await
+        let (mut conn, login) = within(OPEN_LIMIT, self.open()).await?;
+        send(&mut conn, &envelope, raw, &login).await
     }
 
     /// Connects, starts TLS, signs in and says goodbye.
     pub async fn check(&self) -> Result<(), ImapError> {
         within(OPEN_LIMIT, async {
-            let mut conn = self.open().await?;
+            let (mut conn, _) = self.open().await?;
             let _ = conn.quit().await;
             Ok(())
         })
         .await
     }
 
-    async fn open(&self) -> Result<AsyncSmtpConnection, ImapError> {
+    /// A signed-in connection and the login it used. A refused access
+    /// token may only have run out, so the source is asked once more.
+    async fn open(&self) -> Result<(AsyncSmtpConnection, Login), ImapError> {
+        crate::login::signed_in(&*self.source, |login| async move {
+            self.open_with(&login).await
+        })
+        .await
+    }
+
+    async fn open_with(&self, login: &Login) -> Result<AsyncSmtpConnection, ImapError> {
         let (stream, greeted) = self.dial.dial().await?;
         let wire = Wire::new(stream, if greeted { STAND_IN } else { b"" });
-        let lettre = |err| smtp_error(&err, &self.login);
+        let lettre = |err| smtp_error(&err, login);
         let mut conn = AsyncSmtpConnection::connect_with_transport(Box::new(wire), &HELLO)
             .await
             .map_err(lettre)?;
-        if conn.server_info().get_auth_mechanism(&MECHANISMS).is_none() {
-            return Err(ImapError::Unsupported("AUTH PLAIN or AUTH LOGIN"));
+        let mechanisms: &[Mechanism] = if login.oauth {
+            &OAUTH_MECHANISMS
+        } else {
+            &MECHANISMS
+        };
+        if conn.server_info().get_auth_mechanism(mechanisms).is_none() {
+            return Err(ImapError::Unsupported(if login.oauth {
+                "AUTH XOAUTH2"
+            } else {
+                "AUTH PLAIN or AUTH LOGIN"
+            }));
         }
-        let credentials = Credentials::new(self.login.user.clone(), self.login.password.clone());
-        conn.auth(&MECHANISMS, &credentials).await.map_err(lettre)?;
+        let credentials = Credentials::new(login.user.clone(), login.password.clone());
+        conn.auth(mechanisms, &credentials).await.map_err(|err| {
+            // A rejected token gets a 334 challenge that XOAUTH2 cannot
+            // answer, which lettre reports as a client error of its own,
+            // not a 535. The challenge is the only exchange XOAUTH2 has
+            // that lettre can fail on its side, so on an OAuth login any
+            // client error here is the server refusing the token.
+            if login.oauth && err.is_client() {
+                ImapError::Auth {
+                    text: login.hide(&err.to_string()),
+                }
+            } else {
+                lettre(err)
+            }
+        })?;
         Ok(conn)
     }
 }
@@ -526,6 +577,7 @@ fn classify(e: Smtp<'_>) -> ImapError {
 
 #[cfg(test)]
 mod tests {
+    use std::pin::Pin;
     use std::sync::{Arc, Mutex, PoisonError};
 
     use base64::Engine;
@@ -903,6 +955,125 @@ mod tests {
         let plain = BASE64.encode("\0ann@example.com\0hunter2 secret");
         assert!(!printed.contains(&plain), "{printed}");
         assert!(!printed.contains("hunter2"), "{printed}");
+    }
+
+    fn xoauth2_server(command: &str) -> Vec<String> {
+        match command {
+            c if c.starts_with("EHLO") => vec![
+                "250-smtp.example.com".into(),
+                "250-8BITMIME".into(),
+                "250 AUTH XOAUTH2 PLAIN LOGIN".into(),
+            ],
+            other => smtp_server(other),
+        }
+    }
+
+    #[tokio::test]
+    async fn an_oauth_login_signs_in_with_xoauth2() {
+        let seen = SmtpSeen::default();
+        let stream = smtp_pipe("220 ready", seen.clone(), xoauth2_server);
+        let client = SmtpClient::with_dial(
+            Pipes::of(vec![(stream, false)]),
+            Login::bearer("ann@example.com", "tok"),
+        );
+        client.check().await.unwrap();
+        let commands = seen.commands();
+        let want = BASE64.encode("user=ann@example.com\x01auth=Bearer tok\x01\x01");
+        assert_eq!(commands[1], format!("AUTH XOAUTH2 {want}"));
+    }
+
+    #[tokio::test]
+    async fn a_challenged_xoauth2_token_is_an_auth_refusal() {
+        fn challenges(command: &str) -> Vec<String> {
+            match command {
+                c if c.starts_with("AUTH XOAUTH2 ") => {
+                    vec!["334 eyJzdGF0dXMiOiI0MDAifQ==".into()]
+                }
+                other => xoauth2_server(other),
+            }
+        }
+        // A refused token is asked for once more, so the server is dialed twice.
+        let dial = Pipes::of(vec![
+            (
+                smtp_pipe("220 ready", SmtpSeen::default(), challenges),
+                false,
+            ),
+            (
+                smtp_pipe("220 ready", SmtpSeen::default(), challenges),
+                false,
+            ),
+        ]);
+        let client = SmtpClient::with_dial(dial, Login::bearer("ann@example.com", "tok"));
+        let err = client.check().await.unwrap_err();
+        assert!(matches!(err, ImapError::Auth { .. }), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn an_oauth_login_never_falls_back_to_plain() {
+        fn plain_only(command: &str) -> Vec<String> {
+            match command {
+                c if c.starts_with("EHLO") => vec!["250 AUTH PLAIN LOGIN".into()],
+                other => smtp_server(other),
+            }
+        }
+        let seen = SmtpSeen::default();
+        let stream = smtp_pipe("220 ready", seen.clone(), plain_only);
+        let client = SmtpClient::with_dial(
+            Pipes::of(vec![(stream, false)]),
+            Login::bearer("ann@example.com", "tok"),
+        );
+        let err = client.check().await.unwrap_err();
+        assert_eq!(err, ImapError::Unsupported("AUTH XOAUTH2"));
+        assert!(seen.commands().iter().all(|c| !c.starts_with("AUTH")));
+    }
+
+    /// Asked again with `refused`, the source hands over a new token.
+    #[derive(Debug, Default)]
+    struct Renewing {
+        asked: std::sync::Mutex<Vec<bool>>,
+    }
+
+    impl crate::LoginSource for Renewing {
+        fn login(
+            &self,
+            refused: bool,
+        ) -> Pin<Box<dyn std::future::Future<Output = Result<Login, ImapError>> + Send + '_>>
+        {
+            self.asked.lock().unwrap().push(refused);
+            let token = if refused { "new" } else { "old" };
+            Box::pin(async move { Ok(Login::bearer("ann@example.com", token)) })
+        }
+    }
+
+    #[tokio::test]
+    async fn a_refused_xoauth2_asks_the_source_again_once() {
+        fn refuses_old(command: &str) -> Vec<String> {
+            match command {
+                c if c.starts_with("AUTH XOAUTH2 ") => {
+                    let sent = BASE64.decode(c.rsplit(' ').next().unwrap()).unwrap();
+                    if String::from_utf8(sent).unwrap().contains("Bearer old") {
+                        vec!["535 5.7.8 Token expired".into()]
+                    } else {
+                        vec!["235 2.7.0 Accepted".into()]
+                    }
+                }
+                other => xoauth2_server(other),
+            }
+        }
+        let source = Arc::new(Renewing::default());
+        let dial = Pipes::of(vec![
+            (
+                smtp_pipe("220 ready", SmtpSeen::default(), refuses_old),
+                false,
+            ),
+            (
+                smtp_pipe("220 ready", SmtpSeen::default(), refuses_old),
+                false,
+            ),
+        ]);
+        let client = SmtpClient::with_source(dial, source.clone());
+        client.check().await.unwrap();
+        assert_eq!(*source.asked.lock().unwrap(), [false, true]);
     }
 
     #[tokio::test]

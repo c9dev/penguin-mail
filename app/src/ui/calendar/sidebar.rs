@@ -36,6 +36,9 @@ pub enum CalendarReach {
     /// The provider keeps no calendar Penguin Mail can reach, with the
     /// reason from `offered::reason`.
     NotOffered(String),
+    /// A Gmail account that holds no calendar token yet, or whose token
+    /// Google refused: a line saying so and Connect.
+    NotConnected,
 }
 
 /// One account's row in the calendar list.
@@ -89,7 +92,9 @@ pub fn sidebar_accounts(
     accounts
         .iter()
         .map(|(account, offers, withheld, calendars)| {
-            let reach = if !offers.calendar {
+            let reach = if crate::offered::calendar_link(account, *offers).shows_connect() {
+                CalendarReach::NotConnected
+            } else if !offers.calendar {
                 CalendarReach::NotOffered(crate::offered::reason(
                     account,
                     Missing::Calendar,
@@ -1007,6 +1012,10 @@ impl CalendarSidebar {
                 CalendarReach::NotOffered(reason) => {
                     body.append(&dim_line(reason));
                 }
+                CalendarReach::NotConnected => {
+                    body.append(&dim_line(&gettext("Not connected")));
+                    body.append(&self.connect_row(account.id, &account.address));
+                }
             }
             if account.needs_sign_in() {
                 body.append(&dim_line(&gettext("The server refused the password")));
@@ -1212,6 +1221,26 @@ impl CalendarSidebar {
             })
         });
         row
+    }
+
+    /// Connect, under an account whose calendar has no token: the
+    /// window's one path for it, which asks for the consent.
+    fn connect_row(&self, account_id: AccountId, account: &str) -> gtk::Button {
+        let button = gtk::Button::builder()
+            .label(gettext("Connect"))
+            .css_classes(["flat"])
+            .halign(gtk::Align::Start)
+            .build();
+        crate::ui::name(
+            &button,
+            &fill(
+                &gettext("Connect the calendar for {account}"),
+                &[("account", account)],
+            ),
+        );
+        let on_grant = Rc::clone(&self.on_grant);
+        button.connect_clicked(move |_| on_grant(account_id));
+        button
     }
 
     /// A Grant Access button, named "Grant Access for {account}" when
@@ -1445,7 +1474,7 @@ fn add_menu(accounts: &[(AccountId, String, bool)]) -> gtk::MenuButton {
 }
 
 /// A calendar row's menu ([`row_menu`]): Hide from the List, Color with
-/// Gmail's label colours and the calendar's own colour back, and for a
+/// Gmail's label colors and the calendar's own color back, and for a
 /// calendar the account owns, Rename and Delete in a section of their
 /// own.
 fn calendar_menu(
@@ -1780,6 +1809,24 @@ mod tests {
                 None
             ))
         );
+    }
+
+    #[test]
+    fn a_gmail_account_without_a_calendar_token_asks_to_connect() {
+        let offers = Offers {
+            calendar: false,
+            ..Offers::EVERYTHING
+        };
+        let rows = sidebar_accounts(
+            &[(
+                account(1, "maria.costa@gmail.com"),
+                offers,
+                Withheld::NONE,
+                Vec::new(),
+            )],
+            |_| None,
+        );
+        assert_eq!(rows[0].reach, CalendarReach::NotConnected);
     }
 
     #[test]

@@ -941,7 +941,7 @@ impl GmailApi for FakeGmail {
 
     fn granted(&self) -> Option<Granted> {
         Some(self.with(|s| {
-            let mut scopes: Vec<&str> = mailrs_gmail::SIGN_IN_SCOPES
+            let mut scopes: Vec<&str> = mailrs_gmail::FULL_SCOPES
                 .iter()
                 .filter(|scope| !s.withheld.contains(*scope))
                 .filter(|scope| {

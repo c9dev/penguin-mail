@@ -9,7 +9,7 @@ use std::time::Duration;
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, MailSet, Provider};
-use mailrs_gmail::{GMAIL_API_BASE, Granted, SIGN_IN_SCOPES, authorize};
+use mailrs_gmail::{GMAIL_API_BASE, Granted, authorize};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::passwords::Secrets;
@@ -22,7 +22,7 @@ use tokio::io::AsyncWriteExt;
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::mailbox::Standard;
-use mailrs_sync::sign_in::{google_sign_in, google_signed_in};
+use mailrs_sync::sign_in::google_signed_in;
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
@@ -177,6 +177,7 @@ fn connector(db: &Db, config: &Config) -> Connector {
         config: config.clone(),
         clients: Clients::built_in(),
         secrets: Secrets::keyring(),
+        goa: mailrs_sync::goa::session(),
     }
 }
 
@@ -208,14 +209,17 @@ async fn connect(connector: &Connector, account: &Account) -> Result<AccountServ
 }
 
 async fn add_account(db: &Db) -> Result<()> {
-    // Every sign-in, first or again, goes through the own client the
-    // environment names, or else the build's.
     let clients = Clients::current();
-    let (oauth, _) = google_sign_in(&clients)?;
+    // The build's own client asks for no mail, and the command line has no
+    // way to choose another route, so only an own client signs in here.
     let own = match &clients.own_google {
-        Some(Ok(own)) => Some(own),
-        _ => None,
+        Some(Ok(own)) => own,
+        Some(Err(half)) => return Err(half.clone().into()),
+        None => bail!(
+            "Gmail mail needs your own Google project or a password from Google. Add the account in Penguin Mail, or set PENGUIN_MAIL_GOOGLE_CLIENT_ID and PENGUIN_MAIL_GOOGLE_CLIENT_SECRET to your project's key."
+        ),
     };
+    let oauth = own.oauth();
     let flow = authorize(&oauth, GMAIL_API_BASE, |url| {
         println!(
             "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
@@ -240,8 +244,8 @@ async fn add_account(db: &Db) -> Result<()> {
             .as_ref()
             .map(Granted::to_scope)
             .as_deref(),
-        &SIGN_IN_SCOPES.join(" "),
-        own,
+        &oauth.scopes().join(" "),
+        Some(own),
     )
     .await?;
     println!(

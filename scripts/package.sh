@@ -74,7 +74,7 @@ Version: $version
 Architecture: amd64
 Maintainer: Pivotd <support@penguin-mail.com>
 Installed-Size: $size
-Depends: $depends, gpgv
+Depends: $depends, gpgv, gnome-online-accounts, gnome-online-accounts-gtk
 Recommends: gnupg, gpgsm, gnome-shell-extension-appindicator
 Section: mail
 Priority: optional

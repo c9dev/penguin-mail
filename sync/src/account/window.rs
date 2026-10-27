@@ -244,7 +244,9 @@ impl AccountSync {
     ) -> Result<(Vec<RemoteRef>, HashMap<String, HashSet<String>>), SyncError> {
         let server = self.mail.untranslated();
         let listed = server.window_ids(self.window_days, None).await?;
-        if self.renames() {
+        // A label server lists per label even when it keeps refs: its
+        // ids do not say which mailbox holds a message.
+        if self.renames() && !self.mail.capabilities().labels {
             let members = mailboxes_holding(&listed);
             return Ok((listed, members));
         }
@@ -312,7 +314,7 @@ impl AccountSync {
     /// asked nothing; a mailbox already followed is asked nothing either,
     /// since the slow poll covers it after its first successful load.
     pub async fn follow_mailbox(&self, mailbox: &str) -> Result<(), SyncError> {
-        if !self.renames() {
+        if !self.renames() || self.mail.capabilities().labels {
             return Ok(());
         }
         if !self.network_available() {

@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::{Account, AccountState, Provider, RemoveSetting, SignInClient};
+use mailrs_domain::{
+    Account, AccountState, GmailSignIn, MailRoute, Provider, RemoveSetting, SignInClient,
+};
 use mailrs_gmail::OAuthClient;
 use mailrs_graph::MicrosoftClient;
 use mailrs_store::servers::{self, Pop3Servers, Saved, Security, Servers};
@@ -11,13 +13,17 @@ use mailrs_store::services::{self, FoundService, ServiceKind};
 use mailrs_store::{Db, accounts};
 
 use crate::config::Config;
+use crate::connect::gmail_route::google_side;
 use crate::passwords::{PasswordStore, Secrets};
 use crate::services::{AnyIdentities, AnyMail};
 use crate::sign_in::own_client::{ID_VAR, OwnClient, OwnClientError, SECRET_VAR};
-use crate::sign_in::{Browser, BrowserSignInError, Wanted, google_sign_in, in_browser};
+use crate::sign_in::{
+    Browser, BrowserSignInError, ClientSource, Wanted, calendar_consent, google_sign_in,
+    google_signed_in, in_browser,
+};
 use crate::{Clients, Connected, Connector, Lacks};
 
-async fn store() -> (Db, tempfile::TempDir) {
+pub(super) async fn store() -> (Db, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let db = Db::open(&dir.path().join("mail.db")).unwrap();
     (db, dir)
@@ -35,6 +41,7 @@ fn both_clients() -> Clients {
         google: Some(OAuthClient::new("cid", "secret")),
         microsoft: Some(MicrosoftClient::new("00000000-0000-0000-0000-000000000000")),
         own_google: None,
+        chosen_google: None,
     }
 }
 
@@ -44,6 +51,7 @@ fn connector(db: &Db, clients: Clients) -> Connector {
         config: Config::default(),
         clients,
         secrets: Secrets::memory(),
+        goa: crate::goa::session(),
     }
 }
 
@@ -56,7 +64,7 @@ fn saved(host: &str, port: u16, user: &str) -> Saved {
     }
 }
 
-async fn gmail_account(db: &Db) -> Account {
+pub(super) async fn gmail_account(db: &Db) -> Account {
     db.write(|c| accounts::insert_account(c, "me@gmail.com", 0))
         .await
         .unwrap();
@@ -150,6 +158,47 @@ async fn a_google_account_with_its_token_connects_to_google() {
     assert!(
         matches!(connected, Connected::Ready(services) if matches!(services.mail, AnyMail::Google(_)))
     );
+}
+
+#[tokio::test]
+async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )?;
+        servers::save(
+            c,
+            id,
+            &Servers {
+                imap: saved("imap.gmail.com", 993, "me@gmail.com"),
+                smtp: saved("smtp.gmail.com", 465, "me@gmail.com"),
+            },
+        )
+    })
+    .await
+    .unwrap();
+    let reach = connector(&db, both_clients());
+    reach
+        .secrets
+        .passwords
+        .save(id, "abcdefghijklmnop")
+        .unwrap();
+
+    let connected = reach.connect(&me).await.unwrap();
+
+    let Connected::Ready(services) = connected else {
+        panic!("the account connects");
+    };
+    assert!(matches!(services.mail, AnyMail::GmailImap(_)));
+    assert!(services.capabilities().labels);
+    assert!(!services.offers().label_colors);
 }
 
 #[tokio::test]
@@ -373,7 +422,7 @@ async fn a_google_account_with_its_own_client_connects_in_a_build_without_one() 
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+    db.write(move |c| accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject))
         .await
         .unwrap();
     let reach = connector(&db, Clients::default());
@@ -918,9 +967,12 @@ async fn page_opened(browser: Browser, wanted: Wanted) -> String {
 
 async fn page_opened_with(clients: Clients, browser: Browser, wanted: Wanted) -> String {
     let (db, _dir) = store().await;
-    let reach = connector(&db, clients);
+    page_opened_by(&connector(&db, clients), browser, wanted).await
+}
+
+async fn page_opened_by(reach: &Connector, browser: Browser, wanted: Wanted) -> String {
     let (tx, rx) = tokio::sync::oneshot::channel();
-    let run = in_browser(&reach, browser, wanted, move |url: &str| {
+    let run = in_browser(reach, browser, wanted, move |url: &str| {
         let _ = tx.send(url.to_string());
     });
     tokio::select! {
@@ -1017,19 +1069,171 @@ async fn half_an_own_client_opens_no_page_and_says_which_value_is_missing() {
 
 #[test]
 fn the_sign_in_says_which_client_it_uses() {
-    let own = Clients {
-        own_google: Some(Ok(OwnClient::new("own-cid", "own-secret"))),
+    let env = Clients {
+        own_google: Some(Ok(OwnClient::new("env-cid", "s"))),
         ..both_clients()
-    };
-    assert_eq!(google_sign_in(&own).unwrap().1, SignInClient::Own);
-    assert_eq!(
-        google_sign_in(&both_clients()).unwrap().1,
-        SignInClient::BuiltIn
-    );
+    }
+    .with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let kept = OwnClient::new("kept-cid", "s");
+    let setup = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let cases = [
+        (&env, Some(&kept), ClientSource::Environment, "env-cid"),
+        (&setup, Some(&kept), ClientSource::Setup, "setup-cid"),
+        (&both_clients(), Some(&kept), ClientSource::Kept, "kept-cid"),
+        (&both_clients(), None, ClientSource::BuiltIn, "cid"),
+    ];
+    for (clients, kept, source, id) in cases {
+        let choice = google_sign_in(clients, kept).unwrap();
+        assert_eq!(choice.source, source);
+        assert_eq!(choice.oauth.id(), id, "{source:?}");
+        let kind = match source {
+            ClientSource::BuiltIn => SignInClient::BuiltIn,
+            _ => SignInClient::Own,
+        };
+        assert_eq!(choice.kind(), kind, "{source:?}");
+        assert_eq!(
+            choice.own.is_some(),
+            kind == SignInClient::Own,
+            "{source:?}"
+        );
+    }
     assert!(matches!(
-        google_sign_in(&Clients::default()),
+        google_sign_in(&Clients::default(), None),
         Err(BrowserSignInError::NoClient(Browser::Google))
     ));
+}
+
+/// An own Google account `me@gmail.com` whose kept client is `kept-cid`,
+/// in a store `reach` reads.
+async fn own_account_kept(reach: &Connector) {
+    google_signed_in(
+        &reach.db,
+        &reach.secrets,
+        "me@gmail.com",
+        "rt",
+        0,
+        None,
+        "",
+        Some(&OwnClient::new("kept-cid", "s")),
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn signing_an_own_account_in_again_keeps_its_own_client() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, both_clients());
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=kept-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn the_environment_wins_over_a_kept_client() {
+    let (db, _dir) = store().await;
+    let clients = Clients {
+        own_google: Some(Ok(OwnClient::new("env-cid", "s"))),
+        ..both_clients()
+    };
+    let reach = connector(&db, clients);
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=env-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn the_setup_client_signs_in_over_the_built_in_one() {
+    let clients = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let url = page_opened_with(clients, Browser::Google, Wanted::Anyone).await;
+    assert!(url.contains("client_id=setup-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn an_own_client_asks_for_every_permission() {
+    let clients = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let url = page_opened_with(clients, Browser::Google, Wanted::Anyone).await;
+    assert!(url.contains("https%3A%2F%2Fmail.google.com%2F"), "{url}");
+    assert!(url.contains("gmail.settings.basic"), "{url}");
+}
+
+#[tokio::test]
+async fn an_own_account_signs_in_again_in_a_build_without_the_built_in_client() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, Clients::default());
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=kept-cid"), "{url}");
+}
+
+/// A Gmail account at `me@gmail.com` that signed in with `client`, with
+/// nothing in the keyring.
+async fn gmail_account_of(db: &Db, client: SignInClient) -> Account {
+    db.write(move |c| {
+        let id = accounts::insert_account(c, "me@gmail.com", 0)?;
+        accounts::set_gmail_sign_in(c, id, &GmailSignIn::BuiltInApi.with_google_token(client))?;
+        Ok(accounts::account_by_email(c, "me@gmail.com")?.unwrap())
+    })
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn an_own_account_whose_key_is_gone_takes_no_other_client() {
+    let (db, _dir) = store().await;
+    let me = gmail_account_of(&db, SignInClient::Own).await;
+    let refused = in_browser(
+        &connector(&db, both_clients()),
+        Browser::Google,
+        Wanted::Only(me.email.clone()),
+        |url: &str| panic!("opened {url}"),
+    )
+    .await;
+    assert!(matches!(refused, Err(BrowserSignInError::OwnClientMissing)));
+    let client = db
+        .read(move |c| Ok(accounts::gmail_sign_in(c, me.id)?.client()))
+        .await
+        .unwrap();
+    assert_eq!(client, SignInClient::Own);
+}
+
+#[tokio::test]
+async fn an_own_account_whose_key_is_gone_signs_in_through_the_environment() {
+    let (db, _dir) = store().await;
+    gmail_account_of(&db, SignInClient::Own).await;
+    let clients = Clients {
+        own_google: Some(Ok(OwnClient::new("env-cid", "s"))),
+        ..both_clients()
+    };
+    let reach = connector(&db, clients);
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=env-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn a_built_in_account_signs_in_again_through_the_built_in_client() {
+    let (db, _dir) = store().await;
+    gmail_account_of(&db, SignInClient::BuiltIn).await;
+    let reach = connector(&db, both_clients());
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=cid&"), "{url}");
+}
+
+/// A built-in client that asks for no mail, as a release build carries.
+fn mail_free_built_in() -> Clients {
+    Clients {
+        google: Some(OAuthClient::new("cid", "secret").asking(mailrs_gmail::ScopeList::BuiltIn)),
+        ..both_clients()
+    }
+}
+
+#[tokio::test]
+async fn an_own_account_signs_in_again_beside_a_built_in_client_that_reads_no_mail() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, mail_free_built_in());
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=kept-cid"), "{url}");
 }
 
 /// A switch to JMAP that crashed after saving its secret leaves it under
@@ -1991,4 +2195,395 @@ async fn a_sieve_session_with_no_local_rules_runs_the_script_alone() {
         services.rules,
         Some(crate::AnyRules::JmapSieve(_))
     ));
+}
+
+/// A build whose only Google client is the built-in one: it asks for no
+/// mail, so a sign-in through it cannot read any.
+fn built_in_clients() -> Clients {
+    Clients {
+        google: Some(OAuthClient::new("cid", "secret").asking(mailrs_gmail::ScopeList::BuiltIn)),
+        ..both_clients()
+    }
+}
+
+#[tokio::test]
+async fn the_built_in_client_never_signs_in_an_api_account() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, built_in_clients());
+    let mut opened = false;
+    let refused = in_browser(
+        &reach,
+        Browser::Google,
+        Wanted::Only(me.email.clone()),
+        |_| opened = true,
+    )
+    .await;
+    assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+    assert!(!opened, "the browser never opened");
+}
+
+#[tokio::test]
+async fn the_built_in_client_adds_no_new_gmail_account() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, built_in_clients());
+    let mut opened = false;
+    let refused = in_browser(&reach, Browser::Google, Wanted::Anyone, |_| opened = true).await;
+    assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+    assert!(!opened, "the browser never opened");
+    let held = db.read(accounts::list_accounts).await.unwrap();
+    assert!(held.is_empty(), "{held:?}");
+}
+
+#[tokio::test]
+async fn the_built_in_client_refuses_an_address_with_no_gmail_account() {
+    let (db, _dir) = store().await;
+    let imap = imap_account(&db).await;
+    let reach = connector(&db, built_in_clients());
+    for wanted in [
+        Wanted::Only("nobody@gmail.com".into()),
+        Wanted::Only(imap.email),
+    ] {
+        let refused = in_browser(&reach, Browser::Google, wanted, |url: &str| {
+            panic!("opened {url}")
+        })
+        .await;
+        assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+    }
+}
+
+fn id_token(email: &str) -> String {
+    use base64::Engine;
+    let claims = serde_json::json!({"email": email, "email_verified": true});
+    let body = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(claims.to_string());
+    format!("e30.{body}.sig")
+}
+
+/// The built-in client against a token endpoint that answers with an ID
+/// token for `email`. The "browser" is a request to the redirect the
+/// sign-in listens on.
+pub(super) async fn built_in_clients_answering(
+    server: &wiremock::MockServer,
+    email: &str,
+) -> Clients {
+    use wiremock::matchers::{method, path};
+    wiremock::Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(
+            wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token": "at-1",
+                "expires_in": 3600,
+                "refresh_token": "rt-new",
+                "scope": mailrs_gmail::BUILT_IN_SCOPES[2..].join(" "),
+                "id_token": id_token(email),
+            })),
+        )
+        .mount(server)
+        .await;
+    let built_in = OAuthClient::new("cid", "secret")
+        .with_endpoints(
+            format!("{}/auth", server.uri()),
+            format!("{}/token", server.uri()),
+        )
+        .asking(mailrs_gmail::ScopeList::BuiltIn);
+    Clients {
+        google: Some(built_in),
+        ..both_clients()
+    }
+}
+
+pub(super) fn come_back_from_google(consent_url: &str) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let value = |key: &str| {
+        let (_, rest) = consent_url.split_once(&format!("{key}=")).unwrap();
+        rest.split('&').next().unwrap().to_string()
+    };
+    let redirect = value("redirect_uri")
+        .trim_start_matches("http%3A%2F%2F")
+        .replace("%3A", ":");
+    let state = value("state");
+    tokio::spawn(async move {
+        let mut stream = tokio::net::TcpStream::connect(&redirect).await.unwrap();
+        let request = format!("GET /?code=c&state={state} HTTP/1.1\r\nHost: {redirect}\r\n\r\n");
+        stream.write_all(request.as_bytes()).await.unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).await.unwrap();
+    });
+}
+
+#[tokio::test]
+async fn the_calendar_consent_keeps_the_route_and_records_the_built_in_list() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
+    let server = wiremock::MockServer::start().await;
+    // The ID token names the address in another case, as Google may.
+    let reach = connector(
+        &db,
+        built_in_clients_answering(&server, "Me@Gmail.com").await,
+    );
+    let signed = calendar_consent(&reach, &me, come_back_from_google)
+        .await
+        .unwrap();
+    assert_eq!(signed.id, me.id);
+    let (route, client, consent) = db
+        .read(move |c| {
+            Ok((
+                accounts::gmail_sign_in(c, id)?.route(),
+                accounts::gmail_sign_in(c, id)?.client(),
+                accounts::consent(c, id)?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!(route, MailRoute::Imap);
+    assert_eq!(client, SignInClient::BuiltIn);
+    assert_eq!(
+        consent.asked.as_deref(),
+        Some(mailrs_gmail::BUILT_IN_SCOPES.join(" ").as_str())
+    );
+    assert_eq!(
+        reach
+            .secrets
+            .google
+            .load("me@gmail.com")
+            .unwrap()
+            .as_deref(),
+        Some("rt-new")
+    );
+}
+
+/// An IMAP-route account signed in through the built-in client starts on
+/// its route's services, never on Gmail API mail over a token that holds
+/// no mail scope. Its route has no mail adapter yet, so it waits for one.
+#[tokio::test]
+async fn the_built_in_sign_in_starts_an_imap_route_account_on_its_route() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let server = wiremock::MockServer::start().await;
+    let reach = connector(
+        &db,
+        built_in_clients_answering(&server, "me@gmail.com").await,
+    );
+    let signed = in_browser(
+        &reach,
+        Browser::Google,
+        Wanted::Only(me.email.clone()),
+        come_back_from_google,
+    )
+    .await
+    .unwrap();
+    assert_eq!(signed.account.id, me.id);
+    assert!(
+        matches!(signed.services, Connected::NeedsSignIn(Lacks::Secret)),
+        "{:?}",
+        matches!(&signed.services, Connected::Ready(s) if matches!(s.mail, AnyMail::Google(_)))
+    );
+}
+
+#[tokio::test]
+async fn the_calendar_consent_refuses_an_api_account_before_the_browser_opens() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, built_in_clients());
+    let refused = calendar_consent(&reach, &me, |url: &str| panic!("opened {url}")).await;
+    assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+}
+
+#[tokio::test]
+async fn the_calendar_consent_is_refused_for_another_address() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
+    let server = wiremock::MockServer::start().await;
+    let reach = connector(
+        &db,
+        built_in_clients_answering(&server, "other@gmail.com").await,
+    );
+    let refused = calendar_consent(&reach, &me, come_back_from_google).await;
+    assert!(
+        matches!(refused, Err(BrowserSignInError::OtherAddress { .. })),
+        "{:?}",
+        refused.err()
+    );
+}
+
+async fn on_imap_route(db: &Db, me: &Account) {
+    let id = me.id;
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn an_api_account_gets_every_google_service() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let Connected::Ready(services) = reach.connect(&me).await.unwrap() else {
+        panic!("not ready")
+    };
+    assert!(matches!(services.mail, AnyMail::Google(_)));
+    assert!(matches!(
+        services.calendar,
+        Some(crate::AnyCalendar::Google(_))
+    ));
+    assert!(matches!(
+        services.contacts,
+        Some(crate::AnyContacts::Google(_))
+    ));
+    assert!(matches!(services.rules, Some(crate::AnyRules::Google(_))));
+    assert!(matches!(
+        services.auto_reply,
+        Some(crate::AnyAutoReply::Google(_))
+    ));
+}
+
+#[tokio::test]
+async fn an_imap_route_account_waits_for_its_mail_adapter() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let connected = reach.connect(&me).await.unwrap();
+    assert!(matches!(connected, Connected::NeedsSignIn(Lacks::Secret)));
+}
+
+#[tokio::test]
+async fn the_google_side_of_an_imap_route_account_comes_from_its_token() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let google = google_side(&reach, &me).await.unwrap();
+    assert!(google.is_some());
+}
+
+#[tokio::test]
+async fn an_imap_route_account_without_a_calendar_token_has_no_google_side_and_keeps_its_state() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let before = state(&db, &me).await;
+    let reach = connector(&db, both_clients());
+    assert!(google_side(&reach, &me).await.unwrap().is_none());
+    assert_eq!(state(&db, &me).await, before);
+}
+
+#[tokio::test]
+async fn an_imap_route_account_in_a_build_without_a_client_has_no_google_side_and_keeps_its_state()
+{
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let before = state(&db, &me).await;
+    let reach = connector(&db, Clients::default());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    assert!(google_side(&reach, &me).await.unwrap().is_none());
+    assert_eq!(state(&db, &me).await, before);
+}
+
+/// The page `calendar_consent` opens for `me`, read before anyone comes
+/// back from it.
+async fn consent_page_for(reach: &Connector, me: &Account) -> String {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let run = calendar_consent(reach, me, move |url: &str| {
+        let _ = tx.send(url.to_string());
+    });
+    tokio::select! {
+        ended = run => panic!("the consent ended before anyone came back: {:?}", ended.err()),
+        url = rx => url.unwrap(),
+    }
+}
+
+#[tokio::test]
+async fn the_calendar_consent_of_an_app_password_account_on_its_own_project_asks_that_project() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        };
+        accounts::set_gmail_sign_in(c, id, &own_imap)
+    })
+    .await
+    .unwrap();
+    let reach = connector(&db, both_clients());
+    reach
+        .secrets
+        .google_clients
+        .save(id, &OwnClient::new("kept-cid", "s").encode())
+        .unwrap();
+
+    let url = consent_page_for(&reach, &me).await;
+
+    assert!(url.contains("client_id=kept-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn the_calendar_consent_of_an_account_whose_project_went_asks_the_built_in_client() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        };
+        accounts::set_gmail_sign_in(c, id, &own_imap)
+    })
+    .await
+    .unwrap();
+
+    let url = consent_page_for(&connector(&db, both_clients()), &me).await;
+
+    assert!(url.contains("client_id=cid"), "{url}");
+}
+
+#[tokio::test]
+async fn signing_an_app_password_account_in_again_through_the_setup_asks_only_for_its_calendar() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let clients = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let reach = connector(&db, clients);
+
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only(me.email.clone())).await;
+
+    assert!(url.contains("client_id=cid"), "{url}");
+    assert!(!url.contains("setup-cid"), "{url}");
 }

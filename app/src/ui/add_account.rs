@@ -19,9 +19,7 @@ use adw::prelude::*;
 use gtk::{gio, glib, graphene};
 use mailrs_discover::Server;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{
-    Account, AccountId, MailSet, Provider, RemoveSetting, Role as MailRole, SignInClient,
-};
+use mailrs_domain::{Account, AccountId, MailSet, Provider, RemoveSetting, Role as MailRole};
 use mailrs_store::{accounts, servers};
 
 use crate::add_account::lookup::{Check, Checks, State};
@@ -33,10 +31,20 @@ use crate::add_account::{
     Protocol, Removal, Role, Running, Typed,
 };
 use crate::core::Core;
+use crate::gmail_password::{self, Action as GmailAction};
+use crate::own_project::{self, Step as OwnStep};
 use crate::permission::Permission;
+use crate::route_choice::{self, Goa, Platform, Ready, Route, footer, other_ways, ready_now, rows};
+use crate::ui::gmail_password_page::GmailPasswordPage;
+use crate::ui::goa_page::{self, GoaPage, PageState};
+use crate::ui::own_project::{Hooks, OwnProject};
 use crate::ui::post_band::PostBand;
+use crate::ui::route_page::{self, ConsentPage, RoutePage};
 use crate::ui::tile_grid::TileGrid;
-use mailrs_sync::sign_in::Wanted;
+use mailrs_sync::sign_in::own_client::OwnClient;
+use mailrs_sync::sign_in::{BrowserSignInError, ClientSource, Wanted};
+
+mod routes;
 
 /// The dialog's size, the mockup's.
 const WIDTH: i32 = 480;
@@ -64,8 +72,28 @@ pub enum Opening {
     /// The password page for an IMAP account that needs to sign in again,
     /// or the calendar page for a calendar account that does.
     Again(Account),
+    /// The page that offers this Gmail account its calendar and contacts,
+    /// after its mail works.
+    Consent(Account),
+    /// The own Google project setup, for a new account or, with
+    /// `address`, for that existing Gmail account signing in again, which
+    /// keeps its mail and cannot change how it signs in here.
+    OwnProject {
+        start: OwnStart,
+        address: Option<String>,
+    },
     /// A demo stage, for screenshots: see [`preview`].
     Preview(String),
+}
+
+/// Where the own Google project setup opens.
+pub enum OwnStart {
+    /// At the step the person reached last time, or the intro.
+    Resume,
+    /// At the last page, with the project kept from an earlier setup.
+    Saved(OwnClient),
+    /// At this page.
+    At(OwnStep),
 }
 
 /// What the dialog hands the window.
@@ -93,9 +121,20 @@ pub enum Done {
     /// Open Inbox on the last page: the window shows that account's
     /// inbox. The dialog is closed.
     OpenInbox(AccountId),
+    /// The calendar consent went through for this account. The dialog is
+    /// closed.
+    CalendarConnected(Account),
     /// Grant Access on the last page: the window sends this account
     /// through its provider's consent again. The dialog is closed.
     Grant(String),
+}
+
+/// What the browser page waits for.
+enum Flow {
+    /// A new sign-in, or a sign-in again.
+    SignIn,
+    /// A Gmail account's calendar consent.
+    Consent(Account),
 }
 
 pub fn present(
@@ -109,14 +148,23 @@ pub fn present(
         _ => None,
     };
     let this = Dialog::new(core, again, Box::new(done));
+    if let Opening::Consent(account) = &opening {
+        this.fit_consent_note(account);
+        this.consenting.replace(Some(account.clone()));
+    }
     this.connect();
+    this.load_saved_project();
     let root = match &opening {
+        Opening::Browser(Browser::Google) => route_page::TAG,
+        Opening::Consent(_) => route_page::CONSENT_TAG,
         Opening::Pick | Opening::Preview(_) => "pick",
         Opening::Tile(_) | Opening::ByHand => "address",
         Opening::Browser(_) => "browser",
         Opening::Calendar => "calendar",
         Opening::Again(account) if account.provider == Provider::CalDav => "calendar",
+        Opening::Again(account) if account.provider == Provider::Gmail => gmail_password::TAG,
         Opening::Again(_) => "password",
+        Opening::OwnProject { .. } => OwnStep::Intro.tag(),
     };
     // Every page is added, the root first, so a page popped off the stack
     // stays in the dialog: a page left without a parent while a screen
@@ -142,6 +190,7 @@ pub fn present(
             this.asking.close();
             this.stop_browser();
             this.stop_counting();
+            this.stop_goa_wait();
         }
     });
     this.window.present(Some(parent));
@@ -157,25 +206,66 @@ pub fn present(
         Opening::Pick => {}
         Opening::Tile(tile) => this.open_address(Some(tile), false),
         Opening::ByHand => this.open_address(None, true),
+        Opening::Browser(Browser::Google) => this.offer_routes(None),
         Opening::Browser(browser) => this.start_browser(browser, None),
+        Opening::Consent(_) => {
+            // The closed envelope with no stamp, as the route page has.
+            this.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
+        }
         Opening::Calendar => this.open_calendar(),
         Opening::Again(account) if account.provider == Provider::CalDav => {
             this.load_calendar(account)
         }
+        Opening::Again(account) if account.provider == Provider::Gmail => {
+            this.open_gmail_password(Some(account.email.clone()), true)
+        }
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
+        Opening::OwnProject { start, address } => {
+            this.signing_again.set(address.is_some());
+            this.own.signing_again(address.is_some());
+            this.route_expected.replace(address);
+            let at = this.open_own(start);
+            this.window.set_focus(Some(&this.own.first_focus(at)));
+        }
+    }
+    if root == route_page::CONSENT_TAG {
+        this.window.set_focus(Some(&this.consent.continue_button));
+    }
+    if root == route_page::TAG
+        && this.showing() == Some(route_page::TAG)
+        && let Some(row) = this.routes.first_row()
+    {
+        this.window.set_focus(Some(&row));
     }
 }
 
 /// A banded page: a flat header over the band, the page's own column
 /// under it.
-struct Banded {
-    page: adw::NavigationPage,
+pub(super) struct Banded {
+    pub(super) page: adw::NavigationPage,
     header: adw::HeaderBar,
-    body: gtk::Box,
+    pub(super) body: gtk::Box,
+    toolbar: adw::ToolbarView,
 }
 
-fn banded(tag: &str, title: &str) -> Banded {
+impl Banded {
+    /// Puts `child` in a bar under the scroller, so it stays in view
+    /// however short the screen: on a 768-pixel screen the band and a
+    /// long page push a button in the column out of sight. Answers the
+    /// bar, for the page's own style class.
+    pub(super) fn bottom_bar(&self, child: &impl IsA<gtk::Widget>) -> gtk::Box {
+        let bar = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .css_classes(["post-bottom"])
+            .build();
+        bar.append(child);
+        self.toolbar.add_bottom_bar(&bar);
+        bar
+    }
+}
+
+pub(super) fn banded(tag: &str, title: &str) -> Banded {
     let header = adw::HeaderBar::builder()
         .show_title(false)
         .css_classes(["post-band-header"])
@@ -211,10 +301,15 @@ fn banded(tag: &str, title: &str) -> Banded {
         .tag(tag)
         .child(&toolbar)
         .build();
-    Banded { page, header, body }
+    Banded {
+        page,
+        header,
+        body,
+        toolbar,
+    }
 }
 
-fn label(text: &str, classes: &[&str]) -> gtk::Label {
+pub(super) fn label(text: &str, classes: &[&str]) -> gtk::Label {
     gtk::Label::builder()
         .label(text)
         .wrap(true)
@@ -224,13 +319,13 @@ fn label(text: &str, classes: &[&str]) -> gtk::Label {
         .build()
 }
 
-fn heading(text: &str) -> gtk::Label {
+pub(super) fn heading(text: &str) -> gtk::Label {
     let heading = label(text, &["post-title"]);
     heading.set_accessible_role(gtk::AccessibleRole::Heading);
     heading
 }
 
-fn pill(text: &str, suggested: bool) -> gtk::Button {
+pub(super) fn pill(text: &str, suggested: bool) -> gtk::Button {
     let classes = if suggested {
         vec!["pill", "suggested-action", "post-wide"]
     } else {
@@ -454,7 +549,7 @@ fn link_button(link: &add_account::Link) -> gtk::LinkButton {
 }
 
 /// A boxed list of rows.
-fn boxed_list() -> gtk::ListBox {
+pub(super) fn boxed_list() -> gtk::ListBox {
     gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .css_classes(["boxed-list", "post-list"])
@@ -787,6 +882,9 @@ struct BrowserPage {
     again: gtk::Button,
     copy: gtk::Button,
     retry: gtk::Button,
+    /// Back into the own Google project setup, at the step that fixes a
+    /// failed sign-in through it.
+    own_step: gtk::Button,
     cancel: gtk::Button,
     /// The row of buttons under the wait, stacked on a narrow window.
     buttons: gtk::Box,
@@ -839,6 +937,10 @@ fn browser_page() -> BrowserPage {
         &["pill", "post-small-pill"],
     );
     retry.set_visible(false);
+    let own_step = gtk::Button::builder()
+        .visible(false)
+        .css_classes(["pill", "post-small-pill", "suggested-action"])
+        .build();
     let cancel = gtk::Button::builder()
         .label(gettext("Cancel"))
         .hexpand(true)
@@ -849,7 +951,7 @@ fn browser_page() -> BrowserPage {
         .spacing(8)
         .css_classes(["post-bottom"])
         .build();
-    for button in [&again, &copy, &retry, &cancel] {
+    for button in [&again, &copy, &own_step, &retry, &cancel] {
         buttons.append(button);
     }
     let body = &banded.body;
@@ -873,6 +975,7 @@ fn browser_page() -> BrowserPage {
         again,
         copy,
         retry,
+        own_step,
         cancel,
         buttons,
     }
@@ -1847,7 +1950,43 @@ struct Dialog {
     /// how many features were left off, which its lede names.
     granting: Cell<Option<(Provider, usize)>>,
     count_timer: RefCell<Option<glib::SourceId>>,
+    /// The own Google project setup is for an account that exists and
+    /// signs in again, so it offers no other way to sign in.
+    signing_again: Cell<bool>,
+    /// Online Accounts was picked before an address was typed, so the page
+    /// for it opens once the address page has one.
+    goa_after_address: Cell<bool>,
+    /// The address typed before the route page, for the sign-in it leads
+    /// to.
+    route_expected: RefCell<Option<String>>,
+    /// The own Google project setup's pages.
+    own: Rc<OwnProject>,
+    /// The client the setup chose, which the browser sign-in under way
+    /// goes through, for Try Again.
+    browser_chosen: RefCell<Option<OwnClient>>,
+    /// Where the browser page's button back into the setup leads, after a
+    /// sign-in through the person's project failed.
+    own_back: RefCell<Option<OwnStart>>,
+    /// The project kept from an earlier setup, once the keyring answered.
+    saved: RefCell<Option<OwnClient>>,
     pick: PickPage,
+    routes: RoutePage,
+    /// The page that signs in through Online Accounts.
+    goa: Rc<GoaPage>,
+    /// The Google accounts Online Accounts held when its window opened, so
+    /// a new one can be told from the rest while the page waits.
+    /// What Online Accounts offered when the route page was last filled.
+    routes_goa: Cell<Goa>,
+    goa_before: RefCell<Vec<String>>,
+    /// The address the Online Accounts page is for.
+    goa_address: RefCell<Option<String>>,
+    /// Reads the list again while the page waits.
+    goa_timer: RefCell<Option<glib::SourceId>>,
+    consent: ConsentPage,
+    gmail: GmailPasswordPage,
+    /// The Gmail account the calendar consent is for, when the dialog
+    /// opened on it.
+    consenting: RefCell<Option<Account>>,
     address: AddressPage,
     lookup: LookupPage,
     browser: BrowserPage,
@@ -1858,10 +1997,36 @@ struct Dialog {
     calendar: CalendarStep,
 }
 
+/// The own Google project setup's pages, whose sign-in and links go
+/// through `dialog`.
+fn own_setup(core: &Rc<Core>, dialog: &std::rc::Weak<Dialog>) -> Rc<OwnProject> {
+    let (signs, opens, switches) = (dialog.clone(), dialog.clone(), dialog.clone());
+    OwnProject::new(
+        core,
+        Hooks {
+            sign_in: Box::new(move |own| {
+                if let Some(this) = signs.upgrade() {
+                    this.setup_sign_in(own);
+                }
+            }),
+            open_uri: Box::new(move |url| {
+                if let Some(this) = opens.upgrade() {
+                    this.open_uri(url);
+                }
+            }),
+            switch: Box::new(move || {
+                if let Some(this) = switches.upgrade() {
+                    this.switch_from_setup();
+                }
+            }),
+        },
+    )
+}
+
 /// Whether Add Account offers Microsoft: in a build with its client, and
 /// in the demo, which signs in nowhere and shows every tile.
 pub fn signs_in_to_microsoft(core: &Core) -> bool {
-    core.demo || core.built_with_sign_in(Browser::Microsoft)
+    core.demo || core.built_with_sign_in(Browser::Microsoft, false)
 }
 
 impl Dialog {
@@ -1905,7 +2070,11 @@ impl Dialog {
             );
             window.add_breakpoint(narrow);
         }
-        Rc::new(Dialog {
+        Rc::new_cyclic(|weak: &std::rc::Weak<Dialog>| Dialog {
+            own: own_setup(core, weak),
+            browser_chosen: RefCell::new(None),
+            own_back: RefCell::new(None),
+            saved: RefCell::new(None),
             core: Rc::clone(core),
             window,
             nav,
@@ -1940,7 +2109,19 @@ impl Dialog {
             added: Cell::new(None),
             granting: Cell::new(None),
             count_timer: RefCell::new(None),
+            signing_again: Cell::new(false),
+            goa_after_address: Cell::new(false),
+            route_expected: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
+            routes: RoutePage::new(),
+            goa: GoaPage::new(),
+            routes_goa: Cell::new(Goa::Absent),
+            goa_before: RefCell::new(Vec::new()),
+            goa_address: RefCell::new(None),
+            goa_timer: RefCell::new(None),
+            consent: ConsentPage::new(),
+            gmail: GmailPasswordPage::new(),
+            consenting: RefCell::new(None),
             address: address_page(),
             lookup: lookup_page(),
             browser,
@@ -1952,9 +2133,13 @@ impl Dialog {
         })
     }
 
-    fn pages(&self) -> [(&'static str, adw::NavigationPage); 9] {
-        [
+    fn pages(&self) -> Vec<(&'static str, adw::NavigationPage)> {
+        let mut pages = vec![
             ("pick", self.pick.banded.page.clone()),
+            (route_page::TAG, self.routes.page.clone()),
+            (goa_page::TAG, self.goa.page.clone()),
+            (route_page::CONSENT_TAG, self.consent.page.clone()),
+            (gmail_password::TAG, self.gmail.page.clone()),
             ("address", self.address.banded.page.clone()),
             ("lookup", self.lookup.banded.page.clone()),
             ("browser", self.browser.banded.page.clone()),
@@ -1963,13 +2148,16 @@ impl Dialog {
             ("added", self.finished.banded.page.clone()),
             ("servers", self.manual.page.clone()),
             ("calendar", self.calendar.page.clone()),
-        ]
+        ];
+        pages.extend(self.own.pages());
+        pages
     }
 
     /// Wires each control to what it does. Every closure holds a weak
     /// reference to the dialog; `present` holds the strong one until the
     /// dialog closes.
     fn connect(self: &Rc<Self>) {
+        self.connect_goa();
         let on = |run: fn(&Rc<Dialog>)| {
             let weak = Rc::downgrade(self);
             move || {
@@ -2083,12 +2271,62 @@ impl Dialog {
             copied.show();
         });
         let retry = on(|this| {
+            let consenting = this.consenting.borrow().clone();
+            if let Some(account) = consenting {
+                return this.run_browser(Browser::Google, None, Flow::Consent(account), None);
+            }
             let expected = this.browser_expected.borrow().clone();
-            this.start_browser(this.browser_provider.get(), expected);
+            let chosen = this.browser_chosen.borrow().clone();
+            let provider = this.browser_provider.get();
+            this.run_browser(provider, expected, Flow::SignIn, chosen);
         });
         self.browser.retry.connect_clicked(move |_| retry());
+        let back_into_setup = on(|this| {
+            let start = this.own_back.borrow_mut().take();
+            if let Some(start) = start {
+                this.open_own(start);
+            }
+        });
+        self.browser
+            .own_step
+            .connect_clicked(move |_| back_into_setup());
+        // The intro and the last page carry Google's stamp; the steps
+        // cover the band.
+        for (tag, _) in self.own.pages() {
+            if tag == OwnStep::Intro.tag() || tag == OwnStep::Warning.tag() {
+                let google = post::stamp_for("Google");
+                self.set_band(tag, Step::Address, Some(google), Some("Google"));
+            } else {
+                self.set_band(tag, Step::Servers, None, None);
+            }
+        }
         let cancel = on(Dialog::cancel_browser);
         self.browser.cancel.connect_clicked(move |_| cancel());
+        let continue_to_google = on(|this| {
+            let consenting = this.consenting.borrow().clone();
+            if let Some(account) = consenting {
+                this.run_browser(Browser::Google, None, Flow::Consent(account), None);
+            }
+        });
+        self.consent
+            .continue_button
+            .connect_clicked(move |_| continue_to_google());
+        let not_now = on(|this| {
+            this.window.close();
+        });
+        self.consent.not_now.connect_clicked(move |_| not_now());
+        let sign_in = on(Dialog::sign_in_gmail);
+        self.gmail.sign_in.connect_clicked(move |_| sign_in());
+        let sign_in = on(Dialog::sign_in_gmail);
+        self.gmail
+            .password
+            .connect_entry_activated(move |_| sign_in());
+        let ready = on(Dialog::update_gmail);
+        self.gmail.password.connect_changed(move |_| ready());
+        let ready = on(Dialog::update_gmail);
+        self.gmail.address.connect_changed(move |_| ready());
+        let another = on(|this| this.gmail_another_way());
+        self.gmail.other_way.connect_clicked(move |_| another());
         let jmap_browser = on(Dialog::start_jmap_browser);
         self.password
             .browser
@@ -2278,6 +2516,7 @@ impl Dialog {
     fn chose(self: &Rc<Self>, tile: Tile, mark: &gtk::Label) {
         let middle = graphene::Point::new(mark.width() as f32 / 2.0, mark.height() as f32 / 2.0);
         match tile.browser() {
+            Some(Browser::Google) => self.offer_routes(None),
             Some(browser) => self.start_browser(browser, None),
             None => self.open_address(Some(tile), false),
         }
@@ -2373,7 +2612,11 @@ impl Dialog {
                     this.say(&said);
                 }
                 Next::Closed(_) => this.show_closed(&address),
-                Next::Google => this.start_browser(Browser::Google, Some(address.full())),
+                Next::Google if this.goa_after_address.replace(false) => {
+                    this.route_expected.replace(Some(address.full()));
+                    this.choose_goa();
+                }
+                Next::Google => this.offer_routes(Some(address.full())),
                 Next::Microsoft => this.start_browser(Browser::Microsoft, Some(address.full())),
                 Next::Manual { proposal, line } => this.show_manual(&proposal, Some(&line)),
             }
@@ -2487,7 +2730,10 @@ impl Dialog {
             (None, _) => self.tile.get().map_or(post::ANY_SERVER, Tile::stamp),
         };
         let provider = advice.as_ref().map(|a| a.provider.clone());
-        self.show_advice(advice.as_ref());
+        self.show_advice(post::shown_advice(
+            advice.as_ref(),
+            self.goa_after_address.get(),
+        ));
         self.set_band("address", Step::Address, Some(stamp), provider.as_deref());
     }
 
@@ -3565,7 +3811,140 @@ impl Dialog {
     /// `browser`'s sign-in in the browser, with the page that waits for
     /// it. `expected` is the address typed, when there was one.
     fn start_browser(self: &Rc<Self>, browser: Browser, expected: Option<String>) {
+        self.run_browser(browser, expected, Flow::SignIn, None);
+    }
+
+    /// Opens the own Google project setup at `start`, over the page on
+    /// screen, and answers the page it opened.
+    fn open_own(self: &Rc<Self>, start: OwnStart) -> OwnStep {
+        let (at, resumed) = match start {
+            OwnStart::Resume => {
+                let at = own_project::resume_at(self.core.google_setup_step());
+                (at, at != OwnStep::Intro)
+            }
+            OwnStart::Saved(own) => {
+                self.own.use_key(own);
+                (OwnStep::Warning, false)
+            }
+            OwnStart::At(step) => (step, false),
+        };
+        let root = self.root_tag();
+        self.own.open(&self.nav, root, at, resumed);
+        at
+    }
+
+    /// The tag of the page at the bottom of the stack.
+    fn root_tag(&self) -> &'static str {
+        let first = self
+            .nav
+            .navigation_stack()
+            .item(0)
+            .and_downcast::<adw::NavigationPage>()
+            .and_then(|page| page.tag());
+        self.pages()
+            .into_iter()
+            .map(|(tag, _)| tag)
+            .find(|tag| first.as_deref() == Some(*tag))
+            .unwrap_or("pick")
+    }
+
+    /// Signs in through `own`, the key the setup was given.
+    fn setup_sign_in(self: &Rc<Self>, own: OwnClient) {
+        let expected = self.route_expected.borrow().clone();
+        self.run_browser(Browser::Google, expected, Flow::SignIn, Some(own));
+    }
+
+    fn open_uri(&self, url: &str) {
+        gtk::UriLauncher::new(url).launch(
+            self.window.root().and_downcast::<gtk::Window>().as_ref(),
+            gio::Cancellable::NONE,
+            |_| {},
+        );
+    }
+
+    /// Says what failed in a sign-in through the person's own project,
+    /// with the way back into the setup that fixes it. Answers false when
+    /// the project explains nothing, so the usual failure shows.
+    async fn own_failure(
+        self: &Rc<Self>,
+        err: &anyhow::Error,
+        chosen: Option<OwnClient>,
+        address: Option<String>,
+    ) -> bool {
+        if let Some(BrowserSignInError::OwnClientMissing) = err.downcast_ref::<BrowserSignInError>()
+        {
+            let back = match self.core.saved_project().await {
+                Some(own) => (
+                    // Translators: Google is a name; keep it as it is.
+                    gettext("Use your Google project again"),
+                    OwnStart::Saved(own),
+                ),
+                None => (go_to_step(OwnStep::File), OwnStart::At(OwnStep::File)),
+            };
+            self.show_own_problem(err.to_string(), Vec::new(), Some(back));
+            return true;
+        }
+        let source = self
+            .core
+            .google_sign_in_source(chosen.as_ref(), address)
+            .await;
+        let Some(problem) = own_project::problem(err, source) else {
+            return false;
+        };
+        let links = problem
+            .open
+            .map(|url| {
+                vec![add_account::Link {
+                    label: gettext("Open Google Cloud"),
+                    url,
+                }]
+            })
+            .unwrap_or_default();
+        let back = problem
+            .back_to
+            .map(|step| (go_to_step(step), OwnStart::At(step)));
+        self.show_own_problem(problem.words, links, back);
+        true
+    }
+
+    /// The failure card with `words`, and a button back into the setup
+    /// when `back` names where.
+    fn show_own_problem(
+        &self,
+        words: String,
+        links: Vec<add_account::Link>,
+        back: Option<(String, OwnStart)>,
+    ) {
+        self.browser_failed_with(&Failure {
+            line: words.clone(),
+            title: gettext("Could not sign in"),
+            body: words,
+            said: None,
+            links,
+            copy: None,
+            kind: FailureKind::Refused,
+        });
+        if let Some((label, start)) = back {
+            self.own_back.replace(Some(start));
+            self.browser.own_step.set_label(&label);
+            self.browser.own_step.set_visible(true);
+            self.browser.own_step.grab_focus();
+        }
+    }
+
+    /// As [`Dialog::start_browser`], for the `flow` the page waits for.
+    fn run_browser(
+        self: &Rc<Self>,
+        browser: Browser,
+        expected: Option<String>,
+        flow: Flow,
+        chosen: Option<OwnClient>,
+    ) {
         self.stop_browser();
+        self.browser_chosen.replace(chosen.clone());
+        self.own_back.replace(None);
+        self.browser.own_step.set_visible(false);
+        self.browser.progress.set_visible(true);
         self.browser_provider.set(browser);
         let provider = browser.name();
         let page = &self.browser;
@@ -3594,27 +3973,30 @@ impl Dialog {
         self.set_band("browser", Step::Browser, Some(stamp), Some(provider));
         self.push("browser");
         // Without the build's client the browser would open for nothing,
-        // so say why at once. The demo goes on to its own message.
-        if !self.core.demo && !self.core.built_with_sign_in(browser) {
-            return self.browser_failed(&match browser {
-                Browser::Google => gettext(
-                    "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
-                ),
-                Browser::Microsoft => gettext(
-                    "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
-                ),
-            });
+        // so say why at once. The demo goes on to its own message. A
+        // Google sign-in may still go through the person's own project,
+        // which only the run knows, and it refuses before any page opens.
+        if !self.core.demo
+            && browser == Browser::Microsoft
+            && !self.core.built_with_sign_in(browser, false)
+        {
+            return self.browser_failed(&gettext(
+                "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
+            ));
         }
         // An own client named in the environment replaces the build's, so
         // the page says which one Google is about to see. Half of one is
         // refused here, before a page opens.
         if !self.core.demo && browser == Browser::Google {
-            match self.core.google_sign_in_client() {
+            match self.core.google_sign_in_client(chosen.as_ref()) {
+                Err(BrowserSignInError::NoClient(_)) => {}
                 Err(err) => return self.browser_failed(&err.to_string()),
-                Ok(SignInClient::Own) => page.lede.set_text(&gettext(
-                    "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on.",
-                )),
-                Ok(SignInClient::BuiltIn) => {}
+                Ok(ClientSource::BuiltIn | ClientSource::Setup | ClientSource::Kept) => {}
+                Ok(ClientSource::Environment) => {
+                    page.lede.set_text(&gettext(
+                        "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on.",
+                    ));
+                }
             }
         }
         let ticket = self.asking.ask();
@@ -3634,16 +4016,35 @@ impl Dialog {
             // Google's page takes no address, so the typed one must be the
             // one that comes back. Microsoft's fills its field with it and
             // takes another one.
+            let source_address = expected.clone();
             let wanted = match (browser, expected) {
                 (_, None) => Wanted::Anyone,
                 (Browser::Google, Some(address)) => Wanted::Only(address),
                 (Browser::Microsoft, Some(address)) => Wanted::Suggested(address),
             };
-            let signed = this
-                .core
-                .sign_in_in_browser(browser, urls, wanted, canceled)
-                .await;
+            let is_consent = matches!(flow, Flow::Consent(_));
+            let signed = match flow {
+                Flow::Consent(account) => this
+                    .core
+                    .connect_calendar(account, urls, canceled)
+                    .await
+                    .map(|a| (a, None)),
+                Flow::SignIn => {
+                    this.core
+                        .sign_in_in_browser(browser, urls, wanted, canceled, chosen.clone())
+                        .await
+                }
+            };
             match signed {
+                Ok((account, _)) if is_consent => {
+                    // The account is connected whether or not the dialog is
+                    // still open, so the window hears about it either way.
+                    (this.done)(Done::CalendarConnected(account));
+                    if this.asking.wants(ticket) {
+                        this.stop_browser();
+                        this.window.close();
+                    }
+                }
                 // The account is kept whether or not the dialog is still
                 // open, so the window hears about it either way.
                 Ok((account, name)) => {
@@ -3651,6 +4052,10 @@ impl Dialog {
                         account: account.clone(),
                         name,
                     });
+                    if this.asking.wants(ticket) && this.signing_again.get() {
+                        this.stop_browser();
+                        return this.finish(Done::SignedInAgain(account));
+                    }
                     if this.asking.wants(ticket) {
                         this.stop_browser();
                         this.typed.replace(Address::parse(&account.email));
@@ -3669,6 +4074,13 @@ impl Dialog {
                 }
                 Err(err) if this.asking.wants(ticket) => {
                     this.stop_browser();
+                    if browser == Browser::Google {
+                        let explained = this.own_failure(&err, chosen, source_address).await;
+                        // The dialog may have moved on while it looked.
+                        if explained || !this.asking.wants(ticket) {
+                            return;
+                        }
+                    }
                     match add_account::keyring_unplugged(&err, crate::keyring_plug::current()) {
                         Some(unplugged) => this.browser_failed_with(&unplugged),
                         None => this.browser_failed(&err.to_string()),
@@ -3770,6 +4182,11 @@ impl Dialog {
         }
         self.asking.forget();
         self.stop_browser();
+        // A canceled calendar consent counts as Not Now.
+        if self.consenting.borrow().is_some() {
+            self.window.close();
+            return;
+        }
         if self.nav.previous_page(&self.browser.banded.page).is_some() {
             self.nav.pop();
         } else {
@@ -4180,6 +4597,14 @@ impl Dialog {
 /// of the demo (`MAILRS_DEMO_ADD_ACCOUNT`). Each stage goes through the
 /// same calls the real flow makes; only the answers are made up, since
 /// the demo signs in nowhere.
+/// "Go to Step N", the browser page's way back to the step that fixes a
+/// failed sign-in.
+fn go_to_step(step: OwnStep) -> String {
+    let number = step.number().map(|n| n.to_string()).unwrap_or_default();
+    // Translators: the button that goes back to a step of the Google project setup.
+    fill(&gettext("Go to Step {number}"), &[("number", &number)])
+}
+
 fn preview(this: &Rc<Dialog>, stage: &str) {
     use mailrs_discover::{Candidate, Found, Security, Source, UserName, Verdict};
     use mailrs_imap::{CheckError, ImapError};
@@ -4444,6 +4869,123 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 }
                 _ => {}
             }
+        }
+        "own-intro" => {
+            this.open_own(OwnStart::At(OwnStep::Intro));
+        }
+        "own-file" => {
+            this.open_own(OwnStart::At(OwnStep::File));
+        }
+        "own-file-ready" => {
+            this.own.paste(
+                "482910337715-k3h9q2example.apps.googleusercontent.com",
+                "GOCSPX-example-secret",
+            );
+            this.open_own(OwnStart::At(OwnStep::File));
+        }
+        "own-warning" => {
+            let sample = OwnClient::new("123-abc.apps.googleusercontent.com", "x");
+            this.open_own(OwnStart::Saved(sample));
+        }
+        "own-denied" => {
+            let sample = OwnClient::new("123-abc.apps.googleusercontent.com", "x");
+            this.run_browser(Browser::Google, None, Flow::SignIn, Some(sample));
+            this.asking.forget();
+            this.stop_browser();
+            let denied: anyhow::Error = BrowserSignInError::Google(
+                mailrs_gmail::GmailError::OAuth("Google returned access_denied".into()),
+            )
+            .into();
+            if let Some(problem) = own_project::problem(&denied, ClientSource::Setup) {
+                let back = problem
+                    .back_to
+                    .map(|step| (go_to_step(step), OwnStart::At(step)));
+                this.show_own_problem(problem.words, Vec::new(), back);
+            }
+        }
+        own if own.starts_with("own-step") => {
+            let step = own
+                .strip_prefix("own-step-")
+                .and_then(|n| n.parse().ok())
+                .and_then(OwnStep::of_number)
+                .unwrap_or(OwnStep::Project);
+            this.open_own(OwnStart::At(step));
+        }
+        "routes" | "routes-mac" => {
+            // Every row is ready, so the screenshots show them all.
+            if stage == "routes" {
+                this.show_routes(Platform::Linux, ready_now(Goa::Holds), None);
+            } else {
+                this.show_routes(Platform::MacOs, ready_now(Goa::Absent), None);
+            }
+        }
+        stage if stage.starts_with("gmail-password") => {
+            let again = stage == "gmail-password-again";
+            let address = (stage != "gmail-password").then_some("maria.costa@gmail.com");
+            this.open_gmail_password(address.map(str::to_string), again);
+            this.push(gmail_password::TAG);
+            let page = &this.gmail;
+            if stage != "gmail-password" && stage != "gmail-password-again" {
+                page.password.set_text("ofmrduyvkabsqgwx");
+            }
+            match stage {
+                "gmail-password-signing" => page.update_sign_in(true),
+                "gmail-password-help" => page.help.set_expanded(true),
+                "gmail-password-refused" => {
+                    this.show_gmail_failure(&gmail_password::GmailFailure::NeedsAppPassword)
+                }
+                "gmail-password-hidden" => {
+                    this.show_gmail_failure(&gmail_password::GmailFailure::AllMailHidden)
+                }
+                "gmail-password-note" => page.password.set_text("hunter2"),
+                _ => {}
+            }
+        }
+        "goa-use" | "goa-add" | "goa-waiting" | "goa-other" | "goa-missing" | "goa-snap" => {
+            let goa = |id: &str, address: &str| mailrs_sync::goa::GoaAccount {
+                id: id.into(),
+                identity: address.into(),
+                presentation: address.into(),
+                mail_disabled: false,
+                attention_needed: false,
+            };
+            let address = "dana@example.com".to_string();
+            let others = vec![goa("account_2_0", "other@example.com")];
+            let state = match stage {
+                "goa-use" => PageState::Holds {
+                    account: goa("account_1_0", &address),
+                },
+                "goa-add" => PageState::Add { address, others },
+                "goa-waiting" => PageState::Waiting { address, others },
+                "goa-other" => PageState::OtherAdded {
+                    address,
+                    added: goa("account_2_0", "other@example.com"),
+                    others: Vec::new(),
+                },
+                "goa-missing" => PageState::Missing { address },
+                "goa-not-installed" => PageState::NotInstalled { address },
+                _ => PageState::SnapPlug { address },
+            };
+            this.goa.show(state);
+            this.set_band(
+                goa_page::TAG,
+                Step::Address,
+                Some(post::stamp_for("Google")),
+                Some("Google"),
+            );
+            this.push(goa_page::TAG);
+        }
+        "consent" => {
+            let account = Account {
+                id: 1,
+                email: "maria.costa@gmail.com".into(),
+                state: mailrs_domain::AccountState::Ok,
+                provider: Provider::Gmail,
+                provider_name: Some("Gmail".into()),
+            };
+            this.consenting.replace(Some(account));
+            this.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
+            this.push(route_page::CONSENT_TAG);
         }
         "closed" => {
             let tuta = Address::parse("dana@tuta.com").expect("a sample address");

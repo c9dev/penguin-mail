@@ -21,6 +21,7 @@ mod event_change;
 mod event_types;
 mod export;
 mod finding;
+mod goa_connect;
 pub(crate) mod heap;
 mod imap;
 mod imap_services;
@@ -380,17 +381,51 @@ pub(crate) async fn imap_harness() -> ImapHarness {
 /// covers every synced mailbox, so a test sees a change in Sent or Archive
 /// at the next `incremental` rather than after the slow poll.
 pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> ImapHarness {
+    let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
+    let services = AccountServices::imap(Arc::clone(&imap), Arc::clone(&smtp), settings);
+    if let AnyMail::Imap(adapter) = &services.mail {
+        adapter.look_at_every_mailbox();
+    }
+    harness_of(imap, smtp, services).await
+}
+
+/// [`imap_harness_on`] for a Gmail account whose mail comes over Gmail's
+/// IMAP, as `me@example.com`.
+pub(crate) async fn gmail_imap_harness_on(imap: FakeImap) -> ImapHarness {
+    let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
+    let (mail, identities) = crate::services::gmail_over_imap(
+        Arc::clone(&imap),
+        Arc::clone(&smtp),
+        "me@example.com",
+        crate::DEFAULT_WINDOW_DAYS,
+    );
+    if let AnyMail::GmailImap(adapter) = &mail {
+        adapter.look_at_every_mailbox();
+    }
+    let services = AccountServices {
+        mail,
+        calendar: None,
+        contacts: None,
+        rules: None,
+        auto_reply: None,
+        identities,
+    };
+    harness_of(imap, smtp, services).await
+}
+
+/// A harness for `services`, served by `imap` and `smtp`, on a new store
+/// with one account.
+async fn harness_of(
+    imap: Arc<FakeImap>,
+    smtp: Arc<FakeSmtp>,
+    services: AccountServices,
+) -> ImapHarness {
     let dir = tempfile::tempdir().unwrap();
     let db = Db::open(&dir.path().join("mail.db")).unwrap();
     let account_id = db
         .write(|c| accounts::insert_account(c, "me@example.com", 0))
         .await
         .unwrap();
-    let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
-    let services = AccountServices::imap(Arc::clone(&imap), Arc::clone(&smtp), settings);
-    if let AnyMail::Imap(adapter) = &services.mail {
-        adapter.look_at_every_mailbox();
-    }
     let (sender, events) = async_channel::unbounded();
     let sync = Arc::new(
         AccountSync::new(account_id, services, db.clone(), sender)

@@ -19,7 +19,7 @@ const BATCH_FROM: usize = 10;
 /// The labels `ops` add and remove, each list in the order the operations
 /// name them. A move, or a keyword Gmail has no label for, is not
 /// something Gmail can do.
-pub(super) fn labels_for(ops: &[MailOp]) -> Result<(Vec<String>, Vec<String>), BackendError> {
+pub(crate) fn labels_for(ops: &[MailOp]) -> Result<(Vec<String>, Vec<String>), BackendError> {
     let (mut add, mut remove) = (Vec::new(), Vec::new());
     for op in ops {
         let (membership, on) = match op {

@@ -3,7 +3,8 @@
 //! holds with a `match`: no boxed futures and no trait objects. Each
 //! adapter runs over a client enum from `clients.rs`, the real client or
 //! under the `fake` feature the in-memory one, so it appears here once:
-//! `Google` over Gmail, `Imap` over IMAP and SMTP, `Microsoft` over Graph,
+//! `Google` over Gmail, `Imap` over IMAP and SMTP, `GmailImap` over
+//! Gmail's IMAP and SMTP, `Microsoft` over Graph,
 //! `Pop3` over POP3 and SMTP, `Dav` over CalDAV or CardDAV, and `Sieve`
 //! over ManageSieve.
 
@@ -21,10 +22,10 @@ use super::clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyJmap, AnyPop3, AnyS
 use super::local::LocalRules;
 use super::{
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, Claimed,
-    ContactsService, Found, Google, Held, IdentityService, Imap, Jmap, JmapSieve, KeywordsPage,
-    Look, MailBackend, MailCapabilities, Microsoft, NoMail, Pop3, RawMessage, ReceiptOut, Refused,
-    Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery, SendAsAddress, Settled,
-    SieveRules, Storage, SyncState, Unapplied, Unheld, Want, Withheld,
+    ContactsService, Found, GmailImap, Google, Held, IdentityService, Imap, Jmap, JmapSieve,
+    KeywordsPage, Look, MailBackend, MailCapabilities, Microsoft, NoMail, Pop3, RawMessage,
+    ReceiptOut, Refused, Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery,
+    SendAsAddress, Settled, SieveRules, Storage, SyncState, Unapplied, Unheld, Want, Withheld,
 };
 use crate::api::{DraftRef, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -78,6 +79,7 @@ macro_rules! forward_all {
         match $self {
             $enum::Google(adapter) => adapter.$method($($arg),*).await,
             $enum::Imap(adapter) => adapter.$method($($arg),*).await,
+            $enum::GmailImap(adapter) => adapter.$method($($arg),*).await,
             $enum::Jmap(adapter) => adapter.$method($($arg),*).await,
             $enum::Microsoft(adapter) => adapter.$method($($arg),*).await,
             $enum::Pop3(adapter) => adapter.$method($($arg),*).await,
@@ -92,6 +94,7 @@ macro_rules! forward_all_now {
         match $self {
             $enum::Google(adapter) => adapter.$method($($arg),*),
             $enum::Imap(adapter) => adapter.$method($($arg),*),
+            $enum::GmailImap(adapter) => adapter.$method($($arg),*),
             $enum::Jmap(adapter) => adapter.$method($($arg),*),
             $enum::Microsoft(adapter) => adapter.$method($($arg),*),
             $enum::Pop3(adapter) => adapter.$method($($arg),*),
@@ -102,6 +105,7 @@ macro_rules! forward_all_now {
 
 type GoogleAdapter = Google<AnyGmail>;
 type ImapAdapter = Imap<AnyImap, AnySmtp>;
+type GmailImapAdapter = GmailImap<AnyImap, AnySmtp>;
 type JmapAdapter = Jmap<AnyJmap>;
 type MicrosoftAdapter = Microsoft<AnyGraph>;
 type Pop3Adapter = Pop3<AnySmtp, AnyPop3>;
@@ -111,6 +115,8 @@ type Pop3Adapter = Pop3<AnySmtp, AnyPop3>;
 pub enum AnyMail {
     Google(GoogleAdapter),
     Imap(ImapAdapter),
+    /// A Gmail account whose mail comes over IMAP.
+    GmailImap(GmailImapAdapter),
     Jmap(JmapAdapter),
     Microsoft(MicrosoftAdapter),
     Pop3(Pop3Adapter),
@@ -169,6 +175,7 @@ pub enum AnyAutoReply {
 pub enum AnyIdentities {
     Google(GoogleAdapter),
     Imap(ImapAdapter),
+    GmailImap(GmailImapAdapter),
     Jmap(JmapAdapter),
     Microsoft(MicrosoftAdapter),
     Pop3(Pop3Adapter),
@@ -181,6 +188,11 @@ impl AnyMail {
     /// calendar account.
     pub fn serves_mail(&self) -> bool {
         !matches!(self, AnyMail::NoMail(_))
+    }
+
+    /// A label of the account can take a colour. Gmail's IMAP keeps none.
+    pub fn label_colors(&self) -> bool {
+        !matches!(self, AnyMail::GmailImap(_))
     }
 
     /// The account's session offers Masked Email.
@@ -216,7 +228,7 @@ impl AnyMail {
     pub fn withheld(&self) -> Withheld {
         match self {
             AnyMail::Google(adapter) => adapter.withheld(),
-            AnyMail::Imap(_) => Withheld::NONE,
+            AnyMail::Imap(_) | AnyMail::GmailImap(_) => Withheld::NONE,
             AnyMail::Jmap(_) => Withheld::NONE,
             AnyMail::Microsoft(adapter) => adapter.withheld(),
             AnyMail::Pop3(_) => Withheld::NONE,

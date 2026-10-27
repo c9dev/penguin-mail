@@ -187,11 +187,7 @@ mod tests {
     use super::*;
 
     fn start(inherited: Option<&str>, language: Option<&str>, chosen: &str) -> Environment {
-        environment(
-            inherited.map(OsStr::new),
-            language.map(OsStr::new),
-            chosen,
-        )
+        environment(inherited.map(OsStr::new), language.map(OsStr::new), chosen)
     }
 
     /// A first start keeps the desktop's own LANGUAGE for a later restart

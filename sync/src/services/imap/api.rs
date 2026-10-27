@@ -64,6 +64,33 @@ pub trait ImapApi: Send + Sync + 'static {
         uids: &UidSet,
     ) -> impl Future<Output = Result<Vec<Fetched>, ImapError>> + Send;
 
+    /// As [`ImapApi::headers`], with Gmail's ids and labels in each answer's
+    /// `gmail` field.
+    fn gmail_headers(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> impl Future<Output = Result<Vec<Fetched>, ImapError>> + Send;
+
+    /// As [`ImapApi::flags`], with Gmail's ids and labels in each answer's
+    /// `gmail` field.
+    fn gmail_flags(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        changed_since: Option<u64>,
+    ) -> impl Future<Output = Result<Vec<FlagsOf>, ImapError>> + Send;
+
+    /// Adds Gmail `labels` to `uids`, or takes them away. A label that
+    /// starts with a backslash is one of Gmail's own.
+    fn store_labels(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        add: bool,
+        labels: &[String],
+    ) -> impl Future<Output = Result<(), ImapError>> + Send;
+
     /// `BODY.PEEK[<section>]`: `""` for the whole message, `"HEADER"`, or
     /// a part path such as `"1.2"`, whose bytes come still
     /// transfer-encoded for [`BodyStructure::decode`]. `None` when the
@@ -191,6 +218,29 @@ impl ImapApi for ImapClient {
         ImapClient::headers(self, mailbox, uids).await
     }
 
+    async fn gmail_headers(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<Fetched>, ImapError> {
+        ImapClient::gmail_headers(self, mailbox, uids).await
+    }
+
+    async fn gmail_flags(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        changed_since: Option<u64>,
+    ) -> Result<Vec<FlagsOf>, ImapError> {
+        ImapClient::gmail_flags(self, mailbox, uids, changed_since).await
+    }
+
+    async fn store_labels(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        add: bool,
+        labels: &[String],
+    ) -> Result<(), ImapError> {
+        ImapClient::store_labels(self, mailbox, uids, add, labels).await
+    }
+
     async fn body(
         &self,
         mailbox: &str,
@@ -309,6 +359,9 @@ mod tests {
         sendable(ImapApi::flags(&client, "INBOX", &uids, None));
         sendable(ImapApi::search(&client, "INBOX", "ALL"));
         sendable(ImapApi::headers(&client, "INBOX", &uids));
+        sendable(ImapApi::gmail_headers(&client, "INBOX", &uids));
+        sendable(ImapApi::gmail_flags(&client, "INBOX", &uids, None));
+        sendable(ImapApi::store_labels(&client, "INBOX", &uids, true, &[]));
         sendable(ImapApi::body(&client, "INBOX", 1, ""));
         sendable(ImapApi::structure(&client, "INBOX", 1));
         sendable(ImapApi::store(&client, "INBOX", &uids, true, &[]));

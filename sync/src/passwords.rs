@@ -81,6 +81,17 @@ impl KeyringPasswords {
         }
     }
 
+    /// The person's own Google project, kept once for every Google account
+    /// under `sign_in::own_client::PROJECT_KEY`. Apart from the per-account
+    /// clients, so forgetting an account never deletes it.
+    pub const GOOGLE_PROJECT_SERVICE: &'static str = "penguin-mail-google-project";
+
+    pub fn google_project() -> Self {
+        KeyringPasswords {
+            service: Self::GOOGLE_PROJECT_SERVICE.to_string(),
+        }
+    }
+
     /// JMAP passwords and tokens, apart from IMAP passwords, so a JMAP
     /// account keeps its CalDAV app password under `SERVICE` beside them.
     pub const JMAP_SERVICE: &'static str = "penguin-mail-jmap";
@@ -339,6 +350,8 @@ impl PasswordStore for Passwords {
 pub struct Secrets {
     pub google: Arc<dyn TokenStore>,
     pub google_clients: Arc<Passwords>,
+    /// The person's own Google project, shared by every Google account.
+    pub google_project: Arc<Passwords>,
     pub passwords: Arc<Passwords>,
     pub microsoft: Arc<Passwords>,
     pub jmap: Arc<Passwords>,
@@ -354,6 +367,7 @@ impl Secrets {
         Secrets {
             google: Arc::new(KeyringTokenStore::new()),
             google_clients: Arc::new(Passwords::Keyring(KeyringPasswords::google_client())),
+            google_project: Arc::new(Passwords::Keyring(KeyringPasswords::google_project())),
             passwords: Arc::new(Passwords::Keyring(KeyringPasswords::new())),
             microsoft: Arc::new(Passwords::Keyring(KeyringPasswords::microsoft())),
             jmap: Arc::new(Passwords::Keyring(KeyringPasswords::jmap())),
@@ -367,6 +381,7 @@ impl Secrets {
         Secrets {
             google: Arc::new(MemoryTokenStore::default()),
             google_clients: Arc::new(Passwords::Memory(MemoryPasswords::default())),
+            google_project: Arc::new(Passwords::Memory(MemoryPasswords::default())),
             passwords: Arc::new(Passwords::Memory(MemoryPasswords::default())),
             microsoft: Arc::new(Passwords::Memory(MemoryPasswords::default())),
             jmap: Arc::new(Passwords::Memory(MemoryPasswords::default())),
@@ -500,6 +515,40 @@ mod tests {
         secrets.forget(&account).await.unwrap();
         assert_eq!(secrets.passwords.load(3).unwrap(), None);
         assert_eq!(secrets.passwords.load_outgoing(3).unwrap(), None);
+    }
+
+    #[test]
+    fn the_google_project_sits_under_its_own_service() {
+        assert_eq!(
+            KeyringPasswords::GOOGLE_PROJECT_SERVICE,
+            "penguin-mail-google-project"
+        );
+    }
+
+    #[tokio::test]
+    async fn forgetting_a_google_account_keeps_the_project() {
+        let secrets = Secrets::memory();
+        let account = mailrs_domain::Account {
+            id: 5,
+            email: "dana@gmail.com".into(),
+            state: mailrs_domain::AccountState::Ok,
+            provider: mailrs_domain::Provider::Gmail,
+            provider_name: None,
+        };
+        secrets
+            .google_project
+            .save(crate::sign_in::own_client::PROJECT_KEY, "kept project")
+            .unwrap();
+        secrets.google_clients.save(5, "kept client").unwrap();
+        secrets.forget(&account).await.unwrap();
+        assert_eq!(secrets.google_clients.load(5).unwrap(), None);
+        assert_eq!(
+            secrets
+                .google_project
+                .load(crate::sign_in::own_client::PROJECT_KEY)
+                .unwrap(),
+            Some("kept project".to_string())
+        );
     }
 
     #[test]

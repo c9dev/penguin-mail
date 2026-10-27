@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{Account, Provider};
+use mailrs_domain::{Account, MailRoute, Provider};
 use mailrs_sync::{AutomaticReply, Offers, Permitted};
 
 use crate::core::Core;
@@ -21,6 +21,7 @@ use mailrs_domain::translate::{fill, gettext, with_reason};
 pub fn present(
     core: &Rc<Core>,
     account: &Account,
+    route: Option<MailRoute>,
     parent: &impl IsA<gtk::Widget>,
     grant: impl Fn() + 'static,
     saved: impl Fn(&str) + 'static,
@@ -65,6 +66,35 @@ pub fn present(
         closer.close();
     });
     dialog.present(Some(parent));
+
+    // Gmail keeps the automatic reply of an account read over IMAP on
+    // gmail.com, where the person sets it.
+    if account.provider == Provider::Gmail && route == Some(MailRoute::Imap) {
+        let text = crate::offered::reason_on(
+            account,
+            MailRoute::Imap,
+            mailrs_sync::Missing::AutoReply,
+            None,
+        );
+        let link = gtk::LinkButton::with_label(
+            crate::offered::SETTINGS_LINK,
+            &crate::offered::settings_link_label(),
+        );
+        link.set_halign(gtk::Align::Center);
+        let choices = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .build();
+        choices.append(&link);
+        let page = adw::StatusPage::builder()
+            .icon_name("mail-reply-sender-symbolic")
+            .title(glib::markup_escape_text(&text).as_str())
+            .child(&choices)
+            .build();
+        stack.add_named(&page, Some("elsewhere"));
+        stack.set_visible_child_name("elsewhere");
+        return;
+    }
 
     if core.account(account.id).is_none() {
         let said = gettext("This account is not syncing yet.");

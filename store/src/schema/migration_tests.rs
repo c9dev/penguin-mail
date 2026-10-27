@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime};
 
-use mailrs_domain::Memberships;
+use mailrs_domain::{MailRoute, Memberships};
 use mailrs_gmail::labels as gmail;
 use rusqlite::Connection;
 
@@ -361,8 +361,8 @@ fn an_account_from_before_the_migration_keeps_its_own_client() {
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
     assert_eq!(
-        crate::accounts::sign_in_client(&conn, id).unwrap(),
-        mailrs_domain::SignInClient::Own
+        crate::accounts::gmail_sign_in(&conn, id).unwrap(),
+        mailrs_domain::GmailSignIn::OwnProject
     );
 }
 
@@ -1428,4 +1428,42 @@ fn a_store_put_back_after_a_failed_migration_recounts_its_correspondents() {
         })
         .unwrap();
     assert_eq!(marks, (true, 0));
+}
+
+#[test]
+fn an_old_store_reads_every_gmail_account_as_on_the_api() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    configure(&conn).unwrap();
+    migrate(&mut conn, &MIGRATIONS[..64]).unwrap();
+    conn.execute(
+        "INSERT INTO accounts (email, added_at) VALUES ('dana@gmail.com', 1)",
+        [],
+    )
+    .unwrap();
+    migrate(&mut conn, MIGRATIONS).unwrap();
+    let id: i64 = conn
+        .query_row("SELECT id FROM accounts", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(
+        crate::accounts::gmail_sign_in(&conn, id).unwrap().route(),
+        MailRoute::GmailApi
+    );
+}
+
+#[test]
+fn an_old_store_reads_every_account_as_holding_no_online_accounts_id() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    configure(&conn).unwrap();
+    migrate(&mut conn, &MIGRATIONS[..65]).unwrap();
+    conn.execute(
+        "INSERT INTO accounts (email, added_at) VALUES ('dana@gmail.com', 1)",
+        [],
+    )
+    .unwrap();
+    migrate(&mut conn, MIGRATIONS).unwrap();
+    let id: i64 = conn
+        .query_row("SELECT id FROM accounts", [], |r| r.get(0))
+        .unwrap();
+    let sign_in = crate::accounts::gmail_sign_in(&conn, id).unwrap();
+    assert_eq!(sign_in.goa_id(), None);
 }

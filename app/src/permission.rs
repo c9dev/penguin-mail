@@ -10,8 +10,8 @@
 use std::collections::HashSet;
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{AccountId, Provider};
-use mailrs_gmail::SIGN_IN_SCOPES;
+use mailrs_domain::{AccountId, GmailSignIn, MailRoute, Provider, SignInClient};
+use mailrs_gmail::{BUILT_IN_SCOPES, FULL_SCOPES};
 use mailrs_sync::{Offers, Withheld};
 
 /// A permission sign-in leaves out, or one a caller can find missing.
@@ -336,12 +336,30 @@ pub fn grant_bar_title(account: &str, missing: &[Permission], provider: Provider
     )
 }
 
+/// The scopes `provider`'s account asks for at sign-in: what its client's
+/// own list holds. A built-in Gmail account that reads mail through IMAP
+/// asks for the built-in list, and so does an Online Accounts account,
+/// whose calendar token comes from the built-in client; every other Gmail
+/// account asks for the full one, as does an account whose sign-in is
+/// unknown.
+pub fn own_scopes(provider: Provider, sign_in: Option<&GmailSignIn>) -> &'static [&'static str] {
+    match (provider, sign_in) {
+        (Provider::Microsoft, _) => &mailrs_graph::SCOPES,
+        (_, Some(sign_in))
+            if sign_in.route() == MailRoute::Imap && sign_in.client() == SignInClient::BuiltIn =>
+        {
+            &BUILT_IN_SCOPES
+        }
+        _ => &FULL_SCOPES,
+    }
+}
+
 /// Whether the account's Grant Access banner shows: something is
 /// withheld, and `asked` (the account's `asked_scopes` row) does not
-/// already cover every scope of either provider's sign-in. An account asked for
-/// everything and unticked a box gets no banner; the feature it lacks
-/// says so where it lives instead.
-pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
+/// already cover every scope of its own client's list, `own`. An account
+/// asked for everything its client offers and unticked a box gets no
+/// banner; the feature it lacks says so where it lives instead.
+pub fn wants_banner(withheld: Withheld, asked: Option<&str>, own: &[&str]) -> bool {
     if withheld.is_empty() {
         return false;
     }
@@ -353,12 +371,11 @@ pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
         .map(str::to_ascii_lowercase)
         .collect();
     // Microsoft names its scopes in mixed case and may answer in another.
-    let covers = |scopes: &[&str]| {
-        scopes
-            .iter()
-            .all(|s| asked.contains(&s.to_ascii_lowercase()))
-    };
-    !(covers(&SIGN_IN_SCOPES) || covers(&mailrs_graph::SCOPES))
+    // `openid` and `email` only name the address; a consent never leaves
+    // them out.
+    !own.iter()
+        .filter(|scope| !matches!(**scope, "openid" | "email"))
+        .all(|scope| asked.contains(&scope.to_ascii_lowercase()))
 }
 
 /// Whether an invitation's card offers Grant Access: the account has a
@@ -527,9 +544,14 @@ mod tests {
         };
         assert!(!wants_banner(
             withheld,
-            Some(&mailrs_graph::SCOPES.join(" "))
+            Some(&mailrs_graph::SCOPES.join(" ")),
+            &mailrs_graph::SCOPES
         ));
-        assert!(wants_banner(withheld, Some("openid Mail.ReadWrite")));
+        assert!(wants_banner(
+            withheld,
+            Some("openid Mail.ReadWrite"),
+            &mailrs_graph::SCOPES
+        ));
     }
 
     #[test]
@@ -595,27 +617,27 @@ mod tests {
             ..Withheld::NONE
         };
         assert!(
-            wants_banner(some_withheld, None),
+            wants_banner(some_withheld, None, &FULL_SCOPES),
             "an old account asked for far less"
         );
         let old_asked = "https://www.googleapis.com/auth/gmail.modify \
                           https://www.googleapis.com/auth/gmail.settings.basic";
-        assert!(wants_banner(some_withheld, Some(old_asked)));
+        assert!(wants_banner(some_withheld, Some(old_asked), &FULL_SCOPES));
     }
 
     #[test]
     fn no_banner_once_the_account_was_asked_and_chose() {
-        let asked = SIGN_IN_SCOPES.join(" ");
+        let asked = FULL_SCOPES.join(" ");
         let some_withheld = Withheld {
             calendar: true,
             ..Withheld::NONE
         };
         assert!(
-            !wants_banner(some_withheld, Some(&asked)),
+            !wants_banner(some_withheld, Some(&asked), &FULL_SCOPES),
             "a consent that asked for everything got its answer already"
         );
         assert!(
-            !wants_banner(Withheld::NONE, Some(&asked)),
+            !wants_banner(Withheld::NONE, Some(&asked), &FULL_SCOPES),
             "nothing withheld needs no banner either"
         );
     }
@@ -653,7 +675,11 @@ mod tests {
             !withheld.calendar && !withheld.calendar_list,
             "every calendar still reads"
         );
-        assert!(wants_banner(withheld, consent.asked.as_deref()));
+        assert!(wants_banner(
+            withheld,
+            consent.asked.as_deref(),
+            &FULL_SCOPES
+        ));
         assert_eq!(
             withheld_permissions(withheld),
             [Permission::ManageCalendars, Permission::Drive]
@@ -675,11 +701,87 @@ mod tests {
         let conn = mailrs_store::open_in_memory().unwrap();
         let id = mailrs_store::accounts::insert_account(&conn, "ana@example.com", 0).unwrap();
         mailrs_store::accounts::set_granted(&conn, id, &five_scope_grant()).unwrap();
-        mailrs_store::accounts::set_asked(&conn, id, &SIGN_IN_SCOPES.join(" ")).unwrap();
+        mailrs_store::accounts::set_asked(&conn, id, &FULL_SCOPES.join(" ")).unwrap();
         let consent = mailrs_store::accounts::consent(&conn, id).unwrap();
         let granted = mailrs_gmail::Granted::parse(consent.granted.as_deref().unwrap());
         let withheld = mailrs_sync::withheld_by_grant(Some(&granted));
-        assert!(!wants_banner(withheld, consent.asked.as_deref()));
+        assert!(!wants_banner(
+            withheld,
+            consent.asked.as_deref(),
+            &FULL_SCOPES
+        ));
+    }
+
+    fn withheld_calendar() -> Withheld {
+        Withheld {
+            calendar: true,
+            ..Withheld::NONE
+        }
+    }
+
+    #[test]
+    fn a_built_in_imap_account_asked_for_its_own_list_gets_no_banner() {
+        let asked = BUILT_IN_SCOPES.join(" ");
+        assert!(!wants_banner(
+            withheld_calendar(),
+            Some(&asked),
+            &BUILT_IN_SCOPES
+        ));
+    }
+
+    #[test]
+    fn an_old_built_in_account_asked_for_the_full_list_gets_no_banner() {
+        assert!(!wants_banner(
+            withheld_calendar(),
+            Some(&FULL_SCOPES.join(" ")),
+            &FULL_SCOPES
+        ));
+    }
+
+    #[test]
+    fn an_asked_list_that_differs_from_the_clients_own_gives_a_banner() {
+        // The built-in list left the mail scope out, so against an own
+        // client's list it is short, and a scope is withheld.
+        let asked = BUILT_IN_SCOPES.join(" ");
+        assert!(wants_banner(
+            withheld_calendar(),
+            Some(&asked),
+            &FULL_SCOPES
+        ));
+        assert!(!wants_banner(Withheld::NONE, Some(&asked), &FULL_SCOPES));
+    }
+
+    #[test]
+    fn each_account_is_compared_with_its_own_clients_list() {
+        let built_in_imap = GmailSignIn::AppPassword {
+            google: SignInClient::BuiltIn,
+        };
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        };
+        assert_eq!(
+            own_scopes(Provider::Gmail, Some(&built_in_imap)),
+            BUILT_IN_SCOPES
+        );
+        assert_eq!(
+            own_scopes(Provider::Gmail, Some(&GmailSignIn::BuiltInApi)),
+            FULL_SCOPES
+        );
+        assert_eq!(own_scopes(Provider::Gmail, Some(&own_imap)), FULL_SCOPES);
+        assert_eq!(
+            own_scopes(Provider::Gmail, Some(&GmailSignIn::OwnProject)),
+            FULL_SCOPES
+        );
+        assert_eq!(own_scopes(Provider::Gmail, None), FULL_SCOPES);
+        assert_eq!(own_scopes(Provider::Microsoft, None), mailrs_graph::SCOPES);
+    }
+
+    #[test]
+    fn an_online_accounts_account_is_compared_with_the_built_in_list() {
+        let goa = GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
+        };
+        assert_eq!(own_scopes(Provider::Gmail, Some(&goa)), BUILT_IN_SCOPES);
     }
 
     #[test]

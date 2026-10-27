@@ -42,6 +42,11 @@ The app uses the desktop's Secret Service for passwords and its portals
 for desktop integration. Enable those services through your desktop's
 NixOS or Home Manager configuration.
 
+To sign in to Gmail through the Google account on your desktop, enable GNOME
+Online Accounts with `services.gnome.gnome-online-accounts.enable = true;` and
+add `pkgs.gnome-online-accounts-gtk` to `environment.systemPackages` on a
+desktop other than GNOME. GNOME turns the service on by itself.
+
 Updates come through your Nix profile, NixOS configuration, or Home
 Manager configuration. The Nix build does not offer the app's own updater.
 

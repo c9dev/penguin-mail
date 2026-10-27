@@ -79,6 +79,8 @@ pub struct App {
     /// Each account's consent, read in the same pass as `accounts` so the
     /// Grant Access banner never waits on a round trip of its own.
     consent: RefCell<HashMap<AccountId, accounts::Consent>>,
+    /// Each Gmail account's client and route, read with the consent.
+    google_sign_ins: RefCell<HashMap<AccountId, mailrs_domain::GmailSignIn>>,
     /// The JMAP accounts that signed in through the browser, as
     /// `reload_accounts` last read them, so signing in again says where.
     through_browser: RefCell<HashSet<AccountId>>,
@@ -121,6 +123,10 @@ pub struct App {
     /// list reloads only after new mail arrives.
     contacts: Contacts,
     pub(crate) contacts_stale: Cell<bool>,
+    /// The person heard this run that the Calendar API is off in their
+    /// own project. A read that works clears it, so a later switch-off
+    /// is told again.
+    calendar_api_off_told: Cell<bool>,
     /// Contact photos, read from disk as rows and conversations ask. The
     /// files on disk are known whenever the suggestions load.
     photos: Rc<crate::photos::ContactPhotos>,
@@ -183,6 +189,7 @@ impl App {
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
+            google_sign_ins: RefCell::default(),
             through_browser: RefCell::default(),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
@@ -210,6 +217,7 @@ impl App {
             settings_broken: RefCell::new(opened.broken),
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
+            calendar_api_off_told: Cell::new(false),
             photos: Rc::new(crate::photos::ContactPhotos::new()),
             pending_sends: Cell::new(0),
             dictionaries: dictionaries::Shared::default(),
@@ -858,7 +866,7 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (mut loaded, order, consent, through_browser) = self
+        let (mut loaded, order, consent, google_sign_ins, through_browser) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
@@ -876,7 +884,8 @@ impl App {
                     out.push((account, account_labels));
                 }
                 let consent = accounts::all_consent(c)?;
-                Ok((out, order, consent, through_browser))
+                let google_sign_ins = accounts::google_sign_ins(c)?;
+                Ok((out, order, consent, google_sign_ins, through_browser))
             })
             .await?;
         loaded.sort_by_key(|(account, _)| self.settings.borrow().account_rank(&account.email));
@@ -897,6 +906,7 @@ impl App {
         }
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
         *self.consent.borrow_mut() = consent;
+        *self.google_sign_ins.borrow_mut() = google_sign_ins;
         // A settings change that touches the accounts reloads them too, and
         // only an account this run has not seen needs Gmail asked about it.
         let arrived: Vec<Account> = loaded
@@ -918,6 +928,12 @@ impl App {
     /// it was ever asked for every scope, and which scopes it granted.
     pub fn consent(&self) -> HashMap<AccountId, accounts::Consent> {
         self.consent.borrow().clone()
+    }
+
+    /// How `id` signs in to Google, as `reload_accounts` last read it.
+    /// None for an account that is not a Gmail account.
+    pub fn google_sign_in(&self, id: AccountId) -> Option<mailrs_domain::GmailSignIn> {
+        self.google_sign_ins.borrow().get(&id).cloned()
     }
 
     /// Finds a display name and the send-as addresses for each account
@@ -1242,6 +1258,7 @@ impl App {
             }
             match read {
                 Ok(refreshed) => {
+                    this.calendar_api_off_told.set(false);
                     for turned_down in &refreshed.turned_down {
                         tracing::info!(event = %turned_down.event, "a calendar change was turned down");
                     }
@@ -1263,7 +1280,20 @@ impl App {
                         this.check_event_reminders();
                     }
                 }
-                Err(err) => tracing::warn!(%err, "could not read the calendars"),
+                Err(err) => {
+                    // Calendar switched off in the person's own project
+                    // refuses every read until it is turned on. The person
+                    // hears it once, not at every refresh.
+                    if let Some((service, url)) = api_off(&err)
+                        && !this.calendar_api_off_told.replace(true)
+                    {
+                        this.tell_window(Notice::ApiOff {
+                            service: &service,
+                            enable_url: &url,
+                        });
+                    }
+                    tracing::warn!(%err, "could not read the calendars");
+                }
             }
         });
     }
