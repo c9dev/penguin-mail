@@ -4392,7 +4392,7 @@ msgid "Quickest. About 2 minutes"
 msgstr "Найшвидше. Близько 2 хвилин"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:161 app/src/ui/add_account.rs:3876
+#: app/src/route_choice.rs:161 app/src/ui/add_account.rs:3879
 msgid "Use your Google project again"
 msgstr "Знову використати ваш проєкт Google"
 
@@ -5159,7 +5159,7 @@ msgstr "Увійдіть у браузері"
 msgid "Time left"
 msgstr "Залишилося часу"
 
-#: app/src/ui/add_account.rs:920 app/src/ui/add_account.rs:3961
+#: app/src/ui/add_account.rs:920 app/src/ui/add_account.rs:3964
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail чекатиме не довше п'яти хвилин."
 
@@ -5171,8 +5171,8 @@ msgstr "Відкрити сторінку знову"
 msgid "Copy Link"
 msgstr "Копіювати посилання"
 
-#: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4275
-#: app/src/ui/add_account.rs:4344 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4278
+#: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -5190,8 +5190,8 @@ msgid "Cancel"
 msgstr "Скасувати"
 
 #: app/src/ui/add_account.rs:1087 app/src/ui/add_account.rs:1242
-#: app/src/ui/add_account.rs:3161 app/src/ui/add_account.rs:3251
-#: app/src/ui/add_account.rs:3708 app/src/ui/gmail_password_page.rs:128
+#: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
+#: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
 #: app/src/ui/window.rs:1484
 msgid "Sign In"
@@ -5230,7 +5230,7 @@ msgstr ""
 msgid "Server Settings"
 msgstr "Налаштування сервера"
 
-#: app/src/ui/add_account.rs:1180 app/src/ui/add_account.rs:3308
+#: app/src/ui/add_account.rs:1180 app/src/ui/add_account.rs:3311
 msgid "Outgoing"
 msgstr "Вихідна пошта"
 
@@ -5243,11 +5243,11 @@ msgid "Servers"
 msgstr "Сервери"
 
 #: app/src/ui/add_account.rs:1195 app/src/ui/add_account.rs:1197
-#: app/src/ui/add_account.rs:2801 app/src/ui/add_account.rs:2805
+#: app/src/ui/add_account.rs:2804 app/src/ui/add_account.rs:2808
 msgid "Use these servers"
 msgstr "Використовувати ці сервери"
 
-#: app/src/ui/add_account.rs:1199 app/src/ui/add_account.rs:2803
+#: app/src/ui/add_account.rs:1199 app/src/ui/add_account.rs:2806
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -5399,7 +5399,7 @@ msgstr "Ім'я користувача"
 msgid "Leave the user name empty to sign in with your address."
 msgstr "Залиште ім'я користувача порожнім, щоб входити зі своєю адресою."
 
-#: app/src/ui/add_account.rs:1774 app/src/ui/add_account.rs:3621
+#: app/src/ui/add_account.rs:1774 app/src/ui/add_account.rs:3624
 msgid "Use These Settings"
 msgstr "Використати ці налаштування"
 
@@ -5428,15 +5428,15 @@ msgstr "Додати календар"
 msgid "Add a Calendar"
 msgstr "Додавання календаря"
 
-#: app/src/ui/add_account.rs:2566 app/src/ui/add_account.rs:4684
+#: app/src/ui/add_account.rs:2566 app/src/ui/add_account.rs:4687
 msgid "Looking up {domain}"
 msgstr "Пошук {domain}"
 
-#: app/src/ui/add_account.rs:2832
+#: app/src/ui/add_account.rs:2835
 msgid "{domain} uses {provider}"
 msgstr "{domain} використовує {provider}"
 
-#: app/src/ui/add_account.rs:2856
+#: app/src/ui/add_account.rs:2859
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -5444,38 +5444,38 @@ msgstr ""
 "Це не пароль від вебсайту {provider}. Створіть пароль із доступом до пошти в "
 "налаштуваннях {provider} і вставте його сюди."
 
-#: app/src/ui/add_account.rs:3153 app/src/ui/add_account.rs:3246
-#: app/src/ui/add_account.rs:3766 app/src/ui/add_account.rs:4755
+#: app/src/ui/add_account.rs:3156 app/src/ui/add_account.rs:3249
+#: app/src/ui/add_account.rs:3769 app/src/ui/add_account.rs:4758
 #: app/src/ui/gmail_password_page.rs:261
 msgid "Signing In…"
 msgstr "Вхід…"
 
-#: app/src/ui/add_account.rs:3327
+#: app/src/ui/add_account.rs:3330
 msgid "Could not reach {host}"
 msgstr "Не вдалося з'єднатися з {host}"
 
-#: app/src/ui/add_account.rs:3329
+#: app/src/ui/add_account.rs:3332
 msgid "Your password was not sent."
 msgstr "Ваш пароль не надіслано."
 
-#: app/src/ui/add_account.rs:3599
+#: app/src/ui/add_account.rs:3602
 msgid "Looking Up…"
 msgstr "Пошук…"
 
-#: app/src/ui/add_account.rs:3707 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "Увійти знову"
 
-#: app/src/ui/add_account.rs:3895 app/src/ui/own_project.rs:761
+#: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
 #: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2218
 msgid "Open Google Cloud"
 msgstr "Відкрити Google Cloud"
 
-#: app/src/ui/add_account.rs:3949 app/src/ui/add_account.rs:4325
+#: app/src/ui/add_account.rs:3952 app/src/ui/add_account.rs:4328
 msgid "Sign in with {provider} in your browser"
 msgstr "Увійдіть до {provider} у браузері"
 
-#: app/src/ui/add_account.rs:3954 app/src/ui/add_account.rs:4330
+#: app/src/ui/add_account.rs:3957 app/src/ui/add_account.rs:4333
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -5483,7 +5483,7 @@ msgstr ""
 "Сторінку входу {provider} відкрито у браузері. Коли ви завершите там, це "
 "вікно перейде до наступного кроку."
 
-#: app/src/ui/add_account.rs:3981
+#: app/src/ui/add_account.rs:3984
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5491,7 +5491,7 @@ msgstr ""
 "Цю копію Penguin Mail зібрано без входу через Microsoft. Завантажте випуск "
 "із github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3994
+#: app/src/ui/add_account.rs:3997
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -5499,32 +5499,32 @@ msgstr ""
 "Вхід через ваш власний клієнт Google. Сторінку входу Google відкрито у "
 "браузері. Коли ви завершите там, це вікно перейде до наступного кроку."
 
-#: app/src/ui/add_account.rs:4210
+#: app/src/ui/add_account.rs:4213
 msgid "Link copied"
 msgstr "Посилання скопійовано"
 
-#: app/src/ui/add_account.rs:4337
+#: app/src/ui/add_account.rs:4340
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail чекатиме не довше десяти хвилин."
 
-#: app/src/ui/add_account.rs:4360
+#: app/src/ui/add_account.rs:4363
 msgid "Canceling…"
 msgstr "Скасування…"
 
-#: app/src/ui/add_account.rs:4424
+#: app/src/ui/add_account.rs:4427
 msgid "{account} is added"
 msgstr "Обліковий запис {account} додано"
 
-#: app/src/ui/add_account.rs:4444
+#: app/src/ui/add_account.rs:4447
 msgid "{account} is ready"
 msgstr "Обліковий запис {account} готовий"
 
 #. Translators: the button that goes back to a step of the Google project setup.
-#: app/src/ui/add_account.rs:4602
+#: app/src/ui/add_account.rs:4605
 msgid "Go to Step {number}"
 msgstr "Перейти до кроку {number}"
 
-#: app/src/ui/add_account.rs:4758
+#: app/src/ui/add_account.rs:4761
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."

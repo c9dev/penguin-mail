@@ -4193,7 +4193,7 @@ msgid "Quickest. About 2 minutes"
 msgstr "가장 빠름. 약 2분"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:161 app/src/ui/add_account.rs:3876
+#: app/src/route_choice.rs:161 app/src/ui/add_account.rs:3879
 msgid "Use your Google project again"
 msgstr "Google 프로젝트 다시 사용"
 
@@ -4939,7 +4939,7 @@ msgstr "브라우저에서 로그인"
 msgid "Time left"
 msgstr "남은 시간"
 
-#: app/src/ui/add_account.rs:920 app/src/ui/add_account.rs:3961
+#: app/src/ui/add_account.rs:920 app/src/ui/add_account.rs:3964
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "5분 후 기다리기를 중단합니다."
 
@@ -4951,8 +4951,8 @@ msgstr "페이지 다시 열기"
 msgid "Copy Link"
 msgstr "링크 복사"
 
-#: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4275
-#: app/src/ui/add_account.rs:4344 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4278
+#: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4970,8 +4970,8 @@ msgid "Cancel"
 msgstr "취소"
 
 #: app/src/ui/add_account.rs:1087 app/src/ui/add_account.rs:1242
-#: app/src/ui/add_account.rs:3161 app/src/ui/add_account.rs:3251
-#: app/src/ui/add_account.rs:3708 app/src/ui/gmail_password_page.rs:128
+#: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
+#: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
 #: app/src/ui/window.rs:1484
 msgid "Sign In"
@@ -5010,7 +5010,7 @@ msgstr ""
 msgid "Server Settings"
 msgstr "서버 설정"
 
-#: app/src/ui/add_account.rs:1180 app/src/ui/add_account.rs:3308
+#: app/src/ui/add_account.rs:1180 app/src/ui/add_account.rs:3311
 msgid "Outgoing"
 msgstr "발신"
 
@@ -5023,11 +5023,11 @@ msgid "Servers"
 msgstr "서버"
 
 #: app/src/ui/add_account.rs:1195 app/src/ui/add_account.rs:1197
-#: app/src/ui/add_account.rs:2801 app/src/ui/add_account.rs:2805
+#: app/src/ui/add_account.rs:2804 app/src/ui/add_account.rs:2808
 msgid "Use these servers"
 msgstr "이 서버 사용"
 
-#: app/src/ui/add_account.rs:1199 app/src/ui/add_account.rs:2803
+#: app/src/ui/add_account.rs:1199 app/src/ui/add_account.rs:2806
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -5177,7 +5177,7 @@ msgstr "사용자 이름"
 msgid "Leave the user name empty to sign in with your address."
 msgstr "사용자 이름을 비워 두면 이메일 주소로 로그인합니다."
 
-#: app/src/ui/add_account.rs:1774 app/src/ui/add_account.rs:3621
+#: app/src/ui/add_account.rs:1774 app/src/ui/add_account.rs:3624
 msgid "Use These Settings"
 msgstr "이 설정 사용"
 
@@ -5206,15 +5206,15 @@ msgstr "캘린더 추가"
 msgid "Add a Calendar"
 msgstr "캘린더 추가"
 
-#: app/src/ui/add_account.rs:2566 app/src/ui/add_account.rs:4684
+#: app/src/ui/add_account.rs:2566 app/src/ui/add_account.rs:4687
 msgid "Looking up {domain}"
 msgstr "{domain} 조회 중"
 
-#: app/src/ui/add_account.rs:2832
+#: app/src/ui/add_account.rs:2835
 msgid "{domain} uses {provider}"
 msgstr "{domain}에서는 {provider} 사용"
 
-#: app/src/ui/add_account.rs:2856
+#: app/src/ui/add_account.rs:2859
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -5222,38 +5222,38 @@ msgstr ""
 "{provider} 웹사이트 비밀번호가 아닙니다. {provider} 설정에서 메일 접근 권한"
 "이 있는 앱 비밀번호를 만들어 여기에 붙여넣으세요."
 
-#: app/src/ui/add_account.rs:3153 app/src/ui/add_account.rs:3246
-#: app/src/ui/add_account.rs:3766 app/src/ui/add_account.rs:4755
+#: app/src/ui/add_account.rs:3156 app/src/ui/add_account.rs:3249
+#: app/src/ui/add_account.rs:3769 app/src/ui/add_account.rs:4758
 #: app/src/ui/gmail_password_page.rs:261
 msgid "Signing In…"
 msgstr "로그인 중…"
 
-#: app/src/ui/add_account.rs:3327
+#: app/src/ui/add_account.rs:3330
 msgid "Could not reach {host}"
 msgstr "{host}에 연결할 수 없습니다"
 
-#: app/src/ui/add_account.rs:3329
+#: app/src/ui/add_account.rs:3332
 msgid "Your password was not sent."
 msgstr "비밀번호를 전송하지 않았습니다."
 
-#: app/src/ui/add_account.rs:3599
+#: app/src/ui/add_account.rs:3602
 msgid "Looking Up…"
 msgstr "조회 중…"
 
-#: app/src/ui/add_account.rs:3707 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "다시 로그인"
 
-#: app/src/ui/add_account.rs:3895 app/src/ui/own_project.rs:761
+#: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
 #: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2218
 msgid "Open Google Cloud"
 msgstr "Google Cloud 열기"
 
-#: app/src/ui/add_account.rs:3949 app/src/ui/add_account.rs:4325
+#: app/src/ui/add_account.rs:3952 app/src/ui/add_account.rs:4328
 msgid "Sign in with {provider} in your browser"
 msgstr "브라우저에서 {provider}에 로그인"
 
-#: app/src/ui/add_account.rs:3954 app/src/ui/add_account.rs:4330
+#: app/src/ui/add_account.rs:3957 app/src/ui/add_account.rs:4333
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -5261,7 +5261,7 @@ msgstr ""
 "브라우저에서 {provider}의 로그인 페이지를 열었습니다. 완료하면 이 창에서 다"
 "음 단계로 넘어갑니다."
 
-#: app/src/ui/add_account.rs:3981
+#: app/src/ui/add_account.rs:3984
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5269,7 +5269,7 @@ msgstr ""
 "이 Penguin Mail은 Microsoft 로그인 기능 없이 빌드되었습니다. github.com/"
 "c9dev/penguin-mail/releases에서 배포 버전을 받으세요."
 
-#: app/src/ui/add_account.rs:3994
+#: app/src/ui/add_account.rs:3997
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -5277,32 +5277,32 @@ msgstr ""
 "내 Google 클라이언트로 로그인합니다. 브라우저에서 Google 로그인 페이지를 열었"
 "습니다. 완료하면 이 창에서 다음 단계로 넘어갑니다."
 
-#: app/src/ui/add_account.rs:4210
+#: app/src/ui/add_account.rs:4213
 msgid "Link copied"
 msgstr "링크를 복사했습니다"
 
-#: app/src/ui/add_account.rs:4337
+#: app/src/ui/add_account.rs:4340
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "10분 후 기다리기를 중단합니다."
 
-#: app/src/ui/add_account.rs:4360
+#: app/src/ui/add_account.rs:4363
 msgid "Canceling…"
 msgstr "취소 중…"
 
-#: app/src/ui/add_account.rs:4424
+#: app/src/ui/add_account.rs:4427
 msgid "{account} is added"
 msgstr "{account} 추가됨"
 
-#: app/src/ui/add_account.rs:4444
+#: app/src/ui/add_account.rs:4447
 msgid "{account} is ready"
 msgstr "{account} 준비 완료"
 
 #. Translators: the button that goes back to a step of the Google project setup.
-#: app/src/ui/add_account.rs:4602
+#: app/src/ui/add_account.rs:4605
 msgid "Go to Step {number}"
 msgstr "{number}단계로 가기"
 
-#: app/src/ui/add_account.rs:4758
+#: app/src/ui/add_account.rs:4761
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
