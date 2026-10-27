@@ -3,6 +3,7 @@
 
 mod accounts;
 pub(crate) mod dialog;
+pub(crate) mod google_route;
 pub(crate) mod space;
 
 use std::cell::{Cell, RefCell};
@@ -397,7 +398,12 @@ fn accounts_page(
     let order = accounts::Order::new(app, &group, defaults);
     let storage = app.storage();
     let mut space_rows = Vec::new();
-    let missing = missing_lines(accounts, |id, missing| app.core.missed(id, missing));
+    let missing = missing_lines(
+        accounts,
+        |id, missing| app.core.missed(id, missing),
+        |id| app.google_sign_in(id).map(|sign_in| sign_in.route()),
+    );
+    let connect: Rc<dyn Fn(AccountId)> = Rc::new(grant.clone());
     for (index, (account, offers)) in accounts.iter().enumerate() {
         let expanded = focus.map_or(index == 0, |focus| {
             focus.account().eq_ignore_ascii_case(&account.email)
@@ -418,8 +424,13 @@ fn accounts_page(
             dialog,
             &row,
         ));
-        row.add_row(&super::sender_prefs::account_row(app, account));
-        super::contacts_prefs::account_rows(
+        row.add_row(&super::sender_prefs::account_row(
+            app,
+            account,
+            app.google_sign_in(account.id)
+                .map(|sign_in| sign_in.route()),
+        ));
+        let contacts = super::contacts_prefs::account_rows(
             app,
             &settings,
             account,
@@ -441,6 +452,7 @@ fn accounts_page(
         );
         row.add_row(&space_row);
         space_rows.push((account.id, update));
+        google_route::rows(app, account, *offers, &row, &connect, contacts);
         if let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email) {
             let unavailable = adw::ActionRow::builder()
                 .use_markup(false)

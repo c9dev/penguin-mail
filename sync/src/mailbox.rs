@@ -777,7 +777,7 @@ impl<A: Accounts> Mailboxes<A> {
     }
 
     /// Fills the preview of one visible row. IMAP headers carry no preview,
-    /// so only that provider reads a missing body, through its unread-safe
+    /// so only IMAP, with or without Gmail's extensions, reads a missing body, through its unread-safe
     /// cache. Callers queue visible rows rather than whole mailbox pages.
     pub async fn preview(&self, target: Target) -> Result<Option<String>, SyncError> {
         let wanted = target.clone();
@@ -794,7 +794,10 @@ impl<A: Accounts> Mailboxes<A> {
         let Some(sync) = self.accounts.account(target.account_id) else {
             return Ok(None);
         };
-        if !matches!(&sync.services().mail, crate::AnyMail::Imap(_)) {
+        if !matches!(
+            &sync.services().mail,
+            crate::AnyMail::Imap(_) | crate::AnyMail::GmailImap(_)
+        ) {
             return Ok(None);
         }
         let body = sync.body(&id).await?;

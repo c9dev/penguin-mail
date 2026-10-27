@@ -254,6 +254,9 @@ either_client! {
         fn flags(mailbox: &str, uids: &UidSet, changed_since: Option<u64>) -> Imapped<Vec<FlagsOf>>;
         fn search(mailbox: &str, keys: &str) -> Imapped<Vec<u32>>;
         fn headers(mailbox: &str, uids: &UidSet) -> Imapped<Vec<mailrs_imap::Fetched>>;
+        fn gmail_headers(mailbox: &str, uids: &UidSet) -> Imapped<Vec<mailrs_imap::Fetched>>;
+        fn gmail_flags(mailbox: &str, uids: &UidSet, changed_since: Option<u64>) -> Imapped<Vec<FlagsOf>>;
+        fn store_labels(mailbox: &str, uids: &UidSet, add: bool, labels: &[String]) -> Imapped<()>;
         fn body(mailbox: &str, uid: u32, section: &str) -> Imapped<Option<Vec<u8>>>;
         fn structure(mailbox: &str, uid: u32) -> Imapped<Option<BodyStructure>>;
         fn store(mailbox: &str, uids: &UidSet, add: bool, flags: &[String]) -> Imapped<()>;

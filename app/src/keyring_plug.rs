@@ -65,11 +65,29 @@ pub fn read(packaging: Packaging, ask: impl FnOnce() -> Option<i32>) -> Plug {
     }
 }
 
-/// Runs `snapctl is-connected`, which exits 0 when the plug is connected
-/// and 1 when it is not.
+/// The plug that lets the snap read the desktop's Online Accounts, and
+/// what connects it. Like the keyring's, the Snap Store does not connect it
+/// on install.
+pub const ACCOUNTS_PLUG: &str = "accounts-service";
+pub const ACCOUNTS_COMMAND: &str = "snap connect penguin-mail:accounts-service";
+
+/// The Online Accounts plug as snapd answers now, asked off the main
+/// thread and not kept: the person may connect it while the app runs.
+pub async fn accounts_plug() -> Plug {
+    gio::spawn_blocking(|| read(crate::packaging::BUILT_FOR, || ask(ACCOUNTS_PLUG)))
+        .await
+        .unwrap_or(Plug::Unknown)
+}
+
 fn ask_snapctl() -> Option<i32> {
+    ask("password-manager-service")
+}
+
+/// Runs `snapctl is-connected` for `plug`, which exits 0 when the plug is
+/// connected and 1 when it is not.
+pub fn ask(plug: &str) -> Option<i32> {
     let status = std::process::Command::new("snapctl")
-        .args(["is-connected", "password-manager-service"])
+        .args(["is-connected", plug])
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -179,6 +197,17 @@ mod tests {
         for packaging in [Packaging::Native, Packaging::Rpm, Packaging::Flatpak] {
             assert_eq!(read(packaging, never_asked), Plug::NotNeeded);
         }
+    }
+
+    #[test]
+    fn the_accounts_plug_is_asked_by_its_own_name() {
+        assert_eq!(read(Packaging::Snap, || Some(1)), Plug::Disconnected);
+        assert_eq!(ACCOUNTS_PLUG, "accounts-service");
+        assert_eq!(
+            ACCOUNTS_COMMAND,
+            "snap connect penguin-mail:accounts-service"
+        );
+        assert_ne!(ACCOUNTS_COMMAND, COMMAND);
     }
 
     #[test]

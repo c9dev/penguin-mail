@@ -44,16 +44,15 @@ pub const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 /// through Drive needs no second consent later; nothing uses it yet.
 pub const DRIVE_FILE_SCOPE: &str = "https://www.googleapis.com/auth/drive.file";
 
-/// Every scope sign-in asks Google for, in one consent: [`DELETE_SCOPE`]
-/// (mail, and deleting it for good), settings, [`CONTACTS_WRITE_SCOPE`]
-/// (contacts, and changing them), events, the calendar list and the
-/// calendars themselves, and [`DRIVE_FILE_SCOPE`]. Google's verification
-/// team asks for least privilege, so this leaves out [`GMAIL_SCOPE`],
-/// [`crate::people::CONTACTS_SCOPE`] and [`CALENDAR_LIST_SCOPE`]: each is
-/// already covered by the wider scope in the list. A person may untick
-/// any of these on Google's screen; [`Granted`] says which the token
-/// still carries.
-pub const SIGN_IN_SCOPES: [&str; 7] = [
+/// Every scope an own Google client asks for, in one consent:
+/// [`DELETE_SCOPE`] (mail, and deleting it for good), settings,
+/// [`CONTACTS_WRITE_SCOPE`] (contacts, and changing them), events, the
+/// calendar list and the calendars themselves, and [`DRIVE_FILE_SCOPE`].
+/// The list leaves out [`GMAIL_SCOPE`], [`crate::people::CONTACTS_SCOPE`]
+/// and [`CALENDAR_LIST_SCOPE`]: each is already covered by the wider scope
+/// in the list. A person may untick any of these on Google's screen;
+/// [`Granted`] says which the token still carries.
+pub const FULL_SCOPES: [&str; 7] = [
     DELETE_SCOPE,
     SETTINGS_SCOPE,
     CONTACTS_WRITE_SCOPE,
@@ -62,6 +61,42 @@ pub const SIGN_IN_SCOPES: [&str; 7] = [
     CALENDARS_SCOPE,
     DRIVE_FILE_SCOPE,
 ];
+
+/// What the built-in client asks for: no mail scope, so no scope Google
+/// restricts. `openid` and `email` come first so the token answer carries
+/// an ID token that names the address.
+pub const BUILT_IN_SCOPES: [&str; 7] = [
+    "openid",
+    "email",
+    CONTACTS_WRITE_SCOPE,
+    CALENDAR_SCOPE,
+    CALENDAR_LIST_WRITE_SCOPE,
+    CALENDARS_SCOPE,
+    DRIVE_FILE_SCOPE,
+];
+
+/// Which list of scopes a client asks for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScopeList {
+    /// [`FULL_SCOPES`]: an own client, mail included.
+    Full,
+    /// [`BUILT_IN_SCOPES`]: the project's client, no mail.
+    BuiltIn,
+}
+
+impl ScopeList {
+    pub fn scopes(self) -> &'static [&'static str] {
+        match self {
+            ScopeList::Full => &FULL_SCOPES,
+            ScopeList::BuiltIn => &BUILT_IN_SCOPES,
+        }
+    }
+
+    /// Whether the list asks for the mail scope.
+    pub fn asks_mail(self) -> bool {
+        self == ScopeList::Full
+    }
+}
 
 #[derive(Clone)]
 pub struct AccessToken {
@@ -161,6 +196,47 @@ impl AccessToken {
 pub struct Tokens {
     pub access: AccessToken,
     pub refresh_token: String,
+    /// Set when the consent asked for `openid` and `email`.
+    pub id_token: Option<IdToken>,
+}
+
+/// The claims of Google's ID token that name the signed-in address.
+#[derive(Clone)]
+pub struct IdToken {
+    pub email: String,
+    pub email_verified: bool,
+}
+
+// The address names the person, so Debug output hides it.
+impl std::fmt::Debug for IdToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IdToken")
+            .field("email", &"<hidden>")
+            .field("email_verified", &self.email_verified)
+            .finish()
+    }
+}
+
+impl IdToken {
+    /// Reads the payload without checking the signature: the token comes
+    /// straight from Google's token endpoint over TLS. `None` when the
+    /// payload does not decode or holds no address. A missing
+    /// `email_verified` reads as unverified.
+    pub fn parse(token: &str) -> Option<IdToken> {
+        let payload = token.split('.').nth(1)?;
+        let bytes = URL_SAFE_NO_PAD.decode(payload.trim_end_matches('=')).ok()?;
+        let claims: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+        // Google has sent the claim as a bool and as the string "true".
+        let email_verified = match &claims["email_verified"] {
+            serde_json::Value::Bool(verified) => *verified,
+            serde_json::Value::String(verified) => verified == "true",
+            _ => false,
+        };
+        Some(IdToken {
+            email: claims["email"].as_str()?.to_string(),
+            email_verified,
+        })
+    }
 }
 
 impl std::fmt::Debug for Tokens {
@@ -168,6 +244,7 @@ impl std::fmt::Debug for Tokens {
         f.debug_struct("Tokens")
             .field("access", &self.access)
             .field("refresh_token", &"<hidden>")
+            .field("id_token", &self.id_token)
             .finish()
     }
 }
@@ -216,6 +293,7 @@ pub struct OAuthClient {
     /// Google counts quota against the OAuth client, so every account
     /// signed in through this one draws on the same pool. Clones share it.
     quota: std::sync::Arc<crate::limiter::QuotaPool>,
+    list: ScopeList,
 }
 
 // Written out so the secret never reaches a log line through `{:?}`. The
@@ -237,6 +315,8 @@ struct TokenResponse {
     refresh_token: Option<String>,
     #[serde(default)]
     scope: Option<String>,
+    #[serde(default)]
+    id_token: Option<String>,
 }
 
 impl TokenResponse {
@@ -264,7 +344,23 @@ impl OAuthClient {
             auth_url: GOOGLE_AUTH_URL.into(),
             token_url: GOOGLE_TOKEN_URL.into(),
             quota: std::sync::Arc::new(crate::limiter::QuotaPool::new()),
+            list: ScopeList::Full,
         }
+    }
+
+    /// The same client asking for `list` instead.
+    pub fn asking(mut self, list: ScopeList) -> Self {
+        self.list = list;
+        self
+    }
+
+    pub fn scope_list(&self) -> ScopeList {
+        self.list
+    }
+
+    /// The scopes this client asks for.
+    pub fn scopes(&self) -> &'static [&'static str] {
+        self.list.scopes()
     }
 
     /// The client ID, which Google shows on its consent screen and which
@@ -293,7 +389,7 @@ impl OAuthClient {
         &self.http
     }
 
-    /// Google's consent URL, asking for every [`SIGN_IN_SCOPES`] entry in
+    /// Google's consent URL, asking for every [`Self::scopes`] entry in
     /// one visit. Google still lets the person untick any of them; what
     /// the token ends up carrying comes back as [`Granted`].
     pub fn authorize_url(
@@ -302,6 +398,18 @@ impl OAuthClient {
         pkce: &Pkce,
         state: &str,
     ) -> Result<String, GmailError> {
+        self.authorize_url_hinted(redirect_uri, pkce, state, None)
+    }
+
+    /// [`Self::authorize_url`] naming the account to sign in, so Google
+    /// does not offer another.
+    pub fn authorize_url_hinted(
+        &self,
+        redirect_uri: &str,
+        pkce: &Pkce,
+        state: &str,
+        login_hint: Option<&str>,
+    ) -> Result<String, GmailError> {
         let mut url = Url::parse(&self.auth_url).map_err(|e| {
             GmailError::OAuth(format!("bad authorization URL {}: {e}", self.auth_url))
         })?;
@@ -309,13 +417,16 @@ impl OAuthClient {
             .append_pair("client_id", &self.client_id)
             .append_pair("redirect_uri", redirect_uri)
             .append_pair("response_type", "code")
-            .append_pair("scope", &SIGN_IN_SCOPES.join(" "))
+            .append_pair("scope", &self.scopes().join(" "))
             .append_pair("include_granted_scopes", "true")
             .append_pair("code_challenge", &pkce.challenge)
             .append_pair("code_challenge_method", "S256")
             .append_pair("state", state)
             .append_pair("access_type", "offline")
             .append_pair("prompt", "consent");
+        if let Some(hint) = login_hint {
+            url.query_pairs_mut().append_pair("login_hint", hint);
+        }
         Ok(url.into())
     }
 
@@ -342,6 +453,7 @@ impl OAuthClient {
         Ok(Tokens {
             access: response.access(),
             refresh_token,
+            id_token: response.id_token.as_deref().and_then(IdToken::parse),
         })
     }
 
@@ -395,6 +507,7 @@ pub fn built_in_client() -> Option<OAuthClient> {
         option_env!("PENGUIN_MAIL_GOOGLE_CLIENT_ID"),
         option_env!("PENGUIN_MAIL_GOOGLE_CLIENT_SECRET"),
     )
+    .map(|client| client.asking(ScopeList::BuiltIn))
 }
 
 /// Receives Google's redirect on 127.0.0.1 during consent.
@@ -516,6 +629,7 @@ mod build_client_tests {
         let tokens = Tokens {
             access: access.clone(),
             refresh_token: "1//refresh".into(),
+            id_token: None,
         };
         let authorized = crate::Authorized {
             email: "dana@gmail.com".into(),

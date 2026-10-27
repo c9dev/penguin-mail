@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{Account, Filter, Label, LabelKind};
+use mailrs_domain::{Account, Filter, Label, LabelKind, MailRoute, Provider};
 use mailrs_sync::{BackendError, Permitted, Replaced, RuleList, SyncError};
 
 use crate::core::Core;
@@ -46,11 +46,13 @@ struct Rules {
     dialog: adw::Dialog,
 }
 
-/// Shows the rules of `account`. `grant` runs when Gmail wants the
-/// settings permission first.
+/// Shows the rules of `account`, which reads its mail by `route` when it
+/// is a Gmail account. `grant` runs when Gmail wants the settings
+/// permission first.
 pub fn present(
     core: &Rc<Core>,
     account: &Account,
+    route: Option<MailRoute>,
     labels: Vec<Label>,
     filing: Filing,
     parent: &impl IsA<gtk::Widget>,
@@ -93,6 +95,18 @@ pub fn present(
     header.pack_start(&add);
     let toolbar = adw::ToolbarView::new();
     toolbar.add_top_bar(&header);
+    if let Some(route) = route.filter(|_| account.provider == Provider::Gmail)
+        && route == MailRoute::Imap
+    {
+        // The rules here run on this computer; Gmail's own filters stay
+        // on gmail.com.
+        let text = crate::offered::reason_on(account, route, mailrs_sync::Missing::Rules, None);
+        toolbar.add_top_bar(&link_banner(
+            &text,
+            &crate::offered::filters_link_label(),
+            crate::offered::FILTERS_LINK,
+        ));
+    }
     toolbar.set_content(Some(&stack));
     let nav = adw::NavigationView::new();
     nav.add(
@@ -149,6 +163,20 @@ pub fn present(
     });
     dialog.present(Some(parent));
     rules.reload();
+}
+
+/// A banner that says `text` and opens `link` from a button named `label`.
+pub fn link_banner(text: &str, label: &str, link: &'static str) -> adw::Banner {
+    let banner = adw::Banner::builder()
+        .title(glib::markup_escape_text(text).as_str())
+        .button_label(label)
+        .revealed(true)
+        .build();
+    banner.connect_button_clicked(move |banner| {
+        let window = banner.root().and_downcast::<gtk::Window>();
+        gtk::UriLauncher::new(link).launch(window.as_ref(), gtk::gio::Cancellable::NONE, |_| {});
+    });
+    banner
 }
 
 impl Rules {

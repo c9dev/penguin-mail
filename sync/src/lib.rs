@@ -14,6 +14,7 @@ mod engine;
 mod error;
 pub mod events;
 pub mod export;
+pub mod goa;
 pub mod hidden;
 pub mod invitations;
 pub mod lock;
@@ -88,13 +89,14 @@ pub use services::{
     AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyDav, AnyGmail, AnyGraph,
     AnyIdentities, AnyImap, AnyJmap, AnyMail, AnyPop3, AnyRules, AnySieve, AnySmtp,
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, Claimed,
-    ContactsService, Found, Google, GraphApi, Held, ID_PAGE_SIZE, IdentityService, Imap, ImapApi,
-    ImapSettings, Jmap, JmapApi, JmapSettings, JmapSieve, KeywordsOf, KeywordsPage, LIST_PAGE_SIZE,
-    LocalRules, Look, Looked, MailBackend, MailCapabilities, Microsoft, MicrosoftSettings, Missing,
-    NoMail, Offers, Pop3, Pop3Settings, Priority, RAW_LIMIT, RawMessage, ReceiptOut, Refused,
-    Relocated, RemoteChange, RemoteRef, RulesBeside, RulesPlace, RulesService, SERVER_REPLY_SCRIPT,
-    SearchQuery, SendAsAddress, Settled, SieveRules, Storage, Submit, SyncState, Unapplied, Unheld,
-    Want, Withheld, background, withheld_by_grant,
+    ContactsService, Found, GmailImap, GmailImapParts, Google, GraphApi, Held, ID_PAGE_SIZE,
+    IdentityService, Imap, ImapApi, ImapSettings, Jmap, JmapApi, JmapSettings, JmapSieve,
+    KeywordsOf, KeywordsPage, LIST_PAGE_SIZE, LocalRules, Look, Looked, MailBackend,
+    MailCapabilities, Microsoft, MicrosoftSettings, Missing, NoMail, Offers, Pop3, Pop3Settings,
+    Priority, RAW_LIMIT, RawMessage, ReceiptOut, Refused, Relocated, RemoteChange, RemoteRef,
+    RulesBeside, RulesPlace, RulesService, SERVER_REPLY_SCRIPT, SearchQuery, SendAsAddress,
+    Settled, SieveRules, Storage, Submit, SyncState, Unapplied, Unheld, Want, Withheld, background,
+    withheld_by_grant,
 };
 pub use settings::{
     AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted, Replaced, RuleList, SentRules,

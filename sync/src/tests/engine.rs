@@ -381,6 +381,16 @@ async fn opening_the_window_looks_for_mail_at_once() {
 }
 
 #[tokio::test]
+async fn an_own_account_whose_token_is_refused_needs_reauth() {
+    let s = setup().await;
+    s.fake.fail_next(GmailError::NeedsReauth);
+    s.engine
+        .start_account(1, AccountServices::google(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::NeedsReauth)).await;
+    assert_eq!(stored_state(&s).await, AccountState::NeedsReauth);
+}
+
+#[tokio::test]
 async fn the_engine_prefetches_the_configured_number_of_bodies() {
     let dir = tempfile::tempdir().unwrap();
     let db = Db::open(&dir.path().join("mail.db")).unwrap();

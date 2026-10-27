@@ -23,7 +23,9 @@ updates or overwrite another installation.
 
 The desktop supplies its display server, D-Bus services, keyring,
 bubblewrap and xdg-dbus-proxy. Install missing desktop services with your distribution's
-package manager. GnuPG and S/MIME use the system's `gpg` and `gpgsm`;
+package manager. To sign in to Gmail through the Google account on your
+desktop, install `gnome-online-accounts`, and on a desktop other than GNOME
+also `gnome-online-accounts-gtk`. GnuPG and S/MIME use the system's `gpg` and `gpgsm`;
 install `gnupg` and `gpgsm` if you need them. Claude Code and command-based
 MCP servers also use programs installed on your computer.
 

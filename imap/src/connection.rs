@@ -21,6 +21,7 @@ use crate::parse::{
     MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SelectReader, StructureReader,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
+use crate::types::{check_label, label_text};
 use crate::{
     AppendUid, BodyStructure, Capabilities, CopyUid, Fetched, FlagsOf, HEADER_FIELDS, ImapError,
     Listed, Login, QuotaUse, Selected, Since, UidSet, Woke,
@@ -78,6 +79,25 @@ impl Authenticator for Bearer<'_> {
     }
 }
 
+/// SASL XOAUTH2, which Google and Microsoft offer beside OAUTHBEARER. A
+/// rejected exchange sends a JSON challenge, answered with an empty line.
+struct XOAuth2<'a> {
+    login: &'a Login,
+    sent: bool,
+}
+
+impl Authenticator for XOAuth2<'_> {
+    type Response = String;
+
+    fn process(&mut self, _challenge: &[u8]) -> String {
+        if self.sent {
+            return String::new();
+        }
+        self.sent = true;
+        self.login.xoauth2_response()
+    }
+}
+
 impl<S: Stream> Conn<S> {
     /// Signs in on `stream`. `greeted` says the greeting was read already,
     /// as it is when STARTTLS ran before TLS. Reads the capabilities again
@@ -129,10 +149,16 @@ impl<S: Stream> Conn<S> {
             raw_capability(&mut client, &mut before).await?;
         }
         let has = |atom: &str| before.atoms.iter().any(|a| a == atom);
-        let session = if login.oauth {
+        // XOAUTH2 first: Gmail took it with a token from Online Accounts.
+        let session = if login.oauth && has("AUTH=XOAUTH2") {
+            client
+                .authenticate("XOAUTH2", XOAuth2 { login, sent: false })
+                .await
+                .map_err(|(err, _)| from_async_imap(err, Doing::Login))?
+        } else if login.oauth {
             if !has("AUTH=OAUTHBEARER") {
                 return Err(ImapError::Protocol(
-                    "the server does not offer OAUTHBEARER".into(),
+                    "the server offers neither XOAUTH2 nor OAUTHBEARER".into(),
                 ));
             }
             client
@@ -266,6 +292,29 @@ impl<S: Stream> Conn<S> {
         uids: &UidSet,
         changed_since: Option<u64>,
     ) -> Result<Vec<FlagsOf>, ImapError> {
+        self.flags_fetch(mailbox, uids, changed_since, false).await
+    }
+
+    /// [`Conn::flags`] with Gmail's ids and labels added to each item.
+    pub(crate) async fn gmail_flags(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+        changed_since: Option<u64>,
+    ) -> Result<Vec<FlagsOf>, ImapError> {
+        if !self.capabilities.gmail {
+            return Err(ImapError::Unsupported("X-GM-EXT-1"));
+        }
+        self.flags_fetch(mailbox, uids, changed_since, true).await
+    }
+
+    async fn flags_fetch(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+        changed_since: Option<u64>,
+        gmail: bool,
+    ) -> Result<Vec<FlagsOf>, ImapError> {
         if changed_since.is_some() && !self.capabilities.condstore {
             return Err(ImapError::Unsupported("CONDSTORE"));
         }
@@ -273,16 +322,20 @@ impl<S: Stream> Conn<S> {
             return Ok(Vec::new());
         }
         self.ensure_selected(mailbox).await?;
-        let items = match self.capabilities.condstore {
-            true => "(UID FLAGS MODSEQ)",
-            false => "(UID FLAGS)",
+        let modseq = match self.capabilities.condstore {
+            true => " MODSEQ",
+            false => "",
+        };
+        let gmail = match gmail {
+            true => " X-GM-MSGID X-GM-THRID X-GM-LABELS",
+            false => "",
         };
         let modifier = changed_since
             .map(|m| format!(" (CHANGEDSINCE {m})"))
             .unwrap_or_default();
         let mut reader = FlagsReader::new(uids);
         self.exec(
-            &format!("UID FETCH {uids} {items}{modifier}"),
+            &format!("UID FETCH {uids} (UID FLAGS{modseq}{gmail}){modifier}"),
             Doing::Mailbox(mailbox),
             &mut reader,
         )
@@ -312,6 +365,24 @@ impl<S: Stream> Conn<S> {
         mailbox: &str,
         uids: &UidSet,
     ) -> Result<Vec<Fetched>, ImapError> {
+        self.header_fetch(mailbox, uids, false).await
+    }
+
+    /// [`Conn::headers`] with Gmail's ids and labels added to each item.
+    pub(crate) async fn gmail_headers(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> Result<Vec<Fetched>, ImapError> {
+        self.header_fetch(mailbox, uids, true).await
+    }
+
+    async fn header_fetch(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+        gmail: bool,
+    ) -> Result<Vec<Fetched>, ImapError> {
         if uids.is_empty() {
             return Ok(Vec::new());
         }
@@ -320,8 +391,12 @@ impl<S: Stream> Conn<S> {
             true => " MODSEQ",
             false => "",
         };
+        let gmail = match gmail {
+            true => " X-GM-MSGID X-GM-THRID X-GM-LABELS",
+            false => "",
+        };
         let command = format!(
-            "UID FETCH {uids} (UID FLAGS INTERNALDATE RFC822.SIZE{modseq} BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])"
+            "UID FETCH {uids} (UID FLAGS INTERNALDATE RFC822.SIZE{modseq}{gmail} BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])"
         );
         let mut reader = HeadersReader::new(uids);
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
@@ -393,6 +468,42 @@ impl<S: Stream> Conn<S> {
         };
         self.exec(
             &format!("UID STORE {uids} {sign}FLAGS.SILENT ({list})"),
+            Doing::Mailbox(mailbox),
+            &mut (),
+        )
+        .await
+    }
+
+    /// `UID STORE` of Gmail labels. A system label (`\\Inbox`) goes as an
+    /// atom, any other quoted in modified UTF-7.
+    pub(crate) async fn store_labels(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+        add: bool,
+        labels: &[String],
+    ) -> Result<(), ImapError> {
+        if uids.is_empty() || labels.is_empty() {
+            return Ok(());
+        }
+        for label in labels {
+            check_label(label)?;
+        }
+        if !self.capabilities.gmail {
+            return Err(ImapError::Unsupported("X-GM-EXT-1"));
+        }
+        let list = labels
+            .iter()
+            .map(|l| label_text(l))
+            .collect::<Vec<_>>()
+            .join(" ");
+        self.ensure_selected(mailbox).await?;
+        let sign = match add {
+            true => '+',
+            false => '-',
+        };
+        self.exec(
+            &format!("UID STORE {uids} {sign}X-GM-LABELS.SILENT ({list})"),
             Doing::Mailbox(mailbox),
             &mut (),
         )
@@ -909,7 +1020,7 @@ mod tests {
 
     use super::{Conn, search_command};
     use crate::testing::{pipe, selected, server};
-    use crate::{CopyUid, ImapError, Login, Since, UidSet, Woke};
+    use crate::{CopyUid, HEADER_FIELDS, ImapError, Login, Since, UidSet, Woke};
 
     const GREETING: &str = "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN] ready";
     const ALL: &str = "IDLE QRESYNC CONDSTORE MOVE UIDPLUS SPECIAL-USE ENABLE";
@@ -1191,6 +1302,194 @@ mod tests {
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
         let fetched = conn.headers("INBOX", &UidSet::from_uid(101)).await.unwrap();
         assert!(fetched.is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_gmail_header_fetch_asks_for_the_three_items() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| {
+                match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => vec![
+                    "* 1 FETCH (UID 7 FLAGS () X-GM-MSGID 255 X-GM-THRID 256 X-GM-LABELS (\\Inbox) BODY[HEADER.FIELDS (SUBJECT)] {12}".into(),
+                    "Subject: x".into(),
+                    ")".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let fetched = conn
+            .gmail_headers("INBOX", &UidSet::from_uids([7]))
+            .await
+            .unwrap();
+        assert_eq!(fetched[0].gmail.as_ref().unwrap().id(), "ff");
+        let fetch = seen(&log)
+            .into_iter()
+            .find(|c| c.starts_with("UID FETCH"))
+            .unwrap();
+        assert_eq!(
+            fetch,
+            format!(
+                "UID FETCH 7 (UID FLAGS INTERNALDATE RFC822.SIZE MODSEQ X-GM-MSGID X-GM-THRID X-GM-LABELS BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])"
+            )
+        );
+    }
+
+    const GMAIL: &str = "IDLE QRESYNC CONDSTORE MOVE UIDPLUS SPECIAL-USE ENABLE X-GM-EXT-1";
+
+    /// Runs `call` against a Gmail-like server and returns the first
+    /// command that starts with `verb`.
+    async fn gmail_command<F>(verb: &str, call: F) -> String
+    where
+        F: AsyncFnOnce(&mut Conn<tokio::io::DuplexStream>) -> Result<(), ImapError>,
+    {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(GMAIL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        call(&mut conn).await.unwrap();
+        seen(&log)
+            .into_iter()
+            .find(|c| c.starts_with(verb))
+            .unwrap()
+    }
+
+    fn one() -> UidSet {
+        UidSet::from_uids([7])
+    }
+
+    #[tokio::test]
+    async fn archive_sends_minus_inbox_as_an_atom() {
+        let sent = gmail_command("UID STORE", async |conn| {
+            conn.store_labels("[Gmail]/All Mail", &one(), false, &["\\Inbox".to_string()])
+                .await
+        })
+        .await;
+        assert_eq!(sent, "UID STORE 7 -X-GM-LABELS.SILENT (\\Inbox)");
+    }
+
+    #[tokio::test]
+    async fn a_nested_accented_label_is_quoted_in_utf7() {
+        let sent = gmail_command("UID STORE", async |conn| {
+            conn.store_labels(
+                "INBOX",
+                &one(),
+                true,
+                &["Fam\u{ed}lia/F\u{e9}rias 2026".to_string()],
+            )
+            .await
+        })
+        .await;
+        assert_eq!(
+            sent,
+            "UID STORE 7 +X-GM-LABELS.SILENT (\"Fam&AO0-lia/F&AOk-rias 2026\")"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_label_with_a_line_break_is_refused_before_sending() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(GMAIL, log.clone(), |_| vec!["{tag} OK".into()]),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let err = conn
+            .store_labels("INBOX", &one(), true, &["a\r\nb".to_string()])
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ImapError::Invalid(_)));
+        assert!(seen(&log).iter().all(|c| !c.starts_with("UID STORE")));
+    }
+
+    #[tokio::test]
+    async fn an_empty_label_change_sends_nothing() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(GMAIL, log.clone(), |_| vec!["{tag} OK".into()]),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        conn.store_labels("INBOX", &one(), true, &[]).await.unwrap();
+        conn.store_labels("INBOX", &UidSet::default(), true, &["x".to_string()])
+            .await
+            .unwrap();
+        assert!(seen(&log).iter().all(|c| !c.starts_with("UID STORE")));
+    }
+
+    #[tokio::test]
+    async fn the_gmail_flags_fetch_reads_labels_with_changedsince() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(GMAIL, log.clone(), |command| {
+                match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => vec![
+                    "* 1 FETCH (UID 7 FLAGS (\\Seen) MODSEQ (91) X-GM-MSGID 255 X-GM-THRID 256 X-GM-LABELS (\\Inbox \"Work\"))".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let flags = conn.gmail_flags("INBOX", &one(), Some(90)).await.unwrap();
+        assert_eq!(flags.len(), 1);
+        assert_eq!(flags[0].modseq, Some(91));
+        let gmail = flags[0].gmail.as_ref().unwrap();
+        assert_eq!(gmail.id(), "ff");
+        assert_eq!(gmail.thread_id(), "100");
+        assert_eq!(gmail.labels, ["\\Inbox", "Work"]);
+        let fetch = seen(&log)
+            .into_iter()
+            .find(|c| c.starts_with("UID FETCH"))
+            .unwrap();
+        assert_eq!(
+            fetch,
+            "UID FETCH 7 (UID FLAGS MODSEQ X-GM-MSGID X-GM-THRID X-GM-LABELS) (CHANGEDSINCE 90)"
+        );
+    }
+
+    #[tokio::test]
+    async fn gmail_writes_need_x_gm_ext_1() {
+        let stream = pipe(GREETING, server(ALL, log(), |_| vec!["{tag} OK".into()]));
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        assert_eq!(
+            conn.store_labels("INBOX", &one(), true, &["x".to_string()])
+                .await
+                .unwrap_err(),
+            ImapError::Unsupported("X-GM-EXT-1")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_gmail_raw_search_with_accents_goes_as_a_literal() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(GMAIL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID SEARCH") => vec!["* SEARCH 4".into(), "{tag} OK".into()],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let keys = crate::types::gm_raw("from:joão").unwrap();
+        assert_eq!(conn.search("INBOX", &keys).await.unwrap(), [4]);
+        assert!(
+            seen(&log).contains(&"UID SEARCH CHARSET UTF-8 X-GM-RAW {10}from:joão".to_string())
+        );
     }
 
     #[tokio::test]

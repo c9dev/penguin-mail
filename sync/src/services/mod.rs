@@ -35,7 +35,7 @@ pub use caldav::CalDav;
 pub use carddav::CardDav;
 pub use clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyJmap, AnyPop3, AnySieve, AnySmtp};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
-pub use imap::{Imap, ImapApi, ImapSettings, Submit};
+pub use imap::{GmailImap, Imap, ImapApi, ImapSettings, Submit};
 pub use jmap::{Jmap, JmapApi, JmapSettings, JmapSieve, SERVER_REPLY_SCRIPT};
 pub use local::LocalRules;
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
@@ -253,6 +253,16 @@ pub enum RemoteChange {
         uidvalidity: u32,
         uids: UidSet,
     },
+    /// The message the store holds as `id` sits at `at` now. A server
+    /// whose ids outlive a move (Gmail over IMAP keeps the API's hex id)
+    /// reports where its message went this way, so the ref follows the
+    /// message between mailboxes while its id stays. The engine writes
+    /// every one before it reads refs for `Vanished` and `Holds`, so a
+    /// message that moved is not read as gone.
+    Located {
+        id: String,
+        at: Location,
+    },
     /// The server renumbered `mailbox`, as a new UIDVALIDITY says, and
     /// every name the store holds for its messages is void. The engine
     /// lists that mailbox again, whose UIDs now belong to `uidvalidity`,
@@ -395,6 +405,43 @@ pub struct Refused {
     pub auto_reply: bool,
 }
 
+/// The mail and identity of a Gmail account that reads its mail over
+/// Gmail's IMAP and sends over its SMTP, on the clients `imap` and `smtp`.
+/// The clients carry the sign-in: `mailrs_imap::Login::new(address,
+/// app_password)` for an app password, `Login::bearer(address, token)` for
+/// an OAuth access token from another source. The account's own address
+/// is `address`.
+pub fn gmail_over_imap(
+    imap: impl Into<AnyImap>,
+    smtp: impl Into<AnySmtp>,
+    address: &str,
+    window_days: i64,
+) -> (AnyMail, AnyIdentities) {
+    let adapter = GmailImap::over(Imap::new(
+        Arc::new(imap.into()),
+        Arc::new(smtp.into()),
+        ImapSettings {
+            address: address.to_string(),
+            provider_name: "Gmail".to_string(),
+            files_sent_mail: true,
+            window_days,
+        },
+    ));
+    (
+        AnyMail::GmailImap(adapter.clone()),
+        AnyIdentities::GmailImap(adapter),
+    )
+}
+
+/// The parts of a Gmail account whose mail comes over IMAP. `google` is
+/// `None` while the account holds no calendar token.
+pub struct GmailImapParts {
+    pub mail: AnyMail,
+    pub identities: AnyIdentities,
+    pub rules: AnyRules,
+    pub google: Option<Google<AnyGmail>>,
+}
+
 /// The services one account is served by. A provider that lacks one leaves
 /// its field `None`, and the module that needs it answers
 /// `BackendError::Unsupported`.
@@ -421,6 +468,27 @@ impl AccountServices {
             rules: Some(AnyRules::Google(google.clone())),
             auto_reply: Some(AnyAutoReply::Google(google.clone())),
             identities: AnyIdentities::Google(google),
+        }
+    }
+
+    /// A Gmail account whose mail comes over IMAP: the mail and the
+    /// address from `parts`, rules kept on this computer, and the
+    /// calendar and contacts of `parts.google` when the account holds a
+    /// calendar token. Google keeps no automatic reply for it here.
+    pub fn gmail_imap(parts: GmailImapParts) -> Self {
+        let GmailImapParts {
+            mail,
+            identities,
+            rules,
+            google,
+        } = parts;
+        AccountServices {
+            mail,
+            calendar: google.clone().map(AnyCalendar::Google),
+            contacts: google.map(AnyContacts::Google),
+            rules: Some(rules),
+            auto_reply: None,
+            identities,
         }
     }
 
@@ -619,7 +687,11 @@ impl AccountServices {
     /// adapter: an IMAP account withholds nothing, since it grants
     /// nothing to Google to begin with.
     pub fn withheld(&self) -> Withheld {
-        self.mail.withheld()
+        match (&self.mail, &self.calendar) {
+            (AnyMail::Google(_), _) => self.mail.withheld(),
+            (_, Some(AnyCalendar::Google(google))) => google.withheld().without_mail(),
+            _ => self.mail.withheld(),
+        }
     }
 
     /// Whether Hide from the List reaches the provider's own list. Only
@@ -665,6 +737,7 @@ impl AccountServices {
             focus_time: features.focus_time,
             declines: features.declines,
             masked_email: self.mail.masked_email(),
+            label_colors: caps.labels && self.mail.label_colors(),
         }
     }
 }
@@ -831,6 +904,16 @@ impl Withheld {
     pub fn is_empty(self) -> bool {
         self == Withheld::NONE
     }
+
+    /// Without the two grants that belong to mail, which an account
+    /// that reads its mail elsewhere never asked Google for.
+    pub fn without_mail(self) -> Withheld {
+        Withheld {
+            settings: false,
+            delete: false,
+            ..self
+        }
+    }
 }
 
 /// What one account can do, read once from its services: the mail
@@ -889,6 +972,8 @@ pub struct Offers {
     pub declines: bool,
     /// The account makes masked addresses on its server, as Fastmail does.
     pub masked_email: bool,
+    /// A label can take a colour. Gmail over IMAP keeps none.
+    pub label_colors: bool,
 }
 
 impl Offers {
@@ -919,6 +1004,7 @@ impl Offers {
         focus_time: false,
         declines: false,
         masked_email: false,
+        label_colors: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.

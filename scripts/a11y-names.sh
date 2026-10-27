@@ -15,8 +15,10 @@
 # reply and a forward in the composer with their history shown, opens Add
 # Account on its tiles and its Other page, opens Switch to JMAP from the
 # Fastmail account's menu, and walks the calendar. Then it starts the demo
-# once more, on Add Account's page for a calendar without mail, and reads
-# that.
+# again for the Add Account page for a calendar without mail, the Gmail
+# route, app password and consent pages, and reads each. Last it goes
+# through the own Google project setup with the keyboard alone, and checks
+# that a failed sign-in through it leads back to the step that fixes it.
 #
 # The hidden display needs Xvfb and xvfb-run, dbus-run-session,
 # at-spi2-core, python3 with the GObject and AT-SPI bindings, and the XTest
@@ -249,6 +251,60 @@ class Input:
         for index in range(count.value):
             self.x11.XMoveResizeWindow(self.display, ctypes.c_ulong(children[index]), 0, 0, width, height)
         self.x11.XFlush(self.display)
+
+    def key(self, keysym, held=()):
+        """Presses `keysym` with the keys in `held` (keysyms) down."""
+        codes = [self.x11.XKeysymToKeycode(self.display, k) for k in held]
+        for code in codes:
+            self.xtst.XTestFakeKeyEvent(self.display, code, 1, 0)
+        code = self.x11.XKeysymToKeycode(self.display, keysym)
+        for pressed in (1, 0):
+            self.xtst.XTestFakeKeyEvent(self.display, code, pressed, 0)
+            self.x11.XFlush(self.display)
+            time.sleep(0.05)
+        for code in reversed(codes):
+            self.xtst.XTestFakeKeyEvent(self.display, code, 0, 0)
+        self.x11.XFlush(self.display)
+        time.sleep(0.05)
+
+    def focus_largest(self):
+        """Gives the keyboard focus back to the largest top-level window,
+        as a window manager would once a dialog in front of it closes. The
+        hidden display has none, so the focus otherwise stays nowhere."""
+        import ctypes
+
+        # XWindowAttributes up to map_state, then room for the rest.
+        class Attributes(ctypes.Structure):
+            _fields_ = [("x", ctypes.c_int), ("y", ctypes.c_int), ("width", ctypes.c_int),
+                        ("height", ctypes.c_int), ("border_width", ctypes.c_int),
+                        ("depth", ctypes.c_int), ("visual", ctypes.c_void_p),
+                        ("root", ctypes.c_ulong), ("klass", ctypes.c_int),
+                        ("bit_gravity", ctypes.c_int), ("win_gravity", ctypes.c_int),
+                        ("backing_store", ctypes.c_int), ("backing_planes", ctypes.c_ulong),
+                        ("backing_pixel", ctypes.c_ulong), ("save_under", ctypes.c_int),
+                        ("colormap", ctypes.c_ulong), ("map_installed", ctypes.c_int),
+                        ("map_state", ctypes.c_int), ("pad", ctypes.c_char * 256)]
+
+        self.x11.XDefaultRootWindow.restype = ctypes.c_ulong
+        root = self.x11.XDefaultRootWindow(self.display)
+        root_ret, parent = ctypes.c_ulong(), ctypes.c_ulong()
+        children = ctypes.POINTER(ctypes.c_ulong)()
+        count = ctypes.c_uint()
+        self.x11.XQueryTree(self.display, ctypes.c_ulong(root), ctypes.byref(root_ret),
+                            ctypes.byref(parent), ctypes.byref(children), ctypes.byref(count))
+        best, area = None, 0
+        for index in range(count.value):
+            attributes = Attributes()
+            self.x11.XGetWindowAttributes(self.display, ctypes.c_ulong(children[index]),
+                                          ctypes.byref(attributes))
+            # A window that is not viewable (map_state 2) cannot take the
+            # focus: X answers BadMatch, which ends the walk.
+            if attributes.map_state == 2 and attributes.width * attributes.height > area:
+                best, area = children[index], attributes.width * attributes.height
+        if best is not None:
+            self.x11.XSetInputFocus(self.display, ctypes.c_ulong(best), 2, 0)
+            self.x11.XFlush(self.display)
+            time.sleep(0.3)
 
     def escape(self):
         code = self.x11.XKeysymToKeycode(self.display, 0xFF1B)
@@ -1126,7 +1182,172 @@ def walk_switch_jmap(keys):
     return len(unnamed)
 
 
+RETURN, TAB, LEFT, ALT, CONTROL, KEY_L = 0xFF0D, 0xFF09, 0xFF51, 0xFFE9, 0xFFE3, 0x6C
+OWN_HEADINGS = [
+    "Your own Google project", "Make a project", "Turn on Gmail, Calendar and Contacts",
+    "Name the sign-in screen", "Publish it", "Make the key for Penguin Mail",
+    "Give the file to Penguin Mail",
+]
+DESKTOP_KEY = ('{"installed":{"client_id":"123-abc.apps.googleusercontent.com",'
+               '"project_id":"penguin-mail-4711","client_secret":"GOCSPX-abc"}}')
+
+
+def find_node(role, name, showing_only=True):
+    for app in penguins()[0]:
+        for node in nodes(app):
+            try:
+                if node.get_role_name() != role or (node.get_name() or "").strip() != name:
+                    continue
+                if showing_only and not node.get_state_set().contains(Atspi.StateType.SHOWING):
+                    continue
+                return node
+            except Exception:
+                continue
+    return None
+
+
+def focused():
+    """The control with the keyboard focus. A window or a panel that holds
+    it says FOCUSED too, so a control a person acts on comes first."""
+    holders = []
+    for app in penguins()[0]:
+        for node in nodes(app):
+            try:
+                if node.get_state_set().contains(Atspi.StateType.FOCUSED):
+                    if node.get_role_name() in ACTS:
+                        return node
+                    holders.append(node)
+            except Exception:
+                continue
+    return holders[0] if holders else None
+
+
+def focused_name():
+    node = focused()
+    try:
+        return (node.get_name() or "").strip() if node is not None else ""
+    except Exception:
+        return ""
+
+
+def walk_own_project(keys):
+    """Goes through the own Google project setup with the keyboard alone:
+    Start, then Next on each step, the key file through the file chooser,
+    then Alt+Left back to the intro, the focus on a named control on every
+    page. Gives back how many problems it met, unnamed controls included."""
+    import os
+
+    problems = 0
+    seen = []
+
+    def read_page():
+        for app in penguins()[0]:
+            walk(app, ["own project"], seen)
+
+    def heading_shows(name):
+        return wait_until(lambda: find_node("heading", name) is not None, 8.0)
+
+    if not wait_until(lambda: find_node("button", "Start") is not None, 30):
+        print("The setup did not open on its intro.", file=sys.stderr)
+        return 1
+    time.sleep(1.0)
+    read_page()
+    keys.key(RETURN)
+    for index, heading in enumerate(OWN_HEADINGS[1:], start=1):
+        if not heading_shows(heading):
+            print("own project: no page %r" % heading, file=sys.stderr)
+            return problems + 1
+        time.sleep(0.6)
+        read_page()
+        if index == len(OWN_HEADINGS) - 1:
+            break
+        for _ in range(30):
+            if focused_name() == "Next":
+                break
+            keys.key(TAB)
+            time.sleep(0.15)
+        if focused_name() != "Next":
+            print("own project: Tab never reached Next on %r" % heading, file=sys.stderr)
+            return problems + 1
+        keys.key(RETURN)
+    # Step 6: the key file, through GTK's own chooser.
+    # A folder of the walk's own, removed when the walk ends, so a run
+    # outside the sandbox leaves nothing in the home folder.
+    import atexit
+    import shutil
+    import tempfile
+    folder = tempfile.mkdtemp(prefix="penguin-a11y-")
+    atexit.register(shutil.rmtree, folder, True)
+    path = os.path.join(folder, "client_secret_123.json")
+    with open(path, "w") as out:
+        out.write(DESKTOP_KEY)
+    if focused_name() != "Choose File…":
+        print("own project: step 6 opened with the focus on %r" % focused_name(), file=sys.stderr)
+        problems += 1
+    keys.key(RETURN)
+    if not wait_until(lambda: find_node("button", "Open") is not None, 10):
+        print("own project: Choose File… opened no chooser", file=sys.stderr)
+        return problems + 1
+    time.sleep(0.8)
+    keys.key(KEY_L, held=(CONTROL,))
+    time.sleep(0.6)
+    entry = None
+    for app in penguins()[0]:
+        for node in nodes(app):
+            try:
+                if (node.get_role_name() == "text"
+                        and node.get_state_set().contains(Atspi.StateType.SHOWING)
+                        and node.get_state_set().contains(Atspi.StateType.EDITABLE)
+                        and node.get_state_set().contains(Atspi.StateType.FOCUSED)):
+                    entry = node
+            except Exception:
+                continue
+    if entry is None:
+        print("own project: the chooser took no typed path", file=sys.stderr)
+        return problems + 1
+    Atspi.EditableText.set_text_contents(entry, path)
+    time.sleep(0.4)
+    find_node("button", "Open").get_action_iface().do_action(0)
+    if not wait_until(lambda: find_node("label", "Ready: Penguin Mail project") is not None, 10):
+        print("own project: the key file was not taken", file=sys.stderr)
+        return problems + 1
+    # The chooser was a window of its own; the display has no window
+    # manager to hand the focus back to the main window once it closed.
+    keys.focus_largest()
+    time.sleep(0.6)
+    if focused_name() != "Sign in with Google":
+        print("own project: after the file the focus is on %r" % focused_name(), file=sys.stderr)
+        problems += 1
+    read_page()
+    # Back to the intro, one page at a time, never losing the focus.
+    for heading in reversed(OWN_HEADINGS[:-1]):
+        keys.key(LEFT, held=(ALT,))
+        if not heading_shows(heading):
+            print("own project: Alt+Left did not reach %r" % heading, file=sys.stderr)
+            return problems + 1
+        time.sleep(0.6)
+        if not focused_name():
+            print("own project: no named focus on %r" % heading, file=sys.stderr)
+            problems += 1
+    unnamed = sorted({row[2] for row in seen if not row[1]})
+    print("own project: %d controls, %d unnamed" % (len(seen), len(unnamed)))
+    for path_seen in unnamed:
+        print("  %s" % path_seen)
+    return problems + len(unnamed)
+
+
 calendar_unnamed = conversation_unnamed = composer_unnamed = added_unnamed = switch_unnamed = 0
+own_problems = 0
+if sys.argv[1:] == ["--own-project"]:
+    own_problems = walk_own_project(Input())
+if sys.argv[1:] == ["--own-denied"]:
+    # A sign-in through the person's project that Google turned down
+    # offers the step that fixes it, by name, and the button goes there.
+    if not wait_until(lambda: find_node("button", "Go to Step 4") is not None, 30):
+        sys.exit("The failed sign-in offered no Go to Step 4.")
+    find_node("button", "Go to Step 4").get_action_iface().do_action(0)
+    if not wait_until(lambda: find_node("heading", "Publish it") is not None, 8):
+        sys.exit("Go to Step 4 did not open Publish it.")
 if sys.argv[1:] == ["--calendar-page"]:
     # The demo opens Add Account on its calendar page a moment after the
     # window has settled. A dialog that never opened has no unnamed
@@ -1137,6 +1358,20 @@ if sys.argv[1:] == ["--calendar-page"]:
 
     if not wait_until(page_read, 20):
         sys.exit("Add Account did not open on its calendar page.")
+    print("calendar page: " + ", ".join(sorted({row[1] for row in found if row[1]})[:12]))
+if sys.argv[1:2] == ["--shown"]:
+    # A stage the demo opens on its own: a page, a sheet or a banner. The
+    # walk waits for the control named in the arguments (role, then
+    # name), and fails aloud when it never comes, since a stage that did
+    # not open has no unnamed control either.
+    want_role, want_name = sys.argv[2], sys.argv[3]
+
+    def stage_read():
+        controls()
+        return any(row[0] == want_role and row[1] == want_name for row in found)
+
+    if not wait_until(stage_read, 30):
+        sys.exit("The demo did not show %s %r." % (want_role, want_name))
 if sys.argv[1:] == ["--menus"]:
     open_menus()
     switch_unnamed = walk_switch_jmap(Input())
@@ -1150,7 +1385,7 @@ print("%d controls, %d named, %d unnamed" % (len(found), len(found) - len(unname
 for role, _, path in unnamed:
     print("  %s" % path)
 sys.exit(1 if (unnamed or calendar_unnamed or conversation_unnamed or composer_unnamed or added_unnamed
-             or switch_unnamed) else 0)
+             or switch_unnamed or own_problems) else 0)
 PYTHON
 
 if [ "$here" = --here ]; then
@@ -1191,7 +1426,8 @@ take_down() {
         [ "$pid" = "$$" ] && continue
         if tr '\0' '\n' 2>/dev/null <"$proc/environ" |
             grep -qxF "XDG_RUNTIME_DIR=$sandbox/run"; then
-            kill "$pid" 2>/dev/null
+            # One that ended since the list was read fails no run.
+            kill "$pid" 2>/dev/null || true
         fi
     done
 }
@@ -1228,18 +1464,24 @@ fi
 # New events start on the demo's Google Workspace calendar, whose editor
 # has the Type row the walk opens. The demo's first account plays a
 # personal Gmail one, which makes events alone.
-printf 'last_calendar_account = "dana@fernwood.example"\n' >"$sandbox/settings.toml"
 export MAILRS_SETTINGS="$sandbox/settings.toml"
 inside="
 $launcher --launch-immediately &
 sleep 1
 $registry &
 sleep 1
-# Starts the demo with \$1 in its environment and walks it as \$2 says.
+# Starts the demo with \$1 in its environment and walks it as the other arguments say.
 walk_demo() {
+    # Each start gets fresh settings: the calendar walk leaves the app in
+    # the calendar space, where the mail window and its banner do not show.
+    # \$WALK_SPACE, when set, names the space the app starts in.
+    printf 'last_calendar_account = \"dana@fernwood.example\"\n' >$sandbox/settings.toml
+    if [ -n \"\${WALK_SPACE:-}\" ]; then
+        printf 'space = \"%s\"\n' \"\$WALK_SPACE\" >>$sandbox/settings.toml
+    fi
     env $webkit \$1 $app --demo >$sandbox/app.log 2>&1 &
     window=\$!
-    python3 $walk \$2
+    python3 $walk \"\${@:2}\"
     status=\$?
     kill \$window 2>/dev/null
     wait \$window 2>/dev/null
@@ -1250,7 +1492,19 @@ walk_demo() {
 # rest. The page that adds a calendar without mail sits behind a row, and
 # a row answers no AT-SPI action; the demo opens Add Account on that page
 # when asked, as it does for the screenshots, so a second start reads it.
-walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page
+walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && WALK_SPACE=calendar walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=routes --shown 'list item' 'Use the Google account on this computer' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=consent --shown 'button' 'Continue to Google' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=gmail-password-filled --shown 'link' 'Open App passwords' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=gmail-password-help --shown 'button' 'Use another way to sign in' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=gmail-password-refused --shown 'button' 'Open App passwords' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-use --shown 'button' 'Use This Account' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-add --shown 'button' 'Open Online Accounts' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-waiting --shown 'button' 'Other ways to sign in' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-other --shown 'button' 'Use It' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=goa-snap --shown 'button' 'Copy' \
+    && walk_demo 'MAILRS_DEMO_ADD_ACCOUNT=own-intro GDK_DEBUG=no-portals' --own-project \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=own-denied --own-denied
 status=\$?
 # A failed run says why the app did what it did: a crash or a warning in
 # its log is often the whole answer, and CI keeps nothing else.

@@ -1,3 +1,4 @@
+pub(crate) mod gmail_route;
 mod storage;
 
 use std::future::Future;
@@ -6,7 +7,7 @@ use std::time::Duration;
 
 use mailrs_dav::{DavClient, Kind as DavKind, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
-use mailrs_domain::{Account, AccountId, AccountState, Provider};
+use mailrs_domain::{Account, AccountId, AccountState, GmailSignIn, MailRoute, Provider};
 use mailrs_gmail::{GmailClient, GmailError, Granted, OAuthClient, TokenStore};
 use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
@@ -101,17 +102,22 @@ pub fn smtp_login(user: &str, password: String, outgoing: Option<String>) -> Log
     Login::new(user, outgoing.unwrap_or(password))
 }
 
-/// The build's own sign-in clients, and the own Google client the
-/// environment names. A copy built from source without the release values
-/// has neither built-in client, and its Google and Microsoft accounts
-/// cannot refresh their tokens unless they signed in with an own client.
+/// The build's own sign-in clients, the own Google client the environment
+/// names, and the one the person's setup chose. A Google sign-in takes the
+/// environment's client first, then the setup's, then the one an account
+/// signing in again kept, then the build's. A copy built from source
+/// without the release values has neither built-in client, and its Google
+/// and Microsoft accounts cannot refresh their tokens unless they signed in
+/// with an own client.
 #[derive(Clone, Default)]
 pub struct Clients {
     pub google: Option<OAuthClient>,
     pub microsoft: Option<MicrosoftClient>,
-    /// The own Google client a new Google sign-in uses in place of
-    /// `google`, or why the environment does not name one.
+    /// The own Google client the environment names, which wins over every
+    /// other, or why the environment does not name one.
     pub own_google: Option<Result<OwnClient, OwnClientError>>,
+    /// The own Google client the person's setup chose for this sign-in.
+    pub chosen_google: Option<OwnClient>,
 }
 
 impl Clients {
@@ -121,6 +127,7 @@ impl Clients {
             google: mailrs_gmail::built_in_client(),
             microsoft: mailrs_graph::built_in_client(),
             own_google: None,
+            chosen_google: None,
         }
     }
 
@@ -131,6 +138,14 @@ impl Clients {
         Clients {
             own_google: own_client::from_env(),
             ..Clients::built_in()
+        }
+    }
+
+    /// These clients with `own` as the one the setup chose.
+    pub fn with_chosen(self, own: Option<OwnClient>) -> Clients {
+        Clients {
+            chosen_google: own,
+            ..self
         }
     }
 }
@@ -168,6 +183,9 @@ pub struct Connector {
     pub config: Config,
     pub clients: Clients,
     pub secrets: Secrets,
+    /// The desktop's Online Accounts, which signs a Gmail account in for
+    /// its mail when the account was linked through it.
+    pub goa: Arc<dyn crate::goa::OnlineAccounts>,
 }
 
 impl Connector {
@@ -177,19 +195,10 @@ impl Connector {
         let db = &self.db;
         let window_days = self.config.engine_config().window_days;
         let started = match account.provider {
-            Provider::Gmail => {
-                let kept = Arc::clone(&self.secrets.google_clients);
-                let Some(oauth) =
-                    account_client(db, &self.config, self.clients.google.clone(), kept, account)
-                        .await?
-                else {
-                    tracing::warn!(account = account.id, "no Google client for this account");
-                    return Ok(Connected::NeedsSignIn(Lacks::Client));
-                };
-                connect_account(oauth, Arc::clone(&self.secrets.google), account, db)
-                    .await
-                    .map(AccountServices::google)
-            }
+            Provider::Gmail => match self.connect_gmail(account).await? {
+                Ok(services) => Ok(services),
+                Err(lacks) => return Ok(Connected::NeedsSignIn(lacks)),
+            },
             Provider::Imap => {
                 connect_imap(
                     db,
@@ -225,6 +234,49 @@ impl Connector {
                 Ok(Connected::NeedsSignIn(Lacks::Secret))
             }
             Err(err) => Err(err),
+        }
+    }
+
+    /// A Gmail account's services, built by where its mail comes from.
+    /// `Err` names what the account lacks to have them.
+    async fn connect_gmail(
+        &self,
+        account: &Account,
+    ) -> Result<Result<AccountServices, Lacks>, SyncError> {
+        let id = account.id;
+        let sign_in = self
+            .db
+            .read(move |c| accounts::gmail_sign_in(c, id))
+            .await?;
+        if let GmailSignIn::OnlineAccounts { goa_id } = sign_in {
+            // Boxed: the Online Accounts path would make this future large
+            // enough to overflow a test thread's stack.
+            return Box::pin(gmail_route::goa_services(self, account, goa_id)).await;
+        }
+        match sign_in.route() {
+            MailRoute::GmailApi => {
+                let kept = Arc::clone(&self.secrets.google_clients);
+                let Some(oauth) = account_client(
+                    &self.db,
+                    &self.config,
+                    self.clients.google.clone(),
+                    kept,
+                    account,
+                )
+                .await?
+                else {
+                    tracing::warn!(account = account.id, "no Google client for this account");
+                    return Ok(Err(Lacks::Client));
+                };
+                match connect_account(oauth, Arc::clone(&self.secrets.google), account, &self.db)
+                    .await
+                {
+                    Ok(client) => Ok(Ok(AccountServices::google(client))),
+                    Err(SyncError::Backend(BackendError::NeedsReauth)) => Ok(Err(Lacks::Secret)),
+                    Err(err) => Err(err),
+                }
+            }
+            MailRoute::Imap => gmail_route::connect_imap_route(self, account).await,
         }
     }
 

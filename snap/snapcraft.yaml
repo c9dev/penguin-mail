@@ -42,6 +42,11 @@ apps:
       # the app finds it missing at start and shows the command that
       # connects it.
       - password-manager-service
+      # The Google account the person already added to the desktop's Online
+      # Accounts. The store does not connect this plug on install until the
+      # auto-connect request is granted; the app shows the command until
+      # then.
+      - accounts-service
       - desktop
       - desktop-legacy
       - wayland

@@ -67,6 +67,7 @@ fn an_imap_account_offers_mail_alone() {
             focus_time: false,
             declines: false,
             masked_email: false,
+            label_colors: false,
         }
     );
 }

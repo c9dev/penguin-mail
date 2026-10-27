@@ -25,10 +25,15 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
 use mailrs_sync::read_inbox::InboxesRead;
 use mailrs_sync::services::finding;
+use mailrs_sync::sign_in::app_password::{
+    NewGmailImap, check_gmail, gmail_imap_signed_in, read_pasted,
+};
+use mailrs_sync::sign_in::own_client::{OwnClient, saved_project};
 use mailrs_sync::sign_in::{
-    Browser, BrowserReady, BrowserSignInError, JmapBrowser, NewCalDav, NewImap, NewJmap, NewPop3,
-    Wanted, caldav_signed_in, caldav_signed_in_again, check_pop3, google_sign_in, imap_signed_in,
-    in_browser, jmap_in_browser, jmap_signed_in, pop3_signed_in,
+    Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, KeptClient, NewCalDav,
+    NewImap, NewJmap, NewPop3, Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent,
+    check_pop3, google_sign_in, imap_signed_in, in_browser, jmap_in_browser, jmap_signed_in,
+    kept_own_client, pop3_signed_in,
 };
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, Clients, Connector,
@@ -43,6 +48,8 @@ use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoMail};
 use crate::starting::{self, Connected, Starting};
 use mailrs_domain::translate::gettext;
+
+mod goa;
 
 /// The store could not be updated to this version, and the copy taken
 /// before the attempt was put back. Startup shows this with a way to
@@ -137,6 +144,14 @@ pub struct Core {
     /// The IMAP accounts whose server also speaks JMAP, with the session
     /// to sign in to, as `look_for_jmap` found them.
     switch_offers: RefCell<HashMap<AccountId, JmapFound>>,
+    /// The desktop's Online Accounts, or a stand-in in the demo.
+    goa: Arc<dyn mailrs_sync::goa::OnlineAccounts>,
+    /// What the app last read from it.
+    goa_state: Arc<goa::GoaState>,
+    /// The watch on it, while one runs.
+    goa_watch: RefCell<Option<tokio::task::JoinHandle<()>>>,
+    /// Whether an account reads through Online Accounts.
+    goa_linked: Cell<bool>,
     /// The accounts `look_for_jmap` has looked at this run, found or not.
     switch_looked: RefCell<HashSet<AccountId>>,
     /// Where each kind of account keeps what signs it in: the keyring, or
@@ -320,6 +335,10 @@ impl Core {
             verdicts: RefCell::default(),
             misses: RefCell::new(misses),
             switch_offers: RefCell::default(),
+            goa: online_accounts(demo),
+            goa_state: Arc::default(),
+            goa_watch: RefCell::new(None),
+            goa_linked: Cell::new(false),
             switch_looked: RefCell::default(),
             secrets: match demo {
                 true => Secrets::memory(),
@@ -340,25 +359,36 @@ impl Core {
     }
 
     /// Whether this copy has a client for a sign-in on `browser`'s page:
-    /// the build's own, or for Google an own client the environment names.
-    /// A copy built from source without the release values has no built-in
-    /// client. Half an own client counts as one, so the sign-in goes on to
-    /// say which value is missing.
-    pub fn built_with_sign_in(&self, browser: Browser) -> bool {
+    /// the build's own, or for Google an own client the environment names,
+    /// or the one an account signing in again kept, which `own_account`
+    /// says it has. A copy built from source without the release values
+    /// has no built-in client. Half an own client counts as one, so the
+    /// sign-in goes on to say which value is missing.
+    pub fn built_with_sign_in(&self, browser: Browser, own_account: bool) -> bool {
         let clients = Clients::current();
         match browser {
-            Browser::Google => !matches!(
-                google_sign_in(&clients),
-                Err(BrowserSignInError::NoClient(_))
-            ),
+            Browser::Google => {
+                own_account
+                    || !matches!(
+                        google_sign_in(&clients, None),
+                        Err(BrowserSignInError::NoClient(_))
+                    )
+            }
             Browser::Microsoft => clients.microsoft.is_some(),
         }
     }
 
-    /// Which client a Google sign-in started now would go through, or why
-    /// it cannot start. The environment is read again on each call.
-    pub fn google_sign_in_client(&self) -> Result<SignInClient, BrowserSignInError> {
-        google_sign_in(&Clients::current()).map(|(_, kind)| kind)
+    /// Where the client of a Google sign-in started now would come from,
+    /// with `chosen` the setup's client, or why it cannot start. The
+    /// environment is read again on each call. An account's kept client is
+    /// not looked up here, so a sign-in again that would take it reads as
+    /// the built-in one.
+    pub fn google_sign_in_client(
+        &self,
+        chosen: Option<&OwnClient>,
+    ) -> Result<ClientSource, BrowserSignInError> {
+        google_sign_in(&Clients::current().with_chosen(chosen.cloned()), None)
+            .map(|choice| choice.source)
     }
 
     /// What connecting, signing in and forgetting an account needs, with
@@ -369,12 +399,117 @@ impl Core {
             config: self.config.borrow().clone(),
             clients: Clients::current(),
             secrets: self.secrets.clone(),
+            goa: self.goa.clone(),
         }
     }
 
     /// The sync section of `config.toml`.
     pub fn sync_config(&self) -> mailrs_sync::config::SyncConfig {
         self.config.borrow().sync.clone()
+    }
+
+    /// Where the client of a Google sign-in for `address` would come
+    /// from, with `chosen` the setup's client: as
+    /// [`Core::google_sign_in_client`], and the account's kept client when
+    /// `address` is an account that signed in through its own project.
+    /// Unlike that one it never fails: a sign-in that cannot start says
+    /// so itself.
+    pub async fn google_sign_in_source(
+        &self,
+        chosen: Option<&OwnClient>,
+        address: Option<String>,
+    ) -> ClientSource {
+        if let Ok(source @ (ClientSource::Environment | ClientSource::Setup)) =
+            self.google_sign_in_client(chosen)
+        {
+            return source;
+        }
+        let Some(address) = address else {
+            return ClientSource::BuiltIn;
+        };
+        let own = self
+            .db
+            .read(move |c| {
+                let Some(account) = accounts::account_by_email(c, &address)? else {
+                    return Ok(false);
+                };
+                Ok(accounts::google_sign_ins(c)?
+                    .get(&account.id)
+                    .is_some_and(|sign_in| sign_in.client() == SignInClient::Own))
+            })
+            .await
+            .unwrap_or(false);
+        if own {
+            ClientSource::Kept
+        } else {
+            ClientSource::BuiltIn
+        }
+    }
+
+    /// Google Cloud's page of the project the Gmail account at `address`
+    /// signs in through, for Preferences' link.
+    pub async fn own_project_page(&self, address: String) -> String {
+        let connector = self.connector();
+        let kept = self
+            .call(async move {
+                let Connector {
+                    db,
+                    config,
+                    secrets,
+                    ..
+                } = &connector;
+                kept_own_client(db, config, secrets, &address).await
+            })
+            .await;
+        let project = match kept {
+            Ok(KeptClient::Found(own)) => own.project_id().map(str::to_string),
+            _ => None,
+        };
+        crate::own_project::project_page(project.as_deref())
+    }
+
+    /// The Google project kept from an earlier setup, if there is one.
+    /// The demo keeps none.
+    pub async fn saved_project(&self) -> Option<OwnClient> {
+        if self.demo {
+            return None;
+        }
+        let secrets = self.secrets.clone();
+        self.call(async move { Ok::<_, anyhow::Error>(saved_project(&secrets).await) })
+            .await
+            .ok()
+            .flatten()
+    }
+
+    /// The step of the own Google project setup the person reached.
+    pub fn google_setup_step(&self) -> Option<u8> {
+        self.config.borrow().google_setup_step
+    }
+
+    /// Remembers the setup step reached, or `None` once the setup ends.
+    /// Writes `config.toml`; the demo keeps it in memory. Unlike
+    /// `update_sync` it leaves the engine running.
+    pub fn set_google_setup_step(&self, step: Option<u8>) -> Result<()> {
+        let updated = {
+            let mut config = self.config.borrow_mut();
+            if config.google_setup_step == step {
+                return Ok(());
+            }
+            config.google_setup_step = step;
+            config.clone()
+        };
+        if !self.demo {
+            updated.save(&config_path()?)?;
+        }
+        Ok(())
+    }
+
+    /// Forgets the saved setup step after the setup's client signed an
+    /// account in. A file that will not write is logged; the sign-in holds.
+    fn finish_google_setup(&self) {
+        if let Err(err) = self.set_google_setup_step(None) {
+            tracing::warn!(%err, "could not clear the saved Google setup step");
+        }
     }
 
     /// Saves new sync settings and restarts every account's loop with them.
@@ -419,21 +554,27 @@ impl Core {
                 config,
                 clients: Clients::built_in(),
                 secrets: self.secrets.clone(),
+                goa: self.goa.clone(),
             },
             demo: self.demo_mail.clone(),
         });
-        let port = Arc::new(EnginePort {
-            engine,
-            running: Arc::clone(&self.engine),
-            db: self.db.clone(),
-            events: self.events_tx.clone(),
-            started: self.started_tx.clone(),
-        });
+        let (running, events, started) = (
+            Arc::clone(&self.engine),
+            self.events_tx.clone(),
+            self.started_tx.clone(),
+        );
         let db = self.db.clone();
         self.runtime.spawn(async move {
             let Ok(all) = db.read(accounts::list_accounts).await else {
                 return;
             };
+            let port = Arc::new(EnginePort {
+                engine,
+                running,
+                db,
+                events,
+                started,
+            });
             let connect = move |account: Account| {
                 let reach = Arc::clone(&reach);
                 async move { reach.connect(&account).await }
@@ -817,6 +958,7 @@ impl Core {
         urls: async_channel::Sender<String>,
         wanted: Wanted,
         cancel: async_channel::Receiver<()>,
+        chosen: Option<OwnClient>,
     ) -> Result<(Account, Option<String>)> {
         if self.demo {
             bail!(gettext("Demo mode cannot add real accounts."));
@@ -825,28 +967,81 @@ impl Core {
             .engine
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
-        let connector = self.connector();
+        let mut connector = self.connector();
+        connector.clients = connector.clients.with_chosen(chosen);
+        let setup = connector.clients.chosen_google.is_some();
         let calendar_copy = self.calendar_copy();
-        self.call(async move {
-            let run = in_browser(&connector, browser, wanted, move |url: &str| {
-                let _ = urls.try_send(url.to_string());
-            });
-            let waited = tokio::select! {
-                waited = tokio::time::timeout(BROWSER_WAIT, run) => waited,
-                _ = cancel.recv() => bail!(gettext("Canceled.")),
-            };
-            let signed = waited.map_err(|_| {
-                anyhow!(gettext(
-                    "Gave up waiting for the browser after five minutes."
-                ))
-            })??;
-            engine.start_account(signed.account.id, signed.services);
-            // The sign-in may have granted the calendar permission, so the
-            // copy stops waiting out an earlier refusal.
-            calendar_copy.permission_changed(signed.account.id);
-            Ok::<_, anyhow::Error>((signed.account, signed.name))
-        })
-        .await
+        let db = self.db.clone();
+        let signed = self
+            .call(async move {
+                let run = in_browser(&connector, browser, wanted, move |url: &str| {
+                    let _ = urls.try_send(url.to_string());
+                });
+                let waited = tokio::select! {
+                    waited = tokio::time::timeout(BROWSER_WAIT, run) => waited,
+                    _ = cancel.recv() => bail!(gettext("Canceled.")),
+                };
+                let signed = waited.map_err(|_| BrowserTimedOut)??;
+                match signed.services {
+                    mailrs_sync::Connected::Ready(services) => {
+                        engine.start_account(signed.account.id, services)
+                    }
+                    // A Gmail account whose mail route still lacks its secret
+                    // waits for it, as at any start.
+                    mailrs_sync::Connected::NeedsSignIn(_) => {
+                        let id = signed.account.id;
+                        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+                            .await?;
+                    }
+                }
+                // The sign-in may have granted the calendar permission, so the
+                // copy stops waiting out an earlier refusal.
+                calendar_copy.permission_changed(signed.account.id);
+                Ok::<_, anyhow::Error>((signed.account, signed.name))
+            })
+            .await?;
+        if setup {
+            self.finish_google_setup();
+        }
+        Ok(signed)
+    }
+
+    /// Signs in to a Gmail account with the app password `pasted` holds:
+    /// Gmail's servers take the login first, then the account, its servers
+    /// and its password are kept and the account starts. Nothing is kept
+    /// when the login fails.
+    pub async fn sign_in_with_app_password(
+        &self,
+        address: String,
+        pasted: String,
+    ) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("Demo mode cannot add real accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, secrets) = (self.db.clone(), self.secrets.clone());
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        let account = self
+            .call(async move {
+                let pasted = read_pasted(&pasted);
+                let checked = check_gmail(&address, pasted.secret()).await?;
+                let new = NewGmailImap {
+                    address: address.trim().to_lowercase(),
+                    servers: checked.servers,
+                    password: pasted.secret().to_string(),
+                };
+                let account = gmail_imap_signed_in(&db, &secrets, new, now_millis()).await?;
+                start_again(&reach, &engine, &db, &account, false).await?;
+                Ok::<_, anyhow::Error>(account)
+            })
+            .await?;
+        Ok(account)
     }
 
     /// The servers for `address`, found the way discovery goes: the
@@ -1217,7 +1412,9 @@ impl Core {
             };
             let signed =
                 jmap_in_browser(&connector, offer, &address, dav_password, open, canceled).await?;
-            engine.start_account(signed.account.id, signed.services);
+            if let mailrs_sync::Connected::Ready(services) = signed.services {
+                engine.start_account(signed.account.id, services);
+            }
             Ok::<_, anyhow::Error>(signed.account)
         })
         .await
@@ -1604,6 +1801,67 @@ impl Core {
 }
 
 impl Core {
+    /// Whether the calendar consent of `account` meets Google through the
+    /// built-in client. False in the demo and when the store cannot say.
+    pub async fn consent_through_built_in(&self, account: Account) -> bool {
+        if self.demo {
+            return false;
+        }
+        let connector = self.connector();
+        self.call(async move {
+            mailrs_sync::sign_in::consent_through_built_in(&connector, &account).await
+        })
+        .await
+        .unwrap_or(false)
+    }
+
+    /// Asks Google, through the built-in client, for the calendar,
+    /// contacts and Drive access of `account`, a Gmail account whose mail
+    /// comes over IMAP, and starts the account again with them. Its mail
+    /// route stays as it was. `urls` gets Google's page, and closing the
+    /// channel behind `cancel` ends the wait and leaves the account as it
+    /// was.
+    pub async fn connect_calendar(
+        &self,
+        account: Account,
+        urls: async_channel::Sender<String>,
+        cancel: async_channel::Receiver<()>,
+    ) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("The demo cannot connect a calendar."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let db = self.db.clone();
+        let connector = self.connector();
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        self.call(async move {
+            let open = move |url: &str| {
+                let _ = urls.try_send(url.to_string());
+            };
+            let consent = calendar_consent(&connector, &account, open);
+            let signed = tokio::select! {
+                waited = tokio::time::timeout(BROWSER_WAIT, consent) => waited
+                    .map_err(|_| BrowserTimedOut)??,
+                _ = cancel.recv() => bail!(gettext("Canceled.")),
+            };
+            // The account's services read the new token once its loop starts again.
+            engine.stop_account(signed.id);
+            if let Err(err) = start_again(&reach, &engine, &db, &signed, false).await {
+                tracing::warn!(account = signed.id, error = %err, "could not start the account again after its calendar consent");
+            }
+            Ok::<_, anyhow::Error>(signed)
+        })
+        .await
+    }
+}
+
+impl Core {
     /// Signs in on the JMAP server's own page in the browser for Switch to
     /// JMAP, and hands back the grant; nothing is kept until the switch
     /// runs. The account goes on syncing over IMAP while the browser is
@@ -1632,6 +1890,12 @@ impl Core {
         .await
     }
 }
+
+/// Nobody came back from the browser within [`BROWSER_WAIT`]. Its own type
+/// lets the own-project setup tell a wait that ran out from other errors.
+#[derive(Debug, thiserror::Error)]
+#[error("{}", gettext("Gave up waiting for the browser after five minutes."))]
+pub struct BrowserTimedOut;
 
 /// Starts `account`'s loop on the services the store names for it now,
 /// or marks it as needing a sign-in when nothing signs it in. Once a
@@ -1778,6 +2042,23 @@ impl Background for Core {
             task.await;
         });
     }
+}
+
+/// The desktop's Online Accounts. The demo holds one Google account of its
+/// own, so the pages that use it can be seen without touching the person's.
+fn online_accounts(demo: bool) -> Arc<dyn mailrs_sync::goa::OnlineAccounts> {
+    if !demo {
+        return mailrs_sync::goa::session();
+    }
+    let fake = mailrs_sync::goa::fake::FakeAccounts::new();
+    fake.add(mailrs_sync::goa::GoaAccount {
+        id: "account_1_0".into(),
+        identity: "dana@example.com".into(),
+        presentation: "dana@example.com".into(),
+        mail_disabled: false,
+        attention_needed: false,
+    });
+    fake
 }
 
 /// Where contact photos are kept: the cache directory, since Google
@@ -1969,6 +2250,10 @@ mod tests {
     use std::sync::{Arc, Mutex, PoisonError};
 
     use super::Core;
+    use mailrs_domain::{GmailSignIn, Provider};
+    use mailrs_store::accounts;
+    use mailrs_sync::sign_in::ClientSource;
+    use mailrs_sync::sign_in::own_client::OwnClient;
 
     /// Each `Core::open(true)` makes a demo folder of its own
     /// (`DemoFolder::make` numbers them), so the tests here share no file.
@@ -2089,6 +2374,57 @@ mod tests {
                 "app".into()
             ))
         );
+    }
+
+    #[test]
+    fn the_setup_step_is_kept_in_memory_in_the_demo_and_cleared_by_none() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        assert_eq!(core.google_setup_step(), None);
+        core.set_google_setup_step(Some(3)).unwrap();
+        assert_eq!(core.google_setup_step(), Some(3));
+        core.finish_google_setup();
+        assert_eq!(core.google_setup_step(), None);
+    }
+
+    #[test]
+    fn a_sign_in_again_of_an_own_account_goes_through_its_kept_client() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        let accounts = core
+            .runtime
+            .block_on(core.db.read(mailrs_store::accounts::list_accounts))
+            .expect("the demo lists its accounts");
+        let gmail = accounts
+            .into_iter()
+            .find(|a| a.provider == Provider::Gmail)
+            .expect("the demo has a Gmail account");
+        let (id, email) = (gmail.id, gmail.email.clone());
+        core.runtime
+            .block_on(core.db.write(move |c| {
+                accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject)?;
+                Ok(())
+            }))
+            .unwrap();
+        let source = |chosen: Option<&OwnClient>, address: Option<&str>| {
+            core.runtime
+                .block_on(core.google_sign_in_source(chosen, address.map(str::to_string)))
+        };
+        assert_eq!(source(None, Some(&email)), ClientSource::Kept);
+        let setup = OwnClient::new("123-abc.apps.googleusercontent.com", "x");
+        assert_eq!(source(Some(&setup), Some(&email)), ClientSource::Setup);
+        assert_eq!(
+            source(None, Some("nobody@gmail.example")),
+            ClientSource::BuiltIn
+        );
+        assert_eq!(source(None, None), ClientSource::BuiltIn);
+    }
+
+    #[test]
+    fn the_demo_keeps_no_google_project() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        assert!(core.runtime.block_on(core.saved_project()).is_none());
     }
 
     #[test]

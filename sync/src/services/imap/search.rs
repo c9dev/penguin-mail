@@ -279,7 +279,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// to [`window::WINDOW`] UIDs per SEARCH. A dense mailbox answers only
     /// a few pages' worth of ids rather than fifty thousand at each scroll,
     /// and a sparse one stays within the client's answer budget.
-    async fn newest_matching(
+    pub(super) async fn newest_matching(
         &self,
         mailbox: &str,
         keys: &str,

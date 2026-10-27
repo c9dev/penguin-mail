@@ -1104,6 +1104,13 @@ BEGIN
     UPDATE contact_marks SET stale = 1, counted_row = 0;
 END;
 "#,
+    // Where a Gmail account's mail comes from: the Gmail API or Gmail's
+    // IMAP and SMTP. Only Gmail rows read it.
+    "ALTER TABLE accounts ADD COLUMN mail_route TEXT NOT NULL DEFAULT 'gmail_api';",
+    // The Online Accounts account a Gmail account linked through the
+    // desktop reads its mail with. It is kept to find the account again;
+    // the address finds it when Online Accounts gives it a new id.
+    "ALTER TABLE accounts ADD COLUMN goa_id TEXT;",
 ];
 
 /// How long the copy taken before a migration stays once the store has

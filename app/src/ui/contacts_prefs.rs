@@ -14,6 +14,7 @@ use mailrs_sync::{Missing, Offers, Withheld};
 use crate::app::App;
 use crate::offered::reason;
 use crate::settings::{Change, Settings};
+use crate::ui::preferences::google_route::Contacts;
 
 /// The calendar settings and the accounts GNOME can show beside them.
 pub fn calendar_page(
@@ -29,7 +30,8 @@ pub fn calendar_page(
         .name("calendar")
         .build();
     let missed = |id, missing| app.core.missed(id, missing);
-    let (calendar, online) = calendar(accounts, &withheld, &missed, grant, calendar_rows);
+    let known = |email: &str| crate::goa::known(&app.core, email);
+    let (calendar, online) = calendar(accounts, &withheld, &missed, &known, grant, calendar_rows);
     page.add(&calendar);
     if let Some(online) = online {
         page.add(&online);
@@ -46,7 +48,7 @@ pub fn account_rows(
     withheld: Withheld,
     grant: impl Fn(AccountId) + 'static,
     parent: &adw::ExpanderRow,
-) {
+) -> Contacts {
     if matches!(
         account.provider,
         Provider::Imap | Provider::Pop3 | Provider::Jmap
@@ -59,9 +61,25 @@ pub fn account_rows(
         parent.add_row(&row);
         fill_servers(app, &row, account, &Rc::default());
     }
-    parent.add_row(&contact_control(
-        app, settings, account, offers, withheld, grant,
-    ));
+    // A Gmail account whose calendar is not connected says so in its own
+    // Contacts row (`preferences::google_route`), which Connect fills; the
+    // control joins that account's rows once the calendar connects.
+    let grant: Rc<dyn Fn(AccountId)> = Rc::new(grant);
+    let (weak_app, settings, owner) = (Rc::downgrade(app), settings.clone(), account.clone());
+    let build: Rc<dyn Fn(Offers) -> gtk::Widget> = Rc::new(move |offers| {
+        let Some(app) = weak_app.upgrade() else {
+            return gtk::Box::new(gtk::Orientation::Vertical, 0).upcast();
+        };
+        let grant = Rc::clone(&grant);
+        contact_control(&app, &settings, &owner, offers, withheld, move |id| {
+            grant(id)
+        })
+    });
+    let added = !crate::offered::calendar_link(account, offers).shows_connect();
+    if added {
+        parent.add_row(&build(offers));
+    }
+    Contacts { build, added }
 }
 
 /// The rows an earlier fill put in an account's row. They are held
@@ -326,6 +344,7 @@ fn calendar(
     accounts: &[(Account, Offers)],
     withheld: &impl Fn(AccountId) -> Withheld,
     missed: &impl Fn(AccountId, Missing) -> Option<Miss>,
+    known: &impl Fn(&str) -> Option<bool>,
     grant: impl Fn(AccountId) + Clone + 'static,
     settings_rows: &[gtk::Widget],
 ) -> (adw::PreferencesGroup, Option<adw::PreferencesGroup>) {
@@ -349,6 +368,30 @@ fn calendar(
     }
     let mut online_accounts = true;
     for (account, offers) in accounts {
+        if crate::offered::calendar_link(account, *offers).shows_connect() {
+            let row = adw::ActionRow::builder()
+                .use_markup(false)
+                .title(&account.email)
+                .subtitle(gettext("Not connected"))
+                .build();
+            let button = gtk::Button::builder()
+                .label(gettext("Connect"))
+                .valign(gtk::Align::Center)
+                .build();
+            crate::ui::name(
+                &button,
+                &fill(
+                    &gettext("Connect the calendar for {account}"),
+                    &[("account", &account.email)],
+                ),
+            );
+            let (account_id, connect) = (account.id, grant.clone());
+            button.connect_clicked(move |_| connect(account_id));
+            row.add_suffix(&button);
+            crate::ui::preferences::google_route::note_calendar_row(account.id, &row, &button);
+            group.add(&row);
+            continue;
+        }
         match calendar_lack(
             account,
             *offers,
@@ -374,7 +417,7 @@ fn calendar(
         if !online_accounts {
             continue;
         }
-        let Some(known) = crate::goa::known(&account.email) else {
+        let Some(known) = known(&account.email) else {
             // No Online Accounts on this desktop: there is nothing to add
             // the account to, so the rows would only say so.
             online_accounts = false;
@@ -400,9 +443,11 @@ fn calendar(
                 ),
             );
             add.connect_clicked(|_| {
-                if let Err(err) = crate::goa::open_online_accounts() {
-                    tracing::warn!(error = %err, "could not open Online Accounts");
-                }
+                gtk::glib::spawn_future_local(async {
+                    if let Err(err) = crate::goa::open_online_accounts().await {
+                        tracing::warn!(error = %err, "could not open Online Accounts");
+                    }
+                });
             });
             row.add_suffix(&add);
         }

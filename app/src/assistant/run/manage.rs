@@ -250,6 +250,12 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) async fn recolor_label<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if !self.offers(account.id).label_colors {
+            return Err(format!(
+                "{} keeps no label colors on this connection.",
+                account.email
+            ));
+        }
         let label = self.user_label(&account, &required(input, "label")?)?;
         let key = required(input, "color")?.to_lowercase();
         let key = if key == "grey" { "gray".into() } else { key };

@@ -4,7 +4,7 @@
 use mail_parser::{MessageParser, MimeHeaders};
 use mailrs_domain::{Address, EpochMillis};
 
-use crate::UidSet;
+use crate::{ImapError, UidSet};
 
 /// What the server offers, read after login: servers such as Gmail and
 /// iCloud list CONDSTORE and QRESYNC only to a signed-in user.
@@ -26,6 +26,9 @@ pub struct Capabilities {
     pub special_use: bool,
     /// QUOTA (RFC 9208, RFC 2087): GETQUOTAROOT says how full the account is.
     pub quota: bool,
+    /// X-GM-EXT-1: Gmail's message and thread ids, labels and raw search.
+    /// [`Capabilities::all`] leaves it off, as only Gmail offers it.
+    pub gmail: bool,
 }
 
 impl Capabilities {
@@ -39,6 +42,7 @@ impl Capabilities {
             uidplus: true,
             special_use: true,
             quota: true,
+            gmail: false,
         }
     }
 
@@ -58,6 +62,7 @@ impl Capabilities {
                 "UIDPLUS" => caps.uidplus = true,
                 "SPECIAL-USE" => caps.special_use = true,
                 "QUOTA" => caps.quota = true,
+                "X-GM-EXT-1" => caps.gmail = true,
                 atom if atom.starts_with("QUOTA=") => caps.quota = true,
                 _ => {}
             }
@@ -178,12 +183,114 @@ impl Selected {
     }
 }
 
+/// `text` as an IMAP quoted string. A caller that sends it through
+/// `search_command` gets non-ASCII text and line breaks as literals.
+fn quoted(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 2);
+    out.push('"');
+    for c in text.chars() {
+        if matches!(c, '"' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
+}
+
+/// `X-GM-RAW <query>`: Gmail's own search syntax as a UID SEARCH key.
+/// Text beyond printable ASCII goes as a literal when the search is sent.
+pub fn gm_raw(query: &str) -> Result<String, ImapError> {
+    if query.contains('\0') {
+        return Err(ImapError::Invalid("a search holds a NUL".into()));
+    }
+    Ok(format!("X-GM-RAW {}", quoted(query)))
+}
+
+/// A search key for the messages with these X-GM-MSGIDs. Callers pass at
+/// least one id and at most 100 and batch the rest.
+pub fn gm_msgid(ids: &[u64]) -> String {
+    match ids {
+        [] => String::new(),
+        [id] => format!("X-GM-MSGID {id}"),
+        [id, rest @ ..] => format!("OR X-GM-MSGID {id} {}", gm_msgid(rest)),
+    }
+}
+
+/// A search key for the messages of one X-GM-THRID.
+pub fn gm_thrid(id: u64) -> String {
+    format!("X-GM-THRID {id}")
+}
+
+/// A search key for the messages with one label. Refused for a label no
+/// command can carry, so a name cannot add keys of its own. Gmail's SEARCH
+/// takes the label as a string only: a system label written as an atom
+/// (`X-GM-LABELS \Inbox`) is answered "Could not parse command", so even
+/// those go quoted here, unlike in STORE.
+pub fn gm_labels(label: &str) -> Result<String, ImapError> {
+    check_label(label)?;
+    let text = match label.starts_with('\\') {
+        true => quoted(label),
+        false => label_text(label),
+    };
+    Ok(format!("X-GM-LABELS {text}"))
+}
+
+/// A label as a command writes it: a system label (`\\Inbox`) as an
+/// atom, any other quoted in modified UTF-7.
+pub(crate) fn label_text(label: &str) -> String {
+    match label.starts_with('\\') {
+        true => label.to_string(),
+        false => quoted(&crate::utf7::encode(label)),
+    }
+}
+
+/// Checks a label can go into a command at all, so a bad one never reaches
+/// the server: no NUL, CR or LF, and a system label must be an atom.
+pub(crate) fn check_label(label: &str) -> Result<(), ImapError> {
+    let bad_atom = |c: char| !c.is_ascii_graphic() || "(){%*\"\\]".contains(c);
+    let invalid = match label.strip_prefix('\\') {
+        Some(atom) => atom.is_empty() || atom.chars().any(bad_atom),
+        None => label.is_empty() || label.contains(['\0', '\r', '\n']),
+    };
+    match invalid {
+        true => Err(ImapError::Invalid(format!("{label:?} is not a label"))),
+        false => Ok(()),
+    }
+}
+
+/// What Gmail adds to a message over IMAP (X-GM-EXT-1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GmailMeta {
+    /// X-GM-MSGID. In hex it is the Gmail API's message id.
+    pub msgid: u64,
+    /// X-GM-THRID. In hex it is the Gmail API's thread id.
+    pub thrid: u64,
+    /// Labels decoded from modified UTF-7. System labels keep their
+    /// backslash: `\Inbox`, `\Important`, `\Sent`, `\Draft`, `\Starred`.
+    pub labels: Vec<String>,
+}
+
+impl GmailMeta {
+    /// The message id as the Gmail API writes it.
+    pub fn id(&self) -> String {
+        format!("{:x}", self.msgid)
+    }
+
+    /// The thread id as the Gmail API writes it.
+    pub fn thread_id(&self) -> String {
+        format!("{:x}", self.thrid)
+    }
+}
+
 /// One message's flags, and its MODSEQ where the server has CONDSTORE.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FlagsOf {
     pub uid: u32,
     pub flags: Vec<String>,
     pub modseq: Option<u64>,
+    /// Gmail's ids and labels. `None` unless the fetch asked for them.
+    pub gmail: Option<GmailMeta>,
 }
 
 /// What the adapter needs to list a message without its body: flags,
@@ -213,6 +320,8 @@ pub struct Fetched {
     /// The top-level type is `multipart/mixed`, which is how most mail
     /// with attachments arrives.
     pub mixed: bool,
+    /// Gmail's ids and labels. `None` unless the fetch asked for them.
+    pub gmail: Option<GmailMeta>,
 }
 
 /// The header fields [`Fetched::from_header`] reads, in the form
@@ -326,6 +435,79 @@ pub enum Woke {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gm_raw_quotes_ascii() {
+        assert_eq!(
+            gm_raw("has:attachment older_than:1y").unwrap(),
+            "X-GM-RAW \"has:attachment older_than:1y\""
+        );
+    }
+
+    #[test]
+    fn gm_raw_escapes_quotes_and_backslashes() {
+        assert_eq!(
+            gm_raw("subject:\"a b\" \\").unwrap(),
+            "X-GM-RAW \"subject:\\\"a b\\\" \\\\\""
+        );
+    }
+
+    #[test]
+    fn gm_raw_sends_utf8_as_a_literal() {
+        let keys = gm_raw("from:joão").unwrap();
+        let (head, literals) = crate::connection::search_command(&keys).unwrap();
+        assert_eq!(head, "UID SEARCH CHARSET UTF-8 X-GM-RAW ");
+        assert_eq!(literals, [("from:joão".as_bytes().to_vec(), String::new())]);
+    }
+
+    #[test]
+    fn gm_raw_refuses_nul() {
+        assert!(matches!(gm_raw("a\0b"), Err(ImapError::Invalid(_))));
+    }
+
+    #[test]
+    fn a_gm_raw_line_break_never_ends_the_command() {
+        let keys = gm_raw("a\r\nA9 DELETE INBOX").unwrap();
+        let (head, literals) = crate::connection::search_command(&keys).unwrap();
+        assert!(!head.contains('\n'));
+        assert_eq!(literals.len(), 1);
+    }
+
+    #[test]
+    fn one_msgid_is_a_plain_key() {
+        assert_eq!(gm_msgid(&[255]), "X-GM-MSGID 255");
+    }
+
+    #[test]
+    fn several_msgids_nest_their_ors() {
+        assert_eq!(
+            gm_msgid(&[1, 2, 3]),
+            "OR X-GM-MSGID 1 OR X-GM-MSGID 2 X-GM-MSGID 3"
+        );
+    }
+
+    #[test]
+    fn gm_thrid_names_a_thread() {
+        assert_eq!(gm_thrid(256), "X-GM-THRID 256");
+    }
+
+    #[test]
+    fn gm_labels_quotes_every_label_for_a_search() {
+        assert_eq!(
+            gm_labels("Fam\u{ed}lia/F\u{e9}rias 2026").unwrap(),
+            "X-GM-LABELS \"Fam&AO0-lia/F&AOk-rias 2026\""
+        );
+        assert_eq!(gm_labels("\\Inbox").unwrap(), "X-GM-LABELS \"\\\\Inbox\"");
+        assert_eq!(gm_labels("Work").unwrap(), "X-GM-LABELS \"Work\"");
+        assert!(gm_labels("\\Inbox) OR ALL (").is_err());
+    }
+
+    #[test]
+    fn x_gm_ext_1_marks_gmail() {
+        assert!(Capabilities::from_atoms(["IMAP4rev1", "x-gm-ext-1"]).gmail);
+        assert!(!Capabilities::from_atoms(["IMAP4rev1"]).gmail);
+        assert!(!Capabilities::all().gmail);
+    }
 
     const HEADER: &[u8] = b"From: =?UTF-8?Q?Jo=C3=A3o?= <joao@example.pt>\r\n\
 To: ann@example.com, \"Bob B.\" <bob@example.com>\r\n\

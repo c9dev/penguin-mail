@@ -2,12 +2,18 @@
 //! provider's page, and keeping an IMAP, POP3, JMAP or Microsoft account
 //! that just signed in.
 
+pub mod app_password;
 mod browser;
 mod browser_grant;
+pub(crate) mod change;
+pub mod goa_link;
 mod jmap_browser;
 pub mod own_client;
 
-pub use browser::{Browser, BrowserSignInError, SignedIn, Wanted, google_sign_in, in_browser};
+pub use browser::{
+    Browser, BrowserSignInError, ClientChoice, ClientSource, SignedIn, Wanted, calendar_consent,
+    consent_through_built_in, google_sign_in, in_browser, keep_chosen_project,
+};
 pub use browser_grant::{BrowserGrant, browser_grant};
 pub use jmap_browser::{BROWSER_WAIT, BrowserReady, JmapBrowser, browser_ready, jmap_in_browser};
 
@@ -16,7 +22,8 @@ use std::sync::Arc;
 use mailrs_discover::Server;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, EpochMillis, Provider, RemoveSetting, SignInClient,
+    Account, AccountId, AccountState, EpochMillis, GmailSignIn, Provider, RemoveSetting,
+    SignInClient,
 };
 use mailrs_gmail::OAuthClient;
 use mailrs_imap::{CheckError, ImapError};
@@ -31,15 +38,18 @@ use crate::connect::{STEP_WAIT, read_secret};
 use crate::passwords::{PasswordError, PasswordStore, Secrets};
 use crate::services::finding::{self, ServiceProbe};
 use crate::{BackendError, SyncError};
+use change::{Change, ChangeError, NewToken, Whose, change_sign_in};
 use own_client::OwnClient;
 
 /// The client `account` signs in with, from what the store recorded for
 /// it. An own account takes the client `kept` holds under its id, and
 /// one added through the old setup page, with nothing kept, the one in
-/// `config.toml`. An account with no client left, such as an own account
-/// whose `config.toml` is gone, or a built-in account in a build without
-/// the client, is marked as needing a new sign-in and gets `None`. The
-/// engine never starts such an account, so nothing else would mark it.
+/// `config.toml`; a built-in account takes `built_in`. A new sign-in
+/// chooses its client by [`google_sign_in`] instead. An account with no
+/// client left, such as an own account whose `config.toml` is gone, or a
+/// built-in account in a build without the client, is marked as needing a
+/// new sign-in and gets `None`. The engine never starts such an account,
+/// so nothing else would mark it.
 pub async fn account_client<P: PasswordStore + 'static>(
     db: &Db,
     config: &Config,
@@ -47,76 +57,127 @@ pub async fn account_client<P: PasswordStore + 'static>(
     kept: Arc<P>,
     account: &Account,
 ) -> Result<Option<OAuthClient>, SyncError> {
-    let id = account.id;
-    let kind = db.read(move |c| accounts::sign_in_client(c, id)).await?;
-    let own = match kind {
-        SignInClient::Own => read_secret(kept, id, STEP_WAIT)
-            .await?
-            .as_deref()
-            .and_then(OwnClient::decode),
-        SignInClient::BuiltIn => None,
-    };
-    let client = match own {
-        Some(own) => Some(own.oauth()),
-        None => client_for(kind, config, built_in),
-    };
+    let client = client_of(db, config, built_in, kept, account).await?;
     if client.is_none() {
+        let id = account.id;
         db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
             .await?;
     }
     Ok(client)
 }
 
-/// Adds the account `email` signed in as, or finds it when it is already
-/// here, and records `client`, the client it signed in with. An account
-/// that signs in again takes the client of that sign-in. An address
-/// another provider's account holds is refused, so Google services never
-/// start on an IMAP account's row.
-///
-/// `granted` is the scopes Google's token answer said it carries, and
-/// `asked` the ones this consent asked for: every [`mailrs_gmail::SIGN_IN_SCOPES`]
-/// entry, joined with spaces. Both go on the account row so a later
-/// feature can tell a scope the person unticked from one nobody has
-/// asked for yet.
-pub async fn signed_in(
+/// [`account_client`] without the state write, for an account that can
+/// run without the client.
+pub(crate) async fn client_of<P: PasswordStore + 'static>(
     db: &Db,
-    email: &str,
-    now: EpochMillis,
-    granted: Option<&str>,
-    asked: &str,
-    client: SignInClient,
-) -> Result<Account, SignInError> {
-    let address = email.to_string();
-    let email = address.clone();
-    let granted = granted.map(str::to_string);
-    let asked = asked.to_string();
-    db.write(move |c| {
-        if let Some(held) = accounts::account_by_email(c, &email)?
-            && held.provider != Provider::Gmail
-        {
-            return Ok(Err(held.provider_name().to_string()));
-        }
-        let id = accounts::insert_account(c, &email, now)?;
-        accounts::set_sign_in_client(c, id, client)?;
-        if let Some(granted) = &granted {
-            accounts::set_granted(c, id, granted)?;
-        }
-        accounts::set_asked(c, id, &asked)?;
-        // The row was written a line above in the same transaction.
-        accounts::account_by_email(c, &email)?
-            .ok_or(StoreError::Sqlite(rusqlite::Error::QueryReturnedNoRows))
-            .map(Ok)
+    config: &Config,
+    built_in: Option<OAuthClient>,
+    kept: Arc<P>,
+    account: &Account,
+) -> Result<Option<OAuthClient>, SyncError> {
+    let id = account.id;
+    let sign_in = db.read(move |c| accounts::gmail_sign_in(c, id)).await?;
+    // An account on Online Accounts takes its mail from there, and its
+    // calendar, contacts and Drive from the built-in client's own token,
+    // unless it came from its own project: its Google token is that
+    // project's while the keyring keeps the project, since a consent
+    // through the built-in client deletes it.
+    if sign_in.on_online_accounts() {
+        let kept = kept_own(kept, id).await?;
+        return Ok(kept.map(|own| own.oauth()).or(built_in));
+    }
+    Ok(match sign_in.client() {
+        SignInClient::Own => own_client_of(config, kept, id)
+            .await?
+            .map(|own| own.oauth()),
+        SignInClient::BuiltIn => built_in,
     })
-    .await?
-    .map_err(|provider| SignInError::Taken { address, provider })
 }
 
-/// [`signed_in`], then the account's refresh token into `secrets`, and
-/// `own`, the own client it signed in with, under its id. A sign-in with
-/// the built-in client deletes any own client kept for the account, which
-/// no longer refreshes through it. The secrets go in only once the store
-/// has taken the address, so a sign-in refused because an IMAP account
-/// holds it leaves nothing in the keyring.
+/// What an account signing in again kept of its own client.
+pub enum KeptClient {
+    /// The address is no Gmail account that signed in with an own client.
+    NotOwn,
+    /// The own client it signed in with.
+    Found(OwnClient),
+    /// It signed in with an own client that is no longer on this computer.
+    Missing,
+}
+
+/// The own client the Gmail account at `address` signed in with, so that
+/// signing it in again keeps it: the one its keyring entry holds, else the
+/// one in `config.toml`.
+pub async fn kept_own_client(
+    db: &Db,
+    config: &Config,
+    secrets: &Secrets,
+    address: &str,
+) -> Result<KeptClient, SyncError> {
+    let address = address.to_string();
+    let own = db
+        .read(move |c| match accounts::account_by_email(c, &address)? {
+            Some(held) if held.provider == Provider::Gmail => {
+                let own = accounts::gmail_sign_in(c, held.id)?.client() == SignInClient::Own;
+                Ok(own.then_some(held.id))
+            }
+            _ => Ok(None),
+        })
+        .await?;
+    let Some(id) = own else {
+        return Ok(KeptClient::NotOwn);
+    };
+    Ok(
+        match own_client_of(config, Arc::clone(&secrets.google_clients), id).await? {
+            Some(own) => KeptClient::Found(own),
+            None => KeptClient::Missing,
+        },
+    )
+}
+
+/// An own account's client: the one `kept` holds under `id`, else the one
+/// in `config.toml`.
+/// The own client the keyring keeps for `id`, without the `config.toml`
+/// fallback: for an account on Online Accounts, whose Google token is an
+/// own project's only while the keyring keeps the project.
+pub(crate) async fn kept_own<P: PasswordStore + 'static>(
+    kept: Arc<P>,
+    id: AccountId,
+) -> Result<Option<OwnClient>, SyncError> {
+    Ok(read_secret(kept, id, STEP_WAIT)
+        .await?
+        .as_deref()
+        .and_then(OwnClient::decode))
+}
+
+async fn own_client_of<P: PasswordStore + 'static>(
+    config: &Config,
+    kept: Arc<P>,
+    id: AccountId,
+) -> Result<Option<OwnClient>, SyncError> {
+    let kept = read_secret(kept, id, STEP_WAIT)
+        .await?
+        .as_deref()
+        .and_then(OwnClient::decode);
+    Ok(kept.or_else(|| {
+        config
+            .oauth
+            .as_ref()
+            .map(|own| OwnClient::new(&own.client_id, &own.client_secret))
+    }))
+}
+
+/// Adds the account `email` signed in as, or finds it when it is already
+/// here, keeps its refresh token, and `own`, the own client it signed in
+/// with, under its id. An account that signs in again takes the client of
+/// that sign-in; a sign-in with the built-in client deletes any own client
+/// kept for the account, which no longer refreshes through it. An address
+/// another provider's account holds is refused, so Google services never
+/// start on an IMAP account's row, and nothing reaches the keyring.
+///
+/// `granted` is the scopes Google's token answer said it carries, and
+/// `asked` the ones this consent asked for: the asking client's scopes,
+/// joined with spaces. Both go on the account row so a later feature can
+/// tell a scope the person unticked from one nobody has asked for yet.
 #[allow(clippy::too_many_arguments)]
 pub async fn google_signed_in(
     db: &Db,
@@ -128,81 +189,120 @@ pub async fn google_signed_in(
     asked: &str,
     own: Option<&OwnClient>,
 ) -> Result<Account, SignInError> {
-    let kind = match own {
+    let client = match own {
         Some(_) => SignInClient::Own,
         None => SignInClient::BuiltIn,
     };
-    let address = email.to_string();
-    let before = db
-        .read(move |c| match accounts::account_by_email(c, &address)? {
-            Some(held) if held.provider == Provider::Gmail => {
-                Ok(Some((held.id, accounts::sign_in_client(c, held.id)?)))
-            }
-            _ => Ok(None),
-        })
-        .await?;
-    let account = signed_in(db, email, now, granted, asked, kind).await?;
-    // The client goes in before the token: a token kept beside the wrong
-    // client cannot refresh. On a failure the account signs in as it did,
-    // and a new one is not kept.
-    let kept = keep_google_secrets(secrets, account.id, email, refresh_token, own).await;
-    if let Err(err) = kept {
-        let id = account.id;
-        db.write(move |c| match before {
-            Some((_, client)) => accounts::set_sign_in_client(c, id, client),
-            None => accounts::delete_account(c, id),
-        })
-        .await?;
-        return Err(err);
-    }
-    Ok(account)
+    let token = GoogleToken {
+        email,
+        refresh_token,
+        granted,
+        asked,
+    };
+    let to = move |before: &GmailSignIn| before.with_google_token(client);
+    google_signed_in_as(db, secrets, token, now, to, own).await
 }
 
-/// Keeps the own client (or drops a kept one for the built-in client)
-/// and then the refresh token. When the token fails, the client kept
-/// before is put back.
-async fn keep_google_secrets(
-    secrets: &Secrets,
-    id: AccountId,
-    email: &str,
-    refresh_token: &str,
-    own: Option<&OwnClient>,
-) -> Result<(), SignInError> {
-    let token = |e: &dyn std::fmt::Display| SignInError::Token(e.to_string());
-    let clients = Arc::clone(&secrets.google_clients);
-    let kept = own.map(OwnClient::encode);
-    let earlier = tokio::task::spawn_blocking(move || {
-        let earlier = clients.load(id)?;
-        match kept {
-            Some(kept) => clients.save(id, &kept),
-            None => clients.delete(id),
-        }
-        .map(|()| earlier)
-    })
-    .await
-    .map_err(|e| token(&e))?
-    .map_err(|e| token(&e))?;
-    let tokens = Arc::clone(&secrets.google);
-    let (email, refresh) = (email.to_string(), refresh_token.to_string());
-    let saved = tokio::task::spawn_blocking(move || tokens.save(&email, &refresh))
-        .await
-        .map_err(|e| token(&e))?;
-    if let Err(err) = saved {
-        let clients = Arc::clone(&secrets.google_clients);
-        let restored = tokio::task::spawn_blocking(move || match earlier {
-            Some(earlier) => clients.save(id, &earlier),
-            None => clients.delete(id),
-        })
-        .await;
-        if !matches!(restored, Ok(Ok(()))) {
-            tracing::warn!(
-                account = id,
-                "could not put back the Google client kept before a failed sign-in"
-            );
-        }
-        return Err(token(&err));
+/// What a Google sign-in brought back: the address, its refresh token,
+/// the scopes Google granted and the ones the sign-in asked for.
+#[derive(Clone, Copy)]
+pub struct GoogleToken<'a> {
+    pub email: &'a str,
+    pub refresh_token: &'a str,
+    pub granted: Option<&'a str>,
+    pub asked: &'a str,
+}
+
+// The refresh token signs in as the person, so Debug output, which can end
+// up in a log or a panic message, hides it.
+impl std::fmt::Debug for GoogleToken<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GoogleToken")
+            .field("email", &self.email)
+            .field("refresh_token", &"<hidden>")
+            .field("granted", &self.granted)
+            .field("asked", &self.asked)
+            .finish()
     }
-    Ok(())
+}
+
+/// [`google_signed_in`] with `to` saying what the account's sign-in becomes
+/// from what it is, for an account whose mail does not sign in with this
+/// token: one on the IMAP route that adds its calendar. A new address
+/// starts from the built-in client on the API.
+pub async fn google_signed_in_as(
+    db: &Db,
+    secrets: &Secrets,
+    token: GoogleToken<'_>,
+    now: EpochMillis,
+    to: impl FnOnce(&GmailSignIn) -> GmailSignIn,
+    own: Option<&OwnClient>,
+) -> Result<Account, SignInError> {
+    let GoogleToken {
+        email,
+        refresh_token,
+        granted,
+        asked,
+    } = token;
+    let address = email.to_string();
+    let held = db
+        .read(move |c| match accounts::account_by_email(c, &address)? {
+            Some(held) if held.provider != Provider::Gmail => {
+                Ok(Err(held.provider_name().to_string()))
+            }
+            Some(held) => Ok(Ok(Some((held.id, accounts::gmail_sign_in(c, held.id)?)))),
+            None => Ok(Ok(None)),
+        })
+        .await?
+        .map_err(|provider| SignInError::Taken {
+            address: email.to_string(),
+            provider,
+        })?;
+    let (whose, to) = match held {
+        Some((id, from)) => (Whose::Held(id), to(&from)),
+        None => {
+            let email = email.to_string();
+            (Whose::New { email, now }, to(&GmailSignIn::BuiltInApi))
+        }
+    };
+    let change = Change {
+        token: Some(NewToken {
+            email: email.to_string(),
+            refresh_token: refresh_token.to_string(),
+            own: own.cloned(),
+            granted: granted.map(str::to_string),
+            asked: asked.to_string(),
+        }),
+        ..Change::to(to)
+    };
+    let id = change_sign_in(db, secrets, whose, change).await?;
+    db.read(move |c| accounts::account(c, id))
+        .await?
+        .ok_or(SignInError::Store(StoreError::Sqlite(
+            rusqlite::Error::QueryReturnedNoRows,
+        )))
+}
+
+impl From<ChangeError> for SignInError {
+    fn from(err: ChangeError) -> Self {
+        match err {
+            ChangeError::Token(reason) => SignInError::Token(reason),
+            ChangeError::Password(err) => SignInError::Token(err.to_string()),
+            ChangeError::Store(err) => SignInError::Store(err),
+            ChangeError::Taken { address, provider } => SignInError::Taken { address, provider },
+        }
+    }
+}
+
+impl From<ChangeError> for ImapSignInError {
+    fn from(err: ChangeError) -> Self {
+        match err {
+            ChangeError::Token(reason) => ImapSignInError::Password(PasswordError::Keyring(reason)),
+            ChangeError::Password(err) => ImapSignInError::Password(err),
+            ChangeError::Store(err) => ImapSignInError::Store(err),
+            ChangeError::Taken { address, provider } => taken_error(&address, &provider),
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -269,11 +369,25 @@ fn different_account(address: &str) -> String {
     )
 }
 
+/// The error for an address another provider's account holds.
+fn taken_error(address: &str, provider: &str) -> ImapSignInError {
+    ImapSignInError::Taken {
+        address: address.to_string(),
+        provider: provider.to_string(),
+    }
+}
+
 fn taken(address: &str, provider: &str) -> String {
-    fill(
+    let held = fill(
         &gettext("{address} is already in Penguin Mail as a {provider} account."),
         &[("address", address), ("provider", provider)],
-    )
+    );
+    format!("{held} {}", remove_and_add_again())
+}
+
+/// What to do to sign an account in another way than it is.
+fn remove_and_add_again() -> String {
+    gettext("To sign in another way, remove this account and add it again.")
 }
 
 /// Keeps an IMAP account whose login worked: adds it, or finds the one
@@ -1230,7 +1344,7 @@ async fn save_token<P: PasswordStore + 'static>(
 /// call blocks. Without one, an outgoing password kept from before goes,
 /// so the outgoing server signs in with the incoming password as the
 /// form said it would.
-async fn save_passwords<P: PasswordStore + 'static>(
+pub(crate) async fn save_passwords<P: PasswordStore + 'static>(
     passwords: Arc<P>,
     id: AccountId,
     password: String,
@@ -1248,25 +1362,6 @@ async fn save_passwords<P: PasswordStore + 'static>(
     Ok(())
 }
 
-/// The client for an account that signed in with `client` and has no own
-/// client kept in the keyring. A built-in account takes `built_in`, the
-/// build's own; an own account takes the one in `config.toml`. `None` when
-/// that client is missing, which the caller treats as needing a new
-/// sign-in.
-pub fn client_for(
-    client: SignInClient,
-    config: &Config,
-    built_in: Option<OAuthClient>,
-) -> Option<OAuthClient> {
-    match client {
-        SignInClient::BuiltIn => built_in,
-        SignInClient::Own => config
-            .oauth
-            .as_ref()
-            .map(|own| OAuthClient::new(&own.client_id, &own.client_secret)),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use mailrs_domain::{Account, AccountState, SignInClient};
@@ -1276,10 +1371,24 @@ mod tests {
     use super::*;
     use crate::config::{Config, OAuthConfig};
     use crate::passwords::{MemoryPasswords, Secrets};
+    use crate::{Clients, Connector};
 
     /// A keyring holding no own client for any account.
     fn kept_none() -> Arc<MemoryPasswords> {
         Arc::new(MemoryPasswords::default())
+    }
+
+    #[test]
+    fn google_token_debug_hides_the_refresh_token() {
+        let token = GoogleToken {
+            email: "a@gmail.com",
+            refresh_token: "1//secret-refresh",
+            granted: None,
+            asked: "scope",
+        };
+        let shown = format!("{token:?}");
+        assert!(!shown.contains("secret-refresh"));
+        assert!(shown.contains("a@gmail.com"));
     }
 
     fn built_in() -> Option<mailrs_gmail::OAuthClient> {
@@ -1299,28 +1408,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn a_built_in_account_takes_the_builds_client() {
-        let client = client_for(SignInClient::BuiltIn, &with_own(), built_in()).unwrap();
-        assert_eq!(client.id(), "built.apps.googleusercontent.com");
-    }
-
-    #[test]
-    fn an_own_account_takes_the_client_in_the_config() {
-        let client = client_for(SignInClient::Own, &with_own(), built_in()).unwrap();
-        assert_eq!(client.id(), "own.apps.googleusercontent.com");
-    }
-
-    #[test]
-    fn an_own_account_with_no_client_in_the_config_has_none() {
-        assert!(client_for(SignInClient::Own, &Config::default(), built_in()).is_none());
-    }
-
-    #[test]
-    fn a_built_in_account_in_a_build_without_one_has_none() {
-        assert!(client_for(SignInClient::BuiltIn, &with_own(), None).is_none());
-    }
-
     fn store() -> (tempfile::TempDir, Db) {
         let dir = tempfile::tempdir().unwrap();
         let db = Db::open(&dir.path().join("mail.db")).unwrap();
@@ -1331,7 +1418,7 @@ mod tests {
         let email = email.to_string();
         db.write(move |c| {
             let id = accounts::insert_account(c, &email, 0)?;
-            accounts::set_sign_in_client(c, id, client)?;
+            accounts::set_gmail_sign_in(c, id, &GmailSignIn::BuiltInApi.with_google_token(client))?;
             Ok(accounts::account_by_email(c, &email)?.unwrap())
         })
         .await
@@ -1393,19 +1480,21 @@ mod tests {
     #[tokio::test]
     async fn a_new_sign_in_records_the_built_in_client_and_its_consent() {
         let (_dir, db) = store();
-        let added = signed_in(
+        let added = google_signed_in(
             &db,
+            &Secrets::memory(),
             "new@example.com",
+            "refresh",
             0,
             Some("gmail.modify"),
             "gmail.modify settings",
-            SignInClient::BuiltIn,
+            None,
         )
         .await
         .unwrap();
         let id = added.id;
         let kind = db
-            .read(move |c| accounts::sign_in_client(c, id))
+            .read(move |c| Ok(accounts::gmail_sign_in(c, id)?.client()))
             .await
             .unwrap();
         assert_eq!(kind, SignInClient::BuiltIn);
@@ -1423,12 +1512,22 @@ mod tests {
         db.write(|c| accounts::insert_imap_account(c, "dana@fastmail.com", "Fastmail", 0))
             .await
             .unwrap();
-        let refused = signed_in(&db, "dana@fastmail.com", 0, None, "", SignInClient::BuiltIn)
-            .await
-            .expect_err("an IMAP account holds the address");
+        let secrets = Secrets::memory();
+        let refused = google_signed_in(
+            &db,
+            &secrets,
+            "dana@fastmail.com",
+            "refresh",
+            0,
+            None,
+            "",
+            None,
+        )
+        .await
+        .expect_err("an IMAP account holds the address");
         assert_eq!(
             refused.to_string(),
-            "dana@fastmail.com is already in Penguin Mail as a Fastmail account."
+            "dana@fastmail.com is already in Penguin Mail as a Fastmail account. To sign in another way, remove this account and add it again."
         );
         let kept = db
             .read(|c| accounts::account_by_email(c, "dana@fastmail.com"))
@@ -1480,28 +1579,12 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn signing_an_own_account_in_again_moves_it_to_the_built_in_client() {
-        let (_dir, db) = store();
-        let own = account(&db, "own@example.com", SignInClient::Own).await;
-        let again = signed_in(&db, "own@example.com", 0, None, "", SignInClient::BuiltIn)
-            .await
-            .unwrap();
-        assert_eq!(again.id, own.id);
-        let id = own.id;
-        let kind = db
-            .read(move |c| accounts::sign_in_client(c, id))
-            .await
-            .unwrap();
-        assert_eq!(kind, SignInClient::BuiltIn);
-    }
-
     fn own_client() -> own_client::OwnClient {
         own_client::OwnClient::new("own.apps.googleusercontent.com", "GOCSPX-own")
     }
 
     async fn kind(db: &Db, id: mailrs_domain::AccountId) -> SignInClient {
-        db.read(move |c| accounts::sign_in_client(c, id))
+        db.read(move |c| Ok(accounts::gmail_sign_in(c, id)?.client()))
             .await
             .unwrap()
     }
@@ -1676,6 +1759,54 @@ mod tests {
         assert_eq!(client.id(), "built.apps.googleusercontent.com");
     }
 
+    #[tokio::test]
+    async fn an_online_accounts_account_from_its_own_project_keeps_the_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let linked = account(&db, "goa@example.com", SignInClient::Own).await;
+        let id = linked.id;
+        db.write(move |c| {
+            accounts::set_gmail_sign_in(
+                c,
+                id,
+                &GmailSignIn::OnlineAccounts {
+                    goa_id: "account_1".into(),
+                },
+            )
+        })
+        .await
+        .unwrap();
+        let kept = own_client::OwnClient::new("kept.apps.googleusercontent.com", "GOCSPX-kept");
+        secrets.google_clients.save(id, &kept.encode()).unwrap();
+        let client = account_client(
+            &db,
+            &Config::default(),
+            built_in(),
+            Arc::clone(&secrets.google_clients),
+            &linked,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(client.id(), "kept.apps.googleusercontent.com");
+        secrets.google_clients.delete(id).unwrap();
+        let client = account_client(
+            &db,
+            &with_own(),
+            built_in(),
+            Arc::clone(&secrets.google_clients),
+            &linked,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            client.id(),
+            "built.apps.googleusercontent.com",
+            "without a kept project it takes the built-in client, not config.toml's"
+        );
+    }
+
     /// The variables are never set in this test: the account's kept
     /// client alone decides which client the refresh goes out under.
     #[tokio::test]
@@ -1729,6 +1860,226 @@ mod tests {
         assert_eq!(client.refresh("rt").await.unwrap().token, "at");
     }
 
+    /// A connector over `db` and `secrets` whose setup chose `chosen`.
+    fn reach(db: &Db, secrets: &Secrets, chosen: Option<own_client::OwnClient>) -> Connector {
+        Connector {
+            db: db.clone(),
+            config: Config::default(),
+            clients: Clients::default().with_chosen(chosen),
+            secrets: secrets.clone(),
+            goa: crate::goa::session(),
+        }
+    }
+
+    fn authorized(email: &str) -> mailrs_gmail::Authorized {
+        mailrs_gmail::Authorized {
+            email: email.into(),
+            refresh_token: "rt".into(),
+            granted: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_setup_sign_in_keeps_the_account_the_project_and_refreshes_after_a_restart() {
+        use wiremock::matchers::{body_string_contains, method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/token"))
+            .and(body_string_contains(
+                "client_id=own.apps.googleusercontent.com",
+            ))
+            .and(body_string_contains("refresh_token=rt"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token": "at",
+                "expires_in": 3600,
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+        assert_eq!(choice.source, ClientSource::Setup);
+        let added = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@gmail.com"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(kind(&db, added.id).await, SignInClient::Own);
+        assert_eq!(
+            kept_id(&secrets, added.id).as_deref(),
+            Some("own.apps.googleusercontent.com")
+        );
+        assert_eq!(
+            own_client::saved_project(&secrets).await.unwrap().id(),
+            "own.apps.googleusercontent.com"
+        );
+        // A restart reads the client from the keyring alone.
+        let client = account_client(
+            &db,
+            &Config::default(),
+            None,
+            Arc::clone(&secrets.google_clients),
+            &added,
+        )
+        .await
+        .unwrap()
+        .expect("the kept client serves a build without the built-in one")
+        .with_endpoints(
+            format!("{}/auth", server.uri()),
+            format!("{}/token", server.uri()),
+        );
+        assert_eq!(client.refresh("rt").await.unwrap().token, "at");
+    }
+
+    #[tokio::test]
+    async fn an_environment_sign_in_keeps_no_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let clients = Clients {
+            own_google: Some(Ok(own_client())),
+            ..Clients::default()
+        };
+        let choice = google_sign_in(&clients, None).unwrap();
+        assert_eq!(choice.source, ClientSource::Environment);
+        let added = browser::signed_in_through(
+            &reach(&db, &secrets, None),
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@gmail.com"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(kind(&db, added.id).await, SignInClient::Own);
+        assert!(own_client::saved_project(&secrets).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn a_refused_sign_in_keeps_no_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        db.write(|c| accounts::insert_imap_account(c, "me@example.com", "Fastmail", 0))
+            .await
+            .unwrap();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+        let refused = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@example.com"),
+        )
+        .await;
+        assert!(
+            matches!(
+                refused,
+                Err(BrowserSignInError::Kept(SignInError::Taken { .. }))
+            ),
+            "{refused:?}"
+        );
+        assert!(own_client::saved_project(&secrets).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn a_sign_in_as_another_address_keeps_no_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+        let refused = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Only("you@gmail.com".into()),
+            authorized("me@gmail.com"),
+        )
+        .await;
+        assert!(
+            matches!(refused, Err(BrowserSignInError::OtherAddress { .. })),
+            "{refused:?}"
+        );
+        assert!(own_client::saved_project(&secrets).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn the_kept_own_client_comes_from_the_keyring_then_the_config() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let kept = account(&db, "kept@gmail.com", SignInClient::Own).await;
+        let kept_client = own_client::OwnClient::new("kept.apps.googleusercontent.com", "s");
+        secrets
+            .google_clients
+            .save(kept.id, &kept_client.encode())
+            .unwrap();
+        account(&db, "config@gmail.com", SignInClient::Own).await;
+        let built = account(&db, "built@gmail.com", SignInClient::BuiltIn).await;
+        secrets
+            .google_clients
+            .save(built.id, &own_client().encode())
+            .unwrap();
+        account(&db, "gone@gmail.com", SignInClient::Own).await;
+        let config = with_own();
+        let found = |config: &'static Config, address: &'static str| {
+            let (db, secrets) = (&db, &secrets);
+            async move {
+                match kept_own_client(db, config, secrets, address).await.unwrap() {
+                    KeptClient::Found(own) => own.id().to_string(),
+                    KeptClient::Missing => "missing".to_string(),
+                    KeptClient::NotOwn => "not own".to_string(),
+                }
+            }
+        };
+        let config: &'static Config = Box::leak(Box::new(config));
+        let none: &'static Config = Box::leak(Box::default());
+        assert_eq!(
+            found(config, "kept@gmail.com").await,
+            "kept.apps.googleusercontent.com"
+        );
+        assert_eq!(
+            found(config, "config@gmail.com").await,
+            "own.apps.googleusercontent.com"
+        );
+        assert_eq!(found(none, "gone@gmail.com").await, "missing");
+        assert_eq!(found(config, "built@gmail.com").await, "not own");
+        assert_eq!(found(config, "nobody@gmail.com").await, "not own");
+    }
+
+    #[tokio::test]
+    async fn an_imap_account_has_no_kept_own_client() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        db.write(|c| accounts::insert_imap_account(c, "me@example.com", "Fastmail", 0))
+            .await
+            .unwrap();
+        let found = kept_own_client(&db, &with_own(), &secrets, "me@example.com")
+            .await
+            .unwrap();
+        assert!(matches!(found, KeptClient::NotOwn));
+    }
+
+    #[tokio::test]
+    async fn only_a_setup_choice_keeps_the_project() {
+        let secrets = Secrets::memory();
+        let env = Clients {
+            own_google: Some(Ok(own_client())),
+            ..Clients::default()
+        };
+        keep_chosen_project(&secrets, &google_sign_in(&env, None).unwrap()).await;
+        assert!(own_client::saved_project(&secrets).await.is_none());
+        let kept = own_client();
+        let choice = google_sign_in(&Clients::default(), Some(&kept)).unwrap();
+        keep_chosen_project(&secrets, &choice).await;
+        assert!(own_client::saved_project(&secrets).await.is_none());
+        let setup = Clients::default().with_chosen(Some(own_client()));
+        keep_chosen_project(&secrets, &google_sign_in(&setup, None).unwrap()).await;
+        assert!(own_client::saved_project(&secrets).await.is_some());
+    }
+
     fn new_microsoft(address: &str) -> NewMicrosoft {
         NewMicrosoft {
             address: address.into(),
@@ -1780,7 +2131,7 @@ mod tests {
         .expect_err("Gmail holds the address");
         assert_eq!(
             refused.to_string(),
-            "dana@contoso.com is already in Penguin Mail as a Gmail account."
+            "dana@contoso.com is already in Penguin Mail as a Gmail account. To sign in another way, remove this account and add it again."
         );
         assert_eq!(tokens.load(1).unwrap(), None);
     }
@@ -1817,5 +2168,50 @@ mod tests {
         assert_eq!(again.id, id);
         assert_eq!(again.state, AccountState::Ok);
         assert_eq!(tokens.load(id).unwrap().as_deref(), Some("refresh-2"));
+    }
+
+    #[tokio::test]
+    async fn a_setup_sign_in_as_an_account_on_an_app_password_leaves_it_on_imap() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let id = db
+            .write(|c| {
+                let id = accounts::insert_account(c, "me@gmail.com", 0)?;
+                let password = GmailSignIn::AppPassword {
+                    google: SignInClient::BuiltIn,
+                };
+                accounts::set_gmail_sign_in(c, id, &password)?;
+                Ok(id)
+            })
+            .await
+            .unwrap();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+
+        let refused = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@gmail.com"),
+        )
+        .await;
+
+        assert!(
+            matches!(refused, Err(BrowserSignInError::AlreadyHeld)),
+            "{:?}",
+            refused.err()
+        );
+        let sign_in = db
+            .read(move |c| accounts::gmail_sign_in(c, id))
+            .await
+            .unwrap();
+        assert_eq!(
+            sign_in,
+            GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn
+            }
+        );
+        assert_eq!(kept_id(&secrets, id), None);
+        assert_eq!(secrets.google.load("me@gmail.com").unwrap(), None);
     }
 }

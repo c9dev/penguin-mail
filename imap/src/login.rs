@@ -1,6 +1,8 @@
 //! A user name and password for one server.
 
 use std::fmt;
+use std::future::Future;
+use std::pin::Pin;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -32,6 +34,52 @@ impl Login {
     }
 }
 
+/// Where a client gets its login, asked again for each connection. A
+/// password never changes, but an access token lasts an hour and a pooled
+/// client outlives it.
+pub trait LoginSource: Send + Sync + fmt::Debug {
+    /// The login to sign in with. `refused` is true only on the one retry
+    /// after the server turned the last login down.
+    fn login(
+        &self,
+        refused: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<Login, crate::ImapError>> + Send + '_>>;
+}
+
+impl LoginSource for Login {
+    fn login(
+        &self,
+        _refused: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<Login, crate::ImapError>> + Send + '_>> {
+        Box::pin(async move { Ok(self.clone()) })
+    }
+}
+
+/// Signs in through `sign_in` with `source`'s login, and answers what it
+/// opened with the login that opened it. A token the server turned down
+/// may only have run out, so the source is asked for a fresh one, once; a
+/// password is never tried twice.
+pub(crate) async fn signed_in<T, F, Fut>(
+    source: &dyn LoginSource,
+    sign_in: F,
+) -> Result<(T, Login), crate::ImapError>
+where
+    F: Fn(Login) -> Fut,
+    Fut: Future<Output = Result<T, crate::ImapError>>,
+{
+    let login = source.login(false).await?;
+    // Boxed to keep this future small: every call that may open a
+    // connection carries it.
+    match Box::pin(sign_in(login.clone())).await {
+        Err(crate::ImapError::Auth { .. }) if login.oauth => {
+            let login = source.login(true).await?;
+            let opened = Box::pin(sign_in(login.clone())).await?;
+            Ok((opened, login))
+        }
+        other => other.map(|opened| (opened, login)),
+    }
+}
+
 /// What stands where the password was.
 const HIDDEN: &str = "<hidden>";
 
@@ -39,6 +87,14 @@ impl Login {
     pub(crate) fn bearer_response(&self) -> String {
         let user = self.user.replace('=', "=3D").replace(',', "=2C");
         format!("n,a={user},\x01auth=Bearer {}\x01\x01", self.password)
+    }
+
+    /// The one message of Google's and Microsoft's XOAUTH2.
+    pub(crate) fn xoauth2_response(&self) -> String {
+        format!(
+            "user={}\x01auth=Bearer {}\x01\x01",
+            self.user, self.password
+        )
     }
 
     /// `text` with the password taken out, in every form a server could
@@ -80,6 +136,7 @@ impl Login {
         ];
         if self.oauth {
             secrets.push(BASE64.encode(self.bearer_response()));
+            secrets.push(BASE64.encode(self.xoauth2_response()));
         }
         secrets.sort_by_key(|secret| std::cmp::Reverse(secret.len()));
         secrets.dedup();
@@ -157,6 +214,19 @@ mod tests {
         let encoded = base64::Engine::encode(
             &base64::engine::general_purpose::STANDARD,
             login.bearer_response(),
+        );
+        assert_eq!(
+            login.hide(&format!("NO rejected {encoded}")),
+            "NO rejected <hidden>"
+        );
+    }
+
+    #[test]
+    fn a_server_cannot_repeat_the_encoded_xoauth2_message_in_an_error() {
+        let login = Login::bearer("ann@example.com", "sensitive-token");
+        let encoded = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            login.xoauth2_response(),
         );
         assert_eq!(
             login.hide(&format!("NO rejected {encoded}")),

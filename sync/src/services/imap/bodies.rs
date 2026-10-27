@@ -17,11 +17,17 @@ use crate::services::RawMessage;
 const DEPTH: usize = 64;
 
 impl<I: ImapApi, S: Submit> Imap<I, S> {
-    /// Where `name` points, while the mailbox keeps the UIDVALIDITY it
-    /// names. After a change the same UID can name another message, so the
-    /// old location answers `NotFound` until the feed relists the mailbox.
+    /// Where `name`, a location as plain IMAP names mail, points, while
+    /// the mailbox keeps the UIDVALIDITY it names.
     pub(super) async fn current(&self, name: &str) -> Result<Location, BackendError> {
         let at = Location::parse(name).ok_or(BackendError::NotFound)?;
+        self.checked(at).await
+    }
+
+    /// `at`, while its mailbox keeps the UIDVALIDITY it names. After a
+    /// change the same UID can name another message, so the old location
+    /// answers `NotFound` until the feed relists the mailbox.
+    pub(super) async fn checked(&self, at: Location) -> Result<Location, BackendError> {
         let selected = self.select(&at.mailbox, None).await?;
         match selected.uidvalidity == at.uidvalidity {
             true => Ok(at),
@@ -37,17 +43,27 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let mut raws = Vec::with_capacity(names.len());
         for name in names {
             let at = self.current(name).await?;
-            let bytes = self
-                .api
-                .body(&at.mailbox, at.uid, "")
-                .await?
-                .ok_or(BackendError::NotFound)?;
-            raws.push(RawMessage {
-                id: name.clone(),
-                bytes,
-            });
+            raws.push(self.raw_at(name, &at).await?);
         }
         Ok(raws)
+    }
+
+    /// The message `name` names, as it arrived, from `at`, a place
+    /// [`Imap::checked`] passed.
+    pub(super) async fn raw_at(
+        &self,
+        name: &str,
+        at: &Location,
+    ) -> Result<RawMessage, BackendError> {
+        let bytes = self
+            .api
+            .body(&at.mailbox, at.uid, "")
+            .await?
+            .ok_or(BackendError::NotFound)?;
+        Ok(RawMessage {
+            id: name.to_string(),
+            bytes,
+        })
     }
 
     /// The message's parts with its top-level headers and the bytes of the
@@ -56,6 +72,16 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// the body read from them is not kept.
     pub(super) async fn structure_of(&self, name: &str) -> Result<Parts, BackendError> {
         let at = self.current(name).await?;
+        self.structure_at(name, &at).await
+    }
+
+    /// [`Imap::structure_of`] for the message `name` names, at `at`, a
+    /// place [`Imap::checked`] passed.
+    pub(super) async fn structure_at(
+        &self,
+        name: &str,
+        at: &Location,
+    ) -> Result<Parts, BackendError> {
         let structure = self
             .api
             .structure(&at.mailbox, at.uid)
@@ -103,6 +129,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// encoding undone.
     pub(super) async fn part_of(&self, name: &str, path: &str) -> Result<Vec<u8>, BackendError> {
         let at = self.current(name).await?;
+        self.part_at(&at, path).await
+    }
+
+    /// [`Imap::part_of`] at `at`, a place [`Imap::checked`] passed.
+    pub(super) async fn part_at(&self, at: &Location, path: &str) -> Result<Vec<u8>, BackendError> {
         let structure = self
             .api
             .structure(&at.mailbox, at.uid)

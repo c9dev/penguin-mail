@@ -637,10 +637,21 @@ impl<A: Accounts> Tools<A> {
     /// The run holds no store, so it gives the general reason and not why
     /// the last search for a calendar or contacts server failed.
     fn unavailable(&self, account: &Account, missing: Missing) -> Option<Value> {
-        self.offers(account.id)
-            .missing()
-            .contains(&missing)
-            .then(|| json!({"unavailable": crate::offered::reason(account, missing, None)}))
+        if !self.offers(account.id).missing().contains(&missing) {
+            return None;
+        }
+        // A Gmail account whose mail comes over IMAP keeps its filters and
+        // automatic reply on gmail.com, and the answer says so.
+        let over_imap = self
+            .modules
+            .accounts
+            .services(account.id)
+            .is_some_and(|services| matches!(services.mail, mailrs_sync::AnyMail::GmailImap(_)));
+        let route = match over_imap {
+            true => mailrs_domain::MailRoute::Imap,
+            false => mailrs_domain::MailRoute::GmailApi,
+        };
+        Some(json!({"unavailable": crate::offered::reason_on(account, route, missing, None)}))
     }
 
     fn offers(&self, account_id: AccountId) -> mailrs_sync::Offers {

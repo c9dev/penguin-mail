@@ -26,8 +26,11 @@ app/src/autostart.rs
 app/src/compose.rs
 app/src/contacts.rs
 app/src/core.rs
+app/src/core/goa.rs
 app/src/event_reminders/notice.rs
 app/src/format.rs
+app/src/gmail_password.rs
+app/src/goa_notice.rs
 app/src/keyring_plug.rs
 app/src/language_names.rs
 app/src/main.rs
@@ -35,6 +38,7 @@ app/src/notify.rs
 app/src/offered.rs
 app/src/open_thread/run/receipt.rs
 app/src/open_thread/run/translation.rs
+app/src/own_project.rs
 app/src/packaging.rs
 app/src/permission.rs
 app/src/pgp.rs
@@ -42,6 +46,7 @@ app/src/protection/draft.rs
 app/src/protection.rs
 app/src/render.rs
 app/src/render/receipt.rs
+app/src/route_choice.rs
 app/src/rules.rs
 app/src/search.rs
 app/src/settings/mod.rs
@@ -51,6 +56,7 @@ app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs
 app/src/ui/add_account.rs
+app/src/ui/add_account/routes.rs
 app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
 app/src/ui/assistant.rs
@@ -90,6 +96,8 @@ app/src/ui/conversation.rs
 app/src/ui/eml_file.rs
 app/src/ui/link_preview.rs
 app/src/ui/find.rs
+app/src/ui/gmail_password_page.rs
+app/src/ui/goa_page.rs
 app/src/ui/hide_my_email.rs
 app/src/ui/ics_file.rs
 app/src/ui/invitation.rs
@@ -97,14 +105,17 @@ app/src/ui/invitation/strip.rs
 app/src/ui/key_import.rs
 app/src/ui/mod.rs
 app/src/ui/moving.rs
+app/src/ui/own_project.rs
 app/src/ui/permission.rs
 app/src/ui/pgp.rs
 app/src/ui/preferences.rs
 app/src/ui/preferences/dialog.rs
 app/src/ui/preferences/accounts.rs
+app/src/ui/preferences/google_route.rs
 app/src/ui/sender_prefs.rs
 app/src/ui/sender_prefs/signature.rs
 app/src/ui/queued.rs
+app/src/ui/route_page.rs
 app/src/ui/rules.rs
 app/src/ui/sandbox_setup.rs
 app/src/ui/sidebar.rs
@@ -178,6 +189,7 @@ sync/src/passwords.rs
 sync/src/services/imap/outgoing.rs
 sync/src/sign_in.rs
 sync/src/sign_in/browser.rs
+sync/src/sign_in/goa_link.rs
 sync/src/sign_in/own_client.rs
 sync/src/triage.rs
 # the template from the crate roots and warns when this list has drifted

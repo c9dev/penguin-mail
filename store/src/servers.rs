@@ -65,6 +65,15 @@ pub fn save(conn: &Connection, account_id: AccountId, servers: &Servers) -> Resu
     put(conn, account_id, "smtp", &servers.smtp)
 }
 
+/// Drops every server the account keeps.
+pub fn forget(conn: &Connection, account_id: AccountId) -> Result<()> {
+    conn.execute(
+        "DELETE FROM account_servers WHERE account_id = ?1",
+        params![account_id],
+    )?;
+    Ok(())
+}
+
 /// Keeps a POP3 account's servers, replacing what was there.
 pub fn save_pop3(conn: &Connection, account_id: AccountId, servers: &Pop3Servers) -> Result<()> {
     put(conn, account_id, "pop3", &servers.pop3)?;

@@ -81,13 +81,18 @@ pub fn resolve(
         found.insert(remote, Resolved::Stored(id));
     }
     // A stored id no ref names any more belongs to a message that moved.
+    // An id that is no location (a Gmail message's hex id) never went by
+    // a place, so it stands for itself wherever its ref points.
     let mut by_id = conn.prepare_cached(
         "SELECT message_id FROM remote_refs \
          WHERE account_id = ?1 AND message_id IN (SELECT value FROM json_each(?2))",
     )?;
     let rows = by_id.query_map(params![account_id, list], |row| row.get::<_, String>(0))?;
     for row in rows {
-        found.entry(row?).or_insert(Resolved::Stale);
+        let id = row?;
+        if Location::parse(&id).is_some() {
+            found.entry(id).or_insert(Resolved::Stale);
+        }
     }
     Ok(found)
 }
@@ -342,6 +347,25 @@ mod tests {
         assert_eq!(
             in_mailbox_where(&conn, account_id, "Archive", |_, _| true).unwrap(),
             ["INBOX/7/42"]
+        );
+    }
+
+    #[test]
+    fn a_hex_id_with_a_ref_is_never_stale() {
+        let (conn, account_id) = store(&["18c2f0a1b2c3d4e5"]);
+        let there = at("[Gmail]/All Mail", 1, 7);
+        locate(&conn, account_id, "18c2f0a1b2c3d4e5", &there).unwrap();
+        assert_eq!(
+            resolve(
+                &conn,
+                account_id,
+                &names(&["18c2f0a1b2c3d4e5", "[Gmail]/All Mail/1/7"])
+            )
+            .unwrap(),
+            HashMap::from([(
+                "[Gmail]/All Mail/1/7".to_string(),
+                Resolved::Stored("18c2f0a1b2c3d4e5".into())
+            )])
         );
     }
 

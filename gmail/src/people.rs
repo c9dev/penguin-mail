@@ -16,7 +16,7 @@ use crate::GmailError;
 /// contacts, though it cannot write them.
 pub const CONTACTS_SCOPE: &str = "https://www.googleapis.com/auth/contacts.readonly";
 
-/// Read and change the account's contacts. [`crate::SIGN_IN_SCOPES`] asks
+/// Read and change the account's contacts. [`crate::FULL_SCOPES`] asks
 /// for this one rather than [`CONTACTS_SCOPE`]: it covers reading too,
 /// and asking the narrower scope first would mean a second consent the
 /// first time the assistant adds or changes a contact.

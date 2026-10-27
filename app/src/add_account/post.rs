@@ -516,6 +516,12 @@ fn browser_advice(provider: &str) -> Advice {
     }
 }
 
+/// The advice the address page shows. On the way to Online Accounts,
+/// Continue opens no browser, so a card saying it does is left out.
+pub fn shown_advice(advice: Option<&Advice>, to_online_accounts: bool) -> Option<&Advice> {
+    advice.filter(|a| !(to_online_accounts && a.kind == AdviceKind::Browser))
+}
+
 fn closed(provider: &str, title: String, body: String) -> Advice {
     Advice {
         kind: AdviceKind::Closed,
@@ -530,6 +536,21 @@ fn closed(provider: &str, title: String, body: String) -> Advice {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_way_to_online_accounts_drops_the_browser_card() {
+        let google = advice("gmail.com", false);
+        assert_eq!(
+            shown_advice(google.as_ref(), false).map(|a| a.kind),
+            Some(AdviceKind::Browser)
+        );
+        assert!(shown_advice(google.as_ref(), true).is_none());
+        let password = tile_advice(Tile::Fastmail);
+        assert_eq!(
+            shown_advice(password.as_ref(), true).map(|a| a.kind),
+            password.as_ref().map(|a| a.kind)
+        );
+    }
 
     #[test]
     fn each_step_shows_the_pose_the_mockup_gives_it() {

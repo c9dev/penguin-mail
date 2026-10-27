@@ -192,6 +192,7 @@ async fn serve(
         let (tag, body) = command.split_once(' ').unwrap_or((command.as_str(), ""));
         let replies = if body.eq_ignore_ascii_case("AUTHENTICATE PLAIN")
             || body.eq_ignore_ascii_case("AUTHENTICATE OAUTHBEARER")
+            || body.eq_ignore_ascii_case("AUTHENTICATE XOAUTH2")
         {
             if send(&mut write, "+ ").await.is_none() {
                 return;

@@ -9,6 +9,7 @@ mod api;
 pub(in crate::services) mod bodies;
 mod cadence;
 mod feed;
+mod gmail;
 mod keywords;
 mod mailboxes;
 mod outgoing;
@@ -20,6 +21,7 @@ mod window;
 mod writes;
 
 pub use api::{ImapApi, Submit};
+pub use gmail::GmailImap;
 pub(crate) use outgoing::{envelope_of, submit_over, without_bcc};
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -138,7 +140,17 @@ struct Known {
     /// guard dropped the last one. The drop itself wakes the engine at
     /// once; the wait comes before the next IDLE.
     idle_pause: Option<Duration>,
+    /// Gmail over IMAP: where the messages met this session were last
+    /// seen, by hex id.
+    places: gmail::Places,
+    /// Gmail over IMAP: drafts sent this session that Drafts could not
+    /// let go of, by hex id, the latest [`SENT_DRAFTS_KEPT`]. The next
+    /// listing of drafts removes them again and leaves them out.
+    sent_drafts: VecDeque<String>,
 }
+
+/// The most sent drafts [`Known::sent_drafts`] holds.
+const SENT_DRAFTS_KEPT: usize = 64;
 
 /// The most messages [`Known::unreadable`] remembers.
 const UNREADABLE_KEPT: usize = 256;
@@ -317,6 +329,7 @@ impl From<ImapError> for BackendError {
             ImapError::Network(detail) => BackendError::Offline(detail),
             ImapError::Auth { .. } | ImapError::ImapDisabled { .. } => BackendError::NeedsReauth,
             ImapError::TooManyConnections { .. } => BackendError::RateLimited(None),
+            ImapError::BandwidthLimit { .. } => BackendError::DownloadLimit,
             ImapError::NoMailbox(_) => BackendError::NotFound,
             ImapError::Unsupported(_) => BackendError::Unsupported,
             other @ (ImapError::Tls { .. }
@@ -492,7 +505,12 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     async fn watch(&self) {
-        self.watch_inbox().await
+        let inbox = async {
+            Ok(self
+                .mailbox_for(Role::Inbox)
+                .unwrap_or_else(|| "INBOX".into()))
+        };
+        self.watch_inbox(inbox).await
     }
 
     async fn keywords_in(

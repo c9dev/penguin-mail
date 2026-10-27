@@ -1,8 +1,11 @@
 //! Accounts and their sync cursors.
 
 use mailrs_domain::{
-    Account, AccountId, AccountState, EpochMillis, Provider, RemoveSetting, SignInClient,
+    Account, AccountId, AccountState, EpochMillis, GmailSignIn, MailRoute, Provider, RemoveSetting,
+    SignInClient,
 };
+use std::collections::HashMap;
+
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
@@ -286,26 +289,120 @@ pub fn set_state(conn: &Connection, id: AccountId, state: AccountState) -> Resul
     Ok(())
 }
 
-/// The Google client `id` signs in with.
-pub fn sign_in_client(conn: &Connection, id: AccountId) -> Result<SignInClient> {
-    let value: String = conn.query_row(
-        "SELECT oauth_client FROM accounts WHERE id = ?1",
+/// How the Gmail account `id` signs in. A row of another provider reads as
+/// the columns' defaults, the built-in client on the API.
+pub fn gmail_sign_in(conn: &Connection, id: AccountId) -> Result<GmailSignIn> {
+    let (client, route, goa_id) = conn.query_row(
+        "SELECT oauth_client, mail_route, goa_id FROM accounts WHERE id = ?1",
         params![id],
-        |row| row.get(0),
+        |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        },
     )?;
-    value.parse().map_err(|_| StoreError::Corrupt {
+    decode_sign_in(client, route, goa_id)
+}
+
+/// The value the `oauth_client` column holds for an account on Online
+/// Accounts. It names no Google client: that account's Google token is the
+/// built-in client's.
+const ON_ONLINE_ACCOUNTS: &str = "goa";
+
+/// Reads the three columns that together say how a Gmail account signs
+/// in. An Online Accounts account reads its mail over IMAP whatever the
+/// route column says, as it always has.
+fn decode_sign_in(client: String, route: String, goa_id: Option<String>) -> Result<GmailSignIn> {
+    if client == ON_ONLINE_ACCOUNTS {
+        let goa_id = goa_id.ok_or_else(|| StoreError::Corrupt {
+            column: "accounts.goa_id",
+            value: String::new(),
+        })?;
+        return Ok(GmailSignIn::OnlineAccounts { goa_id });
+    }
+    let client: SignInClient = client.parse().map_err(|_| StoreError::Corrupt {
         column: "accounts.oauth_client",
-        value: value.clone(),
+        value: client.clone(),
+    })?;
+    let route: MailRoute = route.parse().map_err(|_| StoreError::Corrupt {
+        column: "accounts.mail_route",
+        value: route.clone(),
+    })?;
+    Ok(match (route, client) {
+        (MailRoute::GmailApi, SignInClient::BuiltIn) => GmailSignIn::BuiltInApi,
+        (MailRoute::GmailApi, SignInClient::Own) => GmailSignIn::OwnProject,
+        (MailRoute::Imap, google) => GmailSignIn::AppPassword { google },
     })
 }
 
-/// Records that `id` signed in with `client`.
-pub fn set_sign_in_client(conn: &Connection, id: AccountId, client: SignInClient) -> Result<()> {
+/// The three columns `sign_in` is kept in: the client, the route and the
+/// Online Accounts id.
+fn encode_sign_in(sign_in: &GmailSignIn) -> (&'static str, &'static str, Option<&str>) {
+    let route = sign_in.route().as_str();
+    match sign_in {
+        GmailSignIn::OnlineAccounts { goa_id } => (ON_ONLINE_ACCOUNTS, route, Some(goa_id)),
+        other => (other.client().as_str(), route, None),
+    }
+}
+
+/// Records how `id` signs in, all three columns in one statement, so a
+/// failure leaves none of them changed. The sync state stays.
+pub fn set_gmail_sign_in(conn: &Connection, id: AccountId, sign_in: &GmailSignIn) -> Result<()> {
+    let (client, route, goa_id) = encode_sign_in(sign_in);
     conn.execute(
-        "UPDATE accounts SET oauth_client = ?2 WHERE id = ?1",
-        params![id, client.as_str()],
+        "UPDATE accounts SET oauth_client = ?2, mail_route = ?3, goa_id = ?4 WHERE id = ?1",
+        params![id, client, route, goa_id],
     )?;
     Ok(())
+}
+
+/// Points the Online Accounts account `id` links to at `new`, while it
+/// still links to `old`.
+pub fn relink_goa(conn: &Connection, id: AccountId, old: &str, new: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET goa_id = ?3 \
+         WHERE id = ?1 AND oauth_client = ?4 AND goa_id = ?2",
+        params![id, old, new, ON_ONLINE_ACCOUNTS],
+    )?;
+    Ok(())
+}
+
+/// The sign-in of every Gmail account, read in one query. A row this
+/// build cannot read, such as one a newer build wrote, is left out and
+/// logged, as [`list_accounts`] leaves it out, so it stops no other
+/// account.
+pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GmailSignIn>> {
+    let mut stmt = conn
+        .prepare("SELECT id, oauth_client, mail_route, goa_id FROM accounts WHERE provider = ?1")?;
+    let rows = stmt.query_map(params![Provider::Gmail.as_str()], |row| {
+        Ok((
+            row.get::<_, AccountId>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, Option<String>>(3)?,
+        ))
+    })?;
+    let mut all = HashMap::new();
+    for row in rows {
+        let (id, client, route, goa_id) = row?;
+        match decode_sign_in(client, route, goa_id) {
+            Ok(sign_in) => {
+                all.insert(id, sign_in);
+            }
+            Err(StoreError::Corrupt { column, value }) => {
+                tracing::warn!(
+                    account = id,
+                    column,
+                    value,
+                    "left out a sign-in this build cannot read"
+                );
+            }
+            Err(err) => return Err(err),
+        }
+    }
+    Ok(all)
 }
 
 /// When the account's inbox was last checked against Gmail's, if ever.
@@ -456,6 +553,15 @@ pub fn set_granted(conn: &Connection, id: AccountId, scope: &str) -> Result<()> 
     conn.execute(
         "UPDATE accounts SET granted_scopes = ?2 WHERE id = ?1",
         params![id, scope],
+    )?;
+    Ok(())
+}
+
+/// Puts back a consent read with [`consent`], an unknown half included.
+pub fn set_consent(conn: &Connection, id: AccountId, consent: &Consent) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET granted_scopes = ?2, asked_scopes = ?3 WHERE id = ?1",
+        params![id, consent.granted, consent.asked],
     )?;
     Ok(())
 }
