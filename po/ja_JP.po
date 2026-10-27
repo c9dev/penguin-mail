@@ -3938,6 +3938,7 @@ msgstr "サーバー上"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1019
 msgid "Off"
 msgstr "無効"
 
@@ -4353,7 +4354,7 @@ msgstr "{version} の新機能"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1065 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1079 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "更新を確認"
 
@@ -4697,7 +4698,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "ダウンロードしたすべてのメッセージをこのコンピューターに保存します。"
 
 #: app/src/ui/add_account.rs:1486 app/src/ui/add_account.rs:1487
-#: app/src/ui/preferences.rs:1413
+#: app/src/ui/preferences.rs:1427
 msgid "Days"
 msgstr "日数"
 
@@ -5655,7 +5656,7 @@ msgid "Declined"
 msgstr "不参加"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1232
+#: app/src/ui/preferences.rs:1246
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -5769,11 +5770,11 @@ msgstr "終了日"
 msgid "End time"
 msgstr "終了時刻"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1365
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1379
 msgid "Starts"
 msgstr "開始"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1367
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1381
 msgid "Ends"
 msgstr "終了"
 
@@ -6437,7 +6438,7 @@ msgstr "終日"
 
 #: app/src/ui/calendar/mod.rs:1794 app/src/ui/calendar/mod.rs:3046
 #: app/src/ui/calendar/sidebar.rs:352 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1246 app/src/ui/preferences.rs:1421
+#: app/src/ui/preferences.rs:1260 app/src/ui/preferences.rs:1435
 msgid "%a"
 msgstr "%a"
 
@@ -8788,131 +8789,161 @@ msgid "Keep Mail on This Computer For"
 msgstr "このコンピューターにメールを保存する期間"
 
 #: app/src/ui/preferences.rs:1008
-msgid "Bodies of mail you have read, kept for opening offline"
+#, fuzzy
+#| msgid "Bodies of mail you have read, kept for opening offline"
+msgid "Message text kept for opening offline"
 msgstr "読んだメールの本文を保存し、オフラインで開けるようにします"
 
 #: app/src/ui/preferences.rs:1011
 msgid "Message Cache"
 msgstr "メッセージキャッシュ"
 
-#: app/src/ui/preferences.rs:1040
+#: app/src/ui/preferences.rs:1020
+#, fuzzy
+#| msgid "New message"
+msgid "100 messages"
+msgstr "新着メッセージ"
+
+#: app/src/ui/preferences.rs:1021
+#, fuzzy
+#| msgid "New message"
+msgid "300 messages"
+msgstr "新着メッセージ"
+
+#: app/src/ui/preferences.rs:1022
+#, fuzzy
+#| msgid "New message"
+msgid "1,000 messages"
+msgstr "新着メッセージ"
+
+#: app/src/ui/preferences.rs:1026
+msgid "Download Recent Inbox Messages"
+msgstr ""
+
+#: app/src/ui/preferences.rs:1027
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+
+#: app/src/ui/preferences.rs:1054
 msgid "Startup"
 msgstr "起動"
 
-#: app/src/ui/preferences.rs:1043
+#: app/src/ui/preferences.rs:1057
 msgid "Start in the Tray at Login"
 msgstr "ログイン時にトレイで起動"
 
-#: app/src/ui/preferences.rs:1058
+#: app/src/ui/preferences.rs:1072
 msgid "Not available in demo mode"
 msgstr "デモモードでは利用できません"
 
-#: app/src/ui/preferences.rs:1066
+#: app/src/ui/preferences.rs:1080
 msgid "Look for a new release once a day"
 msgstr "1日1回、新しいリリースを確認します"
 
-#: app/src/ui/preferences.rs:1107
+#: app/src/ui/preferences.rs:1121
 msgid "{used} of {limit}"
 msgstr "{limit}中{used}"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{amount} · Full"
 msgstr "{amount} · 空き容量なし"
 
-#: app/src/ui/preferences.rs:1121
+#: app/src/ui/preferences.rs:1135
 msgid "{amount} · Nearly full"
 msgstr "{amount} · 空き容量わずか"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "Senders Who May Load Images"
 msgstr "画像の読み込みを許可する差出人"
 
-#: app/src/ui/preferences.rs:1134 app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1148 app/src/ui/preferences.rs:1157
 msgid "Nobody yet"
 msgstr "まだいません"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count}人の差出人"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1169
 msgid "Anyone at this domain"
 msgstr "このドメインの全員"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "This address"
 msgstr "このアドレス"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1176
 msgid "Stop Loading Images from This Sender"
 msgstr "この差出人の画像の自動読み込みを停止"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "Stop loading images from {sender}"
 msgstr "{sender}の画像の自動読み込みを停止"
 
-#: app/src/ui/preferences.rs:1239
+#: app/src/ui/preferences.rs:1253
 msgid "Monday to Friday"
 msgstr "月曜日から金曜日"
 
-#: app/src/ui/preferences.rs:1240
+#: app/src/ui/preferences.rs:1254
 msgid "Every day of the week"
 msgstr "毎日"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1255
 msgid "No days"
 msgstr "曜日未選択"
 
-#: app/src/ui/preferences.rs:1248
+#: app/src/ui/preferences.rs:1262
 msgid ", "
 msgstr "、"
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "{time}, {days}"
 msgstr "{time}、{days}"
 
-#: app/src/ui/preferences.rs:1319
+#: app/src/ui/preferences.rs:1333
 msgid "Week Starts On"
 msgstr "週の始まり"
 
-#: app/src/ui/preferences.rs:1324
+#: app/src/ui/preferences.rs:1338
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "自動では、ロケールに応じた週の始まりを使います"
 
-#: app/src/ui/preferences.rs:1338
+#: app/src/ui/preferences.rs:1352
 msgid "Working Hours"
 msgstr "勤務時間"
 
-#: app/src/ui/preferences.rs:1357
+#: app/src/ui/preferences.rs:1371
 msgid "Hours"
 msgstr "時間"
 
-#: app/src/ui/preferences.rs:1408
+#: app/src/ui/preferences.rs:1422
 msgid "–"
 msgstr "～"
 
-#: app/src/ui/preferences.rs:1491
+#: app/src/ui/preferences.rs:1505
 msgid "Never Translate"
 msgstr "翻訳しない言語"
 
-#: app/src/ui/preferences.rs:1493
+#: app/src/ui/preferences.rs:1507
 msgid "Messages in these languages get no offer to translate them"
 msgstr "これらの言語のメッセージでは翻訳を提案しません"
 
-#: app/src/ui/preferences.rs:1522
+#: app/src/ui/preferences.rs:1536
 msgid "Follow System"
 msgstr "システムに従う"
 
-#: app/src/ui/preferences.rs:1526
+#: app/src/ui/preferences.rs:1540
 msgid "Language"
 msgstr "言語"
 
-#: app/src/ui/preferences.rs:1527
+#: app/src/ui/preferences.rs:1541
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "再起動後に新しい言語で表示します"
 
-#: app/src/ui/preferences.rs:1604 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1618 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "署名なし"
 
@@ -11521,19 +11552,27 @@ msgstr ""
 "Googleカレンダーでは、一部の職場・学校アカウントのみが不在と集中時間の予定に"
 "対応しています（{reason}）"
 
-#: sync/src/error.rs:164
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+#, fuzzy
+#| msgid "This message could not be displayed"
+msgid "Message text could not be fetched completely"
+msgstr "このメッセージを表示できませんでした"
+
+#: sync/src/error.rs:171
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider}から待機を求められました"
 
-#: sync/src/error.rs:174
+#: sync/src/error.rs:181
 msgid "The server asked Penguin Mail to wait"
 msgstr "サーバーから待機を求められました"
 
-#: sync/src/error.rs:186
+#: sync/src/error.rs:193
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "「{name}」はGmailのラベル用の名前です。別の名前を選んでください。"
 
-#: sync/src/error.rs:193
+#: sync/src/error.rs:200
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -11541,11 +11580,11 @@ msgstr ""
 "「{title}」はGoogleカレンダーが作成する予定のため、Googleカレンダーでのみ変更"
 "できます。"
 
-#: sync/src/error.rs:201
+#: sync/src/error.rs:208
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host}が配信停止のリクエストを拒否しました（HTTP {status}）"
 
-#: sync/src/error.rs:205
+#: sync/src/error.rs:212
 msgid "could not reach {host}"
 msgstr "{host}に接続できませんでした"
 
