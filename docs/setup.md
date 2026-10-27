@@ -170,7 +170,22 @@ how many days of mail it keeps, or how much message text it caches, write
 poll_seconds = 30
 window_days = 30
 body_cache_mb = 1024
+body_prefetch_count = 0
 ```
+
+**Preferences → Sync → Storage → Download Recent Inbox Messages** can keep
+text for the newest 100, 300, or 1,000 Inbox messages per account before you
+open them. Off is the default. A custom `body_prefetch_count` in the config
+file uses the same setting. The existing message cache limit still applies,
+so this is a cache rather than a permanent offline archive. Downloads run
+after sync and backfill, yield to foreground actions, and preserve unread
+state. Attached files and remote images stay on the server. POP3 ignores
+this setting because it already downloads whole messages.
+
+Temporary failures retry with the sync engine's backoff. Attempt tracking
+stays within the selected newest messages, so it does not grow with the
+account's lifetime or repeatedly download bodies the cache cannot hold.
+Based on [zwnk's proposal for issue #50](https://github.com/c9dev/penguin-mail/issues/50).
 
 Opening a custom or nested IMAP folder, Sent, or Drafts lists its server mail
 beyond this background window. Each page reads at most 25 messages' metadata

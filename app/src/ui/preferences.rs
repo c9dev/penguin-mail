@@ -1005,7 +1005,7 @@ fn sync_page(
     });
     storage.add(&window);
     let caches = cache_choices();
-    let cache_note = gettext("Bodies of mail you have read, kept for opening offline");
+    let cache_note = gettext("Message text kept for opening offline");
     let cache = sync_combo(
         &caches,
         &gettext("Message Cache"),
@@ -1015,6 +1015,20 @@ fn sync_page(
         |c, v| c.body_cache_mb = Some(v),
     );
     storage.add(&cache);
+    let downloads = vec![
+        (0_i64, gettext("Off")),
+        (100, gettext("100 messages")),
+        (300, gettext("300 messages")),
+        (1000, gettext("1,000 messages")),
+    ];
+    storage.add(&sync_combo(
+        &downloads,
+        &gettext("Download Recent Inbox Messages"),
+        Some(&gettext("Download message text in each account for faster opening and offline reading. Attachments and remote images aren't downloaded.")),
+        nearest(&downloads, i64::try_from(current.body_prefetch_count.unwrap_or(0)).unwrap_or(i64::MAX)),
+        pending,
+        |c, v| c.body_prefetch_count = Some(v as usize),
+    ));
     page.add(&storage);
     // On a phone the two lines under these rows took the room their values
     // need, and Message Cache read "1 …". They go below 450 sp.

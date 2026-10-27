@@ -4023,6 +4023,7 @@ msgstr "Sunucuda"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1019
 msgid "Off"
 msgstr "Kapalı"
 
@@ -4436,7 +4437,7 @@ msgstr "{version} Sürümündeki Yenilikler"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1065 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1079 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Güncellemeleri Kontrol Et"
 
@@ -4779,7 +4780,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail indirdiği tüm iletileri bu bilgisayarda tutar."
 
 #: app/src/ui/add_account.rs:1486 app/src/ui/add_account.rs:1487
-#: app/src/ui/preferences.rs:1413
+#: app/src/ui/preferences.rs:1427
 msgid "Days"
 msgstr "Gün"
 
@@ -5746,7 +5747,7 @@ msgid "Declined"
 msgstr "Reddedildi"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1232
+#: app/src/ui/preferences.rs:1246
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -5860,11 +5861,11 @@ msgstr "Bitiş tarihi"
 msgid "End time"
 msgstr "Bitiş saati"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1365
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1379
 msgid "Starts"
 msgstr "Başlangıç"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1367
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1381
 msgid "Ends"
 msgstr "Bitiş"
 
@@ -6539,7 +6540,7 @@ msgstr "Tüm gün"
 
 #: app/src/ui/calendar/mod.rs:1794 app/src/ui/calendar/mod.rs:3046
 #: app/src/ui/calendar/sidebar.rs:352 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1246 app/src/ui/preferences.rs:1421
+#: app/src/ui/preferences.rs:1260 app/src/ui/preferences.rs:1435
 msgid "%a"
 msgstr "%a"
 
@@ -8941,132 +8942,162 @@ msgid "Keep Mail on This Computer For"
 msgstr "Bu Bilgisayarda Posta Saklama Süresi"
 
 #: app/src/ui/preferences.rs:1008
-msgid "Bodies of mail you have read, kept for opening offline"
+#, fuzzy
+#| msgid "Bodies of mail you have read, kept for opening offline"
+msgid "Message text kept for opening offline"
 msgstr "Çevrimdışı açmak için saklanan, okuduğunuz postaların gövdeleri"
 
 #: app/src/ui/preferences.rs:1011
 msgid "Message Cache"
 msgstr "İleti Önbelleği"
 
-#: app/src/ui/preferences.rs:1040
+#: app/src/ui/preferences.rs:1020
+#, fuzzy
+#| msgid "New message"
+msgid "100 messages"
+msgstr "Yeni ileti"
+
+#: app/src/ui/preferences.rs:1021
+#, fuzzy
+#| msgid "New message"
+msgid "300 messages"
+msgstr "Yeni ileti"
+
+#: app/src/ui/preferences.rs:1022
+#, fuzzy
+#| msgid "New message"
+msgid "1,000 messages"
+msgstr "Yeni ileti"
+
+#: app/src/ui/preferences.rs:1026
+msgid "Download Recent Inbox Messages"
+msgstr ""
+
+#: app/src/ui/preferences.rs:1027
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+
+#: app/src/ui/preferences.rs:1054
 msgid "Startup"
 msgstr "Başlangıç"
 
-#: app/src/ui/preferences.rs:1043
+#: app/src/ui/preferences.rs:1057
 msgid "Start in the Tray at Login"
 msgstr "Oturum Açıldığında Sistem Tepsisinde Başlat"
 
-#: app/src/ui/preferences.rs:1058
+#: app/src/ui/preferences.rs:1072
 msgid "Not available in demo mode"
 msgstr "Demo kipinde kullanılamaz"
 
-#: app/src/ui/preferences.rs:1066
+#: app/src/ui/preferences.rs:1080
 msgid "Look for a new release once a day"
 msgstr "Günde bir kez yeni sürüm ara"
 
-#: app/src/ui/preferences.rs:1107
+#: app/src/ui/preferences.rs:1121
 msgid "{used} of {limit}"
 msgstr "{used} / {limit}"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{amount} · Full"
 msgstr "{amount} · Dolu"
 
-#: app/src/ui/preferences.rs:1121
+#: app/src/ui/preferences.rs:1135
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Neredeyse dolu"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "Senders Who May Load Images"
 msgstr "Resim Yükleyebilen Gönderenler"
 
-#: app/src/ui/preferences.rs:1134 app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1148 app/src/ui/preferences.rs:1157
 msgid "Nobody yet"
 msgstr "Henüz kimse yok"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} gönderen"
 msgstr[1] "{count} gönderen"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1169
 msgid "Anyone at this domain"
 msgstr "Bu alan adındaki herkes"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "This address"
 msgstr "Bu adres"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1176
 msgid "Stop Loading Images from This Sender"
 msgstr "Bu Gönderenin Resimlerini Yüklemeyi Durdur"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "Stop loading images from {sender}"
 msgstr "{sender} göndericisinden resim yüklemeyi durdur"
 
-#: app/src/ui/preferences.rs:1239
+#: app/src/ui/preferences.rs:1253
 msgid "Monday to Friday"
 msgstr "Pazartesiden Cumaya"
 
-#: app/src/ui/preferences.rs:1240
+#: app/src/ui/preferences.rs:1254
 msgid "Every day of the week"
 msgstr "Haftanın her günü"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1255
 msgid "No days"
 msgstr "Hiçbir gün"
 
-#: app/src/ui/preferences.rs:1248
+#: app/src/ui/preferences.rs:1262
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1319
+#: app/src/ui/preferences.rs:1333
 msgid "Week Starts On"
 msgstr "Haftanın İlk Günü"
 
-#: app/src/ui/preferences.rs:1324
+#: app/src/ui/preferences.rs:1338
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Otomatik, yerel ayarın haftanın ilk gününü izler"
 
-#: app/src/ui/preferences.rs:1338
+#: app/src/ui/preferences.rs:1352
 msgid "Working Hours"
 msgstr "Çalışma Saatleri"
 
-#: app/src/ui/preferences.rs:1357
+#: app/src/ui/preferences.rs:1371
 msgid "Hours"
 msgstr "Saatler"
 
-#: app/src/ui/preferences.rs:1408
+#: app/src/ui/preferences.rs:1422
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1491
+#: app/src/ui/preferences.rs:1505
 msgid "Never Translate"
 msgstr "Asla Çevirme"
 
-#: app/src/ui/preferences.rs:1493
+#: app/src/ui/preferences.rs:1507
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Bu dillerdeki iletiler için çeviri önerilmez"
 
-#: app/src/ui/preferences.rs:1522
+#: app/src/ui/preferences.rs:1536
 msgid "Follow System"
 msgstr "Sistemi İzle"
 
-#: app/src/ui/preferences.rs:1526
+#: app/src/ui/preferences.rs:1540
 msgid "Language"
 msgstr "Dil"
 
-#: app/src/ui/preferences.rs:1527
+#: app/src/ui/preferences.rs:1541
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail yeni dili yeniden başlatıldıktan sonra gösterir"
 
-#: app/src/ui/preferences.rs:1604 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1618 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "İmza yok"
 
@@ -11733,19 +11764,27 @@ msgstr ""
 "Google Takvim, ofis dışında ve odaklanma zamanını yalnızca bazı iş ve okul "
 "hesaplarında sunar ({reason})"
 
-#: sync/src/error.rs:164
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+#, fuzzy
+#| msgid "This message could not be displayed"
+msgid "Message text could not be fetched completely"
+msgstr "Bu ileti gösterilemedi"
+
+#: sync/src/error.rs:171
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider}, Penguin Mail'den beklemesini istedi"
 
-#: sync/src/error.rs:174
+#: sync/src/error.rs:181
 msgid "The server asked Penguin Mail to wait"
 msgstr "Sunucu, Penguin Mail'den beklemesini istedi"
 
-#: sync/src/error.rs:186
+#: sync/src/error.rs:193
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail “{name}” adını kendi etiketi için ayırıyor. Başka bir ad seçin."
 
-#: sync/src/error.rs:193
+#: sync/src/error.rs:200
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -11753,11 +11792,11 @@ msgstr ""
 "Google Takvim “{title}” etkinliğini kendisi oluşturduğu için yalnızca Google "
 "Takvim değiştirebilir."
 
-#: sync/src/error.rs:201
+#: sync/src/error.rs:208
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} abonelikten çıkma isteğini reddetti (HTTP {status})"
 
-#: sync/src/error.rs:205
+#: sync/src/error.rs:212
 msgid "could not reach {host}"
 msgstr "{host} sunucusuna erişilemedi"
 

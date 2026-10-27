@@ -700,3 +700,42 @@ async fn a_message_read_raw_stays_cached_whatever_its_real_size() {
         (0, 1)
     );
 }
+
+#[tokio::test]
+async fn prefetch_retries_when_a_required_text_part_did_not_arrive() {
+    let h = harness().await;
+    let ics = super::invitations::invite(0, "20260310T090000Z");
+    h.fake.seed(meta(
+        "prefetch-invite",
+        "invite-thread",
+        crate::now_millis(),
+        &["INBOX"],
+    ));
+    h.fake.with(|s| {
+        s.raws.insert(
+            "prefetch-invite".into(),
+            super::invitations::google_invitation(&ics),
+        );
+    });
+    h.bootstrap_all().await;
+    let mut held = h.fake.hold("users.messages.attachments.get");
+    let refuse = async {
+        held.entered().await;
+        h.fake
+            .fail_next(GmailError::RateLimited { retry_after: None });
+        held.release();
+    };
+    let (first, ()) = tokio::join!(h.sync.prefetch_bodies_step(1), refuse);
+    assert!(
+        first.is_err(),
+        "an incomplete download must reach the engine's backoff"
+    );
+    h.sync.prefetch_bodies_step(1).await.unwrap();
+    let account = h.account_id;
+    let cached =
+        h.db.read(move |c| mailrs_store::bodies::peek_body(c, account, "prefetch-invite"))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(cached.calendar.as_deref(), Some(ics.as_str()));
+}

@@ -16,8 +16,8 @@ use tokio::time::Instant;
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::raw_cache::{RAW_CACHE_BYTES, RawCache};
 use crate::{
-    AccountServices, AccountSync, AnyMail, BackendError, MailBackend, SyncError, background, backoff_delay,
-    now_millis, poll_offset, with_jitter,
+    AccountServices, AccountSync, AnyMail, BackendError, MailBackend, SyncError, background,
+    backoff_delay, now_millis, poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -32,12 +32,15 @@ pub struct EngineConfig {
     pub max_backoff: Duration,
     pub window_days: i64,
     pub body_cache_bytes: i64,
-    /// Gap between backfill pages. A page of 100 messages costs 505 quota
-    /// units, about two and a half seconds of an account's budget, so
-    /// pages back to back leave the user nothing. The gap lets the bucket
-    /// refill before anybody presses Delete.
+    /// How many of each account's newest Inbox messages have their text
+    /// fetched ahead of opening. Zero turns it off.
+    pub body_prefetch_count: usize,
+    /// Gap between backfill pages or prefetched bodies. A backfill page of
+    /// 100 messages costs 505 quota units, about two and a half seconds of
+    /// an account's budget, so pages back to back leave the user nothing.
+    /// The gap lets the bucket refill before anybody presses Delete.
     pub backfill_pause: Duration,
-    /// The gap while the user is already waiting on Gmail.
+    /// The gap while the user is already waiting on the server.
     pub backfill_busy_pause: Duration,
     /// How long a crashed account loop waits before its one restart.
     pub restart_after: Duration,
@@ -50,6 +53,7 @@ impl Default for EngineConfig {
             max_backoff: Duration::from_secs(300),
             window_days: DEFAULT_WINDOW_DAYS,
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
+            body_prefetch_count: 0,
             backfill_pause: Duration::from_millis(500),
             backfill_busy_pause: Duration::from_secs(5),
             restart_after: Duration::from_secs(30),
@@ -356,17 +360,17 @@ async fn run_account(
         ))
         .await
         {
-            Ok(more_backfill) => {
+            Ok(more_background) => {
                 failures = 0;
                 if reported != Some(AccountState::Ok) {
                     reported = Some(AccountState::Ok);
                     report(&sync, AccountState::Ok).await;
                 }
-                if more_backfill {
-                    // Backfill has the whole mailbox to load and no hurry.
-                    // A gap between pages keeps the account's budget from
-                    // running at nothing, and a longer one gets out of the
-                    // way of a user action that is already waiting.
+                if more_background {
+                    // Backfill and prefetch have no hurry. A gap between
+                    // requests keeps the account's budget from running at
+                    // nothing, and a longer one gets out of the way of a
+                    // user action that is already waiting.
                     let pause = match sync.foreground_waiting() {
                         true => config.backfill_busy_pause,
                         false => config.backfill_pause,
@@ -425,11 +429,11 @@ async fn run_account(
 }
 
 /// One pass: poll history when due, prune, check the inbox against
-/// Gmail's and list the labels when due, then load one backfill page. The
-/// account's mail service may set its own gap between polls, as an IMAP
-/// server with IDLE does. Returns true when more backfill pages remain.
-/// An account whose mailboxes are local lists them once an hour and has
-/// no window to prune or page.
+/// Gmail's and list the labels when due, then load one backfill page or
+/// prefetch one body. The account's mail service may set its own gap between
+/// polls, as an IMAP server with IDLE does. Returns true when more background
+/// work remains. An account whose mailboxes are local lists them once an hour
+/// and has no window to prune, page or prefetch.
 pub(crate) async fn tick(
     sync: &AccountSync,
     next_poll: &mut Instant,
@@ -468,7 +472,10 @@ pub(crate) async fn tick(
         *next_prune = Instant::now() + PRUNE_INTERVAL;
         sync.set_checked_at(now_millis()).await?;
     }
-    sync.backfill_step().await
+    if sync.backfill_step().await? {
+        return Ok(true);
+    }
+    sync.prefetch_bodies_step(config.body_prefetch_count).await
 }
 
 /// How long to wait before the first prune and inbox check, given when

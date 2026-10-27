@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use async_channel::Receiver;
 use mailrs_dav::fake::FakeDav;
-use mailrs_domain::{AccountState, ChangeEvent};
+use mailrs_domain::{AccountState, ChangeEvent, MessageBody};
 use mailrs_gmail::GmailError;
 use mailrs_store::{Db, accounts};
 
@@ -378,4 +378,48 @@ async fn opening_the_window_looks_for_mail_at_once() {
     // The tray's next look is minutes away; showing the window cannot wait for it.
     s.engine.set_window_open(true);
     wait_for(&s.events, |e| matches!(e, ChangeEvent::NewMail { .. })).await;
+}
+
+#[tokio::test]
+async fn the_engine_prefetches_the_configured_number_of_bodies() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Db::open(&dir.path().join("mail.db")).unwrap();
+    let account = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    let fake = Arc::new(FakeGmail::new());
+    fake.seed(meta("prefetched", "t1", now_millis(), &["INBOX"]));
+    fake.with(|s| {
+        s.bodies.insert(
+            "prefetched".into(),
+            MessageBody {
+                text: Some("ready offline".into()),
+                ..Default::default()
+            },
+        );
+    });
+    let config = EngineConfig {
+        body_prefetch_count: 1,
+        backfill_pause: Duration::from_millis(1),
+        ..EngineConfig::default()
+    };
+    let (engine, _events) = SyncEngine::new(db.clone(), config);
+    engine.start_account(account, AccountServices::google(Arc::clone(&fake)));
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(body) = db
+                .read(move |c| mailrs_store::bodies::peek_body(c, account, "prefetched"))
+                .await
+                .unwrap()
+            {
+                assert_eq!(body.text.as_deref(), Some("ready offline"));
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the engine did not cache the configured Inbox text");
+    engine.shutdown();
 }
