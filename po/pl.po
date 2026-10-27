@@ -12957,23 +12957,23 @@ msgstr "Pęk kluczy odmówiła: {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "Reguła na tym komputerze przekazała załączoną wiadomość od {address}."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "Wydarzenie wymaga identyfikatora do zaimportowania."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Kalendarz CalDAV nie może przechowywać załączonych plików."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "Kalendarz CalDAV nie ma plików do udostępnienia."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "Nie jesteś gościem tego wydarzenia."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail nie może zmieniać listy kalendarzy serwera CalDAV."
 

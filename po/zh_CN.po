@@ -12246,23 +12246,23 @@ msgstr "密钥环拒绝操作：{reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "此电脑上的规则转发了 {address} 的邮件，内容如附件。"
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "活动需要识别码才能导入。"
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "CalDAV 日历无法保存附加文件。"
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "CalDAV 日历没有可共享的文件。"
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "并非此活动的参与者。"
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail 无法更改 CalDAV 服务器的日历列表。"
 

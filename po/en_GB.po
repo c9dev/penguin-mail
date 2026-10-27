@@ -11675,23 +11675,23 @@ msgstr "The keyring refused: {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "A rule on this computer forwarded the attached message from {address}."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "An event needs an ID to be imported."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "A CalDAV calendar cannot store attached files."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "A CalDAV calendar has no files to share."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "You are not a guest of this event."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail cannot change the calendar list of a CalDAV server."
 

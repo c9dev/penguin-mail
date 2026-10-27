@@ -12253,23 +12253,23 @@ msgstr "鑰匙圈拒絕操作：{reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "此電腦上的規則轉寄了 {address} 的郵件，內容如附件。"
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "活動需要識別碼才能匯入。"
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "CalDAV 行事曆無法儲存附加檔案。"
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "CalDAV 行事曆沒有可共用的檔案。"
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "並非此活動的參與者。"
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail 無法變更 CalDAV 伺服器的行事曆清單。"
 

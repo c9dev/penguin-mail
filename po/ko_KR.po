@@ -12475,23 +12475,23 @@ msgstr "키 모음이 거부했습니다: {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "이 컴퓨터의 규칙이 {address}의 메시지를 첨부하여 전달했습니다."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "일정을 가져오려면 ID가 필요합니다."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "CalDAV 캘린더는 첨부 파일을 저장할 수 없습니다."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "CalDAV 캘린더에 공유할 파일이 없습니다."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "이 일정의 참석자가 아닙니다."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail은 CalDAV 서버의 캘린더 목록을 변경할 수 없습니다."
 

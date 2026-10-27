@@ -35,7 +35,11 @@ fn the_client_speaks_caldav_and_carddav_to_radicale() {
         let client = DavClient::new(&radicale.url(), Kind::Calendar, Login::new(USER, &password))
             .expect("a client");
         let homes = client.homes().await.expect("the homes");
-        let home = homes.calendar.expect("a calendar home");
+        let home = homes
+            .calendar_homes
+            .into_iter()
+            .next()
+            .expect("a calendar home");
         // Radicale schedules nothing, so it names no address the principal
         // is invited by. A missing property is an empty list, not an error.
         assert!(homes.addresses.is_empty(), "{:?}", homes.addresses);

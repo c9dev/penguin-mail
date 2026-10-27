@@ -12954,23 +12954,23 @@ msgstr "Le trousseau a refusé : {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "Une règle de cet ordinateur a transféré le message joint de {address}."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "Un événement a besoin d’un identifiant pour être importé."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Un agenda CalDAV ne peut pas stocker de fichiers joints."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "Un agenda CalDAV n’a pas de fichiers à partager."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "Vous n’êtes pas invité à cet événement."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "Penguin Mail ne peut pas modifier la liste des agendas d’un serveur CalDAV."

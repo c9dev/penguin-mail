@@ -60,7 +60,7 @@ impl ServiceProbe for RealProbe {
             other => BackendError::Refused(other.to_string()),
         })?;
         let home = match kind {
-            Kind::Calendar => homes.calendar,
+            Kind::Calendar => homes.calendar_homes.into_iter().next(),
             Kind::AddressBook => homes.addressbook,
         };
         home.map(drop).ok_or(BackendError::Unsupported)

@@ -49,7 +49,8 @@ impl std::fmt::Debug for Login {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Homes {
     pub principal: String,
-    pub calendar: Option<String>,
+    /// Every calendar home advertised by the principal, in server order.
+    pub calendar_homes: Vec<String>,
     pub addressbook: Option<String>,
     /// The addresses the principal goes by in an invitation, as its
     /// `calendar-user-address-set` names them. Empty on a server that
@@ -615,9 +616,16 @@ impl DavApi for DavClient {
             .map(|r| r.props.clone())
             .unwrap_or_default();
         let resolve = |home: Option<String>| home.map(|h| self.resolve(&answer.url, &h));
+        let mut seen = std::collections::HashSet::new();
+        let calendar_homes = props
+            .calendar_homes
+            .into_iter()
+            .map(|home| self.resolve(&answer.url, &home))
+            .filter(|home| seen.insert(home.clone()))
+            .collect();
         Ok(Homes {
             principal,
-            calendar: resolve(props.calendar_home),
+            calendar_homes,
             addressbook: resolve(props.addressbook_home),
             addresses: props.addresses,
         })

@@ -12853,23 +12853,23 @@ msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr ""
 "Uma regra neste computador reencaminhou a mensagem em anexo de {address}."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "Um evento precisa de um ID para ser importado."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Um calendário CalDAV não pode guardar ficheiros anexados."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "Um calendário CalDAV não tem ficheiros para partilhar."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "Não é convidado deste evento."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "O Penguin Mail não pode alterar a lista de calendários de um servidor CalDAV."

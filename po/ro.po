@@ -13055,23 +13055,23 @@ msgstr ""
 "O regulă de pe acest calculator a redirecționat mesajul atașat de la "
 "{address}."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "Un eveniment are nevoie de un ID pentru a fi importat."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Un calendar CalDAV nu poate stoca fișiere atașate."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "Un calendar CalDAV nu are fișiere de partajat."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "Nu sunteți invitat la acest eveniment."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "Penguin Mail nu poate modifica lista de calendare a unui server CalDAV."

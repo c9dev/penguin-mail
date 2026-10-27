@@ -21,6 +21,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - Choose where to save a single attachment, including in Flatpak, and see errors when its default application cannot open it.
+- Show shared and group calendars discovered through CalDAV or JMAP, with their read-only and editing permissions.
 
 - Google Calendar edits can switch events between timed and all-day without reverting.
 - Microsoft 365 searches show each matching message once and open mail outside the local sync window.

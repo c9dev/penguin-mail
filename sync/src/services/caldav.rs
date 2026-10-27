@@ -472,12 +472,25 @@ impl<D: DavApi> CalendarService for CalDav<D> {
             // changed on the server is picked up without a restart.
             self.learn(homes.addresses);
         }
-        let home = homes.calendar.ok_or(BackendError::Unsupported)?;
-        let found = self
-            .api
-            .collections(&home, Kind::Calendar)
-            .await
-            .map_err(|e| self.err(e))?;
+        let home = homes
+            .calendar_homes
+            .first()
+            .cloned()
+            .ok_or(BackendError::Unsupported)?;
+        let mut found = Vec::new();
+        let mut seen = HashSet::new();
+        for home in homes.calendar_homes {
+            for collection in self
+                .api
+                .collections(&home, Kind::Calendar)
+                .await
+                .map_err(|e| self.err(e))?
+            {
+                if seen.insert(collection.href.clone()) {
+                    found.push(collection);
+                }
+            }
+        }
         // The window says before an answer whether its organizer will
         // hear of it, which only an account without mail has to ask. A
         // server that does not say is taken to send nothing.

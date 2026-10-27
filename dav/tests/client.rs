@@ -48,7 +48,7 @@ async fn a_principal_on_one_host_finds_its_home_on_another_of_the_same_domain() 
     let homes = client(&server).homes().await.unwrap();
     assert_eq!(homes.principal, "/1234567890/principal/");
     assert_eq!(
-        homes.calendar.as_deref(),
+        homes.calendar_homes.first().map(String::as_str),
         Some("https://p12-caldav.icloud.com:443/1234567890/calendars/")
     );
     assert!(
@@ -78,7 +78,8 @@ async fn the_homes_name_the_addresses_the_principal_goes_by() {
     assert_eq!(homes.addresses, ["robin@example.org"]);
     assert!(
         homes
-            .calendar
+            .calendar_homes
+            .first()
             .is_some_and(|home| home.ends_with("/remote.php/dav/calendars/robin/"))
     );
 }
@@ -596,7 +597,10 @@ async fn a_root_that_answers_404_finds_the_principal_through_the_well_known_url(
     fastmail_like(&server, "caldav", "/dav/calendars").await;
     let homes = client_of(&server, Kind::Calendar).homes().await.unwrap();
     assert_eq!(homes.principal, "/dav/principals/user/me/");
-    assert_eq!(homes.calendar.as_deref(), Some("/dav/calendars/user/me/"));
+    assert_eq!(
+        homes.calendar_homes.first().map(String::as_str),
+        Some("/dav/calendars/user/me/")
+    );
 }
 
 #[tokio::test]
@@ -666,7 +670,14 @@ async fn a_root_without_a_principal_tries_the_well_known_url() {
         .respond_with(homes_answer("/dav/principals/user/me/"))
         .mount(&server)
         .await;
-    assert!(client(&server).homes().await.unwrap().calendar.is_some());
+    assert!(
+        !client(&server)
+            .homes()
+            .await
+            .unwrap()
+            .calendar_homes
+            .is_empty()
+    );
 }
 
 #[tokio::test]
@@ -690,7 +701,14 @@ async fn a_root_that_answers_501_tries_the_well_known_url() {
         .respond_with(homes_answer("/dav/principals/user/me/"))
         .mount(&server)
         .await;
-    assert!(client(&server).homes().await.unwrap().calendar.is_some());
+    assert!(
+        !client(&server)
+            .homes()
+            .await
+            .unwrap()
+            .calendar_homes
+            .is_empty()
+    );
 }
 
 #[tokio::test]
@@ -752,7 +770,7 @@ async fn a_principal_on_another_host_of_the_site_is_asked_there() {
         format!("http://127.0.0.1:{port}/dav/principals/user/me/")
     );
     assert_eq!(
-        homes.calendar,
-        Some(format!("http://127.0.0.1:{port}/dav/calendars/user/me/"))
+        homes.calendar_homes,
+        vec![format!("http://127.0.0.1:{port}/dav/calendars/user/me/")]
     );
 }
