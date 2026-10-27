@@ -4515,6 +4515,7 @@ msgstr "Di server"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "Nonaktif"
 
@@ -4936,7 +4937,7 @@ msgstr "Yang Baru di {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1077 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
@@ -5276,7 +5277,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail menyimpan semua pesan yang diunduh di komputer ini."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1425
+#: app/src/ui/preferences.rs:1439
 msgid "Days"
 msgstr "Hari"
 
@@ -6256,7 +6257,7 @@ msgid "Declined"
 msgstr "Ditolak"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1244
+#: app/src/ui/preferences.rs:1258
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6370,11 +6371,11 @@ msgstr "Tanggal selesai"
 msgid "End time"
 msgstr "Waktu selesai"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1377
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1391
 msgid "Starts"
 msgstr "Mulai"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1379
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1393
 msgid "Ends"
 msgstr "Selesai"
 
@@ -7053,7 +7054,7 @@ msgstr "Sepanjang Hari"
 
 #: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1258 app/src/ui/preferences.rs:1433
+#: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
 msgid "%a"
 msgstr "%a"
 
@@ -9691,132 +9692,156 @@ msgid "Keep Mail on This Computer For"
 msgstr "Simpan Email di Komputer Ini Selama"
 
 #: app/src/ui/preferences.rs:1020
-msgid "Bodies of mail you have read, kept for opening offline"
-msgstr "Isi email yang telah dibaca, disimpan agar dapat dibuka saat luring"
+msgid "Message text kept for opening offline"
+msgstr "Teks pesan yang disimpan agar bisa dibuka tanpa koneksi"
 
 #: app/src/ui/preferences.rs:1023
 msgid "Message Cache"
 msgstr "Singgahan Pesan"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1032
+msgid "100 messages"
+msgstr "100 pesan"
+
+#: app/src/ui/preferences.rs:1033
+msgid "300 messages"
+msgstr "300 pesan"
+
+#: app/src/ui/preferences.rs:1034
+msgid "1,000 messages"
+msgstr "1.000 pesan"
+
+#: app/src/ui/preferences.rs:1038
+msgid "Download Recent Inbox Messages"
+msgstr "Unduh Pesan Kotak Masuk Terbaru"
+
+#: app/src/ui/preferences.rs:1039
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+"Unduh teks pesan di setiap akun agar lebih cepat dibuka dan bisa dibaca "
+"tanpa koneksi. Lampiran dan gambar jarak jauh tidak diunduh."
+
+#: app/src/ui/preferences.rs:1066
 msgid "Startup"
 msgstr "Saat Memulai"
 
-#: app/src/ui/preferences.rs:1055
+#: app/src/ui/preferences.rs:1069
 msgid "Start in the Tray at Login"
 msgstr "Mulai di Baki Saat Masuk"
 
-#: app/src/ui/preferences.rs:1070
+#: app/src/ui/preferences.rs:1084
 msgid "Not available in demo mode"
 msgstr "Tidak tersedia dalam mode demo"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1092
 msgid "Look for a new release once a day"
 msgstr "Cari rilis baru sekali sehari"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{used} of {limit}"
 msgstr "{used} dari {limit}"
 
-#: app/src/ui/preferences.rs:1131
+#: app/src/ui/preferences.rs:1145
 msgid "{amount} · Full"
 msgstr "{amount} · Penuh"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Hampir penuh"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "Senders Who May Load Images"
 msgstr "Pengirim yang Boleh Memuat Gambar"
 
-#: app/src/ui/preferences.rs:1146 app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1160 app/src/ui/preferences.rs:1169
 msgid "Nobody yet"
 msgstr "Belum ada"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} pengirim"
 msgstr[1] "{count} pengirim"
 
-#: app/src/ui/preferences.rs:1167
+#: app/src/ui/preferences.rs:1181
 msgid "Anyone at this domain"
 msgstr "Siapa pun di domain ini"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "This address"
 msgstr "Alamat ini"
 
-#: app/src/ui/preferences.rs:1174
+#: app/src/ui/preferences.rs:1188
 msgid "Stop Loading Images from This Sender"
 msgstr "Berhenti Memuat Gambar dari Pengirim Ini"
 
-#: app/src/ui/preferences.rs:1181
+#: app/src/ui/preferences.rs:1195
 msgid "Stop loading images from {sender}"
 msgstr "Berhenti memuat gambar dari {sender}"
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "Monday to Friday"
 msgstr "Senin sampai Jumat"
 
-#: app/src/ui/preferences.rs:1252
+#: app/src/ui/preferences.rs:1266
 msgid "Every day of the week"
 msgstr "Setiap hari dalam seminggu"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1267
 msgid "No days"
 msgstr "Tidak ada hari"
 
-#: app/src/ui/preferences.rs:1260
+#: app/src/ui/preferences.rs:1274
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1263
+#: app/src/ui/preferences.rs:1277
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1331
+#: app/src/ui/preferences.rs:1345
 msgid "Week Starts On"
 msgstr "Awal Minggu"
 
-#: app/src/ui/preferences.rs:1336
+#: app/src/ui/preferences.rs:1350
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Otomatis mengikuti hari pertama dalam seminggu menurut lokal"
 
-#: app/src/ui/preferences.rs:1350
+#: app/src/ui/preferences.rs:1364
 msgid "Working Hours"
 msgstr "Jam Kerja"
 
-#: app/src/ui/preferences.rs:1369
+#: app/src/ui/preferences.rs:1383
 msgid "Hours"
 msgstr "Jam"
 
-#: app/src/ui/preferences.rs:1420
+#: app/src/ui/preferences.rs:1434
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1503
+#: app/src/ui/preferences.rs:1517
 msgid "Never Translate"
 msgstr "Jangan Terjemahkan"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1519
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Pesan dalam bahasa ini tidak mendapat tawaran terjemahan"
 
-#: app/src/ui/preferences.rs:1534
+#: app/src/ui/preferences.rs:1548
 msgid "Follow System"
 msgstr "Ikuti Sistem"
 
-#: app/src/ui/preferences.rs:1538
+#: app/src/ui/preferences.rs:1552
 msgid "Language"
 msgstr "Bahasa"
 
-#: app/src/ui/preferences.rs:1539
+#: app/src/ui/preferences.rs:1553
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/preferences.rs:1616 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1630 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Tanpa tanda tangan"
 
@@ -12569,19 +12594,25 @@ msgstr ""
 "Google Calendar hanya menyediakan di luar kantor dan waktu fokus untuk "
 "sebagian akun kerja dan sekolah ({reason})"
 
-#: sync/src/error.rs:170
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+msgid "Message text could not be fetched completely"
+msgstr "Teks pesan tidak dapat diambil sepenuhnya"
+
+#: sync/src/error.rs:176
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} meminta Penguin Mail menunggu"
 
-#: sync/src/error.rs:180
+#: sync/src/error.rs:186
 msgid "The server asked Penguin Mail to wait"
 msgstr "Server meminta Penguin Mail menunggu"
 
-#: sync/src/error.rs:202
+#: sync/src/error.rs:208
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail menggunakan “{name}” untuk labelnya sendiri. Pilih nama lain."
 
-#: sync/src/error.rs:209
+#: sync/src/error.rs:215
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -12589,11 +12620,11 @@ msgstr ""
 "Google Calendar membuat “{title}” sendiri, sehingga hanya Google Calendar "
 "yang dapat mengubahnya."
 
-#: sync/src/error.rs:217
+#: sync/src/error.rs:223
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} menolak permintaan berhenti berlangganan (HTTP {status})"
 
-#: sync/src/error.rs:221
+#: sync/src/error.rs:227
 msgid "could not reach {host}"
 msgstr "tidak dapat menghubungi {host}"
 
@@ -13326,6 +13357,9 @@ msgstr "Tandai bukan spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Pindahkan ke {folder}"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr "Isi email yang telah dibaca, disimpan agar dapat dibuka saat luring"
 
 #~ msgid "This account is already moving to its new sign-in."
 #~ msgstr "Akun ini sudah dipindahkan ke cara masuk yang baru."

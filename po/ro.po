@@ -4604,6 +4604,7 @@ msgstr "Pe server"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "Dezactivat"
 
@@ -5029,7 +5030,7 @@ msgstr "Noutăți în {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1077 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Caută actualizări"
 
@@ -5374,7 +5375,7 @@ msgstr ""
 "Penguin Mail păstrează pe acest calculator fiecare mesaj pe care îl descarcă."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1425
+#: app/src/ui/preferences.rs:1439
 msgid "Days"
 msgstr "Zile"
 
@@ -6359,7 +6360,7 @@ msgid "Declined"
 msgstr "Refuzat"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1244
+#: app/src/ui/preferences.rs:1258
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6475,11 +6476,11 @@ msgstr "Data de sfârșit"
 msgid "End time"
 msgstr "Ora de sfârșit"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1377
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1391
 msgid "Starts"
 msgstr "Începe"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1379
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1393
 msgid "Ends"
 msgstr "Se termină"
 
@@ -7163,7 +7164,7 @@ msgstr "Toată ziua"
 
 #: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1258 app/src/ui/preferences.rs:1433
+#: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
 msgid "%a"
 msgstr "%a"
 
@@ -9849,133 +9850,157 @@ msgid "Keep Mail on This Computer For"
 msgstr "Păstrează mesajele pe acest calculator timp de"
 
 #: app/src/ui/preferences.rs:1020
-msgid "Bodies of mail you have read, kept for opening offline"
-msgstr "Conținutul mesajelor citite, păstrat pentru deschidere fără conexiune"
+msgid "Message text kept for opening offline"
+msgstr "Textul mesajelor păstrat pentru deschidere fără conexiune"
 
 #: app/src/ui/preferences.rs:1023
 msgid "Message Cache"
 msgstr "Cache de mesaje"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1032
+msgid "100 messages"
+msgstr "100 de mesaje"
+
+#: app/src/ui/preferences.rs:1033
+msgid "300 messages"
+msgstr "300 de mesaje"
+
+#: app/src/ui/preferences.rs:1034
+msgid "1,000 messages"
+msgstr "1.000 de mesaje"
+
+#: app/src/ui/preferences.rs:1038
+msgid "Download Recent Inbox Messages"
+msgstr "Descarcă mesajele recente din Inbox"
+
+#: app/src/ui/preferences.rs:1039
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+"Descarcă textul mesajelor din fiecare cont, pentru deschidere mai rapidă și "
+"citire fără conexiune. Atașamentele și imaginile la distanță nu se descarcă."
+
+#: app/src/ui/preferences.rs:1066
 msgid "Startup"
 msgstr "Pornire"
 
-#: app/src/ui/preferences.rs:1055
+#: app/src/ui/preferences.rs:1069
 msgid "Start in the Tray at Login"
 msgstr "Pornește în bara de sistem la autentificare"
 
-#: app/src/ui/preferences.rs:1070
+#: app/src/ui/preferences.rs:1084
 msgid "Not available in demo mode"
 msgstr "Indisponibil în modul demonstrativ"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1092
 msgid "Look for a new release once a day"
 msgstr "Caută o versiune nouă o dată pe zi"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{used} of {limit}"
 msgstr "{used} din {limit}"
 
-#: app/src/ui/preferences.rs:1131
+#: app/src/ui/preferences.rs:1145
 msgid "{amount} · Full"
 msgstr "{amount} · Plin"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Aproape plin"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "Senders Who May Load Images"
 msgstr "Expeditori care pot încărca imagini"
 
-#: app/src/ui/preferences.rs:1146 app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1160 app/src/ui/preferences.rs:1169
 msgid "Nobody yet"
 msgstr "Nimeni încă"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} expeditor"
 msgstr[1] "{count} expeditori"
 msgstr[2] "{count} de expeditori"
 
-#: app/src/ui/preferences.rs:1167
+#: app/src/ui/preferences.rs:1181
 msgid "Anyone at this domain"
 msgstr "Oricine din acest domeniu"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "This address"
 msgstr "Această adresă"
 
-#: app/src/ui/preferences.rs:1174
+#: app/src/ui/preferences.rs:1188
 msgid "Stop Loading Images from This Sender"
 msgstr "Nu mai încărca imagini de la acest expeditor"
 
-#: app/src/ui/preferences.rs:1181
+#: app/src/ui/preferences.rs:1195
 msgid "Stop loading images from {sender}"
 msgstr "Nu mai încărca imagini de la {sender}"
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "Monday to Friday"
 msgstr "De luni până vineri"
 
-#: app/src/ui/preferences.rs:1252
+#: app/src/ui/preferences.rs:1266
 msgid "Every day of the week"
 msgstr "În fiecare zi a săptămânii"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1267
 msgid "No days"
 msgstr "Nicio zi"
 
-#: app/src/ui/preferences.rs:1260
+#: app/src/ui/preferences.rs:1274
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1263
+#: app/src/ui/preferences.rs:1277
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1331
+#: app/src/ui/preferences.rs:1345
 msgid "Week Starts On"
 msgstr "Săptămâna începe"
 
-#: app/src/ui/preferences.rs:1336
+#: app/src/ui/preferences.rs:1350
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "„Automat” folosește prima zi a săptămânii din setările regionale"
 
-#: app/src/ui/preferences.rs:1350
+#: app/src/ui/preferences.rs:1364
 msgid "Working Hours"
 msgstr "Program de lucru"
 
-#: app/src/ui/preferences.rs:1369
+#: app/src/ui/preferences.rs:1383
 msgid "Hours"
 msgstr "Ore"
 
-#: app/src/ui/preferences.rs:1420
+#: app/src/ui/preferences.rs:1434
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1503
+#: app/src/ui/preferences.rs:1517
 msgid "Never Translate"
 msgstr "Nu traduce niciodată"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1519
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Pentru mesajele în aceste limbi nu se oferă traducerea"
 
-#: app/src/ui/preferences.rs:1534
+#: app/src/ui/preferences.rs:1548
 msgid "Follow System"
 msgstr "Ca sistemul"
 
-#: app/src/ui/preferences.rs:1538
+#: app/src/ui/preferences.rs:1552
 msgid "Language"
 msgstr "Limbă"
 
-#: app/src/ui/preferences.rs:1539
+#: app/src/ui/preferences.rs:1553
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail afișează noua limbă după repornire"
 
-#: app/src/ui/preferences.rs:1616 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1630 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Fără semnătură"
 
@@ -12787,19 +12812,25 @@ msgstr ""
 "Google Calendar oferă „Absent de la birou” și „Timp de concentrare” doar pe "
 "unele conturi de serviciu și de școală ({reason})"
 
-#: sync/src/error.rs:170
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+msgid "Message text could not be fetched completely"
+msgstr "Textul mesajului nu a putut fi descărcat complet"
+
+#: sync/src/error.rs:176
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} a cerut ca Penguin Mail să aștepte"
 
-#: sync/src/error.rs:180
+#: sync/src/error.rs:186
 msgid "The server asked Penguin Mail to wait"
 msgstr "Serverul a cerut ca Penguin Mail să aștepte"
 
-#: sync/src/error.rs:202
+#: sync/src/error.rs:208
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail rezervă „{name}” pentru propria etichetă. Alegeți alt nume."
 
-#: sync/src/error.rs:209
+#: sync/src/error.rs:215
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -12807,11 +12838,11 @@ msgstr ""
 "Google Calendar creează singur „{title}”, așa că doar Google Calendar îl "
 "poate modifica."
 
-#: sync/src/error.rs:217
+#: sync/src/error.rs:223
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} a refuzat cererea de dezabonare (HTTP {status})"
 
-#: sync/src/error.rs:221
+#: sync/src/error.rs:227
 msgid "could not reach {host}"
 msgstr "nu s-a putut contacta {host}"
 
@@ -13565,6 +13596,10 @@ msgstr "Marchează ca nefiind spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mută în {folder}"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr ""
+#~ "Conținutul mesajelor citite, păstrat pentru deschidere fără conexiune"
 
 #~ msgid "This account is already moving to its new sign-in."
 #~ msgstr "Acest cont trece deja la noua metodă de conectare."

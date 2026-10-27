@@ -4546,6 +4546,7 @@ msgstr "En el servidor"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "Desactivado"
 
@@ -4964,7 +4965,7 @@ msgstr "Novedades de la versión {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1077 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Buscar actualizaciones"
 
@@ -5307,7 +5308,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail guarda en este equipo todos los mensajes que descarga."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1425
+#: app/src/ui/preferences.rs:1439
 msgid "Days"
 msgstr "Días"
 
@@ -6295,7 +6296,7 @@ msgid "Declined"
 msgstr "Rechazado"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1244
+#: app/src/ui/preferences.rs:1258
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6410,11 +6411,11 @@ msgstr "Fecha de fin"
 msgid "End time"
 msgstr "Hora de fin"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1377
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1391
 msgid "Starts"
 msgstr "Empieza"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1379
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1393
 msgid "Ends"
 msgstr "Termina"
 
@@ -7091,7 +7092,7 @@ msgstr "Todo el día"
 
 #: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1258 app/src/ui/preferences.rs:1433
+#: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
 msgid "%a"
 msgstr "%a"
 
@@ -9737,133 +9738,157 @@ msgid "Keep Mail on This Computer For"
 msgstr "Guardar el correo en este equipo durante"
 
 #: app/src/ui/preferences.rs:1020
-msgid "Bodies of mail you have read, kept for opening offline"
-msgstr "Cuerpos del correo que has leído, guardados para abrirlos sin conexión"
+msgid "Message text kept for opening offline"
+msgstr "Texto de los mensajes guardado para abrirlos sin conexión"
 
 #: app/src/ui/preferences.rs:1023
 msgid "Message Cache"
 msgstr "Caché de mensajes"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1032
+msgid "100 messages"
+msgstr "100 mensajes"
+
+#: app/src/ui/preferences.rs:1033
+msgid "300 messages"
+msgstr "300 mensajes"
+
+#: app/src/ui/preferences.rs:1034
+msgid "1,000 messages"
+msgstr "1000 mensajes"
+
+#: app/src/ui/preferences.rs:1038
+msgid "Download Recent Inbox Messages"
+msgstr "Descargar mensajes recientes de la bandeja de entrada"
+
+#: app/src/ui/preferences.rs:1039
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+"Descarga el texto de los mensajes de cada cuenta para abrirlos más rápido y "
+"leerlos sin conexión. Los adjuntos y las imágenes remotas no se descargan."
+
+#: app/src/ui/preferences.rs:1066
 msgid "Startup"
 msgstr "Inicio"
 
-#: app/src/ui/preferences.rs:1055
+#: app/src/ui/preferences.rs:1069
 msgid "Start in the Tray at Login"
 msgstr "Iniciar en la bandeja del sistema al iniciar sesión"
 
-#: app/src/ui/preferences.rs:1070
+#: app/src/ui/preferences.rs:1084
 msgid "Not available in demo mode"
 msgstr "No disponible en el modo de demostración"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1092
 msgid "Look for a new release once a day"
 msgstr "Buscar una versión nueva una vez al día"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{used} of {limit}"
 msgstr "{used} de {limit}"
 
-#: app/src/ui/preferences.rs:1131
+#: app/src/ui/preferences.rs:1145
 msgid "{amount} · Full"
 msgstr "{amount} · Lleno"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Casi lleno"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "Senders Who May Load Images"
 msgstr "Remitentes que pueden cargar imágenes"
 
-#: app/src/ui/preferences.rs:1146 app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1160 app/src/ui/preferences.rs:1169
 msgid "Nobody yet"
 msgstr "Nadie todavía"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} remitente"
 msgstr[1] "{count} remitentes"
 
-#: app/src/ui/preferences.rs:1167
+#: app/src/ui/preferences.rs:1181
 msgid "Anyone at this domain"
 msgstr "Cualquiera de este dominio"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "This address"
 msgstr "Esta dirección"
 
-#: app/src/ui/preferences.rs:1174
+#: app/src/ui/preferences.rs:1188
 msgid "Stop Loading Images from This Sender"
 msgstr "Dejar de cargar imágenes de este remitente"
 
-#: app/src/ui/preferences.rs:1181
+#: app/src/ui/preferences.rs:1195
 msgid "Stop loading images from {sender}"
 msgstr "Dejar de cargar imágenes de {sender}"
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "Monday to Friday"
 msgstr "De lunes a viernes"
 
-#: app/src/ui/preferences.rs:1252
+#: app/src/ui/preferences.rs:1266
 msgid "Every day of the week"
 msgstr "Todos los días de la semana"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1267
 msgid "No days"
 msgstr "Ningún día"
 
-#: app/src/ui/preferences.rs:1260
+#: app/src/ui/preferences.rs:1274
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1263
+#: app/src/ui/preferences.rs:1277
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1331
+#: app/src/ui/preferences.rs:1345
 msgid "Week Starts On"
 msgstr "La semana empieza el"
 
-#: app/src/ui/preferences.rs:1336
+#: app/src/ui/preferences.rs:1350
 msgid "Automatic follows the locale's own first day of the week"
 msgstr ""
 "Automático sigue el primer día de la semana de la configuración regional"
 
-#: app/src/ui/preferences.rs:1350
+#: app/src/ui/preferences.rs:1364
 msgid "Working Hours"
 msgstr "Horario laboral"
 
-#: app/src/ui/preferences.rs:1369
+#: app/src/ui/preferences.rs:1383
 msgid "Hours"
 msgstr "Horas"
 
-#: app/src/ui/preferences.rs:1420
+#: app/src/ui/preferences.rs:1434
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1503
+#: app/src/ui/preferences.rs:1517
 msgid "Never Translate"
 msgstr "No traducir nunca"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1519
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Los mensajes en estos idiomas no ofrecen traducción"
 
-#: app/src/ui/preferences.rs:1534
+#: app/src/ui/preferences.rs:1548
 msgid "Follow System"
 msgstr "Seguir al sistema"
 
-#: app/src/ui/preferences.rs:1538
+#: app/src/ui/preferences.rs:1552
 msgid "Language"
 msgstr "Idioma"
 
-#: app/src/ui/preferences.rs:1539
+#: app/src/ui/preferences.rs:1553
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail muestra un idioma nuevo tras reiniciarse"
 
-#: app/src/ui/preferences.rs:1616 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1630 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Sin firma"
 
@@ -12617,19 +12642,25 @@ msgstr ""
 "Google Calendar solo ofrece fuera de la oficina y tiempo de concentración en "
 "algunas cuentas de trabajo y de centros educativos ({reason})"
 
-#: sync/src/error.rs:170
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+msgid "Message text could not be fetched completely"
+msgstr "No se pudo descargar el texto completo del mensaje"
+
+#: sync/src/error.rs:176
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} ha pedido a Penguin Mail que espere"
 
-#: sync/src/error.rs:180
+#: sync/src/error.rs:186
 msgid "The server asked Penguin Mail to wait"
 msgstr "El servidor ha pedido a Penguin Mail que espere"
 
-#: sync/src/error.rs:202
+#: sync/src/error.rs:208
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail reserva «{name}» para una etiqueta propia. Elige otro nombre."
 
-#: sync/src/error.rs:209
+#: sync/src/error.rs:215
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -12637,11 +12668,11 @@ msgstr ""
 "Google Calendar crea «{title}» por sí mismo, así que solo Google Calendar "
 "puede cambiarlo."
 
-#: sync/src/error.rs:217
+#: sync/src/error.rs:223
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} ha rechazado la solicitud de baja (HTTP {status})"
 
-#: sync/src/error.rs:221
+#: sync/src/error.rs:227
 msgid "could not reach {host}"
 msgstr "no se ha podido acceder a {host}"
 
@@ -13384,6 +13415,10 @@ msgstr "Marcar como correo deseado"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover a {folder}"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr ""
+#~ "Cuerpos del correo que has leído, guardados para abrirlos sin conexión"
 
 #~ msgid "This account is already moving to its new sign-in."
 #~ msgstr "Esta cuenta ya está pasando a su nuevo inicio de sesión."

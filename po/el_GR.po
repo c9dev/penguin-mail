@@ -4656,6 +4656,7 @@ msgstr "Στον διακομιστή"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "Ανενεργό"
 
@@ -5080,7 +5081,7 @@ msgstr "Τι νέο υπάρχει στην έκδοση {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1077 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Έλεγχος για ενημερώσεις"
 
@@ -5429,7 +5430,7 @@ msgstr ""
 "Το Penguin Mail κρατά σε αυτόν τον υπολογιστή κάθε μήνυμα που λαμβάνει."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1425
+#: app/src/ui/preferences.rs:1439
 msgid "Days"
 msgstr "Ημέρες"
 
@@ -6418,7 +6419,7 @@ msgid "Declined"
 msgstr "Απορρίφθηκε"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1244
+#: app/src/ui/preferences.rs:1258
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6534,11 +6535,11 @@ msgstr "Ημερομηνία λήξης"
 msgid "End time"
 msgstr "Ώρα λήξης"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1377
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1391
 msgid "Starts"
 msgstr "Έναρξη"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1379
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1393
 msgid "Ends"
 msgstr "Λήξη"
 
@@ -7220,7 +7221,7 @@ msgstr "Ολοήμερα"
 
 #: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1258 app/src/ui/preferences.rs:1433
+#: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
 msgid "%a"
 msgstr "%a"
 
@@ -9906,135 +9907,159 @@ msgid "Keep Mail on This Computer For"
 msgstr "Διατήρηση αλληλογραφίας σε αυτόν τον υπολογιστή για"
 
 #: app/src/ui/preferences.rs:1020
-msgid "Bodies of mail you have read, kept for opening offline"
-msgstr ""
-"Κείμενα μηνυμάτων που έχετε διαβάσει, αποθηκευμένα για άνοιγμα χωρίς σύνδεση"
+msgid "Message text kept for opening offline"
+msgstr "Κείμενο μηνυμάτων που φυλάσσεται για άνοιγμα χωρίς σύνδεση"
 
 #: app/src/ui/preferences.rs:1023
 msgid "Message Cache"
 msgstr "Προσωρινή μνήμη μηνυμάτων"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1032
+msgid "100 messages"
+msgstr "100 μηνύματα"
+
+#: app/src/ui/preferences.rs:1033
+msgid "300 messages"
+msgstr "300 μηνύματα"
+
+#: app/src/ui/preferences.rs:1034
+msgid "1,000 messages"
+msgstr "1.000 μηνύματα"
+
+#: app/src/ui/preferences.rs:1038
+msgid "Download Recent Inbox Messages"
+msgstr "Λήψη πρόσφατων μηνυμάτων εισερχομένων"
+
+#: app/src/ui/preferences.rs:1039
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+"Λήψη του κειμένου των μηνυμάτων κάθε λογαριασμού για γρηγορότερο άνοιγμα και "
+"ανάγνωση χωρίς σύνδεση. Τα συνημμένα και οι απομακρυσμένες εικόνες δεν "
+"λαμβάνονται."
+
+#: app/src/ui/preferences.rs:1066
 msgid "Startup"
 msgstr "Εκκίνηση"
 
-#: app/src/ui/preferences.rs:1055
+#: app/src/ui/preferences.rs:1069
 msgid "Start in the Tray at Login"
 msgstr "Εκκίνηση στην περιοχή ειδοποιήσεων κατά τη σύνδεση"
 
-#: app/src/ui/preferences.rs:1070
+#: app/src/ui/preferences.rs:1084
 msgid "Not available in demo mode"
 msgstr "Μη διαθέσιμο σε λειτουργία επίδειξης"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1092
 msgid "Look for a new release once a day"
 msgstr "Αναζήτηση νέας έκδοσης μία φορά την ημέρα"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{used} of {limit}"
 msgstr "{used} από {limit}"
 
-#: app/src/ui/preferences.rs:1131
+#: app/src/ui/preferences.rs:1145
 msgid "{amount} · Full"
 msgstr "{amount} · Πλήρες"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Σχεδόν πλήρες"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "Senders Who May Load Images"
 msgstr "Αποστολείς με άδεια φόρτωσης εικόνων"
 
-#: app/src/ui/preferences.rs:1146 app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1160 app/src/ui/preferences.rs:1169
 msgid "Nobody yet"
 msgstr "Κανείς ακόμη"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} αποστολέας"
 msgstr[1] "{count} αποστολείς"
 
-#: app/src/ui/preferences.rs:1167
+#: app/src/ui/preferences.rs:1181
 msgid "Anyone at this domain"
 msgstr "Οποιοσδήποτε σε αυτόν τον τομέα"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "This address"
 msgstr "Αυτή η διεύθυνση"
 
-#: app/src/ui/preferences.rs:1174
+#: app/src/ui/preferences.rs:1188
 msgid "Stop Loading Images from This Sender"
 msgstr "Διακοπή φόρτωσης εικόνων από αυτόν τον αποστολέα"
 
-#: app/src/ui/preferences.rs:1181
+#: app/src/ui/preferences.rs:1195
 msgid "Stop loading images from {sender}"
 msgstr "Διακοπή φόρτωσης εικόνων από {sender}"
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "Monday to Friday"
 msgstr "Δευτέρα έως Παρασκευή"
 
-#: app/src/ui/preferences.rs:1252
+#: app/src/ui/preferences.rs:1266
 msgid "Every day of the week"
 msgstr "Κάθε ημέρα της εβδομάδας"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1267
 msgid "No days"
 msgstr "Καμία ημέρα"
 
-#: app/src/ui/preferences.rs:1260
+#: app/src/ui/preferences.rs:1274
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1263
+#: app/src/ui/preferences.rs:1277
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1331
+#: app/src/ui/preferences.rs:1345
 msgid "Week Starts On"
 msgstr "Η εβδομάδα ξεκινά την"
 
-#: app/src/ui/preferences.rs:1336
+#: app/src/ui/preferences.rs:1350
 msgid "Automatic follows the locale's own first day of the week"
 msgstr ""
 "Η αυτόματη επιλογή ακολουθεί την πρώτη ημέρα της εβδομάδας των τοπικών "
 "ρυθμίσεων"
 
-#: app/src/ui/preferences.rs:1350
+#: app/src/ui/preferences.rs:1364
 msgid "Working Hours"
 msgstr "Ώρες εργασίας"
 
-#: app/src/ui/preferences.rs:1369
+#: app/src/ui/preferences.rs:1383
 msgid "Hours"
 msgstr "Ώρες"
 
-#: app/src/ui/preferences.rs:1420
+#: app/src/ui/preferences.rs:1434
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1503
+#: app/src/ui/preferences.rs:1517
 msgid "Never Translate"
 msgstr "Να μη γίνεται ποτέ μετάφραση"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1519
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Για μηνύματα σε αυτές τις γλώσσες δεν προτείνεται μετάφραση"
 
-#: app/src/ui/preferences.rs:1534
+#: app/src/ui/preferences.rs:1548
 msgid "Follow System"
 msgstr "Όπως το σύστημα"
 
-#: app/src/ui/preferences.rs:1538
+#: app/src/ui/preferences.rs:1552
 msgid "Language"
 msgstr "Γλώσσα"
 
-#: app/src/ui/preferences.rs:1539
+#: app/src/ui/preferences.rs:1553
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Το Penguin Mail εμφανίζει μια νέα γλώσσα μετά από επανεκκίνηση"
 
-#: app/src/ui/preferences.rs:1616 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1630 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Χωρίς υπογραφή"
 
@@ -12810,19 +12835,25 @@ msgstr ""
 "Το Google Calendar προσφέρει απουσία από το γραφείο και χρόνο συγκέντρωσης "
 "μόνο σε ορισμένους λογαριασμούς εργασίας και σχολείου ({reason})"
 
-#: sync/src/error.rs:170
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+msgid "Message text could not be fetched completely"
+msgstr "Δεν ήταν δυνατή η πλήρης λήψη του κειμένου του μηνύματος"
+
+#: sync/src/error.rs:176
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "Το {provider} ζήτησε από το Penguin Mail να περιμένει"
 
-#: sync/src/error.rs:180
+#: sync/src/error.rs:186
 msgid "The server asked Penguin Mail to wait"
 msgstr "Ο διακομιστής ζήτησε από το Penguin Mail να περιμένει"
 
-#: sync/src/error.rs:202
+#: sync/src/error.rs:208
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Το Gmail κρατά το «{name}» για δική του ετικέτα. Επιλέξτε άλλο όνομα."
 
-#: sync/src/error.rs:209
+#: sync/src/error.rs:215
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -12830,11 +12861,11 @@ msgstr ""
 "Το Google Calendar δημιουργεί μόνο του το «{title}», οπότε μόνο το Google "
 "Calendar μπορεί να το αλλάξει."
 
-#: sync/src/error.rs:217
+#: sync/src/error.rs:223
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "Το {host} απέρριψε το αίτημα κατάργησης εγγραφής (HTTP {status})"
 
-#: sync/src/error.rs:221
+#: sync/src/error.rs:227
 msgid "could not reach {host}"
 msgstr "δεν ήταν δυνατή η σύνδεση με το {host}"
 
@@ -13616,6 +13647,11 @@ msgstr "Σήμανση ως μη ανεπιθύμητο"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Μετακίνηση σε {folder}"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr ""
+#~ "Κείμενα μηνυμάτων που έχετε διαβάσει, αποθηκευμένα για άνοιγμα χωρίς "
+#~ "σύνδεση"
 
 #~ msgid "This account is already moving to its new sign-in."
 #~ msgstr "Αυτός ο λογαριασμός μεταφέρεται ήδη στη νέα του σύνδεση."

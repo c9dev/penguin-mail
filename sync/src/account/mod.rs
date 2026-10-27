@@ -8,6 +8,7 @@ mod labels;
 mod listed;
 mod muted;
 mod outbox;
+mod prefetch;
 mod receipts;
 mod snapshot;
 mod space;
@@ -26,7 +27,7 @@ pub use listed::Searched;
 pub(crate) use store_mail::StoreMail;
 pub use trash::Emptied;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -78,6 +79,9 @@ pub struct AccountSync {
     /// Body bytes stored since the last eviction pass, `None` before the
     /// first one.
     unswept: Mutex<Option<i64>>,
+    /// Attempts within the current newest-Inbox selection, including bodies
+    /// evicted before opening, so a small cache cannot cause a download loop.
+    prefetch_tried: Mutex<HashSet<String>>,
     /// When the last history replay left the store up to date. Opening a
     /// thread within [`FRESH_FOR`] of it trusts the store and asks Gmail
     /// nothing.
@@ -125,6 +129,7 @@ impl AccountSync {
             wait_ceiling: crate::WAIT_CEILING,
             touched: Arc::default(),
             unswept: Mutex::default(),
+            prefetch_tried: Mutex::default(),
             caught_up: Arc::default(),
             listed: Mutex::default(),
             hits: Mutex::default(),

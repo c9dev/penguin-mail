@@ -4380,6 +4380,7 @@ msgstr "Trên máy chủ"
 
 #: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
 #: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "Tắt"
 
@@ -4783,7 +4784,7 @@ msgstr "Điểm mới trong {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1077 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Kiểm tra bản cập nhật"
 
@@ -5124,7 +5125,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail giữ mọi thư tải xuống trên máy tính này."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1425
+#: app/src/ui/preferences.rs:1439
 msgid "Days"
 msgstr "Ngày"
 
@@ -6089,7 +6090,7 @@ msgid "Declined"
 msgstr "Đã từ chối"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1244
+#: app/src/ui/preferences.rs:1258
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6203,11 +6204,11 @@ msgstr "Ngày kết thúc"
 msgid "End time"
 msgstr "Giờ kết thúc"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1377
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1391
 msgid "Starts"
 msgstr "Bắt đầu"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1379
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1393
 msgid "Ends"
 msgstr "Kết thúc"
 
@@ -6869,7 +6870,7 @@ msgstr "Cả ngày"
 
 #: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1258 app/src/ui/preferences.rs:1433
+#: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
 msgid "%a"
 msgstr "%a"
 
@@ -9455,131 +9456,155 @@ msgid "Keep Mail on This Computer For"
 msgstr "Giữ thư trên máy tính này trong"
 
 #: app/src/ui/preferences.rs:1020
-msgid "Bodies of mail you have read, kept for opening offline"
-msgstr "Nội dung thư đã đọc, được giữ để mở khi ngoại tuyến"
+msgid "Message text kept for opening offline"
+msgstr "Nội dung thư được lưu để mở khi ngoại tuyến"
 
 #: app/src/ui/preferences.rs:1023
 msgid "Message Cache"
 msgstr "Bộ nhớ đệm thư"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1032
+msgid "100 messages"
+msgstr "100 thư"
+
+#: app/src/ui/preferences.rs:1033
+msgid "300 messages"
+msgstr "300 thư"
+
+#: app/src/ui/preferences.rs:1034
+msgid "1,000 messages"
+msgstr "1.000 thư"
+
+#: app/src/ui/preferences.rs:1038
+msgid "Download Recent Inbox Messages"
+msgstr "Tải về thư gần đây trong Hộp thư đến"
+
+#: app/src/ui/preferences.rs:1039
+msgid ""
+"Download message text in each account for faster opening and offline "
+"reading. Attachments and remote images aren't downloaded."
+msgstr ""
+"Tải về nội dung thư của mỗi tài khoản để mở nhanh hơn và đọc khi ngoại "
+"tuyến. Tệp đính kèm và hình ảnh từ xa không được tải về."
+
+#: app/src/ui/preferences.rs:1066
 msgid "Startup"
 msgstr "Khởi động"
 
-#: app/src/ui/preferences.rs:1055
+#: app/src/ui/preferences.rs:1069
 msgid "Start in the Tray at Login"
 msgstr "Khởi động trong khay hệ thống khi đăng nhập"
 
-#: app/src/ui/preferences.rs:1070
+#: app/src/ui/preferences.rs:1084
 msgid "Not available in demo mode"
 msgstr "Không khả dụng ở chế độ minh họa"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1092
 msgid "Look for a new release once a day"
 msgstr "Kiểm tra bản phát hành mới mỗi ngày"
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1133
 msgid "{used} of {limit}"
 msgstr "{used} trên {limit}"
 
-#: app/src/ui/preferences.rs:1131
+#: app/src/ui/preferences.rs:1145
 msgid "{amount} · Full"
 msgstr "{amount} · Đầy"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1147
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Gần đầy"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1159
 msgid "Senders Who May Load Images"
 msgstr "Người gửi được phép tải hình ảnh"
 
-#: app/src/ui/preferences.rs:1146 app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1160 app/src/ui/preferences.rs:1169
 msgid "Nobody yet"
 msgstr "Chưa có ai"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1171
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} người gửi"
 
-#: app/src/ui/preferences.rs:1167
+#: app/src/ui/preferences.rs:1181
 msgid "Anyone at this domain"
 msgstr "Mọi người thuộc tên miền này"
 
-#: app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1183
 msgid "This address"
 msgstr "Địa chỉ này"
 
-#: app/src/ui/preferences.rs:1174
+#: app/src/ui/preferences.rs:1188
 msgid "Stop Loading Images from This Sender"
 msgstr "Ngừng tải hình ảnh từ người gửi này"
 
-#: app/src/ui/preferences.rs:1181
+#: app/src/ui/preferences.rs:1195
 msgid "Stop loading images from {sender}"
 msgstr "Ngừng tải hình ảnh từ {sender}"
 
-#: app/src/ui/preferences.rs:1251
+#: app/src/ui/preferences.rs:1265
 msgid "Monday to Friday"
 msgstr "Thứ Hai đến thứ Sáu"
 
-#: app/src/ui/preferences.rs:1252
+#: app/src/ui/preferences.rs:1266
 msgid "Every day of the week"
 msgstr "Mọi ngày trong tuần"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1267
 msgid "No days"
 msgstr "Không có ngày"
 
-#: app/src/ui/preferences.rs:1260
+#: app/src/ui/preferences.rs:1274
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1263
+#: app/src/ui/preferences.rs:1277
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1331
+#: app/src/ui/preferences.rs:1345
 msgid "Week Starts On"
 msgstr "Tuần bắt đầu vào"
 
-#: app/src/ui/preferences.rs:1336
+#: app/src/ui/preferences.rs:1350
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Tự động dùng ngày đầu tuần của thiết lập vùng"
 
-#: app/src/ui/preferences.rs:1350
+#: app/src/ui/preferences.rs:1364
 msgid "Working Hours"
 msgstr "Giờ làm việc"
 
-#: app/src/ui/preferences.rs:1369
+#: app/src/ui/preferences.rs:1383
 msgid "Hours"
 msgstr "Giờ"
 
-#: app/src/ui/preferences.rs:1420
+#: app/src/ui/preferences.rs:1434
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1503
+#: app/src/ui/preferences.rs:1517
 msgid "Never Translate"
 msgstr "Không bao giờ dịch"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1519
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Không đề nghị dịch thư bằng các ngôn ngữ này"
 
-#: app/src/ui/preferences.rs:1534
+#: app/src/ui/preferences.rs:1548
 msgid "Follow System"
 msgstr "Theo hệ thống"
 
-#: app/src/ui/preferences.rs:1538
+#: app/src/ui/preferences.rs:1552
 msgid "Language"
 msgstr "Ngôn ngữ"
 
-#: app/src/ui/preferences.rs:1539
+#: app/src/ui/preferences.rs:1553
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail hiển thị ngôn ngữ mới sau khi khởi động lại"
 
-#: app/src/ui/preferences.rs:1616 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1630 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Không có chữ ký"
 
@@ -12239,29 +12264,35 @@ msgstr ""
 "Google Calendar chỉ hỗ trợ vắng mặt và thời gian tập trung trên một số tài "
 "khoản cơ quan và trường học ({reason})"
 
-#: sync/src/error.rs:170
+#. A structure read left out required text. Background prefetch retries
+#. with backoff rather than keeping or abandoning the incomplete body.
+#: sync/src/error.rs:17
+msgid "Message text could not be fetched completely"
+msgstr "Không thể tải đầy đủ nội dung thư"
+
+#: sync/src/error.rs:176
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} yêu cầu Penguin Mail chờ"
 
-#: sync/src/error.rs:180
+#: sync/src/error.rs:186
 msgid "The server asked Penguin Mail to wait"
 msgstr "Máy chủ yêu cầu Penguin Mail chờ"
 
-#: sync/src/error.rs:202
+#: sync/src/error.rs:208
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail dành “{name}” cho nhãn của mình. Chọn tên khác."
 
-#: sync/src/error.rs:209
+#: sync/src/error.rs:215
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
 msgstr "Google Calendar tự tạo “{title}” nên chỉ Google Calendar sửa được."
 
-#: sync/src/error.rs:217
+#: sync/src/error.rs:223
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} từ chối yêu cầu hủy đăng ký (HTTP {status})"
 
-#: sync/src/error.rs:221
+#: sync/src/error.rs:227
 msgid "could not reach {host}"
 msgstr "không thể kết nối tới {host}"
 
@@ -12982,6 +13013,9 @@ msgstr "Đánh dấu không phải thư rác"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Chuyển vào {folder}"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr "Nội dung thư đã đọc, được giữ để mở khi ngoại tuyến"
 
 #~ msgid "This account is already moving to its new sign-in."
 #~ msgstr "Tài khoản này đang chuyển sang cách đăng nhập mới."

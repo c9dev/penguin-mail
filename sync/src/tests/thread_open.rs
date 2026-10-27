@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use mailrs_domain::{Account, AccountState, Attachment, Folder, MessageBody};
-use mailrs_store::messages;
+use mailrs_store::{bodies, messages};
 
 use super::harness;
 use crate::fake::meta;
@@ -56,6 +56,81 @@ async fn bodies_are_fetched_once_then_served_from_the_cache() {
     });
     assert_eq!(h.sync.body("a").await.unwrap(), body);
     assert_eq!(h.sync.body("a").await.unwrap(), body);
+    assert_eq!(h.fake.with(|s| s.body_fetches), 1);
+}
+
+#[tokio::test]
+async fn prefetch_caches_only_the_requested_newest_inbox_bodies() {
+    let h = harness().await;
+    let now = now_millis();
+    for (id, date, labels) in [
+        ("old", now - 30, vec!["INBOX"]),
+        ("middle", now - 20, vec!["INBOX", "UNREAD"]),
+        ("new", now - 10, vec!["INBOX", "UNREAD"]),
+        ("archived", now, vec![]),
+    ] {
+        h.fake.seed(meta(id, &format!("t{id}"), date, &labels));
+        h.fake.with(|s| {
+            s.bodies.insert(
+                id.into(),
+                MessageBody {
+                    text: Some(id.into()),
+                    ..Default::default()
+                },
+            );
+        });
+    }
+    h.bootstrap_all().await;
+
+    assert!(h.sync.prefetch_bodies_step(2).await.unwrap());
+    assert!(!h.sync.prefetch_bodies_step(2).await.unwrap());
+    assert!(!h.sync.prefetch_bodies_step(2).await.unwrap());
+    assert_eq!(h.fake.with(|s| s.body_fetches), 2);
+    assert_eq!(
+        h.fake.with(|s| (s.raw_fetches, s.structure_fetches)),
+        (0, 2),
+        "prefetch reads text parts, not whole messages"
+    );
+
+    let account_id = h.account_id;
+    for (id, cached) in [
+        ("old", false),
+        ("middle", true),
+        ("new", true),
+        ("archived", false),
+    ] {
+        let message_id = id.to_string();
+        let body =
+            h.db.read(move |c| bodies::peek_body(c, account_id, &message_id))
+                .await
+                .unwrap();
+        assert_eq!(body.is_some(), cached, "cache state for {id}");
+    }
+    assert_eq!(h.accessed_at("middle").await, 0);
+    assert_eq!(h.accessed_at("new").await, 0);
+    assert_eq!(h.labels_of("new").await, ["INBOX", "UNREAD"]);
+}
+
+#[tokio::test]
+async fn prefetch_does_not_loop_when_the_cache_cannot_hold_a_body() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.fake.with(|s| {
+        s.bodies.insert(
+            "a".into(),
+            MessageBody {
+                text: Some("larger than the cache".into()),
+                ..Default::default()
+            },
+        );
+    });
+    h.bootstrap_all().await;
+    let sync = h
+        .sync_with(std::time::Duration::from_secs(1))
+        .with_limits(30, 1);
+
+    assert!(!sync.prefetch_bodies_step(1).await.unwrap());
+    assert!(!sync.prefetch_bodies_step(1).await.unwrap());
     assert_eq!(h.fake.with(|s| s.body_fetches), 1);
 }
 
@@ -346,5 +421,35 @@ async fn opening_a_body_then_its_file_asks_gmail_once() {
     assert_eq!(
         h.fake.with(|s| (s.raw_fetches, s.structure_fetches)),
         (1, 0)
+    );
+}
+
+#[tokio::test]
+async fn prefetch_retries_a_temporary_failure() {
+    let h = harness().await;
+    h.fake.seed(meta("retry", "t1", now_millis(), &["INBOX"]));
+    h.fake.with(|s| {
+        s.bodies.insert(
+            "retry".into(),
+            MessageBody {
+                text: Some("ready".into()),
+                ..Default::default()
+            },
+        );
+    });
+    h.bootstrap_all().await;
+    h.fake
+        .fail_next(mailrs_gmail::GmailError::Network("offline".into()));
+    assert!(
+        h.sync.prefetch_bodies_step(1).await.is_err(),
+        "the engine must back off before retrying"
+    );
+    h.sync.prefetch_bodies_step(1).await.unwrap();
+    let account = h.account_id;
+    assert!(
+        h.db.read(move |c| bodies::peek_body(c, account, "retry"))
+            .await
+            .unwrap()
+            .is_some()
     );
 }
