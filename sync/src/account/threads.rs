@@ -229,35 +229,82 @@ impl AccountSync {
             self.touch_body(message_id, now);
             return Ok(body);
         }
-        let (body, complete) = match self.small(message_id).await? {
-            true => (mailrs_mime::read(&self.raw(message_id).await?), true),
-            false => {
-                let parts = self.mail.fetch_structure(message_id).await?;
-                (mailrs_mime::body(&parts), !parts.incomplete)
-            }
-        };
+        let (body, complete) = self.download_body(message_id, true).await?;
         // A body that lacks a part the server failed to send, such as an
         // invitation's calendar refused by a rate limit, is shown but not
         // kept, so the next opening asks for the part again.
-        if !complete {
-            return Ok(body);
+        if complete {
+            self.store_body(message_id, &body, now, false).await?;
         }
+        Ok(body)
+    }
+
+    /// Fetches one body ahead of a read. A cache race counts as success, and
+    /// the stored body does not count as read until a person opens it.
+    pub(super) async fn prefetch_body(&self, message_id: &str) -> Result<bool, SyncError> {
+        let (account_id, key) = (self.account_id, message_id.to_string());
+        if self
+            .db
+            .read(move |c| bodies::peek_body(c, account_id, &key))
+            .await?
+            .is_some()
+        {
+            return Ok(true);
+        }
+        let (body, complete) = self.download_body(message_id, false).await?;
+        if !complete {
+            return Err(crate::BackendError::IncompleteBody.into());
+        }
+        self.store_body(message_id, &body, now_millis(), true).await
+    }
+
+    async fn download_body(
+        &self,
+        message_id: &str,
+        read_small_whole: bool,
+    ) -> Result<(MessageBody, bool), SyncError> {
+        if read_small_whole && self.small(message_id).await? {
+            return Ok((mailrs_mime::read(&self.raw(message_id).await?), true));
+        }
+        let parts = self.mail.fetch_structure(message_id).await?;
+        Ok((mailrs_mime::body(&parts), !parts.incomplete))
+    }
+
+    async fn store_body(
+        &self,
+        message_id: &str,
+        body: &MessageBody,
+        now: i64,
+        prefetched: bool,
+    ) -> Result<bool, SyncError> {
         let size =
             body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
         let sweep = self.due_for_eviction(size as i64);
-        let (key, stored, cap) = (message_id.to_string(), body.clone(), self.body_cache_bytes);
+        let (account_id, key, stored, cap) = (
+            self.account_id,
+            message_id.to_string(),
+            body.clone(),
+            self.body_cache_bytes,
+        );
         self.db
             .write(move |c| {
-                if messages::thread_id_of(c, account_id, &key)?.is_some() {
-                    bodies::put_body(c, account_id, &key, &stored, now)?;
-                    if sweep {
-                        bodies::evict_bodies(c, cap)?;
-                    }
+                if messages::thread_id_of(c, account_id, &key)?.is_none() {
+                    return Ok(false);
                 }
-                Ok(())
+                match prefetched {
+                    true => bodies::put_prefetched_body(c, account_id, &key, &stored, now)?,
+                    false => bodies::put_body(c, account_id, &key, &stored, now)?,
+                }
+                if sweep {
+                    bodies::evict_bodies(c, cap)?;
+                }
+                match prefetched {
+                    true => Ok(bodies::peek_body(c, account_id, &key)?.is_some()),
+                    false => Ok(true),
+                }
             })
-            .await?;
-        Ok(body)
+            .await
+            .map_err(Into::into)
     }
 
     /// Whether storing `size` more bytes of body calls for an eviction
