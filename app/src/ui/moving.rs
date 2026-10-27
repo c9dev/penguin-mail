@@ -45,6 +45,9 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, String>
     if dest == Some(MailSet::flagged()) {
         return Ok(TriageAction::Star);
     }
+    if matches!(dest, Some(MailSet::Role(_))) && destination(from) == dest {
+        return Err(already());
+    }
     match (from_folder, to.folder()) {
         (Some(Folder::Trash), Some(Folder::Trash)) | (Some(Folder::Junk), Some(Folder::Junk)) => {
             return Err(already());
@@ -53,8 +56,13 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, String>
         (Some(Folder::Trash), _) if dest.as_ref() == Some(&inbox) => {
             return Ok(TriageAction::Untrash);
         }
+        (Some(Folder::Trash), Some(Folder::Junk)) => return Ok(TriageAction::Junk),
+        (Some(Folder::Trash), Some(Folder::AllMail | Folder::Archive)) => {
+            return Ok(relabel(vec![], vec![MailSet::Role(Role::Trash)]));
+        }
         (Some(Folder::Trash), _) => {
-            return Err(gettext("Move it from the Trash to the Inbox first"));
+            let dest = dest.ok_or_else(|| gettext("Mail cannot go there"))?;
+            return Ok(relabel(vec![dest], vec![MailSet::Role(Role::Trash)]));
         }
         (Some(Folder::Junk), _) if dest.as_ref() == Some(&inbox) => {
             return Ok(TriageAction::NotJunk);
@@ -221,7 +229,13 @@ mod tests {
             move_action(&trash, &Mailbox::Unified(Standard::Inbox)),
             Ok(TriageAction::Untrash)
         );
-        assert!(move_action(&trash, &label("Travel")).is_err());
+        assert_eq!(
+            move_action(&trash, &label("Travel")),
+            Ok(relabel(
+                vec![named("Travel")],
+                vec![MailSet::Role(Role::Trash)]
+            ))
+        );
         assert!(move_action(&trash, &trash).is_err());
         assert_eq!(
             move_action(&junk, &account_inbox()),
@@ -235,6 +249,46 @@ mod tests {
             move_action(&label("Work"), &junk),
             Ok(relabel(vec![junk_set()], vec![inbox_set(), named("Work")]))
         );
+    }
+
+    #[test]
+    fn trash_can_move_directly_to_other_folders() {
+        let trash = folder(Folder::Trash);
+        let removed = MailSet::Role(Role::Trash);
+        for to in [Folder::Archive, Folder::AllMail] {
+            assert_eq!(
+                move_action(&trash, &folder(to)),
+                Ok(relabel(vec![], vec![removed.clone()]))
+            );
+        }
+        assert_eq!(
+            move_action(&trash, &folder(Folder::Junk)),
+            Ok(TriageAction::Junk)
+        );
+        for which in [Standard::Sent, Standard::Drafts] {
+            assert_eq!(
+                move_action(
+                    &trash,
+                    &Mailbox::Standard {
+                        account_id: 1,
+                        which
+                    }
+                ),
+                Ok(relabel(vec![which.set()], vec![removed.clone()]))
+            );
+        }
+    }
+
+    #[test]
+    fn sent_and_drafts_cannot_be_dropped_back_on_the_same_folder() {
+        for which in [Standard::Sent, Standard::Drafts] {
+            let from = Mailbox::Standard {
+                account_id: 1,
+                which,
+            };
+            assert!(move_action(&from, &Mailbox::Unified(which)).is_err());
+            assert!(move_action(&Mailbox::Unified(which), &from).is_err());
+        }
     }
 
     #[test]

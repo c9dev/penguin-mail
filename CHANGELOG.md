@@ -20,6 +20,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Move mail directly between folders in the same account, including out of Trash, and choose Inbox from the mail's folder menu.
 - Choose where to save a single attachment, including in Flatpak, and see errors when its default application cannot open it.
 - Show shared and group calendars discovered through CalDAV or JMAP, with their read-only and editing permissions.
 

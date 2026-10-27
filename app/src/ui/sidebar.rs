@@ -1665,9 +1665,7 @@ fn label_icon(offers: Offers) -> &'static str {
 /// Mailboxes mail can be moved into.
 fn takes_mail(mailbox: &Mailbox) -> bool {
     match mailbox {
-        Mailbox::Unified(which) | Mailbox::Standard { which, .. } => {
-            matches!(which, Standard::Inbox | Standard::Flagged | Standard::Muted)
-        }
+        Mailbox::Unified(_) | Mailbox::Standard { .. } => true,
         Mailbox::Label { .. } => true,
         Mailbox::Folder { .. } => true,
         Mailbox::Flag(_) => true,
@@ -2349,21 +2347,11 @@ mod tests {
     }
 
     #[test]
-    fn inbox_flagged_and_muted_take_dropped_mail() {
-        for which in [Standard::Inbox, Standard::Flagged, Standard::Muted] {
+    fn standard_mailboxes_take_dropped_mail() {
+        for which in Standard::ALL {
             assert!(takes_mail(&Mailbox::Unified(which)), "{which:?}");
             assert!(
                 takes_mail(&Mailbox::Standard {
-                    account_id: 1,
-                    which
-                }),
-                "{which:?}"
-            );
-        }
-        for which in [Standard::Sent, Standard::Drafts] {
-            assert!(!takes_mail(&Mailbox::Unified(which)), "{which:?}");
-            assert!(
-                !takes_mail(&Mailbox::Standard {
                     account_id: 1,
                     which
                 }),

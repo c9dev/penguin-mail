@@ -2333,7 +2333,8 @@ impl MainWindow {
                 .unwrap_or_default(),
             _ => HashSet::new(),
         };
-        self.label_popover_for(targets, applied, Some(view))
+        let from = self.mailbox_of(&view);
+        self.label_popover_for(targets, applied, Some(view), from)
     }
 
     /// Labels of the targets' account, with `applied` already ticked. Mail
@@ -2345,6 +2346,7 @@ impl MainWindow {
         targets: Vec<Target>,
         applied: HashSet<String>,
         follow: Option<Rc<ConversationView>>,
+        from: Mailbox,
     ) -> gtk::Popover {
         let popover = gtk::Popover::new();
         let accounts: HashSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
@@ -2379,13 +2381,51 @@ impl MainWindow {
             }
             return popover;
         };
+        let filing = Filing::of([self.offers(account_id)]);
         let mut labels: Vec<Label> = self
             .labels_of(account_id)
             .into_iter()
-            .filter(|l| l.kind == mailrs_domain::LabelKind::User)
+            .filter(|l| match filing {
+                Filing::Labels => l.kind == mailrs_domain::LabelKind::User,
+                Filing::Folders => {
+                    matches!(
+                        l.kind,
+                        mailrs_domain::LabelKind::User | mailrs_domain::LabelKind::System
+                    ) && l.role != Some(mailrs_domain::Role::Inbox)
+                }
+            })
             .collect();
         labels.sort_by_key(|l| l.name.to_lowercase());
-        let filing = Filing::of([self.offers(account_id)]);
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let inbox = gtk::Button::builder()
+            .label(gettext("Move to Inbox"))
+            .css_classes(["flat"])
+            .build();
+        crate::ui::name(&inbox, &gettext("Move to Inbox"));
+        let into_inbox = crate::ui::moving::move_action(
+            &from,
+            &Mailbox::Standard {
+                account_id,
+                which: crate::ui::Standard::Inbox,
+            },
+        )
+        .ok();
+        inbox.set_sensitive(into_inbox.is_some());
+        let (weak, pop) = (Rc::downgrade(self), popover.clone());
+        {
+            let (targets, follow) = (targets.clone(), follow.clone());
+            inbox.connect_clicked(move |_| {
+                pop.popdown();
+                if let (Some(win), Some(triage)) = (weak.upgrade(), into_inbox.as_ref()) {
+                    win.press_label(
+                        targets.clone(),
+                        Press::Label(triage.clone()),
+                        follow.as_ref(),
+                    );
+                }
+            });
+        }
+        content.append(&inbox);
         // A message sits in one folder, so no folder shows as ticked.
         let applied = match filing {
             Filing::Labels => applied,
@@ -2422,7 +2462,6 @@ impl MainWindow {
             });
         }
         if labels.is_empty() {
-            let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&message(&filing.none_yet()));
             content.append(&create);
             popover.set_child(Some(&content));
@@ -2432,6 +2471,19 @@ impl MainWindow {
             .css_classes(["navigation-sidebar"])
             .selection_mode(gtk::SelectionMode::None)
             .build();
+        let source = from
+            .moved_from()
+            .of(account_id)
+            .cloned()
+            .or_else(|| match from.folder() {
+                Some(mailrs_domain::Folder::Archive) => {
+                    Some(mailrs_domain::MailSet::Role(Role::Archive))
+                }
+                Some(mailrs_domain::Folder::AllMail) => {
+                    Some(mailrs_domain::MailSet::Role(Role::All))
+                }
+                _ => None,
+            });
         for label in &labels {
             let row = gtk::Box::builder().spacing(10).build();
             let check = gtk::Image::from_icon_name("object-select-symbolic");
@@ -2451,6 +2503,15 @@ impl MainWindow {
                 .child(&row)
                 .activatable(true)
                 .build();
+            if filing == Filing::Folders
+                && source.as_ref().is_some_and(|source| match source {
+                    mailrs_domain::MailSet::Mailbox(id) => *id == label.id,
+                    mailrs_domain::MailSet::Role(role) => label.role == Some(*role),
+                    _ => false,
+                })
+            {
+                row.set_sensitive(false);
+            }
             // The tick beside the name is drawn at zero opacity when the
             // label is off, which says nothing out loud.
             crate::ui::name(
@@ -2484,7 +2545,6 @@ impl MainWindow {
             .max_content_height(360)
             .min_content_width(220)
             .build();
-        let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content.append(&scroller);
         content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         content.append(&create);

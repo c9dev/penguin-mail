@@ -362,7 +362,7 @@ impl MainWindow {
             .unwrap_or_default();
         // No conversation to move on from: the thread keeps its other
         // messages, so the reader stays where they are.
-        let popover = self.label_popover_for(vec![target], applied, None);
+        let popover = self.label_popover_for(vec![target], applied, None, self.mailbox_of(view));
         view.popup_where_menu_was(&popover);
     }
 
