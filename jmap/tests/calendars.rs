@@ -163,3 +163,170 @@ async fn a_refused_update_says_why() {
         matches!(refused, mailrs_jmap::JmapError::Method { ref kind, .. } if kind == "noSupportedScheduleMethods")
     );
 }
+
+#[tokio::test]
+async fn shared_calendars_route_events_and_writes_to_their_own_accounts() {
+    let server = MockServer::start().await;
+    let mut session = session_on(&server.uri(), json!({}));
+    let capability = json!({"maxCalendarsPerEvent": null, "maxParticipantsPerEvent": null,
+        "minDateTime":"1900-01-01T00:00:00Z", "maxDateTime":"2200-01-01T00:00:00Z",
+        "maxExpandedQueryDuration":"P366D", "mayCreateCalendar":true});
+    session["capabilities"][CALENDARS] = json!({});
+    session["primaryAccounts"][CALENDARS] = json!("A1");
+    for account in ["A1", "B1", "C1"] {
+        session["accounts"][account] = json!({"name":account,"isPersonal":account=="A1",
+            "isReadOnly":account=="C1","accountCapabilities":{CALENDARS:capability}});
+    }
+    Mock::given(method("GET"))
+        .and(path("/jmap/session"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(session))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST")).and(path("/api/"))
+        .respond_with(|request: &wiremock::Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            let responses: Vec<Value> = body["methodCalls"].as_array().unwrap().iter().map(|call| {
+                let account = call[1]["accountId"].as_str().unwrap();
+                let response = match call[0].as_str().unwrap() {
+                    "Calendar/get" => json!({"accountId":account,"state":"c1","notFound":[],"list":[
+                        {"id":"cal","name":account,"isDefault":true,"myRights":{
+                            "mayReadItems":true,"mayWriteAll":true,"mayAdmin":account=="A1"}}]}),
+                    "CalendarEvent/query" => json!({"accountId":account,"queryState":"q1","canCalculateChanges":true,"position":0,"ids":["e1"],"total":1}),
+                    "CalendarEvent/get" => json!({"accountId":account,"state":"s1","notFound":[],"list":[
+                        {"id":"e1","calendarIds":{"cal":true},"title":account}]}),
+                    "CalendarEvent/changes" => json!({"accountId":account,"oldState":"s1","newState":"s2","hasMoreChanges":false,"created":[],"updated":["e1"],"destroyed":[]}),
+                    "CalendarEvent/set" => json!({"accountId":account,"oldState":"s1","newState":"s2","updated":{"e1":null},"created":{"e":{"id":"e1"}}}),
+                    other => panic!("unexpected method {other}"),
+                };
+                json!([call[0], response, call[2]])
+            }).collect();
+            ResponseTemplate::new(200).set_body_json(json!({"sessionState":"s1","methodResponses":responses}))
+        }).mount(&server).await;
+    let client = client(&server);
+    let calendars = client.calendars().await.unwrap();
+    assert_eq!(calendars.len(), 3);
+    assert_eq!(calendars[0].id, "cal", "existing personal IDs stay valid");
+    let shared = calendars.iter().find(|c| c.name == "B1").unwrap();
+    let reader = calendars.iter().find(|c| c.name == "C1").unwrap();
+    assert_ne!(shared.id, calendars[0].id);
+    assert_ne!(shared.id, reader.id);
+    assert!(!shared.is_default && !reader.is_default);
+    assert!(shared.my_rights.may_write_all && !reader.my_rights.may_write_all);
+    let page = client
+        .calendar_events_page(&json!({"inCalendar":shared.id}), 0, 10)
+        .await
+        .unwrap();
+    assert_eq!(page.events[0]["title"], "B1");
+    assert_eq!(
+        page.events[0]["calendarIds"],
+        json!({shared.id.clone():true})
+    );
+    let id = page.events[0]["id"].as_str().unwrap().to_string();
+    let fetched = client
+        .calendar_events(std::slice::from_ref(&id))
+        .await
+        .unwrap();
+    assert_eq!(fetched.list[0]["title"], "B1");
+    let changes = client
+        .calendar_event_changes(&page.state, 10)
+        .await
+        .unwrap();
+    assert_eq!(changes.updated.as_slice(), std::slice::from_ref(&id));
+    client
+        .set_calendar_event(
+            &EventWrite::Update {
+                id,
+                patch: serde_json::from_value(json!({"title":"Changed"})).unwrap(),
+            },
+            false,
+            Some(&page.state),
+        )
+        .await
+        .unwrap();
+    let created = client
+        .set_calendar_event(
+            &EventWrite::Create(
+                serde_json::from_value(
+                    json!({"calendarIds":{shared.id.clone():true},"title":"New"}),
+                )
+                .unwrap(),
+            ),
+            false,
+            None,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(created["id"], page.events[0]["id"]);
+    client
+        .set_calendar_event(
+            &EventWrite::Destroy(created["id"].as_str().unwrap().into()),
+            false,
+            None,
+        )
+        .await
+        .unwrap();
+    let count = server.received_requests().await.unwrap().len();
+    let cross_account = client
+        .set_calendar_event(
+            &EventWrite::Update {
+                id: "e1".into(),
+                patch: serde_json::from_value(json!({"calendarIds":{shared.id.clone():true}}))
+                    .unwrap(),
+            },
+            false,
+            None,
+        )
+        .await;
+    assert!(matches!(
+        cross_account,
+        Err(mailrs_jmap::JmapError::Forbidden(_))
+    ));
+    assert_eq!(
+        server.received_requests().await.unwrap().len(),
+        count,
+        "a cross-account move must not reach the server as a different calendar's id"
+    );
+    let requests = server.received_requests().await.unwrap();
+    let calls: Vec<Value> = requests
+        .iter()
+        .filter(|r| r.method == "POST")
+        .flat_map(|r| {
+            serde_json::from_slice::<Value>(&r.body).unwrap()["methodCalls"]
+                .as_array()
+                .unwrap()
+                .clone()
+        })
+        .collect();
+    let query = calls
+        .iter()
+        .find(|c| c[0] == "CalendarEvent/query")
+        .unwrap();
+    assert_eq!(query[1]["accountId"], "B1");
+    assert_eq!(query[1]["filter"]["inCalendar"], "cal");
+    let changes = calls
+        .iter()
+        .find(|c| c[0] == "CalendarEvent/changes")
+        .unwrap();
+    assert_eq!(changes[1]["accountId"], "B1");
+    assert_eq!(changes[1]["sinceState"], "s1");
+    let set = calls.iter().find(|c| c[0] == "CalendarEvent/set").unwrap();
+    assert_eq!(set[1]["accountId"], "B1");
+    assert_eq!(set[1]["ifInState"], "s1");
+    assert_eq!(set[1]["update"]["e1"], json!({"title":"Changed"}));
+    let created = calls
+        .iter()
+        .find(|c| c[0] == "CalendarEvent/set" && c[1].get("create").is_some())
+        .unwrap();
+    assert_eq!(created[1]["accountId"], "B1");
+    assert_eq!(
+        created[1]["create"]["e"]["calendarIds"],
+        json!({"cal":true})
+    );
+    let destroyed = calls
+        .iter()
+        .find(|c| c[0] == "CalendarEvent/set" && c[1].get("destroy").is_some())
+        .unwrap();
+    assert_eq!(destroyed[1]["accountId"], "B1");
+    assert_eq!(destroyed[1]["destroy"], json!(["e1"]));
+}

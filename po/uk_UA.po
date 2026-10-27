@@ -4151,8 +4151,8 @@ msgstr "Цей обліковий запис не під'єднано."
 msgid "Could not save: {reason}"
 msgstr "Не вдалося зберегти: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2850
-#: app/src/ui/window.rs:2873
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2910
+#: app/src/ui/window.rs:2933
 msgid "Could not open the draft: {reason}"
 msgstr "Не вдалося відкрити чернетку: {reason}"
 
@@ -4275,18 +4275,21 @@ msgstr[2] "{count} вкладень"
 msgid "Quick Look"
 msgstr "Швидкий перегляд"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
-#: app/src/ui/window/attachments.rs:366
-msgid "Save to Downloads"
-msgstr "Зберегти до «Завантажень»"
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:284
+#: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
+#: app/src/ui/window/detached.rs:302
+msgid "Save As…"
+msgstr "Зберегти як…"
 
 #: app/src/render.rs:627
 msgid "Open {file}, {size}"
 msgstr "Відкрити {file}, {size}"
 
 #: app/src/render.rs:634
-msgid "Save {file} to Downloads"
-msgstr "Зберегти {file} до «Завантажень»"
+#, fuzzy
+#| msgid "Saved {file}"
+msgid "Save {file}…"
+msgstr "{file} збережено"
 
 #: app/src/render.rs:641
 msgid "Save All ({count})"
@@ -4410,7 +4413,7 @@ msgid "Set up a different project"
 msgstr "Налаштувати інший проєкт"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3280
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3263
 msgid "Set up your own Google project"
 msgstr "Налаштувати власний проєкт Google"
 
@@ -4593,8 +4596,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Передплата Claude"
 
-#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3653
-#: app/src/ui/window.rs:3733
+#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3636
+#: app/src/ui/window.rs:3716
 msgid "Assistant"
 msgstr "Асистент"
 
@@ -4988,7 +4991,7 @@ msgstr "Відкрити Penguin Mail"
 msgid "New Message"
 msgstr "Нове повідомлення"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1972 app/src/ui/window.rs:3659
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1970 app/src/ui/window.rs:3642
 msgid "Check for Mail"
 msgstr "Перевірити пошту"
 
@@ -5006,7 +5009,7 @@ msgstr "Що нового у {version}"
 msgid "Check for Updates"
 msgstr "Перевірити оновлення"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3672
+#: app/src/tray.rs:266 app/src/ui/window.rs:3655
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Вийти"
@@ -5028,7 +5031,7 @@ msgstr "Що нового"
 msgid "Website"
 msgstr "Вебсайт"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3671
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3654
 msgid "Donate"
 msgstr "Пожертвувати"
 
@@ -5036,7 +5039,7 @@ msgstr "Пожертвувати"
 msgid "License"
 msgstr "Ліцензія"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3670
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3653
 msgid "About Penguin Mail"
 msgstr "Про Penguin Mail"
 
@@ -5544,7 +5547,7 @@ msgstr ""
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr "Фільтри, псевдоніми й автовідповідь цим способом недоступні."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3819
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3802
 msgid "Summarize this conversation"
 msgstr "Підсумувати цю розмову"
 
@@ -5569,13 +5572,13 @@ msgstr "Написати чернетку відповіді на відкрит
 msgid "Choose a Model"
 msgstr "Вибрати модель"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3780
-#: app/src/ui/window.rs:3781
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3763
+#: app/src/ui/window.rs:3764
 msgid "Detach"
 msgstr "Відкріпити"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4447
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4430
 msgid "Close"
 msgstr "Закрити"
 
@@ -5784,7 +5787,7 @@ msgstr "Змінити {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3423
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3406
 msgid "Remove"
 msgstr "Прибрати"
 
@@ -6624,8 +6627,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Подробиці бачать лише ті, хто може змінювати цей календар"
 
 #: app/src/ui/calendar/editor.rs:2025 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1714
-#: app/src/ui/sidebar.rs:1989
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1712
+#: app/src/ui/sidebar.rs:1987
 msgid "Color"
 msgstr "Колір"
 
@@ -7496,19 +7499,19 @@ msgstr "Надати доступ для {account}"
 msgid "Sign in again to {account}"
 msgstr "Увійти знову до {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:1994
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:1992
 msgid "Sign In Again…"
 msgstr "Увійти знову…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2002
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2000
 msgid "Remove Account…"
 msgstr "Прибрати обліковий запис…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2009
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2007
 msgid "Account options"
 msgstr "Параметри облікового запису"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2014
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2012
 msgid "Options for {account}"
 msgstr "Параметри для {account}"
 
@@ -7536,13 +7539,13 @@ msgstr "Сховати зі списку"
 msgid "Original Color"
 msgstr "Початковий колір"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1702
-#: app/src/ui/sidebar.rs:1979
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1700
+#: app/src/ui/sidebar.rs:1977
 msgid "Rename…"
 msgstr "Перейменувати…"
 
 #: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1601
-#: app/src/ui/sidebar.rs:1730
+#: app/src/ui/sidebar.rs:1728
 msgid "Delete…"
 msgstr "Вилучити…"
 
@@ -7670,7 +7673,7 @@ msgstr "{date}, є події"
 msgid "Offline, last updated {time}"
 msgstr "Поза мережею, востаннє оновлено {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2072
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2070
 msgid "Offline"
 msgstr "Поза мережею"
 
@@ -7913,7 +7916,7 @@ msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Виберіть відправника і введіть дозволений суфікс адреси."
 
 #: app/src/ui/composer/mod.rs:1763 app/src/ui/queued.rs:65
-#: app/src/ui/window/press.rs:450
+#: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Скасувати надсилання"
 
@@ -8473,7 +8476,7 @@ msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Не спам (Ctrl+Shift+J)"
 
 #: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:134
-#: app/src/ui/window/press.rs:436
+#: app/src/ui/window/press.rs:447
 msgid "Delete Forever"
 msgstr "Вилучити назавжди"
 
@@ -8883,7 +8886,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Дозволити «Сховати e-mail»"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3870
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3853
 msgid "Add an account first"
 msgstr "Спершу додайте обліковий запис"
 
@@ -9341,17 +9344,14 @@ msgstr "Сірий"
 msgid "The mail is already there"
 msgstr "Пошта вже там"
 
-#: app/src/ui/moving.rs:57
-msgid "Move it from the Trash to the Inbox first"
-msgstr "Спершу перемістіть її зі «Смітника» до «Вхідних»"
-
-#: app/src/ui/moving.rs:93
-msgid "The mail is already in All Mail"
-msgstr "Пошта вже в «Усій пошті»"
-
-#: app/src/ui/moving.rs:98
+#: app/src/ui/moving.rs:64 app/src/ui/moving.rs:106
+#: app/src/ui/window/press.rs:348
 msgid "Mail cannot go there"
 msgstr "Пошту не можна туди перемістити"
+
+#: app/src/ui/moving.rs:101
+msgid "The mail is already in All Mail"
+msgstr "Пошта вже в «Усій пошті»"
 
 #: app/src/ui/own_project.rs:46
 msgid "To sign in another way, remove this account and add it again."
@@ -10060,7 +10060,7 @@ msgstr "Перемістити {account} вниз"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3668 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3651 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Параметри"
 
@@ -10409,7 +10409,7 @@ msgstr "Додати адресу"
 msgid "Default sender"
 msgstr "Типовий відправник"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:1881
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:1879
 msgid "Signature…"
 msgstr "Підпис…"
 
@@ -10527,71 +10527,71 @@ msgstr[0] "Календар, {count} очікує на вашу відповід
 msgstr[1] "Календар, {count} очікують на вашу відповідь"
 msgstr[2] "Календар, {count} очікують на вашу відповідь"
 
-#: app/src/ui/sidebar.rs:1597 app/src/ui/sidebar.rs:1721
-#: app/src/ui/sidebar.rs:1990
+#: app/src/ui/sidebar.rs:1597 app/src/ui/sidebar.rs:1719
+#: app/src/ui/sidebar.rs:1988
 msgid "Move Up"
 msgstr "Перемістити вгору"
 
-#: app/src/ui/sidebar.rs:1598 app/src/ui/sidebar.rs:1724
-#: app/src/ui/sidebar.rs:1991
+#: app/src/ui/sidebar.rs:1598 app/src/ui/sidebar.rs:1722
+#: app/src/ui/sidebar.rs:1989
 msgid "Move Down"
 msgstr "Перемістити вниз"
 
-#: app/src/ui/sidebar.rs:1752
+#: app/src/ui/sidebar.rs:1750
 msgid "Empty Trash…"
 msgstr "Спорожнити смітник…"
 
-#: app/src/ui/sidebar.rs:1880
+#: app/src/ui/sidebar.rs:1878
 msgid "Automatic Reply…"
 msgstr "Автовідповідь…"
 
-#: app/src/ui/sidebar.rs:1882
+#: app/src/ui/sidebar.rs:1880
 msgid "Rules…"
 msgstr "Правила…"
 
-#: app/src/ui/sidebar.rs:1883 app/src/ui/window.rs:3662
+#: app/src/ui/sidebar.rs:1881 app/src/ui/window.rs:3645
 msgid "Hide My Email…"
 msgstr "Сховати e-mail…"
 
-#: app/src/ui/sidebar.rs:1892
+#: app/src/ui/sidebar.rs:1890
 msgid "On this computer"
 msgstr "На цьому комп'ютері"
 
-#: app/src/ui/sidebar.rs:1900
+#: app/src/ui/sidebar.rs:1898
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "На цьому комп'ютері. Показати або сховати поштові скриньки цього облікового "
 "запису"
 
-#: app/src/ui/sidebar.rs:1901
+#: app/src/ui/sidebar.rs:1899
 msgid "Show or hide this account's mailboxes"
 msgstr "Показати або сховати поштові скриньки цього облікового запису"
 
-#: app/src/ui/sidebar.rs:1995
+#: app/src/ui/sidebar.rs:1993
 msgid "Switch to JMAP…"
 msgstr "Перейти на JMAP…"
 
-#: app/src/ui/sidebar.rs:1997
+#: app/src/ui/sidebar.rs:1995
 msgid "Messages That Will Not Download…"
 msgstr "Повідомлення, які не завантажуються…"
 
-#: app/src/ui/sidebar.rs:2070
+#: app/src/ui/sidebar.rs:2068
 msgid "Sign in again to keep syncing"
 msgstr "Увійдіть знову, щоб продовжити синхронізацію"
 
-#: app/src/ui/sidebar.rs:2076
+#: app/src/ui/sidebar.rs:2074
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} не відповідає; повторна спроба"
 
-#: app/src/ui/sidebar.rs:2087
+#: app/src/ui/sidebar.rs:2085
 msgid "The keyring is not responding; retrying"
 msgstr "В'язка ключів не відповідає; повторна спроба"
 
-#: app/src/ui/sidebar.rs:2090
+#: app/src/ui/sidebar.rs:2088
 msgid "Downloading mail"
 msgstr "Завантаження пошти"
 
-#: app/src/ui/sidebar.rs:2094
+#: app/src/ui/sidebar.rs:2092
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Синхронізацію зупинено через помилку; перезапустіть Penguin Mail, щоб "
@@ -10599,7 +10599,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2101
+#: app/src/ui/sidebar.rs:2099
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11066,7 +11066,7 @@ msgstr "Не вдалося завантажити пошту: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Додано {account}. Завантаження пошти…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3042
+#: app/src/ui/window.rs:362 app/src/ui/window.rs:3025
 msgid "{account} is signed in again."
 msgstr "Вхід до {account} виконано знову."
 
@@ -11233,61 +11233,51 @@ msgstr "Не вдалося вилучити пошту: {reason}"
 msgid "Turn On the {service}"
 msgstr "Увімкніть {service}"
 
-#: app/src/ui/window.rs:2539
+#: app/src/ui/window.rs:2401 app/src/ui/window.rs:2404
+#, fuzzy
+#| msgid "Moved to the Inbox"
+msgid "Move to Inbox"
+msgstr "Переміщено до «Вхідних»"
+
+#: app/src/ui/window.rs:2599
 msgid "Select mail from one account to tag it."
 msgstr "Щоб додати тег, виберіть пошту з одного облікового запису."
 
-#: app/src/ui/window.rs:2551
+#: app/src/ui/window.rs:2611
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Цей обліковий запис ще не має тегів. Створіть тег в Outlook."
 
-#: app/src/ui/window.rs:2644
+#: app/src/ui/window.rs:2704
 msgid "Add an account to reply or forward"
 msgstr "Додайте обліковий запис, щоб відповідати або пересилати"
 
-#: app/src/ui/window.rs:2748
+#: app/src/ui/window.rs:2808
 msgid "Could not include {file}: {reason}"
 msgstr "Не вдалося додати {file}: {reason}"
 
-#: app/src/ui/window.rs:2829
+#: app/src/ui/window.rs:2889
 msgid "The server had already sent this message."
 msgstr "Сервер уже надіслав це повідомлення."
 
-#: app/src/ui/window.rs:2834
+#: app/src/ui/window.rs:2894
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Це повідомлення скасовано в іншій програмі, і його більше немає в "
 "«Чернетках»."
 
-#: app/src/ui/window.rs:2948
-msgid "Downloading {file}…"
-msgstr "Завантаження {file}…"
-
-#: app/src/ui/window.rs:2969 app/src/ui/window/attachments.rs:260
-msgid "Saved {file} to Downloads"
-msgstr "{file} збережено до «Завантажень»"
-
-#: app/src/ui/window.rs:2972
-msgid "Open"
-msgstr "Відкрити"
-
-#: app/src/ui/window.rs:2987 app/src/ui/window/attachments.rs:265
-msgid "Could not save {file}: {reason}"
-msgstr "Не вдалося зберегти {file}: {reason}"
-
-#: app/src/ui/window.rs:3227
+#: app/src/ui/window.rs:3210
 msgid "Continue in your browser"
 msgstr "Продовжте в браузері"
 
-#: app/src/ui/window.rs:3277
+#: app/src/ui/window.rs:3260
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Цю копію Penguin Mail зібрано без входу через Google."
 
-#: app/src/ui/window.rs:3299
+#: app/src/ui/window.rs:3282
 msgid "Get a Release"
 msgstr "Отримати випуск"
 
-#: app/src/ui/window.rs:3409
+#: app/src/ui/window.rs:3392
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11295,80 +11285,80 @@ msgstr ""
 "Не вдалося перевірити, чи сервер зберігає повідомлення для пізнішого "
 "надсилання, тому {account} залишається: {reason}"
 
-#: app/src/ui/window.rs:3420
+#: app/src/ui/window.rs:3403
 msgid "Remove {account}?"
 msgstr "Прибрати {account}?"
 
-#: app/src/ui/window.rs:3439
+#: app/src/ui/window.rs:3422
 msgid "Remove Anyway"
 msgstr "Усе одно прибрати"
 
-#: app/src/ui/window.rs:3452
+#: app/src/ui/window.rs:3435
 msgid "Removed {account}"
 msgstr "{account} прибрано"
 
-#: app/src/ui/window.rs:3454
+#: app/src/ui/window.rs:3437
 msgid "Could not remove {account}: {reason}"
 msgstr "Не вдалося прибрати {account}: {reason}"
 
-#: app/src/ui/window.rs:3640
+#: app/src/ui/window.rs:3623
 msgid "Refresh"
 msgstr "Оновити"
 
-#: app/src/ui/window.rs:3644
+#: app/src/ui/window.rs:3627
 msgid "Show Declined Events"
 msgstr "Показувати відхилені події"
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3643
 msgid "Add Account…"
 msgstr "Додати обліковий запис…"
 
-#: app/src/ui/window.rs:3661
+#: app/src/ui/window.rs:3644
 msgid "New Smart Mailbox…"
 msgstr "Нова розумна скринька…"
 
-#: app/src/ui/window.rs:3669
+#: app/src/ui/window.rs:3652
 msgid "Keyboard Shortcuts"
 msgstr "Комбінації клавіш"
 
-#: app/src/ui/window.rs:3678 app/src/ui/window.rs:3680
+#: app/src/ui/window.rs:3661 app/src/ui/window.rs:3663
 msgid "Main Menu"
 msgstr "Головне меню"
 
-#: app/src/ui/window.rs:3745 app/src/ui/window.rs:3746
+#: app/src/ui/window.rs:3728 app/src/ui/window.rs:3729
 msgid "Dock"
 msgstr "Закріпити"
 
-#: app/src/ui/window.rs:3871
+#: app/src/ui/window.rs:3854
 msgid "Add a mail account first"
 msgstr "Спочатку додайте поштовий обліковий запис"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4122
+#: app/src/ui/window.rs:4105
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Календар і контакти {account} підключено."
 
-#: app/src/ui/window.rs:4238
+#: app/src/ui/window.rs:4221
 msgid "Open a message from the person first"
 msgstr "Спочатку відкрийте повідомлення від цієї людини"
 
-#: app/src/ui/window.rs:4330
+#: app/src/ui/window.rs:4313
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail покаже нову мову після перезапуску"
 
-#: app/src/ui/window.rs:4332 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4315 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Перезапустити"
 
-#: app/src/ui/window.rs:4396
+#: app/src/ui/window.rs:4379
 msgid "Show Rules"
 msgstr "Показати правила"
 
-#: app/src/ui/window.rs:4422
+#: app/src/ui/window.rs:4405
 msgid "Messages That Will Not Download"
 msgstr "Повідомлення, які не завантажуються"
 
-#: app/src/ui/window.rs:4424
+#: app/src/ui/window.rs:4407
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11398,7 +11388,7 @@ msgstr ""
 "Бічна панель показує назву замість адреси. Залиште поле порожнім, щоб бачити "
 "адресу."
 
-#: app/src/ui/window/attachments.rs:79
+#: app/src/ui/window/attachments.rs:79 app/src/ui/window/attachments.rs:355
 msgid "Could not open {file}: {reason}"
 msgstr "Не вдалося відкрити {file}: {reason}"
 
@@ -11424,15 +11414,33 @@ msgstr[2] "{count} вкладень збережено в {folder}"
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "Збережено в {folder}: {count}. Не вдалося зберегти {files}"
 
-#: app/src/ui/window/attachments.rs:308
+#: app/src/ui/window/attachments.rs:245
+msgid "Downloading {file}…"
+msgstr "Завантаження {file}…"
+
+#: app/src/ui/window/attachments.rs:269 app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:331
+msgid "Could not save {file}: {reason}"
+msgstr "Не вдалося зберегти {file}: {reason}"
+
+#: app/src/ui/window/attachments.rs:316 app/src/ui/window/export.rs:111
+#: app/src/ui/window/export.rs:153 app/src/ui/window/export.rs:214
+msgid "Saved {file}"
+msgstr "{file} збережено"
+
+#: app/src/ui/window/attachments.rs:319
+msgid "Open"
+msgstr "Відкрити"
+
+#: app/src/ui/window/attachments.rs:398
 msgid "Could not open {file}"
 msgstr "Не вдалося відкрити {file}"
 
-#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
+#: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
 msgid "Open in Another Program"
 msgstr "Відкрити в іншій програмі"
 
-#: app/src/ui/window/attachments.rs:371
+#: app/src/ui/window/attachments.rs:461
 msgid "{file}, preview"
 msgstr "{file}, попередній перегляд"
 
@@ -11500,10 +11508,6 @@ msgstr "Не вдалося завантажити джерело: {reason}"
 msgid "Message Source"
 msgstr "Джерело повідомлення"
 
-#: app/src/ui/window/detached.rs:302
-msgid "Save As…"
-msgstr "Зберегти як…"
-
 #: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr "Зберегти як файл .eml"
@@ -11520,11 +11524,6 @@ msgstr "Експортувати пошту"
 #: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:205
 msgid "Exporting…"
 msgstr "Експортування…"
-
-#: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
-#: app/src/ui/window/export.rs:214
-msgid "Saved {file}"
-msgstr "{file} збережено"
 
 #: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:154
 #: app/src/ui/window/export.rs:156 app/src/ui/window/export.rs:215
@@ -11760,45 +11759,45 @@ msgstr "Нагадає {when}"
 msgid "Drop mail on its own account's mailboxes"
 msgstr "Перетягуйте пошту на скриньки її власного облікового запису"
 
-#: app/src/ui/window/press.rs:378
+#: app/src/ui/window/press.rs:389
 msgid "Moved to {mailbox}"
 msgstr "Переміщено до {mailbox}"
 
-#: app/src/ui/window/press.rs:391
+#: app/src/ui/window/press.rs:402
 msgid "Delete This Conversation Forever?"
 msgstr "Вилучити цю розмову назавжди?"
 
-#: app/src/ui/window/press.rs:393
+#: app/src/ui/window/press.rs:404
 msgid "Delete {count} Conversation Forever?"
 msgid_plural "Delete {count} Conversations Forever?"
 msgstr[0] "Вилучити {count} розмову назавжди?"
 msgstr[1] "Вилучити {count} розмови назавжди?"
 msgstr[2] "Вилучити {count} розмов назавжди?"
 
-#: app/src/ui/window/press.rs:398
+#: app/src/ui/window/press.rs:409
 msgid "Delete This Message Forever?"
 msgstr "Вилучити це повідомлення назавжди?"
 
-#: app/src/ui/window/press.rs:400
+#: app/src/ui/window/press.rs:411
 msgid "Delete {count} Message Forever?"
 msgid_plural "Delete {count} Messages Forever?"
 msgstr[0] "Вилучити {count} повідомлення назавжди?"
 msgstr[1] "Вилучити {count} повідомлення назавжди?"
 msgstr[2] "Вилучити {count} повідомлень назавжди?"
 
-#: app/src/ui/window/press.rs:408
+#: app/src/ui/window/press.rs:419
 msgid "{provider} deletes it from every device and cannot bring it back."
 msgstr "{provider} вилучає його з усіх пристроїв і не може відновити."
 
-#: app/src/ui/window/press.rs:412
+#: app/src/ui/window/press.rs:423
 msgid "{provider} deletes them from every device and cannot bring them back."
 msgstr "{provider} вилучає їх з усіх пристроїв і не може відновити."
 
-#: app/src/ui/window/press.rs:415
+#: app/src/ui/window/press.rs:426
 msgid "The server deletes it from every device and cannot bring it back."
 msgstr "Сервер вилучає його з усіх пристроїв і не може відновити."
 
-#: app/src/ui/window/press.rs:417
+#: app/src/ui/window/press.rs:428
 msgid ""
 "Each account's server deletes them from every device and cannot bring them "
 "back."
@@ -11806,7 +11805,7 @@ msgstr ""
 "Сервер кожного облікового запису вилучає їх з усіх пристроїв і не може "
 "відновити."
 
-#: app/src/ui/window/press.rs:425
+#: app/src/ui/window/press.rs:436
 msgid ""
 "Mail in {accounts} stays in the Trash, since its server cannot delete mail "
 "for good."
@@ -11823,31 +11822,31 @@ msgstr[2] ""
 "Пошта в {accounts} залишається в «Смітнику», бо їхні сервери не можуть "
 "вилучати пошту назавжди."
 
-#: app/src/ui/window/press.rs:450
+#: app/src/ui/window/press.rs:461
 msgid "Cancel Send (Delete)"
 msgstr "Скасувати надсилання (Delete)"
 
-#: app/src/ui/window/press.rs:452
+#: app/src/ui/window/press.rs:463
 msgid "Delete from Outbox"
 msgstr "Вилучити з «Вихідних»"
 
-#: app/src/ui/window/press.rs:453
+#: app/src/ui/window/press.rs:464
 msgid "Delete from Outbox (Delete)"
 msgstr "Вилучити з «Вихідних» (Delete)"
 
-#: app/src/ui/window/press.rs:456
+#: app/src/ui/window/press.rs:467
 msgid "Cancel Reminder"
 msgstr "Скасувати нагадування"
 
-#: app/src/ui/window/press.rs:457
+#: app/src/ui/window/press.rs:468
 msgid "Cancel Reminder (Delete)"
 msgstr "Скасувати нагадування (Delete)"
 
-#: app/src/ui/window/press.rs:460
+#: app/src/ui/window/press.rs:471
 msgid "Dismiss Follow-Up"
 msgstr "Закрити нагадування про відповідь"
 
-#: app/src/ui/window/press.rs:461
+#: app/src/ui/window/press.rs:472
 msgid "Dismiss Follow-Up (Delete)"
 msgstr "Закрити нагадування про відповідь (Delete)"
 
@@ -13002,23 +13001,23 @@ msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr ""
 "Правило на цьому комп'ютері переслало вкладене повідомлення від {address}."
 
-#: sync/src/services/caldav.rs:627
+#: sync/src/services/caldav.rs:640
 msgid "An event needs an ID to be imported."
 msgstr "Щоб імпортувати подію, вона повинна мати ідентифікатор."
 
-#: sync/src/services/caldav.rs:686
+#: sync/src/services/caldav.rs:699
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Календар CalDAV не може зберігати вкладені файли."
 
-#: sync/src/services/caldav.rs:692
+#: sync/src/services/caldav.rs:705
 msgid "A CalDAV calendar has no files to share."
 msgstr "Календар CalDAV не має файлів для спільного доступу."
 
-#: sync/src/services/caldav.rs:748
+#: sync/src/services/caldav.rs:761
 msgid "You are not a guest of this event."
 msgstr "Ви не є гостем цієї події."
 
-#: sync/src/services/caldav.rs:757
+#: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail не може змінювати список календарів сервера CalDAV."
 
@@ -13532,6 +13531,18 @@ msgstr "Позначити як не спам"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Перемістити до {folder}"
+
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "Спершу перемістіть її зі «Смітника» до «Вхідних»"
+
+#~ msgid "Save to Downloads"
+#~ msgstr "Зберегти до «Завантажень»"
+
+#~ msgid "Save {file} to Downloads"
+#~ msgstr "Зберегти {file} до «Завантажень»"
+
+#~ msgid "Saved {file} to Downloads"
+#~ msgstr "{file} збережено до «Завантажень»"
 
 #~ msgid "Bodies of mail you have read, kept for opening offline"
 #~ msgstr "Тексти прочитаних листів, збережені для відкриття без мережі"

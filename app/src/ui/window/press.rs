@@ -331,10 +331,21 @@ fn dropped(
     accounts: &[Reached],
     act: impl Fn(MailAction, History, Option<String>) -> Step,
 ) -> Step {
-    if let Mailbox::Label { account_id, .. } | Mailbox::Standard { account_id, .. } = to
-        && targets.iter().any(|t| t.account_id != *account_id)
+    if let Some(account_id) = to.account()
+        && targets.iter().any(|t| t.account_id != account_id)
     {
         return Step::Refuse(gettext("Drop mail on its own account's mailboxes"));
+    }
+    if matches!(
+        to,
+        Mailbox::Unified(crate::ui::Standard::Sent | crate::ui::Standard::Drafts)
+            | Mailbox::Standard {
+                which: crate::ui::Standard::Sent | crate::ui::Standard::Drafts,
+                ..
+            }
+    ) && accounts.iter().any(|a| !a.moves)
+    {
+        return Step::Refuse(gettext("Mail cannot go there"));
     }
     if let Mailbox::Flag(color) = to {
         return act(MailAction::Flag(Some(*color)), History::Record, None);
@@ -993,6 +1004,57 @@ mod tests {
             Scope::Carried { open: false },
         ));
         assert!(!plan.taken());
+    }
+
+    #[test]
+    fn another_accounts_system_folders_refuse_dropped_mail() {
+        for folder in [
+            Folder::Trash,
+            Folder::Junk,
+            Folder::Archive,
+            Folder::AllMail,
+        ] {
+            assert_eq!(
+                step(
+                    Press::Drop(Mailbox::Folder {
+                        account_id: Some(2),
+                        folder
+                    }),
+                    inbox(),
+                    Scope::Carried { open: false }
+                ),
+                Step::Refuse("Drop mail on its own account's mailboxes".into())
+            );
+        }
+    }
+
+    #[test]
+    fn sent_and_drafts_accept_moves_only_on_folder_accounts() {
+        for which in [Standard::Sent, Standard::Drafts] {
+            let to = Mailbox::Standard {
+                account_id: 1,
+                which,
+            };
+            let press = pressed(Press::Drop(to), inbox(), Scope::Carried { open: false });
+            let folders = Pressed {
+                accounts: vec![Reached {
+                    moves: true,
+                    ..gmail(1)
+                }],
+                ..press.clone()
+            };
+            assert!(matches!(
+                plan(folders).step,
+                Step::Act {
+                    history: History::Record,
+                    ..
+                }
+            ));
+            assert_eq!(
+                plan(press).step,
+                Step::Refuse("Mail cannot go there".into())
+            );
+        }
     }
 
     #[test]

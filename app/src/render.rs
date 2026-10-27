@@ -622,7 +622,7 @@ fn render_attachments(
             escape(&attachment.filename),
             human_size(attachment.size),
             look = escape(&gettext("Quick Look")),
-            save = escape(&gettext("Save to Downloads")),
+            save = escape(&gettext("Save As…")),
             opens = escape(&fill(
                 &gettext("Open {file}, {size}"),
                 &[
@@ -631,7 +631,7 @@ fn render_attachments(
                 ],
             )),
             gets = escape(&fill(
-                &gettext("Save {file} to Downloads"),
+                &gettext("Save {file}…"),
                 &[("file", &attachment.filename)],
             )),
         );
@@ -1744,10 +1744,7 @@ mod tests {
             html.contains("aria-label=\"Open cat.png, 2.0 KB\""),
             "{html}"
         );
-        assert!(
-            html.contains("aria-label=\"Save report.pdf to Downloads\""),
-            "{html}"
-        );
+        assert!(html.contains("aria-label=\"Save report.pdf…\""), "{html}");
     }
 
     #[test]

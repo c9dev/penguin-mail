@@ -51,7 +51,7 @@ pub struct Props {
     pub calendar_data: Option<String>,
     pub address_data: Option<String>,
     pub principal: Option<String>,
-    pub calendar_home: Option<String>,
+    pub calendar_homes: Vec<String>,
     pub addressbook_home: Option<String>,
     /// The `mailto:` entries of `calendar-user-address-set`, lower-cased
     /// and without the scheme: the addresses invitations name the
@@ -183,7 +183,14 @@ fn read_props(prop: Node, props: &mut Props) {
             (CALDAV, "calendar-data") => props.calendar_data = text(p),
             (CARDDAV, "address-data") => props.address_data = text(p),
             (DAV, "current-user-principal") => props.principal = href_in(p),
-            (CALDAV, "calendar-home-set") => props.calendar_home = href_in(p),
+            (CALDAV, "calendar-home-set") => {
+                props.calendar_homes = p
+                    .children()
+                    .filter(|c| is(*c, DAV, "href"))
+                    .filter_map(text)
+                    .map(|h| crate::ids::canonical_href(&h))
+                    .collect();
+            }
             (CARDDAV, "addressbook-home-set") => props.addressbook_home = href_in(p),
             (CALDAV, "calendar-user-address-set") => {
                 props.addresses = p

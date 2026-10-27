@@ -40,6 +40,45 @@ async fn run_and_undo(h: &Harness, targets: &[Target], action: MailAction) {
     assert_eq!(undone.outcome.done, targets);
 }
 
+#[tokio::test]
+async fn moving_out_of_trash_or_junk_to_a_folder_can_be_undone() {
+    for (role, label) in [(Role::Trash, "TRASH"), (Role::Junk, "SPAM")] {
+        let h = harness().await;
+        h.fake
+            .seed(meta("a", "t1", now_millis(), &[label, "UNREAD"]));
+        h.fake.seed(meta("sent", "t1", now_millis(), &["SENT"]));
+        h.bootstrap_all().await;
+        h.sync.ensure_thread("t1").await.unwrap();
+        let actions = actions(&h);
+        let outcome = actions
+            .run_from(
+                &[Target::thread(h.account_id, "t1")],
+                MailAction::Triage(TriageAction::Relabel {
+                    add: vec![MailSet::Mailbox("Label_1".into())],
+                    remove: vec![MailSet::Role(role)],
+                }),
+                History::Record,
+                &crate::MovedFrom::one(h.account_id, MailSet::Role(role)),
+            )
+            .await;
+        assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+        assert_eq!(h.labels_of("a").await, ["Label_1", "UNREAD"]);
+        assert_eq!(in_gmail(&h, "a"), ["Label_1", "UNREAD"]);
+        assert_eq!(in_gmail(&h, "sent"), ["Label_1", "SENT"]);
+        let undone = actions.undo().await.unwrap();
+        assert!(
+            undone.outcome.failed.is_empty(),
+            "{:?}",
+            undone.outcome.failed
+        );
+        let mut original = vec![label.to_string(), "UNREAD".into()];
+        original.sort();
+        assert_eq!(h.labels_of("a").await, original);
+        assert_eq!(in_gmail(&h, "a"), original);
+        assert_eq!(in_gmail(&h, "sent"), ["SENT"]);
+    }
+}
+
 /// Each toast's Undo names one action, so it must reverse that one even
 /// when later actions sit above it on the stack.
 #[tokio::test]

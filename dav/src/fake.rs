@@ -199,7 +199,7 @@ impl DavApi for FakeDav {
         let addresses = state.addresses.clone();
         Ok(Homes {
             principal: "/principal/".into(),
-            calendar: Some("/cal/".into()),
+            calendar_homes: vec!["/cal/".into()],
             addressbook: Some("/card/".into()),
             addresses,
         })

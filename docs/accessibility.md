@@ -89,6 +89,13 @@ Mailbox rows announce their unread count, including custom folders, Sent,
 Junk and Trash. Drafts keep their total count. Nested folders follow the
 server mailbox they belong to, including the account's Inbox.
 
+Drag mail onto another folder in the same account to move it there. Trash
+and Junk can move directly to custom folders or back to Inbox. The Labels
+or Move to Folder menu also offers Move to Inbox, and folder accounts list
+their system folders there. These menu actions work with the keyboard and
+keep the same Undo as a drag. Gmail reserves Sent and Drafts, so ordinary
+mail cannot be dragged into those destinations on a Gmail account.
+
 ## Add Account
 
 Each provider tile in Add Account and on the first-run page is one

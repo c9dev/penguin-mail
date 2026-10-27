@@ -9,6 +9,9 @@
 //! UTCDateTime; a server in an older shape counts as offering no
 //! calendars, and its account keeps CalDAV.
 
+mod scope;
+
+use scope::Scope;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
@@ -116,18 +119,6 @@ struct Queried {
     total: Option<u64>,
 }
 
-/// The calendars account, and the most one `/get` may take (the session's
-/// `maxObjectsInGet`, at most 500, at least 1).
-fn calendar_account(session: &Session) -> Result<(String, usize), JmapError> {
-    let account = session
-        .account_for(CALENDARS)
-        .ok_or_else(|| JmapError::UnknownCapability(CALENDARS.into()))?;
-    Ok((
-        account.to_string(),
-        session.limits().max_objects_in_get.clamp(1, 500),
-    ))
-}
-
 fn calendar_request(session: &Session) -> Request {
     let mut request = Request::new();
     if session.capabilities.contains_key(CYRUS_JSCALENDAR_BIS) {
@@ -139,18 +130,49 @@ fn calendar_request(session: &Session) -> Request {
 impl JmapClient {
     pub async fn calendars(&self) -> Result<Vec<JmapCalendar>, JmapError> {
         let session = self.session().await?;
-        let (account, _) = calendar_account(&session)?;
-        let mut request = calendar_request(&session);
-        let got = request.call(
-            CALENDARS,
-            "Calendar/get",
-            json!({ "accountId": account, "ids": null }),
-        );
-        Ok(self
-            .send(&request)
-            .await?
-            .take::<Got<JmapCalendar>>(&got, "Calendar/get")?
-            .list)
+        let primary = session
+            .account_for(CALENDARS)
+            .ok_or_else(|| JmapError::UnknownCapability(CALENDARS.into()))?;
+        let accounts = std::iter::once(primary)
+            .chain(
+                session
+                    .accounts
+                    .keys()
+                    .map(String::as_str)
+                    .filter(|id| *id != primary),
+            )
+            .filter(|id| {
+                session.accounts[*id]
+                    .account_capabilities
+                    .get(CALENDARS)
+                    .is_some_and(fits)
+            });
+        let mut calendars = Vec::new();
+        for account in accounts {
+            let scope = Scope::for_account(&session, account)?;
+            let mut request = calendar_request(&session);
+            let got = request.call(
+                CALENDARS,
+                "Calendar/get",
+                json!({"accountId": account, "ids": null}),
+            );
+            let got: Got<JmapCalendar> = self.send(&request).await?.take(&got, "Calendar/get")?;
+            calendars.extend(got.list.into_iter().map(|mut calendar| {
+                calendar.id = scope.id(&calendar.id);
+                if account != primary {
+                    calendar.is_default = false;
+                }
+                if session.accounts[account].is_read_only {
+                    calendar.my_rights.may_write_all = false;
+                    calendar.my_rights.may_write_own = false;
+                    calendar.my_rights.may_admin = false;
+                    calendar.my_rights.may_delete = false;
+                    calendar.my_rights.may_rsvp = false;
+                }
+                calendar
+            }));
+        }
+        Ok(calendars)
     }
 
     /// The account's event changes since `since`, every calendar at once.
@@ -160,7 +182,10 @@ impl JmapClient {
         max: usize,
     ) -> Result<ChangesResponse, JmapError> {
         let session = self.session().await?;
-        let (account, step) = calendar_account(&session)?;
+        let scope = Scope::of(&session, since)?;
+        let account = &scope.account;
+        let step = session.limits().max_objects_in_get.clamp(1, 500);
+        let since = scope.raw(since)?;
         let mut request = calendar_request(&session);
         let changes = request.call(
             CALENDARS,
@@ -169,15 +194,37 @@ impl JmapClient {
                 "accountId": account, "sinceState": since, "maxChanges": max.clamp(1, step)
             }),
         );
-        self.send(&request)
+        let mut changes: ChangesResponse = self
+            .send(&request)
             .await?
-            .take(&changes, "CalendarEvent/changes")
+            .take(&changes, "CalendarEvent/changes")?;
+        changes.old_state = scope.id(&changes.old_state);
+        changes.new_state = scope.id(&changes.new_state);
+        for ids in [
+            &mut changes.created,
+            &mut changes.updated,
+            &mut changes.destroyed,
+        ] {
+            for id in ids {
+                *id = scope.id(id);
+            }
+        }
+        Ok(changes)
     }
 
     /// `ids`, a request per `maxObjectsInGet`.
     pub async fn calendar_events(&self, ids: &[String]) -> Result<CalendarEvents, JmapError> {
         let session = self.session().await?;
-        let (account, step) = calendar_account(&session)?;
+        let scope = Scope::of(
+            &session,
+            ids.first().map(String::as_str).unwrap_or_default(),
+        )?;
+        let account = &scope.account;
+        let step = session.limits().max_objects_in_get.clamp(1, 500);
+        let ids = ids
+            .iter()
+            .map(|id| scope.raw(id))
+            .collect::<Result<Vec<_>, _>>()?;
         let mut all = CalendarEvents::default();
         for chunk in ids.chunks(step) {
             let mut request = calendar_request(&session);
@@ -187,9 +234,11 @@ impl JmapClient {
                 json!({ "accountId": account, "ids": chunk }),
             );
             let got: Got<Value> = self.send(&request).await?.take(&got, "CalendarEvent/get")?;
-            all.state = got.state;
-            all.list.extend(got.list);
-            all.not_found.extend(got.not_found);
+            all.state = scope.id(&got.state);
+            all.list
+                .extend(got.list.into_iter().map(|e| scope.event(e)));
+            all.not_found
+                .extend(got.not_found.iter().map(|id| scope.id(id)));
         }
         Ok(all)
     }
@@ -203,7 +252,10 @@ impl JmapClient {
         limit: usize,
     ) -> Result<EventsPage, JmapError> {
         let session = self.session().await?;
-        let (account, step) = calendar_account(&session)?;
+        let scope = Scope::of(&session, scope::calendar(filter).unwrap_or_default())?;
+        let account = &scope.account;
+        let step = session.limits().max_objects_in_get.clamp(1, 500);
+        let filter = scope.filter(filter)?;
         let mut request = calendar_request(&session);
         let query = request.call(
             CALENDARS,
@@ -228,8 +280,12 @@ impl JmapClient {
         let queried: Queried = answer.take(&query, "CalendarEvent/query")?;
         let events: Got<Value> = answer.take(&got, "CalendarEvent/get")?;
         Ok(EventsPage {
-            state: events.state,
-            events: events.list,
+            state: scope.id(&events.state),
+            events: events
+                .list
+                .into_iter()
+                .map(|event| scope.event(event))
+                .collect(),
             total: queried.total,
         })
     }
@@ -244,11 +300,30 @@ impl JmapClient {
         state: Option<&str>,
     ) -> Result<Option<Value>, JmapError> {
         let session = self.session().await?;
-        let (account, _) = calendar_account(&session)?;
+        let hint = match write {
+            EventWrite::Create(fields) => fields
+                .get("calendarIds")
+                .and_then(Value::as_object)
+                .and_then(|ids| ids.keys().next())
+                .map(String::as_str)
+                .unwrap_or_default(),
+            EventWrite::Update { id, .. } | EventWrite::Destroy(id) => id.as_str(),
+        };
+        let scope = Scope::of(&session, hint)?;
+        let account = &scope.account;
+        let write = match write {
+            EventWrite::Create(fields) => EventWrite::Create(scope.fields(fields)?),
+            EventWrite::Update { id, patch } => EventWrite::Update {
+                id: scope.raw(id)?,
+                patch: scope.fields(patch)?,
+            },
+            EventWrite::Destroy(id) => EventWrite::Destroy(scope.raw(id)?),
+        };
+        let write = &write;
         let mut request = calendar_request(&session);
         let mut args = json!({ "accountId": account, "sendSchedulingMessages": send });
         if let Some(state) = state {
-            args["ifInState"] = json!(state);
+            args["ifInState"] = json!(scope.raw(state)?);
         }
         let key = match write {
             EventWrite::Create(object) => {
@@ -278,11 +353,14 @@ impl JmapClient {
             EventWrite::Create(_) => said
                 .created
                 .and_then(|mut created| created.remove(key))
-                .map(Some)
+                .map(|event| Some(scope.event(event)))
                 .ok_or_else(|| JmapError::Decode("the server created no event".into())),
-            EventWrite::Update { .. } => {
-                Ok(said.updated.as_mut().and_then(|u| u.remove(key)).flatten())
-            }
+            EventWrite::Update { .. } => Ok(said
+                .updated
+                .as_mut()
+                .and_then(|u| u.remove(key))
+                .flatten()
+                .map(|event| scope.event(event))),
             EventWrite::Destroy(_) => Ok(None),
         }
     }

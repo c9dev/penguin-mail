@@ -854,3 +854,64 @@ async fn an_event_the_server_reports_under_an_encoded_href_stays_one_event() {
     );
     assert_eq!(dav.with(|s| s.resources.len()), 1);
 }
+
+#[tokio::test]
+async fn calendars_in_every_home_include_shared_readers_and_writers() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+    let server = MockServer::start().await;
+    let response = |properties: &str| {
+        format!(
+            "<d:multistatus xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\"><d:response><d:href>/principal/</d:href><d:propstat><d:prop>{properties}</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>"
+        )
+    };
+    Mock::given(method("PROPFIND"))
+        .and(path("/"))
+        .respond_with(ResponseTemplate::new(207).set_body_string(response(
+            "<d:current-user-principal><d:href>/principal/</d:href></d:current-user-principal>",
+        )))
+        .mount(&server)
+        .await;
+    Mock::given(method("PROPFIND")).and(path("/principal/"))
+        .respond_with(ResponseTemplate::new(207).set_body_string(response("<c:calendar-home-set><d:href>/own/</d:href><d:href>/team/</d:href><d:href>/reader/</d:href><d:href>/team/</d:href></c:calendar-home-set>")))
+        .mount(&server).await;
+    for (home, writable) in [("own", true), ("team", true), ("reader", false)] {
+        let privilege = if writable {
+            "<d:privilege><d:write/></d:privilege>"
+        } else {
+            "<d:privilege><d:read/></d:privilege>"
+        };
+        let body = response(&format!("<d:displayname>{home}</d:displayname><d:resourcetype><d:collection/><c:calendar/></d:resourcetype><d:current-user-privilege-set>{privilege}</d:current-user-privilege-set>"))
+            .replace("/principal/", &format!("/{home}/calendar/"));
+        Mock::given(method("PROPFIND"))
+            .and(path(format!("/{home}/")))
+            .respond_with(ResponseTemplate::new(207).set_body_string(body))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    let dav = mailrs_dav::DavClient::over(
+        server.uri().parse().unwrap(),
+        Kind::Calendar,
+        mailrs_dav::Login::new("me", "pw"),
+    )
+    .unwrap();
+    let adapter = CalDav::new(
+        Arc::new(dav),
+        crate::AnyMail::NoMail(crate::services::NoMail),
+        vec![ME.into()],
+    );
+    let calendars = adapter.calendars().await.unwrap();
+    assert_eq!(calendars.len(), 3);
+    assert_eq!(
+        calendars
+            .iter()
+            .map(|c| (c.name.as_str(), c.access, c.primary))
+            .collect::<Vec<_>>(),
+        [
+            ("own", Access::Owner, true),
+            ("team", Access::Writer, false),
+            ("reader", Access::Reader, false)
+        ]
+    );
+}

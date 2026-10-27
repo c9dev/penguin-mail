@@ -2333,7 +2333,8 @@ impl MainWindow {
                 .unwrap_or_default(),
             _ => HashSet::new(),
         };
-        self.label_popover_for(targets, applied, Some(view))
+        let from = self.mailbox_of(&view);
+        self.label_popover_for(targets, applied, Some(view), from)
     }
 
     /// Labels of the targets' account, with `applied` already ticked. Mail
@@ -2345,6 +2346,7 @@ impl MainWindow {
         targets: Vec<Target>,
         applied: HashSet<String>,
         follow: Option<Rc<ConversationView>>,
+        from: Mailbox,
     ) -> gtk::Popover {
         let popover = gtk::Popover::new();
         let accounts: HashSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
@@ -2379,13 +2381,51 @@ impl MainWindow {
             }
             return popover;
         };
+        let filing = Filing::of([self.offers(account_id)]);
         let mut labels: Vec<Label> = self
             .labels_of(account_id)
             .into_iter()
-            .filter(|l| l.kind == mailrs_domain::LabelKind::User)
+            .filter(|l| match filing {
+                Filing::Labels => l.kind == mailrs_domain::LabelKind::User,
+                Filing::Folders => {
+                    matches!(
+                        l.kind,
+                        mailrs_domain::LabelKind::User | mailrs_domain::LabelKind::System
+                    ) && l.role != Some(mailrs_domain::Role::Inbox)
+                }
+            })
             .collect();
         labels.sort_by_key(|l| l.name.to_lowercase());
-        let filing = Filing::of([self.offers(account_id)]);
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let inbox = gtk::Button::builder()
+            .label(gettext("Move to Inbox"))
+            .css_classes(["flat"])
+            .build();
+        crate::ui::name(&inbox, &gettext("Move to Inbox"));
+        let into_inbox = crate::ui::moving::move_action(
+            &from,
+            &Mailbox::Standard {
+                account_id,
+                which: crate::ui::Standard::Inbox,
+            },
+        )
+        .ok();
+        inbox.set_sensitive(into_inbox.is_some());
+        let (weak, pop) = (Rc::downgrade(self), popover.clone());
+        {
+            let (targets, follow) = (targets.clone(), follow.clone());
+            inbox.connect_clicked(move |_| {
+                pop.popdown();
+                if let (Some(win), Some(triage)) = (weak.upgrade(), into_inbox.as_ref()) {
+                    win.press_label(
+                        targets.clone(),
+                        Press::Label(triage.clone()),
+                        follow.as_ref(),
+                    );
+                }
+            });
+        }
+        content.append(&inbox);
         // A message sits in one folder, so no folder shows as ticked.
         let applied = match filing {
             Filing::Labels => applied,
@@ -2422,7 +2462,6 @@ impl MainWindow {
             });
         }
         if labels.is_empty() {
-            let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&message(&filing.none_yet()));
             content.append(&create);
             popover.set_child(Some(&content));
@@ -2432,6 +2471,19 @@ impl MainWindow {
             .css_classes(["navigation-sidebar"])
             .selection_mode(gtk::SelectionMode::None)
             .build();
+        let source = from
+            .moved_from()
+            .of(account_id)
+            .cloned()
+            .or_else(|| match from.folder() {
+                Some(mailrs_domain::Folder::Archive) => {
+                    Some(mailrs_domain::MailSet::Role(Role::Archive))
+                }
+                Some(mailrs_domain::Folder::AllMail) => {
+                    Some(mailrs_domain::MailSet::Role(Role::All))
+                }
+                _ => None,
+            });
         for label in &labels {
             let row = gtk::Box::builder().spacing(10).build();
             let check = gtk::Image::from_icon_name("object-select-symbolic");
@@ -2451,6 +2503,15 @@ impl MainWindow {
                 .child(&row)
                 .activatable(true)
                 .build();
+            if filing == Filing::Folders
+                && source.as_ref().is_some_and(|source| match source {
+                    mailrs_domain::MailSet::Mailbox(id) => *id == label.id,
+                    mailrs_domain::MailSet::Role(role) => label.role == Some(*role),
+                    _ => false,
+                })
+            {
+                row.set_sensitive(false);
+            }
             // The tick beside the name is drawn at zero opacity when the
             // label is off, which says nothing out loud.
             crate::ui::name(
@@ -2484,7 +2545,6 @@ impl MainWindow {
             .max_content_height(360)
             .min_content_width(220)
             .build();
-        let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content.append(&scroller);
         content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         content.append(&create);
@@ -2911,83 +2971,6 @@ impl MainWindow {
                     }) as Box<dyn Fn()>
                 });
                 composer.lock(&notice, cancel);
-            }
-        });
-    }
-
-    /// Downloads attachment `index` of `message_id` in `view`.
-    pub(super) fn save_attachment_from(
-        self: &Rc<Self>,
-        view: &ConversationView,
-        message_id: String,
-        index: usize,
-    ) {
-        let found = view.find(|open| {
-            let body = open.bodies.get(&message_id)?.as_ref().ok()?;
-            Some((open.account_id, body.attachments.get(index)?.clone()))
-        });
-        let Some((account_id, attachment)) = found else {
-            return;
-        };
-        // A file out of an encrypted message never reached Gmail, so its
-        // bytes are here or nowhere.
-        if self.save_opened_file_from(view, &message_id, index, &attachment) {
-            return;
-        }
-        let (Some(sync), Some(attachment_id)) = (
-            self.core.account(account_id),
-            attachment.attachment_id.clone(),
-        ) else {
-            return;
-        };
-        let downloads =
-            glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            this.toast(&fill(
-                &gettext("Downloading {file}…"),
-                &[("file", &attachment.filename)],
-            ));
-            let filename = attachment.filename.clone();
-            let saved = this
-                .core
-                .call(async move {
-                    let data = sync.attachment(&message_id, &attachment_id).await?;
-                    let path = unique_path(&downloads, &filename);
-                    let target = path.clone();
-                    tokio::task::spawn_blocking(move || std::fs::write(&target, data)).await??;
-                    Ok::<PathBuf, anyhow::Error>(path)
-                })
-                .await;
-            match saved {
-                Ok(path) => {
-                    let name = path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    let saved_to_downloads =
-                        fill(&gettext("Saved {file} to Downloads"), &[("file", &name)]);
-                    let toast = adw::Toast::builder()
-                        .title(toast_title(&saved_to_downloads))
-                        .button_label(gettext("Open"))
-                        .timeout(6)
-                        .build();
-                    let window = this.window.clone();
-                    toast.connect_button_clicked(move |_| {
-                        let file = gio::File::for_path(&path);
-                        gtk::FileLauncher::new(Some(&file)).launch(
-                            Some(&window),
-                            gio::Cancellable::NONE,
-                            |_| {},
-                        );
-                    });
-                    this.toasts.add_toast(toast);
-                }
-                Err(err) => this.toast(&with_reason(
-                    &gettext("Could not save {file}: {reason}"),
-                    &err,
-                    &[("file", &attachment.filename)],
-                )),
             }
         });
     }
@@ -4615,17 +4598,22 @@ fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
         .unwrap_or(false)
 }
 
-/// `dir/name`, or `dir/name (2).ext` and so on when that exists.
-fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
+/// An attachment name that stays within the chosen folder.
+fn attachment_name(name: &str) -> String {
     let clean: String = name
         .chars()
         .map(|c| if c == '/' || c == '\0' { '_' } else { c })
         .collect();
-    let clean = if clean.trim().is_empty() || clean == "." || clean == ".." {
-        "attachment".to_string()
+    if clean.trim().is_empty() || clean == "." || clean == ".." {
+        "attachment".into()
     } else {
         clean
-    };
+    }
+}
+
+/// `dir/name`, or `dir/name (2).ext` and so on when that exists.
+fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
+    let clean = attachment_name(name);
     let candidate = dir.join(&clean);
     if !candidate.exists() {
         return candidate;

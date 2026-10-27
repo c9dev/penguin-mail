@@ -207,65 +207,155 @@ impl MainWindow {
         });
     }
 
-    /// Saves a file the open thread already holds, and says whether it
-    /// did, so the caller knows to stop rather than ask Gmail.
-    pub(super) fn save_opened_file_from(
+    /// Saves one attachment through the desktop's file chooser. The chosen
+    /// file also carries the portal grant in a sandboxed build.
+    pub(super) fn save_attachment_from(
         self: &Rc<Self>,
         view: &ConversationView,
-        message_id: &str,
+        message_id: String,
         index: usize,
-        attachment: &Attachment,
-    ) -> bool {
-        match opened_file(view, message_id, index) {
-            Some(data) => {
-                self.save_opened_file(attachment, data);
-                true
-            }
-            None => false,
+    ) {
+        let Some((account_id, attachment)) = self.attachment_at(view, &message_id, index) else {
+            return;
+        };
+        let parent = view
+            .window()
+            .unwrap_or_else(|| self.window.clone().upcast());
+        if let Some(data) = opened_file(view, &message_id, index) {
+            self.save_file(parent, attachment.filename, move |file| {
+                file.replace_contents(
+                    &data,
+                    None,
+                    false,
+                    gio::FileCreateFlags::NONE,
+                    gio::Cancellable::NONE,
+                )
+                .map(drop)
+            });
+            return;
         }
-    }
-
-    /// Writes a file that came out of an encrypted message to Downloads.
-    fn save_opened_file(self: &Rc<Self>, attachment: &Attachment, data: Vec<u8>) {
-        self.save_to_downloads(attachment.filename.clone(), move |path| {
-            std::fs::write(path, data)
+        let (Some(sync), Some(attachment_id)) =
+            (self.core.account(account_id), attachment.attachment_id)
+        else {
+            return;
+        };
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            this.toast(&fill(
+                &gettext("Downloading {file}…"),
+                &[("file", &attachment.filename)],
+            ));
+            match this
+                .core
+                .call_for(account_id, async move {
+                    sync.attachment(&message_id, &attachment_id).await
+                })
+                .await
+            {
+                Ok(data) if parent.is_visible() => {
+                    this.save_file(parent, attachment.filename, move |file| {
+                        file.replace_contents(
+                            &data,
+                            None,
+                            false,
+                            gio::FileCreateFlags::NONE,
+                            gio::Cancellable::NONE,
+                        )
+                        .map(drop)
+                    })
+                }
+                Ok(_) => {}
+                Err(err) => this.toast(&with_reason(
+                    &gettext("Could not save {file}: {reason}"),
+                    &err,
+                    &[("file", &attachment.filename)],
+                )),
+            }
         });
     }
 
-    /// Puts a file into Downloads under a free name and says how it went.
-    /// `write` makes the file at the path it is given. It runs on a worker
-    /// thread, since a large file or a slow disk would otherwise freeze the
-    /// window while it writes.
-    fn save_to_downloads(
+    fn save_file(
         self: &Rc<Self>,
+        parent: gtk::Window,
         name: String,
-        write: impl FnOnce(&Path) -> io::Result<()> + Send + 'static,
+        write: impl FnOnce(&gio::File) -> Result<(), glib::Error> + Send + 'static,
     ) {
-        let downloads =
-            glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
+        let dialog = gtk::FileDialog::builder()
+            .title(gettext("Save As…"))
+            .modal(true)
+            .initial_name(super::attachment_name(&name))
+            .build();
+        if let Some(downloads) = glib::user_special_dir(glib::UserDirectory::Downloads) {
+            dialog.set_initial_folder(Some(&gio::File::for_path(downloads)));
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let wanted = name.clone();
-            let saved =
-                gio::spawn_blocking(move || save_under_free_name(&downloads, &wanted, write))
-                    .await
-                    .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+            let file = match dialog.save_future(Some(&parent)).await {
+                Ok(file) => file,
+                Err(err) if dismissed(&err) => return,
+                Err(err) => {
+                    return this.toast(&with_reason(
+                        &gettext("Could not save {file}: {reason}"),
+                        &err,
+                        &[("file", &name)],
+                    ));
+                }
+            };
+            let target = file.clone();
+            let saved = gio::spawn_blocking(move || write(&target))
+                .await
+                .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
             match saved {
-                Ok(path) => {
-                    let shown = path
-                        .file_name()
+                Ok(()) => {
+                    let shown = file
+                        .basename()
                         .map(|n| n.to_string_lossy().into_owned())
                         .unwrap_or(name);
-                    this.toast(&fill(
-                        &gettext("Saved {file} to Downloads"),
-                        &[("file", &shown)],
-                    ));
+                    let toast = adw::Toast::builder()
+                        .title(super::toast_title(&fill(
+                            &gettext("Saved {file}"),
+                            &[("file", &shown)],
+                        )))
+                        .button_label(gettext("Open"))
+                        .timeout(6)
+                        .build();
+                    let weak = Rc::downgrade(&this);
+                    toast.connect_button_clicked(move |_| {
+                        if let Some(this) = weak.upgrade() {
+                            this.open_file(&parent, &file, false);
+                        }
+                    });
+                    this.toast_overlay().add_toast(toast);
                 }
                 Err(err) => this.toast(&with_reason(
                     &gettext("Could not save {file}: {reason}"),
                     &err,
                     &[("file", &name)],
                 )),
+            }
+        });
+    }
+
+    /// Delegates to the desktop, reporting failures instead of discarding
+    /// them. The explicit alternate-program action opens its app chooser.
+    fn open_file(self: &Rc<Self>, parent: &gtk::Window, file: &gio::File, choose: bool) {
+        let launcher = gtk::FileLauncher::new(Some(file));
+        launcher.set_always_ask(choose);
+        let name = file
+            .basename()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let weak = Rc::downgrade(self);
+        launcher.launch(Some(parent), gio::Cancellable::NONE, move |result| {
+            if let Err(err) = result
+                && !dismissed(&err)
+                && let Some(this) = weak.upgrade()
+            {
+                this.toast(&with_reason(
+                    &gettext("Could not open {file}: {reason}"),
+                    &err,
+                    &[("file", &name)],
+                ));
             }
         });
     }
@@ -324,17 +414,17 @@ impl MainWindow {
             this.previews.kept(path.clone(), decrypted);
             match texture {
                 Some(texture) => this.quick_look(&attachment, texture, path),
-                None => gtk::FileLauncher::new(Some(&gio::File::for_path(&path))).launch(
-                    Some(&this.window),
-                    gio::Cancellable::NONE,
-                    |_| {},
+                None => this.open_file(
+                    &this.window.clone().upcast(),
+                    &gio::File::for_path(&path),
+                    false,
                 ),
             }
         });
     }
 
-    /// A window on one picture, with the file behind it: Save puts it in
-    /// Downloads, Open hands it to the desktop, and dragging the picture
+    /// A window on one picture: Save chooses a destination, Open chooses
+    /// a desktop application, and dragging the picture
     /// out drops the file wherever it lands.
     fn quick_look(self: &Rc<Self>, attachment: &Attachment, texture: gdk::Texture, path: PathBuf) {
         let picture = gtk::Picture::for_paintable(&texture);
@@ -357,13 +447,13 @@ impl MainWindow {
         let header = adw::HeaderBar::new();
         let save = gtk::Button::builder()
             .icon_name("document-save-symbolic")
-            .tooltip_text(gettext("Save to Downloads"))
+            .tooltip_text(gettext("Save As…"))
             .build();
         let open = gtk::Button::builder()
             .icon_name("document-open-symbolic")
             .tooltip_text(gettext("Open in Another Program"))
             .build();
-        crate::ui::name(&save, &gettext("Save to Downloads"));
+        crate::ui::name(&save, &gettext("Save As…"));
         crate::ui::name(&open, &gettext("Open in Another Program"));
         crate::ui::name(
             &picture,
@@ -394,18 +484,14 @@ impl MainWindow {
 
         let source = path.clone();
         let this = Rc::clone(self);
-        save.connect_clicked(move |_| this.copy_into_downloads(&source));
+        let parent = window.clone().upcast();
+        save.connect_clicked(move |_| this.save_preview(&parent, &source));
         let source = gio::File::for_path(&path);
-        let parent = window.clone();
-        open.connect_clicked(move |_| {
-            gtk::FileLauncher::new(Some(&source)).launch(
-                Some(&parent),
-                gio::Cancellable::NONE,
-                |_| {},
-            );
-        });
+        let parent = window.clone().upcast();
+        let this = Rc::clone(self);
+        open.connect_clicked(move |_| this.open_file(&parent, &source, true));
 
-        // The copy goes with the window. Save to Downloads made its own.
+        // The copy goes with the window. Saving made a separate copy.
         let (gone, weak) = (path.clone(), Rc::downgrade(self));
         window.connect_destroy(move |_| {
             if let Some(win) = weak.upgrade() {
@@ -427,15 +513,28 @@ impl MainWindow {
         window.present();
     }
 
-    /// Copies a previewed file into Downloads under a free name.
-    fn copy_into_downloads(self: &Rc<Self>, source: &Path) {
+    /// Saves a separate copy; closing the preview removes only its cache.
+    fn save_preview(self: &Rc<Self>, parent: &gtk::Window, source: &Path) {
         let name = source
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "attachment".into());
-        let source = source.to_path_buf();
-        self.save_to_downloads(name, move |target| std::fs::copy(&source, target).map(drop));
+        let source = gio::File::for_path(source);
+        self.save_file(parent.clone(), name, move |target| {
+            source
+                .copy(
+                    target,
+                    gio::FileCopyFlags::OVERWRITE,
+                    gio::Cancellable::NONE,
+                    None,
+                )
+                .map(drop)
+        });
     }
+}
+
+fn dismissed(error: &glib::Error) -> bool {
+    error.matches(gtk::DialogError::Dismissed) || error.matches(gtk::DialogError::Cancelled)
 }
 
 /// Writes a file into `folder` under `name`, or `name (2)` and so on when
