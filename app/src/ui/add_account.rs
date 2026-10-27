@@ -2730,7 +2730,10 @@ impl Dialog {
             (None, _) => self.tile.get().map_or(post::ANY_SERVER, Tile::stamp),
         };
         let provider = advice.as_ref().map(|a| a.provider.clone());
-        self.show_advice(advice.as_ref());
+        self.show_advice(post::shown_advice(
+            advice.as_ref(),
+            self.goa_after_address.get(),
+        ));
         self.set_band("address", Step::Address, Some(stamp), provider.as_deref());
     }
 
