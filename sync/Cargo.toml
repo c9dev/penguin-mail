@@ -49,7 +49,7 @@ tracing.workspace = true
 
 # Online Accounts is a D-Bus service on Linux; macOS has none.
 [target.'cfg(target_os = "linux")'.dependencies]
-zbus = { version = "5", default-features = false, features = ["tokio"] }
+zbus = { version = "6", default-features = false, features = ["tokio"] }
 
 [dev-dependencies]
 base64.workspace = true
@@ -69,4 +69,4 @@ tracing-subscriber.workspace = true
 # without waiting itself.
 tokio = { workspace = true, features = ["test-util"] }
 # Plays Online Accounts on a private bus in `tests/goa_bus.rs`.
-zbus = { version = "5", default-features = false, features = ["tokio"] }
+zbus = { version = "6", default-features = false, features = ["tokio", "proxy", "service", "object-manager"] }

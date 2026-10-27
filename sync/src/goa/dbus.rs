@@ -9,8 +9,7 @@ use std::time::Duration;
 use futures::future::BoxFuture;
 use futures::stream::{BoxStream, select_all};
 use futures::{FutureExt, StreamExt};
-use zbus::zvariant::{OwnedObjectPath, OwnedValue};
-use zbus::{Connection, MatchRule, MessageStream};
+use zbus::{Connection, MatchRule, MessageStream, OwnedObjectPath, OwnedVariant};
 
 use super::{GoaAccount, GoaChange, GoaError, GoaToken, OnlineAccounts, bounded};
 
@@ -52,7 +51,6 @@ impl DbusAccounts {
         let conn = match &self.address {
             Some(address) => {
                 zbus::connection::Builder::address(address.as_str())
-                    .map_err(error_of)?
                     .build()
                     .await
             }
@@ -79,11 +77,21 @@ impl DbusAccounts {
 
 /// What a failed call means to the caller.
 fn error_of(err: zbus::Error) -> GoaError {
-    use zbus::Error;
-    if let Error::MethodError(name, text, _) = &err {
-        let name = name.as_str();
-        let text = text.clone().unwrap_or_default();
-        return match name {
+    use zbus::{DBusError, Error};
+    // zbus reports the standard org.freedesktop.DBus.Error replies as
+    // `FDO`, and every other error reply as `MethodError`.
+    let reply = match &err {
+        Error::MethodError(name, text, _) => {
+            Some((name.as_str().to_string(), text.clone().unwrap_or_default()))
+        }
+        Error::FDO(fdo) => Some((
+            fdo.name().as_str().to_string(),
+            fdo.description().unwrap_or_default().to_string(),
+        )),
+        _ => None,
+    };
+    if let Some((name, text)) = reply {
+        return match name.as_str() {
             "org.freedesktop.DBus.Error.ServiceUnknown"
             | "org.freedesktop.DBus.Error.AccessDenied"
             | "org.freedesktop.DBus.Error.NameHasNoOwner"
@@ -104,9 +112,9 @@ fn error_of(err: zbus::Error) -> GoaError {
     }
 }
 
-type Interfaces = HashMap<zbus::names::OwnedInterfaceName, HashMap<String, OwnedValue>>;
+type Interfaces = HashMap<zbus::names::OwnedInterfaceName, HashMap<String, OwnedVariant>>;
 
-fn text(props: &HashMap<String, OwnedValue>, key: &str) -> String {
+fn text(props: &HashMap<String, OwnedVariant>, key: &str) -> String {
     props
         .get(key)
         .and_then(|v| <&str>::try_from(v).ok())
@@ -114,7 +122,7 @@ fn text(props: &HashMap<String, OwnedValue>, key: &str) -> String {
         .to_string()
 }
 
-fn flag(props: &HashMap<String, OwnedValue>, key: &str) -> bool {
+fn flag(props: &HashMap<String, OwnedVariant>, key: &str) -> bool {
     props
         .get(key)
         .and_then(|v| bool::try_from(v).ok())
@@ -231,32 +239,25 @@ impl OnlineAccounts for DbusAccounts {
                 let added = MatchRule::builder()
                     .msg_type(zbus::message::Type::Signal)
                     .sender(SERVICE)
-                    .map_err(error_of)?
                     .interface("org.freedesktop.DBus.ObjectManager")
-                    .map_err(error_of)?
                     .member("InterfacesAdded")
-                    .map_err(error_of)?
-                    .build();
+                    .build()
+                    .map_err(error_of)?;
                 let removed = MatchRule::builder()
                     .msg_type(zbus::message::Type::Signal)
                     .sender(SERVICE)
-                    .map_err(error_of)?
                     .interface("org.freedesktop.DBus.ObjectManager")
-                    .map_err(error_of)?
                     .member("InterfacesRemoved")
-                    .map_err(error_of)?
-                    .build();
+                    .build()
+                    .map_err(error_of)?;
                 let changed = MatchRule::builder()
                     .msg_type(zbus::message::Type::Signal)
                     .sender(SERVICE)
-                    .map_err(error_of)?
                     .interface("org.freedesktop.DBus.Properties")
-                    .map_err(error_of)?
                     .member("PropertiesChanged")
-                    .map_err(error_of)?
                     .path_namespace(format!("{ROOT}/Accounts"))
-                    .map_err(error_of)?
-                    .build();
+                    .build()
+                    .map_err(error_of)?;
                 let mut streams = Vec::new();
                 for rule in [added, removed, changed] {
                     streams.push(

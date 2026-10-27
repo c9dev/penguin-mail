@@ -7,8 +7,8 @@ use std::process::{Child, Command, Stdio};
 
 use futures::StreamExt;
 use mailrs_sync::goa::{DbusAccounts, GoaChange, GoaError, OnlineAccounts};
+use zbus::ObjectPath;
 use zbus::object_server::SignalEmitter;
-use zbus::zvariant::ObjectPath;
 
 struct Bus {
     child: Child,
@@ -134,9 +134,7 @@ async fn the_client_reads_accounts_tokens_and_changes_over_a_bus() {
         return;
     };
     let server = zbus::connection::Builder::address(bus.address.as_str())
-        .unwrap()
         .name("org.gnome.OnlineAccounts")
-        .unwrap()
         .build()
         .await
         .unwrap();
@@ -262,9 +260,7 @@ async fn a_restarted_bus_is_dialed_again() {
         Err(GoaError::Unreachable(_))
     ));
     let server = zbus::connection::Builder::address(address.as_str())
-        .unwrap()
         .name("org.gnome.OnlineAccounts")
-        .unwrap()
         .build()
         .await
         .unwrap();
@@ -284,9 +280,7 @@ async fn a_restarted_bus_is_dialed_again() {
         panic!("the bus did not start again");
     };
     let server = zbus::connection::Builder::address(address.as_str())
-        .unwrap()
         .name("org.gnome.OnlineAccounts")
-        .unwrap()
         .build()
         .await
         .unwrap();
