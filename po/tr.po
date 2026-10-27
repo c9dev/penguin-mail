@@ -2015,6 +2015,10 @@ msgstr ""
 "Site, soru işaretinden sonraki kısım dahil tüm adresi alır. Her Zaman İzin "
 "Ver yalnızca bu adresi kapsar."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "Model bekleniyor…"

@@ -2017,6 +2017,10 @@ msgstr ""
 "O site recebe o endereço completo, incluindo tudo o que vem depois de um "
 "ponto de interrogação. Permitir sempre cobre apenas este endereço exato."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr "O Keenable recusou a chave de API."
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "À espera do modelo…"

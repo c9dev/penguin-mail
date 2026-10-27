@@ -2075,6 +2075,10 @@ msgstr ""
 "ερωτηματικό. Η επιλογή «Να επιτρέπεται πάντα» καλύπτει μόνο αυτήν ακριβώς τη "
 "διεύθυνση."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "Αναμονή για το μοντέλο…"

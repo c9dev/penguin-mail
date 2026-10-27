@@ -1904,6 +1904,10 @@ msgstr ""
 "网站会收到完整网址，包括问号后的所有内容。[始终允许] 只适用于此网址，不包含其"
 "他网址。"
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "正在等待模型…"

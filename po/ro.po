@@ -2062,6 +2062,10 @@ msgstr ""
 "Site-ul primește adresa întreagă, inclusiv tot ce urmează după semnul "
 "întrebării. „Permite întotdeauna” acoperă doar exact această adresă."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "Se așteaptă modelul…"

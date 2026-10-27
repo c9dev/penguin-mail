@@ -2055,6 +2055,10 @@ msgstr ""
 "Сайт получит весь адрес, включая всё, что идёт после вопросительного знака. "
 "«Всегда разрешать» относится только к этому адресу."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "Ожидание модели…"

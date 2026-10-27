@@ -143,6 +143,42 @@ async fn searxng_without_json_says_how_to_turn_it_on() {
     assert!(problem.contains("search.formats"), "{problem}");
 }
 
+#[tokio::test]
+async fn a_long_brave_or_searxng_snippet_is_left_whole() {
+    let long = "Penguins are flightless seabirds. ".repeat(40);
+    let long = long.trim_end();
+    assert!(long.chars().count() > MAX_SNIPPET);
+    let brave_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/res/v1/web/search"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "web": {"results": [
+                {"title": "Penguin", "url": "https://example.org/", "description": long},
+            ]}
+        })))
+        .mount(&brave_server)
+        .await;
+    let searxng_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/search"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "results": [
+                {"title": "Penguin", "url": "https://example.org/", "content": long},
+            ]
+        })))
+        .mount(&searxng_server)
+        .await;
+    let searxng = SearchEngine::Searxng {
+        base: searxng_server.uri(),
+    };
+    for engine in [brave(&brave_server), searxng] {
+        let hits = search(&search_client(), &engine, "penguins", 1)
+            .await
+            .unwrap();
+        assert_eq!(hits[0].snippet, long, "{}", engine.name());
+    }
+}
+
 fn keenable(server: &MockServer, key: Option<&str>) -> SearchEngine {
     SearchEngine::Keenable {
         key: key.map(String::from),

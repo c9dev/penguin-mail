@@ -1951,6 +1951,10 @@ msgstr ""
 "Trang web nhận toàn bộ địa chỉ, kể cả phần sau dấu hỏi. Luôn cho phép chỉ áp "
 "dụng cho đúng địa chỉ này."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "Đang chờ mô hình…"

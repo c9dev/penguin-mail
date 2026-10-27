@@ -1839,6 +1839,10 @@ msgid ""
 "mark. Always Allow covers this exact address only."
 msgstr ""
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr ""

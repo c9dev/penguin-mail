@@ -1750,6 +1750,10 @@ msgstr ""
 "\n"
 "The site receives the whole address, including anything after a question mark. Always Allow covers this exact address only."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr "Keenable refused the API key."
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "Waiting for the model…"

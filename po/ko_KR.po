@@ -1951,6 +1951,10 @@ msgstr ""
 "물음표 뒤의 내용을 포함한 전체 주소를 사이트에 보냅니다. 항상 허용은 이 주소"
 "에만 적용합니다."
 
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr "모델 대기 중…"

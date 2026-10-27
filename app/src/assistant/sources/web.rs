@@ -34,9 +34,9 @@ pub const KEENABLE_BASE: &str = "https://api.keenable.ai";
 /// The name Keenable files a search under. Its keyless endpoint refuses a
 /// request that does not name the app making it.
 const KEENABLE_TITLE: &str = "Penguin Mail";
-/// Characters of a result's snippet the model reads. Keenable sends a few
-/// thousand characters of the page where the other engines send a line or
-/// two, and like a page, a search stays in the chat.
+/// Characters of a Keenable result's snippet the model reads. Keenable
+/// sends a few thousand characters of the page where the other engines send
+/// a line or two, and like a page, a search stays in the chat.
 const MAX_SNIPPET: usize = 1_000;
 /// The most a page may weigh before the rest of it is left unread.
 const MAX_BYTES: usize = 2 * 1024 * 1024;
@@ -465,7 +465,7 @@ pub async fn search(
                  Add json to search.formats in its settings.yml."
                 .to_string(),
             (SearchEngine::Keenable { key: Some(_), .. }, 401 | 403) => {
-                "Keenable refused the API key.".to_string()
+                gettext("Keenable refused the API key.")
             }
             (_, 429) => format!(
                 "{} says too many searches. Wait and try again.",
@@ -485,7 +485,7 @@ pub async fn search(
         // the snippet.
         SearchEngine::Keenable { .. } => (&body["results"], "snippet"),
     };
-    Ok(results
+    let mut hits: Vec<Hit> = results
         .as_array()
         .into_iter()
         .flatten()
@@ -494,14 +494,18 @@ pub async fn search(
                 title: plain(result["title"].as_str()?),
                 url: result["url"].as_str()?.to_string(),
                 // Brave marks the words that matched with <strong>.
-                snippet: clip(
-                    &plain(result[snippet].as_str().unwrap_or_default()),
-                    MAX_SNIPPET,
-                ),
+                snippet: plain(result[snippet].as_str().unwrap_or_default()),
             })
         })
         .take(count as usize)
-        .collect())
+        .collect();
+    // Brave's and SearXNG's snippets reach the model whole, however long.
+    if matches!(engine, SearchEngine::Keenable { .. }) {
+        for hit in &mut hits {
+            hit.snippet = clip(&hit.snippet, MAX_SNIPPET);
+        }
+    }
+    Ok(hits)
 }
 
 /// Downloads one page and reads it as text.
