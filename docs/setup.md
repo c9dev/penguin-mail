@@ -490,3 +490,10 @@ their servers offer them. Fastmail accounts signed in through the browser also
 read their IMAP quota when JMAP does not offer one, using the same OAuth session.
 Outlook connected through Microsoft Graph does not
 currently provide a mailbox quota report in Penguin Mail.
+
+## Attachments
+
+Use the save button beside an attachment to choose its filename and destination.
+The desktop file chooser grants Flatpak access to the selected file. Opening
+an attachment uses the system's default application for its type. A picture's
+**Open in Another Program** button opens the desktop's application chooser.

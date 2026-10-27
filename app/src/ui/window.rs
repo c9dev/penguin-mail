@@ -2915,83 +2915,6 @@ impl MainWindow {
         });
     }
 
-    /// Downloads attachment `index` of `message_id` in `view`.
-    pub(super) fn save_attachment_from(
-        self: &Rc<Self>,
-        view: &ConversationView,
-        message_id: String,
-        index: usize,
-    ) {
-        let found = view.find(|open| {
-            let body = open.bodies.get(&message_id)?.as_ref().ok()?;
-            Some((open.account_id, body.attachments.get(index)?.clone()))
-        });
-        let Some((account_id, attachment)) = found else {
-            return;
-        };
-        // A file out of an encrypted message never reached Gmail, so its
-        // bytes are here or nowhere.
-        if self.save_opened_file_from(view, &message_id, index, &attachment) {
-            return;
-        }
-        let (Some(sync), Some(attachment_id)) = (
-            self.core.account(account_id),
-            attachment.attachment_id.clone(),
-        ) else {
-            return;
-        };
-        let downloads =
-            glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            this.toast(&fill(
-                &gettext("Downloading {file}…"),
-                &[("file", &attachment.filename)],
-            ));
-            let filename = attachment.filename.clone();
-            let saved = this
-                .core
-                .call(async move {
-                    let data = sync.attachment(&message_id, &attachment_id).await?;
-                    let path = unique_path(&downloads, &filename);
-                    let target = path.clone();
-                    tokio::task::spawn_blocking(move || std::fs::write(&target, data)).await??;
-                    Ok::<PathBuf, anyhow::Error>(path)
-                })
-                .await;
-            match saved {
-                Ok(path) => {
-                    let name = path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    let saved_to_downloads =
-                        fill(&gettext("Saved {file} to Downloads"), &[("file", &name)]);
-                    let toast = adw::Toast::builder()
-                        .title(toast_title(&saved_to_downloads))
-                        .button_label(gettext("Open"))
-                        .timeout(6)
-                        .build();
-                    let window = this.window.clone();
-                    toast.connect_button_clicked(move |_| {
-                        let file = gio::File::for_path(&path);
-                        gtk::FileLauncher::new(Some(&file)).launch(
-                            Some(&window),
-                            gio::Cancellable::NONE,
-                            |_| {},
-                        );
-                    });
-                    this.toasts.add_toast(toast);
-                }
-                Err(err) => this.toast(&with_reason(
-                    &gettext("Could not save {file}: {reason}"),
-                    &err,
-                    &[("file", &attachment.filename)],
-                )),
-            }
-        });
-    }
-
     // ---- Accounts ----------------------------------------------------------
 
     /// Adds a Google account, or signs in again the one at `expected`.
@@ -4615,17 +4538,22 @@ fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
         .unwrap_or(false)
 }
 
-/// `dir/name`, or `dir/name (2).ext` and so on when that exists.
-fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
+/// An attachment name that stays within the chosen folder.
+fn attachment_name(name: &str) -> String {
     let clean: String = name
         .chars()
         .map(|c| if c == '/' || c == '\0' { '_' } else { c })
         .collect();
-    let clean = if clean.trim().is_empty() || clean == "." || clean == ".." {
-        "attachment".to_string()
+    if clean.trim().is_empty() || clean == "." || clean == ".." {
+        "attachment".into()
     } else {
         clean
-    };
+    }
+}
+
+/// `dir/name`, or `dir/name (2).ext` and so on when that exists.
+fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
+    let clean = attachment_name(name);
     let candidate = dir.join(&clean);
     if !candidate.exists() {
         return candidate;

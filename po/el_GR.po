@@ -4353,18 +4353,21 @@ msgstr[1] "{count} συνημμένα"
 msgid "Quick Look"
 msgstr "Γρήγορη προβολή"
 
-#: app/src/render.rs:625 app/src/ui/window/attachments.rs:360
-#: app/src/ui/window/attachments.rs:366
-msgid "Save to Downloads"
-msgstr "Αποθήκευση στις Λήψεις"
+#: app/src/render.rs:625 app/src/ui/window/attachments.rs:284
+#: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
+#: app/src/ui/window/detached.rs:302
+msgid "Save As…"
+msgstr "Αποθήκευση ως…"
 
 #: app/src/render.rs:627
 msgid "Open {file}, {size}"
 msgstr "Άνοιγμα {file}, {size}"
 
 #: app/src/render.rs:634
-msgid "Save {file} to Downloads"
-msgstr "Αποθήκευση του {file} στις Λήψεις"
+#, fuzzy
+#| msgid "Saved {file}"
+msgid "Save {file}…"
+msgstr "Αποθηκεύτηκε το {file}"
 
 #: app/src/render.rs:641
 msgid "Save All ({count})"
@@ -4487,7 +4490,7 @@ msgid "Set up a different project"
 msgstr "Ρύθμιση διαφορετικού έργου"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3280
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3203
 msgid "Set up your own Google project"
 msgstr "Ρύθμιση δικού σας έργου Google"
 
@@ -4672,8 +4675,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Συνδρομή Claude"
 
-#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3653
-#: app/src/ui/window.rs:3733
+#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3576
+#: app/src/ui/window.rs:3656
 msgid "Assistant"
 msgstr "Βοηθός"
 
@@ -5067,7 +5070,7 @@ msgstr "Άνοιγμα του Penguin Mail"
 msgid "New Message"
 msgstr "Νέο μήνυμα"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1972 app/src/ui/window.rs:3659
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1972 app/src/ui/window.rs:3582
 msgid "Check for Mail"
 msgstr "Έλεγχος για αλληλογραφία"
 
@@ -5085,7 +5088,7 @@ msgstr "Τι νέο υπάρχει στην έκδοση {version}"
 msgid "Check for Updates"
 msgstr "Έλεγχος για ενημερώσεις"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3672
+#: app/src/tray.rs:266 app/src/ui/window.rs:3595
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Έξοδος"
@@ -5108,7 +5111,7 @@ msgstr "Τι νέο υπάρχει"
 msgid "Website"
 msgstr "Ιστότοπος"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3671
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3594
 msgid "Donate"
 msgstr "Δωρεά"
 
@@ -5116,7 +5119,7 @@ msgstr "Δωρεά"
 msgid "License"
 msgstr "Άδεια χρήσης"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3670
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3593
 msgid "About Penguin Mail"
 msgstr "Σχετικά με το Penguin Mail"
 
@@ -5630,7 +5633,7 @@ msgstr ""
 "Τα φίλτρα, τα ψευδώνυμα και η αυτόματη απάντηση δεν είναι διαθέσιμα με αυτόν "
 "τον τρόπο."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3819
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3742
 msgid "Summarize this conversation"
 msgstr "Σύνοψη αυτής της συζήτησης"
 
@@ -5655,13 +5658,13 @@ msgstr "Σύνταξη πρόχειρης απάντησης στην ανοιχ
 msgid "Choose a Model"
 msgstr "Επιλογή μοντέλου"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3780
-#: app/src/ui/window.rs:3781
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3703
+#: app/src/ui/window.rs:3704
 msgid "Detach"
 msgstr "Αποκόλληση"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4447
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4370
 msgid "Close"
 msgstr "Κλείσιμο"
 
@@ -5870,7 +5873,7 @@ msgstr "Επεξεργασία του {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3423
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3346
 msgid "Remove"
 msgstr "Αφαίρεση"
 
@@ -8969,7 +8972,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Να επιτραπεί το Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3870
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3793
 msgid "Add an account first"
 msgstr "Προσθέστε πρώτα έναν λογαριασμό"
 
@@ -10154,7 +10157,7 @@ msgstr "Μετακίνηση του {account} κάτω"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3668 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3591 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Προτιμήσεις"
 
@@ -10645,7 +10648,7 @@ msgstr "Αυτόματη απάντηση…"
 msgid "Rules…"
 msgstr "Κανόνες…"
 
-#: app/src/ui/sidebar.rs:1883 app/src/ui/window.rs:3662
+#: app/src/ui/sidebar.rs:1883 app/src/ui/window.rs:3585
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
@@ -11160,7 +11163,7 @@ msgstr "Δεν ήταν δυνατή η φόρτωση της αλληλογρα
 msgid "Added {account}. Downloading mail…"
 msgstr "Προστέθηκε ο λογαριασμός {account}. Λήψη αλληλογραφίας…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3042
+#: app/src/ui/window.rs:362 app/src/ui/window.rs:2965
 msgid "{account} is signed in again."
 msgstr "Ο λογαριασμός {account} συνδέθηκε ξανά."
 
@@ -11343,35 +11346,19 @@ msgstr ""
 "Η αποστολή αυτού του μηνύματος ακυρώθηκε σε άλλη εφαρμογή και δεν βρίσκεται "
 "πια στα Πρόχειρα."
 
-#: app/src/ui/window.rs:2948
-msgid "Downloading {file}…"
-msgstr "Λήψη του {file}…"
-
-#: app/src/ui/window.rs:2969 app/src/ui/window/attachments.rs:260
-msgid "Saved {file} to Downloads"
-msgstr "Το {file} αποθηκεύτηκε στις Λήψεις"
-
-#: app/src/ui/window.rs:2972
-msgid "Open"
-msgstr "Άνοιγμα"
-
-#: app/src/ui/window.rs:2987 app/src/ui/window/attachments.rs:265
-msgid "Could not save {file}: {reason}"
-msgstr "Δεν ήταν δυνατή η αποθήκευση του {file}: {reason}"
-
-#: app/src/ui/window.rs:3227
+#: app/src/ui/window.rs:3150
 msgid "Continue in your browser"
 msgstr "Συνεχίστε στο πρόγραμμα περιήγησης"
 
-#: app/src/ui/window.rs:3277
+#: app/src/ui/window.rs:3200
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Αυτό το αντίγραφο του Penguin Mail δημιουργήθηκε χωρίς σύνδεση Google."
 
-#: app/src/ui/window.rs:3299
+#: app/src/ui/window.rs:3222
 msgid "Get a Release"
 msgstr "Λήψη έκδοσης"
 
-#: app/src/ui/window.rs:3409
+#: app/src/ui/window.rs:3332
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11379,80 +11366,80 @@ msgstr ""
 "Δεν ήταν δυνατός ο έλεγχος για μηνύματα που κρατά ο διακομιστής για αποστολή "
 "αργότερα, οπότε ο λογαριασμός {account} παραμένει: {reason}"
 
-#: app/src/ui/window.rs:3420
+#: app/src/ui/window.rs:3343
 msgid "Remove {account}?"
 msgstr "Αφαίρεση του {account};"
 
-#: app/src/ui/window.rs:3439
+#: app/src/ui/window.rs:3362
 msgid "Remove Anyway"
 msgstr "Αφαίρεση παρ' όλα αυτά"
 
-#: app/src/ui/window.rs:3452
+#: app/src/ui/window.rs:3375
 msgid "Removed {account}"
 msgstr "Αφαιρέθηκε ο λογαριασμός {account}"
 
-#: app/src/ui/window.rs:3454
+#: app/src/ui/window.rs:3377
 msgid "Could not remove {account}: {reason}"
 msgstr "Δεν ήταν δυνατή η αφαίρεση του {account}: {reason}"
 
-#: app/src/ui/window.rs:3640
+#: app/src/ui/window.rs:3563
 msgid "Refresh"
 msgstr "Ανανέωση"
 
-#: app/src/ui/window.rs:3644
+#: app/src/ui/window.rs:3567
 msgid "Show Declined Events"
 msgstr "Εμφάνιση απορριφθέντων συμβάντων"
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3583
 msgid "Add Account…"
 msgstr "Προσθήκη λογαριασμού…"
 
-#: app/src/ui/window.rs:3661
+#: app/src/ui/window.rs:3584
 msgid "New Smart Mailbox…"
 msgstr "Νέο έξυπνο γραμματοκιβώτιο…"
 
-#: app/src/ui/window.rs:3669
+#: app/src/ui/window.rs:3592
 msgid "Keyboard Shortcuts"
 msgstr "Συντομεύσεις πληκτρολογίου"
 
-#: app/src/ui/window.rs:3678 app/src/ui/window.rs:3680
+#: app/src/ui/window.rs:3601 app/src/ui/window.rs:3603
 msgid "Main Menu"
 msgstr "Κύριο μενού"
 
-#: app/src/ui/window.rs:3745 app/src/ui/window.rs:3746
+#: app/src/ui/window.rs:3668 app/src/ui/window.rs:3669
 msgid "Dock"
 msgstr "Προσάρτηση"
 
-#: app/src/ui/window.rs:3871
+#: app/src/ui/window.rs:3794
 msgid "Add a mail account first"
 msgstr "Προσθέστε πρώτα έναν λογαριασμό αλληλογραφίας"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4122
+#: app/src/ui/window.rs:4045
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Το ημερολόγιο και οι επαφές του {account} είναι συνδεδεμένα."
 
-#: app/src/ui/window.rs:4238
+#: app/src/ui/window.rs:4161
 msgid "Open a message from the person first"
 msgstr "Ανοίξτε πρώτα ένα μήνυμα από το άτομο"
 
-#: app/src/ui/window.rs:4330
+#: app/src/ui/window.rs:4253
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Το Penguin Mail θα εμφανίσει τη νέα γλώσσα μετά από επανεκκίνηση"
 
-#: app/src/ui/window.rs:4332 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4255 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Επανεκκίνηση"
 
-#: app/src/ui/window.rs:4396
+#: app/src/ui/window.rs:4319
 msgid "Show Rules"
 msgstr "Εμφάνιση κανόνων"
 
-#: app/src/ui/window.rs:4422
+#: app/src/ui/window.rs:4345
 msgid "Messages That Will Not Download"
 msgstr "Μηνύματα που δεν γίνεται λήψη τους"
 
-#: app/src/ui/window.rs:4424
+#: app/src/ui/window.rs:4347
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11482,7 +11469,7 @@ msgstr ""
 "Η πλευρική στήλη εμφανίζει το όνομα αντί για τη διεύθυνση. Αφήστε το κενό "
 "για να εμφανίζεται η διεύθυνση."
 
-#: app/src/ui/window/attachments.rs:79
+#: app/src/ui/window/attachments.rs:79 app/src/ui/window/attachments.rs:355
 msgid "Could not open {file}: {reason}"
 msgstr "Δεν ήταν δυνατό το άνοιγμα του {file}: {reason}"
 
@@ -11507,15 +11494,33 @@ msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr ""
 "Αποθηκεύτηκαν {count} στο {folder}. Δεν ήταν δυνατή η αποθήκευση των {files}"
 
-#: app/src/ui/window/attachments.rs:308
+#: app/src/ui/window/attachments.rs:245
+msgid "Downloading {file}…"
+msgstr "Λήψη του {file}…"
+
+#: app/src/ui/window/attachments.rs:269 app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:331
+msgid "Could not save {file}: {reason}"
+msgstr "Δεν ήταν δυνατή η αποθήκευση του {file}: {reason}"
+
+#: app/src/ui/window/attachments.rs:316 app/src/ui/window/export.rs:111
+#: app/src/ui/window/export.rs:153 app/src/ui/window/export.rs:214
+msgid "Saved {file}"
+msgstr "Αποθηκεύτηκε το {file}"
+
+#: app/src/ui/window/attachments.rs:319
+msgid "Open"
+msgstr "Άνοιγμα"
+
+#: app/src/ui/window/attachments.rs:398
 msgid "Could not open {file}"
 msgstr "Δεν ήταν δυνατό το άνοιγμα του {file}"
 
-#: app/src/ui/window/attachments.rs:364 app/src/ui/window/attachments.rs:367
+#: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
 msgid "Open in Another Program"
 msgstr "Άνοιγμα με άλλο πρόγραμμα"
 
-#: app/src/ui/window/attachments.rs:371
+#: app/src/ui/window/attachments.rs:461
 msgid "{file}, preview"
 msgstr "{file}, προεπισκόπηση"
 
@@ -11582,10 +11587,6 @@ msgstr "Δεν ήταν δυνατή η φόρτωση του πηγαίου κ�
 msgid "Message Source"
 msgstr "Πηγαίος κώδικας μηνύματος"
 
-#: app/src/ui/window/detached.rs:302
-msgid "Save As…"
-msgstr "Αποθήκευση ως…"
-
 #: app/src/ui/window/detached.rs:303
 msgid "Save as an .eml file"
 msgstr "Αποθήκευση ως αρχείο .eml"
@@ -11602,11 +11603,6 @@ msgstr "Εξαγωγή αλληλογραφίας"
 #: app/src/ui/window/export.rs:100 app/src/ui/window/export.rs:205
 msgid "Exporting…"
 msgstr "Εξαγωγή…"
-
-#: app/src/ui/window/export.rs:111 app/src/ui/window/export.rs:153
-#: app/src/ui/window/export.rs:214
-msgid "Saved {file}"
-msgstr "Αποθηκεύτηκε το {file}"
 
 #: app/src/ui/window/export.rs:112 app/src/ui/window/export.rs:154
 #: app/src/ui/window/export.rs:156 app/src/ui/window/export.rs:215
@@ -13647,6 +13643,15 @@ msgstr "Σήμανση ως μη ανεπιθύμητο"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Μετακίνηση σε {folder}"
+
+#~ msgid "Save to Downloads"
+#~ msgstr "Αποθήκευση στις Λήψεις"
+
+#~ msgid "Save {file} to Downloads"
+#~ msgstr "Αποθήκευση του {file} στις Λήψεις"
+
+#~ msgid "Saved {file} to Downloads"
+#~ msgstr "Το {file} αποθηκεύτηκε στις Λήψεις"
 
 #~ msgid "Bodies of mail you have read, kept for opening offline"
 #~ msgstr ""

@@ -20,6 +20,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Choose where to save a single attachment, including in Flatpak, and see errors when its default application cannot open it.
+
 - Google Calendar edits can switch events between timed and all-day without reverting.
 - Microsoft 365 searches show each matching message once and open mail outside the local sync window.
 - Message list settings, sender signature settings, and Empty Trash controls now appear in Traditional Chinese.
