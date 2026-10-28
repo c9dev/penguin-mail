@@ -193,7 +193,14 @@ fn main() -> glib::ExitCode {
     // person's own copy of the app they are looking at. The bridge above
     // runs on every one of Claude Code's turns and says nothing a person
     // reads, so it starts without reading the preferences at all.
-    language::bind(&Settings::load(&Settings::default_path()).language);
+    let early = Settings::load(&Settings::default_path());
+    language::bind(&early.language);
+    // So is the renderer: the web engine reads its environment when its
+    // first process starts, and GTK its own before any window.
+    #[cfg(target_os = "linux")]
+    if early.software_rendering {
+        web::draw_without_gpu();
+    }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{}", usage());
         return glib::ExitCode::SUCCESS;

@@ -41,6 +41,7 @@ impl Engine for WebkitEngine {
         settings.set_enable_back_forward_navigation_gestures(false);
         settings.set_allow_file_access_from_file_urls(false);
         settings.set_allow_universal_access_from_file_urls(false);
+        crate::web::apply_rendering(&settings);
         // The page is read as text, so its pictures would be requests
         // with nothing to show for them.
         settings.set_auto_load_images(false);

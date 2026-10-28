@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
@@ -14,6 +15,33 @@ const MATCH_LIMIT: u32 = u32::MAX;
 
 /// Readies the engine before GTK starts. WebKitGTK needs nothing.
 pub fn prepare() {}
+
+/// Whether pages draw on the CPU; see [`draw_without_gpu`].
+static WITHOUT_GPU: AtomicBool = AtomicBool::new(false);
+
+/// Makes every page from here on draw on the CPU: no accelerated
+/// compositing, Skia rasterizing in software, and frames handed over in
+/// shared memory rather than DMA-BUF buffers. For a graphics driver that
+/// leaves pages blank, as some hybrid laptops and virtual machines do.
+/// `main` calls this before GTK starts, so the engine's processes inherit
+/// the variables.
+pub fn draw_without_gpu() {
+    // SAFETY: called from `main` before any other thread exists, as the
+    // language is bound.
+    unsafe {
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        std::env::set_var("WEBKIT_SKIA_ENABLE_CPU_RENDERING", "1");
+    }
+    WITHOUT_GPU.store(true, Ordering::Relaxed);
+}
+
+/// Applies [`draw_without_gpu`] to one page's settings.
+pub(crate) fn apply_rendering(settings: &webkit::Settings) {
+    if WITHOUT_GPU.load(Ordering::Relaxed) {
+        settings.set_hardware_acceleration_policy(webkit::HardwareAccelerationPolicy::Never);
+    }
+}
 
 /// One page, and the handle every clone of it shares.
 #[derive(Clone)]
@@ -56,6 +84,7 @@ impl WebView {
         settings.set_allow_file_access_from_file_urls(false);
         settings.set_enable_smooth_scrolling(true);
         settings.set_auto_load_images(true);
+        apply_rendering(&settings);
         let view = webkit::WebView::builder()
             .network_session(&network_session())
             .user_content_manager(&webkit::UserContentManager::new())
@@ -97,6 +126,7 @@ impl WebView {
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(false);
         settings.set_enable_javascript_markup(false);
+        apply_rendering(&settings);
         let view = webkit::WebView::builder()
             .network_session(&network_session())
             .settings(&settings)
