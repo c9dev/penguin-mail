@@ -74,7 +74,7 @@ oo7 = "0.6.0"
 # The Public Suffix List, compiled in, so discovery can tell a registrable
 # domain from a suffix such as `co.uk` without asking anyone.
 psl = "2.1.241"
-pulldown-cmark = "0.13.4"
+pulldown-cmark = "0.13.5"
 rand = "0.10.3"
 reqwest = { version = "0.13.5", features = ["json", "form", "query"] }
 # Reads autoconfig files. It refuses a document type declaration, so a file
