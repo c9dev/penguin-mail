@@ -3,6 +3,12 @@ name: macOS package
 on:
   workflow_call:
     inputs:
+      source_ref:
+        type: string
+        default: ""
+      use_cache:
+        type: boolean
+        default: true
       # A JSON list of the architectures to build. Omitted, both build, which
       # is what the release workflow wants.
       arches:
@@ -52,6 +58,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ inputs.source_ref || github.sha }}
       - name: Install build dependencies
         run: |
           brew install gtk4 libadwaita adwaita-icon-theme gettext librsvg pkgconf
@@ -63,7 +70,7 @@ jobs:
       # A tagged release builds without the cache, as the Linux packages do:
       # another run wrote whatever it holds, and the zips go out signed.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: github.ref_type != 'tag'
+        if: inputs.use_cache && github.ref_type != 'tag'
         with:
           shared-key: macos-${{ matrix.arch }}
       - name: Check packaging and startup code
@@ -72,6 +79,10 @@ jobs:
           cargo test -p mailrs --bin penguin-mail bundle::tests
           cargo clippy --workspace --all-targets -- -D warnings
       - name: Check native web view placement
+        # Use software rendering for the layout check on hosted runners.
+        # The archived app starts with its default renderer.
+        env:
+          GSK_RENDERER: cairo
         run: python3 scripts/check-macos-web.py
       - name: Build the app bundle
         env:

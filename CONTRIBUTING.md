@@ -186,6 +186,13 @@ editor, writes the store listings' release notes with
 the push fails, it takes the tag back off and keeps the release commit,
 and running it again pushes that commit.
 
+If a packaging workflow fails after tagging, fix the workflow on `main`,
+then run **Release** from the Actions tab on `main` with `release_tag` set
+to the existing tag, such as `v1.0.11`. This builds that tag's source with
+the corrected workflow and publishes after its CI passes. It keeps the tag
+unchanged and disables the macOS build cache. Leave `release_tag` empty for
+a trial build that publishes nothing.
+
 The tag starts the release workflow:
 
 - It builds the `.deb`, tarball and zip on Ubuntu 26.04, the rpm on
