@@ -51,8 +51,29 @@ pub(crate) async fn check() {
     use std::rc::Rc;
     use std::time::Duration;
 
-    async fn settle() {
-        gtk::glib::timeout_future(Duration::from_millis(250)).await;
+    async fn wait_for(ready: impl Fn() -> bool) -> bool {
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while std::time::Instant::now() < deadline {
+            if ready() {
+                return true;
+            }
+            gtk::glib::timeout_future(Duration::from_millis(50)).await;
+        }
+        ready()
+    }
+
+    async fn idle(placed: &Cell<i32>) -> bool {
+        // Allow startup paints to finish, then observe a quiet interval
+        // spanning several display refreshes.
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline {
+            let before = placed.get();
+            gtk::glib::timeout_future(Duration::from_millis(250)).await;
+            if placed.get() == before {
+                return true;
+            }
+        }
+        false
     }
 
     let anchor = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -71,15 +92,19 @@ pub(crate) async fn check() {
         width.set(weak.upgrade().unwrap().width());
     });
     window.present();
-    settle().await;
-    let before = placed.get();
-    assert!(before > 0, "a mapped page follows the initial layout");
-    settle().await;
-    assert_eq!(
-        placed.get(),
-        before,
+    assert!(
+        wait_for(|| placed.get() > 0).await,
+        "the initial layout arrives: mapped={}, realized={}, width={}, frame={:?}",
+        anchor.is_mapped(),
+        anchor.is_realized(),
+        anchor.width(),
+        anchor.frame_clock().map(|clock| clock.frame_counter()),
+    );
+    assert!(
+        idle(&placed).await,
         "an idle native page requests no frames"
     );
+    let before = placed.get();
     let stale = Rc::new(Cell::new(false));
     let missed = stale.clone();
     let weak = anchor.downgrade();
@@ -89,27 +114,30 @@ pub(crate) async fn check() {
             missed.set(missed.get() || last_width.get() != anchor.width());
         }
     });
+    let expected_width = anchor.width() - 30;
     anchor.set_margin_start(30);
-    settle().await;
     assert!(
-        placed.get() > before,
+        wait_for(|| placed.get() > before && anchor.width() == expected_width).await,
         "a changed layout places the page again"
     );
     assert!(!stale.get(), "the native page uses this frame's allocation");
     clock.disconnect(handler);
     anchor.set_visible(false);
     let hidden = placed.get();
+    let frame = clock.frame_counter();
     window.queue_draw();
-    settle().await;
+    assert!(
+        wait_for(|| clock.frame_counter() > frame).await,
+        "the window repaints while the page is hidden"
+    );
     assert_eq!(
         placed.get(),
         hidden,
         "an unmapped page stops following frames"
     );
     anchor.set_visible(true);
-    settle().await;
     assert!(
-        placed.get() > hidden,
+        wait_for(|| placed.get() > hidden).await,
         "a remapped page follows its window again"
     );
     window.close();
