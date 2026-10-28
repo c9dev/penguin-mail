@@ -1541,6 +1541,24 @@ impl CalendarView {
         root.append(&strip_row);
         root.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         root.append(&scroller);
+        // A desktop with overlay scrollbars off, as Cinnamon ships, gives
+        // the grid a scrollbar of its own width, which the headings and
+        // the all-day strip above it lack. Their columns would then sit a
+        // scrollbar's width wide of the grid's, so they keep that width
+        // free at their end. The horizontal adjustment's page is the
+        // grid's width, set at every allocation, and the scrolled window
+        // keeps the rest. (The bar's own `visible` never changes: the
+        // scrolled window shows and hides it as a child.)
+        let keep_columns = {
+            let (scroller, headings, strip_row) =
+                (scroller.clone(), headings.clone(), strip_row.clone());
+            move |page: &gtk::Adjustment| {
+                let bar = (f64::from(scroller.width()) - page.page_size()).round() as i32;
+                headings.set_margin_end(bar.max(0));
+                strip_row.set_margin_end(bar.max(0));
+            }
+        };
+        scroller.hadjustment().connect_changed(keep_columns);
 
         let weak = Rc::downgrade(self);
         grid.connect_event_activated(move |_, o, anchor| {
