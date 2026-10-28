@@ -130,11 +130,30 @@ fn main() -> glib::ExitCode {
             })
             .with_env_filter(
                 tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                    tracing_subscriber::EnvFilter::new("warn,penguin_mail=info,mailrs_sync=info")
+                    // zbus warns when a portal request object has gone
+                    // before its property cache fills, which is every
+                    // request that answers quickly; the call itself
+                    // still succeeds.
+                    tracing_subscriber::EnvFilter::new(
+                        "warn,penguin_mail=info,mailrs_sync=info,zbus::proxy=error",
+                    )
                 }),
             )
             .finish(),
     ));
+    // A panic inside a GTK callback cannot unwind through C, so the
+    // process aborts right after the hook runs. The default hook writes
+    // to standard error alone, and a packaged copy's standard error goes
+    // nowhere, so the message and where it came from go to the log first.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        tracing::error!(
+            %info,
+            backtrace = %std::backtrace::Backtrace::force_capture(),
+            "the app panicked"
+        );
+        default_hook(info);
+    }));
     // A repeating event with no zone repeats in the computer's. Reading
     // that zone once here keeps the file reads off the calendar's first
     // expansion.
