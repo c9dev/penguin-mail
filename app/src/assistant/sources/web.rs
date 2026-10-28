@@ -24,11 +24,20 @@ use serde_json::{Value, json};
 use url::Host;
 
 use super::Source;
-use crate::assistant::{self, BRAVE_KEY};
+use crate::assistant::{self, BRAVE_KEY, KEENABLE_KEY};
 use crate::settings::{AiProvider, AiSettings, Feature, Settings, WebSearch};
 
 /// Brave's API, which the tests point elsewhere.
 pub const BRAVE_BASE: &str = "https://api.search.brave.com";
+/// Keenable's API, which the tests point elsewhere.
+pub const KEENABLE_BASE: &str = "https://api.keenable.ai";
+/// The name Keenable files a search under. Its keyless endpoint refuses a
+/// request that does not name the app making it.
+const KEENABLE_TITLE: &str = "Penguin Mail";
+/// Characters of a Keenable result's snippet the model reads. Keenable
+/// sends a few thousand characters of the page where the other engines send
+/// a line or two, and like a page, a search stays in the chat.
+const MAX_SNIPPET: usize = 1_000;
 /// The most a page may weigh before the rest of it is left unread.
 const MAX_BYTES: usize = 2 * 1024 * 1024;
 /// How long a search or a page download may take.
@@ -48,14 +57,19 @@ const MAX_COUNT: u64 = 10;
 pub enum SearchEngine {
     Brave { key: String, base: String },
     Searxng { base: String },
+    Keenable { key: Option<String>, base: String },
 }
 
 impl SearchEngine {
-    /// The engine the settings choose, with the Brave key from the keyring,
-    /// or a sentence saying what is missing.
-    pub fn chosen(ai: &AiSettings, brave_key: Option<String>) -> Result<SearchEngine, String> {
+    /// The engine the settings choose, with its key from the keyring, which
+    /// `key` reads by entry name, or a sentence saying what is missing.
+    /// Keenable answers without a key; one only lifts its hourly limit.
+    pub fn chosen(
+        ai: &AiSettings,
+        key: impl Fn(&str) -> Option<String>,
+    ) -> Result<SearchEngine, String> {
         match ai.web_search {
-            WebSearch::Brave => brave_key
+            WebSearch::Brave => key(BRAVE_KEY)
                 .filter(|key| !key.trim().is_empty())
                 .map(|key| SearchEngine::Brave {
                     key: key.trim().to_string(),
@@ -66,6 +80,12 @@ impl SearchEngine {
                 "" => Err(gettext("Enter the address of a SearXNG server.")),
                 base => Ok(SearchEngine::Searxng { base: base.into() }),
             },
+            WebSearch::Keenable => Ok(SearchEngine::Keenable {
+                key: key(KEENABLE_KEY)
+                    .map(|key| key.trim().to_string())
+                    .filter(|key| !key.is_empty()),
+                base: KEENABLE_BASE.to_string(),
+            }),
             WebSearch::Off | WebSearch::Claude => Err(gettext(
                 "Choose Brave Search or SearXNG for a local model to search with.",
             )),
@@ -76,6 +96,7 @@ impl SearchEngine {
         match self {
             SearchEngine::Brave { .. } => "Brave Search",
             SearchEngine::Searxng { .. } => "SearXNG",
+            SearchEngine::Keenable { .. } => "Keenable",
         }
     }
 }
@@ -127,7 +148,7 @@ pub fn for_settings(settings: &Settings) -> Option<Arc<dyn Source>> {
     }
     let engine = match ai.resolved(Feature::Assistant).0 {
         AiProvider::Off => return None,
-        AiProvider::Local => SearchEngine::chosen(ai, assistant::load_key(BRAVE_KEY)).ok(),
+        AiProvider::Local => SearchEngine::chosen(ai, assistant::load_key).ok(),
         AiProvider::Anthropic | AiProvider::ClaudeCode => None,
     };
     Some(Arc::new(Web::new(engine)))
@@ -421,6 +442,14 @@ pub async fn search(
         SearchEngine::Searxng { base } => client
             .get(format!("{base}/search"))
             .query(&[("q", query), ("format", "json")]),
+        SearchEngine::Keenable { key, base } => match key {
+            Some(key) => client
+                .post(format!("{base}/v1/search"))
+                .header("X-API-Key", key),
+            None => client.post(format!("{base}/v1/search/public")),
+        }
+        .header("X-Keenable-Title", KEENABLE_TITLE)
+        .json(&json!({"query": query, "max_results": count})),
     };
     let response = request
         .send()
@@ -435,6 +464,9 @@ pub async fn search(
             (SearchEngine::Searxng { .. }, 403) => "The SearXNG server does not answer in JSON. \
                  Add json to search.formats in its settings.yml."
                 .to_string(),
+            (SearchEngine::Keenable { key: Some(_), .. }, 401 | 403) => {
+                gettext("Keenable refused the API key.")
+            }
             (_, 429) => format!(
                 "{} says too many searches. Wait and try again.",
                 engine.name()
@@ -449,8 +481,11 @@ pub async fn search(
     let (results, snippet) = match engine {
         SearchEngine::Brave { .. } => (&body["web"]["results"], "description"),
         SearchEngine::Searxng { .. } => (&body["results"], "content"),
+        // Keenable's description is always empty; the page's text is in
+        // the snippet.
+        SearchEngine::Keenable { .. } => (&body["results"], "snippet"),
     };
-    Ok(results
+    let mut hits: Vec<Hit> = results
         .as_array()
         .into_iter()
         .flatten()
@@ -463,7 +498,14 @@ pub async fn search(
             })
         })
         .take(count as usize)
-        .collect())
+        .collect();
+    // Brave's and SearXNG's snippets reach the model whole, however long.
+    if matches!(engine, SearchEngine::Keenable { .. }) {
+        for hit in &mut hits {
+            hit.snippet = clip(&hit.snippet, MAX_SNIPPET);
+        }
+    }
+    Ok(hits)
 }
 
 /// Downloads one page and reads it as text.
@@ -682,6 +724,16 @@ fn shorten(text: &str, max: usize) -> (String, usize) {
     let kept = text[..end].trim_end().to_string();
     let cut = text[end..].chars().count();
     (kept, cut)
+}
+
+/// One line of text cut to `max` characters at a space where one is near,
+/// with an ellipsis when anything was left out.
+fn clip(line: &str, max: usize) -> String {
+    let Some((end, _)) = line.char_indices().nth(max) else {
+        return line.to_string();
+    };
+    let space = line[..end].rfind(' ').filter(|&at| at > end / 2);
+    format!("{}…", line[..space.unwrap_or(end)].trim_end())
 }
 
 /// A search's results as the model reads them, marked as web content.

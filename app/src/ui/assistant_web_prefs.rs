@@ -8,7 +8,7 @@ use gtk::glib;
 
 use crate::app::App;
 use crate::assistant::sources::web::{self, SearchEngine};
-use crate::assistant::{self, BRAVE_KEY};
+use crate::assistant::{self, BRAVE_KEY, KEENABLE_KEY};
 use crate::settings::{AiChange, Change, Choice, WebSearch};
 use mailrs_domain::translate::{fill, gettext};
 
@@ -43,6 +43,17 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
         row.set_text("");
     });
 
+    let keenable_key = adw::PasswordEntryRow::builder()
+        .title(keenable_title(assistant::load_key(KEENABLE_KEY).is_some()))
+        .show_apply_button(true)
+        .build();
+    keenable_key.connect_apply(|row| {
+        let key = row.text();
+        assistant::save_key(KEENABLE_KEY, &key);
+        row.set_title(&keenable_title(!key.trim().is_empty()));
+        row.set_text("");
+    });
+
     let searxng = adw::EntryRow::builder()
         .title(gettext("SearXNG Server Address"))
         .text(&ai.searxng_url)
@@ -71,7 +82,7 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
         // Test the address the dialog shows, applied or not.
         let mut ai = app.settings().ai;
         ai.searxng_url = typed.text().to_string();
-        let engine = match SearchEngine::chosen(&ai, assistant::load_key(BRAVE_KEY)) {
+        let engine = match SearchEngine::chosen(&ai, assistant::load_key) {
             Ok(engine) => engine,
             Err(problem) => return shown.set_subtitle(&glib::markup_escape_text(&problem)),
         };
@@ -97,11 +108,20 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
 
     // Each engine shows only the rows that set it up.
     let show = {
-        let (brave_key, searxng, test_row) = (brave_key.clone(), searxng.clone(), test_row.clone());
+        let (brave_key, searxng, keenable_key, test_row) = (
+            brave_key.clone(),
+            searxng.clone(),
+            keenable_key.clone(),
+            test_row.clone(),
+        );
         move |on: WebSearch| {
             brave_key.set_visible(on == WebSearch::Brave);
             searxng.set_visible(on == WebSearch::Searxng);
-            test_row.set_visible(matches!(on, WebSearch::Brave | WebSearch::Searxng));
+            keenable_key.set_visible(on == WebSearch::Keenable);
+            test_row.set_visible(matches!(
+                on,
+                WebSearch::Brave | WebSearch::Searxng | WebSearch::Keenable
+            ));
         }
     };
     show(ai.web_search);
@@ -117,6 +137,7 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
     group.add(&choice);
     group.add(&brave_key);
     group.add(&searxng);
+    group.add(&keenable_key);
     group.add(&test_row);
     group
 }
@@ -125,5 +146,13 @@ fn brave_title(saved: bool) -> String {
     match saved {
         true => gettext("Brave Search API Key (Saved)"),
         false => gettext("Brave Search API Key"),
+    }
+}
+
+/// Keenable searches without a key, so the row says the key is optional.
+fn keenable_title(saved: bool) -> String {
+    match saved {
+        true => gettext("Keenable API Key (Saved)"),
+        false => gettext("Keenable API Key (Optional)"),
     }
 }

@@ -1160,31 +1160,31 @@ msgstr "Penguin Mail {version} est à jour"
 msgid "Could not reach GitHub to check for updates"
 msgstr "Impossible de joindre GitHub pour vérifier les mises à jour"
 
-#: app/src/assistant/mod.rs:121
+#: app/src/assistant/mod.rs:122
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr "L’assistant est désactivé. Choisissez un modèle dans les Préférences."
 
-#: app/src/assistant/mod.rs:123
+#: app/src/assistant/mod.rs:124
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 "La traduction n’a pas de modèle. Choisissez-en un dans les Préférences, à la "
 "page IA."
 
-#: app/src/assistant/mod.rs:126
+#: app/src/assistant/mod.rs:127
 msgid "Unsubscribing has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 "Le désabonnement n’a pas de modèle. Choisissez-en un dans les Préférences, à "
 "la page IA."
 
-#: app/src/assistant/mod.rs:132
+#: app/src/assistant/mod.rs:133
 msgid "Choose a model for the local server in Preferences."
 msgstr "Choisissez un modèle pour le serveur local dans les Préférences."
 
-#: app/src/assistant/mod.rs:144
+#: app/src/assistant/mod.rs:145
 msgid "Add an Anthropic API key in Preferences."
 msgstr "Ajoutez une clé d’API Anthropic dans les Préférences."
 
-#: app/src/assistant/mod.rs:151
+#: app/src/assistant/mod.rs:152
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "Claude Code n’est pas installé. Installez-le et connectez-vous, puis "
@@ -2036,21 +2036,21 @@ msgstr ""
 "dossier personnel. {network} Toujours autoriser ne vaut que pour cette "
 "commande exacte."
 
-#: app/src/assistant/sources/web.rs:64
+#: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
 msgstr "Ajoutez une clé d’API Brave Search."
 
-#: app/src/assistant/sources/web.rs:66
+#: app/src/assistant/sources/web.rs:80
 msgid "Enter the address of a SearXNG server."
 msgstr "Saisissez l’adresse d’un serveur SearXNG."
 
-#: app/src/assistant/sources/web.rs:70
+#: app/src/assistant/sources/web.rs:90
 msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr ""
 "Choisissez Brave Search ou SearXNG pour qu’un modèle local puisse faire des "
 "recherches."
 
-#: app/src/assistant/sources/web.rs:333
+#: app/src/assistant/sources/web.rs:354
 msgid ""
 "Open this web page?\n"
 "\n"
@@ -2065,6 +2065,10 @@ msgstr ""
 "\n"
 "Le site reçoit l’adresse complète, y compris ce qui suit un point "
 "d’interrogation. Toujours autoriser ne vaut que pour cette adresse exacte."
+
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -4491,7 +4495,7 @@ msgstr "Plus petit que {size}"
 msgid "Larger than {size}"
 msgstr "Plus grand que {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:859
+#: app/src/rules.rs:251 app/src/settings/mod.rs:864
 msgid "All mail"
 msgstr "Tout le courrier"
 
@@ -4589,8 +4593,8 @@ msgstr "Sur cet ordinateur, tant que Penguin Mail est ouvert"
 msgid "On the server"
 msgstr "Sur le serveur"
 
-#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
-#: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:402
+#: app/src/settings/mod.rs:776 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "Désactivé"
@@ -4642,155 +4646,159 @@ msgstr ""
 msgid "Same as the Assistant"
 msgstr "Comme l’assistant"
 
-#: app/src/settings/mod.rs:399
+#: app/src/settings/mod.rs:403
 msgid "Claude's own only"
 msgstr "Celle de Claude uniquement"
 
-#: app/src/settings/mod.rs:400
+#: app/src/settings/mod.rs:404
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:401
+#: app/src/settings/mod.rs:405
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:571
+#: app/src/settings/mod.rs:406
+msgid "Keenable"
+msgstr ""
+
+#: app/src/settings/mod.rs:576
 msgid "Rich text"
 msgstr "Texte enrichi"
 
-#: app/src/settings/mod.rs:572
+#: app/src/settings/mod.rs:577
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:591 app/src/ui/preferences/accounts.rs:150
+#: app/src/settings/mod.rs:596 app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Automatique"
 
-#: app/src/settings/mod.rs:592 app/src/ui/calendar/editor.rs:2163
+#: app/src/settings/mod.rs:597 app/src/ui/calendar/editor.rs:2163
 msgid "Monday"
 msgstr "Lundi"
 
-#: app/src/settings/mod.rs:593 app/src/ui/calendar/editor.rs:2169
+#: app/src/settings/mod.rs:598 app/src/ui/calendar/editor.rs:2169
 msgid "Sunday"
 msgstr "Dimanche"
 
-#: app/src/settings/mod.rs:631
+#: app/src/settings/mod.rs:636
 msgid "When opened"
 msgstr "À l’ouverture"
 
-#: app/src/settings/mod.rs:632
+#: app/src/settings/mod.rs:637
 msgid "After 2 seconds"
 msgstr "Après 2 secondes"
 
-#: app/src/settings/mod.rs:633
+#: app/src/settings/mod.rs:638
 msgid "Only when I choose"
 msgstr "Seulement quand je le choisis"
 
-#: app/src/settings/mod.rs:649 app/src/settings/mod.rs:667
+#: app/src/settings/mod.rs:654 app/src/settings/mod.rs:672
 msgid "Ask each time"
 msgstr "Demander à chaque fois"
 
-#: app/src/settings/mod.rs:650
+#: app/src/settings/mod.rs:655
 msgid "Always load"
 msgstr "Toujours charger"
 
-#: app/src/settings/mod.rs:668
+#: app/src/settings/mod.rs:673
 msgid "Never ask"
 msgstr "Ne jamais demander"
 
-#: app/src/settings/mod.rs:695
+#: app/src/settings/mod.rs:700
 msgid "No Preview"
 msgstr "Pas d’aperçu"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:701
 msgid "1 Line"
 msgstr "1 ligne"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:702
 msgid "2 Lines"
 msgstr "2 lignes"
 
-#: app/src/settings/mod.rs:731
+#: app/src/settings/mod.rs:736
 msgid "Small"
 msgstr "Petite"
 
-#: app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:737
 msgid "Default"
 msgstr "Par défaut"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:738
 msgid "Large"
 msgstr "Grande"
 
-#: app/src/settings/mod.rs:734
+#: app/src/settings/mod.rs:739
 msgid "Larger"
 msgstr "Plus grande"
 
-#: app/src/settings/mod.rs:772
+#: app/src/settings/mod.rs:777
 msgid "5 seconds"
 msgstr "5 secondes"
 
-#: app/src/settings/mod.rs:773
+#: app/src/settings/mod.rs:778
 msgid "10 seconds"
 msgstr "10 secondes"
 
-#: app/src/settings/mod.rs:774
+#: app/src/settings/mod.rs:779
 msgid "20 seconds"
 msgstr "20 secondes"
 
-#: app/src/settings/mod.rs:775
+#: app/src/settings/mod.rs:780
 msgid "30 seconds"
 msgstr "30 secondes"
 
-#: app/src/settings/mod.rs:792
+#: app/src/settings/mod.rs:797
 msgid "Follow system"
 msgstr "Suivre le système"
 
-#: app/src/settings/mod.rs:793
+#: app/src/settings/mod.rs:798
 msgid "Light"
 msgstr "Clair"
 
-#: app/src/settings/mod.rs:794
+#: app/src/settings/mod.rs:799
 msgid "Dark"
 msgstr "Sombre"
 
-#: app/src/settings/mod.rs:828
+#: app/src/settings/mod.rs:833
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Chaque seconde"
 msgstr[1] "Toutes les {count} secondes"
 
-#: app/src/settings/mod.rs:836
+#: app/src/settings/mod.rs:841
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Chaque minute"
 msgstr[1] "Toutes les {count} minutes"
 
-#: app/src/settings/mod.rs:853
+#: app/src/settings/mod.rs:858
 msgid "2 weeks"
 msgstr "2 semaines"
 
-#: app/src/settings/mod.rs:854
+#: app/src/settings/mod.rs:859
 msgid "30 days"
 msgstr "30 jours"
 
-#: app/src/settings/mod.rs:855
+#: app/src/settings/mod.rs:860
 msgid "90 days"
 msgstr "90 jours"
 
-#: app/src/settings/mod.rs:856
+#: app/src/settings/mod.rs:861
 msgid "1 year"
 msgstr "1 an"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:862
 msgid "2 years"
 msgstr "2 ans"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:863
 msgid "5 years"
 msgstr "5 ans"
 
-#: app/src/settings/mod.rs:880
+#: app/src/settings/mod.rs:885
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4799,21 +4807,21 @@ msgstr ""
 "d’espace disque et de mémoire, et son courrier plus ancien se télécharge en "
 "arrière-plan."
 
-#: app/src/settings/mod.rs:882
+#: app/src/settings/mod.rs:887
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Tout ce qui est dans votre boîte de réception reste aussi, et le courrier "
 "plus ancien reste consultable par la recherche"
 
-#: app/src/settings/mod.rs:889
+#: app/src/settings/mod.rs:894
 msgid "256 MB"
 msgstr "256 Mo"
 
-#: app/src/settings/mod.rs:890
+#: app/src/settings/mod.rs:895
 msgid "1 GB"
 msgstr "1 Go"
 
-#: app/src/settings/mod.rs:891
+#: app/src/settings/mod.rs:896
 msgid "4 GB"
 msgstr "4 Go"
 
@@ -5874,7 +5882,7 @@ msgid "Test the Server"
 msgstr "Tester le serveur"
 
 #: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:373
-#: app/src/ui/assistant_web_prefs.rs:59
+#: app/src/ui/assistant_web_prefs.rs:70
 msgid "Test"
 msgstr "Tester"
 
@@ -6094,7 +6102,7 @@ msgstr "Redemander avant {tool}"
 msgid "Test the Connection"
 msgstr "Tester la connexion"
 
-#: app/src/ui/assistant_prefs.rs:404 app/src/ui/assistant_web_prefs.rs:90
+#: app/src/ui/assistant_prefs.rs:404 app/src/ui/assistant_web_prefs.rs:101
 msgid "No answer: {reason}"
 msgstr "Aucune réponse : {reason}"
 
@@ -6252,33 +6260,45 @@ msgstr ""
 msgid "Search With"
 msgstr "Rechercher avec"
 
-#: app/src/ui/assistant_web_prefs.rs:47
+#: app/src/ui/assistant_web_prefs.rs:58
 msgid "SearXNG Server Address"
 msgstr "Adresse du serveur SearXNG"
 
-#: app/src/ui/assistant_web_prefs.rs:63
+#: app/src/ui/assistant_web_prefs.rs:74
 msgid "Test the Search"
 msgstr "Tester la recherche"
 
-#: app/src/ui/assistant_web_prefs.rs:64
+#: app/src/ui/assistant_web_prefs.rs:75
 msgid "Runs one search and shows the first result"
 msgstr "Lance une recherche et affiche le premier résultat"
 
-#: app/src/ui/assistant_web_prefs.rs:79
+#: app/src/ui/assistant_web_prefs.rs:90
 msgid "Searching…"
 msgstr "Recherche…"
 
-#: app/src/ui/assistant_web_prefs.rs:88
+#: app/src/ui/assistant_web_prefs.rs:99
 msgid "First result: {title}"
 msgstr "Premier résultat : {title}"
 
-#: app/src/ui/assistant_web_prefs.rs:126
+#: app/src/ui/assistant_web_prefs.rs:147
 msgid "Brave Search API Key (Saved)"
 msgstr "Clé d’API Brave Search (enregistrée)"
 
-#: app/src/ui/assistant_web_prefs.rs:127
+#: app/src/ui/assistant_web_prefs.rs:148
 msgid "Brave Search API Key"
 msgstr "Clé d’API Brave Search"
+
+#: app/src/ui/assistant_web_prefs.rs:155
+#, fuzzy
+#| msgid "Brave Search API Key (Saved)"
+msgid "Keenable API Key (Saved)"
+msgstr "Clé d’API Brave Search (enregistrée)"
+
+#: app/src/ui/assistant_web_prefs.rs:156
+#, fuzzy
+#| msgid "API Key (Optional)"
+msgid "Keenable API Key (Optional)"
+msgstr "Clé d’API (facultative)"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50

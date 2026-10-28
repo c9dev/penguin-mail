@@ -174,7 +174,7 @@ up in your contacts, and reads attachments.
   tool it ran, folded up until you open them, and a line saying what it is
   doing right now.
 - **Web search**, through Claude's own search or, for a local model, Brave
-  Search or your own SearXNG.
+  Search, your own SearXNG, or Keenable with no key.
 - **MCP servers** you add give it more tools, and **skills** teach it your
   routines. A skill's scripts run in a sandbox with no access to your mail,
   keys or home folder.

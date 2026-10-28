@@ -134,7 +134,8 @@ desktop's keyring, as described below.
   Claude and can be turned off under Web Search on the AI page. Each search
   sends its words to the search engine in use: Anthropic, when the
   assistant runs on Claude; Brave, when you chose Brave Search for a local
-  model; or the SearXNG server you named. The words of a search come from
+  model; the SearXNG server you named; or Keenable, when you chose
+  Keenable for a local model. The words of a search come from
   your request and can include what the assistant read in your mail. The
   assistant asks you before it reads a page and shows the whole address.
   When you allow it, the site that serves the page sees a request from

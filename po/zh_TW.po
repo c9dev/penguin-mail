@@ -1060,27 +1060,27 @@ msgstr "Penguin Mail {version} 已是最新版本"
 msgid "Could not reach GitHub to check for updates"
 msgstr "無法連線至 GitHub 檢查更新"
 
-#: app/src/assistant/mod.rs:121
+#: app/src/assistant/mod.rs:122
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr "助理尚未啟用。請在 [偏好設定] 中選擇模型。"
 
-#: app/src/assistant/mod.rs:123
+#: app/src/assistant/mod.rs:124
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr "尚未設定翻譯模型。請在 [偏好設定] 的 [AI] 頁面中選擇。"
 
-#: app/src/assistant/mod.rs:126
+#: app/src/assistant/mod.rs:127
 msgid "Unsubscribing has no model. Choose one in Preferences, on the AI page."
 msgstr "尚未設定取消訂閱的模型。請在 [偏好設定] 的 [AI] 頁面中選擇。"
 
-#: app/src/assistant/mod.rs:132
+#: app/src/assistant/mod.rs:133
 msgid "Choose a model for the local server in Preferences."
 msgstr "請在 [偏好設定] 中選擇本機伺服器的模型。"
 
-#: app/src/assistant/mod.rs:144
+#: app/src/assistant/mod.rs:145
 msgid "Add an Anthropic API key in Preferences."
 msgstr "請在 [偏好設定] 中新增 Anthropic API 金鑰。"
 
-#: app/src/assistant/mod.rs:151
+#: app/src/assistant/mod.rs:152
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr "尚未安裝 Claude Code。請安裝並登入後重試。"
 
@@ -1881,19 +1881,19 @@ msgstr ""
 "指令會在沙箱中執行，無法存取郵件或家目錄。{network} [一律允許] 僅適用於此確切"
 "指令。"
 
-#: app/src/assistant/sources/web.rs:64
+#: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
 msgstr "請新增 Brave Search API 金鑰。"
 
-#: app/src/assistant/sources/web.rs:66
+#: app/src/assistant/sources/web.rs:80
 msgid "Enter the address of a SearXNG server."
 msgstr "請輸入 SearXNG 伺服器的位址。"
 
-#: app/src/assistant/sources/web.rs:70
+#: app/src/assistant/sources/web.rs:90
 msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr "請選擇 Brave Search 或 SearXNG 供本機模型搜尋。"
 
-#: app/src/assistant/sources/web.rs:333
+#: app/src/assistant/sources/web.rs:354
 msgid ""
 "Open this web page?\n"
 "\n"
@@ -1908,6 +1908,10 @@ msgstr ""
 "\n"
 "網站會收到完整網址，包括問號後的所有內容。[一律允許] 只適用於此網址，不包含其"
 "他網址。"
+
+#: app/src/assistant/sources/web.rs:468
+msgid "Keenable refused the API key."
+msgstr ""
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -4177,7 +4181,7 @@ msgstr "小於 {size}"
 msgid "Larger than {size}"
 msgstr "大於 {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:859
+#: app/src/rules.rs:251 app/src/settings/mod.rs:864
 msgid "All mail"
 msgstr "所有郵件"
 
@@ -4275,8 +4279,8 @@ msgstr "在此電腦上，Penguin Mail 開啟時"
 msgid "On the server"
 msgstr "在伺服器上"
 
-#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:398
-#: app/src/settings/mod.rs:771 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:402
+#: app/src/settings/mod.rs:776 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1031
 msgid "Off"
 msgstr "關閉"
@@ -4326,153 +4330,157 @@ msgstr "規則無法處理時，讀取電子報的取消訂閱頁面"
 msgid "Same as the Assistant"
 msgstr "與助理相同"
 
-#: app/src/settings/mod.rs:399
+#: app/src/settings/mod.rs:403
 msgid "Claude's own only"
 msgstr "僅限 Claude 內建搜尋"
 
-#: app/src/settings/mod.rs:400
+#: app/src/settings/mod.rs:404
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:401
+#: app/src/settings/mod.rs:405
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:571
+#: app/src/settings/mod.rs:406
+msgid "Keenable"
+msgstr ""
+
+#: app/src/settings/mod.rs:576
 msgid "Rich text"
 msgstr "富文字"
 
-#: app/src/settings/mod.rs:572
+#: app/src/settings/mod.rs:577
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:591 app/src/ui/preferences/accounts.rs:150
+#: app/src/settings/mod.rs:596 app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "自動"
 
-#: app/src/settings/mod.rs:592 app/src/ui/calendar/editor.rs:2163
+#: app/src/settings/mod.rs:597 app/src/ui/calendar/editor.rs:2163
 msgid "Monday"
 msgstr "星期一"
 
-#: app/src/settings/mod.rs:593 app/src/ui/calendar/editor.rs:2169
+#: app/src/settings/mod.rs:598 app/src/ui/calendar/editor.rs:2169
 msgid "Sunday"
 msgstr "星期日"
 
-#: app/src/settings/mod.rs:631
+#: app/src/settings/mod.rs:636
 msgid "When opened"
 msgstr "開啟時"
 
-#: app/src/settings/mod.rs:632
+#: app/src/settings/mod.rs:637
 msgid "After 2 seconds"
 msgstr "2 秒後"
 
-#: app/src/settings/mod.rs:633
+#: app/src/settings/mod.rs:638
 msgid "Only when I choose"
 msgstr "僅在手動選擇時"
 
-#: app/src/settings/mod.rs:649 app/src/settings/mod.rs:667
+#: app/src/settings/mod.rs:654 app/src/settings/mod.rs:672
 msgid "Ask each time"
 msgstr "每次詢問"
 
-#: app/src/settings/mod.rs:650
+#: app/src/settings/mod.rs:655
 msgid "Always load"
 msgstr "一律載入"
 
-#: app/src/settings/mod.rs:668
+#: app/src/settings/mod.rs:673
 msgid "Never ask"
 msgstr "永不詢問"
 
-#: app/src/settings/mod.rs:695
+#: app/src/settings/mod.rs:700
 msgid "No Preview"
 msgstr "不顯示預覽"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:701
 msgid "1 Line"
 msgstr "1 行"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:702
 msgid "2 Lines"
 msgstr "2 行"
 
-#: app/src/settings/mod.rs:731
+#: app/src/settings/mod.rs:736
 msgid "Small"
 msgstr "小"
 
-#: app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:737
 msgid "Default"
 msgstr "預設"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:738
 msgid "Large"
 msgstr "大"
 
-#: app/src/settings/mod.rs:734
+#: app/src/settings/mod.rs:739
 msgid "Larger"
 msgstr "更大"
 
-#: app/src/settings/mod.rs:772
+#: app/src/settings/mod.rs:777
 msgid "5 seconds"
 msgstr "5 秒"
 
-#: app/src/settings/mod.rs:773
+#: app/src/settings/mod.rs:778
 msgid "10 seconds"
 msgstr "10 秒"
 
-#: app/src/settings/mod.rs:774
+#: app/src/settings/mod.rs:779
 msgid "20 seconds"
 msgstr "20 秒"
 
-#: app/src/settings/mod.rs:775
+#: app/src/settings/mod.rs:780
 msgid "30 seconds"
 msgstr "30 秒"
 
-#: app/src/settings/mod.rs:792
+#: app/src/settings/mod.rs:797
 msgid "Follow system"
 msgstr "跟隨系統"
 
-#: app/src/settings/mod.rs:793
+#: app/src/settings/mod.rs:798
 msgid "Light"
 msgstr "淺色"
 
-#: app/src/settings/mod.rs:794
+#: app/src/settings/mod.rs:799
 msgid "Dark"
 msgstr "深色"
 
-#: app/src/settings/mod.rs:828
+#: app/src/settings/mod.rs:833
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "每 {count} 秒"
 
-#: app/src/settings/mod.rs:836
+#: app/src/settings/mod.rs:841
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "每 {count} 分鐘"
 
-#: app/src/settings/mod.rs:853
+#: app/src/settings/mod.rs:858
 msgid "2 weeks"
 msgstr "2 週"
 
-#: app/src/settings/mod.rs:854
+#: app/src/settings/mod.rs:859
 msgid "30 days"
 msgstr "30 天"
 
-#: app/src/settings/mod.rs:855
+#: app/src/settings/mod.rs:860
 msgid "90 days"
 msgstr "90 天"
 
-#: app/src/settings/mod.rs:856
+#: app/src/settings/mod.rs:861
 msgid "1 year"
 msgstr "1 年"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:862
 msgid "2 years"
 msgstr "2 年"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:863
 msgid "5 years"
 msgstr "5 年"
 
-#: app/src/settings/mod.rs:880
+#: app/src/settings/mod.rs:885
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4480,19 +4488,19 @@ msgstr ""
 "每封郵件都會保留在此電腦上。大型帳號會占用大量磁碟空間和記憶體，較舊的郵件會"
 "在背景下載。"
 
-#: app/src/settings/mod.rs:882
+#: app/src/settings/mod.rs:887
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "收件匣中的所有郵件也會保留，較舊的郵件仍可搜尋"
 
-#: app/src/settings/mod.rs:889
+#: app/src/settings/mod.rs:894
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:890
+#: app/src/settings/mod.rs:895
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:891
+#: app/src/settings/mod.rs:896
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5513,7 +5521,7 @@ msgid "Test the Server"
 msgstr "測試伺服器"
 
 #: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:373
-#: app/src/ui/assistant_web_prefs.rs:59
+#: app/src/ui/assistant_web_prefs.rs:70
 msgid "Test"
 msgstr "測試"
 
@@ -5718,7 +5726,7 @@ msgstr "執行 {tool} 前再次詢問"
 msgid "Test the Connection"
 msgstr "測試連線"
 
-#: app/src/ui/assistant_prefs.rs:404 app/src/ui/assistant_web_prefs.rs:90
+#: app/src/ui/assistant_prefs.rs:404 app/src/ui/assistant_web_prefs.rs:101
 msgid "No answer: {reason}"
 msgstr "未回應：{reason}"
 
@@ -5865,33 +5873,45 @@ msgstr ""
 msgid "Search With"
 msgstr "搜尋服務"
 
-#: app/src/ui/assistant_web_prefs.rs:47
+#: app/src/ui/assistant_web_prefs.rs:58
 msgid "SearXNG Server Address"
 msgstr "SearXNG 伺服器位址"
 
-#: app/src/ui/assistant_web_prefs.rs:63
+#: app/src/ui/assistant_web_prefs.rs:74
 msgid "Test the Search"
 msgstr "測試搜尋"
 
-#: app/src/ui/assistant_web_prefs.rs:64
+#: app/src/ui/assistant_web_prefs.rs:75
 msgid "Runs one search and shows the first result"
 msgstr "執行一次搜尋並顯示第一筆結果"
 
-#: app/src/ui/assistant_web_prefs.rs:79
+#: app/src/ui/assistant_web_prefs.rs:90
 msgid "Searching…"
 msgstr "正在搜尋…"
 
-#: app/src/ui/assistant_web_prefs.rs:88
+#: app/src/ui/assistant_web_prefs.rs:99
 msgid "First result: {title}"
 msgstr "第一筆結果：{title}"
 
-#: app/src/ui/assistant_web_prefs.rs:126
+#: app/src/ui/assistant_web_prefs.rs:147
 msgid "Brave Search API Key (Saved)"
 msgstr "Brave Search API 金鑰（已儲存）"
 
-#: app/src/ui/assistant_web_prefs.rs:127
+#: app/src/ui/assistant_web_prefs.rs:148
 msgid "Brave Search API Key"
 msgstr "Brave Search API 金鑰"
+
+#: app/src/ui/assistant_web_prefs.rs:155
+#, fuzzy
+#| msgid "Brave Search API Key (Saved)"
+msgid "Keenable API Key (Saved)"
+msgstr "Brave Search API 金鑰（已儲存）"
+
+#: app/src/ui/assistant_web_prefs.rs:156
+#, fuzzy
+#| msgid "API Key (Optional)"
+msgid "Keenable API Key (Optional)"
+msgstr "API 金鑰（選填）"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50

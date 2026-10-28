@@ -384,6 +384,9 @@ pub enum WebSearch {
     Brave,
     /// A local model searches with a SearXNG server.
     Searxng,
+    /// A local model searches with the Keenable API, which takes a key
+    /// but does not need one.
+    Keenable,
 }
 
 impl Choice for WebSearch {
@@ -392,6 +395,7 @@ impl Choice for WebSearch {
         WebSearch::Claude,
         WebSearch::Brave,
         WebSearch::Searxng,
+        WebSearch::Keenable,
     ];
     fn label(self) -> String {
         match self {
@@ -399,6 +403,7 @@ impl Choice for WebSearch {
             WebSearch::Claude => gettext("Claude's own only"),
             WebSearch::Brave => gettext("Brave Search"),
             WebSearch::Searxng => gettext("SearXNG"),
+            WebSearch::Keenable => gettext("Keenable"),
         }
     }
 }

@@ -31,6 +31,7 @@ const KEY_SERVICE: &str = "mailrs-ai";
 pub const LOCAL_KEY: &str = "local";
 pub const ANTHROPIC_KEY: &str = "anthropic";
 pub const BRAVE_KEY: &str = "brave-search";
+pub const KEENABLE_KEY: &str = "keenable-search";
 
 fn keys() -> KeyringTokenStore {
     KeyringTokenStore::with_service(KEY_SERVICE)
@@ -44,7 +45,7 @@ static CACHE: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 pub fn preload_keys() {
     std::thread::spawn(|| {
         let store = keys();
-        let found: HashMap<String, String> = [LOCAL_KEY, ANTHROPIC_KEY, BRAVE_KEY]
+        let found: HashMap<String, String> = [LOCAL_KEY, ANTHROPIC_KEY, BRAVE_KEY, KEENABLE_KEY]
             .into_iter()
             .filter_map(|name| {
                 let key = store.load(name).ok().flatten()?;

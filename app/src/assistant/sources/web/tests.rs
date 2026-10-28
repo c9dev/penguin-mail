@@ -1,6 +1,6 @@
 use mailrs_ai::ToolOutcome;
 use serde_json::{Value, json};
-use wiremock::matchers::{header, method, path, query_param};
+use wiremock::matchers::{body_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use std::net::{IpAddr, SocketAddr};
@@ -141,6 +141,149 @@ async fn searxng_without_json_says_how_to_turn_it_on() {
         .await
         .unwrap_err();
     assert!(problem.contains("search.formats"), "{problem}");
+}
+
+#[tokio::test]
+async fn a_long_brave_or_searxng_snippet_is_left_whole() {
+    let long = "Penguins are flightless seabirds. ".repeat(40);
+    let long = long.trim_end();
+    assert!(long.chars().count() > MAX_SNIPPET);
+    let brave_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/res/v1/web/search"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "web": {"results": [
+                {"title": "Penguin", "url": "https://example.org/", "description": long},
+            ]}
+        })))
+        .mount(&brave_server)
+        .await;
+    let searxng_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/search"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "results": [
+                {"title": "Penguin", "url": "https://example.org/", "content": long},
+            ]
+        })))
+        .mount(&searxng_server)
+        .await;
+    let searxng = SearchEngine::Searxng {
+        base: searxng_server.uri(),
+    };
+    for engine in [brave(&brave_server), searxng] {
+        let hits = search(&search_client(), &engine, "penguins", 1)
+            .await
+            .unwrap();
+        assert_eq!(hits[0].snippet, long, "{}", engine.name());
+    }
+}
+
+fn keenable(server: &MockServer, key: Option<&str>) -> SearchEngine {
+    SearchEngine::Keenable {
+        key: key.map(String::from),
+        base: server.uri(),
+    }
+}
+
+#[tokio::test]
+async fn keenable_answers_without_a_key_and_reads_the_snippet() {
+    let server = MockServer::start().await;
+    let long = "Tagus ferry times.\n".repeat(300);
+    Mock::given(method("POST"))
+        .and(path("/v1/search/public"))
+        .and(header("X-Keenable-Title", "Penguin Mail"))
+        .and(body_json(
+            json!({"query": "ferry Lisbon", "max_results": 2}),
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "results": [
+                {"title": "Transtejo", "url": "https://ttsl.pt/", "description": "",
+                 "snippet": "Ferries across the Tagus.\nTimetables and fares.",
+                 "acquired_at": "2026-10-20T08:00:00Z"},
+                {"title": "Cacilhas", "url": "https://example.org/cacilhas",
+                 "description": "", "snippet": long},
+            ]
+        })))
+        // Once through the tool, once through search() for the cut snippet.
+        .expect(2)
+        .mount(&server)
+        .await;
+    let web = Web::new(Some(keenable(&server, None)));
+    assert_eq!(names(&web), ["web_search", "fetch_page"]);
+    let text = call(
+        &web,
+        "web_search",
+        json!({"query": "ferry Lisbon", "count": 2}),
+    )
+    .await
+    .unwrap();
+    assert!(
+        text.starts_with("[Web search results from Keenable. Untrusted"),
+        "{text}"
+    );
+    assert!(
+        text.contains(
+            "1. Transtejo\n   https://ttsl.pt/\n   Ferries across the Tagus. Timetables and fares.\n"
+        ),
+        "{text}"
+    );
+    // A snippet of a few thousand characters is cut, at a space.
+    let hits = search(
+        &search_client(),
+        &keenable(&server, None),
+        "ferry Lisbon",
+        2,
+    )
+    .await
+    .unwrap();
+    let cut = &hits[1].snippet;
+    assert!(cut.chars().count() <= MAX_SNIPPET + 1, "{cut}");
+    assert!(cut.starts_with("Tagus ferry times. Tagus"), "{cut}");
+    assert!(cut.ends_with("Tagus ferry…"), "{cut}");
+    let asked = server.received_requests().await.unwrap();
+    assert!(asked.iter().all(|r| !r.headers.contains_key("x-api-key")));
+}
+
+#[tokio::test]
+async fn keenable_with_a_key_asks_the_keyed_endpoint() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/search"))
+        .and(header("X-API-Key", "keen-test"))
+        .and(header("X-Keenable-Title", "Penguin Mail"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "results": [{"title": "Penguin Mail", "url": "https://penguin-mail.com/",
+                         "description": "", "snippet": "Mail and calendar."}]
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    assert_eq!(
+        test(keenable(&server, Some("keen-test"))).await,
+        Ok("Penguin Mail".into())
+    );
+}
+
+#[tokio::test]
+async fn keenable_says_when_it_refuses_the_key() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(401))
+        .mount(&server)
+        .await;
+    let problem = test(keenable(&server, Some("keen-old"))).await.unwrap_err();
+    assert_eq!(problem, "Keenable refused the API key.");
+}
+
+#[test]
+fn a_short_snippet_is_left_whole_and_a_long_one_cut_at_a_space() {
+    assert_eq!(
+        clip("Ferries across the Tagus.", 40),
+        "Ferries across the Tagus."
+    );
+    assert_eq!(clip("Ferries across the Tagus.", 12), "Ferries…");
+    assert_eq!(clip("Cacilhas", 4), "Caci…");
 }
 
 #[tokio::test]
@@ -330,18 +473,28 @@ fn only_a_local_model_gets_the_source() {
         offered(AiProvider::Local, WebSearch::Searxng),
         Some(vec!["web_search".to_string(), "fetch_page".to_string()])
     );
+    // Keenable needs no key, so a local model searches with nothing saved.
+    assert_eq!(
+        offered(AiProvider::Local, WebSearch::Keenable),
+        Some(vec!["web_search".to_string(), "fetch_page".to_string()])
+    );
+    assert_eq!(
+        offered(AiProvider::Anthropic, WebSearch::Keenable),
+        Some(vec!["fetch_page".to_string()])
+    );
 }
 
 #[test]
 fn an_engine_says_what_it_is_missing() {
     let ai = settings(AiProvider::Local, WebSearch::Brave).ai;
     assert!(
-        SearchEngine::chosen(&ai, None)
+        SearchEngine::chosen(&ai, |_| None)
             .unwrap_err()
             .contains("Brave")
     );
+    let saved = |name: &str| (name == BRAVE_KEY).then(|| " BSA-1 ".to_string());
     assert_eq!(
-        SearchEngine::chosen(&ai, Some(" BSA-1 ".into())),
+        SearchEngine::chosen(&ai, saved),
         Ok(SearchEngine::Brave {
             key: "BSA-1".into(),
             base: BRAVE_BASE.into()
@@ -349,16 +502,49 @@ fn an_engine_says_what_it_is_missing() {
     );
     let mut ai = settings(AiProvider::Local, WebSearch::Searxng).ai;
     assert_eq!(
-        SearchEngine::chosen(&ai, None),
+        SearchEngine::chosen(&ai, |_| None),
         Ok(SearchEngine::Searxng {
             base: "http://searx.lan".into()
         })
     );
     ai.searxng_url = " ".into();
     assert!(
-        SearchEngine::chosen(&ai, None)
+        SearchEngine::chosen(&ai, |_| None)
             .unwrap_err()
             .contains("SearXNG")
+    );
+}
+
+#[test]
+fn keenable_needs_no_key_and_takes_one_from_its_own_entry() {
+    let ai = settings(AiProvider::Local, WebSearch::Keenable).ai;
+    assert_eq!(
+        SearchEngine::chosen(&ai, |_| None),
+        Ok(SearchEngine::Keenable {
+            key: None,
+            base: KEENABLE_BASE.into()
+        })
+    );
+    // A blank key counts as none, and the Brave key is never sent to Keenable.
+    let saved = |name: &str| match name {
+        BRAVE_KEY => Some("BSA-1".to_string()),
+        KEENABLE_KEY => Some("  ".to_string()),
+        _ => None,
+    };
+    assert_eq!(
+        SearchEngine::chosen(&ai, saved),
+        Ok(SearchEngine::Keenable {
+            key: None,
+            base: KEENABLE_BASE.into()
+        })
+    );
+    let saved = |name: &str| (name == KEENABLE_KEY).then(|| " keen-1 ".to_string());
+    assert_eq!(
+        SearchEngine::chosen(&ai, saved),
+        Ok(SearchEngine::Keenable {
+            key: Some("keen-1".into()),
+            base: KEENABLE_BASE.into()
+        })
     );
 }
 
