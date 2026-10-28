@@ -1,0 +1,217 @@
+name: Publish built release
+
+# Reuses successful Release artifacts when only publication needs repair.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag
+        type: string
+        required: true
+      source_sha:
+        description: Full source commit the tag must still point to
+        type: string
+        required: true
+      artifact_run_id:
+        description: Release run whose package jobs passed
+        type: string
+        required: true
+      publish_snap:
+        description: Publish the existing snap artifact to edge when credentials exist
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+      source_sha:
+        type: string
+        required: true
+      artifact_run_id:
+        type: string
+        required: true
+      publish_snap:
+        type: boolean
+        default: false
+    secrets:
+      SNAPCRAFT_STORE_CREDENTIALS:
+        required: false
+      APT_SIGNING_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      # Read the public key and release notes from the source commit.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source_sha }}
+      - name: Check the source and completed package jobs
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          BUILD_RUN: ${{ inputs.artifact_run_id }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git fetch --depth=1 origin "refs/tags/$TAG"
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = "$SOURCE_SHA"
+          version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          test "$TAG" = "v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" > "$RUNNER_TEMP/build-run.json"
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN/jobs?per_page=100" > "$RUNNER_TEMP/build-jobs.json"
+          gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?head_sha=$SOURCE_SHA&per_page=50" > "$RUNNER_TEMP/source-ci.json"
+          python3 - <<'CHECK'
+          import json
+          import os
+          from pathlib import Path
+
+          folder = Path(os.environ["RUNNER_TEMP"])
+          run = json.loads((folder / "build-run.json").read_text())
+          if run["path"] != ".github/workflows/release.yml" or run["event"] not in ("push", "workflow_dispatch"):
+              raise SystemExit("Artifacts must come from the Release workflow")
+          jobs = json.loads((folder / "build-jobs.json").read_text())["jobs"]
+          required = {
+              "Read the version", "CI passed on this commit", "Build the packages",
+              "Build the rpm", "Build the Arch package", "Build the Flatpak",
+              "Build the macOS apps / macOS arm64", "Build the macOS apps / macOS x86_64",
+              "Build and test the AppImage / Build the AppImage",
+              "Build and test the AppImage / Test on Ubuntu 22.04",
+              "Build and test the AppImage / Test on Ubuntu 24.04",
+              "Build and test the AppImage / Test on Debian 13",
+              "Build and test the AppImage / Ubuntu 24.04's sandbox rules",
+          }
+          passed = {job["name"] for job in jobs if job["conclusion"] == "success"}
+          if missing := required - passed:
+              raise SystemExit(f"Package jobs have not passed: {sorted(missing)}")
+          ci = json.loads((folder / "source-ci.json").read_text())["workflow_runs"]
+          if not any(item["conclusion"] == "success" for item in ci):
+              raise SystemExit("CI has not passed on the source commit")
+          CHECK
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: penguin-mail-${{ steps.version.outputs.version }}*
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: dist
+      - name: Read release notes from the source tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          scripts/changelog.sh section "$VERSION" > dist/notes.md
+          test -s dist/notes.md
+      # Each package comes from its own job, so the sums are written once
+      # every file is in one place. The updater checks its download against
+      # them, and trusts them only with a good signature from the apt
+      # repository's key, which it has compiled in; it refuses a release
+      # without one. The private key lives in a keyring of its own for this
+      # step only, as in the rpm job.
+      - name: Write and sign the checksums
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          if [ -z "$APT_SIGNING_KEY" ]; then
+            echo "::error::APT_SIGNING_KEY is not set, and the updater refuses unsigned checksums"
+            exit 1
+          fi
+          cd dist
+          rm -f SHA256SUMS SHA256SUMS.asc
+          sha256sum -- *.deb *.rpm *.pkg.tar.zst *.tar.gz *.zip *.flatpak *.AppImage > SHA256SUMS
+          cat SHA256SUMS
+          signing=$(mktemp -d)
+          trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
+          printf '%s\n' "$APT_SIGNING_KEY" | GNUPGHOME=$signing gpg --batch --import
+          GNUPGHOME=$signing gpg --batch --yes --pinentry-mode loopback --passphrase '' \
+              --local-user FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E \
+              --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          gpgv --homedir "$signing" \
+              --keyring "$GITHUB_WORKSPACE/packaging/apt/penguin-mail-archive-keyring.gpg" \
+              SHA256SUMS.asc SHA256SUMS
+      # A re-run after a failed upload finds the release already there,
+      # and then replaces its files and notes rather than stopping.
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s failglob
+          git fetch --depth=1 origin "refs/tags/$TAG"
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = "$SOURCE_SHA"
+          files=(dist/*.deb dist/*.rpm dist/*.pkg.tar.zst dist/*.tar.gz dist/*.zip \
+              dist/*.flatpak dist/*.AppImage dist/SHA256SUMS dist/SHA256SUMS.asc)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+              gh release edit "$TAG" --title "Penguin Mail $VERSION" \
+                  --notes-file dist/notes.md --latest
+              gh release upload "$TAG" --clobber "${files[@]}"
+              # A file the first run uploaded and this one did not build,
+              # say under an old name, would stay downloadable beside the
+              # new sums, so it goes.
+              declare -A keep
+              for file in "${files[@]}"; do keep[$(basename "$file")]=1; done
+              gh release view "$TAG" --json assets --jq '.assets[].name' |
+                  while IFS= read -r name; do
+                      if [ -z "${keep[$name]:-}" ]; then
+                          echo "Removing $name, which this run did not build"
+                          gh release delete-asset "$TAG" "$name" --yes
+                      fi
+                  done
+          else
+              gh release create "$TAG" --verify-tag --title "Penguin Mail $VERSION" \
+                  --notes-file dist/notes.md --latest "${files[@]}"
+          fi
+
+  snap-edge:
+    name: Publish the snap to edge
+    needs: publish
+    if: inputs.publish_snap
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        with:
+          pattern: snap-*
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: snap-file
+      - name: Find the snap
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        id: file
+        run: |
+          shopt -s failglob
+          files=(snap-file/*.snap)
+          test "${#files[@]}" = 1
+          echo "snap=${files[0]}" >> "$GITHUB_OUTPUT"
+      - uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        with:
+          snap: ${{ steps.file.outputs.snap }}
+          release: edge
