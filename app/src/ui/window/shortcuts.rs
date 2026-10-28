@@ -781,9 +781,11 @@ pub(super) fn conversation_chords() -> gtk::ShortcutController {
     chords(Place::Conversation)
 }
 
-/// The Keyboard Shortcuts dialog, one section per heading, with the label
-/// key's line worded for how the accounts file mail.
-pub(super) fn dialog(filing: Filing) -> adw::ShortcutsDialog {
+/// Shows the Keyboard Shortcuts dialog over `parent`, one section per
+/// heading, with the label key's line worded for how the accounts file
+/// mail.
+#[cfg(feature = "adwaita-1-8")]
+pub(super) fn show(filing: Filing, parent: &impl IsA<gtk::Widget>) {
     let dialog = adw::ShortcutsDialog::new();
     for section in Section::ALL {
         let group = adw::ShortcutsSection::new(Some(&section.title()));
@@ -795,7 +797,37 @@ pub(super) fn dialog(filing: Filing) -> adw::ShortcutsDialog {
         }
         dialog.add(group);
     }
-    dialog
+    dialog.present(Some(parent));
+}
+
+/// The same dialog on libadwaita 1.7, which has no shortcuts dialog of
+/// its own: GTK's shortcuts window, deprecated in GTK 4.18 in favor of
+/// the libadwaita one but still shipped.
+#[cfg(not(feature = "adwaita-1-8"))]
+#[allow(deprecated)]
+pub(super) fn show(filing: Filing, parent: &impl IsA<gtk::Window>) {
+    let window = gtk::ShortcutsWindow::builder()
+        .transient_for(parent)
+        .modal(true)
+        .title(gettext("Keyboard Shortcuts"))
+        .build();
+    let page = gtk::ShortcutsSection::builder()
+        .section_name("shortcuts")
+        .build();
+    for section in Section::ALL {
+        let group = gtk::ShortcutsGroup::builder().title(section.title()).build();
+        for shortcut in SHORTCUTS.iter().filter(|s| s.section == section) {
+            group.add_shortcut(
+                &gtk::ShortcutsShortcut::builder()
+                    .title(shortcut.line(filing))
+                    .accelerator(crate::ui::primary_accelerator(&shortcut.accelerators()))
+                    .build(),
+            );
+        }
+        page.add_group(&group);
+    }
+    window.add_section(&page);
+    window.present();
 }
 
 /// An action that runs on the main window alone.

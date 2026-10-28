@@ -931,7 +931,7 @@ impl CalendarView {
     /// A small date picker, for G: jumps to the day chosen and closes.
     pub fn go_to_date(self: &Rc<Self>) {
         let picker = gtk::Calendar::new();
-        picker.set_date(&editor::day_to_glib(self.day.get()));
+        crate::ui::set_calendar_date(&picker, &editor::day_to_glib(self.day.get()));
         crate::ui::name(&picker, &gettext("Go to date"));
         let popover = crate::ui::passing_popover(&self.today_button, &picker);
         let weak = Rc::downgrade(self);

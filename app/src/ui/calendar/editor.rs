@@ -705,7 +705,7 @@ impl Editor {
         });
 
         let end_date_calendar = gtk::Calendar::new();
-        end_date_calendar.set_date(&day_to_glib(end_day));
+        crate::ui::set_calendar_date(&end_date_calendar, &day_to_glib(end_day));
         let end_date_button = gtk::MenuButton::builder()
             .label(format_date(end_day))
             .popover(&gtk::Popover::builder().child(&end_date_calendar).build())
@@ -840,7 +840,7 @@ impl Editor {
         let day = local_day(start, zone);
         if let Some((button, calendar)) = self.start_date.borrow().as_ref() {
             button.set_label(&format_date(day));
-            calendar.set_date(&day_to_glib(day));
+            crate::ui::set_calendar_date(calendar, &day_to_glib(day));
         }
         if let Some(drop) = self.start_time.borrow().as_ref() {
             select_time(drop, local_time(start, zone));
@@ -881,7 +881,7 @@ impl Editor {
         let time = local_time(end, zone);
         if let Some((button, calendar)) = self.end_date.borrow().as_ref() {
             button.set_label(&format_date(day));
-            calendar.set_date(&day_to_glib(day));
+            crate::ui::set_calendar_date(calendar, &day_to_glib(day));
         }
         if let Some(drop) = self.end_time.borrow().as_ref() {
             select_time(drop, time);
@@ -2223,7 +2223,7 @@ fn date_button(
     on_pick: impl Fn(NaiveDate) + 'static,
 ) -> gtk::MenuButton {
     let calendar = gtk::Calendar::new();
-    calendar.set_date(&day_to_glib(day));
+    crate::ui::set_calendar_date(&calendar, &day_to_glib(day));
     let button = gtk::MenuButton::builder()
         .label(format_date(day))
         .popover(&gtk::Popover::builder().child(&calendar).build())

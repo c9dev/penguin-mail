@@ -55,6 +55,27 @@ signs in to Google only with a Google client compiled in;
 one. `cargo run -p mailrs -- --demo` opens the app on sample accounts, with
 no client needed.
 
+### Debian 13
+
+Debian 13 ships GTK 4.18 and libadwaita 1.7, so the app's `gtk-4-20` and
+`adwaita-1-8` features stay off there and the code takes its older path
+for each. `scripts/package-debian.sh` makes a .deb for it:
+
+```sh
+sudo apt install libgtk-4-dev libadwaita-1-dev libwebkitgtk-6.0-dev \
+  libjavascriptcoregtk-6.0-dev libsoup-3.0-dev libglib2.0-dev-bin gettext dpkg-dev
+scripts/package-debian.sh
+sudo apt install ./dist-debian/penguin-mail_*~deb13_amd64.deb
+```
+
+The package's dependencies come from the libraries it was linked
+against, so it has to be built on Debian 13 itself; CI's `debian` job
+does the same in a Debian 13 container, and each release carries the
+.deb it builds. It leaves updates to you: the apt repository serves
+Ubuntu builds, which Debian's libadwaita cannot run, so the package adds
+no repository entry and the app says when a new release is out rather
+than installing it.
+
 ### Nix
 
 `nix develop` supplies the Linux build environment. `nix build` builds an

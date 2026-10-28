@@ -17,7 +17,7 @@ pub async fn pick_time(
     let now = glib::DateTime::now_local().expect("the clock reads");
     let start = now.add_hours(1).unwrap_or_else(|_| now.clone());
     let calendar = gtk::Calendar::new();
-    calendar.set_date(&start);
+    crate::ui::set_calendar_date(&calendar, &start);
     let hour = gtk::SpinButton::with_range(0.0, 23.0, 1.0);
     hour.set_value(start.hour() as f64);
     let minute = gtk::SpinButton::with_range(0.0, 55.0, 5.0);
