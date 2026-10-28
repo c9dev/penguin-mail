@@ -9,6 +9,9 @@ import tempfile
 import threading
 
 root = Path(__file__).resolve().parent.parent
+# Cold debug builds can take longer than the driver's runtime limit.
+subprocess.run(["cargo", "build", "-p", "mailrs", "--ignore-rust-version"],
+               cwd=root, check=True)
 fixture = (root / "app/tests/fixtures/hidden-images.html").read_bytes()
 requests = []
 

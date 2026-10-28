@@ -46,16 +46,13 @@ pub(super) fn follow(anchor: &gtk::Widget, placed: impl Fn() + 'static) {
 }
 
 #[cfg(any(test, all(target_os = "macos", debug_assertions)))]
-pub(crate) fn check() {
+pub(crate) async fn check() {
     use std::cell::Cell;
     use std::rc::Rc;
     use std::time::Duration;
 
-    fn settle() {
-        let wait = gtk::glib::MainLoop::new(None, false);
-        let done = wait.clone();
-        gtk::glib::timeout_add_local_once(Duration::from_millis(250), move || done.quit());
-        wait.run();
+    async fn settle() {
+        gtk::glib::timeout_future(Duration::from_millis(250)).await;
     }
 
     let anchor = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -74,10 +71,10 @@ pub(crate) fn check() {
         width.set(weak.upgrade().unwrap().width());
     });
     window.present();
-    settle();
+    settle().await;
     let before = placed.get();
     assert!(before > 0, "a mapped page follows the initial layout");
-    settle();
+    settle().await;
     assert_eq!(
         placed.get(),
         before,
@@ -93,7 +90,7 @@ pub(crate) fn check() {
         }
     });
     anchor.set_margin_start(30);
-    settle();
+    settle().await;
     assert!(
         placed.get() > before,
         "a changed layout places the page again"
@@ -103,14 +100,14 @@ pub(crate) fn check() {
     anchor.set_visible(false);
     let hidden = placed.get();
     window.queue_draw();
-    settle();
+    settle().await;
     assert_eq!(
         placed.get(),
         hidden,
         "an unmapped page stops following frames"
     );
     anchor.set_visible(true);
-    settle();
+    settle().await;
     assert!(
         placed.get() > hidden,
         "a remapped page follows its window again"

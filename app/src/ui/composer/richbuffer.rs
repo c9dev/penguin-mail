@@ -899,7 +899,14 @@ mod tests {
         }
         #[cfg(target_os = "linux")]
         crate::web::check_scheme_after_last_view_closes();
-        crate::web::frame::check();
+        let context = gtk::glib::MainContext::default();
+        context.block_on(async {
+            let other = context.spawn_local(async {});
+            crate::web::frame::check().await;
+            other
+                .await
+                .expect("another GTK task finishes during the frame check");
+        });
         a_body_reads_back_the_same();
         list_markers_stay_out_of_the_text();
         a_line_changes_kind_and_the_numbers_follow();
