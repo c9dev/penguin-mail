@@ -82,7 +82,11 @@ impl WebView {
         settings.set_enable_fullscreen(false);
         settings.set_enable_back_forward_navigation_gestures(false);
         settings.set_allow_file_access_from_file_urls(false);
-        settings.set_enable_smooth_scrolling(true);
+        // WebKit's smooth scrolling animates each wheel tick over several
+        // frames, which stutters wherever compositing is slow, as on a
+        // hybrid-graphics laptop under X11. GTK's own lists move at once,
+        // so the page does too.
+        settings.set_enable_smooth_scrolling(false);
         settings.set_auto_load_images(true);
         apply_rendering(&settings);
         let view = webkit::WebView::builder()
