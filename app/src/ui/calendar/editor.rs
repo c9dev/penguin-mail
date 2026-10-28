@@ -130,7 +130,9 @@ struct Editor {
     /// The calendar whose own reminders show while `draft.reminders` is
     /// `None`. Follows the calendar row on a new event.
     reminders_calendar: RefCell<Calendar>,
-    reminder_rows: RefCell<Vec<adw::ComboRow>>,
+    /// The rows the reminders group holds, the Add Reminder row last,
+    /// so a rebuild takes every one of them out first.
+    reminder_rows: RefCell<Vec<gtk::Widget>>,
     /// The Custom Repeat page's content, rebuilt each time the Repeats
     /// row asks for it rather than kept live, so a start moved after the
     /// page was last open still seeds the right default weekday.
@@ -1502,11 +1504,11 @@ impl Editor {
             .reminders
             .clone()
             .unwrap_or_else(|| self.reminders_default());
-        let mut rows = Vec::new();
+        let mut rows: Vec<gtk::Widget> = Vec::new();
         for (i, reminder) in list.iter().enumerate() {
             let row = self.reminder_row(i, *reminder);
             group.add(&row);
-            rows.push(row);
+            rows.push(row.upcast());
         }
         let add = adw::ButtonRow::builder()
             .title(gettext("Add Reminder"))
@@ -1529,6 +1531,7 @@ impl Editor {
             this.rebuild_reminders();
         });
         group.add(&add);
+        rows.push(add.upcast());
         *self.reminder_rows.borrow_mut() = rows;
     }
 
