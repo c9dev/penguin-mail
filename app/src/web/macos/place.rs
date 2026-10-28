@@ -84,19 +84,15 @@ pub(super) struct Float {
     dialogs: RefCell<Option<(glib::WeakRef<gtk::Widget>, glib::SignalHandlerId)>>,
 }
 
-/// Starts following the anchor: placing the page on every frame, hiding
+/// Starts following the anchor: placing the page after each GTK frame, hiding
 /// it when the anchor leaves the screen, and taking the keyboard with it.
 pub(super) fn follow(inner: &Rc<Inner>) {
     let weak = Rc::downgrade(inner);
-    inner
-        .anchor
-        .add_tick_callback(move |_, _| match weak.upgrade() {
-            Some(inner) => {
-                place(&inner);
-                glib::ControlFlow::Continue
-            }
-            None => glib::ControlFlow::Break,
-        });
+    crate::web::frame::follow(inner.anchor.upcast_ref(), move || {
+        if let Some(inner) = weak.upgrade() {
+            place(&inner);
+        }
+    });
     let weak = Rc::downgrade(inner);
     inner.anchor.connect_unmap(move |_| {
         if let Some(inner) = weak.upgrade() {
@@ -212,7 +208,7 @@ fn attach(inner: &Rc<Inner>, window: Retained<NSWindow>) {
 }
 
 /// Puts the page over the anchor, clipped to what of it is on screen.
-/// Runs every frame: a pane drag, a window resize or a scroll moves the
+/// Runs after GTK paints: a pane drag, a window resize or a scroll moves the
 /// anchor without a signal on it.
 fn place(inner: &Rc<Inner>) {
     let anchor = &inner.anchor;

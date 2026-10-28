@@ -8,6 +8,7 @@ use super::*;
 use crate::unsubscribe_page::Browser;
 
 pub async fn check_macos(url: &str) {
+    crate::web::frame::check();
     let held = Rc::new(RefCell::new(None));
     let received = Rc::clone(&held);
     let page = WebView::reading("mailrs-check", move |request| {

@@ -3,8 +3,8 @@
 //! GTK 4 cannot hold a native view in its widget tree, so the page is a
 //! subview of the window's content view, and [`place`] moves it over the
 //! anchor, a focusable `gtk::Box` that takes the page's room in the layout,
-//! on every frame. What GTK draws inside the window over the page, a
-//! toast or the event card, shows through a hole cut in the page's layer;
+//! after GTK paints each frame. What GTK draws over the page, a toast or
+//! the event card, shows through a hole cut in the page's layer;
 //! while a dialog is up, the page gives way to a picture of itself so the
 //! dialog and its backdrop draw on top. [`events`] passes the page the
 //! keys and scrolls GTK would otherwise claim on their way to it.

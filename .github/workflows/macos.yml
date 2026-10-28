@@ -71,6 +71,8 @@ jobs:
           python3 scripts/test-macos-package.py
           cargo test -p mailrs --bin penguin-mail bundle::tests
           cargo clippy --workspace --all-targets -- -D warnings
+      - name: Check native web view placement
+        run: python3 scripts/check-macos-web.py
       - name: Build the app bundle
         env:
           PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
