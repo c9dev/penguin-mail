@@ -67,7 +67,7 @@ use std::rc::Rc;
 
 use adw::prelude::ComboRowExt;
 use gtk::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::Folder;
 use mailrs_domain::translate::gettext;
 pub use mailrs_sync::Mailbox;

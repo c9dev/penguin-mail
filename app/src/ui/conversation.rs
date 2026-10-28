@@ -1607,11 +1607,11 @@ impl ConversationView {
         let blocks = self.filter.borrow().clone();
         self.webview
             .set_filter(blocks.as_ref().filter(|_| !drawn.images_allowed));
-        let background = if theme.dark {
+        let background = match crate::ui::theme_page_colors(&self.webview.widget()) {
+            Some((_, background, _)) => background,
             // #1e1e21, the view colour style.css sets for dark windows.
-            gdk::RGBA::new(30.0 / 255.0, 30.0 / 255.0, 33.0 / 255.0, 1.0)
-        } else {
-            gdk::RGBA::WHITE
+            None if theme.dark => gdk::RGBA::new(30.0 / 255.0, 30.0 / 255.0, 33.0 / 255.0, 1.0),
+            None => gdk::RGBA::WHITE,
         };
         self.webview.set_background(&background);
         match drawn.page {
@@ -1649,8 +1649,13 @@ impl ConversationView {
     /// the desktop's font, and whether the head offers Summarize.
     fn theme(&self) -> Theme {
         let style = adw::StyleManager::default();
+        let (colors, dark) = match crate::ui::theme_page_colors(&self.webview.widget()) {
+            Some((colors, _, dark)) => (Some(colors), dark),
+            None => (None, style.is_dark()),
+        };
         Theme {
-            dark: style.is_dark(),
+            dark,
+            colors,
             accent: style.accent_color_rgba().to_str().to_string(),
             accent_text: style
                 .accent_color()

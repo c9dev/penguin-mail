@@ -133,8 +133,8 @@ fn the_conversation_pages_dim_text_passes_aa_on_the_page_and_the_message() {
     // the message's surface.
     for dark in [false, true] {
         let palette = crate::render::page_palette(dark);
-        for under in [palette.bg, palette.surface] {
-            let ratio = contrast(&over(palette.dim, under), under);
+        for under in [palette.bg.as_str(), palette.surface.as_str()] {
+            let ratio = contrast(&over(&palette.dim, under), under);
             assert!(
                 ratio >= AA,
                 "dim {} on {under} is {ratio:.2}:1",

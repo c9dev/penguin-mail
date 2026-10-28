@@ -451,6 +451,25 @@ pub fn ensure_gtk() {
             &css,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        // The view colour style.css gives the windows, under the name
+        // libadwaita gives its own, so the conversation page can ask
+        // which colour is in force: the app's, or a GTK theme's loaded
+        // over it through the person's stylesheet (`ui::theme_page_colors`).
+        // A name is one colour for the whole display, so it follows the
+        // color scheme here.
+        let surfaces = gtk::CssProvider::new();
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &surfaces,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+        let name_view = move |style: &adw::StyleManager| {
+            let view = ui::OWN_VIEW_COLORS[usize::from(style.is_dark())];
+            surfaces.load_from_string(&format!("@define-color view_bg_color {view};"));
+        };
+        let style = adw::StyleManager::default();
+        name_view(&style);
+        style.connect_dark_notify(name_view);
         #[cfg(target_os = "macos")]
         {
             let css = gtk::CssProvider::new();
