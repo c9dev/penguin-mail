@@ -99,6 +99,17 @@ pub struct TurnedDown {
     pub kept_theirs: Vec<String>,
 }
 
+/// Whether the server answered a read with a refusal it will repeat: a
+/// CalDAV 403, or Google's, rather than a missing permission the person
+/// can grant.
+fn is_forbidden(err: &BackendError) -> bool {
+    matches!(err, BackendError::Refused(_))
+        || matches!(
+            err,
+            BackendError::Gmail(mailrs_gmail::GmailError::Http { status: 403, .. })
+        )
+}
+
 /// An id for an event made on this computer. Google takes a client's own
 /// id when it is 5 to 1024 characters of base 32 hex, which lets the copy
 /// store the event under the id it will keep.
@@ -126,6 +137,11 @@ pub struct CalendarCopy<A: Accounts> {
     listed_from: Mutex<HashMap<AccountId, Discriminant<AnyCalendar>>>,
     /// When each account was last found to lack `calendar.events` itself.
     refused: Mutex<HashMap<AccountId, EpochMillis>>,
+    /// The calendars whose server refused to let the account read them:
+    /// a shared calendar listed but closed to it, as SmarterMail does.
+    /// A refusal repeats at every tick until the list changes, so such a
+    /// calendar waits for the next list before it is asked for again.
+    forbidden: Mutex<HashSet<(AccountId, String)>>,
     /// When `ready` last tried a first read that left the account's copy
     /// unsynced, so the next reader within [`READY_RETRY`] answers from
     /// the copy as it stands rather than trying again.
@@ -269,6 +285,7 @@ impl<A: Accounts> CalendarCopy<A> {
             pages_per_read: PAGE_LIMIT,
             listed_from: Mutex::new(HashMap::new()),
             refused: Mutex::new(HashMap::new()),
+            forbidden: Mutex::new(HashSet::new()),
             tried: Mutex::new(HashMap::new()),
             running: tokio::sync::Mutex::new(()),
             reaching: tokio::sync::Mutex::new(()),
@@ -296,6 +313,7 @@ impl<A: Accounts> CalendarCopy<A> {
             .lock()
             .expect("copy poisoned")
             .remove(&account_id);
+        self.forget_forbidden(account_id);
         self.last_list
             .lock()
             .expect("copy poisoned")
@@ -321,6 +339,15 @@ impl<A: Accounts> CalendarCopy<A> {
             .lock()
             .expect("copy poisoned")
             .remove(&account_id);
+    }
+
+    /// Lets the account's refused calendars be asked for again, once a
+    /// new list may have changed what the server lets it read.
+    fn forget_forbidden(&self, account_id: AccountId) {
+        self.forbidden
+            .lock()
+            .expect("copy poisoned")
+            .retain(|(account, _)| *account != account_id);
     }
 
     /// Whether the account turned out to lack the calendar permission less
@@ -596,6 +623,7 @@ impl<A: Accounts> CalendarCopy<A> {
                             .lock()
                             .expect("copy poisoned")
                             .insert(account_id, discriminant(calendar));
+                        self.forget_forbidden(account_id);
                     }
                     Err(BackendError::NeedsPermission) => {
                         let address = self.address(account_id).await?;
@@ -636,6 +664,14 @@ impl<A: Accounts> CalendarCopy<A> {
             if calendar::list::is_local(&entry.id) {
                 continue;
             }
+            if self
+                .forbidden
+                .lock()
+                .expect("copy poisoned")
+                .contains(&(account_id, entry.id.clone()))
+            {
+                continue;
+            }
             if !entry.shown {
                 let id = entry.id.clone();
                 let synced_at = self
@@ -669,6 +705,22 @@ impl<A: Accounts> CalendarCopy<A> {
                 // The network or the rate limit would stop every other
                 // calendar the same way.
                 Err(SyncError::Backend(err)) if err.is_transient() => return Err(err.into()),
+                // The server lists the calendar but will not let this
+                // account read it. It would say so again every tick, so
+                // it is said once, and the calendar waits for the next
+                // list.
+                Err(SyncError::Backend(err)) if is_forbidden(&err) => {
+                    tracing::warn!(
+                        account = account_id,
+                        calendar = entry.id,
+                        %err,
+                        "the server refuses to let this account read a calendar; leaving it until the next list"
+                    );
+                    self.forbidden
+                        .lock()
+                        .expect("copy poisoned")
+                        .insert((account_id, entry.id.clone()));
+                }
                 Err(err) if !matches!(err, SyncError::Store(_)) => {
                     tracing::warn!(account = account_id, calendar = entry.id, %err, "could not read a calendar");
                 }
