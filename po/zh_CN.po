@@ -1910,7 +1910,7 @@ msgstr ""
 
 #: app/src/assistant/sources/web.rs:468
 msgid "Keenable refused the API key."
-msgstr ""
+msgstr "Keenable 拒绝了 API 密钥。"
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -3994,10 +3994,8 @@ msgid "Open {file}, {size}"
 msgstr "打开 {file}，{size}"
 
 #: app/src/render.rs:634
-#, fuzzy
-#| msgid "Saved {file}"
 msgid "Save {file}…"
-msgstr "已保存 {file}"
+msgstr "保存 {file}…"
 
 #: app/src/render.rs:641
 msgid "Save All ({count})"
@@ -4337,7 +4335,7 @@ msgstr "SearXNG"
 
 #: app/src/settings/mod.rs:406
 msgid "Keenable"
-msgstr ""
+msgstr "Keenable"
 
 #: app/src/settings/mod.rs:576
 msgid "Rich text"
@@ -5895,16 +5893,12 @@ msgid "Brave Search API Key"
 msgstr "Brave Search API 密钥"
 
 #: app/src/ui/assistant_web_prefs.rs:155
-#, fuzzy
-#| msgid "Brave Search API Key (Saved)"
 msgid "Keenable API Key (Saved)"
-msgstr "Brave Search API 密钥（已保存）"
+msgstr "Keenable API 密钥（已保存）"
 
 #: app/src/ui/assistant_web_prefs.rs:156
-#, fuzzy
-#| msgid "API Key (Optional)"
 msgid "Keenable API Key (Optional)"
-msgstr "API 密钥（选填）"
+msgstr "Keenable API 密钥（选填）"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50
@@ -10635,10 +10629,8 @@ msgid "Turn On the {service}"
 msgstr "启用 {service}"
 
 #: app/src/ui/window.rs:2401 app/src/ui/window.rs:2404
-#, fuzzy
-#| msgid "Moved to the Inbox"
 msgid "Move to Inbox"
-msgstr "已移至收件箱"
+msgstr "移至收件箱"
 
 #: app/src/ui/window.rs:2599
 msgid "Select mail from one account to tag it."

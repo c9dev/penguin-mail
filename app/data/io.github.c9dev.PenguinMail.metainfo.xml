@@ -110,6 +110,45 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.11" date="2026-10-28">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.11</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>New ways to sign in to Gmail: a Google project of your own, set up step by step inside Penguin Mail, or this computer's Online Accounts on Linux or a password from Google.</li>
+          <li>Adding a Google account asks how it signs in, and lists the ways this computer offers.</li>
+          <li>A Gmail account made before keeps working, and signs in again through your own Google project when it has to.</li>
+          <li>Download recent Inbox message text in the background for faster opening and offline reading, with an optional limit in Sync preferences.</li>
+          <li>A local model can search the web with Keenable, with no API key or server to set up.</li>
+          <li>Filter the message list to unread mail, flagged mail, or mail with attachments.</li>
+          <li>Open .eml files from Files or the command line, and messages attached to other messages, in a window of their own, with Reply and Forward.</li>
+          <li>Choose message preview lines, hide avatars, and control bold text for unread messages and senders.</li>
+          <li>Give each sending address its own signature or use the account signature, with <code>&lt;email&gt;</code> and <code>&lt;domain&gt;</code> filled from the actual sender.</li>
+          <li>Mark all unread inbox mail as read in every account from the tray menu.</li>
+          <li>Empty Trash from its mailbox menu, including older mail outside the local cache, with bounded memory use and a fresh check before each delete batch.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Attachment saving, moving mail to Inbox, and Keenable settings show in every supported language.</li>
+          <li>On macOS, native message views follow completed layouts without keeping an idle window updating.</li>
+          <li>Move mail directly between folders in the same account, including out of Trash, and choose Inbox from the mail's folder menu.</li>
+          <li>Choose where to save a single attachment, including in Flatpak, and see errors when its default application cannot open it.</li>
+          <li>Show shared and group calendars discovered through CalDAV or JMAP, with their read-only and editing permissions.</li>
+          <li>Google Calendar edits can switch events between timed and all-day without reverting.</li>
+          <li>Microsoft 365 searches show each matching message once and open mail outside the local sync window.</li>
+          <li>Message list settings, sender signature settings, and Empty Trash controls now appear in Traditional Chinese.</li>
+          <li>A conversation opened in its own window keeps working after the main window closes, instead of vanishing when the app goes to the background a minute later.</li>
+          <li>A message with no Date header shows no date instead of 1 January 1970.</li>
+          <li>With Attachments includes queued messages with files in Send Later and Outbox, even right after scheduling them.</li>
+          <li>Screen readers omit hidden message previews when navigating the list with the keyboard.</li>
+          <li>IMAP messages show preview text in the list without needing to open them first.</li>
+          <li>IMAP and POP3 accounts stay signed in while their mail server restarts or updates, and try again every few minutes instead of asking you to sign in (#79).</li>
+          <li>Changing From replaces signatures containing quotes, and typing an address suffix no longer rereads the whole message.</li>
+          <li>TLS connections reject distrusted emSign certificates.</li>
+          <li>Empty Trash removes deleted JMAP messages from the app and Undo even when the server refuses another message in the same batch.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.10" date="2026-10-20">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.10</url>
       <description translate="no">

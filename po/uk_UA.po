@@ -2064,7 +2064,7 @@ msgstr ""
 
 #: app/src/assistant/sources/web.rs:468
 msgid "Keenable refused the API key."
-msgstr ""
+msgstr "Keenable відхилив ключ API."
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -4286,10 +4286,8 @@ msgid "Open {file}, {size}"
 msgstr "Відкрити {file}, {size}"
 
 #: app/src/render.rs:634
-#, fuzzy
-#| msgid "Saved {file}"
 msgid "Save {file}…"
-msgstr "{file} збережено"
+msgstr "Зберегти {file}…"
 
 #: app/src/render.rs:641
 msgid "Save All ({count})"
@@ -4643,7 +4641,7 @@ msgstr "SearXNG"
 
 #: app/src/settings/mod.rs:406
 msgid "Keenable"
-msgstr ""
+msgstr "Keenable"
 
 #: app/src/settings/mod.rs:576
 msgid "Rich text"
@@ -6262,16 +6260,12 @@ msgid "Brave Search API Key"
 msgstr "Ключ API Brave Search"
 
 #: app/src/ui/assistant_web_prefs.rs:155
-#, fuzzy
-#| msgid "Brave Search API Key (Saved)"
 msgid "Keenable API Key (Saved)"
-msgstr "Ключ API Brave Search (збережено)"
+msgstr "Ключ API Keenable (збережено)"
 
 #: app/src/ui/assistant_web_prefs.rs:156
-#, fuzzy
-#| msgid "API Key (Optional)"
 msgid "Keenable API Key (Optional)"
-msgstr "Ключ API (необов'язково)"
+msgstr "Ключ API Keenable (необов'язково)"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50
@@ -11234,10 +11228,8 @@ msgid "Turn On the {service}"
 msgstr "Увімкніть {service}"
 
 #: app/src/ui/window.rs:2401 app/src/ui/window.rs:2404
-#, fuzzy
-#| msgid "Moved to the Inbox"
 msgid "Move to Inbox"
-msgstr "Переміщено до «Вхідних»"
+msgstr "Перемістити до «Вхідних»"
 
 #: app/src/ui/window.rs:2599
 msgid "Select mail from one account to tag it."

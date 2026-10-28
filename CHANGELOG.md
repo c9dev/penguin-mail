@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 1.0.11 (2026-10-28)
+
 ### New
 
 - New ways to sign in to Gmail: a Google project of your own, set up step by step inside Penguin Mail, or this computer's Online Accounts on Linux or a password from Google.
@@ -20,6 +22,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Empty Trash from its mailbox menu, including older mail outside the local cache, with bounded memory use and a fresh check before each delete batch.
 
 ### Fixed
+
+- Attachment saving, moving mail to Inbox, and Keenable settings show in every supported language.
 
 - On macOS, native message views follow completed layouts without keeping an idle window updating.
 - Move mail directly between folders in the same account, including out of Trash, and choose Inbox from the mail's folder menu.

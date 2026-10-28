@@ -2070,7 +2070,7 @@ msgstr ""
 
 #: app/src/assistant/sources/web.rs:468
 msgid "Keenable refused the API key."
-msgstr ""
+msgstr "Keenable a refuzat cheia API."
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -4316,10 +4316,8 @@ msgid "Open {file}, {size}"
 msgstr "Deschide {file}, {size}"
 
 #: app/src/render.rs:634
-#, fuzzy
-#| msgid "Saved {file}"
 msgid "Save {file}…"
-msgstr "{file} a fost salvat"
+msgstr "Salvează {file}…"
 
 #: app/src/render.rs:641
 msgid "Save All ({count})"
@@ -4675,7 +4673,7 @@ msgstr "SearXNG"
 
 #: app/src/settings/mod.rs:406
 msgid "Keenable"
-msgstr ""
+msgstr "Keenable"
 
 #: app/src/settings/mod.rs:576
 msgid "Rich text"
@@ -6302,16 +6300,12 @@ msgid "Brave Search API Key"
 msgstr "Cheie API Brave Search"
 
 #: app/src/ui/assistant_web_prefs.rs:155
-#, fuzzy
-#| msgid "Brave Search API Key (Saved)"
 msgid "Keenable API Key (Saved)"
-msgstr "Cheie API Brave Search (salvată)"
+msgstr "Cheie API Keenable (salvată)"
 
 #: app/src/ui/assistant_web_prefs.rs:156
-#, fuzzy
-#| msgid "API Key (Optional)"
 msgid "Keenable API Key (Optional)"
-msgstr "Cheie API (opțional)"
+msgstr "Cheie API Keenable (opțională)"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50
@@ -11294,10 +11288,8 @@ msgid "Turn On the {service}"
 msgstr "Activați {service}"
 
 #: app/src/ui/window.rs:2401 app/src/ui/window.rs:2404
-#, fuzzy
-#| msgid "Moved to the Inbox"
 msgid "Move to Inbox"
-msgstr "Mutat în Mesaje primite"
+msgstr "Mută în Mesaje primite"
 
 #: app/src/ui/window.rs:2599
 msgid "Select mail from one account to tag it."
