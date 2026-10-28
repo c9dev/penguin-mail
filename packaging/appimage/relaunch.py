@@ -322,7 +322,10 @@ say("language restart: PASS")
 
 # Closing the window sheds memory by restarting into the tray.
 act(frame(), "window.close")
-wait(lambda: b"--background" in (argv(pid) or []), "the idle restart", 30)
+# AppRun has --background before it execs the bundled loader. Wait for
+# the app's executable too, so that launcher interval cannot finish the wait.
+wait(lambda: the_app() == pid and b"--background" in (argv(pid) or []),
+     "the background app after the idle restart", 30)
 if the_app() != pid:
     fail("the idle restart did not replace the running process")
 time.sleep(2)

@@ -85,10 +85,12 @@ jobs:
           - system: Debian 13
             image: debian:13@sha256:913f6706df59a68922d1dd08f78c2476560a8d367897200a6005b00e5f67c2d5
     steps:
+      # The artifact uses source_ref; test scripts use the workflow revision
+      # so a release recovery can fix its checks without changing the bundle.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ inputs.source_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: penguin-mail-${{ needs.build.outputs.version }}-appimage
@@ -118,7 +120,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ inputs.source_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: penguin-mail-${{ needs.build.outputs.version }}-appimage
