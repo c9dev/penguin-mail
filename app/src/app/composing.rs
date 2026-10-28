@@ -141,13 +141,26 @@ impl App {
             },
         );
         self.window_opened();
-        let keep = Rc::clone(&composer);
+        self.composers.borrow_mut().push(Rc::clone(&composer));
+        // Closing the window unrealizes it and drops GTK's own reference,
+        // which leaves the composer's. A destroy handler holding the
+        // composer would keep both forever, and the window's `destroy`
+        // never comes while something holds it. So the composer is let go
+        // once the unrealize has returned, and the window with it.
         let app = Rc::downgrade(self);
-        composer.window().connect_destroy(move |_| {
-            let _ = &keep;
-            if let Some(app) = app.upgrade() {
+        let closed = Rc::downgrade(&composer);
+        composer.window().connect_unrealize(move |_| {
+            let app = app.clone();
+            let closed = closed.clone();
+            gtk::glib::idle_add_local_once(move || {
+                let Some(app) = app.upgrade() else { return };
+                let Some(closed) = closed.upgrade() else { return };
+                app.composers
+                    .borrow_mut()
+                    .retain(|open| !Rc::ptr_eq(open, &closed));
+                drop(closed);
                 app.window_closed();
-            }
+            });
         });
         Some(composer)
     }
