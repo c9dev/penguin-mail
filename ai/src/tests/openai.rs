@@ -693,3 +693,62 @@ async fn servers_can_reject_both_optional_fields_in_either_order() {
         assert_eq!(final_body["messages"].as_array().unwrap().len(), 2);
     }
 }
+
+/// A model that answers every round with another tool call, which is what a
+/// stuck turn looks like from the app's side.
+fn calls_a_tool_every_time() -> ResponseTemplate {
+    stream(&[
+        delta(
+            json!({"tool_calls": [{"index": 0, "id": "c1", "type": "function",
+            "function": {"name": "search_mail", "arguments": "{\"query\":\"invoice\"}"}}]}),
+        ),
+        json!({"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]}),
+    ])
+}
+
+#[tokio::test]
+async fn a_turn_gives_up_after_the_rounds_it_was_given() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(calls_a_tool_every_time())
+        .mount(&server)
+        .await;
+
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = OpenAiChat::new(&server.uri(), None, "qwen3".into(), "You sort mail.".into());
+    chat.set_rounds(3);
+    let err = chat
+        .send("Find invoices".into(), Arc::new(FakeHost::default()), &tx)
+        .await
+        .unwrap_err();
+
+    // The number a person set is the number they read back, so the message
+    // says where to look rather than naming a constant they never chose.
+    assert_eq!(
+        err.to_string(),
+        "stopped after 3 model requests without a final answer"
+    );
+    assert_eq!(server.received_requests().await.unwrap().len(), 3);
+}
+
+#[tokio::test]
+async fn a_turn_asks_once_even_when_told_no_rounds() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(stream(&[delta(json!({"content": "No invoices."}))]))
+        .mount(&server)
+        .await;
+
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = OpenAiChat::new(&server.uri(), None, "qwen3".into(), "You sort mail.".into());
+    chat.set_rounds(0);
+    assert_eq!(
+        chat.send("Find invoices".into(), Arc::new(FakeHost::default()), &tx)
+            .await
+            .unwrap(),
+        "No invoices."
+    );
+    assert_eq!(server.received_requests().await.unwrap().len(), 1);
+}

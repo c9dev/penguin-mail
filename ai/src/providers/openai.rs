@@ -8,12 +8,14 @@ use serde_json::{Value, json};
 
 use super::think::{Piece, ThinkTags};
 use super::{
-    MAX_ROUNDS, emit, error_text, http_client, network, outcome_text, parse_tool_input,
-    refuse_tool, run_tool, too_many_rounds,
+    emit, error_text, http_client, network, outcome_text, parse_tool_input, refuse_tool, run_tool,
+    too_many_rounds,
 };
 use crate::history::History;
 use crate::sse::SseReader;
-use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
+use crate::{
+    AgentEvent, AiError, DEFAULT_ROUNDS, Model, ModelList, ToolHost, ToolOutcome, ToolSpec,
+};
 
 /// Added to the system prompt when the server refuses tool definitions.
 const NO_TOOLS_NOTE: &str = "This model runs without tools, so you cannot read, \
@@ -31,6 +33,8 @@ pub(crate) struct OpenAiChat {
     pub(super) think: bool,
     /// Some compatible servers reject reasoning controls altogether.
     pub(super) reasoning_off: bool,
+    /// Model requests this turn may make, from Preferences.
+    pub(super) rounds: usize,
     client: reqwest::Client,
 }
 
@@ -67,8 +71,15 @@ impl OpenAiChat {
             tools_off: false,
             think: false,
             reasoning_off: false,
+            rounds: DEFAULT_ROUNDS,
             client: http_client(),
         }
+    }
+
+    /// One request at the very least, so a hand-edited setting of zero still
+    /// asks the model something before it gives up.
+    pub(crate) fn set_rounds(&mut self, rounds: usize) {
+        self.rounds = rounds.max(1);
     }
 
     pub(crate) async fn send(
@@ -92,7 +103,8 @@ impl OpenAiChat {
         events: &async_channel::Sender<AgentEvent>,
     ) -> Result<String, AiError> {
         let specs = host.specs();
-        for round in 0..MAX_ROUNDS {
+        let rounds = self.rounds;
+        for round in 0..rounds {
             let mut reply = self.round(&specs, events).await?;
             for (index, call) in reply.calls.iter_mut().enumerate() {
                 if call.id.is_empty() {
@@ -123,7 +135,7 @@ impl OpenAiChat {
                 }));
             }
         }
-        Err(too_many_rounds())
+        Err(too_many_rounds(rounds))
     }
 
     /// Each rejected optional field is removed once before retrying.
