@@ -339,6 +339,10 @@ pub struct AiSettings {
     pub claude_command: String,
     /// Ask before the assistant sends mail or changes Gmail settings.
     pub confirm_actions: bool,
+    /// Model requests one assistant turn may make before it gives up. Each
+    /// tool call costs a request of its own, so a wide job wants room and a
+    /// model that wanders wants cutting short.
+    pub max_rounds: usize,
     /// Features other than the assistant that do not follow it. A feature
     /// missing here uses the assistant's model.
     pub uses: BTreeMap<Feature, Use>,
@@ -347,6 +351,15 @@ pub struct AiSettings {
     /// The SearXNG server web search asks, such as `http://localhost:8080`.
     pub searxng_url: String,
 }
+
+/// The fewest model requests one assistant turn may be allowed. Zero would
+/// answer nothing at all, so the assistant always asks the model once.
+pub const MIN_ROUNDS: usize = 1;
+
+/// The most a turn may be allowed, which covers a job that works through a
+/// hundred messages one at a time. Beyond this a model is looping rather
+/// than working, and Stop is the answer.
+pub const MAX_ROUNDS: usize = 100;
 
 impl Default for AiSettings {
     fn default() -> Self {
@@ -362,6 +375,7 @@ impl Default for AiSettings {
             claude_model: String::new(),
             claude_command: String::new(),
             confirm_actions: true,
+            max_rounds: mailrs_ai::DEFAULT_ROUNDS,
             uses: BTreeMap::new(),
             web_search: WebSearch::Claude,
             searxng_url: String::new(),

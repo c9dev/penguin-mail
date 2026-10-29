@@ -14,8 +14,8 @@ use serde_json::{Value, json};
 use super::mcp::McpServer;
 
 use super::{
-    Choice, ColorScheme, ComposeFormat, Feature, MarkRead, PreviewLines, ReadReceipts,
-    RemoteImages, Settings, TextSize, UndoSend, Use, WebSearch,
+    Choice, ColorScheme, ComposeFormat, Feature, MAX_ROUNDS, MIN_ROUNDS, MarkRead, PreviewLines,
+    ReadReceipts, RemoteImages, Settings, TextSize, UndoSend, Use, WebSearch,
 };
 
 /// One named change to the preferences.
@@ -251,6 +251,8 @@ pub enum AiChange {
     BaseUrl(String),
     ClaudeCommand(String),
     ConfirmActions(bool),
+    /// How many model requests one assistant turn may make.
+    MaxRounds(usize),
     /// A server the app found on this machine: its address and first model.
     LocalServer {
         base_url: String,
@@ -543,6 +545,7 @@ impl AiChange {
             AiChange::BaseUrl(url) => ai.base_url = url,
             AiChange::ClaudeCommand(command) => ai.claude_command = command,
             AiChange::ConfirmActions(on) => ai.confirm_actions = on,
+            AiChange::MaxRounds(rounds) => ai.max_rounds = rounds.clamp(MIN_ROUNDS, MAX_ROUNDS),
             AiChange::LocalServer { base_url, model } => {
                 ai.base_url = base_url;
                 ai.local_model = model;
@@ -1137,6 +1140,30 @@ mod tests {
         assert!(effects.is_empty());
         assert!(!settings.ai.assistant_reasoning);
         assert!(settings.ai.translation_reasoning);
+    }
+
+    #[test]
+    fn the_round_limit_stays_where_the_ai_page_can_put_it() {
+        use super::{AiChange, Change, MAX_ROUNDS, MIN_ROUNDS};
+        use crate::settings::Settings;
+        let mut settings = Settings::default();
+        assert_eq!(settings.ai.max_rounds, mailrs_ai::DEFAULT_ROUNDS);
+        // The next question simply reads the new number, so nothing on
+        // screen has to be redone.
+        let effects = Change::Ai(AiChange::MaxRounds(60)).apply(&mut settings);
+        assert!(effects.is_empty());
+        assert_eq!(settings.ai.max_rounds, 60);
+        Change::Ai(AiChange::MaxRounds(0)).apply(&mut settings);
+        assert_eq!(settings.ai.max_rounds, MIN_ROUNDS);
+        Change::Ai(AiChange::MaxRounds(9000)).apply(&mut settings);
+        assert_eq!(settings.ai.max_rounds, MAX_ROUNDS);
+        let saved = toml::to_string(&settings).unwrap();
+        let loaded: Settings = toml::from_str(&saved).unwrap();
+        assert_eq!(loaded.ai.max_rounds, MAX_ROUNDS);
+        // A settings file written before the row existed keeps the number the
+        // loop always had, rather than the range's floor.
+        let older: Settings = toml::from_str("[ai]\n").unwrap();
+        assert_eq!(older.ai.max_rounds, mailrs_ai::DEFAULT_ROUNDS);
     }
 
     #[test]

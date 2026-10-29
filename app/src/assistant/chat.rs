@@ -83,6 +83,7 @@ impl Chat {
         let (prompt, sources) = sources::for_turn(&base, &self.sources, tools.mcp, tools.skills);
         let web = settings.ai.web_search != WebSearch::Off;
         let reasoning = settings.ai.assistant_reasoning;
+        let rounds = settings.ai.max_rounds;
         let host = Arc::new(Toolbox::new(
             Host::new(super::run::specs(), self.requests.clone()).with_picked_files(picked),
             sources,
@@ -95,6 +96,7 @@ impl Chat {
             let mut conversation = conversation.lock().await;
             conversation.set_provider(config);
             conversation.set_thinking(reasoning);
+            conversation.set_rounds(rounds);
             conversation.set_system_prompt(prompt);
             conversation.set_web(web);
             tokio::select! {
