@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use crate::error::GraphError;
 use crate::http::{BatchRequest, DeltaPage, Graph, IMMUTABLE_IDS, Method, Page};
 use crate::mail::with_query;
-use crate::model::{DateTimeZone, EmailAddress, ItemBody, Recipient, Removed};
+use crate::model::{DateTimeZone, EmailAddress, ItemBody, Recipient, Removed, default_if_null};
 
 const UTC: &str = "outlook.timezone=\"UTC\"";
 const PAGE_PREFER: &str = "odata.maxpagesize=50";
@@ -31,6 +31,7 @@ pub struct GraphCalendar {
 pub struct ResponseStatus {
     /// `none`, `organizer`, `tentativelyAccepted`, `accepted`, `declined`,
     /// `notResponded`.
+    #[serde(deserialize_with = "default_if_null")]
     pub response: String,
 }
 
@@ -46,6 +47,7 @@ pub struct Attendee {
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Location {
+    #[serde(deserialize_with = "default_if_null")]
     pub display_name: String,
 }
 
@@ -115,19 +117,22 @@ pub struct GraphEvent {
     pub body: Option<ItemBody>,
     pub start: Option<DateTimeZone>,
     pub end: Option<DateTimeZone>,
+    #[serde(deserialize_with = "default_if_null")]
     pub is_all_day: bool,
     pub location: Option<Location>,
     /// `free`, `tentative`, `busy`, `oof`, `workingElsewhere`.
     pub show_as: Option<String>,
+    #[serde(deserialize_with = "default_if_null")]
     pub is_cancelled: bool,
     /// `normal`, `personal`, `private`, `confidential`.
     pub sensitivity: Option<String>,
     pub organizer: Option<Recipient>,
     pub attendees: Vec<Attendee>,
     pub response_status: Option<ResponseStatus>,
+    #[serde(deserialize_with = "default_if_null")]
     pub is_organizer: bool,
     pub is_reminder_on: Option<bool>,
-    pub reminder_minutes_before_start: Option<u32>,
+    pub reminder_minutes_before_start: Option<i32>,
     pub online_meeting: Option<OnlineMeeting>,
     pub recurrence: Option<PatternedRecurrence>,
     /// `singleInstance`, `occurrence`, `exception`, `seriesMaster`.

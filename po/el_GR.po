@@ -13322,37 +13322,37 @@ msgstr ""
 "Αυτός ο κανόνας είναι μόνο για ανάγνωση, οπότε το Penguin Mail τον αφήνει ως "
 "έχει."
 
-#: sync/src/services/microsoft/calendar.rs:437
+#: sync/src/services/microsoft/calendar.rs:444
 msgid "Outlook cannot repeat an event that way."
 msgstr "Το Outlook δεν μπορεί να επαναλάβει ένα συμβάν με αυτόν τον τρόπο."
 
-#: sync/src/services/microsoft/calendar.rs:830
+#: sync/src/services/microsoft/calendar.rs:837
 msgid "Outlook cannot attach a file to an event."
 msgstr "Το Outlook δεν μπορεί να επισυνάψει αρχείο σε συμβάν."
 
-#: sync/src/services/microsoft/calendar.rs:835
+#: sync/src/services/microsoft/calendar.rs:842
 msgid "Outlook has no files to share."
 msgstr "Το Outlook δεν έχει αρχεία για κοινή χρήση."
 
-#: sync/src/services/microsoft/calendar.rs:845
+#: sync/src/services/microsoft/calendar.rs:852
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Το Outlook δεν μπορεί να μετακινήσει ένα συμβάν σε άλλο ημερολόγιο."
 
-#: sync/src/services/microsoft/calendar.rs:903
+#: sync/src/services/microsoft/calendar.rs:910
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Το Outlook δεν μπορεί να αφαιρέσει ένα ημερολόγιο από τη λίστα."
 
-#: sync/src/services/microsoft/calendar.rs:908
+#: sync/src/services/microsoft/calendar.rs:915
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr ""
 "Το Outlook δεν μπορεί να αποκρύψει ένα ημερολόγιο σε όλες τις συσκευές σας."
 
-#: sync/src/services/microsoft/calendar.rs:913
+#: sync/src/services/microsoft/calendar.rs:920
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr ""
 "Το Outlook δεν μπορεί να εγγραφεί σε ένα ημερολόγιο μέσω της διεύθυνσής του."
 
-#: sync/src/services/microsoft/calendar.rs:917
+#: sync/src/services/microsoft/calendar.rs:924
 msgid "Outlook has no other calendars to add."
 msgstr "Το Outlook δεν έχει άλλα ημερολόγια για προσθήκη."
 

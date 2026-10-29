@@ -6,6 +6,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ## Unreleased
 
 ### Fixed
+- Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
 
 ## 1.0.11 (2026-10-28)

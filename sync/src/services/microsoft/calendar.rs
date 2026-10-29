@@ -361,13 +361,20 @@ impl<G: GraphApi> Microsoft<G> {
             my_answer: (!e.is_organizer)
                 .then(|| e.response_status.as_ref().and_then(|s| answer(&s.response)))
                 .flatten(),
-            reminders: Some(match e.is_reminder_on {
-                Some(true) => vec![Reminder {
-                    minutes: e.reminder_minutes_before_start.unwrap_or(15),
-                    method: ReminderMethod::Notification,
-                }],
-                _ => Vec::new(),
-            }),
+            // Outlook permits reminders after the start, which our before-start
+            // reminders cannot represent. None keeps those fields out of edits
+            // so changing an event's title does not clear its server reminder.
+            reminders: match e.is_reminder_on {
+                Some(true) => u32::try_from(e.reminder_minutes_before_start.unwrap_or(15))
+                    .ok()
+                    .map(|minutes| {
+                        vec![Reminder {
+                            minutes,
+                            method: ReminderMethod::Notification,
+                        }]
+                    }),
+                _ => Some(Vec::new()),
+            },
             conference: e.online_meeting.as_ref().and_then(|m| m.join_url.clone()),
             rules,
             series: (e.kind.as_deref() == Some("exception"))
