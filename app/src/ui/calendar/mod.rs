@@ -1551,8 +1551,9 @@ impl CalendarView {
         // scrolled window shows and hides it as a child.)
         let keep_columns = {
             let (scroller, headings, strip_row) =
-                (scroller.clone(), headings.clone(), strip_row.clone());
+                (scroller.downgrade(), headings.clone(), strip_row.clone());
             move |page: &gtk::Adjustment| {
+                let Some(scroller) = scroller.upgrade() else { return };
                 let bar = (f64::from(scroller.width()) - page.page_size()).round() as i32;
                 headings.set_margin_end(bar.max(0));
                 strip_row.set_margin_end(bar.max(0));
