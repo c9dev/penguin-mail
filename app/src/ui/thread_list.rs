@@ -325,7 +325,12 @@ impl ThreadList {
         let filters = filters::Filters::new();
         header.pack_end(&filters.button);
 
-        let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        // Named, so a GTK theme can reach the slot without counting the
+        // top bars.
+        let categories_slot = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .css_classes(["categories-slot"])
+            .build();
         let banner = adw::Banner::builder()
             .use_markup(false)
             .revealed(false)

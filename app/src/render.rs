@@ -24,6 +24,9 @@ pub const FOLD_MS: u32 = 240;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
     pub dark: bool,
+    /// The page's own colours when a GTK theme is in force over
+    /// libadwaita; None keeps the page's palette.
+    pub colors: Option<PageColors>,
     /// CSS colour of the desktop accent, for fills, dots and outlines.
     pub accent: String,
     /// The accent as libadwaita limits it for text, dark enough on a
@@ -884,45 +887,76 @@ pub(crate) const PAGE_SIDE: i32 = 36;
 pub(crate) const PAGE_NARROW: i32 = 560;
 pub(crate) const PAGE_NARROW_SIDE: i32 = 14;
 
+/// The two colours a GTK theme hands the page: its view background and
+/// its window text, as CSS colours. The rest of the palette is mixed
+/// from them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PageColors {
+    pub bg: String,
+    pub fg: String,
+}
+
 /// The conversation page's colours in one theme.
 pub(crate) struct PagePalette {
-    pub bg: &'static str,
-    pub fg: &'static str,
+    pub bg: String,
+    pub fg: String,
     /// Secondary text: counts, addresses, dates, recipients, quotes.
-    pub dim: &'static str,
-    pub card: &'static str,
-    pub line: &'static str,
-    pub hover: &'static str,
+    pub dim: String,
+    pub card: String,
+    pub line: String,
+    pub hover: String,
     /// What a message sits on.
-    pub surface: &'static str,
+    pub surface: String,
+}
+
+/// The page's palette under a GTK theme: `colors` as it gives them, and
+/// the dim text, cards, lines and surface mixed from its text colour at
+/// the same strengths the page's own palette uses, so a theme of any
+/// colour keeps the page's contrast.
+pub(crate) fn themed_palette(dark: bool, colors: &PageColors) -> PagePalette {
+    let over = |strength: u8| format!("color-mix(in srgb,{} {strength}%,transparent)", colors.fg);
+    let (dim, card, line, hover, surface) = match dark {
+        true => (58, 8, 9, 4, 7),
+        false => (60, 5, 8, 3, 4),
+    };
+    PagePalette {
+        bg: colors.bg.clone(),
+        fg: colors.fg.clone(),
+        dim: over(dim),
+        card: over(card),
+        line: over(line),
+        hover: over(hover),
+        surface: format!("color-mix(in srgb,{} {surface}%,{})", colors.fg, colors.bg),
+    }
 }
 
 /// A message sits on a surface a step away from the page: lighter in a
 /// dark window, darker in a light one, so an open message reads as a
 /// sheet rather than as more page.
 pub(crate) fn page_palette(dark: bool) -> PagePalette {
+    let own = |s: &str| s.to_string();
     if dark {
         PagePalette {
-            bg: "#1e1e21",
-            fg: "#ffffff",
-            dim: "rgba(255,255,255,0.58)",
-            card: "rgba(255,255,255,0.08)",
-            line: "rgba(255,255,255,0.09)",
-            hover: "rgba(255,255,255,0.04)",
-            surface: "#2b2b30",
+            bg: own("#1e1e21"),
+            fg: own("#ffffff"),
+            dim: own("rgba(255,255,255,0.58)"),
+            card: own("rgba(255,255,255,0.08)"),
+            line: own("rgba(255,255,255,0.09)"),
+            hover: own("rgba(255,255,255,0.04)"),
+            surface: own("#2b2b30"),
         }
     } else {
         PagePalette {
-            bg: "#ffffff",
-            fg: "rgba(0,0,6,0.84)",
+            bg: own("#ffffff"),
+            fg: own("rgba(0,0,6,0.84)"),
             // At 52 % the dim text read 4.3:1 on the page, under the
             // 4.5:1 WCAG asks of 12.5 px text; 60 % reads 5.7:1 there and
             // 5.2:1 on a message's surface, and stays well under the body.
-            dim: "rgba(0,0,6,0.6)",
-            card: "rgba(0,0,6,0.05)",
-            line: "rgba(0,0,6,0.08)",
-            hover: "rgba(0,0,6,0.03)",
-            surface: "#f4f4f6",
+            dim: own("rgba(0,0,6,0.6)"),
+            card: own("rgba(0,0,6,0.05)"),
+            line: own("rgba(0,0,6,0.08)"),
+            hover: own("rgba(0,0,6,0.03)"),
+            surface: own("#f4f4f6"),
         }
     }
 }
@@ -936,7 +970,10 @@ fn page_css(theme: &Theme) -> String {
         line,
         hover,
         surface,
-    } = page_palette(theme.dark);
+    } = match &theme.colors {
+        Some(colors) => themed_palette(theme.dark, colors),
+        None => page_palette(theme.dark),
+    };
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text};--caution:{caution}{font}}}\
 html{{background:var(--bg)}}\
@@ -1171,6 +1208,7 @@ mod tests {
             accent: "#3584e4".into(),
             accent_text: "#1a5fb4".into(),
             summarize: false,
+            colors: None,
             font: String::new(),
         }
     }
@@ -2174,6 +2212,7 @@ mod tests {
             accent: "#fff".into(),
             accent_text: "#fff".into(),
             summarize: false,
+            colors: None,
             font: String::new(),
         });
         assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));

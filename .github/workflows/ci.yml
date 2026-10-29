@@ -190,6 +190,44 @@ jobs:
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh
 
+  debian:
+    name: Debian 13 build, package and start
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    # Debian 13 ships GTK 4.18 and libadwaita 1.7, which the app's default
+    # features do not build against; this job keeps the older paths
+    # compiling and the .deb installable there. Pinned by digest like the
+    # gate's container.
+    container: debian:13@sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: debian-13
+      - name: Clippy on the Debian build
+        run: cargo clippy -p mailrs --no-default-features --features packaging-debian --all-targets -- -D warnings
+      - name: Build and pack
+        run: scripts/package-debian.sh dist
+      # Installs the .deb the way a person would and starts it on a
+      # virtual display, so a library it forgot to depend on shows here.
+      - name: Install and start it
+        run: |
+          apt-get install -y ./dist/penguin-mail_*~deb13_amd64.deb
+          penguin-mail --version
+          scripts/smoke-start.sh /usr/bin/penguin-mail
+
   imap:
     name: IMAP and SMTP against real servers
     needs: changes

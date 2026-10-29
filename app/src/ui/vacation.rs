@@ -395,7 +395,7 @@ struct DateButton {
 impl DateButton {
     fn new(title: &str, day: &glib::DateTime) -> DateButton {
         let calendar = gtk::Calendar::new();
-        calendar.set_date(day);
+        crate::ui::set_calendar_date(&calendar, day);
         let button = gtk::MenuButton::builder()
             .label(day_label(day))
             .valign(gtk::Align::Center)

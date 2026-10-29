@@ -67,7 +67,7 @@ use std::rc::Rc;
 
 use adw::prelude::ComboRowExt;
 use gtk::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::Folder;
 use mailrs_domain::translate::gettext;
 pub use mailrs_sync::Mailbox;
@@ -99,6 +99,47 @@ pub fn primary_trigger(accelerator: &str) -> Option<gtk::ShortcutTrigger> {
 
 /// `accelerator` with `<Primary>` as [`PRIMARY`]: `<Meta>`, GDK's name
 /// for Command, on macOS.
+/// The page's own view colours, which `style.css` sets on its windows
+/// and `main` names for the stylesheet: light, then dark.
+pub const OWN_VIEW_COLORS: [&str; 2] = ["#ffffff", "#1e1e21"];
+
+/// The colours a GTK theme in force over libadwaita gives a page WebKit
+/// draws: `view_bg_color` and `window_fg_color`, which libadwaita names
+/// and such a theme, loaded through the person's own stylesheet, names
+/// again. None while the app's own view colour is in force, so the page
+/// keeps its own palette. The dark flag follows the background, since a
+/// dark theme may sit under a light color scheme.
+#[allow(deprecated)]
+pub fn theme_page_colors(
+    widget: &impl IsA<gtk::Widget>,
+) -> Option<(crate::render::PageColors, gdk::RGBA, bool)> {
+    let context = widget.style_context();
+    let bg = context.lookup_color("view_bg_color")?;
+    let fg = context.lookup_color("window_fg_color")?;
+    if OWN_VIEW_COLORS
+        .iter()
+        .filter_map(|own| gdk::RGBA::parse(*own).ok())
+        .any(|own| own == bg)
+    {
+        return None;
+    }
+    let luminance = 0.2126 * bg.red() + 0.7152 * bg.green() + 0.0722 * bg.blue();
+    let colors = crate::render::PageColors {
+        bg: bg.to_str().to_string(),
+        fg: fg.to_str().to_string(),
+    };
+    Some((colors, bg, luminance < 0.5))
+}
+
+/// Puts `calendar` on `date`. The GTK 4.20 bindings take the date
+/// itself, the older ones an option.
+pub fn set_calendar_date(calendar: &gtk::Calendar, date: &glib::DateTime) {
+    #[cfg(feature = "gtk-4-20")]
+    calendar.set_date(date);
+    #[cfg(not(feature = "gtk-4-20"))]
+    calendar.set_date(Some(date));
+}
+
 pub fn primary_accelerator(accelerator: &str) -> String {
     match cfg!(target_os = "macos") {
         true => accelerator.replace("<Primary>", "<Meta>"),

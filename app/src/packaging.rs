@@ -1,7 +1,8 @@
 //! The kind of package this binary was built for, chosen at build time with
-//! a cargo feature: `packaging-rpm`, `packaging-arch`, `packaging-flatpak`
-//! `packaging-snap`, `packaging-nix` or `packaging-appimage`, and none for the .deb, the tarball
-//! and a build from source. It decides who installs new versions and whether skill
+//! a cargo feature: `packaging-rpm`, `packaging-debian`, `packaging-arch`,
+//! `packaging-flatpak`, `packaging-snap`, `packaging-nix` or
+//! `packaging-appimage`, and none for the Ubuntu .deb, the tarball and a
+//! build from source. It decides who installs new versions and whether skill
 //! scripts can run.
 
 use mailrs_domain::translate::gettext;
@@ -15,6 +16,17 @@ compile_error!("the AppImage package currently requires x86_64 Linux");
 #[cfg(any(
     all(
         feature = "packaging-appimage",
+        any(
+            feature = "packaging-rpm",
+            feature = "packaging-debian",
+            feature = "packaging-arch",
+            feature = "packaging-nix",
+            feature = "packaging-flatpak",
+            feature = "packaging-snap"
+        )
+    ),
+    all(
+        feature = "packaging-debian",
         any(
             feature = "packaging-rpm",
             feature = "packaging-arch",
@@ -38,8 +50,11 @@ compile_error!("a build is for one kind of package; pick one packaging-* feature
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Packaging {
-    /// The .deb, the tarball, or `scripts/install.sh`.
+    /// The Ubuntu .deb, the tarball, or `scripts/install.sh`.
     Native,
+    /// The .deb built on Debian 13, whose libraries the apt repository's
+    /// Ubuntu builds cannot run on.
+    Debian,
     Rpm,
     Arch,
     Flatpak,
@@ -51,6 +66,8 @@ pub enum Packaging {
 /// Who installs new versions of a package that does not update itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpdatedBy {
+    /// A new .deb from the releases page, by hand.
+    Deb,
     Dnf,
     Pacman,
     Flathub,
@@ -61,6 +78,8 @@ pub enum UpdatedBy {
 
 pub const BUILT_FOR: Packaging = if cfg!(feature = "packaging-rpm") {
     Packaging::Rpm
+} else if cfg!(feature = "packaging-debian") {
+    Packaging::Debian
 } else if cfg!(feature = "packaging-arch") {
     Packaging::Arch
 } else if cfg!(feature = "packaging-flatpak") {
@@ -87,6 +106,7 @@ impl Packaging {
     const fn traits(self) -> Traits {
         let (updated_by, sandbox) = match self {
             Packaging::Native => (None, None),
+            Packaging::Debian => (Some(UpdatedBy::Deb), None),
             Packaging::Rpm => (Some(UpdatedBy::Dnf), None),
             Packaging::Arch => (Some(UpdatedBy::Pacman), None),
             Packaging::Flatpak => (Some(UpdatedBy::Flathub), Some("Flatpak")),
@@ -124,6 +144,7 @@ impl UpdatedBy {
     /// update controls.
     pub fn line(self) -> String {
         match self {
+            UpdatedBy::Deb => gettext("Download a new .deb to update"),
             UpdatedBy::Dnf => gettext("Updates come from dnf"),
             UpdatedBy::Pacman => gettext("Updates come from pacman"),
             UpdatedBy::Flathub => gettext("Updates come from Flathub"),
@@ -141,6 +162,7 @@ mod tests {
     #[test]
     fn the_rpm_arch_and_store_packages_leave_updates_to_someone_else() {
         assert_eq!(Packaging::Rpm.updated_by(), Some(UpdatedBy::Dnf));
+        assert_eq!(Packaging::Debian.updated_by(), Some(UpdatedBy::Deb));
         assert_eq!(Packaging::Arch.updated_by(), Some(UpdatedBy::Pacman));
         assert_eq!(Packaging::Flatpak.updated_by(), Some(UpdatedBy::Flathub));
         assert_eq!(Packaging::Snap.updated_by(), Some(UpdatedBy::SnapStore));
@@ -159,6 +181,7 @@ mod tests {
     fn skills_run_only_outside_another_sandbox() {
         assert!(Packaging::Native.runs_skills());
         assert!(Packaging::Rpm.runs_skills());
+        assert!(Packaging::Debian.runs_skills());
         assert!(Packaging::Arch.runs_skills());
         assert!(Packaging::Nix.runs_skills());
         assert!(!Packaging::Flatpak.runs_skills());
@@ -169,6 +192,7 @@ mod tests {
     fn a_plain_build_is_native() {
         if !cfg!(any(
             feature = "packaging-rpm",
+            feature = "packaging-debian",
             feature = "packaging-arch",
             feature = "packaging-flatpak",
             feature = "packaging-snap",

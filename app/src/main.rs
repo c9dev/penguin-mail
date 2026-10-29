@@ -130,11 +130,30 @@ fn main() -> glib::ExitCode {
             })
             .with_env_filter(
                 tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                    tracing_subscriber::EnvFilter::new("warn,penguin_mail=info,mailrs_sync=info")
+                    // zbus warns when a portal request object has gone
+                    // before its property cache fills, which is every
+                    // request that answers quickly; the call itself
+                    // still succeeds.
+                    tracing_subscriber::EnvFilter::new(
+                        "warn,penguin_mail=info,mailrs_sync=info,zbus::proxy=error",
+                    )
                 }),
             )
             .finish(),
     ));
+    // A panic inside a GTK callback cannot unwind through C, so the
+    // process aborts right after the hook runs. The default hook writes
+    // to standard error alone, and a packaged copy's standard error goes
+    // nowhere, so the message and where it came from go to the log first.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        tracing::error!(
+            %info,
+            backtrace = %std::backtrace::Backtrace::force_capture(),
+            "the app panicked"
+        );
+        default_hook(info);
+    }));
     // A repeating event with no zone repeats in the computer's. Reading
     // that zone once here keeps the file reads off the calendar's first
     // expansion.
@@ -174,7 +193,14 @@ fn main() -> glib::ExitCode {
     // person's own copy of the app they are looking at. The bridge above
     // runs on every one of Claude Code's turns and says nothing a person
     // reads, so it starts without reading the preferences at all.
-    language::bind(&Settings::load(&Settings::default_path()).language);
+    let early = Settings::load(&Settings::default_path());
+    language::bind(&early.language);
+    // So is the renderer: the web engine reads its environment when its
+    // first process starts, and GTK its own before any window.
+    #[cfg(target_os = "linux")]
+    if early.software_rendering {
+        web::draw_without_gpu();
+    }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{}", usage());
         return glib::ExitCode::SUCCESS;
@@ -425,6 +451,25 @@ pub fn ensure_gtk() {
             &css,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        // The view colour style.css gives the windows, under the name
+        // libadwaita gives its own, so the conversation page can ask
+        // which colour is in force: the app's, or a GTK theme's loaded
+        // over it through the person's stylesheet (`ui::theme_page_colors`).
+        // A name is one colour for the whole display, so it follows the
+        // color scheme here.
+        let surfaces = gtk::CssProvider::new();
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &surfaces,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+        let name_view = move |style: &adw::StyleManager| {
+            let view = ui::OWN_VIEW_COLORS[usize::from(style.is_dark())];
+            surfaces.load_from_string(&format!("@define-color view_bg_color {view};"));
+        };
+        let style = adw::StyleManager::default();
+        name_view(&style);
+        style.connect_dark_notify(name_view);
         #[cfg(target_os = "macos")]
         {
             let css = gtk::CssProvider::new();
