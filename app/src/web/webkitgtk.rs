@@ -57,6 +57,7 @@ impl WebView {
         settings.set_enable_smooth_scrolling(true);
         settings.set_auto_load_images(true);
         let view = webkit::WebView::builder()
+            .web_context(&context())
             .network_session(&network_session())
             .user_content_manager(&webkit::UserContentManager::new())
             .settings(&settings)
@@ -98,6 +99,7 @@ impl WebView {
         settings.set_enable_javascript(false);
         settings.set_enable_javascript_markup(false);
         let view = webkit::WebView::builder()
+            .web_context(&context())
             .network_session(&network_session())
             .settings(&settings)
             .build();
@@ -336,7 +338,7 @@ fn serve_scheme(scheme: &'static str, view: &webkit::WebView, serve: Serve) {
         served.retain(|(_, view, _)| view.upgrade().is_some());
         served.push((scheme, view.downgrade(), serve));
     });
-    let Some(context) = webkit::WebContext::default() else {
+    let Some(context) = view.context() else {
         return;
     };
     if !REGISTERED.with(|registered| registered.borrow_mut().insert(scheme)) {
@@ -366,6 +368,16 @@ pub(crate) fn check_scheme_after_last_view_closes() {
     use std::time::Duration;
 
     glib::MainContext::default().block_on(async {
+        let page = WebView::sealed();
+        assert_eq!(
+            page.view
+                .context()
+                .expect("a page has a context")
+                .cache_model(),
+            webkit::CacheModel::DocumentViewer,
+            "local mail pages must not retain a browser's cache"
+        );
+        drop(page);
         for _ in 0..3 {
             let received = Rc::new(Cell::new(false));
             let answer = received.clone();
@@ -487,4 +499,29 @@ fn network_session() -> webkit::NetworkSession {
         static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
     }
     SESSION.with(|s| s.clone())
+}
+
+/// Mail pages share a context so their processes use the same memory policy.
+fn context() -> webkit::WebContext {
+    thread_local! {
+        static CONTEXT: webkit::WebContext = {
+            // WebKit's default budget scales up to 3 GiB per process. Mail
+            // needs fewer retained resources than a browser with many tabs.
+            // These are cleanup thresholds, not a limit that kills a page.
+            let mut pressure = webkit::MemoryPressureSettings::new();
+            pressure.set_memory_limit(256);
+            pressure.set_kill_threshold(0.0);
+            let context = webkit::WebContext::builder()
+                .memory_pressure_settings(&pressure)
+                .build();
+            context.set_cache_model(webkit::CacheModel::DocumentViewer);
+            #[cfg(feature = "packaging-appimage")]
+            context.add_path_to_sandbox(
+                crate::appimage::root().expect("AppImage root is configured"),
+                true,
+            );
+            context
+        };
+    }
+    CONTEXT.with(Clone::clone)
 }

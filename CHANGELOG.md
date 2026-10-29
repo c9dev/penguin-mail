@@ -5,6 +5,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+- Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
+
 ## 1.0.11 (2026-10-28)
 
 ### New
