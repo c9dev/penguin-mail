@@ -279,3 +279,53 @@ async fn reasoning_preferences_apply_to_each_question_without_losing_history() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_turn_gives_up_at_the_round_limit_preferences_set() {
+    use mailrs_ai::ToolOutcome;
+    use serde_json::json;
+
+    let server = MockServer::start().await;
+    // A model that answers every round with another tool call and never with
+    // a reply, which is the case the limit exists for.
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200)
+            .insert_header("content-type", "text/event-stream")
+            .set_body_string("data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"again\",\"type\":\"function\",\"function\":{\"name\":\"search_mail\",\"arguments\":\"{\\\"query\\\":\\\"invoice\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n"))
+        .mount(&server).await;
+    let (requests, received) = async_channel::unbounded();
+    let (approvals, _) = async_channel::unbounded();
+    let mut chat = Chat::new(requests, approvals);
+    // Answer every call, so only the limit can end the turn.
+    tokio::spawn(async move {
+        while let Ok(request) = received.recv().await {
+            let _ = request
+                .reply
+                .send(ToolOutcome::Ok(json!("nothing found")))
+                .await;
+        }
+    });
+    let mut saved = serde_json::to_value(settings(&server)).unwrap();
+    saved["ai"]["max_rounds"] = 2.into();
+    let settings: Settings = serde_json::from_value(saved).unwrap();
+
+    let question = chat
+        .ask(
+            settings,
+            Tools {
+                mcp: false,
+                skills: false,
+            },
+            "Find invoices".into(),
+            Arc::default(),
+        )
+        .unwrap();
+    let answer = question.answer.await;
+
+    assert_eq!(
+        answer.unwrap_err().to_string(),
+        "stopped after 2 model requests without a final answer"
+    );
+    assert_eq!(server.received_requests().await.unwrap().len(), 2);
+}

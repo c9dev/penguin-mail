@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Choose how many model requests the assistant may make in one turn, under Preferences → AI → Model Requests per Answer. A job that works through a hundred messages one at a time needs room; a model that wanders needs cutting short.
+
 ### Fixed
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.

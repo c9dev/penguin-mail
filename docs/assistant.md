@@ -193,6 +193,17 @@ to the next question. New Chat starts over when you choose it.
 The model menu keeps the current connection's list for five minutes and
 refreshes it when the connection or its credentials change.
 
+## How long a turn runs
+
+Every tool the assistant runs costs a request to the model, so a wide job
+makes many. **Model Requests per Answer** on the AI page sets how many
+requests one turn may make before the assistant gives up and says so, from 1
+to 100, with 25 the default. Raise it for a job that works through a hundred
+messages one at a time, and lower it for a model that wanders, so you hear
+sooner. Stop ends a turn whenever you like and keeps the chat's earlier
+turns. The next question follows whatever number you set. Claude Code runs
+its own turns and keeps its own count.
+
 ## Choose the AI language
 
 Under **Preferences > AI > AI Language**, choose the language for answers,

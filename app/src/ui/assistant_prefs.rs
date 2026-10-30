@@ -10,7 +10,9 @@ use mailrs_ai::{Model, ModelList, ProviderConfig};
 
 use crate::app::App;
 use crate::assistant::{self, ANTHROPIC_KEY, LOCAL_KEY};
-use crate::settings::{AiChange, AiProvider, AiSettings, Change, Choice, Feature, Use};
+use crate::settings::{
+    AiChange, AiProvider, AiSettings, Change, Choice, Feature, MAX_ROUNDS, MIN_ROUNDS, Use,
+};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// Models a picker shows before it grows a search box.
@@ -222,6 +224,23 @@ pub fn page(app: &Rc<App>, dialog: &adw::ToastOverlay) -> adw::PreferencesPage {
         }
     });
     details.add(&expanded);
+    // One request per tool call, so the number a person wants depends on how
+    // wide their jobs are and on how well their model gets to the point.
+    let rounds = adw::SpinRow::with_range(MIN_ROUNDS as f64, MAX_ROUNDS as f64, 1.0);
+    rounds.set_title(&gettext("Model Requests per Answer"));
+    rounds.set_subtitle(&gettext(
+        "How many times a turn may ask the model before the assistant gives up. Each tool it runs costs one.",
+    ));
+    rounds.add_css_class("preference-explanation");
+    rounds.set_value(app.settings().ai.max_rounds.clamp(MIN_ROUNDS, MAX_ROUNDS) as f64);
+    crate::ui::name(&rounds, &gettext("Model Requests per Answer"));
+    let weak = Rc::downgrade(app);
+    rounds.connect_value_notify(move |row| {
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(Change::Ai(AiChange::MaxRounds(row.value() as usize)));
+        }
+    });
+    details.add(&rounds);
     page.add(&details);
     // What the assistant can reach beyond the mail tools, after the
     // settings that choose and restrain the model itself.

@@ -5978,6 +5978,18 @@ msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 "Abrir o raciocínio do modelo e cada ferramenta que usa à medida que aparecem"
 
+#: app/src/ui/assistant_prefs.rs:230 app/src/ui/assistant_prefs.rs:236
+msgid "Model Requests per Answer"
+msgstr "Pedidos ao modelo por resposta"
+
+#: app/src/ui/assistant_prefs.rs:232
+msgid ""
+"How many times a turn may ask the model before the assistant gives up. Each "
+"tool it runs costs one."
+msgstr ""
+"Quantas vezes uma interação pode pedir ao modelo antes de o assistente desistir. "
+"Cada ferramenta que executa custa um pedido."
+
 #: app/src/ui/assistant_prefs.rs:241 app/src/ui/assistant_prefs.rs:262
 msgid "AI Language"
 msgstr "Idioma da IA"
