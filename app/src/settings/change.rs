@@ -90,6 +90,7 @@ pub enum Change {
     WorkingHours(mailrs_domain::calendar::hours::WorkingHours),
     /// Which day the calendar's grids start the week on.
     WeekStart(mailrs_domain::calendar::week::WeekStart),
+    CalendarClock(super::CalendarClock),
     /// The account a new event went on.
     LastCalendarAccount(String),
     /// Folds an account's calendars under its heading in the calendar
@@ -346,6 +347,7 @@ impl Change {
             Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
             Change::WorkingHours(hours) => settings.working_hours = hours,
             Change::WeekStart(week_start) => settings.week_start = week_start,
+            Change::CalendarClock(clock) => settings.calendar_clock = clock,
             Change::LastCalendarAccount(email) => settings.last_calendar_account = Some(email),
             Change::CalendarAccountFolded { email, folded } => {
                 let email = email.to_lowercase();
@@ -726,6 +728,7 @@ settable! {
         // Where the week starts is the person's own view of the grid,
         // like working hours.
         week_start,
+        calendar_clock,
     }
 }
 
@@ -769,7 +772,7 @@ pub enum Effect {
     /// gettext both read the locale as the process starts. The window says
     /// so and offers a restart rather than translating half of itself.
     Language,
-    /// Where the week starts, which an open calendar redraws for at once.
+    /// The week start or time format, which an open calendar redraws for at once.
     Calendar,
     /// Which languages get no translation card, which the open
     /// conversation's card reads.
@@ -925,6 +928,7 @@ impl Effects {
             show_declined_events,
             working_hours,
             week_start,
+            calendar_clock,
             last_calendar_account,
             folded_calendar_accounts,
         } = after;
@@ -1037,7 +1041,9 @@ impl Effects {
                 }
                 Effect::Theme => *color_scheme != before.color_scheme,
                 Effect::Language => *language != before.language,
-                Effect::Calendar => *week_start != before.week_start,
+                Effect::Calendar => {
+                    *week_start != before.week_start || *calendar_clock != before.calendar_clock
+                }
                 Effect::Translation => {
                     *never_translate != before.never_translate || ai.language != before.ai.language
                 }
@@ -1255,6 +1261,33 @@ mod tests {
         }
         .apply(&mut settings);
         assert!(settings.storage_dismissed.is_empty());
+    }
+
+    #[test]
+    fn changing_the_calendar_clock_redraws_once_and_saves_the_choice() {
+        let mut settings = Settings::default();
+        for clock in [
+            super::super::CalendarClock::Hour12,
+            super::super::CalendarClock::Hour24,
+            super::super::CalendarClock::Automatic,
+        ] {
+            let change = Change::CalendarClock(clock);
+            assert_eq!(
+                change
+                    .clone()
+                    .apply(&mut settings)
+                    .iter()
+                    .collect::<Vec<_>>(),
+                vec![Effect::Calendar]
+            );
+            assert_eq!(settings.calendar_clock, clock);
+            assert!(change.apply(&mut settings).is_empty());
+            let saved = toml::to_string(&settings).unwrap();
+            assert_eq!(
+                toml::from_str::<Settings>(&saved).unwrap().calendar_clock,
+                clock
+            );
+        }
     }
 
     #[test]

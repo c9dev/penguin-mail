@@ -2,11 +2,14 @@
 //! cards, popovers, the editor, search results, agenda rows,
 //! notifications and the mail card all print a time of day through
 //! [`time_text`], the one function, so GNOME's own `clock-format`
-//! setting reaches every one of them alike. Falls back to the system
+//! setting reaches every one of them alike in Automatic mode. Preferences
+//! can override it with a fixed 12-hour or 24-hour clock. Falls back to the system
 //! locale's own convention where the schema is missing, as in the
 //! Flatpak or on a desktop that is not GNOME.
 
 use std::cell::Cell;
+
+use crate::settings::CalendarClock;
 
 use chrono::NaiveTime;
 use gtk::gio;
@@ -18,6 +21,7 @@ const SCHEMA_ID: &str = "org.gnome.desktop.interface";
 const KEY: &str = "clock-format";
 
 thread_local! {
+    static PREFERENCE: Cell<CalendarClock> = const { Cell::new(CalendarClock::Automatic) };
     static CACHED: Cell<Option<ClockFormat>> = const { Cell::new(None) };
 }
 
@@ -25,6 +29,11 @@ thread_local! {
 /// [`mailrs_domain::translate::date_locale`] caches the date's own
 /// locale. [`watch`] clears the cache when GNOME's own setting changes.
 pub fn current() -> ClockFormat {
+    match PREFERENCE.with(Cell::get) {
+        CalendarClock::Hour12 => return ClockFormat::Hour12,
+        CalendarClock::Hour24 => return ClockFormat::Hour24,
+        CalendarClock::Automatic => {}
+    }
     CACHED.with(|cell| {
         cell.get().unwrap_or_else(|| {
             let format = gnome_clock_format().unwrap_or_else(locale_clock_format);
@@ -32,6 +41,11 @@ pub fn current() -> ClockFormat {
             format
         })
     })
+}
+
+/// Applies the saved preference at startup and after a change in Preferences.
+pub fn set_preference(preference: CalendarClock) {
+    PREFERENCE.with(|cell| cell.set(preference));
 }
 
 /// GNOME's own setting, when its schema is installed. A desktop that is
@@ -83,4 +97,23 @@ pub fn time_text(at: NaiveTime) -> String {
 /// person may have typed into as well as picked from.
 pub fn parse_time_text(text: &str) -> Option<NaiveTime> {
     mailrs_domain::calendar::clock::parse_time(text, date_locale())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_explicit_clock_wins_and_automatic_restores_the_system_clock() {
+        for system in [ClockFormat::Hour12, ClockFormat::Hour24] {
+            CACHED.with(|cell| cell.set(Some(system)));
+            set_preference(CalendarClock::Hour12);
+            assert_eq!(current(), ClockFormat::Hour12);
+            set_preference(CalendarClock::Hour24);
+            assert_eq!(current(), ClockFormat::Hour24);
+            set_preference(CalendarClock::Automatic);
+            assert_eq!(current(), system);
+        }
+        CACHED.with(|cell| cell.set(None));
+    }
 }

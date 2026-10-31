@@ -4295,7 +4295,10 @@ impl MainWindow {
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
-            Effect::Calendar => self.calendar.week_start_changed(),
+            Effect::Calendar => {
+                self.calendar.preferences_changed();
+                self.refresh_next_event();
+            }
             Effect::Translation => {
                 for view in self.views() {
                     self.thread_run(&view).offer_translation_again();

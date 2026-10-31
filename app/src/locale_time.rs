@@ -33,7 +33,12 @@ const NL_TIME_FIRST_WEEKDAY: c_int = 131_176;
 
 /// glibc's `T_FMT`, computed the same way (131114): the locale's own
 /// `strftime` pattern for a bare time of day, such as `%H:%M:%S` or `%r`.
+#[cfg(not(target_os = "macos"))]
 const T_FMT: c_int = 131_114;
+
+// Darwin uses its own langinfo item numbers, from <langinfo.h>.
+#[cfg(target_os = "macos")]
+const T_FMT: c_int = 3;
 
 thread_local! {
     static FIRST_WEEKDAY: Cell<Option<Weekday>> = const { Cell::new(None) };
