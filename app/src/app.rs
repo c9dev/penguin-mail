@@ -230,6 +230,7 @@ impl App {
             _hold: gio_app.hold(),
         });
         crate::locale_time::set_week_start_setting(app.settings.borrow().week_start);
+        crate::clock_format::set_preference(app.settings.borrow().calendar_clock);
         app.install_actions();
         app.listen();
         app.count_unread();
@@ -369,6 +370,7 @@ impl App {
         }
         if effects.has(Effect::Calendar) {
             crate::locale_time::set_week_start_setting(self.settings.borrow().week_start);
+            crate::clock_format::set_preference(self.settings.borrow().calendar_clock);
         }
         if !effects.is_empty() {
             self.tell_window(Notice::SettingsChanged(effects));

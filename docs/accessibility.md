@@ -193,6 +193,10 @@ buttons that act on it.
 
 ## The calendar from the keyboard
 
+The Time Format row in Calendar preferences offers Automatic, 12-hour and
+24-hour clocks. It has an accessible name and uses the standard combo row
+keyboard controls. Changing it redraws the calendar without a restart.
+
 In Day and Week, Tab passes the day headings first, each of which opens
 its day, then the all-day row, then the events, day by day and earliest
 first. A "N more" button sits among a day's events at the hour it

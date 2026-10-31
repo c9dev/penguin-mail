@@ -797,10 +797,10 @@ impl CalendarView {
         self.run.reload();
     }
 
-    /// Redraws the Week and Month grids and the mini month after the
-    /// "Week Starts On" choice changes, so an open calendar reflects it
+    /// Redraws the grids and the mini month after the week start or
+    /// time format changes, so an open calendar reflects it
     /// at once rather than at the next navigation.
-    pub fn week_start_changed(self: &Rc<Self>) {
+    pub fn preferences_changed(self: &Rc<Self>) {
         self.calendar_sidebar.week_start_changed();
         self.rebuild_pages();
         self.show_range();
