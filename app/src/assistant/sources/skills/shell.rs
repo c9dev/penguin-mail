@@ -2,9 +2,10 @@
 //! carries scripts, inside the sandbox in [`super::sandbox`].
 //!
 //! Every call asks the person first and shows the exact command, unless
-//! they answered Always Allow for that same command line in that same
-//! skill. A different command asks again. A conversation gets
-//! one scratch folder, so a script can leave a file for the next command
+//! they answered Always Allow for that same command and standard input in
+//! that same skill with the same network permission. A changed call asks
+//! again. A conversation gets one scratch folder, so a script can leave a file
+//! for the next command
 //! to read; the folder goes when the conversation does.
 
 use std::path::{Path, PathBuf};
@@ -13,6 +14,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use mailrs_ai::{BoxFuture, ToolOutcome, ToolSpec};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 use super::sandbox::{self, Jail, Limits};
 use super::{Skill, text_field, unknown};
@@ -182,27 +184,38 @@ impl Source for Shell {
         } else {
             gettext("It cannot reach the internet.")
         };
+        let stdin = match input.get("stdin").and_then(Value::as_str) {
+            Some(stdin) => fill(&gettext("Standard input:\n{stdin}"), &[("stdin", stdin)]),
+            None => gettext("No standard input."),
+        };
         Some(fill(
             &gettext(
-                "Run this command for the skill {skill}?\n\n{command}\n\nIt runs in a sandbox with no access to your mail or home folder. {network} Always Allow covers this exact command only.",
+                "Run this command for the skill {skill}?\n\n{command}\n\n{stdin}\n\nIt runs in a sandbox with no access to your mail or home folder. {network} Always Allow covers this exact command and standard input only.",
             ),
             &[
                 ("skill", &runnable.skill.name),
                 ("command", &command),
+                ("stdin", &stdin),
                 ("network", &network),
             ],
         ))
     }
 
-    /// One command line in one skill, as `shell:skill/command`. A key per
-    /// tool would let one Always answer run anything the model writes next.
+    /// Keep input out of saved grants while binding permission to the whole
+    /// call. The version also retires grants that checked only the command.
     fn key(&self, name: &str, input: &Value) -> String {
         match self.runnable(&text_field(input, "skill")) {
-            Some(runnable) => format!(
-                "shell:{}/{}",
-                runnable.skill.name,
-                text_field(input, "command")
-            ),
+            Some(runnable) => {
+                let command = text_field(input, "command");
+                let request = json!([
+                    runnable.skill.id,
+                    command,
+                    input.get("stdin").and_then(Value::as_str),
+                    runnable.network,
+                ]);
+                let digest = Sha256::digest(request.to_string().as_bytes());
+                format!("shell-v2:{}/{} [{digest:x}]", runnable.skill.name, command)
+            }
             None => format!("{}/{name}", self.id()),
         }
     }
