@@ -18,7 +18,8 @@ use adw::prelude::*;
 use gtk::{gdk, glib, pango};
 use mailrs_ai::AgentEvent;
 
-use crate::assistant::chat::{Chat, Tools};
+use crate::assistant::Analysis;
+use crate::assistant::chat::{Chat, Question, Tools};
 use crate::assistant::sources::{ApprovalRequest, Verdict};
 use crate::assistant::turn::{
     self, Phase, Step, ToolState, Turn, Update, thinking_title, tool_label,
@@ -30,13 +31,14 @@ use mailrs_domain::translate::gettext;
 
 /// Starting points shown in an empty chat. The reader types over them, so
 /// they come out in the reader's language and not the model's.
-fn suggestions() -> [String; 5] {
+fn suggestions() -> [String; 6] {
     [
         gettext("Summarize this conversation"),
         gettext("What needs a reply today?"),
         gettext("Archive newsletters older than a week"),
         gettext("Set an out-of-office reply for next week"),
         gettext("Draft a reply to the open conversation"),
+        gettext("Explain this conversation"),
     ]
 }
 
@@ -73,6 +75,7 @@ pub struct AssistantPane {
     core: Rc<Core>,
     /// Saves an Always Allow answer, keyed `source/tool`.
     on_allow: Box<dyn Fn(String)>,
+    on_analyze: Box<dyn Fn(Analysis)>,
     settings: SettingsSource,
     chat: RefCell<Chat>,
     running: Cell<bool>,
@@ -97,6 +100,7 @@ impl AssistantPane {
         on_setup: impl Fn() + 'static,
         on_allow: impl Fn(String) + 'static,
         on_change: impl Fn(crate::settings::Change) + 'static,
+        on_analyze: impl Fn(Analysis) + 'static,
     ) -> Rc<AssistantPane> {
         let (approvals, asked) = async_channel::unbounded::<ApprovalRequest>();
         let model = gtk::MenuButton::builder()
@@ -271,6 +275,7 @@ impl AssistantPane {
             send,
             core,
             on_allow: Box::new(on_allow),
+            on_analyze: Box::new(on_analyze),
             settings: Box::new(settings),
             chat: RefCell::new(Chat::new(requests, approvals)),
             running: Cell::new(false),
@@ -302,8 +307,8 @@ impl AssistantPane {
             }
         });
         let options = suggestions();
-        for (position, index) in [0, 4, 1, 2, 3].into_iter().enumerate() {
-            if position == 0 || position == 2 {
+        for (position, index) in [0, 5, 4, 1, 2, 3].into_iter().enumerate() {
+            if position == 0 || position == 3 {
                 let heading = gtk::Label::builder()
                     .label(if position == 0 {
                         gettext("This conversation")
@@ -334,7 +339,11 @@ impl AssistantPane {
             let weak = Rc::downgrade(&pane);
             button.connect_clicked(move |_| {
                 if let Some(pane) = weak.upgrade() {
-                    pane.ask(text.clone());
+                    match index {
+                        0 => (pane.on_analyze)(Analysis::Summarize),
+                        5 => (pane.on_analyze)(Analysis::Explain),
+                        _ => pane.ask(text.clone()),
+                    }
                 }
             });
             suggestion_list.append(&button);
@@ -468,6 +477,27 @@ impl AssistantPane {
         self.ask_shown(text.clone(), text, Arc::default());
     }
 
+    pub fn analyze(self: &Rc<Self>, action: Analysis, context: String) {
+        if self.running.get() {
+            return;
+        }
+        self.reset();
+        let settings = (self.settings)();
+        if !settings.ai.analysis_tools {
+            self.note(&gettext("Tools are off for this conversation and its follow-up questions. Choose New Chat to use tools again."), false);
+        }
+        let question = self.chat.borrow_mut().analyze(
+            settings,
+            Tools {
+                mcp: self.mcp.get(),
+                skills: self.skills.get(),
+            },
+            action,
+            context,
+        );
+        self.show_question(question, &action.question());
+    }
+
     fn ask_shown(self: &Rc<Self>, text: String, shown: String, picked: Arc<[std::path::PathBuf]>) {
         if self.running.get() {
             return;
@@ -481,6 +511,10 @@ impl AssistantPane {
             text,
             picked,
         );
+        self.show_question(question, &shown);
+    }
+
+    fn show_question(self: &Rc<Self>, question: Result<Question, String>, shown: &str) {
         let question = match question {
             Ok(question) => question,
             Err(problem) => {
@@ -492,7 +526,7 @@ impl AssistantPane {
         self.set_running(true);
         // Asking always goes to the end, wherever the reader had scrolled.
         self.follow.set(true);
-        self.user_bubble(&shown);
+        self.user_bubble(shown);
         self.start_turn();
         let received = question.events;
         *self.stop.borrow_mut() = Some(question.stop);

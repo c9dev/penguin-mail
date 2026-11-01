@@ -81,6 +81,20 @@ seconds, so twenty of them can take minutes. Each list comes back as
 done, sent but unconfirmed, failed, opened in your browser for you to
 finish, or declined.
 
+## Summarize and Explain
+
+The Summarize and Explain buttons above a conversation start a fresh chat
+with only that conversation's loaded text. They cannot call mail tools,
+skills, MCP servers, or web search by default. Follow-up questions keep
+that restriction, even if you change preferences. New Chat returns to the
+ordinary assistant. The matching starting suggestions use the same controls;
+a request typed into an ordinary chat still has that chat's tools.
+
+Under Preferences > AI > Safety, Allow Tools in Summaries and Explanations
+lets new analysis chats use the ordinary assistant tools. This is off by
+default. Turning it on allows those chats to read other mail, take actions,
+and contact external services, subject to their usual approval rules.
+
 ## Writing and drafts
 
 The assistant writes mail the way the composer does:
@@ -461,8 +475,9 @@ and reads the rest only when a request calls for it.
 
 A skill with scripts (a `scripts/` folder, or files such as `.py` and
 `.sh`) can run commands. The assistant asks before each one and shows you
-the exact command. **Always Allow** covers that exact command in that
-skill, and any other command asks again. The **Always Allowed** list on
+the exact command and its standard input. **Always Allow** covers that
+command, input, skill, and network permission together. Changing any of
+these asks again, and old command-only permissions must be approved again. The **Always Allowed** list on
 the AI page shows each allowed command and takes it back. The command
 runs in a sandbox made with
 [bubblewrap](https://github.com/containers/bubblewrap), which must be
@@ -530,6 +545,6 @@ rules described above.
 
 Attach adds removable file chips to the question. The assistant receives their paths, not their contents. When it puts a file into a draft or sends it, Penguin Mail shows the existing approval question and the full paths before reading the files. The question box grows to four lines and scrolls after that. Enter sends; Shift+Enter starts a line.
 
-Each question has You above it. What it did folds the turn's thoughts and tool calls into one row; open a tool to read its input, result and identifier. Show Details Expanded in Preferences opens the outer row. The five starting suggestions sit under This conversation and Your mail.
+Each question has You above it. What it did folds the turn's thoughts and tool calls into one row; open a tool to read its input, result and identifier. Show Details Expanded in Preferences opens the outer row. The six starting suggestions sit under This conversation and Your mail.
 
 Detach sits before the window controls and moves the same chat into its own window. The main window controls appear above the assistant while it is docked and open, and above the message or calendar when the assistant is closed or detached. Dock returns it to the mail window, preserving your question, file chips and pending approval. Closing the detached window docks the chat and hides it. Ctrl+J in the mail window presents a detached chat. Stop declines a pending approval and stops the turn.

@@ -213,8 +213,11 @@ impl Source for Shell {
                     input.get("stdin").and_then(Value::as_str),
                     runnable.network,
                 ]);
-                let digest = Sha256::digest(request.to_string().as_bytes());
-                format!("shell-v2:{}/{} [{digest:x}]", runnable.skill.name, command)
+                let digest: String = Sha256::digest(request.to_string().as_bytes())
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect();
+                format!("shell-v2:{}/{} [{digest}]", runnable.skill.name, command)
             }
             None => format!("{}/{name}", self.id()),
         }

@@ -213,10 +213,100 @@ pub fn find_claude() -> Option<PathBuf> {
     })
 }
 
+/// An explicit request about the conversation on screen.
+#[derive(Clone, Copy)]
+pub enum Analysis {
+    Summarize,
+    Explain,
+}
+
+impl Analysis {
+    pub fn question(self) -> String {
+        match self {
+            Self::Summarize => gettext("Summarize this conversation"),
+            Self::Explain => gettext("Explain this conversation"),
+        }
+    }
+}
+
+/// Snapshot only the messages being displayed, without model-directed reads.
+pub fn analysis_context(thread: &crate::open_thread::OpenThread) -> Result<String, String> {
+    let messages = thread
+        .messages
+        .iter()
+        .filter(|message| {
+            thread
+                .only_message
+                .as_ref()
+                .is_none_or(|only| only == &message.id)
+        })
+        .map(|message| {
+            let body = thread
+                .bodies
+                .get(&message.id)
+                .and_then(|body| body.as_ref().ok())
+                .ok_or_else(|| {
+                    gettext("Wait for the conversation to finish loading, then try again.")
+                })?;
+            Ok(serde_json::json!({
+                "from": message.from,
+                "to": message.to,
+                "date": message.date,
+                "subject": message.subject,
+                "text": crate::compose::body_text(body),
+            }))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    if messages.is_empty() {
+        return Err(gettext("Open a conversation first."));
+    }
+    Ok(serde_json::json!({"messages": messages}).to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::settings::Use;
+
+    #[test]
+    fn analysis_reads_only_displayed_messages_and_requires_their_bodies() {
+        use mailrs_domain::{MessageBody, MessageMeta, Target};
+        let message = |id: &str| -> MessageMeta {
+            serde_json::from_value(serde_json::json!({
+                "account_id": 1, "id": id, "thread_id": "thread",
+                "rfc822_msgid": null, "from": null, "to": [], "cc": [],
+                "subject": "Subject", "date": 0, "snippet": "Not the full message",
+                "size": 0, "has_attachments": false
+            }))
+            .unwrap()
+        };
+        let mut thread = crate::open_thread::OpenThread::new(
+            &Target::thread(1, "thread"),
+            "Subject".into(),
+            vec![message("shown"), message("other")],
+            HashMap::new(),
+            vec![],
+        );
+        assert!(analysis_context(&thread).is_err());
+        let body: MessageBody = serde_json::from_value(serde_json::json!({
+            "text": "Displayed mail", "attachments": []
+        }))
+        .unwrap();
+        thread
+            .bodies
+            .insert("shown".into(), Ok(std::sync::Arc::new(body)));
+        assert!(
+            analysis_context(&thread).is_err(),
+            "the second body is missing"
+        );
+        thread.only_message = Some("shown".into());
+        let context = analysis_context(&thread).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&context).unwrap();
+        assert_eq!(value["messages"].as_array().unwrap().len(), 1);
+        assert_eq!(value["messages"][0]["text"], "Displayed mail");
+        thread.only_message = Some("absent".into());
+        assert!(analysis_context(&thread).is_err());
+    }
 
     fn local(model: &str) -> AiSettings {
         AiSettings {

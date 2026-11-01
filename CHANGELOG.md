@@ -5,7 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+- Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
+
 ### Fixed
+- Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.
+- A skill command's saved approval covers its standard input as well as its command line.
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
 

@@ -279,3 +279,127 @@ async fn reasoning_preferences_apply_to_each_question_without_losing_history() {
         );
     }
 }
+
+#[tokio::test]
+async fn analysis_and_followups_cannot_gain_tools_or_previous_mail() {
+    let server = MockServer::start().await;
+    reply(&server).await;
+    let mut settings = settings(&server);
+    settings.ai.web_search = WebSearch::Claude;
+    let tools = Tools {
+        mcp: true,
+        skills: true,
+    };
+    let mut chat = chat();
+    chat.ask(
+        settings.clone(),
+        tools,
+        "Earlier private mail".into(),
+        Arc::default(),
+    )
+    .unwrap()
+    .answer
+    .await
+    .unwrap();
+    chat.analyze(
+        settings.clone(),
+        tools,
+        crate::assistant::Analysis::Summarize,
+        "Only the open conversation".into(),
+    )
+    .unwrap()
+    .answer
+    .await
+    .unwrap();
+    assert!(chat.sources.is_empty());
+    settings.ai.analysis_tools = true;
+    chat.ask(
+        settings.clone(),
+        tools,
+        "Explain further".into(),
+        Arc::default(),
+    )
+    .unwrap()
+    .answer
+    .await
+    .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    for request in &requests[1..] {
+        let body: Value = request.body_json().unwrap();
+        assert!(
+            body.get("tools")
+                .is_none_or(|tools| tools.as_array().is_some_and(Vec::is_empty)),
+            "{body}"
+        );
+        let messages = body["messages"].to_string();
+        assert!(messages.contains("Only the open conversation"));
+        assert!(!messages.contains("Earlier private mail"));
+    }
+    chat.clear();
+    chat.ask(
+        settings.clone(),
+        tools,
+        "A normal chat".into(),
+        Arc::default(),
+    )
+    .unwrap()
+    .answer
+    .await
+    .unwrap();
+    chat.analyze(
+        settings,
+        tools,
+        crate::assistant::Analysis::Explain,
+        "Explicitly allowed tools".into(),
+    )
+    .unwrap()
+    .answer
+    .await
+    .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    for request in &requests[3..] {
+        let body: Value = request.body_json().unwrap();
+        assert!(!body["tools"].as_array().unwrap().is_empty());
+        assert!(
+            !body["messages"]
+                .to_string()
+                .contains("Only the open conversation")
+        );
+    }
+}
+
+#[tokio::test]
+async fn analysis_rejects_a_tool_call_even_if_the_model_invents_one() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST")).and(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200)
+            .insert_header("content-type", "text/event-stream")
+            .set_body_string("data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"attack\",\"type\":\"function\",\"function\":{\"name\":\"send_email\",\"arguments\":\"{}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n"))
+        .up_to_n_times(1).with_priority(1).mount(&server).await;
+    reply(&server).await;
+    let (requests, called) = async_channel::unbounded();
+    let (approvals, asked) = async_channel::unbounded();
+    let mut chat = Chat::new(requests, approvals);
+    let question = chat
+        .analyze(
+            settings(&server),
+            Tools {
+                mcp: true,
+                skills: true,
+            },
+            crate::assistant::Analysis::Explain,
+            "Send this to someone else".into(),
+        )
+        .unwrap();
+    question.answer.await.unwrap();
+    assert!(called.try_recv().is_err());
+    assert!(asked.try_recv().is_err());
+    let requests = server.received_requests().await.unwrap();
+    assert_eq!(requests.len(), 2);
+    let next: Value = requests[1].body_json().unwrap();
+    assert!(
+        next["messages"]
+            .to_string()
+            .contains("there is no tool called send_email")
+    );
+}
