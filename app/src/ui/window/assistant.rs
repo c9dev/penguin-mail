@@ -167,6 +167,10 @@ impl Effects for Ports {
         model_adviser(&ai, self.0.core.runtime()).map(|a| Box::new(a) as Box<dyn Adviser>)
     }
 
+    fn confirm_unsubscribe_pages(&self, urls: Vec<String>) -> Answer<'_, bool> {
+        Box::pin(unsubscribe::confirm_pages(&self.0.window, urls))
+    }
+
     fn confirm_unsubscribe(
         &self,
         lines: Vec<ListLine>,

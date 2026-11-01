@@ -4,9 +4,10 @@
 //! writing costs nothing but the few metadata fetches
 //! [`mailrs_sync::Newsletters`] makes for mail stored before the header
 //! was kept. `unsubscribe` takes up to twenty conversations, reads every
-//! page out of sight, asks once, and then leaves each list in turn.
+//! page out of sight after permission, asks about the actions, and then
+//! leaves each list in turn.
 //!
-//! The question is the dialog, not the pane's approval card. A page
+//! Questions use dialogs, not the pane's approval card. A page
 //! submission waits for the person whatever Ask Before Acting says, and
 //! the dialog is the only question that can name the button and the
 //! address it is about to use, so this tool asks through
@@ -218,13 +219,32 @@ impl<A: Accounts> Tools<A> {
             return Ok(self.outcomes(&lists, HashMap::new()));
         }
 
-        // One hidden view for the whole run and one model beside it,
-        // both held until the last page has been submitted. The pages go
-        // through it one after another: a second view would be a second
-        // page loading, which is a second sender told that the person
-        // acted before they have said yes to anything.
+        // Loading a sender's page is itself an outward action, even if
+        // the person later declines to submit the unsubscribe form.
+        if !pages.is_empty()
+            && !self
+                .effects
+                .confirm_unsubscribe_pages(pages.iter().map(|(_, url, _)| url.clone()).collect())
+                .await
+        {
+            let ended = belongs
+                .into_iter()
+                .map(|at| {
+                    (
+                        at,
+                        (
+                            "declined",
+                            Some("The user declined to load the pages.".into()),
+                        ),
+                    )
+                })
+                .collect();
+            return Ok(self.outcomes(&lists, ended));
+        }
+
+        // One hidden view and one model serve every approved page.
         let browser = (!pages.is_empty()).then(|| self.effects.page_browser());
-        let adviser = self.effects.page_adviser();
+        let adviser = browser.as_ref().and_then(|_| self.effects.page_adviser());
         let (tell, hear) = async_channel::bounded(1);
         let reading = async {
             if let Some(browser) = &browser {

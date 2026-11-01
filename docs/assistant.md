@@ -71,8 +71,10 @@ other files, such as pictures, it can name but not read.
 It lists the newsletters you have had in the last three months, with how
 many messages each sender wrote and how their list lets go, so "the Figma
 one" is enough to name. It leaves up to twenty of them in one go. A list
-that only lets go through its own page has that page loaded out of sight,
-filled in and pressed, the way the Unsubscribe button does it, and one
+that only lets go through its own page first asks permission to load it,
+showing the addresses and warning that the pages run scripts and contact
+their servers. Opening a link may itself unsubscribe you. After approval,
+the page loads out of sight, the way the Unsubscribe button does it. A second
 dialog names every list, the button it will press and the address it will
 type. A list you untick there is left alone. One page takes up to 45
 seconds, so twenty of them can take minutes. Each list comes back as
