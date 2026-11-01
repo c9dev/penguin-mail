@@ -6407,7 +6407,7 @@ msgstr "Màu lịch"
 msgid "Add Google Meet"
 msgstr "Thêm Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2433
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Sự kiện"
@@ -6842,7 +6842,7 @@ msgid "View"
 msgstr "Chế độ xem"
 
 #: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2418
+#: app/src/ui/calendar/mod.rs:2421
 msgid "New Event (N)"
 msgstr "Sự kiện mới (N)"
 
@@ -6891,47 +6891,47 @@ msgstr "Sự kiện cả ngày"
 msgid "All-day"
 msgstr "Cả ngày"
 
-#: app/src/ui/calendar/mod.rs:1813 app/src/ui/calendar/mod.rs:3065
+#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1285 app/src/ui/preferences.rs:1460
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2136
+#: app/src/ui/calendar/mod.rs:2139
 msgid "Removed “{title}” from your calendar"
 msgstr "Đã xóa “{title}” khỏi lịch của bạn"
 
-#: app/src/ui/calendar/mod.rs:2137
+#: app/src/ui/calendar/mod.rs:2140
 msgid "Deleted “{title}”"
 msgstr "Đã xóa “{title}”"
 
-#: app/src/ui/calendar/mod.rs:2150
+#: app/src/ui/calendar/mod.rs:2153
 msgid "Could not delete the event: {reason}"
 msgstr "Không thể xóa sự kiện: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2203 app/src/ui/composer/mod.rs:1398
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1398
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Hoàn tác"
 
-#: app/src/ui/calendar/mod.rs:2359
+#: app/src/ui/calendar/mod.rs:2362
 msgid "Could not send your answer: {reason}"
 msgstr "Không thể gửi câu trả lời: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2422
+#: app/src/ui/calendar/mod.rs:2425
 msgid "None of your calendars take new events"
 msgstr "Không có lịch nào của bạn nhận sự kiện mới"
 
-#: app/src/ui/calendar/mod.rs:2434 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2437 app/src/ui/calendar/quick.rs:55
 msgid "Focus Time"
 msgstr "Thời gian tập trung"
 
-#: app/src/ui/calendar/mod.rs:2435 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2438 app/src/ui/calendar/quick.rs:56
 msgid "Out of Office"
 msgstr "Vắng mặt"
 
-#: app/src/ui/calendar/mod.rs:2804
+#: app/src/ui/calendar/mod.rs:2807
 msgid "Could not save the event: {reason}"
 msgstr "Không thể lưu sự kiện: {reason}"
 
@@ -11764,7 +11764,7 @@ msgstr "Hiện hoặc ẩn trợ lý"
 msgid "Close window"
 msgstr "Đóng cửa sổ"
 
-#: app/src/ui/window/shortcuts.rs:849
+#: app/src/ui/window/shortcuts.rs:851
 msgid "Checking for mail"
 msgstr "Đang kiểm tra thư"
 
@@ -12296,29 +12296,29 @@ msgstr ""
 msgid "Message text could not be fetched completely"
 msgstr "Không thể tải đầy đủ nội dung thư"
 
-#: sync/src/error.rs:176
+#: sync/src/error.rs:179
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} yêu cầu Penguin Mail chờ"
 
-#: sync/src/error.rs:186
+#: sync/src/error.rs:189
 msgid "The server asked Penguin Mail to wait"
 msgstr "Máy chủ yêu cầu Penguin Mail chờ"
 
-#: sync/src/error.rs:208
+#: sync/src/error.rs:211
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail dành “{name}” cho nhãn của mình. Chọn tên khác."
 
-#: sync/src/error.rs:215
+#: sync/src/error.rs:218
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
 msgstr "Google Calendar tự tạo “{title}” nên chỉ Google Calendar sửa được."
 
-#: sync/src/error.rs:223
+#: sync/src/error.rs:226
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} từ chối yêu cầu hủy đăng ký (HTTP {status})"
 
-#: sync/src/error.rs:227
+#: sync/src/error.rs:230
 msgid "could not reach {host}"
 msgstr "không thể kết nối tới {host}"
 
@@ -12722,35 +12722,35 @@ msgstr ""
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Quy tắc này chỉ đọc nên Penguin Mail giữ nguyên."
 
-#: sync/src/services/microsoft/calendar.rs:437
+#: sync/src/services/microsoft/calendar.rs:444
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook không thể lặp lại sự kiện theo cách đó."
 
-#: sync/src/services/microsoft/calendar.rs:830
+#: sync/src/services/microsoft/calendar.rs:837
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook không thể đính kèm tệp vào sự kiện."
 
-#: sync/src/services/microsoft/calendar.rs:835
+#: sync/src/services/microsoft/calendar.rs:842
 msgid "Outlook has no files to share."
 msgstr "Outlook không có tệp để chia sẻ."
 
-#: sync/src/services/microsoft/calendar.rs:845
+#: sync/src/services/microsoft/calendar.rs:852
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook không thể chuyển sự kiện sang lịch khác."
 
-#: sync/src/services/microsoft/calendar.rs:903
+#: sync/src/services/microsoft/calendar.rs:910
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook không thể xóa lịch khỏi danh sách."
 
-#: sync/src/services/microsoft/calendar.rs:908
+#: sync/src/services/microsoft/calendar.rs:915
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook không thể ẩn lịch trên mọi thiết bị."
 
-#: sync/src/services/microsoft/calendar.rs:913
+#: sync/src/services/microsoft/calendar.rs:920
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook không thể đăng ký lịch bằng địa chỉ."
 
-#: sync/src/services/microsoft/calendar.rs:917
+#: sync/src/services/microsoft/calendar.rs:924
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook không có lịch khác để thêm."
 

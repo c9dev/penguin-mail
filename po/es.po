@@ -6615,7 +6615,7 @@ msgstr "Color del calendario"
 msgid "Add Google Meet"
 msgstr "Añadir Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2433
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Evento"
@@ -7064,7 +7064,7 @@ msgid "View"
 msgstr "Vista"
 
 #: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2418
+#: app/src/ui/calendar/mod.rs:2421
 msgid "New Event (N)"
 msgstr "Evento nuevo (N)"
 
@@ -7113,47 +7113,47 @@ msgstr "Eventos de todo el día"
 msgid "All-day"
 msgstr "Todo el día"
 
-#: app/src/ui/calendar/mod.rs:1813 app/src/ui/calendar/mod.rs:3065
+#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1285 app/src/ui/preferences.rs:1460
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2136
+#: app/src/ui/calendar/mod.rs:2139
 msgid "Removed “{title}” from your calendar"
 msgstr "Se ha quitado «{title}» de tu calendario"
 
-#: app/src/ui/calendar/mod.rs:2137
+#: app/src/ui/calendar/mod.rs:2140
 msgid "Deleted “{title}”"
 msgstr "Se ha eliminado «{title}»"
 
-#: app/src/ui/calendar/mod.rs:2150
+#: app/src/ui/calendar/mod.rs:2153
 msgid "Could not delete the event: {reason}"
 msgstr "No se ha podido eliminar el evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2203 app/src/ui/composer/mod.rs:1398
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1398
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Deshacer"
 
-#: app/src/ui/calendar/mod.rs:2359
+#: app/src/ui/calendar/mod.rs:2362
 msgid "Could not send your answer: {reason}"
 msgstr "No se ha podido enviar tu respuesta: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2422
+#: app/src/ui/calendar/mod.rs:2425
 msgid "None of your calendars take new events"
 msgstr "Ninguno de tus calendarios admite eventos nuevos"
 
-#: app/src/ui/calendar/mod.rs:2434 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2437 app/src/ui/calendar/quick.rs:55
 msgid "Focus Time"
 msgstr "Tiempo de concentración"
 
-#: app/src/ui/calendar/mod.rs:2435 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2438 app/src/ui/calendar/quick.rs:56
 msgid "Out of Office"
 msgstr "Fuera de la oficina"
 
-#: app/src/ui/calendar/mod.rs:2804
+#: app/src/ui/calendar/mod.rs:2807
 msgid "Could not save the event: {reason}"
 msgstr "No se ha podido guardar el evento: {reason}"
 
@@ -12124,7 +12124,7 @@ msgstr "Mostrar u ocultar el asistente"
 msgid "Close window"
 msgstr "Cerrar la ventana"
 
-#: app/src/ui/window/shortcuts.rs:849
+#: app/src/ui/window/shortcuts.rs:851
 msgid "Checking for mail"
 msgstr "Comprobando el correo"
 
@@ -12674,19 +12674,19 @@ msgstr ""
 msgid "Message text could not be fetched completely"
 msgstr "No se pudo descargar el texto completo del mensaje"
 
-#: sync/src/error.rs:176
+#: sync/src/error.rs:179
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} ha pedido a Penguin Mail que espere"
 
-#: sync/src/error.rs:186
+#: sync/src/error.rs:189
 msgid "The server asked Penguin Mail to wait"
 msgstr "El servidor ha pedido a Penguin Mail que espere"
 
-#: sync/src/error.rs:208
+#: sync/src/error.rs:211
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail reserva «{name}» para una etiqueta propia. Elige otro nombre."
 
-#: sync/src/error.rs:215
+#: sync/src/error.rs:218
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -12694,11 +12694,11 @@ msgstr ""
 "Google Calendar crea «{title}» por sí mismo, así que solo Google Calendar "
 "puede cambiarlo."
 
-#: sync/src/error.rs:223
+#: sync/src/error.rs:226
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} ha rechazado la solicitud de baja (HTTP {status})"
 
-#: sync/src/error.rs:227
+#: sync/src/error.rs:230
 msgid "could not reach {host}"
 msgstr "no se ha podido acceder a {host}"
 
@@ -13118,35 +13118,35 @@ msgstr ""
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regla es de solo lectura, así que Penguin Mail la deja como está."
 
-#: sync/src/services/microsoft/calendar.rs:437
+#: sync/src/services/microsoft/calendar.rs:444
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook no puede repetir un evento de esa forma."
 
-#: sync/src/services/microsoft/calendar.rs:830
+#: sync/src/services/microsoft/calendar.rs:837
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook no puede adjuntar un archivo a un evento."
 
-#: sync/src/services/microsoft/calendar.rs:835
+#: sync/src/services/microsoft/calendar.rs:842
 msgid "Outlook has no files to share."
 msgstr "Outlook no tiene archivos que compartir."
 
-#: sync/src/services/microsoft/calendar.rs:845
+#: sync/src/services/microsoft/calendar.rs:852
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook no puede mover un evento a otro calendario."
 
-#: sync/src/services/microsoft/calendar.rs:903
+#: sync/src/services/microsoft/calendar.rs:910
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook no puede quitar un calendario de la lista."
 
-#: sync/src/services/microsoft/calendar.rs:908
+#: sync/src/services/microsoft/calendar.rs:915
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook no puede ocultar un calendario en todos tus dispositivos."
 
-#: sync/src/services/microsoft/calendar.rs:913
+#: sync/src/services/microsoft/calendar.rs:920
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook no puede suscribirse a un calendario por su dirección."
 
-#: sync/src/services/microsoft/calendar.rs:917
+#: sync/src/services/microsoft/calendar.rs:924
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook no tiene otros calendarios que añadir."
 

@@ -102,8 +102,8 @@ pub struct TurnedDown {
 /// Whether the server answered a read with a refusal it will repeat: a
 /// CalDAV 403, or Google's, rather than a missing permission the person
 /// can grant.
-fn is_forbidden(err: &BackendError) -> bool {
-    matches!(err, BackendError::Refused(_))
+pub(crate) fn is_forbidden(err: &BackendError) -> bool {
+    matches!(err, BackendError::Forbidden(_))
         || matches!(
             err,
             BackendError::Gmail(mailrs_gmail::GmailError::Http { status: 403, .. })

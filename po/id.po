@@ -6577,7 +6577,7 @@ msgstr "Warna kalender"
 msgid "Add Google Meet"
 msgstr "Tambahkan Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2433
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Acara"
@@ -7026,7 +7026,7 @@ msgid "View"
 msgstr "Tampilan"
 
 #: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2418
+#: app/src/ui/calendar/mod.rs:2421
 msgid "New Event (N)"
 msgstr "Acara Baru (N)"
 
@@ -7075,47 +7075,47 @@ msgstr "Acara sepanjang hari"
 msgid "All-day"
 msgstr "Sepanjang Hari"
 
-#: app/src/ui/calendar/mod.rs:1813 app/src/ui/calendar/mod.rs:3065
+#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1285 app/src/ui/preferences.rs:1460
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2136
+#: app/src/ui/calendar/mod.rs:2139
 msgid "Removed “{title}” from your calendar"
 msgstr "“{title}” dihapus dari kalender Anda"
 
-#: app/src/ui/calendar/mod.rs:2137
+#: app/src/ui/calendar/mod.rs:2140
 msgid "Deleted “{title}”"
 msgstr "“{title}” dihapus"
 
-#: app/src/ui/calendar/mod.rs:2150
+#: app/src/ui/calendar/mod.rs:2153
 msgid "Could not delete the event: {reason}"
 msgstr "Tidak dapat menghapus acara: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2203 app/src/ui/composer/mod.rs:1398
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1398
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Urungkan"
 
-#: app/src/ui/calendar/mod.rs:2359
+#: app/src/ui/calendar/mod.rs:2362
 msgid "Could not send your answer: {reason}"
 msgstr "Tidak dapat mengirim jawaban Anda: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2422
+#: app/src/ui/calendar/mod.rs:2425
 msgid "None of your calendars take new events"
 msgstr "Tidak ada kalender Anda yang menerima acara baru"
 
-#: app/src/ui/calendar/mod.rs:2434 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2437 app/src/ui/calendar/quick.rs:55
 msgid "Focus Time"
 msgstr "Waktu Fokus"
 
-#: app/src/ui/calendar/mod.rs:2435 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2438 app/src/ui/calendar/quick.rs:56
 msgid "Out of Office"
 msgstr "Di Luar Kantor"
 
-#: app/src/ui/calendar/mod.rs:2804
+#: app/src/ui/calendar/mod.rs:2807
 msgid "Could not save the event: {reason}"
 msgstr "Tidak dapat menyimpan acara: {reason}"
 
@@ -12073,7 +12073,7 @@ msgstr "Tampilkan atau sembunyikan asisten"
 msgid "Close window"
 msgstr "Tutup jendela"
 
-#: app/src/ui/window/shortcuts.rs:849
+#: app/src/ui/window/shortcuts.rs:851
 msgid "Checking for mail"
 msgstr "Memeriksa email"
 
@@ -12626,19 +12626,19 @@ msgstr ""
 msgid "Message text could not be fetched completely"
 msgstr "Teks pesan tidak dapat diambil sepenuhnya"
 
-#: sync/src/error.rs:176
+#: sync/src/error.rs:179
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "{provider} meminta Penguin Mail menunggu"
 
-#: sync/src/error.rs:186
+#: sync/src/error.rs:189
 msgid "The server asked Penguin Mail to wait"
 msgstr "Server meminta Penguin Mail menunggu"
 
-#: sync/src/error.rs:208
+#: sync/src/error.rs:211
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail menggunakan “{name}” untuk labelnya sendiri. Pilih nama lain."
 
-#: sync/src/error.rs:215
+#: sync/src/error.rs:218
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -12646,11 +12646,11 @@ msgstr ""
 "Google Calendar membuat “{title}” sendiri, sehingga hanya Google Calendar "
 "yang dapat mengubahnya."
 
-#: sync/src/error.rs:223
+#: sync/src/error.rs:226
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} menolak permintaan berhenti berlangganan (HTTP {status})"
 
-#: sync/src/error.rs:227
+#: sync/src/error.rs:230
 msgid "could not reach {host}"
 msgstr "tidak dapat menghubungi {host}"
 
@@ -13065,35 +13065,35 @@ msgstr ""
 "Aturan ini hanya dapat dibaca, sehingga Penguin Mail membiarkannya tetap "
 "sama."
 
-#: sync/src/services/microsoft/calendar.rs:437
+#: sync/src/services/microsoft/calendar.rs:444
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook tidak dapat mengulangi acara dengan cara tersebut."
 
-#: sync/src/services/microsoft/calendar.rs:830
+#: sync/src/services/microsoft/calendar.rs:837
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook tidak dapat melampirkan berkas ke acara."
 
-#: sync/src/services/microsoft/calendar.rs:835
+#: sync/src/services/microsoft/calendar.rs:842
 msgid "Outlook has no files to share."
 msgstr "Outlook tidak memiliki berkas untuk dibagikan."
 
-#: sync/src/services/microsoft/calendar.rs:845
+#: sync/src/services/microsoft/calendar.rs:852
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook tidak dapat memindahkan acara ke kalender lain."
 
-#: sync/src/services/microsoft/calendar.rs:903
+#: sync/src/services/microsoft/calendar.rs:910
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook tidak dapat menghapus kalender dari daftar."
 
-#: sync/src/services/microsoft/calendar.rs:908
+#: sync/src/services/microsoft/calendar.rs:915
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook tidak dapat menyembunyikan kalender di semua perangkat Anda."
 
-#: sync/src/services/microsoft/calendar.rs:913
+#: sync/src/services/microsoft/calendar.rs:920
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook tidak dapat berlangganan kalender melalui alamatnya."
 
-#: sync/src/services/microsoft/calendar.rs:917
+#: sync/src/services/microsoft/calendar.rs:924
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook tidak memiliki kalender lain untuk ditambahkan."
 

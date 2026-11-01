@@ -1659,7 +1659,7 @@ impl ConversationView {
             accent: style.accent_color_rgba().to_str().to_string(),
             accent_text: style
                 .accent_color()
-                .to_standalone_rgba(style.is_dark())
+                .to_standalone_rgba(dark)
                 .to_str()
                 .to_string(),
             // A conversation in its own window has no assistant beside it.
@@ -2186,6 +2186,28 @@ fn script_safe(id: &str) -> String {
     id.chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
         .collect()
+}
+
+#[cfg(test)]
+#[allow(deprecated)]
+pub(crate) fn check_custom_theme_accent() {
+    let style = adw::StyleManager::default();
+    let old = style.color_scheme();
+    style.set_color_scheme(adw::ColorScheme::ForceLight);
+    let view = ConversationView::new(|_| {});
+    let css = gtk::CssProvider::new();
+    css.load_from_data("@define-color view_bg_color #303030; @define-color window_fg_color white;");
+    view.webview
+        .widget()
+        .style_context()
+        .add_provider(&css, gtk::STYLE_PROVIDER_PRIORITY_USER);
+    let theme = view.theme();
+    style.set_color_scheme(old);
+    assert!(theme.dark, "the custom page is dark in a light application");
+    assert_eq!(
+        gtk::gdk::RGBA::parse(&theme.accent_text).unwrap(),
+        gtk::gdk::RGBA::parse(style.accent_color().to_standalone_rgba(true).to_str()).unwrap()
+    );
 }
 
 #[cfg(test)]

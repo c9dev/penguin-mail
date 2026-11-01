@@ -910,9 +910,8 @@ pub(crate) struct PagePalette {
 }
 
 /// The page's palette under a GTK theme: `colors` as it gives them, and
-/// the dim text, cards, lines and surface mixed from its text colour at
-/// the same strengths the page's own palette uses, so a theme of any
-/// colour keeps the page's contrast.
+/// cards, lines and surface mixed from its text colour. Secondary text
+/// keeps enough opacity to read against both the page and the message.
 pub(crate) fn themed_palette(dark: bool, colors: &PageColors) -> PagePalette {
     let over = |strength: u8| format!("color-mix(in srgb,{} {strength}%,transparent)", colors.fg);
     let (dim, card, line, hover, surface) = match dark {
@@ -922,12 +921,51 @@ pub(crate) fn themed_palette(dark: bool, colors: &PageColors) -> PagePalette {
     PagePalette {
         bg: colors.bg.clone(),
         fg: colors.fg.clone(),
-        dim: over(dim),
+        dim: themed_dim(colors, dim, surface),
         card: over(card),
         line: over(line),
         hover: over(hover),
         surface: format!("color-mix(in srgb,{} {surface}%,{})", colors.fg, colors.bg),
     }
+}
+
+/// Secondary text raises its opacity toward AA on the page and message.
+/// A theme may already make its foreground translucent, so its alpha
+/// cannot be multiplied by the page's dimming share again.
+fn themed_dim(colors: &PageColors, strength: u8, surface: u8) -> String {
+    use gtk::gdk::RGBA;
+    let (Ok(mut fg), Ok(bg)) = (RGBA::parse(&colors.fg), RGBA::parse(&colors.bg)) else {
+        return colors.fg.clone();
+    };
+    let ink = [fg.red(), fg.green(), fg.blue()];
+    let page = [bg.red(), bg.green(), bg.blue()];
+    let blend = |under: [f32; 3], alpha: f32| {
+        std::array::from_fn::<_, 3, _>(|i| ink[i] * alpha + under[i] * (1.0 - alpha))
+    };
+    let message = blend(page, fg.alpha() * f32::from(surface) / 100.0);
+    let luminance = |rgb: [f32; 3]| {
+        let [r, g, b] = rgb.map(|c| {
+            let c = f64::from(c);
+            if c <= 0.04045 {
+                c / 12.92
+            } else {
+                ((c + 0.055) / 1.055).powf(2.4)
+            }
+        });
+        0.2126 * r + 0.7152 * g + 0.0722 * b
+    };
+    for opacity in strength..=100 {
+        let alpha = f32::from(opacity) / 100.0;
+        fg.set_alpha(alpha);
+        if [page, message].into_iter().all(|under| {
+            let paper = luminance(under);
+            let text = luminance(blend(under, alpha));
+            (paper.max(text) + 0.05) / (paper.min(text) + 0.05) >= 4.55
+        }) {
+            break;
+        }
+    }
+    fg.to_str().to_string()
 }
 
 /// A message sits on a surface a step away from the page: lighter in a
@@ -1120,6 +1158,37 @@ d='M8 2 9.3 6.7 14 8 9.3 9.3 8 14 6.7 9.3 2 8 6.7 6.7Z'/></svg>";
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn translucent_theme_text_keeps_contrast_on_page_and_message() {
+        use gtk::gdk::RGBA;
+        for (dark, bg, fg, surface) in [
+            (false, "#f6f5f4", "rgba(0,0,0,0.8)", "#eeedec"),
+            (true, "#303030", "rgba(255,255,255,0.8)", "#3c3c3c"),
+        ] {
+            let palette = super::themed_palette(
+                dark,
+                &super::PageColors {
+                    bg: bg.into(),
+                    fg: fg.into(),
+                },
+            );
+            let dim = RGBA::parse(&palette.dim).unwrap();
+            for under in [bg, surface] {
+                let under_color = RGBA::parse(under).unwrap();
+                let rgb = [dim.red(), dim.green(), dim.blue()];
+                let back = [under_color.red(), under_color.green(), under_color.blue()];
+                let mut hex = String::from("#");
+                for (ink, paper) in rgb.into_iter().zip(back) {
+                    hex.push_str(&format!(
+                        "{:02x}",
+                        ((ink * dim.alpha() + paper * (1.0 - dim.alpha())) * 255.0).round() as u8
+                    ));
+                }
+                let ratio = crate::accent_contrast::contrast(&hex, under);
+                assert!(ratio >= 4.5, "{fg} on {under}: {ratio}");
+            }
+        }
+    }
     /// Mail keeps its own layout: no column squeezed to a letter a line,
     /// and a newsletter's own width limit is not overridden.
     #[test]

@@ -154,7 +154,9 @@ impl App {
             let closed = closed.clone();
             gtk::glib::idle_add_local_once(move || {
                 let Some(app) = app.upgrade() else { return };
-                let Some(closed) = closed.upgrade() else { return };
+                let Some(closed) = closed.upgrade() else {
+                    return;
+                };
                 app.composers
                     .borrow_mut()
                     .retain(|open| !Rc::ptr_eq(open, &closed));

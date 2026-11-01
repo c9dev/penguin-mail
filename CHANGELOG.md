@@ -19,6 +19,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Adding a reminder to an event no longer stacks another Add Reminder row each time.
 - The week and day views keep their day headings over their columns on desktops without overlay scrollbars.
 - The message view scrolls at once with the wheel instead of animating each tick, which stuttered on some graphics drivers.
+- Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
+- Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
 
 ## 1.0.11 (2026-10-28)
 

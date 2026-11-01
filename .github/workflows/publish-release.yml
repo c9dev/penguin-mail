@@ -100,6 +100,10 @@ jobs:
               "Build and test the AppImage / Test on Debian 13",
               "Build and test the AppImage / Ubuntu 24.04's sandbox rules",
           }
+          # Releases before the Debian package was added have no such job.
+          # A newer build must finish it successfully before recovery publishes.
+          if any(job["name"] == "Build the Debian 13 .deb" for job in jobs):
+              required.add("Build the Debian 13 .deb")
           passed = {job["name"] for job in jobs if job["conclusion"] == "success"}
           if missing := required - passed:
               raise SystemExit(f"Package jobs have not passed: {sorted(missing)}")

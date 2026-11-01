@@ -815,7 +815,9 @@ pub(super) fn show(filing: Filing, parent: &impl IsA<gtk::Window>) {
         .section_name("shortcuts")
         .build();
     for section in Section::ALL {
-        let group = gtk::ShortcutsGroup::builder().title(section.title()).build();
+        let group = gtk::ShortcutsGroup::builder()
+            .title(section.title())
+            .build();
         for shortcut in SHORTCUTS.iter().filter(|s| s.section == section) {
             group.add_shortcut(
                 &gtk::ShortcutsShortcut::builder()

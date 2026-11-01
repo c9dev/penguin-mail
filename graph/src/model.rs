@@ -2,6 +2,16 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Graph's nullable fields can be absent or explicitly null. Serde's
+/// `default` handles only the absent case; both mean an unset value here.
+pub(crate) fn default_if_null<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct EmailAddress {
@@ -21,7 +31,9 @@ pub struct Recipient {
 #[serde(rename_all = "camelCase", default)]
 pub struct ItemBody {
     /// `text` or `html`.
+    #[serde(deserialize_with = "default_if_null")]
     pub content_type: String,
+    #[serde(deserialize_with = "default_if_null")]
     pub content: String,
 }
 
@@ -31,6 +43,7 @@ pub struct ItemBody {
 #[serde(rename_all = "camelCase", default)]
 pub struct DateTimeZone {
     pub date_time: String,
+    #[serde(deserialize_with = "default_if_null")]
     pub time_zone: String,
 }
 

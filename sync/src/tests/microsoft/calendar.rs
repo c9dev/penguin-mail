@@ -126,6 +126,197 @@ fn millis(text: &str) -> i64 {
         .timestamp_millis()
 }
 
+#[tokio::test]
+async fn outlook_fields_do_not_stop_a_calendar_read() {
+    use mailrs_graph::{Graph, MicrosoftClient, Session};
+    use serde_json::json;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "access", "expires_in": 3600,
+            "scope": "Calendars.ReadWrite"
+        })))
+        .mount(&server)
+        .await;
+    let delta = format!(
+        "{}/v1.0/me/calendarView/delta?$deltatoken=next",
+        server.uri()
+    );
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/calendars/cal-1/calendarView/delta"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "value": [{
+                "id": "o1", "type": "occurrence", "seriesMasterId": "m1"
+            }, {
+                "id": "single", "subject": "Appointment from Outlook",
+                "start": {"dateTime": "2026-10-06T10:00:00", "timeZone": "UTC"},
+                "end": {"dateTime": "2026-10-06T11:00:00", "timeZone": "UTC"},
+                "body": {"contentType": null, "content": null},
+                "location": {"displayName": null},
+                "responseStatus": {"response": null},
+                "isAllDay": null, "isCancelled": null, "isOrganizer": null,
+                "isReminderOn": true, "reminderMinutesBeforeStart": -540
+            }],
+            "@odata.deltaLink": delta
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1.0/$batch"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "responses": [{"id": "1", "status": 200, "body": {
+                "id": "m1", "type": "seriesMaster", "subject": "Weekly meeting",
+                "start": {"dateTime": "2026-10-05T09:00:00", "timeZone": null},
+                "end": {"dateTime": "2026-10-05T09:30:00", "timeZone": "UTC"},
+                "body": {"contentType": "html", "content": null},
+                "location": {"displayName": null},
+                "isReminderOn": true, "reminderMinutesBeforeStart": -540,
+                "attendees": [{"emailAddress": {"address": "me@outlook.com"},
+                               "status": {"response": null}}],
+                "recurrence": {
+                    "pattern": {"type": "weekly", "interval": 1, "daysOfWeek": ["monday"]},
+                    "range": {"type": "numbered", "startDate": "2026-10-05", "numberOfOccurrences": 3}
+                }
+            }}]
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/calendarView/delta"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "value": [{
+                "id": "new", "subject": "Another Outlook appointment",
+                "start": {"dateTime": "2026-10-07T12:00:00", "timeZone": "UTC"},
+                "end": {"dateTime": "2026-10-07T13:00:00", "timeZone": "UTC"},
+                "isReminderOn": true, "reminderMinutesBeforeStart": 15
+            }],
+            "@odata.deltaLink": delta
+        })))
+        .mount(&server)
+        .await;
+    let current = json!({
+        "id": "single", "subject": "Appointment from Outlook",
+        "start": {"dateTime": "2026-10-06T10:00:00", "timeZone": "UTC"},
+        "end": {"dateTime": "2026-10-06T11:00:00", "timeZone": "UTC"},
+        "isReminderOn": true, "reminderMinutesBeforeStart": -540
+    });
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/events/single"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(current.clone()))
+        .mount(&server)
+        .await;
+    let mut updated = current;
+    updated["subject"] = json!("Renamed appointment");
+    Mock::given(method("PATCH"))
+        .and(path("/v1.0/me/events/single"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(updated))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = MicrosoftClient::new("test-client").with_endpoints(
+        format!("{}/authorize", server.uri()),
+        format!("{}/token", server.uri()),
+    );
+    let graph = Graph::with_base(
+        Arc::new(Session::new(client, "refresh")),
+        &format!("{}/v1.0/", server.uri()),
+    )
+    .unwrap();
+    let adapter = crate::services::Microsoft::new(
+        Arc::new(graph),
+        crate::services::MicrosoftSettings {
+            address: "me@outlook.com".into(),
+            provider_name: "Microsoft 365".into(),
+            window_days: 30,
+        },
+    );
+    let from = millis("2026-10-01T00:00:00Z");
+    let page = adapter
+        .event_changes("cal-1", None, None, from)
+        .await
+        .unwrap();
+    assert_eq!(page.events.len(), 2);
+    let single = page.events.iter().find(|e| e.id == "single").unwrap();
+    assert_eq!(single.start, millis("2026-10-06T10:00:00Z"));
+    assert_eq!(single.title, "Appointment from Outlook");
+    assert_eq!(single.status, Status::Confirmed);
+    assert!(!single.all_day);
+    assert!(single.place.is_empty());
+    assert!(single.description.is_empty());
+    assert_eq!(single.reminders, None);
+    let mut renamed = single.clone();
+    renamed.title = "Renamed appointment".into();
+    let saved = adapter
+        .put_event(&renamed, None, false, Notify::Guests)
+        .await
+        .unwrap();
+    assert_eq!(saved.title, renamed.title);
+    assert_eq!(saved.reminders, None);
+    let requests = server.received_requests().await.unwrap();
+    let patch = requests
+        .iter()
+        .find(|r| r.method.as_str() == "PATCH")
+        .unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&patch.body).unwrap();
+    assert!(body.get("isReminderOn").is_none());
+    assert!(body.get("reminderMinutesBeforeStart").is_none());
+    let master = page.events.iter().find(|e| e.id == "m1").unwrap();
+    assert_eq!(master.start, millis("2026-10-05T09:00:00Z"));
+    assert_eq!(master.reminders, None);
+    assert_eq!(
+        master.rules,
+        ["RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;COUNT=3"]
+    );
+    let next = adapter
+        .event_changes("cal-1", page.next_sync.as_deref(), None, from)
+        .await
+        .unwrap();
+    assert_eq!(next.events.len(), 1);
+    assert_eq!(next.events[0].title, "Another Outlook appointment");
+    assert_eq!(next.events[0].reminders.as_ref().unwrap()[0].minutes, 15);
+}
+
+#[tokio::test]
+async fn outlook_reminders_keep_before_start_times_and_disabled_state() {
+    let h = outlook().await;
+    let cases = [
+        ("before", true, Some(15), Some(vec![15_u32])),
+        ("at-start", true, Some(0), Some(vec![0])),
+        ("default", true, None, Some(vec![15])),
+        ("after", true, Some(-540), None),
+        ("disabled", false, Some(-540), Some(vec![])),
+    ];
+    for (id, on, minutes, _) in &cases {
+        h.fake.put_event(
+            "cal-1",
+            GraphEvent {
+                id: (*id).into(),
+                start: Some(at("2026-10-06T10:00:00")),
+                end: Some(at("2026-10-06T11:00:00")),
+                is_reminder_on: Some(*on),
+                reminder_minutes_before_start: *minutes,
+                ..GraphEvent::default()
+            },
+        );
+    }
+    let page = read_all(&h).await;
+    assert_eq!(page.events.len(), cases.len());
+    for (id, _, _, expected) in cases {
+        let event = page.events.iter().find(|event| event.id == id).unwrap();
+        let actual = event.reminders.as_ref().map(|reminders| {
+            reminders
+                .iter()
+                .map(|reminder| reminder.minutes)
+                .collect::<Vec<_>>()
+        });
+        assert_eq!(actual, expected, "{id}");
+    }
+}
+
 /// The owner's series from 2026-10-05: "test event", Monday to Friday,
 /// 08:00 to 09:00 UTC, made in Penguin Mail.
 fn weekday_series() -> GraphEvent {
