@@ -183,6 +183,12 @@ impl Desk for Ports {
             .is_some_and(|window| window.images_allowed_for(senders))
     }
 
+    fn images_always_allowed(&self) -> bool {
+        self.window().is_some_and(|window| {
+            window.settings_with(|s| s.remote_images == crate::settings::RemoteImages::Always)
+        })
+    }
+
     fn photos(&self, senders: &[String]) -> crate::render::Photos {
         self.window()
             .and_then(|window| window.app.upgrade())

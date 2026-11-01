@@ -54,6 +54,8 @@ pub struct OpenThread {
     pub bodies: HashMap<String, Result<Arc<MessageBody>, String>>,
     pub expanded: HashSet<String>,
     pub images_allowed: bool,
+    /// The global Always setting also covers senders who join later.
+    pub images_always_allowed: bool,
     /// Set when the view shows one message of the thread, not all of it.
     pub only_message: Option<String>,
     pub me: Vec<String>,
@@ -150,6 +152,7 @@ impl OpenThread {
                 .collect(),
             expanded,
             images_allowed: false,
+            images_always_allowed: false,
             only_message: target.message_id.clone(),
             me,
             inline_images: HashMap::new(),
@@ -352,6 +355,34 @@ impl OpenThread {
             .collect()
     }
 
+    /// Distinct sender addresses covered by a thread-wide image permission.
+    /// An empty entry keeps messages without a sender in the decision.
+    pub fn image_senders(&self) -> Vec<String> {
+        let mut senders: Vec<String> = self
+            .senders()
+            .into_iter()
+            .map(|sender| sender.trim().to_lowercase())
+            .collect();
+        senders.sort();
+        senders.dedup();
+        senders
+    }
+
+    fn restrict_images(&mut self, fresh: &[MessageMeta]) {
+        if self.images_allowed && !self.images_always_allowed {
+            let allowed = self.image_senders();
+            self.images_allowed = fresh.iter().all(|message| {
+                let sender = message
+                    .from
+                    .as_ref()
+                    .map(|from| from.email.trim().to_lowercase())
+                    .unwrap_or_default();
+                allowed.contains(&sender)
+                    && (!sender.is_empty() || self.messages.iter().any(|old| old.id == message.id))
+            });
+        }
+    }
+
     /// Whether a reply can quote the message it answers: that message's
     /// body has arrived, or failed for good.
     pub fn quotable(&self) -> bool {
@@ -392,6 +423,7 @@ impl OpenThread {
             }
         }
         if !fresh.is_empty() {
+            self.restrict_images(&fresh);
             self.messages = fresh;
         }
         self.messages
@@ -401,16 +433,18 @@ impl OpenThread {
             .collect()
     }
 
-    /// Replaces the messages and answers whether their ids differ from the
-    /// ones that were here, in that order.
+    /// Replaces the messages and answers whether their ids or image
+    /// permission changed, requiring a redraw.
     pub fn replace_messages(&mut self, fresh: Vec<MessageMeta>) -> bool {
         let same = self
             .messages
             .iter()
             .map(|m| &m.id)
             .eq(fresh.iter().map(|m| &m.id));
+        let was_allowed = self.images_allowed;
+        self.restrict_images(&fresh);
         self.messages = fresh;
-        !same
+        !same || was_allowed != self.images_allowed
     }
 
     /// Bodies as Gmail sent them, with the HTML already cleaned away from
@@ -588,6 +622,7 @@ mod tests {
             bodies: HashMap::new(),
             expanded: HashSet::new(),
             images_allowed: false,
+            images_always_allowed: false,
             only_message: None,
             me: Vec::new(),
             inline_images: HashMap::new(),
@@ -719,6 +754,67 @@ mod tests {
 
         let answering = open.answering(None, false).expect("something to answer");
         assert!(!answering.secret);
+    }
+
+    fn sent_by(id: &str, sender: &str) -> MessageMeta {
+        let mut meta = message(id, false);
+        meta.from = Some(mailrs_domain::Address {
+            name: None,
+            email: sender.to_string(),
+        });
+        meta
+    }
+
+    #[test]
+    fn new_senders_cannot_inherit_a_threads_image_permission() {
+        let first = sent_by("m1", "ann@example.com");
+        let stranger = sent_by("m2", "bob@example.com");
+        let mut open = thread(vec![first.clone()]);
+        open.images_allowed = true;
+        open.take_messages(&[first.clone(), stranger.clone()]);
+        assert!(!open.images_allowed);
+
+        let mut open = thread(vec![first.clone()]);
+        open.images_allowed = true;
+        assert!(open.replace_messages(vec![first, stranger]));
+        assert!(!open.images_allowed);
+    }
+
+    #[test]
+    fn a_changed_sender_revokes_images_even_when_message_ids_stay() {
+        let mut open = thread(vec![sent_by("m1", "ann@example.com")]);
+        open.images_allowed = true;
+        assert!(open.replace_messages(vec![sent_by("m1", "bob@example.com")]));
+        assert!(!open.images_allowed);
+    }
+
+    #[test]
+    fn another_message_from_the_same_sender_keeps_the_permission() {
+        let first = sent_by("m1", "Ann@example.com");
+        let mut open = thread(vec![first.clone()]);
+        open.images_allowed = true;
+        open.take_messages(&[first, sent_by("m2", "ann@example.com")]);
+        assert!(open.images_allowed);
+        assert_eq!(open.image_senders(), ["ann@example.com"]);
+    }
+
+    #[test]
+    fn new_messages_without_a_sender_do_not_inherit_permission() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.images_allowed = true;
+        open.take_messages(&[message("m1", false), message("m2", false)]);
+        assert!(!open.images_allowed);
+    }
+
+    #[test]
+    fn the_global_always_setting_covers_new_senders() {
+        let mut open = thread(vec![sent_by("m1", "ann@example.com")]);
+        open.images_allowed = true;
+        open.images_always_allowed = true;
+        open.take_messages(&[sent_by("m2", "bob@example.com")]);
+        assert!(open.images_allowed);
+        open.replace_messages(vec![sent_by("m3", "eve@example.com")]);
+        assert!(open.images_allowed);
     }
 
     #[test]

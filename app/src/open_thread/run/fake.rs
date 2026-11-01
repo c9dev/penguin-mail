@@ -188,6 +188,8 @@ pub struct Screen {
     pub cleaners: Vec<std::thread::ThreadId>,
     /// Cleaning fails, as it does when the worker panics.
     pub clean_fails: bool,
+    pub image_senders: Vec<String>,
+    pub images_always_allowed: bool,
 }
 
 pub struct FakeWindow(pub RefCell<Screen>);
@@ -489,6 +491,8 @@ impl FakeWindow {
             sent: Vec::new(),
             cleaners: Vec::new(),
             clean_fails: false,
+            image_senders: Vec::new(),
+            images_always_allowed: false,
         })))
     }
 
@@ -619,8 +623,18 @@ impl Desk for FakeWindow {
         vec!["me@example.com".to_string()]
     }
 
-    fn images_allowed(&self, _senders: &[String]) -> bool {
-        false
+    fn images_allowed(&self, senders: &[String]) -> bool {
+        self.with(|screen| {
+            screen.images_always_allowed
+                || (!senders.is_empty()
+                    && senders
+                        .iter()
+                        .all(|sender| screen.image_senders.contains(sender)))
+        })
+    }
+
+    fn images_always_allowed(&self) -> bool {
+        self.with(|screen| screen.images_always_allowed)
     }
 
     fn photos(&self, _senders: &[String]) -> crate::render::Photos {
