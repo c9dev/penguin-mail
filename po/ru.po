@@ -4473,7 +4473,7 @@ msgstr "Меньше {size}"
 msgid "Larger than {size}"
 msgstr "Больше {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:864
+#: app/src/rules.rs:251 app/src/settings/mod.rs:866
 msgid "All mail"
 msgstr "Вся почта"
 
@@ -4571,212 +4571,212 @@ msgstr "На этом компьютере, пока открыт Penguin Mail"
 msgid "On the server"
 msgstr "На сервере"
 
-#: app/src/settings/mod.rs:210 app/src/settings/mod.rs:402
-#: app/src/settings/mod.rs:776 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1031
+#: app/src/settings/mod.rs:211 app/src/settings/mod.rs:403
+#: app/src/settings/mod.rs:778 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1040
 msgid "Off"
 msgstr "Выключено"
 
-#: app/src/settings/mod.rs:211
+#: app/src/settings/mod.rs:212
 msgid "Local Server"
 msgstr "Локальный сервер"
 
-#: app/src/settings/mod.rs:212
+#: app/src/settings/mod.rs:213
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:213
+#: app/src/settings/mod.rs:214
 msgid "Claude Subscription"
 msgstr "Подписка Claude"
 
-#: app/src/settings/mod.rs:238 app/src/ui/window.rs:3636
+#: app/src/settings/mod.rs:239 app/src/ui/window.rs:3636
 #: app/src/ui/window.rs:3716
 msgid "Assistant"
 msgstr "Ассистент"
 
-#: app/src/settings/mod.rs:239 app/src/ui/preferences.rs:214
+#: app/src/settings/mod.rs:240 app/src/ui/preferences.rs:223
 msgid "Translation"
 msgstr "Перевод"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:243
+#: app/src/settings/mod.rs:244
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Отписка"
 
-#: app/src/settings/mod.rs:249
+#: app/src/settings/mod.rs:250
 msgid "Answers questions and acts on your mail"
 msgstr "Отвечает на вопросы и работает с вашей почтой"
 
-#: app/src/settings/mod.rs:250
+#: app/src/settings/mod.rs:251
 msgid "Translates a message when you ask"
 msgstr "Переводит сообщение по вашему запросу"
 
-#: app/src/settings/mod.rs:252
+#: app/src/settings/mod.rs:253
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Читает страницу отписки от рассылки, когда правила не справляются"
 
-#: app/src/settings/mod.rs:290
+#: app/src/settings/mod.rs:291
 msgid "Same as the Assistant"
 msgstr "Как у ассистента"
 
-#: app/src/settings/mod.rs:403
+#: app/src/settings/mod.rs:404
 msgid "Claude's own only"
 msgstr "Только собственный поиск Claude"
 
-#: app/src/settings/mod.rs:404
+#: app/src/settings/mod.rs:405
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:405
+#: app/src/settings/mod.rs:406
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:406
+#: app/src/settings/mod.rs:407
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:576
+#: app/src/settings/mod.rs:578
 msgid "Rich text"
 msgstr "Форматированный текст"
 
-#: app/src/settings/mod.rs:577
+#: app/src/settings/mod.rs:579
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:596 app/src/ui/preferences/accounts.rs:150
+#: app/src/settings/mod.rs:598 app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Автоматически"
 
-#: app/src/settings/mod.rs:597 app/src/ui/calendar/editor.rs:2163
+#: app/src/settings/mod.rs:599 app/src/ui/calendar/editor.rs:2163
 msgid "Monday"
 msgstr "понедельник"
 
-#: app/src/settings/mod.rs:598 app/src/ui/calendar/editor.rs:2169
+#: app/src/settings/mod.rs:600 app/src/ui/calendar/editor.rs:2169
 msgid "Sunday"
 msgstr "воскресенье"
 
-#: app/src/settings/mod.rs:636
+#: app/src/settings/mod.rs:638
 msgid "When opened"
 msgstr "При открытии"
 
-#: app/src/settings/mod.rs:637
+#: app/src/settings/mod.rs:639
 msgid "After 2 seconds"
 msgstr "Через 2 секунды"
 
-#: app/src/settings/mod.rs:638
+#: app/src/settings/mod.rs:640
 msgid "Only when I choose"
 msgstr "Только по моему выбору"
 
-#: app/src/settings/mod.rs:654 app/src/settings/mod.rs:672
+#: app/src/settings/mod.rs:656 app/src/settings/mod.rs:674
 msgid "Ask each time"
 msgstr "Спрашивать каждый раз"
 
-#: app/src/settings/mod.rs:655
+#: app/src/settings/mod.rs:657
 msgid "Always load"
 msgstr "Всегда загружать"
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:675
 msgid "Never ask"
 msgstr "Никогда не спрашивать"
 
-#: app/src/settings/mod.rs:700
+#: app/src/settings/mod.rs:702
 msgid "No Preview"
 msgstr "Без предпросмотра"
 
-#: app/src/settings/mod.rs:701
+#: app/src/settings/mod.rs:703
 msgid "1 Line"
 msgstr "1 строка"
 
-#: app/src/settings/mod.rs:702
+#: app/src/settings/mod.rs:704
 msgid "2 Lines"
 msgstr "2 строки"
 
-#: app/src/settings/mod.rs:736
+#: app/src/settings/mod.rs:738
 msgid "Small"
 msgstr "Мелкий"
 
-#: app/src/settings/mod.rs:737
+#: app/src/settings/mod.rs:739
 msgid "Default"
 msgstr "По умолчанию"
 
-#: app/src/settings/mod.rs:738
+#: app/src/settings/mod.rs:740
 msgid "Large"
 msgstr "Крупный"
 
-#: app/src/settings/mod.rs:739
+#: app/src/settings/mod.rs:741
 msgid "Larger"
 msgstr "Очень крупный"
 
-#: app/src/settings/mod.rs:777
+#: app/src/settings/mod.rs:779
 msgid "5 seconds"
 msgstr "5 секунд"
 
-#: app/src/settings/mod.rs:778
+#: app/src/settings/mod.rs:780
 msgid "10 seconds"
 msgstr "10 секунд"
 
-#: app/src/settings/mod.rs:779
+#: app/src/settings/mod.rs:781
 msgid "20 seconds"
 msgstr "20 секунд"
 
-#: app/src/settings/mod.rs:780
+#: app/src/settings/mod.rs:782
 msgid "30 seconds"
 msgstr "30 секунд"
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:799
 msgid "Follow system"
 msgstr "Как в системе"
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:800
 msgid "Light"
 msgstr "Светлая"
 
-#: app/src/settings/mod.rs:799
+#: app/src/settings/mod.rs:801
 msgid "Dark"
 msgstr "Тёмная"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:835
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Каждую {count} секунду"
 msgstr[1] "Каждые {count} секунды"
 msgstr[2] "Каждые {count} секунд"
 
-#: app/src/settings/mod.rs:841
+#: app/src/settings/mod.rs:843
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Каждую {count} минуту"
 msgstr[1] "Каждые {count} минуты"
 msgstr[2] "Каждые {count} минут"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:860
 msgid "2 weeks"
 msgstr "2 недели"
 
-#: app/src/settings/mod.rs:859
+#: app/src/settings/mod.rs:861
 msgid "30 days"
 msgstr "30 дней"
 
-#: app/src/settings/mod.rs:860
+#: app/src/settings/mod.rs:862
 msgid "90 days"
 msgstr "90 дней"
 
-#: app/src/settings/mod.rs:861
+#: app/src/settings/mod.rs:863
 msgid "1 year"
 msgstr "1 год"
 
-#: app/src/settings/mod.rs:862
+#: app/src/settings/mod.rs:864
 msgid "2 years"
 msgstr "2 года"
 
-#: app/src/settings/mod.rs:863
+#: app/src/settings/mod.rs:865
 msgid "5 years"
 msgstr "5 лет"
 
-#: app/src/settings/mod.rs:885
+#: app/src/settings/mod.rs:887
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4784,19 +4784,19 @@ msgstr ""
 "Все сообщения хранятся на этом компьютере. Большая учётная запись занимает "
 "много места на диске и памяти, а старая почта загружается в фоновом режиме."
 
-#: app/src/settings/mod.rs:887
+#: app/src/settings/mod.rs:889
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "Всё из папки «Входящие» тоже остаётся, а по старой почте можно искать"
 
-#: app/src/settings/mod.rs:894
+#: app/src/settings/mod.rs:896
 msgid "256 MB"
 msgstr "256 МБ"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:897
 msgid "1 GB"
 msgstr "1 ГБ"
 
-#: app/src/settings/mod.rs:896
+#: app/src/settings/mod.rs:898
 msgid "4 GB"
 msgstr "4 ГБ"
 
@@ -4978,7 +4978,7 @@ msgstr "Открыть Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
 #: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:475
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:480
 msgid "New Message"
 msgstr "Новое сообщение"
 
@@ -4996,7 +4996,7 @@ msgstr "Что нового в {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1100 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Проверить обновления"
 
@@ -5338,7 +5338,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail хранит на этом компьютере каждое загруженное сообщение."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1439
+#: app/src/ui/preferences.rs:1448
 msgid "Days"
 msgstr "Дней"
 
@@ -6140,7 +6140,7 @@ msgstr ""
 "не включите. Скрипты навыка выполняются в песочнице без доступа к вашей "
 "почте, ключам и домашней папке, а ассистент спрашивает перед каждой командой."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:459
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:468
 msgid "Not Available"
 msgstr "Недоступно"
 
@@ -6328,7 +6328,7 @@ msgid "Declined"
 msgstr "Отклонено"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1258
+#: app/src/ui/preferences.rs:1267
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6444,11 +6444,11 @@ msgstr "Дата окончания"
 msgid "End time"
 msgstr "Время окончания"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1391
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1400
 msgid "Starts"
 msgstr "Начало"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1393
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1402
 msgid "Ends"
 msgstr "Окончание"
 
@@ -6592,8 +6592,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Не удалось прикрепить {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1947 app/src/ui/composer/mod.rs:413
-#: app/src/ui/thread_list.rs:343 app/src/ui/thread_list.rs:349
-#: app/src/ui/thread_list.rs:1102
+#: app/src/ui/thread_list.rs:344 app/src/ui/thread_list.rs:350
+#: app/src/ui/thread_list.rs:1137
 msgid "More"
 msgstr "Ещё"
 
@@ -7136,7 +7136,7 @@ msgstr "Весь день"
 
 #: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
+#: app/src/ui/preferences.rs:1281 app/src/ui/preferences.rs:1456
 msgid "%a"
 msgstr "%a"
 
@@ -9469,119 +9469,129 @@ msgid "List mail you sent that has had no reply for three days"
 msgstr "Показывать отправленные письма, на которые три дня нет ответа"
 
 #: app/src/ui/preferences.rs:191
+msgid "Follow Navigation After Removing Mail"
+msgstr ""
+
+#: app/src/ui/preferences.rs:193
+msgid ""
+"After deleting, archiving, or moving mail, select the neighbor in the "
+"direction you last moved"
+msgstr ""
+
+#: app/src/ui/preferences.rs:200
 msgid "Images and Receipts"
 msgstr "Изображения и уведомления о прочтении"
 
-#: app/src/ui/preferences.rs:195
+#: app/src/ui/preferences.rs:204
 msgid "Remote Images"
 msgstr "Внешние изображения"
 
-#: app/src/ui/preferences.rs:197
+#: app/src/ui/preferences.rs:206
 msgid "Loading them can tell senders when you read their mail"
 msgstr "Их загрузка может сообщить отправителям, когда вы прочитали письмо"
 
-#: app/src/ui/preferences.rs:205
+#: app/src/ui/preferences.rs:214
 msgid "Read Receipts"
 msgstr "Уведомления о прочтении"
 
-#: app/src/ui/preferences.rs:207
+#: app/src/ui/preferences.rs:216
 msgid "When a sender asks to know you read their message"
 msgstr "Когда отправитель просит сообщить о прочтении письма"
 
-#: app/src/ui/preferences.rs:223
+#: app/src/ui/preferences.rs:232
 msgid "Appearance"
 msgstr "Внешний вид"
 
-#: app/src/ui/preferences.rs:230
+#: app/src/ui/preferences.rs:239
 msgid "Style"
 msgstr "Стиль"
 
-#: app/src/ui/preferences.rs:237
+#: app/src/ui/preferences.rs:246
 msgid "Text Size"
 msgstr "Размер текста"
 
-#: app/src/ui/preferences.rs:244
+#: app/src/ui/preferences.rs:253
 msgid "Message Preview"
 msgstr "Предпросмотр сообщений"
 
-#: app/src/ui/preferences.rs:245
+#: app/src/ui/preferences.rs:254
 msgid "Lines of message text below the subject"
 msgstr "Строки текста сообщения под темой"
 
-#: app/src/ui/preferences.rs:251
+#: app/src/ui/preferences.rs:260
 msgid "Bold Unread Messages"
 msgstr "Выделять непрочитанные жирным"
 
-#: app/src/ui/preferences.rs:253
+#: app/src/ui/preferences.rs:262
 msgid "Use heavier text for unread senders, subjects, and dates"
 msgstr "Более жирный текст для непрочитанных отправителей, тем и дат"
 
-#: app/src/ui/preferences.rs:260
+#: app/src/ui/preferences.rs:269
 msgid "Always Bold Senders"
 msgstr "Всегда выделять отправителей жирным"
 
-#: app/src/ui/preferences.rs:262
+#: app/src/ui/preferences.rs:271
 msgid "Use heavier sender text for both read and unread messages"
 msgstr ""
 "Более жирный текст отправителя для прочитанных и непрочитанных сообщений"
 
-#: app/src/ui/preferences.rs:269
+#: app/src/ui/preferences.rs:278
 msgid "Show Avatars"
 msgstr "Показывать аватары"
 
-#: app/src/ui/preferences.rs:271
+#: app/src/ui/preferences.rs:280
 msgid "Show contact pictures or initials in the message list"
 msgstr "Показывать фото или инициалы контактов в списке сообщений"
 
-#: app/src/ui/preferences.rs:283 app/src/ui/preferences.rs:288
+#: app/src/ui/preferences.rs:292 app/src/ui/preferences.rs:297
 msgid "Notifications"
 msgstr "Уведомления"
 
-#: app/src/ui/preferences.rs:292
+#: app/src/ui/preferences.rs:301
 msgid "Notify About New Mail"
 msgstr "Уведомлять о новой почте"
 
-#: app/src/ui/preferences.rs:299
+#: app/src/ui/preferences.rs:308
 msgid "Show Sender and Subject"
 msgstr "Показывать отправителя и тему"
 
-#: app/src/ui/preferences.rs:300
+#: app/src/ui/preferences.rs:309
 msgid "Turn off to see only how much mail arrived"
 msgstr "Выключите, чтобы видеть только количество новых писем"
 
-#: app/src/ui/preferences.rs:310
+#: app/src/ui/preferences.rs:319
 msgid "Only for VIPs"
 msgstr "Только для VIP-контактов"
 
-#: app/src/ui/preferences.rs:311
+#: app/src/ui/preferences.rs:320
 msgid "Stay quiet about mail from everyone else"
 msgstr "Не уведомлять о письмах от остальных"
 
-#: app/src/ui/preferences.rs:321
+#: app/src/ui/preferences.rs:330
 msgid "Buttons"
 msgstr "Кнопки"
 
-#: app/src/ui/preferences.rs:323
+#: app/src/ui/preferences.rs:332
 msgid "What a notification offers besides opening the conversation"
 msgstr "Что предлагает уведомление, кроме открытия цепочки"
 
-#: app/src/ui/preferences.rs:354
+#: app/src/ui/preferences.rs:363
 msgid "Event Reminders"
 msgstr "Напоминания о событиях"
 
-#: app/src/ui/preferences.rs:356
+#: app/src/ui/preferences.rs:365
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr ""
 "Уведомление перед каждым событием в сроки, заданные событием или его "
 "календарём"
 
-#: app/src/ui/preferences.rs:378 app/src/ui/preferences.rs:385
+#: app/src/ui/preferences.rs:387 app/src/ui/preferences.rs:394
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "Учётные записи"
 
-#: app/src/ui/preferences.rs:386
+#: app/src/ui/preferences.rs:395
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
@@ -9589,31 +9599,31 @@ msgstr ""
 "Подпись, адреса отправки, серверы, контакты и место, о котором сообщает "
 "сервер."
 
-#: app/src/ui/preferences.rs:391 app/src/ui/preferences.rs:636
+#: app/src/ui/preferences.rs:400 app/src/ui/preferences.rs:645
 msgid "No Accounts Yet"
 msgstr "Учётных записей пока нет"
 
-#: app/src/ui/preferences.rs:393 app/src/ui/preferences.rs:638
+#: app/src/ui/preferences.rs:402 app/src/ui/preferences.rs:647
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Добавьте учётную запись, чтобы выбрать отправителя и написать подписи."
 
-#: app/src/ui/preferences.rs:443
+#: app/src/ui/preferences.rs:452
 msgid "Mailbox storage is not available through this connection."
 msgstr "Сведения о хранилище почтового ящика недоступны через это подключение."
 
-#: app/src/ui/preferences.rs:445
+#: app/src/ui/preferences.rs:454
 msgid "The server has not reported its storage usage."
 msgstr "Сервер не сообщил об использовании хранилища."
 
-#: app/src/ui/preferences.rs:448
+#: app/src/ui/preferences.rs:457
 msgid "Space on the Server"
 msgstr "Место на сервере"
 
-#: app/src/ui/preferences.rs:517 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:526 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "Подпись"
 
-#: app/src/ui/preferences.rs:531
+#: app/src/ui/preferences.rs:540
 msgid ""
 "Used by this account and addresses without their own signature. Markdown "
 "works. <email> becomes the sending address, including its suffix; <domain> "
@@ -9623,74 +9633,74 @@ msgstr ""
 "Поддерживается Markdown. <email> заменяется адресом отправки вместе с "
 "суффиксом, <domain> — его доменом."
 
-#: app/src/ui/preferences.rs:539 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:548 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "Подпись для {account}"
 
-#: app/src/ui/preferences.rs:553
+#: app/src/ui/preferences.rs:562
 msgid "Import from Gmail"
 msgstr "Импортировать из Gmail"
 
-#: app/src/ui/preferences.rs:573
+#: app/src/ui/preferences.rs:582
 msgid "This account is not syncing yet"
 msgstr "Эта учётная запись ещё не синхронизируется"
 
-#: app/src/ui/preferences.rs:589
+#: app/src/ui/preferences.rs:598
 msgid "Imported the signature from Gmail"
 msgstr "Подпись импортирована из Gmail"
 
-#: app/src/ui/preferences.rs:593
+#: app/src/ui/preferences.rs:602
 msgid "Gmail has no signature for this account"
 msgstr "В Gmail нет подписи для этой учётной записи"
 
-#: app/src/ui/preferences.rs:596
+#: app/src/ui/preferences.rs:605
 msgid "Could not import: {reason}"
 msgstr "Не удалось импортировать: {reason}"
 
-#: app/src/ui/preferences.rs:631 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:640 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Написание"
 
-#: app/src/ui/preferences.rs:647 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:656 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Новые сообщения"
 
-#: app/src/ui/preferences.rs:651
+#: app/src/ui/preferences.rs:660
 msgid "New Messages Start As"
 msgstr "Формат новых сообщений"
 
-#: app/src/ui/preferences.rs:653
+#: app/src/ui/preferences.rs:662
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "Форматированный текст оформляет сами слова; Markdown показывает свою разметку"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:660 app/src/ui/sidebar.rs:64
+#: app/src/ui/preferences.rs:669 app/src/ui/sidebar.rs:64
 #: app/src/ui/sidebar.rs:77
 msgid "Undo Send"
 msgstr "Отменить отправку"
 
-#: app/src/ui/preferences.rs:662
+#: app/src/ui/preferences.rs:671
 msgid "How long you can take a message back after sending it"
 msgstr "Сколько времени можно отозвать сообщение после отправки"
 
-#: app/src/ui/preferences.rs:669
+#: app/src/ui/preferences.rs:678
 msgid "Check for Missing Attachments"
 msgstr "Проверять забытые вложения"
 
-#: app/src/ui/preferences.rs:671
+#: app/src/ui/preferences.rs:680
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Спрашивать перед отправкой сообщения, в котором упомянут файл, но нет "
 "вложения"
 
-#: app/src/ui/preferences.rs:705
+#: app/src/ui/preferences.rs:714
 msgid "Signing and Encryption"
 msgstr "Подпись и шифрование"
 
-#: app/src/ui/preferences.rs:707
+#: app/src/ui/preferences.rs:716
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9698,50 +9708,50 @@ msgstr ""
 "Penguin Mail подписывает и шифрует через GnuPG, который хранит ваши ключи и "
 "сам запрашивает парольную фразу."
 
-#: app/src/ui/preferences.rs:712
+#: app/src/ui/preferences.rs:721
 msgid "Your OpenPGP Keys"
 msgstr "Ваши ключи OpenPGP"
 
-#: app/src/ui/preferences.rs:713
+#: app/src/ui/preferences.rs:722
 msgid "Asking gpg…"
 msgstr "Запрос к gpg…"
 
-#: app/src/ui/preferences.rs:717
+#: app/src/ui/preferences.rs:726
 msgid "Your S/MIME Certificates"
 msgstr "Ваши сертификаты S/MIME"
 
-#: app/src/ui/preferences.rs:718
+#: app/src/ui/preferences.rs:727
 msgid "Asking gpgsm…"
 msgstr "Запрос к gpgsm…"
 
-#: app/src/ui/preferences.rs:725
+#: app/src/ui/preferences.rs:734
 msgid "Sign My Messages by Default"
 msgstr "Подписывать сообщения по умолчанию"
 
-#: app/src/ui/preferences.rs:726
+#: app/src/ui/preferences.rs:735
 msgid "New messages open with Sign turned on"
 msgstr "Новые сообщения открываются с включённой подписью"
 
-#: app/src/ui/preferences.rs:732
+#: app/src/ui/preferences.rs:741
 msgid "Encrypt When I Can"
 msgstr "Шифровать, когда возможно"
 
-#: app/src/ui/preferences.rs:734
+#: app/src/ui/preferences.rs:743
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr ""
 "Включать шифрование, как только у каждого получателя есть ключ или сертификат"
 
-#: app/src/ui/preferences.rs:823
+#: app/src/ui/preferences.rs:832
 msgid "gpg could not be asked: {reason}"
 msgstr "Не удалось обратиться к gpg: {reason}"
 
-#: app/src/ui/preferences.rs:842
+#: app/src/ui/preferences.rs:851
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Не удалось обратиться к gpgsm: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:851
+#: app/src/ui/preferences.rs:860
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9758,11 +9768,11 @@ msgstr[2] ""
 "Penguin Mail подписывает и шифрует через {programs}, которые хранят ваши "
 "ключи и сами запрашивают парольную фразу."
 
-#: app/src/ui/preferences.rs:883 app/src/ui/preferences.rs:896
+#: app/src/ui/preferences.rs:892 app/src/ui/preferences.rs:905
 msgid "Spelling"
 msgstr "Орфография"
 
-#: app/src/ui/preferences.rs:885
+#: app/src/ui/preferences.rs:894
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9772,7 +9782,7 @@ msgstr ""
 "Установите словарь Hunspell, например hunspell-ru или hunspell-en-us, и "
 "снова откройте окно написания письма."
 
-#: app/src/ui/preferences.rs:898
+#: app/src/ui/preferences.rs:907
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -9780,59 +9790,59 @@ msgstr ""
 "Язык проверки орфографии для каждой учётной записи. Установленные словари: "
 "{languages}."
 
-#: app/src/ui/preferences.rs:910
+#: app/src/ui/preferences.rs:919
 msgid "System: {language}"
 msgstr "Системный: {language}"
 
-#: app/src/ui/preferences.rs:925
+#: app/src/ui/preferences.rs:934
 msgid "All Installed Languages"
 msgstr "Все установленные языки"
 
-#: app/src/ui/preferences.rs:968
+#: app/src/ui/preferences.rs:977
 msgid "Sync"
 msgstr "Синхронизация"
 
-#: app/src/ui/preferences.rs:976
+#: app/src/ui/preferences.rs:985
 msgid "Checking"
 msgstr "Проверка"
 
-#: app/src/ui/preferences.rs:982
+#: app/src/ui/preferences.rs:991
 msgid "Check for New Mail"
 msgstr "Проверять новую почту"
 
-#: app/src/ui/preferences.rs:991
+#: app/src/ui/preferences.rs:1000
 msgid "Storage"
 msgstr "Хранилище"
 
-#: app/src/ui/preferences.rs:999
+#: app/src/ui/preferences.rs:1008
 msgid "Keep Mail on This Computer For"
 msgstr "Хранить почту на этом компьютере"
 
-#: app/src/ui/preferences.rs:1020
+#: app/src/ui/preferences.rs:1029
 msgid "Message text kept for opening offline"
 msgstr "Текст писем, сохранённый для открытия без подключения"
 
-#: app/src/ui/preferences.rs:1023
+#: app/src/ui/preferences.rs:1032
 msgid "Message Cache"
 msgstr "История сообщений"
 
-#: app/src/ui/preferences.rs:1032
+#: app/src/ui/preferences.rs:1041
 msgid "100 messages"
 msgstr "100 писем"
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1042
 msgid "300 messages"
 msgstr "300 писем"
 
-#: app/src/ui/preferences.rs:1034
+#: app/src/ui/preferences.rs:1043
 msgid "1,000 messages"
 msgstr "1000 писем"
 
-#: app/src/ui/preferences.rs:1038
+#: app/src/ui/preferences.rs:1047
 msgid "Download Recent Inbox Messages"
 msgstr "Загружать последние письма из «Входящих»"
 
-#: app/src/ui/preferences.rs:1039
+#: app/src/ui/preferences.rs:1048
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -9840,126 +9850,126 @@ msgstr ""
 "Загружать текст писем каждой учётной записи, чтобы они быстрее открывались и "
 "были доступны без подключения. Вложения и внешние изображения не загружаются."
 
-#: app/src/ui/preferences.rs:1066
+#: app/src/ui/preferences.rs:1075
 msgid "Startup"
 msgstr "Запуск"
 
-#: app/src/ui/preferences.rs:1069
+#: app/src/ui/preferences.rs:1078
 msgid "Start in the Tray at Login"
 msgstr "Запускать в системном лотке при входе"
 
-#: app/src/ui/preferences.rs:1084
+#: app/src/ui/preferences.rs:1093
 msgid "Not available in demo mode"
 msgstr "Недоступно в демонстрационном режиме"
 
-#: app/src/ui/preferences.rs:1092
+#: app/src/ui/preferences.rs:1101
 msgid "Look for a new release once a day"
 msgstr "Проверять наличие нового выпуска раз в день"
 
-#: app/src/ui/preferences.rs:1133
+#: app/src/ui/preferences.rs:1142
 msgid "{used} of {limit}"
 msgstr "{used} из {limit}"
 
-#: app/src/ui/preferences.rs:1145
+#: app/src/ui/preferences.rs:1154
 msgid "{amount} · Full"
 msgstr "{amount} · Заполнено"
 
-#: app/src/ui/preferences.rs:1147
+#: app/src/ui/preferences.rs:1156
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Почти заполнено"
 
-#: app/src/ui/preferences.rs:1159
+#: app/src/ui/preferences.rs:1168
 msgid "Senders Who May Load Images"
 msgstr "Отправители, которым разрешены изображения"
 
-#: app/src/ui/preferences.rs:1160 app/src/ui/preferences.rs:1169
+#: app/src/ui/preferences.rs:1169 app/src/ui/preferences.rs:1178
 msgid "Nobody yet"
 msgstr "Пока никого"
 
-#: app/src/ui/preferences.rs:1171
+#: app/src/ui/preferences.rs:1180
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} отправитель"
 msgstr[1] "{count} отправителя"
 msgstr[2] "{count} отправителей"
 
-#: app/src/ui/preferences.rs:1181
+#: app/src/ui/preferences.rs:1190
 msgid "Anyone at this domain"
 msgstr "Все из этого домена"
 
-#: app/src/ui/preferences.rs:1183
+#: app/src/ui/preferences.rs:1192
 msgid "This address"
 msgstr "Этот адрес"
 
-#: app/src/ui/preferences.rs:1188
+#: app/src/ui/preferences.rs:1197
 msgid "Stop Loading Images from This Sender"
 msgstr "Не загружать изображения от этого отправителя"
 
-#: app/src/ui/preferences.rs:1195
+#: app/src/ui/preferences.rs:1204
 msgid "Stop loading images from {sender}"
 msgstr "Не загружать изображения от {sender}"
 
-#: app/src/ui/preferences.rs:1265
+#: app/src/ui/preferences.rs:1274
 msgid "Monday to Friday"
 msgstr "С понедельника по пятницу"
 
-#: app/src/ui/preferences.rs:1266
+#: app/src/ui/preferences.rs:1275
 msgid "Every day of the week"
 msgstr "Каждый день недели"
 
-#: app/src/ui/preferences.rs:1267
+#: app/src/ui/preferences.rs:1276
 msgid "No days"
 msgstr "Ни одного дня"
 
-#: app/src/ui/preferences.rs:1274
+#: app/src/ui/preferences.rs:1283
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1277
+#: app/src/ui/preferences.rs:1286
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1345
+#: app/src/ui/preferences.rs:1354
 msgid "Week Starts On"
 msgstr "Первый день недели"
 
-#: app/src/ui/preferences.rs:1350
+#: app/src/ui/preferences.rs:1359
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "«Автоматически» берёт первый день недели из региональных настроек"
 
-#: app/src/ui/preferences.rs:1364
+#: app/src/ui/preferences.rs:1373
 msgid "Working Hours"
 msgstr "Рабочие часы"
 
-#: app/src/ui/preferences.rs:1383
+#: app/src/ui/preferences.rs:1392
 msgid "Hours"
 msgstr "Часы"
 
-#: app/src/ui/preferences.rs:1434
+#: app/src/ui/preferences.rs:1443
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1517
+#: app/src/ui/preferences.rs:1526
 msgid "Never Translate"
 msgstr "Никогда не переводить"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1528
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Для сообщений на этих языках перевод не предлагается"
 
-#: app/src/ui/preferences.rs:1548
+#: app/src/ui/preferences.rs:1557
 msgid "Follow System"
 msgstr "Как в системе"
 
-#: app/src/ui/preferences.rs:1552
+#: app/src/ui/preferences.rs:1561
 msgid "Language"
 msgstr "Язык"
 
-#: app/src/ui/preferences.rs:1553
+#: app/src/ui/preferences.rs:1562
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Новый язык Penguin Mail покажет после перезапуска"
 
-#: app/src/ui/preferences.rs:1630 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1639 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Без подписи"
 
@@ -10035,7 +10045,7 @@ msgstr "Последняя использованная для календар�
 msgid "Same as New Messages"
 msgstr "Как для новых сообщений"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:272
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:273
 msgid "All Inboxes"
 msgstr "Все входящие"
 
@@ -10473,7 +10483,7 @@ msgid "Mailboxes"
 msgstr "Почта"
 
 #: app/src/ui/sidebar.rs:388 app/src/ui/sidebar.rs:1515
-#: app/src/ui/thread_list.rs:363
+#: app/src/ui/thread_list.rs:364
 msgid "Mail"
 msgstr "Почта"
 
@@ -10746,30 +10756,30 @@ msgstr "Текст письма"
 msgid "New Template"
 msgstr "Новый шаблон"
 
-#: app/src/ui/thread_list.rs:235
+#: app/src/ui/thread_list.rs:236
 msgid "No Mail"
 msgstr "Нет писем"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:253
+#: app/src/ui/thread_list.rs:254
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Поиск писем, например from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:292 app/src/ui/thread_list.rs:312
+#: app/src/ui/thread_list.rs:293 app/src/ui/thread_list.rs:313
 msgid "Show Mailboxes"
 msgstr "Показать почтовые ящики"
 
-#: app/src/ui/thread_list.rs:297
+#: app/src/ui/thread_list.rs:298
 msgid "New Message (C)"
 msgstr "Новое сообщение (C)"
 
-#: app/src/ui/thread_list.rs:302
+#: app/src/ui/thread_list.rs:303
 msgid "Search (/)"
 msgstr "Поиск (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:311
+#: app/src/ui/thread_list.rs:312
 msgid "Search mail"
 msgstr "Поиск писем"
 

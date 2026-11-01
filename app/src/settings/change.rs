@@ -23,6 +23,7 @@ use super::{
 pub enum Change {
     Threading(bool),
     MarkRead(MarkRead),
+    FollowSelectionDirection(bool),
     RemoteImages(RemoteImages),
     TextSize(TextSize),
     PreviewLines(PreviewLines),
@@ -282,6 +283,7 @@ impl Change {
             }
             Change::Threading(on) => settings.threading = on,
             Change::MarkRead(when) => settings.mark_read = when,
+            Change::FollowSelectionDirection(on) => settings.follow_selection_direction = on,
             Change::RemoteImages(when) => settings.remote_images = when,
             Change::TextSize(size) => settings.text_size = size,
             Change::PreviewLines(lines) => settings.preview_lines = lines,
@@ -627,6 +629,7 @@ settable! {
     may_set {
         Threading => threading,
         MarkRead => mark_read,
+        FollowSelectionDirection => follow_selection_direction,
         RemoteImages => remote_images,
         TextSize => text_size,
         PreviewLines => preview_lines,
@@ -868,6 +871,7 @@ impl Effects {
         let Settings {
             threading,
             mark_read,
+            follow_selection_direction,
             remote_images,
             text_size,
             preview_lines,
@@ -933,6 +937,7 @@ impl Effects {
         // changing one saves the file and stops there.
         let _quiet = (
             mark_read,
+            follow_selection_direction,
             remote_images,
             notifications,
             notification_previews,
@@ -1396,6 +1401,7 @@ mod tests {
         // The list the module's comment calls quiet, checked one by one.
         let quiet = [
             Change::MarkRead(MarkRead::Manually),
+            Change::FollowSelectionDirection(false),
             Change::RemoteImages(RemoteImages::Always),
             Change::Notifications(false),
             Change::NotificationPreviews(false),

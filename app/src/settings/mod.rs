@@ -26,6 +26,7 @@ pub struct Settings {
     /// Group replies into conversations instead of listing each message.
     pub threading: bool,
     pub mark_read: MarkRead,
+    pub follow_selection_direction: bool,
     pub remote_images: RemoteImages,
     pub text_size: TextSize,
     pub preview_lines: PreviewLines,
@@ -475,6 +476,7 @@ impl Default for Settings {
         Settings {
             threading: true,
             mark_read: MarkRead::Immediately,
+            follow_selection_direction: true,
             remote_images: RemoteImages::Ask,
             text_size: TextSize::Normal,
             preview_lines: PreviewLines::Two,
@@ -1317,6 +1319,7 @@ mod tests {
         let mut settings = Settings {
             threading: false,
             text_size: TextSize::Large,
+            follow_selection_direction: false,
             ..Settings::default()
         };
         settings.set_signature("Me@Example.com", "Dana\n\n");
@@ -1328,6 +1331,7 @@ mod tests {
         let partial = Settings::load(&path);
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
+        assert!(partial.follow_selection_direction);
         assert!(partial.notifications, "missing keys take their defaults");
     }
 

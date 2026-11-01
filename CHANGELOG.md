@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Deleting, archiving, or moving mail selects a neighbor in your last navigation direction, with an option in Reading preferences to always select the next row.
+
 ### Fixed
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.

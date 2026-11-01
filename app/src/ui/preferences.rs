@@ -186,6 +186,15 @@ fn reading_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.mark_read,
         Change::MarkRead,
     ));
+    reading.add(&switch(
+        app,
+        &gettext("Follow Navigation After Removing Mail"),
+        Some(&gettext(
+            "After deleting, archiving, or moving mail, select the neighbor in the direction you last moved",
+        )),
+        settings.follow_selection_direction,
+        Change::FollowSelectionDirection,
+    ));
     page.add(&reading);
     let images = adw::PreferencesGroup::builder()
         .title(gettext("Images and Receipts"))
