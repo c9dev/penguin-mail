@@ -8,7 +8,6 @@
 use std::io::{self, Read, Seek, SeekFrom};
 
 use mail_parser::MessageParser;
-use mail_parser::parsers::MessageStream;
 
 use super::{
     Described, MAX_DEPTH, Part, Parts, Skim, Spans, Transfer, decoded_size, describe,
@@ -48,10 +47,16 @@ pub fn outline_from<R: Read + Seek>(
         return Ok(None);
     };
     let headers = message
-        .headers_raw()
-        .map(|(name, value)| (name.to_string(), unfold(value)))
+        .headers()
+        .iter()
+        .map(|header| {
+            (
+                header.raw_name().to_string(),
+                unfold(&String::from_utf8_lossy(header.raw_value())),
+            )
+        })
         .collect();
-    let root_path = match mime_type(message.root_part()).starts_with("multipart/") {
+    let root_path = match mime_type(&message.root_part()).starts_with("multipart/") {
         true => String::new(),
         false => "1".to_string(),
     };
@@ -118,12 +123,10 @@ impl<R: Read + Seek> Walk<'_, R> {
             return self.whole(start, end, path, depth);
         };
         let parser = MessageParser::default();
-        let mut stream = MessageStream::new(&head);
-        stream.parse_headers(&parser, &mut Vec::new());
-        let body_start = start + stream.offset().min(head.len()) as u64;
         let Some(message) = parser.parse_headers(&head) else {
             return self.whole(start, end, path, depth);
         };
+        let body_start = start + u64::from(message.root_part().offset_body());
         let Described {
             mut skimmed,
             boundary,
@@ -240,7 +243,7 @@ impl<R: Read + Seek> Walk<'_, R> {
             return Ok(());
         };
         skimmed.subject = headers.subject().map(str::to_string);
-        skimmed.children = match mime_type(headers.root_part()).starts_with("multipart/") {
+        skimmed.children = match mime_type(&headers.root_part()).starts_with("multipart/") {
             true => self.part(start, end, path.to_string(), depth + 1)?.children,
             false => vec![self.part(start, end, format!("{path}.1"), depth + 1)?],
         };
@@ -315,7 +318,7 @@ fn blank_line(head: &[u8], from: usize) -> Option<usize> {
 
 /// A forward-only reader of the bytes at `start..end` of a source, with the
 /// operations of mail-parser's stream that cut a multipart body.
-struct Scan<'r, R> {
+pub(super) struct Scan<'r, R> {
     source: &'r mut R,
     buf: Vec<u8>,
     /// Where `buf` starts in the source.
@@ -325,7 +328,7 @@ struct Scan<'r, R> {
 }
 
 impl<'r, R: Read + Seek> Scan<'r, R> {
-    fn new(source: &'r mut R, start: u64, end: u64) -> Self {
+    pub(super) fn new(source: &'r mut R, start: u64, end: u64) -> Self {
         Scan {
             source,
             buf: Vec::new(),
@@ -335,7 +338,7 @@ impl<'r, R: Read + Seek> Scan<'r, R> {
         }
     }
 
-    fn offset(&self) -> u64 {
+    pub(super) fn offset(&self) -> u64 {
         self.pos.min(self.end)
     }
 
@@ -398,7 +401,7 @@ impl<'r, R: Read + Seek> Scan<'r, R> {
         Ok(matches)
     }
 
-    fn skip_crlf(&mut self) -> io::Result<()> {
+    pub(super) fn skip_crlf(&mut self) -> io::Result<()> {
         while let Some(ch) = self.peek()? {
             match ch {
                 b'\r' | b' ' | b'\t' => self.pos += 1,
@@ -433,7 +436,7 @@ impl<'r, R: Read + Seek> Scan<'r, R> {
         Ok(passed)
     }
 
-    fn seek_next_part(&mut self, boundary: &[u8]) -> io::Result<bool> {
+    pub(super) fn seek_next_part(&mut self, boundary: &[u8]) -> io::Result<bool> {
         if boundary.is_empty() {
             return Ok(false);
         }
@@ -453,7 +456,7 @@ impl<'r, R: Read + Seek> Scan<'r, R> {
         Ok(false)
     }
 
-    fn seek_part_end(&mut self, boundary: &[u8]) -> io::Result<(u64, bool)> {
+    pub(super) fn seek_part_end(&mut self, boundary: &[u8]) -> io::Result<(u64, bool)> {
         let (mut last, mut before) = (b'\n', 0u8);
         let mut end_pos = self.offset();
         loop {
@@ -480,7 +483,7 @@ impl<'r, R: Read + Seek> Scan<'r, R> {
         Ok((self.offset(), false))
     }
 
-    fn is_multipart_end(&mut self) -> io::Result<bool> {
+    pub(super) fn is_multipart_end(&mut self) -> io::Result<bool> {
         let saved = self.pos;
         match (self.next()?, self.peek()?) {
             (Some(b'\r'), Some(b'\n')) => {

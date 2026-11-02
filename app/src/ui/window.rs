@@ -830,6 +830,14 @@ impl MainWindow {
                         }
                     }
                 },
+                {
+                    let weak = weak.clone();
+                    move |action| {
+                        if let Some(win) = weak.upgrade() {
+                            win.analyze(&win.conversation, action);
+                        }
+                    }
+                },
             );
             let toolbar_heights = gtk::SizeGroup::new(gtk::SizeGroupMode::Vertical);
             let assistant_top_bar = super::top_bar(&assistant.header);
@@ -1854,7 +1862,8 @@ impl MainWindow {
     pub(super) fn act(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
             Action::Invitation(action) => self.invitation_action(view, action),
-            Action::Summarize => self.summarize(view),
+            Action::Summarize => self.analyze(view, crate::assistant::Analysis::Summarize),
+            Action::Explain => self.analyze(view, crate::assistant::Analysis::Explain),
             Action::Receipt { message_id, send } => self.answer_receipt(view, message_id, send),
             Action::Reply(kind) => self.reply(view, kind),
             Action::EditDraft => self.edit_draft_from(view),
@@ -3789,7 +3798,7 @@ impl MainWindow {
     /// Opens the assistant beside the mail if it is closed, and asks it to
     /// summarize the conversation on screen, as the suggestion in an empty
     /// chat does.
-    fn summarize(self: &Rc<Self>, view: &Rc<ConversationView>) {
+    fn analyze(self: &Rc<Self>, view: &Rc<ConversationView>, action: crate::assistant::Analysis) {
         if view.detached() {
             return;
         }
@@ -3799,7 +3808,11 @@ impl MainWindow {
         } else {
             self.assistant_split.set_show_sidebar(true);
         }
-        self.assistant.ask(gettext("Summarize this conversation"));
+        match view.read(crate::assistant::analysis_context) {
+            Some(Ok(context)) => self.assistant.analyze(action, context),
+            Some(Err(problem)) => self.toast(&problem),
+            None => self.toast(&gettext("Open a conversation first.")),
+        }
     }
 
     /// Offers Summarize above the conversation while the assistant has a
@@ -4295,7 +4308,10 @@ impl MainWindow {
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
-            Effect::Calendar => self.calendar.week_start_changed(),
+            Effect::Calendar => {
+                self.calendar.preferences_changed();
+                self.refresh_next_event();
+            }
             Effect::Translation => {
                 for view in self.views() {
                     self.thread_run(&view).offer_translation_again();

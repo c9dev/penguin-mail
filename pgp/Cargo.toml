@@ -9,7 +9,7 @@ publish.workspace = true
 
 [dependencies]
 libc.workspace = true
-mail-builder.workspace = true
+encodify.workspace = true
 rand.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true

@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 mailrs-domain.workspace = true
 base64.workspace = true
+encodify.workspace = true
 encoding_rs.workspace = true
 html5ever.workspace = true
 mail-parser.workspace = true

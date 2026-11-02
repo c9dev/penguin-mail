@@ -1,4 +1,4 @@
-//! The one dialog that asks before Penguin Mail leaves a mailing list.
+//! The dialogs that ask before loading unsubscribe pages and leaving lists.
 //!
 //! It takes one line or twenty, so the Unsubscribe button and the
 //! assistant ask the same question in the same words. Each line names a
@@ -58,6 +58,29 @@ const REQUEST_WIDTH: i32 = 300;
 /// The response that goes ahead. Cancel, Escape and closing the dialog
 /// all answer something else, and none of them submits anything.
 const GO: &str = "go";
+
+/// Asks before any sender page is contacted. URLs remain plain text so
+/// the sender cannot turn the permission question into markup or links.
+pub async fn confirm_pages(parent: &impl IsA<gtk::Widget>, urls: Vec<String>) -> bool {
+    let dialog = adw::AlertDialog::new(
+        Some(&gettext("Load Unsubscribe Pages?")),
+        Some(&gettext(
+            "Loading these pages contacts their servers and runs their scripts. The sender may learn that you opened the link, and opening it may unsubscribe you. You will be asked again before a form is submitted.",
+        )),
+    );
+    let addresses = gtk::Label::builder()
+        .label(urls.join("\n\n"))
+        .selectable(true)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .xalign(0.0)
+        .build();
+    dialog.set_extra_child(Some(&addresses));
+    dialog.add_responses(&[("cancel", &gettext("Cancel")), (GO, &gettext("Load Pages"))]);
+    dialog.set_close_response("cancel");
+    dialog.set_default_response(Some("cancel"));
+    dialog.choose_future(Some(parent)).await == GO
+}
 
 /// Asks about `lines`, filling each of them in as `updates` says what a
 /// page turned out to hold. Answers the ticked lines, each with the way

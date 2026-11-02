@@ -55,8 +55,14 @@ pub fn head(raw: &[u8]) -> Head {
         .parse(block)
         .map(|message| {
             message
-                .headers_raw()
-                .map(|(name, value)| (name.to_string(), unfold(value)))
+                .headers()
+                .iter()
+                .map(|header| {
+                    (
+                        header.raw_name().to_string(),
+                        unfold(&String::from_utf8_lossy(header.raw_value())),
+                    )
+                })
                 .collect()
         })
         .unwrap_or_default();

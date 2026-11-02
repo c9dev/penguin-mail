@@ -139,10 +139,12 @@ pub struct Asked {
     /// line, the list's name and the words under it once its page had
     /// settled.
     pub lists_asked: Vec<Vec<String>>,
-    /// Whether the person ticks every line and presses Unsubscribe. The
-    /// dialog is that tool's only question, so this stands apart from
-    /// `approves`, which answers the pane's card.
+    /// Whether the person ticks every line and presses Unsubscribe,
+    /// apart from `approves`, which answers the pane's card.
     pub approves_lists: bool,
+    pub pages_asked: Vec<Vec<String>>,
+    pub approves_pages: bool,
+    pub page_advisers: usize,
     pub mail_changed: Vec<(MailAction, Outcome)>,
     pub relisted: usize,
     /// Messages whose only copy was opened in a composer, marked unsaved.
@@ -233,6 +235,7 @@ impl Effects for FakeEffects {
     }
 
     fn page_adviser(&self) -> Option<Box<dyn Adviser>> {
+        self.asked.borrow_mut().page_advisers += 1;
         None
     }
 
@@ -248,6 +251,14 @@ impl Effects for FakeEffects {
         });
         *self.browser.borrow_mut() = Some(Rc::clone(&browser));
         browser
+    }
+
+    fn confirm_unsubscribe_pages(&self, urls: Vec<String>) -> Answer<'_, bool> {
+        Box::pin(async move {
+            let mut asked = self.asked.borrow_mut();
+            asked.pages_asked.push(urls);
+            asked.approves_pages
+        })
     }
 
     fn confirm_unsubscribe(
@@ -734,6 +745,7 @@ impl Harness {
             asked: RefCell::new(Asked {
                 approves: true,
                 approves_lists: true,
+                approves_pages: true,
                 ..Asked::default()
             }),
             pages: RefCell::new(HashMap::new()),

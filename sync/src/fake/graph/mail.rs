@@ -1,7 +1,6 @@
 //! The fake's mail: folders, categories, messages and their log.
 
 use mail_builder::MessageBuilder;
-use mail_parser::MimeHeaders;
 use mailrs_graph::{
     AttachmentInfo, DeltaPage, EmailAddress, Flag, GraphError, ItemBody, Listing, MailFolder,
     MasterCategory, Message, MessageBody, Page, Recipient, Removed, Write,
@@ -247,12 +246,8 @@ fn file_message(s: &mut GraphState, folder: &str, raw: Vec<u8>, draft: bool) -> 
         .parse(&raw)
         .ok_or_else(|| GraphError::Decode("not a message".into()))?;
     let id = s.new_id("msg");
-    let address = |a: &mail_parser::Addr| {
-        recipient(
-            a.name.as_deref().unwrap_or(""),
-            a.address.as_deref().unwrap_or(""),
-        )
-    };
+    let address =
+        |a: mail_parser::Mailbox<'_>| recipient(a.name().unwrap_or(""), a.address().unwrap_or(""));
     let preview: String = parsed
         .body_text(0)
         .unwrap_or_default()
@@ -275,10 +270,10 @@ fn file_message(s: &mut GraphState, folder: &str, raw: Vec<u8>, draft: bool) -> 
                     id: format!("{id}-att-{i}"),
                     name: part.attachment_name().unwrap_or("file").to_string(),
                     content_type: kind,
-                    size: part.contents().len() as i64,
+                    size: part.decoded_len() as i64,
                     ..AttachmentInfo::default()
                 },
-                part.contents().to_vec(),
+                part.decoded().into_owned(),
             )
         })
         .collect();
@@ -299,10 +294,13 @@ fn file_message(s: &mut GraphState, folder: &str, raw: Vec<u8>, draft: bool) -> 
                 .unwrap_or_default()
                 .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         ),
-        from: parsed.from().and_then(|a| a.first()).map(address),
+        from: parsed
+            .from()
+            .and_then(|a| a.mailboxes().next())
+            .map(address),
         to_recipients: parsed
             .to()
-            .map(|a| a.iter().map(address).collect())
+            .map(|a| a.mailboxes().map(address).collect())
             .unwrap_or_default(),
         has_attachments: Some(!files.is_empty()),
         is_read: Some(true),

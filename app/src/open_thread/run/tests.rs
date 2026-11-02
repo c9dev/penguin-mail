@@ -37,6 +37,51 @@ fn opened(inside: mailrs_domain::MessageBody) -> Read {
 }
 
 #[tokio::test]
+async fn trusting_the_summary_sender_does_not_trust_the_whole_thread() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.image_senders.push("ann@example.com".to_string());
+        let mut stranger = meta("m2", false);
+        stranger.from.as_mut().unwrap().email = "bob@example.com".to_string();
+        screen.messages.push(stranger.clone());
+        screen
+            .stored
+            .get_mut(THREAD)
+            .unwrap()
+            .messages
+            .push(stranger);
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.images_allowed), Some(false));
+}
+
+#[tokio::test]
+async fn a_new_sender_during_fetch_does_not_inherit_image_trust() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.image_senders.push("ann@example.com".to_string());
+        let mut stranger = meta("m2", false);
+        stranger.from.as_mut().unwrap().email = "bob@example.com".to_string();
+        screen.messages.push(stranger);
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.images_allowed), Some(false));
+}
+
+#[tokio::test]
+async fn always_loading_images_still_covers_a_new_sender_during_fetch() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.images_always_allowed = true;
+        let mut stranger = meta("m2", false);
+        stranger.from.as_mut().unwrap().email = "bob@example.com".to_string();
+        screen.messages.push(stranger);
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.images_allowed), Some(true));
+}
+
+#[tokio::test]
 async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
     let window = FakeWindow::new();
     window.run().open(row(THREAD)).await;
