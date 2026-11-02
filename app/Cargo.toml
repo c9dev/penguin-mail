@@ -26,7 +26,9 @@ mailrs-sync = { workspace = true, features = ["fake"] }
 mailrs-ai.workspace = true
 mailrs-pgp.workspace = true
 mailrs-smime.workspace = true
-adw.workspace = true
+# Debian 13 ships libadwaita 1.7 and GTK 4.18; the `adwaita-1-8` and
+# `gtk-4-20` features below turn on what newer ones add.
+adw = { workspace = true, features = ["v1_7"] }
 ammonia.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
@@ -43,7 +45,7 @@ futures.workspace = true
 # `mailrs_domain::translate`.
 gettext-rs.workspace = true
 # Notification categories need GIO even when WebKitGTK is not linked.
-gtk = { workspace = true, features = ["gio_v2_80"] }
+gtk = { workspace = true, features = ["gio_v2_80", "v4_18"] }
 ksni.workspace = true
 mail-builder.workspace = true
 # The message inside an encrypted one arrives as MIME, not through Gmail.
@@ -90,8 +92,16 @@ zbus = { version = "6", default-features = false, features = ["tokio", "proxy", 
 # The kind of package a build is for; see src/packaging.rs. A plain build
 # is the .deb or the tarball.
 [features]
+# What a build against Ubuntu 26.04 uses. A build for Debian 13 passes
+# `--no-default-features`; see scripts/package-debian.sh.
+default = ["gtk-4-20", "adwaita-1-8"]
+gtk-4-20 = ["gtk/v4_20"]
+adwaita-1-8 = ["adw/v1_8"]
 packaging-appimage = []
 packaging-rpm = []
+# A .deb built on Debian 13; see scripts/package-debian.sh. The apt
+# repository serves Ubuntu builds, so this one leaves updates to the person.
+packaging-debian = []
 packaging-arch = []
 packaging-nix = []
 # Also moves the Google refresh tokens, the IMAP passwords and the
