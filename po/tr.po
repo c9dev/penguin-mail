@@ -2170,7 +2170,7 @@ msgstr "Odaklanmış"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail, açık pencere olmasa da eşitlemeyi sürdürür"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3446
+#: app/src/compose.rs:669 app/src/compose.rs:3453
 msgid "Add at least one recipient."
 msgstr "En az bir alıcı ekleyin."
 
@@ -2178,7 +2178,7 @@ msgstr "En az bir alıcı ekleyin."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” bir e-posta adresi değil."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3452
+#: app/src/compose.rs:904 app/src/compose.rs:3459
 msgid "Choose a time in the future"
 msgstr "Gelecekte bir zaman seçin"
 
