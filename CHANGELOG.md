@@ -15,6 +15,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- On macOS, messages stay visible after shrinking and expanding the window.
 - Summarize and Explain limit the mail sent to the model and say when some text was left out.
 - Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.
 - A skill command's saved approval covers its standard input as well as its command line.
