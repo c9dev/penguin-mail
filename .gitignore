@@ -27,3 +27,5 @@ packaging/secrets.env
 __pycache__/
 CLAUDE.local.md
 packaging/flatpak/local-signin-test.yml
+# scripts/package-debian.sh
+dist-debian/

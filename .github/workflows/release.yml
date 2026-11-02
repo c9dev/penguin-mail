@@ -248,6 +248,46 @@ jobs:
           path: dist/*.rpm
           if-no-files-found: error
 
+  debian:
+    name: Build the Debian 13 .deb
+    needs: version
+    runs-on: ubuntu-latest
+    # Debian 13's GTK 4.18 and libadwaita 1.7 are two releases behind the
+    # Ubuntu build's, so this .deb builds against them with the app's
+    # newer-library features off. dpkg requires the libraries the binaries
+    # link against, so it has to be built on Debian 13 itself.
+    container: debian:13@sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.version.outputs.source_sha }}
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Build and pack
+        env:
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+        run: scripts/package-debian.sh dist
+      - name: Install and start it
+        run: |
+          apt-get install -y ./dist/penguin-mail_*~deb13_amd64.deb
+          penguin-mail --version
+          scripts/smoke-start.sh /usr/bin/penguin-mail
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: penguin-mail-${{ needs.version.outputs.version }}-debian
+          path: dist/*.deb
+          if-no-files-found: error
+
   arch:
     name: Build the Arch package
     needs: version
@@ -439,7 +479,7 @@ jobs:
 
   publish:
     name: Publish the release
-    needs: [version, ci, build, appimage, rpm, arch, flatpak, macos]
+    needs: [version, ci, build, appimage, rpm, debian, arch, flatpak, macos]
     if: needs.version.outputs.publish == 'true'
     permissions:
       contents: write

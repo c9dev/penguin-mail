@@ -3,7 +3,11 @@
 # <out>: a .deb that installs under /usr, a tarball and a zip that install
 # under ~/.local through install-files.sh, and SHA256SUMS over the three.
 #
-#   scripts/package.sh <tree> <version> <out>
+#   scripts/package.sh <tree> <version> <out> [debian]
+#
+# `debian` packs a build for Debian 13 rather than Ubuntu: the .deb's
+# version carries `~deb13`, and it leaves out the apt repository entry,
+# which serves Ubuntu builds that Debian's older libadwaita cannot run.
 set -euo pipefail
 # Packages must not inherit a group-writable umask from whoever builds them.
 umask 022
@@ -12,6 +16,15 @@ cd "$(dirname "$0")/.."
 tree=${1:?usage: scripts/package.sh <tree> <version> <out>}
 version=${2:?usage: scripts/package.sh <tree> <version> <out>}
 out=${3:?usage: scripts/package.sh <tree> <version> <out>}
+flavor=${4:-ubuntu}
+case $flavor in
+ubuntu) deb_version=$version ;;
+debian) deb_version="$version~deb13" ;;
+*)
+    echo "package.sh knows the flavors ubuntu and debian, not $flavor" >&2
+    exit 1
+    ;;
+esac
 tree=$(realpath "$tree")
 mkdir -p "$out"
 out=$(realpath "$out")
@@ -28,11 +41,13 @@ cp -r "$tree/." "$root/usr/"
 # The apt repository's key and entry, so a person who installs this .deb
 # once gets later versions from `apt upgrade`. The entry sits under /etc,
 # so it is a conffile: dpkg keeps it if the person edits or removes it.
-install -Dm644 "packaging/apt/penguin-mail-archive-keyring.gpg" \
-    "$root/usr/share/keyrings/penguin-mail-archive-keyring.gpg"
-install -Dm644 "packaging/apt/penguin-mail.sources" \
-    "$root/etc/apt/sources.list.d/penguin-mail.sources"
-echo /etc/apt/sources.list.d/penguin-mail.sources > "$root/DEBIAN/conffiles"
+if [ "$flavor" = ubuntu ]; then
+    install -Dm644 "packaging/apt/penguin-mail-archive-keyring.gpg" \
+        "$root/usr/share/keyrings/penguin-mail-archive-keyring.gpg"
+    install -Dm644 "packaging/apt/penguin-mail.sources" \
+        "$root/etc/apt/sources.list.d/penguin-mail.sources"
+    echo /etc/apt/sources.list.d/penguin-mail.sources > "$root/DEBIAN/conffiles"
+fi
 # A binary package's control file has no License field. Debian keeps the
 # licence in the copyright file under /usr/share/doc instead, and lintian
 # and the package managers look for it there.
@@ -70,7 +85,7 @@ depends=$(cd "$work/shlibs" && dpkg-shlibdeps -O \
 size=$(du -sk --exclude=DEBIAN "$root" | cut -f1)
 cat > "$root/DEBIAN/control" <<CONTROL
 Package: penguin-mail
-Version: $version
+Version: $deb_version
 Architecture: amd64
 Maintainer: Pivotd <support@penguin-mail.com>
 Installed-Size: $size
@@ -108,8 +123,17 @@ if [ "$1" = remove ]; then
 fi
 POSTRM
 chmod 755 "$root/DEBIAN/postinst" "$root/DEBIAN/postrm"
-deb="penguin-mail_${version}_amd64.deb"
+deb="penguin-mail_${deb_version}_amd64.deb"
 dpkg-deb --root-owner-group -Zxz --build "$root" "$out/$deb" >/dev/null
+
+# The Debian build is a .deb alone: a tarball linked against Debian's
+# libraries would not run on the Ubuntu the tarball is documented for.
+# The release's checksums cover it with the rest.
+if [ "$flavor" = debian ]; then
+    echo "Packed into $out:"
+    (cd "$out" && ls -1 "$deb")
+    exit 0
+fi
 
 # The tarball and the zip hold the same folder: the tree, the script that
 # installs it, and the licence.

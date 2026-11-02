@@ -383,8 +383,10 @@ cargo run --release -p mailrs-cli -- triage you@gmail.com <thread-id> archive
 ## Which package
 
 Every package is the same app. The Linux packages use a cargo feature that
-says what kind they are (`packaging-rpm`, `packaging-arch`,
-`packaging-flatpak`, `packaging-snap`, or none for the .deb and tarball).
+says what kind they are (`packaging-rpm`, `packaging-debian`,
+`packaging-arch`, `packaging-flatpak`, `packaging-snap`, or none for the
+Ubuntu .deb and tarball; a Debian 13 .deb is built with
+`scripts/package-debian.sh` and updated by hand).
 The macOS app uses the native build. Its WebKit view and app menu use macOS
 instead of Linux's WebKitGTK and tray.
 
