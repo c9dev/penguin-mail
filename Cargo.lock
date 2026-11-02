@@ -510,7 +510,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "hashify",
- "mail-builder",
+ "mail-builder 1.0.0",
  "mail-parser",
 ]
 
@@ -985,6 +985,16 @@ name = "email_address"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e079f19b08ca6239f47f8ba8509c11cf3ea30095831f7fed61441475edd8c449"
+
+[[package]]
+name = "encodify"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e95d6e27686e1d6991a3077f4dbec9d33d18903466d234165ad86cd08c3ebc79"
+dependencies = [
+ "memchr",
+ "simdutf8",
+]
 
 [[package]]
 name = "encoding_rs"
@@ -2385,7 +2395,14 @@ name = "mail-builder"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ccbc27cb02a58a311a404769a22f5abf63fe3173b290d80be7c534f9c7023151"
+
+[[package]]
+name = "mail-builder"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8bca634885db8e836b80700a73661de20ffd93cb5787729afc31575545e2aed"
 dependencies = [
+ "encodify",
  "gethostname",
 ]
 
@@ -2415,7 +2432,7 @@ dependencies = [
  "gtk4",
  "ksni",
  "libadwaita",
- "mail-builder",
+ "mail-builder 2.0.0",
  "mail-parser",
  "mailrs-ai",
  "mailrs-discover",
@@ -2653,7 +2670,7 @@ name = "mailrs-pgp"
 version = "1.0.11"
 dependencies = [
  "libc",
- "mail-builder",
+ "mail-builder 2.0.0",
  "rand 0.10.3",
  "tempfile",
  "thiserror 2.0.21",
@@ -2696,7 +2713,7 @@ dependencies = [
 name = "mailrs-smime"
 version = "1.0.11"
 dependencies = [
- "mail-builder",
+ "mail-builder 2.0.0",
  "mailrs-pgp",
  "rand 0.10.3",
  "tempfile",
@@ -2731,7 +2748,7 @@ dependencies = [
  "dirs",
  "futures",
  "keyring",
- "mail-builder",
+ "mail-builder 2.0.0",
  "mail-parser",
  "mailrs-dav",
  "mailrs-discover",
