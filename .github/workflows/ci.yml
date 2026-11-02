@@ -158,7 +158,7 @@ jobs:
         run: scripts/ci-deps.sh
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: ubuntu-26.04
       # update-po.sh reads the Rust sources with xtr. The cache restored
@@ -250,7 +250,7 @@ jobs:
         run: scripts/ci-deps.sh --rust-only
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: docker-suite
       # The tests never pull; this step fetches every pinned image once.
@@ -290,7 +290,7 @@ jobs:
         run: scripts/ci-deps.sh --rust-only
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: jmap-suite
       - name: Pull the test images
