@@ -8,6 +8,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### New
 
 - Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
+- Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.
 - Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.
 - Penguin Mail builds and installs on Debian 13 from `scripts/package-debian.sh`, as a .deb against its GTK 4.18 and libadwaita 1.7.
 
