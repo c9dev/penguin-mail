@@ -27,8 +27,8 @@ impl MainWindow {
     /// Unsubscribes from the mailing list of the thread `view` shows,
     /// after asking.
     ///
-    /// A list that lets go through a page has its page read out of sight
-    /// while the dialog is already on screen, so the question names the
+    /// After permission to load it, a page is read out of sight while
+    /// the final dialog is on screen, so the question names the
     /// button and the address rather than sending the reader off to do
     /// it themselves. A page nobody could read still opens in their
     /// browser, as it always did.
@@ -97,28 +97,36 @@ impl MainWindow {
             way,
         }];
 
-        // One hidden view for the run, held by both halves: the read that
-        // fills the dialog in, and the submission after the yes.
-        let browser = page.as_ref().map(|_| Rc::new(PageBrowser::new()));
-        let (tell, hear) = async_channel::bounded(1);
-        match (page, browser.clone()) {
-            (Some(url), Some(browser)) => {
-                let ai = self.settings_with(|s| s.ai.clone());
-                let adviser = model_adviser(&ai, self.core.runtime());
-                let address = address.clone();
-                glib::spawn_future_local(async move {
-                    let adviser = adviser.as_ref().map(|a| a as &dyn Adviser);
-                    let prepared = prepare(&*browser, adviser, &url, &address).await;
-                    let _ = tell.send((0, Way::Page(prepared))).await;
-                });
-            }
-            // Nothing will arrive, and the dialog waits for a line to
-            // settle until the last sender is gone.
-            _ => drop(tell),
-        }
-
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
+            if let Some(url) = &page {
+                if !unsubscribe::confirm_pages(&this.window, vec![url.clone()]).await {
+                    return;
+                }
+                if !view.is_showing(&asked_on) {
+                    return;
+                }
+            }
+            // One hidden view for the run, held by both halves: the read that
+            // fills the dialog in, and the submission after the yes.
+            let browser = page.as_ref().map(|_| Rc::new(PageBrowser::new()));
+            let (tell, hear) = async_channel::bounded(1);
+            match (page, browser.clone()) {
+                (Some(url), Some(browser)) => {
+                    let ai = this.settings_with(|s| s.ai.clone());
+                    let adviser = model_adviser(&ai, this.core.runtime());
+                    let address = address.clone();
+                    glib::spawn_future_local(async move {
+                        let adviser = adviser.as_ref().map(|a| a as &dyn Adviser);
+                        let prepared = prepare(&*browser, adviser, &url, &address).await;
+                        let _ = tell.send((0, Way::Page(prepared))).await;
+                    });
+                }
+                // Nothing will arrive, and the dialog waits for a line to
+                // settle until the last sender is gone.
+                _ => drop(tell),
+            }
+
             let Some(ticked) = unsubscribe::confirm(&this.window, lines, hear).await else {
                 return;
             };
