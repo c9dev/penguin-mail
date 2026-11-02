@@ -345,6 +345,8 @@ pub struct AiSettings {
     pub claude_command: String,
     /// Ask before the assistant sends mail or changes Gmail settings.
     pub confirm_actions: bool,
+    /// Allow tools in chats started by Summarize or Explain.
+    pub analysis_tools: bool,
     /// Features other than the assistant that do not follow it. A feature
     /// missing here uses the assistant's model.
     pub uses: BTreeMap<Feature, Use>,
@@ -368,6 +370,7 @@ impl Default for AiSettings {
             claude_model: String::new(),
             claude_command: String::new(),
             confirm_actions: true,
+            analysis_tools: false,
             uses: BTreeMap::new(),
             web_search: WebSearch::Claude,
             searxng_url: String::new(),
@@ -1361,6 +1364,16 @@ mod tests {
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
         assert!(partial.notifications, "missing keys take their defaults");
         assert_eq!(partial.calendar_clock, CalendarClock::Automatic);
+    }
+
+    #[test]
+    fn analysis_tools_require_an_explicit_preference() {
+        let mut settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(!settings.ai.analysis_tools);
+        Change::Ai(AiChange::AnalysisTools(true)).apply(&mut settings);
+        let saved = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&saved).unwrap();
+        assert!(restored.ai.analysis_tools);
     }
 
     #[test]

@@ -253,6 +253,7 @@ pub enum AiChange {
     BaseUrl(String),
     ClaudeCommand(String),
     ConfirmActions(bool),
+    AnalysisTools(bool),
     /// A server the app found on this machine: its address and first model.
     LocalServer {
         base_url: String,
@@ -547,6 +548,7 @@ impl AiChange {
             AiChange::BaseUrl(url) => ai.base_url = url,
             AiChange::ClaudeCommand(command) => ai.claude_command = command,
             AiChange::ConfirmActions(on) => ai.confirm_actions = on,
+            AiChange::AnalysisTools(on) => ai.analysis_tools = on,
             AiChange::LocalServer { base_url, model } => {
                 ai.base_url = base_url;
                 ai.local_model = model;

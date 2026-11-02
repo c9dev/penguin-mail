@@ -7,12 +7,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
 - Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.
 - Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.
 - Penguin Mail builds and installs on Debian 13 from `scripts/package-debian.sh`, as a .deb against its GTK 4.18 and libadwaita 1.7.
 
 ### Fixed
 
+- Summarize and Explain limit the mail sent to the model and say when some text was left out.
+- Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.
+- A skill command's saved approval covers its standard input as well as its command line.
 - Closing or sending a message lets its window go, instead of keeping every composer ever opened alive in the background.
 - A shared calendar the server refuses to show is left alone until the calendar list is read again, instead of being asked for and logged every minute.
 - A crash is written to the log with where it happened, so it can be reported.

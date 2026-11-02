@@ -674,3 +674,79 @@ async fn an_always_answer_from_before_the_fix_allows_no_command() {
     assert_eq!(outcome, ToolOutcome::Err("The user declined.".into()));
     assert_eq!(keys.lock().expect("lock").len(), 1);
 }
+
+#[tokio::test]
+async fn always_allowing_one_input_leaves_other_inputs_asking() {
+    use crate::assistant::sources::Verdict;
+    use mailrs_ai::ToolHost;
+    let (toolbox, keys, _dir) = shell_toolbox(&[], Verdict::Always);
+    let run = |stdin: &str| {
+        toolbox.call(
+            "run_command".into(),
+            json!({"skill": "s", "command": "scripts/total.sh", "stdin": stdin}),
+        )
+    };
+    run("first message\n").await;
+    run("first message\n").await;
+    assert_eq!(keys.lock().expect("lock").len(), 1);
+    run("another message\n").await;
+    let keys = keys.lock().expect("lock");
+    assert_eq!(keys.len(), 2);
+    assert_ne!(keys[0], keys[1]);
+    assert!(!keys[0].contains("first message"));
+}
+
+#[tokio::test]
+async fn a_command_only_grant_does_not_approve_its_input() {
+    use crate::assistant::sources::Verdict;
+    use mailrs_ai::ToolHost;
+    let (toolbox, keys, _dir) = shell_toolbox(&["shell:s/scripts/total.sh"], Verdict::Deny);
+    let outcome = toolbox
+        .call(
+            "run_command".into(),
+            json!({"skill": "s", "command": "scripts/total.sh", "stdin": "private message"}),
+        )
+        .await;
+    assert_eq!(outcome, ToolOutcome::Err("The user declined.".into()));
+    assert_eq!(keys.lock().expect("lock").len(), 1);
+}
+
+#[test]
+fn shell_consent_names_input_and_binds_the_skill_and_network() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let skill = skill_at(dir.path(), "s", true);
+    let shell = |skill: Skill, network| {
+        Shell::with(
+            PathBuf::from("/nonexistent/bwrap"),
+            vec![Runnable { skill, network }],
+            dir.path().join("work"),
+            Limits::DEFAULT,
+        )
+    };
+    let offline = shell(skill.clone(), false);
+    let stdin = "a message\nŽluťoučký kůň\n";
+    let input = json!({"skill": "s", "command": "scripts/total.sh", "stdin": stdin});
+    let question = offline.ask("run_command", &input).expect("asks");
+    assert!(question.contains(stdin));
+    assert!(question.contains("scripts/total.sh"));
+    assert!(question.contains("cannot reach the internet"));
+    let key = offline.key("run_command", &input);
+    assert_ne!(key, shell(skill.clone(), true).key("run_command", &input));
+    let mut other = skill.clone();
+    other.id = "other/s".into();
+    assert_ne!(key, shell(other, false).key("run_command", &input));
+    let mut alias = input.clone();
+    alias["skill"] = json!(skill.id);
+    assert_eq!(key, offline.key("run_command", &alias));
+    let mut absent = input.clone();
+    absent.as_object_mut().unwrap().remove("stdin");
+    assert_ne!(key, offline.key("run_command", &absent));
+    assert!(
+        offline
+            .ask("run_command", &absent)
+            .unwrap()
+            .contains("No standard input.")
+    );
+    absent["stdin"] = json!("");
+    assert_ne!(key, offline.key("run_command", &absent));
+}

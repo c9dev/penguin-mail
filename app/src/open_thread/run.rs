@@ -110,6 +110,7 @@ pub trait Desk: Screen {
     fn me(&self, account_id: AccountId) -> Vec<String>;
     /// Whether mail from all of these senders may load remote images.
     fn images_allowed(&self, senders: &[String]) -> bool;
+    fn images_always_allowed(&self) -> bool;
     /// Contact photos for these senders, as `data:` URIs.
     fn photos(&self, senders: &[String]) -> crate::render::Photos;
     fn is_vip(&self, email: &str) -> bool;
@@ -502,10 +503,8 @@ impl ThreadRun {
         thread.unsubscribed = left;
         let senders = thread.senders();
         let named: Vec<String> = senders.iter().filter(|s| !s.is_empty()).cloned().collect();
-        thread.images_allowed = self
-            .desk
-            .images_allowed(std::slice::from_ref(&summary.from_email))
-            || self.desk.images_allowed(&senders);
+        thread.images_always_allowed = self.desk.images_always_allowed();
+        thread.images_allowed = self.desk.images_allowed(&senders);
         thread.photos = self.desk.photos(&named);
         thread.flag_color = summary.flag_color;
         let vip = thread
