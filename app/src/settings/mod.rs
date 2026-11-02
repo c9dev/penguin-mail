@@ -160,6 +160,8 @@ pub struct Settings {
     /// on: the locale's own first weekday, or a fixed weekday. Defaults
     /// to Automatic.
     pub week_start: WeekStart,
+    /// How calendar times are displayed; Automatic follows the system clock.
+    pub calendar_clock: CalendarClock,
     /// The address of the account the last new event went on. A new
     /// event goes on that account's primary calendar.
     pub last_calendar_account: Option<String>,
@@ -537,6 +539,7 @@ impl Default for Settings {
             show_declined_events: false,
             working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
             week_start: WeekStart::default(),
+            calendar_clock: CalendarClock::default(),
             last_calendar_account: None,
             folded_calendar_accounts: Vec::new(),
         }
@@ -601,6 +604,28 @@ impl Choice for WeekStart {
             WeekStart::Automatic => gettext("Automatic"),
             WeekStart::Monday => gettext("Monday"),
             WeekStart::Sunday => gettext("Sunday"),
+        }
+    }
+}
+
+/// The calendar's clock preference, independent of the interface language.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CalendarClock {
+    #[default]
+    Automatic,
+    Hour12,
+    Hour24,
+}
+
+impl Choice for CalendarClock {
+    const ALL: &'static [Self] = &[Self::Automatic, Self::Hour12, Self::Hour24];
+
+    fn label(self) -> String {
+        match self {
+            Self::Automatic => gettext("Automatic"),
+            Self::Hour12 => gettext("12-hour (AM/PM)"),
+            Self::Hour24 => gettext("24-hour"),
         }
     }
 }
@@ -1322,6 +1347,7 @@ mod tests {
         let mut settings = Settings {
             threading: false,
             text_size: TextSize::Large,
+            calendar_clock: CalendarClock::Hour12,
             ..Settings::default()
         };
         settings.set_signature("Me@Example.com", "Dana\n\n");
@@ -1334,6 +1360,7 @@ mod tests {
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
         assert!(partial.notifications, "missing keys take their defaults");
+        assert_eq!(partial.calendar_clock, CalendarClock::Automatic);
     }
 
     #[test]
