@@ -47,7 +47,7 @@ import time
 import gi
 
 gi.require_version("Atspi", "2.0")
-from gi.repository import Atspi
+from gi.repository import Atspi, GLib
 
 # How many screens of each list to look through for rows with menus.
 PAGES = 6
@@ -171,9 +171,17 @@ if not found:
 # needs a pointer and a keyboard for the rows, and on your own screen
 # those are yours, so --here leaves menus alone.
 def nodes(node):
+    # A composer can close while its accessibility objects are being read.
+    try:
+        count = node.get_child_count()
+    except GLib.Error:
+        return
     yield node
-    for index in range(node.get_child_count()):
-        child = node.get_child_at_index(index)
+    for index in range(count):
+        try:
+            child = node.get_child_at_index(index)
+        except GLib.Error:
+            continue
         if child is not None:
             yield from nodes(child)
 

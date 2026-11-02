@@ -4295,7 +4295,10 @@ impl MainWindow {
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
-            Effect::Calendar => self.calendar.week_start_changed(),
+            Effect::Calendar => {
+                self.calendar.preferences_changed();
+                self.refresh_next_event();
+            }
             Effect::Translation => {
                 for view in self.views() {
                     self.thread_run(&view).offer_translation_again();
@@ -4332,7 +4335,7 @@ impl MainWindow {
             .iter()
             .map(|a| self.offers(a.id))
             .collect();
-        shortcuts::dialog(Filing::of(offers)).present(Some(&self.window));
+        shortcuts::show(Filing::of(offers), &self.window);
     }
 
     /// Opens Switch to JMAP for `account`, when a look found its session.

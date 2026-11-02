@@ -31,9 +31,9 @@ pub struct Summary {
 }
 
 /// The addresses of one header, dropping entries with none.
-fn addresses(list: Option<&mail_parser::Address>) -> Vec<Address> {
+fn addresses(list: Option<mail_parser::AddressList<'_>>) -> Vec<Address> {
     list.map(|list| {
-        list.iter()
+        list.mailboxes()
             .filter_map(|a| {
                 let email = a.address()?.trim();
                 (!email.is_empty()).then(|| Address {
@@ -89,8 +89,14 @@ pub fn headers(raw: &[u8]) -> Summary {
 fn envelope(message: &mail_parser::Message<'_>, snippet: String, has_files: bool) -> Summary {
     let header = |name: &str| {
         message
-            .header_raw(name)
-            .map(|value| value.split_whitespace().collect::<Vec<_>>().join(" "))
+            .headers()
+            .get(name)
+            .map(|header| {
+                String::from_utf8_lossy(header.raw_value())
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
             .filter(|value| !value.is_empty())
     };
     Summary {

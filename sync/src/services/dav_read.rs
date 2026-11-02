@@ -88,7 +88,7 @@ pub(super) fn backend(err: DavError, refused: &Mutex<Option<String>>) -> Backend
             *refused.lock().unwrap_or_else(PoisonError::into_inner) = Some(err.to_string());
             BackendError::NeedsReauth
         }
-        DavError::Forbidden(words) => BackendError::Refused(words),
+        DavError::Forbidden(words) => BackendError::Forbidden(words),
         DavError::NotFound => BackendError::NotFound,
         DavError::Changed => BackendError::Changed,
         DavError::InvalidSyncToken | DavError::NoSyncCollection => BackendError::StateLost,
@@ -143,6 +143,15 @@ mod tests {
             String::new(),
         );
         assert!(reads.take("/cal/", old, 10).is_none());
+    }
+
+    #[test]
+    fn a_parse_error_does_not_suppress_calendar_retries() {
+        let refused = Mutex::new(None);
+        let parse = backend(DavError::Parse("invalid calendar".into()), &refused);
+        assert!(!crate::calendar_copy::is_forbidden(&parse));
+        let denied = backend(DavError::Forbidden("shared calendar".into()), &refused);
+        assert!(crate::calendar_copy::is_forbidden(&denied));
     }
 
     #[test]

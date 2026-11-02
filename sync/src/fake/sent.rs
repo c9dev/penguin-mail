@@ -16,9 +16,9 @@ use super::SentCopy;
 /// path, which is how a caller fetches it now.
 pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
     let parsed = MessageParser::default().parse_headers(raw)?;
-    let addresses = |list: Option<&mail_parser::Address>| -> Vec<Address> {
+    let addresses = |list: Option<mail_parser::AddressList<'_>>| -> Vec<Address> {
         list.map(|list| {
-            list.iter()
+            list.mailboxes()
                 .filter_map(|a| {
                     Some(Address {
                         name: a.name().map(str::to_string),
@@ -38,8 +38,8 @@ pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
         .collect();
     let references = [parsed.in_reply_to(), parsed.references()]
         .into_iter()
-        .filter_map(|header| header.as_text_list())
         .flatten()
+        .flat_map(|header| header.iter())
         .map(|id| id.to_string())
         .collect();
     let snippet = body

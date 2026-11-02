@@ -273,6 +273,19 @@ fn appearance_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.show_avatars,
         Change::ShowAvatars,
     ));
+    // WebKitGTK takes the GPU by way of DMA-BUF buffers, which some
+    // drivers, hybrid laptops and virtual machines leave blank. macOS's
+    // engine has no such switch.
+    #[cfg(target_os = "linux")]
+    appearance.add(&switch(
+        app,
+        &gettext("Draw Messages Without the GPU"),
+        Some(&gettext(
+            "Turn on when messages show blank or garbled. Takes effect after a restart",
+        )),
+        settings.software_rendering,
+        Change::SoftwareRendering,
+    ));
     appearance.add(&language_row(app, settings));
     page.add(&appearance);
     page
@@ -360,6 +373,7 @@ fn calendar_rows(app: &Rc<App>, settings: &Settings) -> Vec<gtk::Widget> {
         )
         .upcast(),
         week_start_row(app, settings.week_start).upcast(),
+        calendar_clock_row(app, settings.calendar_clock).upcast(),
         working_hours_row(app, settings.working_hours).upcast(),
     ]
 }
@@ -1334,6 +1348,19 @@ fn ending_at(mut hours: WorkingHours, hour: u32) -> WorkingHours {
         hours.start_minutes = end - 60;
     }
     hours
+}
+
+fn calendar_clock_row(app: &Rc<App>, clock: crate::settings::CalendarClock) -> adw::ComboRow {
+    let title = gettext("Time Format");
+    let row = combo(
+        app,
+        &title,
+        Some(&gettext("Automatic follows the system clock format")),
+        clock,
+        Change::CalendarClock,
+    );
+    crate::ui::name(&row, &title);
+    row
 }
 
 /// The "Week Starts On" row: Automatic follows the locale's own first

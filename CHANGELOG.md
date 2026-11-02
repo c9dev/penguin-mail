@@ -7,9 +7,20 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
-- Choose how many model requests the assistant may make in one turn, under Preferences → AI → Model Requests per Answer. A job that works through a hundred messages one at a time needs room; a model that wanders needs cutting short.
+- Choose how many model requests the assistant can make per answer in Preferences → AI.
+- Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.
+- Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.
+- Penguin Mail builds and installs on Debian 13 from `scripts/package-debian.sh`, as a .deb against its GTK 4.18 and libadwaita 1.7.
 
 ### Fixed
+
+- Closing or sending a message lets its window go, instead of keeping every composer ever opened alive in the background.
+- A shared calendar the server refuses to show is left alone until the calendar list is read again, instead of being asked for and logged every minute.
+- A crash is written to the log with where it happened, so it can be reported.
+- The message pane takes its colors from a GTK theme loaded over libadwaita, instead of staying near black under a theme of its own.
+- Adding a reminder to an event no longer stacks another Add Reminder row each time.
+- The week and day views keep their day headings over their columns on desktops without overlay scrollbars.
+- The message view scrolls at once with the wheel instead of animating each tick, which stuttered on some graphics drivers.
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
 

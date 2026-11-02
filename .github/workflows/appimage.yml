@@ -72,7 +72,10 @@ jobs:
   test:
     name: Test on ${{ matrix.system }}
     needs: build
-    runs-on: ubuntu-latest
+    # The mounted check needs FUSE inside a container, which the
+    # ubuntu-26.04 image that ubuntu-latest now names refuses with
+    # "fusermount: mount failed: Permission denied". 24.04 allows it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
