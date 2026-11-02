@@ -999,6 +999,7 @@ toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-ri
 toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding: 0 12px; min-height: 28px; }
 /* The mockup's Mail / Calendar pill is 32 px tall: 28 px toggles, 2 px in. */
 toggle-group.space-switch { padding: 2px; }
+toggle-group.space-switch.compact > toggle { padding-left: 6px; padding-right: 6px; }
 /* The view switch folded into one button when the header runs short: the
    same grey pill and 32 px height, naming the view on screen. */
 menubutton.view-menu > button {

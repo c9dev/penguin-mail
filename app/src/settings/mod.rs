@@ -575,7 +575,7 @@ pub enum MailColumn {
 impl MailColumn {
     pub fn limits(self) -> (i32, i32) {
         match self {
-            Self::Mailboxes => (220, 480),
+            Self::Mailboxes => (180, 480),
             Self::Messages => (300, 720),
         }
     }
