@@ -15,8 +15,8 @@ for file in snap/snapcraft.yaml packaging/flatpak/io.github.c9dev.penguin-mail.y
         status=1
     fi
 done
-if [ "$(grep -c 'secrets.MICROSOFT_CLIENT_ID' .github/workflows/release.yml)" -lt 3 ]; then
-    echo "release.yml must hand MICROSOFT_CLIENT_ID to the tree, the deb and the snap builds." >&2
+if [ "$(grep -c 'secrets.MICROSOFT_CLIENT_ID' .github/workflows/release.yml)" -lt 4 ]; then
+    echo "release.yml must hand MICROSOFT_CLIENT_ID to the tree, the deb, the Debian deb and the snap builds." >&2
     status=1
 fi
 exit $status

@@ -245,7 +245,11 @@ Penguin Mail runs on Linux x86_64 and macOS Apple Silicon and Intel. On
 Linux, the .deb, the rpm and the Arch package need GTK 4.20, libadwaita
 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04, Fedora 43
 and Arch's own repositories
-have; the snap brings its own. On Ubuntu 24.04 and the releases built on
+have; the snap brings its own. Debian 13 has GTK 4.18 and libadwaita 1.7,
+which that .deb refuses; each release carries a second .deb built on
+Debian 13, `penguin-mail_<version>~deb13_amd64.deb`, which installs there
+with `sudo apt install ./penguin-mail_*~deb13_amd64.deb` and updates by
+hand from the next release. On Ubuntu 24.04 and the releases built on
 it, such as Pop!_OS 24.04 and Linux Mint 22, apt refuses the .deb for its
 older GTK and libadwaita; install the snap there. The Flatpak comes from
 Penguin Mail's own repository, not Flathub. On Linux, the tray icon needs a

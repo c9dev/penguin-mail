@@ -29,6 +29,7 @@ pub enum Change {
     BoldUnread(bool),
     BoldSenders(bool),
     ShowAvatars(bool),
+    SoftwareRendering(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
     ColorScheme(ColorScheme),
@@ -288,6 +289,7 @@ impl Change {
             Change::BoldUnread(on) => settings.bold_unread = on,
             Change::BoldSenders(on) => settings.bold_senders = on,
             Change::ShowAvatars(on) => settings.show_avatars = on,
+            Change::SoftwareRendering(on) => settings.software_rendering = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
                     TextSize::Normal
@@ -633,6 +635,7 @@ settable! {
         BoldUnread => bold_unread,
         BoldSenders => bold_senders,
         ShowAvatars => show_avatars,
+        SoftwareRendering => software_rendering,
         ColorScheme => color_scheme,
         Notifications => notifications,
         NotificationPreviews => notification_previews,
@@ -874,6 +877,7 @@ impl Effects {
             bold_unread,
             bold_senders,
             show_avatars,
+            software_rendering,
             color_scheme,
             language,
             notifications,
@@ -934,6 +938,9 @@ impl Effects {
         let _quiet = (
             mark_read,
             remote_images,
+            // Read once, before the web engine starts: a change here
+            // takes effect at the next start.
+            software_rendering,
             notifications,
             notification_previews,
             default_account,

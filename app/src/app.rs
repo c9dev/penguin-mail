@@ -99,6 +99,10 @@ pub struct App {
     filter_requested: Cell<bool>,
     /// Main window plus open composers.
     open_windows: Cell<usize>,
+    /// The composers on screen. Each holds its own window, so it has to
+    /// be let go of when that window closes, or the window and the
+    /// engine behind its Preview live on, hidden, as long as the app.
+    composers: RefCell<Vec<Rc<crate::ui::composer::Composer>>>,
     shed_generation: Cell<u64>,
     /// A message requested on the command line, opened on first activation.
     pending_compose: RefCell<Option<String>>,
@@ -200,6 +204,7 @@ impl App {
             skip_first_window: Cell::new(background),
             filter_requested: Cell::new(false),
             open_windows: Cell::new(0),
+            composers: RefCell::new(Vec::new()),
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             pending_file: RefCell::new(file),

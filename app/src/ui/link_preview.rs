@@ -77,7 +77,7 @@ pub mod checks {
             page.on_loaded(move || ready.set(true));
             let theme = crate::render::Theme {
                 dark: false, accent: "#e8660c".into(), accent_text: "#a64600".into(),
-                summarize: false, font: String::new(),
+                summarize: false, font: String::new(), colors: None,
             };
             let mut html = crate::render::head(&crate::render::Head {
                 subject: "Links", count: 1, allow_remote: false,
