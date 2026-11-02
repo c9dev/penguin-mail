@@ -193,8 +193,9 @@ pub fn head(conversation: &Head, theme: &Theme) -> String {
     );
     let offer = if theme.summarize {
         format!(
-            "<a class=\"summarize\" href=\"mailrs:summarize\">{}</a>",
-            escape(&gettext("Summarize"))
+            "<a class=\"summarize\" href=\"mailrs:summarize\">{}</a> <a class=\"summarize\" href=\"mailrs:explain\">{}</a>",
+            escape(&gettext("Summarize")),
+            escape(&gettext("Explain"))
         )
     } else {
         String::new()
@@ -2305,6 +2306,8 @@ mod tests {
         assert!(
             head(true).contains("<a class=\"summarize\" href=\"mailrs:summarize\">Summarize</a>")
         );
+        assert!(head(true).contains("mailrs:explain"));
+        assert!(!head(false).contains("mailrs:explain"));
         assert!(!head(false).contains("mailrs:summarize"));
         assert!(
             head(true).contains("<h1>Rent</h1>"),

@@ -1083,6 +1083,32 @@ msgstr "请在 [首选项] 中添加 Anthropic API 密钥。"
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr "尚未安装 Claude Code。请安装并登录后重试。"
 
+#: app/src/assistant/mod.rs:226
+msgid "Summarize this conversation"
+msgstr "生成此对话的摘要"
+
+#: app/src/assistant/mod.rs:227
+#, fuzzy
+#| msgid "Summarize this conversation"
+msgid "Explain this conversation"
+msgstr "生成此对话的摘要"
+
+#: app/src/assistant/mod.rs:260
+msgid "Wait for the conversation to finish loading, then try again."
+msgstr ""
+
+#: app/src/assistant/mod.rs:285
+#, fuzzy
+#| msgid "This message is too large to open."
+msgid "This message's headers are too large to analyze."
+msgstr "此邮件过大，无法打开。"
+
+#: app/src/assistant/mod.rs:295
+#, fuzzy
+#| msgid "Open a conversation first"
+msgid "Open a conversation first."
+msgstr "请先打开对话"
+
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
@@ -1739,7 +1765,7 @@ msgstr[0] "是否将 {count} 个对话改于 {when} 移回？"
 msgid "Undo “{action}”?"
 msgstr "是否撤销「{action}」？"
 
-#: app/src/assistant/run/unsubscribe.rs:374
+#: app/src/assistant/run/unsubscribe.rs:394
 msgid "this list"
 msgstr "此列表"
 
@@ -1856,22 +1882,42 @@ msgid ""
 "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr "无法运行技能脚本：bubblewrap 无法启动沙箱（{reason}）。"
 
-#: app/src/assistant/sources/skills/shell.rs:181
+#: app/src/assistant/sources/skills/shell.rs:183
 msgid "It can reach the internet."
 msgstr "可连接至互联网。"
 
-#: app/src/assistant/sources/skills/shell.rs:183
+#: app/src/assistant/sources/skills/shell.rs:185
 msgid "It cannot reach the internet."
 msgstr "无法连接至互联网。"
 
-#: app/src/assistant/sources/skills/shell.rs:187
+#: app/src/assistant/sources/skills/shell.rs:188
+msgid ""
+"Standard input:\n"
+"{stdin}"
+msgstr ""
+
+#: app/src/assistant/sources/skills/shell.rs:189
+msgid "No standard input."
+msgstr ""
+
+#: app/src/assistant/sources/skills/shell.rs:193
+#, fuzzy
+#| msgid ""
+#| "Run this command for the skill {skill}?\n"
+#| "\n"
+#| "{command}\n"
+#| "\n"
+#| "It runs in a sandbox with no access to your mail or home folder. "
+#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
 "{command}\n"
 "\n"
+"{stdin}\n"
+"\n"
 "It runs in a sandbox with no access to your mail or home folder. {network} "
-"Always Allow covers this exact command only."
+"Always Allow covers this exact command and standard input only."
 msgstr ""
 "是否为 {skill} 技能运行此命令？\n"
 "\n"
@@ -2465,14 +2511,14 @@ msgstr "Penguin Mail 无法启动"
 msgid "Report a Problem"
 msgstr "报告问题"
 
-#: app/src/notify.rs:61 app/src/ui/conversation.rs:436
-#: app/src/ui/conversation.rs:592 app/src/ui/conversation.rs:1123
+#: app/src/notify.rs:61 app/src/ui/conversation.rs:437
+#: app/src/ui/conversation.rs:593 app/src/ui/conversation.rs:1124
 #: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "归档"
 
-#: app/src/notify.rs:62 app/src/ui/conversation.rs:437
-#: app/src/ui/conversation.rs:1167 app/src/ui/preferences.rs:184
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:438
+#: app/src/ui/conversation.rs:1168 app/src/ui/preferences.rs:184
 #: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "标记为已读"
@@ -2480,15 +2526,15 @@ msgstr "标记为已读"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/conversation.rs:578 app/src/ui/hide_my_email.rs:574
+#: app/src/ui/conversation.rs:579 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:108
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "删除"
 
-#: app/src/notify.rs:64 app/src/ui/conversation.rs:242
-#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:129
+#: app/src/notify.rs:64 app/src/ui/conversation.rs:243
+#: app/src/ui/conversation.rs:587 app/src/ui/window/message_menu.rs:129
 #: app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "回复"
@@ -3871,8 +3917,8 @@ msgstr "此账号尚未连接。"
 msgid "Could not save: {reason}"
 msgstr "无法保存：{reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2910
-#: app/src/ui/window.rs:2933
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2919
+#: app/src/ui/window.rs:2942
 msgid "Could not open the draft: {reason}"
 msgstr "无法打开草稿：{reason}"
 
@@ -3885,147 +3931,151 @@ msgstr[0] "{count} 封邮件"
 msgid "Summarize"
 msgstr "生成摘要"
 
-#: app/src/render.rs:284 app/src/ui/thread_row.rs:447
+#: app/src/render.rs:198
+msgid "Explain"
+msgstr ""
+
+#: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
 msgstr "未知发件人"
 
-#: app/src/render.rs:302
+#: app/src/render.rs:303
 msgid "Show or hide this message"
 msgstr "显示或隐藏此邮件"
 
-#: app/src/render.rs:304 app/src/ui/contact_card.rs:43
+#: app/src/render.rs:305 app/src/ui/contact_card.rs:43
 msgid "Contact"
 msgstr "联系人"
 
-#: app/src/render.rs:309
+#: app/src/render.rs:310
 msgid "Contact card for {person}"
 msgstr "{person} 的联系人名片"
 
-#: app/src/render.rs:378 app/src/ui/thread_row.rs:165
+#: app/src/render.rs:379 app/src/ui/thread_row.rs:165
 msgid "Invitation"
 msgstr "邀请"
 
-#: app/src/render.rs:392
+#: app/src/render.rs:393
 msgid "{date}, {time}"
 msgstr "{date} {time}"
 
-#: app/src/render.rs:413
+#: app/src/render.rs:414
 msgid "Loading…"
 msgstr "正在加载…"
 
-#: app/src/render.rs:418
+#: app/src/render.rs:419
 msgid "This message could not be loaded: {reason}"
 msgstr "无法加载此邮件：{reason}"
 
-#: app/src/render.rs:430
+#: app/src/render.rs:431
 msgid "This message could not be displayed"
 msgstr "无法显示此邮件"
 
-#: app/src/render.rs:432 app/src/ui/conversation.rs:248
-#: app/src/ui/conversation.rs:619
+#: app/src/render.rs:433 app/src/ui/conversation.rs:249
+#: app/src/ui/conversation.rs:620
 msgid "View Source"
 msgstr "查看邮件源码"
 
-#: app/src/render.rs:447
+#: app/src/render.rs:448
 msgid "Possible phishing links"
 msgstr "可能的网络钓鱼链接"
 
-#: app/src/render.rs:449
+#: app/src/render.rs:450
 msgid ""
 "This message contains potentially deceptive links. Check the destination "
 "before opening them."
 msgstr "这封邮件包含可能具有误导性的链接。打开前请先确认目标地址。"
 
-#: app/src/render.rs:502
+#: app/src/render.rs:503
 msgid "Details"
 msgstr "详细信息"
 
-#: app/src/render.rs:523
+#: app/src/render.rs:524
 msgid "from"
 msgstr "发件人"
 
-#: app/src/render.rs:534
+#: app/src/render.rs:535
 msgid "to"
 msgstr "收件人"
 
-#: app/src/render.rs:536
+#: app/src/render.rs:537
 msgid "cc"
 msgstr "抄送"
 
-#: app/src/render.rs:540
+#: app/src/render.rs:541
 msgid "date"
 msgstr "日期"
 
-#: app/src/render.rs:542
+#: app/src/render.rs:543
 msgid "subject"
 msgstr "主题"
 
-#: app/src/render.rs:544
+#: app/src/render.rs:545
 msgid "mailed-by"
 msgstr "邮寄域名"
 
-#: app/src/render.rs:547
+#: app/src/render.rs:548
 msgid "signed-by"
 msgstr "签名域名"
 
-#: app/src/render.rs:551
+#: app/src/render.rs:552
 msgid "security"
 msgstr "安全性"
 
-#: app/src/render.rs:553
+#: app/src/render.rs:554
 msgid "Standard encryption (TLS)"
 msgstr "标准加密（TLS）"
 
-#: app/src/render.rs:558
+#: app/src/render.rs:559
 msgid "Not encrypted in transit"
 msgstr "传输过程未加密"
 
-#: app/src/render.rs:595 app/src/ui/composer/mod.rs:2194
+#: app/src/render.rs:596 app/src/ui/composer/mod.rs:2194
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 个附件"
 
-#: app/src/render.rs:627
+#: app/src/render.rs:628
 msgid "Quick Look"
 msgstr "快速查看"
 
-#: app/src/render.rs:628 app/src/ui/window/attachments.rs:284
+#: app/src/render.rs:629 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
 #: app/src/ui/window/detached.rs:302
 msgid "Save As…"
 msgstr "另存为…"
 
-#: app/src/render.rs:630
+#: app/src/render.rs:631
 msgid "Open {file}, {size}"
 msgstr "打开 {file}，{size}"
 
-#: app/src/render.rs:637
+#: app/src/render.rs:638
 msgid "Save {file}…"
 msgstr "保存 {file}…"
 
-#: app/src/render.rs:644
+#: app/src/render.rs:645
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "全部保存（{count}）"
 
-#: app/src/render.rs:655
+#: app/src/render.rs:656
 msgid "Save every attachment to a folder"
 msgstr "将所有附件保存至文件夹"
 
-#: app/src/render.rs:719
+#: app/src/render.rs:720
 msgid "undisclosed recipients"
 msgstr "未公开的收件人"
 
-#: app/src/render.rs:722
+#: app/src/render.rs:723
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named} 与其他 {count} 位"
 
-#: app/src/render.rs:735
+#: app/src/render.rs:736
 msgid "me"
 msgstr "我"
 
-#: app/src/render.rs:745 app/src/ui/composer/mod.rs:616
+#: app/src/render.rs:746 app/src/ui/composer/mod.rs:616
 #: app/src/ui/composer/mod.rs:620
 msgid "Show trimmed content"
 msgstr "显示省略的内容"
@@ -4119,7 +4169,7 @@ msgid "Set up a different project"
 msgstr "设置另一个项目"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3263
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3272
 msgid "Set up your own Google project"
 msgstr "设置您自己的 Google 项目"
 
@@ -4178,7 +4228,7 @@ msgstr "小于 {size}"
 msgid "Larger than {size}"
 msgstr "大于 {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:908
+#: app/src/rules.rs:251 app/src/settings/mod.rs:911
 msgid "All mail"
 msgstr "所有邮件"
 
@@ -4276,8 +4326,8 @@ msgstr "在此电脑上，Penguin Mail 打开时"
 msgid "On the server"
 msgstr "在服务器上"
 
-#: app/src/settings/mod.rs:216 app/src/settings/mod.rs:422
-#: app/src/settings/mod.rs:820 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:216 app/src/settings/mod.rs:425
+#: app/src/settings/mod.rs:823 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1045
 msgid "Off"
 msgstr "关闭"
@@ -4294,8 +4344,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude 订阅"
 
-#: app/src/settings/mod.rs:244 app/src/ui/window.rs:3636
-#: app/src/ui/window.rs:3716
+#: app/src/settings/mod.rs:244 app/src/ui/window.rs:3645
+#: app/src/ui/window.rs:3725
 msgid "Assistant"
 msgstr "助手"
 
@@ -4327,166 +4377,166 @@ msgstr "规则无法处理时，读取邮件简报的取消订阅页面"
 msgid "Same as the Assistant"
 msgstr "与助手相同"
 
-#: app/src/settings/mod.rs:423
+#: app/src/settings/mod.rs:426
 msgid "Claude's own only"
 msgstr "仅限 Claude 内置搜索"
 
-#: app/src/settings/mod.rs:424
+#: app/src/settings/mod.rs:427
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:425
+#: app/src/settings/mod.rs:428
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:426
+#: app/src/settings/mod.rs:429
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:598
+#: app/src/settings/mod.rs:601
 msgid "Rich text"
 msgstr "富文本"
 
-#: app/src/settings/mod.rs:599
+#: app/src/settings/mod.rs:602
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:618 app/src/settings/mod.rs:640
+#: app/src/settings/mod.rs:621 app/src/settings/mod.rs:643
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "自动"
 
-#: app/src/settings/mod.rs:619 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:622 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "星期一"
 
-#: app/src/settings/mod.rs:620 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:623 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "星期日"
 
-#: app/src/settings/mod.rs:641
+#: app/src/settings/mod.rs:644
 msgid "12-hour (AM/PM)"
 msgstr ""
 
-#: app/src/settings/mod.rs:642
+#: app/src/settings/mod.rs:645
 msgid "24-hour"
 msgstr ""
 
-#: app/src/settings/mod.rs:680
+#: app/src/settings/mod.rs:683
 msgid "When opened"
 msgstr "打开时"
 
-#: app/src/settings/mod.rs:681
+#: app/src/settings/mod.rs:684
 msgid "After 2 seconds"
 msgstr "2 秒后"
 
-#: app/src/settings/mod.rs:682
+#: app/src/settings/mod.rs:685
 msgid "Only when I choose"
 msgstr "仅在手动选择时"
 
-#: app/src/settings/mod.rs:698 app/src/settings/mod.rs:716
+#: app/src/settings/mod.rs:701 app/src/settings/mod.rs:719
 msgid "Ask each time"
 msgstr "每次询问"
 
-#: app/src/settings/mod.rs:699
+#: app/src/settings/mod.rs:702
 msgid "Always load"
 msgstr "始终加载"
 
-#: app/src/settings/mod.rs:717
+#: app/src/settings/mod.rs:720
 msgid "Never ask"
 msgstr "永不询问"
 
-#: app/src/settings/mod.rs:744
+#: app/src/settings/mod.rs:747
 msgid "No Preview"
 msgstr "无预览"
 
-#: app/src/settings/mod.rs:745
+#: app/src/settings/mod.rs:748
 msgid "1 Line"
 msgstr "1 行"
 
-#: app/src/settings/mod.rs:746
+#: app/src/settings/mod.rs:749
 msgid "2 Lines"
 msgstr "2 行"
 
-#: app/src/settings/mod.rs:780
+#: app/src/settings/mod.rs:783
 msgid "Small"
 msgstr "小"
 
-#: app/src/settings/mod.rs:781
+#: app/src/settings/mod.rs:784
 msgid "Default"
 msgstr "默认"
 
-#: app/src/settings/mod.rs:782
+#: app/src/settings/mod.rs:785
 msgid "Large"
 msgstr "大"
 
-#: app/src/settings/mod.rs:783
+#: app/src/settings/mod.rs:786
 msgid "Larger"
 msgstr "更大"
 
-#: app/src/settings/mod.rs:821
+#: app/src/settings/mod.rs:824
 msgid "5 seconds"
 msgstr "5 秒"
 
-#: app/src/settings/mod.rs:822
+#: app/src/settings/mod.rs:825
 msgid "10 seconds"
 msgstr "10 秒"
 
-#: app/src/settings/mod.rs:823
+#: app/src/settings/mod.rs:826
 msgid "20 seconds"
 msgstr "20 秒"
 
-#: app/src/settings/mod.rs:824
+#: app/src/settings/mod.rs:827
 msgid "30 seconds"
 msgstr "30 秒"
 
-#: app/src/settings/mod.rs:841
+#: app/src/settings/mod.rs:844
 msgid "Follow system"
 msgstr "跟随系统"
 
-#: app/src/settings/mod.rs:842
+#: app/src/settings/mod.rs:845
 msgid "Light"
 msgstr "浅色"
 
-#: app/src/settings/mod.rs:843
+#: app/src/settings/mod.rs:846
 msgid "Dark"
 msgstr "深色"
 
-#: app/src/settings/mod.rs:877
+#: app/src/settings/mod.rs:880
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "每 {count} 秒"
 
-#: app/src/settings/mod.rs:885
+#: app/src/settings/mod.rs:888
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "每 {count} 分钟"
 
-#: app/src/settings/mod.rs:902
+#: app/src/settings/mod.rs:905
 msgid "2 weeks"
 msgstr "2 周"
 
-#: app/src/settings/mod.rs:903
+#: app/src/settings/mod.rs:906
 msgid "30 days"
 msgstr "30 天"
 
-#: app/src/settings/mod.rs:904
+#: app/src/settings/mod.rs:907
 msgid "90 days"
 msgstr "90 天"
 
-#: app/src/settings/mod.rs:905
+#: app/src/settings/mod.rs:908
 msgid "1 year"
 msgstr "1 年"
 
-#: app/src/settings/mod.rs:906
+#: app/src/settings/mod.rs:909
 msgid "2 years"
 msgstr "2 年"
 
-#: app/src/settings/mod.rs:907
+#: app/src/settings/mod.rs:910
 msgid "5 years"
 msgstr "5 年"
 
-#: app/src/settings/mod.rs:929
+#: app/src/settings/mod.rs:932
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4494,19 +4544,19 @@ msgstr ""
 "每封邮件都会保留在此电脑上。大型账号会占用大量磁盘空间和内存，较旧的邮件会在"
 "后台下载。"
 
-#: app/src/settings/mod.rs:931
+#: app/src/settings/mod.rs:934
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "收件箱中的所有邮件也会保留，较旧的邮件仍可搜索"
 
-#: app/src/settings/mod.rs:938
+#: app/src/settings/mod.rs:941
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:939
+#: app/src/settings/mod.rs:942
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:940
+#: app/src/settings/mod.rs:943
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4678,7 +4728,7 @@ msgstr "打开 Penguin Mail"
 msgid "New Message"
 msgstr "新建邮件"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1970 app/src/ui/window.rs:3642
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1970 app/src/ui/window.rs:3651
 msgid "Check for Mail"
 msgstr "检查邮件"
 
@@ -4696,7 +4746,7 @@ msgstr "{version} 的新功能"
 msgid "Check for Updates"
 msgstr "检查更新"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3655
+#: app/src/tray.rs:266 app/src/ui/window.rs:3664
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "退出"
@@ -4717,7 +4767,7 @@ msgstr "新功能"
 msgid "Website"
 msgstr "网站"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3654
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3663
 msgid "Donate"
 msgstr "捐款"
 
@@ -4725,7 +4775,7 @@ msgstr "捐款"
 msgid "License"
 msgstr "许可证"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3653
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3662
 msgid "About Penguin Mail"
 msgstr "关于 Penguin Mail"
 
@@ -4774,12 +4824,12 @@ msgid "The update to {version} failed"
 msgstr "更新至 {version} 失败"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1540
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1548
 msgid "Copy Command"
 msgstr "复制命令"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1545
+#: app/src/ui/window.rs:1553
 msgid "Command copied"
 msgstr "已复制命令"
 
@@ -4877,9 +4927,10 @@ msgstr "复制链接"
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
-#: app/src/ui/unsubscribe.rs:119 app/src/ui/vacation.rs:46
-#: app/src/ui/when.rs:52 app/src/ui/window/arrange.rs:148
-#: app/src/ui/window/images.rs:101 app/src/ui/window/organize.rs:78
+#: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
+#: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
+#: app/src/ui/window/arrange.rs:148 app/src/ui/window/images.rs:87
+#: app/src/ui/window/images.rs:157 app/src/ui/window/organize.rs:78
 #: app/src/ui/window/organize.rs:127
 msgid "Cancel"
 msgstr "取消"
@@ -4888,7 +4939,7 @@ msgstr "取消"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1484
+#: app/src/ui/window.rs:1492
 msgid "Sign In"
 msgstr "登录"
 
@@ -5007,7 +5058,7 @@ msgstr "暂时不要"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:487
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1617
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1625
 msgid "Grant Access"
 msgstr "授予访问权限"
 
@@ -5092,7 +5143,7 @@ msgstr "用户名留空即以电子邮件地址登录。"
 msgid "Use These Settings"
 msgstr "使用这些设置"
 
-#: app/src/ui/add_account.rs:1814 app/src/ui/assistant_prefs.rs:65
+#: app/src/ui/add_account.rs:1814 app/src/ui/assistant_prefs.rs:78
 msgid "Server Address"
 msgstr "服务器地址"
 
@@ -5156,7 +5207,7 @@ msgid "Sign In Again"
 msgstr "重新登录"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2218
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2227
 msgid "Open Google Cloud"
 msgstr "打开 Google Cloud"
 
@@ -5221,46 +5272,42 @@ msgstr "此服务器无法区分邮件，因此 Penguin Mail 无法安全下载�
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr "用这种方式无法使用过滤器、别名和自动回复。"
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3802
-msgid "Summarize this conversation"
-msgstr "生成此对话的摘要"
-
-#: app/src/ui/assistant.rs:36
+#: app/src/ui/assistant.rs:37
 msgid "What needs a reply today?"
 msgstr "今天有哪些邮件需要回复？"
 
-#: app/src/ui/assistant.rs:37
+#: app/src/ui/assistant.rs:38
 msgid "Archive newsletters older than a week"
 msgstr "归档超过一周的邮件简报"
 
-#: app/src/ui/assistant.rs:38
+#: app/src/ui/assistant.rs:39
 msgid "Set an out-of-office reply for next week"
 msgstr "设置下周的外出自动回复"
 
-#: app/src/ui/assistant.rs:39
+#: app/src/ui/assistant.rs:40
 msgid "Draft a reply to the open conversation"
 msgstr "为打开的对话撰写回复草稿"
 
-#: app/src/ui/assistant.rs:104 app/src/ui/assistant.rs:107
-#: app/src/ui/assistant.rs:214 app/src/ui/assistant.rs:419
+#: app/src/ui/assistant.rs:108 app/src/ui/assistant.rs:111
+#: app/src/ui/assistant.rs:218 app/src/ui/assistant.rs:428
 msgid "Choose a Model"
 msgstr "选择模型"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3763
-#: app/src/ui/window.rs:3764
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3772
+#: app/src/ui/window.rs:3773
 msgid "Detach"
 msgstr "分离窗口"
 
-#: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4433
+#: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4446
 msgid "Close"
 msgstr "关闭"
 
-#: app/src/ui/assistant.rs:126
+#: app/src/ui/assistant.rs:130
 msgid "New Chat"
 msgstr "新建聊天"
 
-#: app/src/ui/assistant.rs:153
+#: app/src/ui/assistant.rs:157
 msgid ""
 "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
 "draft, and change settings."
@@ -5268,23 +5315,23 @@ msgstr ""
 "可以询问邮件相关问题，或指定要整理的内容。我可以搜索、生成摘要、分类、撰写草"
 "稿及更改设置。"
 
-#: app/src/ui/assistant.rs:179 app/src/ui/assistant.rs:184
-#: app/src/ui/assistant.rs:552 app/src/ui/calendar/scope.rs:152
+#: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
+#: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
 #: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1924
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "发送"
 
-#: app/src/ui/assistant.rs:189 app/src/ui/assistant.rs:191
+#: app/src/ui/assistant.rs:193 app/src/ui/assistant.rs:195
 #: app/src/ui/assistant/files.rs:34
 msgid "Attach"
 msgstr "附加文件"
 
-#: app/src/ui/assistant.rs:220
+#: app/src/ui/assistant.rs:224
 msgid "Set Up the Assistant"
 msgstr "设置助手"
 
-#: app/src/ui/assistant.rs:222
+#: app/src/ui/assistant.rs:226
 msgid ""
 "Use a local model from LM Studio, Ollama, or any server with OpenAI's API. "
 "You can also use an Anthropic API key or your Claude subscription."
@@ -5292,77 +5339,89 @@ msgstr ""
 "可使用 LM Studio、Ollama 或任何提供 OpenAI API 的服务器上的本地模型。也可使"
 "用 Anthropic API 密钥或 Claude 订阅。"
 
-#: app/src/ui/assistant.rs:309
+#: app/src/ui/assistant.rs:314
 msgid "This conversation"
 msgstr "这个对话"
 
-#: app/src/ui/assistant.rs:311
+#: app/src/ui/assistant.rs:316
 msgid "Your mail"
 msgstr "您的邮件"
 
-#: app/src/ui/assistant.rs:551
+#: app/src/ui/assistant.rs:487
+msgid ""
+"Some conversation text was left out because it is too long. This answer "
+"covers only the included text."
+msgstr ""
+
+#: app/src/ui/assistant.rs:490
+msgid ""
+"Tools are off for this conversation and its follow-up questions. Choose New "
+"Chat to use tools again."
+msgstr ""
+
+#: app/src/ui/assistant.rs:588
 msgid "Stop"
 msgstr "停止"
 
-#: app/src/ui/assistant.rs:572 app/src/ui/assistant.rs:573
+#: app/src/ui/assistant.rs:609 app/src/ui/assistant.rs:610
 msgid "What it did"
 msgstr "已运行的操作"
 
-#: app/src/ui/assistant.rs:645 app/src/ui/calendar/words.rs:634
+#: app/src/ui/assistant.rs:682 app/src/ui/calendar/words.rs:634
 #: app/src/ui/invitation.rs:1323
 msgid "You"
 msgstr "您"
 
-#: app/src/ui/assistant.rs:705
+#: app/src/ui/assistant.rs:742
 msgid "Don't Allow"
 msgstr "不允许"
 
-#: app/src/ui/assistant.rs:707
+#: app/src/ui/assistant.rs:744
 msgid "Allow"
 msgstr "允许"
 
-#: app/src/ui/assistant.rs:711
+#: app/src/ui/assistant.rs:748
 msgid "Always Allow"
 msgstr "始终允许"
 
-#: app/src/ui/assistant.rs:751
+#: app/src/ui/assistant.rs:788
 msgid "Allowed"
 msgstr "已允许"
 
-#: app/src/ui/assistant.rs:752
+#: app/src/ui/assistant.rs:789
 msgid "Always allowed"
 msgstr "已设为始终允许"
 
-#: app/src/ui/assistant.rs:753
+#: app/src/ui/assistant.rs:790
 msgid "Not allowed"
 msgstr "未允许"
 
-#: app/src/ui/assistant.rs:838
+#: app/src/ui/assistant.rs:875
 msgid "Ask Penguin Mail…"
 msgstr "询问 Penguin Mail…"
 
-#: app/src/ui/assistant.rs:847
+#: app/src/ui/assistant.rs:884
 msgid "Ask Penguin Mail"
 msgstr "询问 Penguin Mail"
 
-#: app/src/ui/assistant.rs:1061 app/src/ui/assistant.rs:1224
+#: app/src/ui/assistant.rs:1098 app/src/ui/assistant.rs:1261
 msgid "Running"
 msgstr "运行中"
 
-#: app/src/ui/assistant.rs:1062 app/src/ui/assistant.rs:1225
+#: app/src/ui/assistant.rs:1099 app/src/ui/assistant.rs:1262
 #: app/src/ui/calendar/editor.rs:268 app/src/ui/hide_my_email.rs:851
 msgid "Done"
 msgstr "完成"
 
-#: app/src/ui/assistant.rs:1063 app/src/ui/assistant.rs:1226
+#: app/src/ui/assistant.rs:1100 app/src/ui/assistant.rs:1263
 msgid "Failed"
 msgstr "失败"
 
-#: app/src/ui/assistant.rs:1132
+#: app/src/ui/assistant.rs:1169
 msgid "Result"
 msgstr "结果"
 
-#: app/src/ui/assistant.rs:1141
+#: app/src/ui/assistant.rs:1178
 msgid "Input"
 msgstr "输入"
 
@@ -5395,15 +5454,15 @@ msgid "Manage in Preferences"
 msgstr "在首选项中管理"
 
 #: app/src/ui/assistant/controls.rs:179 app/src/ui/assistant/controls.rs:181
-#: app/src/ui/assistant_prefs.rs:684
+#: app/src/ui/assistant_prefs.rs:697
 msgid "Search models"
 msgstr "搜索模型"
 
-#: app/src/ui/assistant/controls.rs:230 app/src/ui/assistant_prefs.rs:701
+#: app/src/ui/assistant/controls.rs:230 app/src/ui/assistant_prefs.rs:714
 msgid "Asking for the model list…"
 msgstr "正在查找模型列表…"
 
-#: app/src/ui/assistant/controls.rs:292 app/src/ui/assistant_prefs.rs:632
+#: app/src/ui/assistant/controls.rs:292 app/src/ui/assistant_prefs.rs:645
 msgid "Claude Code's own default"
 msgstr "Claude Code 内置默认模型"
 
@@ -5457,7 +5516,7 @@ msgstr "编辑 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3406
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3415
 msgid "Remove"
 msgstr "移除"
 
@@ -5526,7 +5585,7 @@ msgstr "Bearer 令牌（可选）"
 msgid "Test the Server"
 msgstr "测试服务器"
 
-#: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:392
+#: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:405
 #: app/src/ui/assistant_web_prefs.rs:70
 msgid "Test"
 msgstr "测试"
@@ -5588,11 +5647,21 @@ msgid ""
 "such as automatic replies and rules"
 msgstr "批准助手发送的每封邮件，以及自动回复、规则等 Gmail 设置的每项更改"
 
-#: app/src/ui/assistant_prefs.rs:55
+#: app/src/ui/assistant_prefs.rs:52
+msgid "Allow Tools in Summaries and Explanations"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:53
+msgid ""
+"Allow these chats to read other mail, take actions, and contact external "
+"services. Off by default."
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
 msgstr "连接"
 
-#: app/src/ui/assistant_prefs.rs:57
+#: app/src/ui/assistant_prefs.rs:70
 msgid ""
 "A local server is LM Studio, Ollama, or any server with OpenAI's API. Local "
 "models keep your mail on this computer. With Anthropic or a Claude "
@@ -5602,55 +5671,55 @@ msgstr ""
 "让邮件留在此电脑上。使用 Anthropic 或 Claude 订阅时，功能读取的内容会发送至 "
 "Anthropic。"
 
-#: app/src/ui/assistant_prefs.rs:70
+#: app/src/ui/assistant_prefs.rs:83
 msgid "API Key (Optional)"
 msgstr "API 密钥（选填）"
 
-#: app/src/ui/assistant_prefs.rs:75
+#: app/src/ui/assistant_prefs.rs:88
 msgid "Anthropic API Key"
 msgstr "Anthropic API 密钥"
 
-#: app/src/ui/assistant_prefs.rs:98
+#: app/src/ui/assistant_prefs.rs:111
 msgid "Uses your Claude subscription through {path}"
 msgstr "通过 {path} 使用 Claude 订阅"
 
-#: app/src/ui/assistant_prefs.rs:101
+#: app/src/ui/assistant_prefs.rs:114
 msgid "Not found. Install Claude Code and sign in by running claude once."
 msgstr "找不到。请安装 Claude Code，并运行一次 claude 以登录。"
 
-#: app/src/ui/assistant_prefs.rs:129
+#: app/src/ui/assistant_prefs.rs:142
 msgid "Removed the key"
 msgstr "已移除密钥"
 
-#: app/src/ui/assistant_prefs.rs:131
+#: app/src/ui/assistant_prefs.rs:144
 msgid "Saved in the keyring"
 msgstr "已保存至密钥环"
 
-#: app/src/ui/assistant_prefs.rs:138
+#: app/src/ui/assistant_prefs.rs:151
 msgid "Key saved in the keyring"
 msgstr "已将密钥保存至密钥环"
 
-#: app/src/ui/assistant_prefs.rs:140
+#: app/src/ui/assistant_prefs.rs:153
 msgid "No key saved"
 msgstr "尚未保存密钥"
 
-#: app/src/ui/assistant_prefs.rs:154
+#: app/src/ui/assistant_prefs.rs:167
 msgid "Anthropic API Key (Saved)"
 msgstr "Anthropic API 密钥（已保存）"
 
-#: app/src/ui/assistant_prefs.rs:158
+#: app/src/ui/assistant_prefs.rs:171
 msgid "Used For"
 msgstr "用途"
 
-#: app/src/ui/assistant_prefs.rs:160
+#: app/src/ui/assistant_prefs.rs:173
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr "每项功能会将读取的内容发送至为该功能选择的模型。"
 
-#: app/src/ui/assistant_prefs.rs:180
+#: app/src/ui/assistant_prefs.rs:193
 msgid "Reasoning"
 msgstr "推理"
 
-#: app/src/ui/assistant_prefs.rs:182
+#: app/src/ui/assistant_prefs.rs:195
 msgid ""
 "Ask supported models to think before answering. Turning this off can make "
 "replies faster. Claude Code uses its own settings."
@@ -5658,42 +5727,42 @@ msgstr ""
 "要求支持此功能的模型在回答前进行思考。关闭此选项可能会加快回复。Claude Code "
 "使用自己的设置。"
 
-#: app/src/ui/assistant_prefs.rs:188
+#: app/src/ui/assistant_prefs.rs:201
 msgid "Assistant Chats"
 msgstr "助手对话"
 
-#: app/src/ui/assistant_prefs.rs:193
+#: app/src/ui/assistant_prefs.rs:206
 msgid "Email Translations"
 msgstr "邮件翻译"
 
-#: app/src/ui/assistant_prefs.rs:210 app/src/ui/conversation.rs:724
+#: app/src/ui/assistant_prefs.rs:223 app/src/ui/conversation.rs:725
 #: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "对话"
 
-#: app/src/ui/assistant_prefs.rs:213
+#: app/src/ui/assistant_prefs.rs:226
 msgid "Show Details Expanded"
 msgstr "展开详细信息"
 
-#: app/src/ui/assistant_prefs.rs:215
+#: app/src/ui/assistant_prefs.rs:228
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr "显示模型的思考过程及运行的每个工具时，自动展开内容"
 
-#: app/src/ui/assistant_prefs.rs:230 app/src/ui/assistant_prefs.rs:236
+#: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:232
+#: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:260 app/src/ui/assistant_prefs.rs:281
+#: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
 msgstr "AI 语言"
 
-#: app/src/ui/assistant_prefs.rs:262
+#: app/src/ui/assistant_prefs.rs:275
 msgid ""
 "Language for assistant responses, summaries, and translations. Email replies "
 "and drafts follow the language of the correspondence unless you ask "
@@ -5702,99 +5771,99 @@ msgstr ""
 "助手回答、摘要及翻译使用的语言。除非另有要求，邮件回复与草稿会沿用往来邮件的"
 "语言。"
 
-#: app/src/ui/assistant_prefs.rs:267
+#: app/src/ui/assistant_prefs.rs:280
 msgid "Same as Interface"
 msgstr "与界面相同"
 
-#: app/src/ui/assistant_prefs.rs:269
+#: app/src/ui/assistant_prefs.rs:282
 msgid "Other…"
 msgstr "其他…"
 
-#: app/src/ui/assistant_prefs.rs:286
+#: app/src/ui/assistant_prefs.rs:299
 msgid "Language Name"
 msgstr "语言名称"
 
-#: app/src/ui/assistant_prefs.rs:315
+#: app/src/ui/assistant_prefs.rs:328
 msgid ""
 "Enter a language name of up to 80 characters, using letters, spaces, "
 "hyphens, apostrophes, or parentheses."
 msgstr "请输入最多 80 个字符的语言名称，可使用字母、空格、连字符、撇号或括号。"
 
-#: app/src/ui/assistant_prefs.rs:333
+#: app/src/ui/assistant_prefs.rs:346
 msgid "Always Allowed"
 msgstr "始终允许"
 
-#: app/src/ui/assistant_prefs.rs:335
+#: app/src/ui/assistant_prefs.rs:348
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
 msgstr "无须询问即可运行的外部工具。移除工具后，下次运行前会再次询问。"
 
-#: app/src/ui/assistant_prefs.rs:351
+#: app/src/ui/assistant_prefs.rs:364
 msgid "Ask Again"
 msgstr "再次询问"
 
-#: app/src/ui/assistant_prefs.rs:355
+#: app/src/ui/assistant_prefs.rs:368
 msgid "Ask again before {tool}"
 msgstr "运行 {tool} 前再次询问"
 
-#: app/src/ui/assistant_prefs.rs:396
+#: app/src/ui/assistant_prefs.rs:409
 msgid "Test the Connection"
 msgstr "测试连接"
 
-#: app/src/ui/assistant_prefs.rs:423 app/src/ui/assistant_web_prefs.rs:101
+#: app/src/ui/assistant_prefs.rs:436 app/src/ui/assistant_web_prefs.rs:101
 msgid "No answer: {reason}"
 msgstr "未响应：{reason}"
 
-#: app/src/ui/assistant_prefs.rs:486
+#: app/src/ui/assistant_prefs.rs:499
 msgid "Connection"
 msgstr "连接"
 
-#: app/src/ui/assistant_prefs.rs:640
+#: app/src/ui/assistant_prefs.rs:653
 msgid "Model"
 msgstr "模型"
 
-#: app/src/ui/assistant_prefs.rs:659 app/src/ui/assistant_prefs.rs:663
+#: app/src/ui/assistant_prefs.rs:672 app/src/ui/assistant_prefs.rs:676
 msgid "Models You Can Use"
 msgstr "可用的模型"
 
-#: app/src/ui/assistant_prefs.rs:817
+#: app/src/ui/assistant_prefs.rs:830
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr "此服务商未列出模型。请在输入框中输入名称。"
 
-#: app/src/ui/assistant_prefs.rs:852
+#: app/src/ui/assistant_prefs.rs:865
 msgid "alias"
 msgstr "别名"
 
-#: app/src/ui/assistant_prefs.rs:892
+#: app/src/ui/assistant_prefs.rs:905
 msgid "Found on This Computer"
 msgstr "在此电脑上找到"
 
-#: app/src/ui/assistant_prefs.rs:896
+#: app/src/ui/assistant_prefs.rs:909
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr "正在寻找 LM Studio、Ollama、Unsloth 和 Claude Code…"
 
-#: app/src/ui/assistant_prefs.rs:912
+#: app/src/ui/assistant_prefs.rs:925
 msgid "Nothing found"
 msgstr "未找到"
 
-#: app/src/ui/assistant_prefs.rs:914
+#: app/src/ui/assistant_prefs.rs:927
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 "请启动 LM Studio 服务器或 Ollama，或安装 Claude Code，再重新打开 [首选项]。"
 
-#: app/src/ui/assistant_prefs.rs:926
+#: app/src/ui/assistant_prefs.rs:939
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] "{model} 与其他 {count} 个模型"
 
-#: app/src/ui/assistant_prefs.rs:938
+#: app/src/ui/assistant_prefs.rs:951
 msgid "Use"
 msgstr "使用"
 
-#: app/src/ui/assistant_prefs.rs:943
+#: app/src/ui/assistant_prefs.rs:956
 msgid "Use {provider}"
 msgstr "使用 {provider}"
 
@@ -6639,8 +6708,8 @@ msgid ""
 "subscribe to it again later."
 msgstr "所有设备的 Google 日历列表都会移除此日历。之后仍可重新订阅。"
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:425
-#: app/src/ui/unsubscribe.rs:120
+#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:426
+#: app/src/ui/unsubscribe.rs:143
 msgid "Unsubscribe"
 msgstr "取消订阅"
 
@@ -6734,7 +6803,7 @@ msgid "Show Calendars"
 msgstr "显示日历"
 
 #: app/src/ui/calendar/mod.rs:400 app/src/ui/calendar/mod.rs:404
-#: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:570
+#: app/src/ui/conversation.rs:567 app/src/ui/conversation.rs:571
 msgid "Assistant (Ctrl+J)"
 msgstr "助手（Ctrl+J）"
 
@@ -7168,7 +7237,7 @@ msgstr "重命名…"
 msgid "Delete…"
 msgstr "删除…"
 
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:624
+#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:625
 msgid "Unsubscribe…"
 msgstr "取消订阅…"
 
@@ -7385,7 +7454,7 @@ msgstr "加密"
 msgid "Request Read Receipt"
 msgstr "要求已读回执"
 
-#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1797
+#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1798
 msgid "Choose a Time…"
 msgstr "选择时间…"
 
@@ -7831,7 +7900,7 @@ msgstr "使用 {host}（账号：{account}）"
 msgid "Find Again"
 msgstr "再次寻找"
 
-#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:576
+#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:577
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1595
 msgid "Edit…"
 msgstr "编辑…"
@@ -7885,220 +7954,220 @@ msgstr "将 {account} 加入 GNOME 在线账号"
 msgid "Not allowed when you signed in"
 msgstr "登录时未允许"
 
-#: app/src/ui/conversation.rs:243 app/src/ui/conversation.rs:587
+#: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
 #: app/src/ui/window/message_menu.rs:130
 msgid "Reply All"
 msgstr "全部回复"
 
-#: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
+#: app/src/ui/conversation.rs:245 app/src/ui/conversation.rs:589
 #: app/src/ui/window/message_menu.rs:131 app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "转发"
 
-#: app/src/ui/conversation.rs:247 app/src/ui/conversation.rs:618
+#: app/src/ui/conversation.rs:248 app/src/ui/conversation.rs:619
 msgid "Print…"
 msgstr "打印…"
 
-#: app/src/ui/conversation.rs:249 app/src/ui/conversation.rs:620
+#: app/src/ui/conversation.rs:250 app/src/ui/conversation.rs:621
 #: app/src/ui/window/message_menu.rs:143
 msgid "Export…"
 msgstr "导出…"
 
-#: app/src/ui/conversation.rs:253 app/src/ui/conversation.rs:626
+#: app/src/ui/conversation.rs:254 app/src/ui/conversation.rs:627
 msgid "Always Load Images…"
 msgstr "始终加载图片…"
 
-#: app/src/ui/conversation.rs:413
+#: app/src/ui/conversation.rs:414
 msgid "No Conversation Selected"
 msgstr "未选择对话"
 
-#: app/src/ui/conversation.rs:419
+#: app/src/ui/conversation.rs:420
 msgid "Remote images are hidden to protect your privacy"
 msgstr "已隐藏远程图片以保护隐私"
 
-#: app/src/ui/conversation.rs:420
+#: app/src/ui/conversation.rs:421 app/src/ui/window/images.rs:88
 msgid "Load Images"
 msgstr "加载图片"
 
-#: app/src/ui/conversation.rs:424
+#: app/src/ui/conversation.rs:425
 msgid "This message is from a mailing list"
 msgstr "此邮件来自邮件群组"
 
-#: app/src/ui/conversation.rs:438 app/src/ui/conversation.rs:1174
+#: app/src/ui/conversation.rs:439 app/src/ui/conversation.rs:1175
 #: app/src/ui/window/message_menu.rs:137
 msgid "Flag"
 msgstr "标记"
 
-#: app/src/ui/conversation.rs:439 app/src/ui/conversation.rs:602
-#: app/src/ui/conversation.rs:940 app/src/ui/conversation.rs:1179
+#: app/src/ui/conversation.rs:440 app/src/ui/conversation.rs:603
+#: app/src/ui/conversation.rs:941 app/src/ui/conversation.rs:1180
 msgid "Mute"
 msgstr "静音"
 
-#: app/src/ui/conversation.rs:441 app/src/ui/conversation.rs:593
-#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:133
+#: app/src/ui/conversation.rs:442 app/src/ui/conversation.rs:594
+#: app/src/ui/conversation.rs:1112 app/src/ui/window/message_menu.rs:133
 msgid "Move to Trash"
 msgstr "移至回收站"
 
-#: app/src/ui/conversation.rs:468
+#: app/src/ui/conversation.rs:469
 msgid "Several Conversations Selected"
 msgstr "已选择多个对话"
 
-#: app/src/ui/conversation.rs:470
+#: app/src/ui/conversation.rs:471
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr "操作与快捷键会应用至所有选择的对话。Esc 可清除选择。"
 
-#: app/src/ui/conversation.rs:516
+#: app/src/ui/conversation.rs:517
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr "归档（E 或 Ctrl+Alt+A）"
 
-#: app/src/ui/conversation.rs:518 app/src/ui/conversation.rs:1094
+#: app/src/ui/conversation.rs:519 app/src/ui/conversation.rs:1095
 msgid "Move to Trash (Delete)"
 msgstr "移至回收站（Delete）"
 
-#: app/src/ui/conversation.rs:519 app/src/ui/conversation.rs:1104
+#: app/src/ui/conversation.rs:520 app/src/ui/conversation.rs:1105
 msgid "Junk (Ctrl+Shift+J)"
 msgstr "垃圾邮件（Ctrl+Shift+J）"
 
-#: app/src/ui/conversation.rs:522
+#: app/src/ui/conversation.rs:523
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "标记为未读（Ctrl+Shift+U）"
 
-#: app/src/ui/conversation.rs:527 app/src/ui/conversation.rs:531
-#: app/src/ui/conversation.rs:1838
+#: app/src/ui/conversation.rs:528 app/src/ui/conversation.rs:532
+#: app/src/ui/conversation.rs:1839
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "标记（Ctrl+Shift+L）"
 
-#: app/src/ui/conversation.rs:528 app/src/ui/conversation.rs:534
+#: app/src/ui/conversation.rs:529 app/src/ui/conversation.rs:535
 msgid "Choose Flag Color"
 msgstr "选择标记颜色"
 
-#: app/src/ui/conversation.rs:535
+#: app/src/ui/conversation.rs:536
 msgid "Flags it in the color you chose last, or takes the flag off"
 msgstr "以上次选择的颜色加上标记，或移除标记"
 
-#: app/src/ui/conversation.rs:539
+#: app/src/ui/conversation.rs:540
 msgid "Reply (Ctrl+R)"
 msgstr "回复（Ctrl+R）"
 
-#: app/src/ui/conversation.rs:542
+#: app/src/ui/conversation.rs:543
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr "全部回复（Ctrl+Shift+R）"
 
-#: app/src/ui/conversation.rs:544
+#: app/src/ui/conversation.rs:545
 msgid "Forward (Ctrl+Shift+F)"
 msgstr "转发（Ctrl+Shift+F）"
 
-#: app/src/ui/conversation.rs:546
+#: app/src/ui/conversation.rs:547
 msgid "Edit Draft"
 msgstr "编辑草稿"
 
-#: app/src/ui/conversation.rs:553 app/src/ui/conversation.rs:556
+#: app/src/ui/conversation.rs:554 app/src/ui/conversation.rs:557
 msgid "More Actions"
 msgstr "更多操作"
 
-#: app/src/ui/conversation.rs:577 app/src/ui/queued.rs:56
+#: app/src/ui/conversation.rs:578 app/src/ui/queued.rs:56
 msgid "Send Now"
 msgstr "立即发送"
 
-#: app/src/ui/conversation.rs:597
+#: app/src/ui/conversation.rs:598
 msgid "Flag or Unflag"
 msgstr "加上或移除标记"
 
-#: app/src/ui/conversation.rs:599
+#: app/src/ui/conversation.rs:600
 msgid "Mark Read or Unread"
 msgstr "标记为已读或未读"
 
-#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:142
+#: app/src/ui/conversation.rs:608 app/src/ui/window/message_menu.rs:142
 msgid "Tags…"
 msgstr "类别…"
 
-#: app/src/ui/conversation.rs:611 app/src/ui/sidebar.rs:1134
+#: app/src/ui/conversation.rs:612 app/src/ui/sidebar.rs:1134
 #: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "提醒我"
 
-#: app/src/ui/conversation.rs:615
+#: app/src/ui/conversation.rs:616
 msgid "Open in New Window"
 msgstr "在新窗口中打开"
 
-#: app/src/ui/conversation.rs:623 app/src/ui/conversation.rs:907
+#: app/src/ui/conversation.rs:624 app/src/ui/conversation.rs:908
 msgid "Add Sender to VIPs"
 msgstr "将发件人加入 VIP"
 
 #. Both sender items leave a rule on the server, so an account
 #. without rules turns them off, and the menu leaves them out.
-#: app/src/ui/conversation.rs:631
+#: app/src/ui/conversation.rs:632
 msgid "Block Sender…"
 msgstr "阻止发件人…"
 
-#: app/src/ui/conversation.rs:639 app/src/ui/conversation.rs:927
+#: app/src/ui/conversation.rs:640 app/src/ui/conversation.rs:928
 msgid "Categorize Sender"
 msgstr "将发件人分类"
 
-#: app/src/ui/conversation.rs:667 app/src/ui/conversation.rs:669
+#: app/src/ui/conversation.rs:668 app/src/ui/conversation.rs:670
 msgid "Tags"
 msgstr "类别"
 
-#: app/src/ui/conversation.rs:905
+#: app/src/ui/conversation.rs:906
 msgid "Remove Sender from VIPs"
 msgstr "将发件人从 VIP 移除"
 
-#: app/src/ui/conversation.rs:938 app/src/ui/conversation.rs:1177
+#: app/src/ui/conversation.rs:939 app/src/ui/conversation.rs:1178
 msgid "Unmute"
 msgstr "取消静音"
 
-#: app/src/ui/conversation.rs:1093
+#: app/src/ui/conversation.rs:1094
 msgid "Delete Forever (Delete)"
 msgstr "永久删除（Delete）"
 
-#: app/src/ui/conversation.rs:1102
+#: app/src/ui/conversation.rs:1103
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "非垃圾邮件（Ctrl+Shift+J）"
 
-#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:134
+#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:134
 #: app/src/ui/window/press.rs:447
 msgid "Delete Forever"
 msgstr "永久删除"
 
-#: app/src/ui/conversation.rs:1115
+#: app/src/ui/conversation.rs:1116
 msgid "Not Junk"
 msgstr "非垃圾邮件"
 
-#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:136
+#: app/src/ui/conversation.rs:1170 app/src/ui/window/message_menu.rs:136
 msgid "Mark as Unread"
 msgstr "标记为未读"
 
-#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:138
+#: app/src/ui/conversation.rs:1173 app/src/ui/window/message_menu.rs:138
 msgid "Unflag"
 msgstr "移除标记"
 
-#: app/src/ui/conversation.rs:1188
+#: app/src/ui/conversation.rs:1189
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "已选择 {count} 个对话"
 
-#: app/src/ui/conversation.rs:1194
+#: app/src/ui/conversation.rs:1195
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "已选择 {count} 封邮件"
 
-#: app/src/ui/conversation.rs:1837
+#: app/src/ui/conversation.rs:1838
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "移除标记（Ctrl+Shift+L）"
 
-#: app/src/ui/conversation.rs:1850
+#: app/src/ui/conversation.rs:1851
 msgid "Mark as Read (U)"
 msgstr "标记为已读（U）"
 
-#: app/src/ui/conversation.rs:1851
+#: app/src/ui/conversation.rs:1852
 msgid "Mark as Unread (U)"
 msgstr "标记为未读（U）"
 
-#: app/src/ui/conversation.rs:2123
+#: app/src/ui/conversation.rs:2126
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color}（Ctrl+Alt+{number}）"
 
-#: app/src/ui/conversation.rs:2140 app/src/ui/window/message_menu.rs:269
+#: app/src/ui/conversation.rs:2143 app/src/ui/window/message_menu.rs:269
 msgid "Clear Flag"
 msgstr "清除标记"
 
@@ -8447,7 +8516,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "允许隐藏电子邮件地址"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3853
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3866
 msgid "Add an account first"
 msgstr "请先添加账号"
 
@@ -9569,7 +9638,7 @@ msgstr "将 {account} 下移"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3651 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3660 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "首选项"
 
@@ -10039,7 +10108,7 @@ msgstr "自动回复…"
 msgid "Rules…"
 msgstr "规则…"
 
-#: app/src/ui/sidebar.rs:1881 app/src/ui/window.rs:3645
+#: app/src/ui/sidebar.rs:1881 app/src/ui/window.rs:3654
 msgid "Hide My Email…"
 msgstr "隐藏电子邮件地址…"
 
@@ -10359,72 +10428,91 @@ msgstr "显示原文"
 msgid "Show Translation"
 msgstr "显示译文"
 
-#: app/src/ui/unsubscribe.rs:224
+#: app/src/ui/unsubscribe.rs:66
+#, fuzzy
+#| msgid "Unsubscribe"
+msgid "Load Unsubscribe Pages?"
+msgstr "取消订阅"
+
+#: app/src/ui/unsubscribe.rs:68
+msgid ""
+"Loading these pages contacts their servers and runs their scripts. The "
+"sender may learn that you opened the link, and opening it may unsubscribe "
+"you. You will be asked again before a form is submitted."
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:79
+#, fuzzy
+#| msgid "Load Images"
+msgid "Load Pages"
+msgstr "加载图片"
+
+#: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
 msgstr "是否取消订阅 {sender}？"
 
-#: app/src/ui/unsubscribe.rs:228
+#: app/src/ui/unsubscribe.rs:251
 msgid "Unsubscribe from {count} list?"
 msgid_plural "Unsubscribe from {count} lists?"
 msgstr[0] "是否取消订阅 {count} 个邮件群组？"
 
-#: app/src/ui/unsubscribe.rs:243
+#: app/src/ui/unsubscribe.rs:266
 msgid "Loading a page tells the sender you acted, as opening it yourself does."
 msgstr "加载页面会让发件人知道已采取操作，如同自行打开页面。"
 
-#: app/src/ui/unsubscribe.rs:249
+#: app/src/ui/unsubscribe.rs:272
 msgid "Reading the page…"
 msgstr "正在读取页面…"
 
-#: app/src/ui/unsubscribe.rs:250
+#: app/src/ui/unsubscribe.rs:273
 msgid "ask the sender to take you off the list"
 msgstr "要求发件人从邮件群组移除地址"
 
-#: app/src/ui/unsubscribe.rs:252
+#: app/src/ui/unsubscribe.rs:275
 msgid "send this request from {address}"
 msgstr "从 {address} 发送此请求"
 
-#: app/src/ui/unsubscribe.rs:281
+#: app/src/ui/unsubscribe.rs:304
 msgid "To: {address}"
 msgstr "收件人：{address}"
 
-#: app/src/ui/unsubscribe.rs:292
+#: app/src/ui/unsubscribe.rs:315
 msgid "nothing: the page says you are off the list already"
 msgstr "不做任何事：页面表示已取消订阅"
 
-#: app/src/ui/unsubscribe.rs:293
+#: app/src/ui/unsubscribe.rs:316
 msgid "open the page in the browser"
 msgstr "在浏览器中打开页面"
 
-#: app/src/ui/unsubscribe.rs:306
+#: app/src/ui/unsubscribe.rs:329
 msgid "press “{button}” on {site} with {address}, all emails"
 msgstr "按下「{button}」（网站：{site}），使用 {address}，适用于所有电子邮件"
 
-#: app/src/ui/unsubscribe.rs:310
+#: app/src/ui/unsubscribe.rs:333
 msgid "press “{button}” on {site} with {address}"
 msgstr "按下「{button}」（网站：{site}），使用 {address}"
 
-#: app/src/ui/unsubscribe.rs:313
+#: app/src/ui/unsubscribe.rs:336
 msgid "press “{button}” on {site}, all emails"
 msgstr "按下「{button}」（网站：{site}），适用于所有电子邮件"
 
-#: app/src/ui/unsubscribe.rs:314
+#: app/src/ui/unsubscribe.rs:337
 msgid "press “{button}” on {site}"
 msgstr "按下「{button}」（网站：{site}）"
 
-#: app/src/ui/unsubscribe.rs:323
+#: app/src/ui/unsubscribe.rs:346
 msgid "Unsubscribed from {sender}"
 msgstr "已取消订阅 {sender}"
 
-#: app/src/ui/unsubscribe.rs:324
+#: app/src/ui/unsubscribe.rs:347
 msgid "Sent, but the page did not say it worked"
 msgstr "已发送，但页面未确认成功"
 
-#: app/src/ui/unsubscribe.rs:325
+#: app/src/ui/unsubscribe.rs:348
 msgid "The page needs you to finish it"
 msgstr "此页面需要手动完成"
 
-#: app/src/ui/unsubscribe.rs:327
+#: app/src/ui/unsubscribe.rs:350
 msgid "Could not unsubscribe from {sender}: {reason}"
 msgstr "无法取消订阅 {sender}：{reason}"
 
@@ -10533,7 +10621,7 @@ msgstr "无法加载邮件：{reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "已添加 {account}。正在下载邮件…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3025
+#: app/src/ui/window.rs:362 app/src/ui/window.rs:3034
 msgid "{account} is signed in again."
 msgstr "{account} 已重新登录。"
 
@@ -10658,142 +10746,142 @@ msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "已将 {count} 封邮件移至收件箱"
 
-#: app/src/ui/window.rs:937
+#: app/src/ui/window.rs:945
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail（演示）"
 
-#: app/src/ui/window.rs:1370
+#: app/src/ui/window.rs:1378
 msgid "Could not read accounts: {reason}"
 msgstr "无法读取账号：{reason}"
 
-#: app/src/ui/window.rs:2109
+#: app/src/ui/window.rs:2118
 msgid "Could not delete the mail: {reason}"
 msgstr "无法删除邮件：{reason}"
 
-#: app/src/ui/window.rs:2216
+#: app/src/ui/window.rs:2225
 msgid "Turn On the {service}"
 msgstr "启用 {service}"
 
-#: app/src/ui/window.rs:2401 app/src/ui/window.rs:2404
+#: app/src/ui/window.rs:2410 app/src/ui/window.rs:2413
 msgid "Move to Inbox"
 msgstr "移至收件箱"
 
-#: app/src/ui/window.rs:2599
+#: app/src/ui/window.rs:2608
 msgid "Select mail from one account to tag it."
 msgstr "请选择同一账号中的邮件以添加类别。"
 
-#: app/src/ui/window.rs:2611
+#: app/src/ui/window.rs:2620
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "此账号尚无类别。请在 Outlook 中创建。"
 
-#: app/src/ui/window.rs:2704
+#: app/src/ui/window.rs:2713
 msgid "Add an account to reply or forward"
 msgstr "添加账号后即可回复或转发"
 
-#: app/src/ui/window.rs:2808
+#: app/src/ui/window.rs:2817
 msgid "Could not include {file}: {reason}"
 msgstr "无法加入 {file}：{reason}"
 
-#: app/src/ui/window.rs:2889
+#: app/src/ui/window.rs:2898
 msgid "The server had already sent this message."
 msgstr "服务器已经发送这封邮件。"
 
-#: app/src/ui/window.rs:2894
+#: app/src/ui/window.rs:2903
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "这封邮件已在其他应用中取消，且已不在草稿中。"
 
-#: app/src/ui/window.rs:3210
+#: app/src/ui/window.rs:3219
 msgid "Continue in your browser"
 msgstr "请在浏览器中继续"
 
-#: app/src/ui/window.rs:3260
+#: app/src/ui/window.rs:3269
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "此版本的 Penguin Mail 未包含 Google 登录功能。"
 
-#: app/src/ui/window.rs:3282
+#: app/src/ui/window.rs:3291
 msgid "Get a Release"
 msgstr "取得发行版本"
 
-#: app/src/ui/window.rs:3392
+#: app/src/ui/window.rs:3401
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
 msgstr "无法检查服务器保留待稍后发送的邮件，因此保留 {account}：{reason}"
 
-#: app/src/ui/window.rs:3403
+#: app/src/ui/window.rs:3412
 msgid "Remove {account}?"
 msgstr "是否移除 {account}？"
 
-#: app/src/ui/window.rs:3422
+#: app/src/ui/window.rs:3431
 msgid "Remove Anyway"
 msgstr "仍要移除"
 
-#: app/src/ui/window.rs:3435
+#: app/src/ui/window.rs:3444
 msgid "Removed {account}"
 msgstr "已移除 {account}"
 
-#: app/src/ui/window.rs:3437
+#: app/src/ui/window.rs:3446
 msgid "Could not remove {account}: {reason}"
 msgstr "无法移除 {account}：{reason}"
 
-#: app/src/ui/window.rs:3623
+#: app/src/ui/window.rs:3632
 msgid "Refresh"
 msgstr "刷新"
 
-#: app/src/ui/window.rs:3627
+#: app/src/ui/window.rs:3636
 msgid "Show Declined Events"
 msgstr "显示已拒绝的活动"
 
-#: app/src/ui/window.rs:3643
+#: app/src/ui/window.rs:3652
 msgid "Add Account…"
 msgstr "添加账号…"
 
-#: app/src/ui/window.rs:3644
+#: app/src/ui/window.rs:3653
 msgid "New Smart Mailbox…"
 msgstr "新建智能邮箱…"
 
-#: app/src/ui/window.rs:3652 app/src/ui/window/shortcuts.rs:812
+#: app/src/ui/window.rs:3661 app/src/ui/window/shortcuts.rs:812
 msgid "Keyboard Shortcuts"
 msgstr "键盘快捷键"
 
-#: app/src/ui/window.rs:3661 app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3670 app/src/ui/window.rs:3672
 msgid "Main Menu"
 msgstr "主菜单"
 
-#: app/src/ui/window.rs:3728 app/src/ui/window.rs:3729
+#: app/src/ui/window.rs:3737 app/src/ui/window.rs:3738
 msgid "Dock"
 msgstr "固定到主窗口"
 
-#: app/src/ui/window.rs:3854
+#: app/src/ui/window.rs:3867
 msgid "Add a mail account first"
 msgstr "请先添加邮件账号"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4105
+#: app/src/ui/window.rs:4118
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} 的日历和联系人已连接。"
 
-#: app/src/ui/window.rs:4221
+#: app/src/ui/window.rs:4234
 msgid "Open a message from the person first"
 msgstr "请先打开此人的邮件"
 
-#: app/src/ui/window.rs:4316
+#: app/src/ui/window.rs:4329
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "重新启动后，Penguin Mail 会显示新的语言"
 
-#: app/src/ui/window.rs:4318 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4331 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "重新启动"
 
-#: app/src/ui/window.rs:4382
+#: app/src/ui/window.rs:4395
 msgid "Show Rules"
 msgstr "显示规则"
 
-#: app/src/ui/window.rs:4408
+#: app/src/ui/window.rs:4421
 msgid "Messages That Will Not Download"
 msgstr "无法下载的邮件"
 
-#: app/src/ui/window.rs:4410
+#: app/src/ui/window.rs:4423
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10918,7 +11006,7 @@ msgstr "请先打开对话"
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
-#: app/src/ui/window/senders.rs:288
+#: app/src/ui/window/senders.rs:296
 msgid "That account is not connected"
 msgstr "此账号尚未连接"
 
@@ -10971,35 +11059,55 @@ msgid "{count} sent message has had no reply"
 msgid_plural "{count} sent messages have had no reply"
 msgstr[0] "{count} 封发送的邮件尚未收到回复"
 
-#: app/src/ui/window/images.rs:71
+#: app/src/ui/window/images.rs:74
+#, fuzzy
+#| msgid "Unknown sender"
+msgid "Unknown Sender"
+msgstr "未知发件人"
+
+#: app/src/ui/window/images.rs:81
+#, fuzzy
+#| msgid "Stop Loading Images from This Sender"
+msgid "Load Images from Multiple Senders?"
+msgstr "停止加载此发件人的图片"
+
+#: app/src/ui/window/images.rs:83
+msgid ""
+"This loads remote images from more than one email address in this "
+"conversation. Each sender may learn when you opened their mail.\n"
+"\n"
+"{senders}"
+msgstr ""
+
+#: app/src/ui/window/images.rs:127
 msgid "Always"
 msgstr "始终"
 
-#: app/src/ui/window/images.rs:92
+#: app/src/ui/window/images.rs:148
 msgid "This message has no sender to remember."
 msgstr "此邮件没有可记住的发件人。"
 
-#: app/src/ui/window/images.rs:96
+#: app/src/ui/window/images.rs:152
 msgid "Always Load Images?"
 msgstr "是否始终加载图片？"
 
-#: app/src/ui/window/images.rs:104
+#: app/src/ui/window/images.rs:160
 msgid "From {sender}"
 msgstr "来自 {sender}"
 
-#: app/src/ui/window/images.rs:110
+#: app/src/ui/window/images.rs:166
 msgid "From Anyone at {domain}"
 msgstr "来自 {domain} 域名的任何人"
 
-#: app/src/ui/window/images.rs:160
+#: app/src/ui/window/images.rs:220
 msgid "Images from anyone at {domain} will load from now on"
 msgstr "日后会加载来自 {domain} 域名的所有图片"
 
-#: app/src/ui/window/images.rs:165
+#: app/src/ui/window/images.rs:225
 msgid "Images from {sender} will load from now on"
 msgstr "日后会加载 {sender} 的图片"
 
-#: app/src/ui/window/images.rs:170
+#: app/src/ui/window/images.rs:230
 msgid "Could not remember that sender: {reason}"
 msgstr "无法记住此发件人：{reason}"
 
@@ -11351,29 +11459,29 @@ msgstr ""
 msgid "This message has no unsubscribe link"
 msgstr "此邮件没有取消订阅链接"
 
-#: app/src/ui/window/senders.rs:144
+#: app/src/ui/window/senders.rs:152
 msgid ""
 "The request to leave {sender} waits in the Outbox. It goes out as soon as it "
 "can."
 msgstr "取消订阅 {sender} 的请求正在发件箱中等待，能发送时就会送出。"
 
-#: app/src/ui/window/senders.rs:210
+#: app/src/ui/window/senders.rs:218
 msgid "Open Page"
 msgstr "打开页面"
 
-#: app/src/ui/window/senders.rs:247
+#: app/src/ui/window/senders.rs:255
 msgid "The app is closing."
 msgstr "程序正在关闭。"
 
-#: app/src/ui/window/senders.rs:265
+#: app/src/ui/window/senders.rs:273
 msgid "Open a message from the sender to block"
 msgstr "请先打开要阻止的发件人寄来的邮件"
 
-#: app/src/ui/window/senders.rs:271
+#: app/src/ui/window/senders.rs:279
 msgid "Block {sender}?"
 msgstr "是否阻止 {sender}？"
 
-#: app/src/ui/window/senders.rs:274
+#: app/src/ui/window/senders.rs:282
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -11381,15 +11489,15 @@ msgstr ""
 "来自 {email} 的新邮件会直接移至回收站，此对话现在也会移至回收站。若要解除阻"
 "止，请在 [规则] 中移除该规则。"
 
-#: app/src/ui/window/senders.rs:279
+#: app/src/ui/window/senders.rs:287
 msgid "Block"
 msgstr "阻止"
 
-#: app/src/ui/window/senders.rs:306
+#: app/src/ui/window/senders.rs:314
 msgid "Blocked {sender}"
 msgstr "已阻止 {sender}"
 
-#: app/src/ui/window/senders.rs:313
+#: app/src/ui/window/senders.rs:321
 msgid "Could not block the sender: {reason}"
 msgstr "无法阻止发件人：{reason}"
 
@@ -11619,7 +11727,7 @@ msgstr "查看存储空间"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "隐藏空间警告至下次启动"
 
-#: app/src/ui/window/thread.rs:630
+#: app/src/ui/window/thread.rs:636
 msgid "The account is not connected yet."
 msgstr "账号尚未连接。"
 
@@ -12797,6 +12905,21 @@ msgstr "标记为非垃圾邮件"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
+
+#~ msgid ""
+#~ "Run this command for the skill {skill}?\n"
+#~ "\n"
+#~ "{command}\n"
+#~ "\n"
+#~ "It runs in a sandbox with no access to your mail or home folder. "
+#~ "{network} Always Allow covers this exact command only."
+#~ msgstr ""
+#~ "是否为 {skill} 技能运行此命令？\n"
+#~ "\n"
+#~ "{command}\n"
+#~ "\n"
+#~ "命令会在沙箱中运行，无法访问邮件或主目录。{network} [始终允许] 仅适用于此"
+#~ "命令。"
 
 #~ msgid "Move it from the Trash to the Inbox first"
 #~ msgstr "请先将邮件从回收站移至收件箱"

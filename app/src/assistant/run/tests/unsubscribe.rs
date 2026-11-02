@@ -199,6 +199,7 @@ async fn three_lists_leave_in_one_call_once_the_dialog_says_yes() {
         "the page is typed one address, the owner's"
     );
 
+    assert_eq!(h.asked().pages_asked, [[PAGE]]);
     assert_eq!(
         h.asked().lists_asked,
         [[
@@ -212,6 +213,41 @@ async fn three_lists_leave_in_one_call_once_the_dialog_says_yes() {
         h.asked().questions.is_empty(),
         "the dialog is the question, so the pane shows no card as well"
     );
+}
+
+#[tokio::test]
+async fn refusing_page_access_stops_before_any_sender_is_contacted() {
+    let h = with_three().await;
+    h.desk.0.borrow_mut().settings.ai.confirm_actions = false;
+    h.effects.asked.borrow_mut().approves_pages = false;
+
+    let answer = h
+        .ok(
+            "unsubscribe",
+            json!({"conversations": [
+                conversation("tn1"),
+                conversation("tn2"),
+                conversation("tn3"),
+            ]}),
+        )
+        .await;
+
+    let said: Vec<String> = outcomes(&answer).into_iter().map(|(_, o)| o).collect();
+    assert_eq!(said, ["declined", "declined", "declined"]);
+    assert_eq!(h.asked().pages_asked, [[PAGE]]);
+    assert_eq!(h.asked().page_advisers, 0);
+    assert!(
+        h.effects.browser.borrow().is_none(),
+        "no hidden browser was created"
+    );
+    assert!(
+        h.asked().lists_asked.is_empty(),
+        "no form confirmation was needed"
+    );
+    assert!(h.asked().pages_opened.is_empty());
+    assert!(h.one_click.posted().is_empty());
+    assert!(h.asked().requests.is_empty());
+    assert!(h.asked().lists_left.is_empty());
 }
 
 #[tokio::test]
@@ -288,6 +324,11 @@ async fn a_conversation_with_no_way_out_says_so_and_stops_nothing_else() {
         "That conversation has no unsubscribe link Penguin Mail can use."
     );
     assert_eq!(lists[1]["outcome"], "done");
+    assert!(
+        h.asked().pages_asked.is_empty(),
+        "one-click needs no page permission"
+    );
+    assert!(h.effects.browser.borrow().is_none());
     assert_eq!(
         h.asked().lists_asked,
         [["Trail Notes: ask the sender to take you off the list".to_string()]],

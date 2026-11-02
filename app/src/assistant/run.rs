@@ -142,10 +142,8 @@ pub trait Effects {
     fn left_list(&self, account_id: AccountId, thread_id: &str);
 
     // ---- Leaving lists that only a page will take ------------------------
-    // Leaving several lists at once needs two things of the window: the
-    // hidden view a page loads in, and the one dialog that asks about
-    // every list. The dialog's own words are the window's, so these two
-    // hand its types straight through rather than building it here.
+    // The window asks before loading pages and again before submitting
+    // forms. It owns the dialogs' words and the hidden view.
 
     /// The hidden view one run loads its pages in, one page at a time.
     /// It is dropped when the run ends.
@@ -153,6 +151,8 @@ pub trait Effects {
     /// The model a page the rules cannot read is shown to, or nothing
     /// when the Unsubscribing feature has none.
     fn page_adviser(&self) -> Option<Box<dyn Adviser>>;
+    /// Asks before loading any of the sender's pages, including their scripts.
+    fn confirm_unsubscribe_pages(&self, urls: Vec<String>) -> Answer<'_, bool>;
     /// Asks about leaving `lines`, filling each page line in as
     /// `updates` says what that page turned out to hold. Answers the
     /// ticked lines with the way each settled on, or nothing when the

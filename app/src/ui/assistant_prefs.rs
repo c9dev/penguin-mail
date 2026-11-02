@@ -48,6 +48,19 @@ pub fn page(app: &Rc<App>, dialog: &adw::ToastOverlay) -> adw::PreferencesPage {
         }
     });
     safety.add(&confirm);
+    let analysis_tools = adw::SwitchRow::builder()
+        .title(gettext("Allow Tools in Summaries and Explanations"))
+        .subtitle(gettext("Allow these chats to read other mail, take actions, and contact external services. Off by default."))
+        .active(ai.analysis_tools)
+        .build();
+    let weak = Rc::downgrade(app);
+    analysis_tools.add_css_class("preference-explanation");
+    analysis_tools.connect_active_notify(move |row| {
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(Change::Ai(AiChange::AnalysisTools(row.is_active())));
+        }
+    });
+    safety.add(&analysis_tools);
     page.add(&safety);
     page.add(&always_allowed(app));
 

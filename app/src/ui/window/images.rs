@@ -52,7 +52,63 @@ impl MainWindow {
     /// images is the moment the question makes sense; the same choice
     /// stays in the More menu for anyone who lets the toast go.
     pub(super) fn load_images_once(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        view.allow_images();
+        let Some((asked_on, senders, messages)) = view.read(|open| {
+            (
+                open.target(),
+                open.image_senders(),
+                open.messages
+                    .iter()
+                    .map(|m| m.id.clone())
+                    .collect::<Vec<_>>(),
+            )
+        }) else {
+            return;
+        };
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
+        glib::spawn_future_local(async move {
+            if senders.len() > 1 {
+                let names: Vec<String> = senders
+                    .iter()
+                    .map(|sender| {
+                        if sender.is_empty() {
+                            gettext("Unknown Sender")
+                        } else {
+                            sender.clone()
+                        }
+                    })
+                    .collect();
+                let dialog = adw::AlertDialog::builder()
+                    .heading(gettext("Load Images from Multiple Senders?"))
+                    .body(fill(
+                        &gettext("This loads remote images from more than one email address in this conversation. Each sender may learn when you opened their mail.\n\n{senders}"),
+                        &[("senders", &names.join("\n"))],
+                    ))
+                    .build();
+                dialog.add_response("cancel", &gettext("Cancel"));
+                dialog.add_response("load", &gettext("Load Images"));
+                dialog.set_default_response(Some("cancel"));
+                dialog.set_close_response("cancel");
+                if dialog.choose_future(Some(&this.window)).await != "load" {
+                    return;
+                }
+            }
+            // A new participant must not inherit the answer to an older question.
+            if !view.is_showing(&asked_on)
+                || !view
+                    .read(|open| {
+                        open.image_senders() == senders
+                            && open.messages.iter().map(|m| &m.id).eq(messages.iter())
+                    })
+                    .unwrap_or(false)
+            {
+                return;
+            }
+            view.allow_images();
+            this.offer_to_remember_images(&view);
+        });
+    }
+
+    fn offer_to_remember_images(self: &Rc<Self>, view: &Rc<ConversationView>) {
         let Some(from) = view.find(OpenThread::newest_sender) else {
             return;
         };
@@ -152,7 +208,11 @@ impl MainWindow {
                 *self.image_senders.borrow_mut() = list;
                 // Only on the thread the person agreed for: another one
                 // opened since then may be from someone else entirely.
-                if view.is_showing(&asked_on) {
+                if view.is_showing(&asked_on)
+                    && view
+                        .read(|open| self.images_allowed_for(&open.senders()))
+                        .unwrap_or(false)
+                {
                     view.allow_images();
                 }
                 self.toast(&if whole_domain {
