@@ -477,12 +477,15 @@ impl AssistantPane {
         self.ask_shown(text.clone(), text, Arc::default());
     }
 
-    pub fn analyze(self: &Rc<Self>, action: Analysis, context: String) {
+    pub fn analyze(self: &Rc<Self>, action: Analysis, context: crate::assistant::AnalysisContext) {
         if self.running.get() {
             return;
         }
         self.reset();
         let settings = (self.settings)();
+        if context.truncated {
+            self.note(&gettext("Some conversation text was left out because it is too long. This answer covers only the included text."), false);
+        }
         if !settings.ai.analysis_tools {
             self.note(&gettext("Tools are off for this conversation and its follow-up questions. Choose New Chat to use tools again."), false);
         }
@@ -493,7 +496,7 @@ impl AssistantPane {
                 skills: self.skills.get(),
             },
             action,
-            context,
+            context.text,
         );
         self.show_question(question, &action.question());
     }

@@ -229,38 +229,75 @@ impl Analysis {
     }
 }
 
+pub struct AnalysisContext {
+    pub text: String,
+    pub truncated: bool,
+}
+
+const ANALYSIS_MESSAGE_CHARS: usize = 8_000;
+// Count serialized bytes so headers, JSON escaping and message count share the cap.
+const ANALYSIS_CONTEXT_BYTES: usize = 64_000;
+
 /// Snapshot only the messages being displayed, without model-directed reads.
-pub fn analysis_context(thread: &crate::open_thread::OpenThread) -> Result<String, String> {
-    let messages = thread
-        .messages
-        .iter()
-        .filter(|message| {
-            thread
-                .only_message
-                .as_ref()
-                .is_none_or(|only| only == &message.id)
-        })
-        .map(|message| {
-            let body = thread
-                .bodies
-                .get(&message.id)
-                .and_then(|body| body.as_ref().ok())
-                .ok_or_else(|| {
-                    gettext("Wait for the conversation to finish loading, then try again.")
-                })?;
-            Ok(serde_json::json!({
-                "from": message.from,
-                "to": message.to,
-                "date": message.date,
-                "subject": message.subject,
-                "text": crate::compose::body_text(body),
-            }))
-        })
-        .collect::<Result<Vec<_>, String>>()?;
+pub fn analysis_context(
+    thread: &crate::open_thread::OpenThread,
+) -> Result<AnalysisContext, String> {
+    let mut messages = Vec::new();
+    let mut truncated = false;
+    let mut full = false;
+    let mut bytes = r#"{"messages":[],"truncated":false}"#.len();
+    for message in thread.messages.iter().filter(|message| {
+        thread
+            .only_message
+            .as_ref()
+            .is_none_or(|only| only == &message.id)
+    }) {
+        let body = thread
+            .bodies
+            .get(&message.id)
+            .and_then(|body| body.as_ref().ok())
+            .ok_or_else(|| {
+                gettext("Wait for the conversation to finish loading, then try again.")
+            })?;
+        if full {
+            continue;
+        }
+        let mut text = crate::compose::body_text(body);
+        let cut = text
+            .char_indices()
+            .nth(ANALYSIS_MESSAGE_CHARS)
+            .map(|(index, _)| index);
+        if let Some(index) = cut {
+            text.truncate(index);
+            truncated = true;
+        }
+        let entry = serde_json::json!({
+            "from": message.from,
+            "to": message.to,
+            "date": message.date,
+            "subject": message.subject,
+            "text": text,
+            "truncated": cut.is_some(),
+        });
+        let size = entry.to_string().len() + usize::from(!messages.is_empty());
+        if bytes + size > ANALYSIS_CONTEXT_BYTES {
+            if messages.is_empty() {
+                return Err(gettext("This message's headers are too large to analyze."));
+            }
+            truncated = true;
+            full = true;
+        } else {
+            bytes += size;
+            messages.push(entry);
+        }
+    }
     if messages.is_empty() {
         return Err(gettext("Open a conversation first."));
     }
-    Ok(serde_json::json!({"messages": messages}).to_string())
+    Ok(AnalysisContext {
+        text: serde_json::json!({"messages": messages, "truncated": truncated}).to_string(),
+        truncated,
+    })
 }
 
 #[cfg(test)]
@@ -301,11 +338,92 @@ mod tests {
         );
         thread.only_message = Some("shown".into());
         let context = analysis_context(&thread).unwrap();
-        let value: serde_json::Value = serde_json::from_str(&context).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&context.text).unwrap();
         assert_eq!(value["messages"].as_array().unwrap().len(), 1);
         assert_eq!(value["messages"][0]["text"], "Displayed mail");
         thread.only_message = Some("absent".into());
         assert!(analysis_context(&thread).is_err());
+    }
+
+    #[test]
+    fn analysis_bounds_long_bodies_and_serialized_conversations() {
+        use mailrs_domain::{MessageBody, MessageMeta, Target};
+        let mut thread = crate::open_thread::OpenThread::new(
+            &Target::thread(1, "thread"),
+            String::new(),
+            vec![],
+            HashMap::new(),
+            vec![],
+        );
+        let message: MessageMeta = serde_json::from_value(serde_json::json!({
+            "account_id": 1, "id": "0", "thread_id": "thread",
+            "rfc822_msgid": null, "from": null, "to": [], "cc": [],
+            "subject": "Subject", "date": 0, "snippet": "", "size": 0,
+            "has_attachments": false
+        }))
+        .unwrap();
+        let body = |text: String| -> std::sync::Arc<MessageBody> {
+            std::sync::Arc::new(
+                serde_json::from_value(serde_json::json!({
+                    "text": text, "attachments": []
+                }))
+                .unwrap(),
+            )
+        };
+        thread.messages.push(message.clone());
+        // The old reader kept 8,000 characters; multibyte text must stay valid.
+        thread
+            .bodies
+            .insert("0".into(), Ok(body("é🦀".repeat(52_000))));
+        let context = analysis_context(&thread).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&context.text).unwrap();
+        assert!(context.truncated);
+        assert_eq!(value["truncated"], true);
+        assert_eq!(value["messages"][0]["truncated"], true);
+        assert_eq!(
+            value["messages"][0]["text"]
+                .as_str()
+                .unwrap()
+                .chars()
+                .count(),
+            ANALYSIS_MESSAGE_CHARS
+        );
+        assert!(context.text.len() <= ANALYSIS_CONTEXT_BYTES);
+
+        thread
+            .bodies
+            .insert("0".into(), Ok(body("x".repeat(ANALYSIS_MESSAGE_CHARS))));
+        assert!(!analysis_context(&thread).unwrap().truncated);
+        // Escaping and large headers count, even when every body is within its limit.
+        for index in 1..100 {
+            let mut message = message.clone();
+            message.id = index.to_string();
+            message.subject = "\"\\".repeat(1_000);
+            thread.bodies.insert(
+                message.id.clone(),
+                Ok(body("\u{1}".repeat(ANALYSIS_MESSAGE_CHARS))),
+            );
+            thread.messages.push(message);
+        }
+        let context = analysis_context(&thread).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&context.text).unwrap();
+        let included = value["messages"].as_array().unwrap();
+        assert!(context.truncated);
+        assert!(included.len() > 1 && included.len() < thread.messages.len());
+        assert!(context.text.len() <= ANALYSIS_CONTEXT_BYTES);
+        assert_eq!(value["messages"][1]["truncated"], false);
+        thread.bodies.remove("99");
+        assert!(
+            analysis_context(&thread).is_err(),
+            "even omitted messages must have finished loading"
+        );
+        thread.only_message = Some("0".into());
+        assert!(!analysis_context(&thread).unwrap().truncated);
+        thread.messages[0].subject = "x".repeat(ANALYSIS_CONTEXT_BYTES);
+        assert!(
+            analysis_context(&thread).is_err(),
+            "oversized headers must not bypass the budget"
+        );
     }
 
     fn local(model: &str) -> AiSettings {

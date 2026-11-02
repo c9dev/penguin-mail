@@ -44,8 +44,12 @@ mod tests {
         assert!(!needs_fallback(FALLBACK, |_| false));
     }
 
-    /// Every `-symbolic` name in the app's code that neither Adwaita nor
-    /// the app's own icons hold. libadwaita draws its own `adw-` icons.
+    /// Icons GTK carries in its own resources, so they show under every
+    /// theme. Adwaita 48, as Debian 13 ships it, dropped the first.
+    const GTK_CARRIES: &[&str] = &["emblem-system-symbolic"];
+
+    /// Every `-symbolic` name in the app's code that neither Adwaita, GTK
+    /// nor the app's own icons hold. libadwaita draws its own `adw-` icons.
     fn missing_icons(adwaita: &std::path::Path) -> Vec<String> {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         let mut have = std::collections::HashSet::new();
@@ -57,6 +61,7 @@ mod tests {
         names
             .into_iter()
             .filter(|name| !name.starts_with("adw-") && !have.contains(name))
+            .filter(|name| !GTK_CARRIES.contains(&name.as_str()))
             .collect()
     }
 

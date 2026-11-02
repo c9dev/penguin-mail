@@ -90,6 +90,11 @@ that restriction, even if you change preferences. New Chat returns to the
 ordinary assistant. The matching starting suggestions use the same controls;
 a request typed into an ordinary chat still has that chat's tools.
 
+Analysis includes up to 8,000 characters from each message and at most
+64,000 bytes of conversation data, including headers and JSON formatting.
+Messages that do not fit and the messages after them are left out. The chat
+says when text is omitted; the model also receives truncation markers.
+
 Under Preferences > AI > Safety, Allow Tools in Summaries and Explanations
 lets new analysis chats use the ordinary assistant tools. This is off by
 default. Turning it on allows those chats to read other mail, take actions,

@@ -4345,7 +4345,7 @@ impl MainWindow {
             .iter()
             .map(|a| self.offers(a.id))
             .collect();
-        shortcuts::dialog(Filing::of(offers)).present(Some(&self.window));
+        shortcuts::show(Filing::of(offers), &self.window);
     }
 
     /// Opens Switch to JMAP for `account`, when a look found its session.

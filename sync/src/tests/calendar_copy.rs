@@ -164,6 +164,42 @@ async fn without_any_calendar_permission_the_refresh_says_so() {
     assert!(matches!(done, Permitted::NeedsPermission));
 }
 
+/// A calendar the server lists but refuses to let the account read, as
+/// SmarterMail does with some shared ones, is asked for once per list:
+/// a refusal that repeats every minute would only fill the log.
+#[tokio::test]
+async fn a_calendar_the_server_refuses_waits_for_the_next_list() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![calendar("primary", true), calendar("shared", false)];
+    });
+    h.fake.put_calendar_event(event("primary", "a"));
+    h.fake.fail_call(
+        "calendar.events.list",
+        1,
+        mailrs_gmail::GmailError::Http {
+            status: 403,
+            body: "Forbidden".into(),
+        },
+    );
+    let copy = copy(&h);
+    let accounts = [h.account_id];
+    copy.refresh_due(&accounts, NOW, true).await.unwrap();
+    assert!(stored(&h, "primary", "a").await.is_some());
+    let reads = || h.fake.usage().calls_to("calendar.events.list");
+    assert_eq!(reads(), 2, "both calendars were asked for once");
+
+    copy.refresh_due(&accounts, NOW + READ_EVERY_OPEN, true)
+        .await
+        .unwrap();
+    assert_eq!(reads(), 3, "the refused calendar was left alone");
+
+    copy.refresh_due(&accounts, NOW + LIST_EVERY, true)
+        .await
+        .unwrap();
+    assert_eq!(reads(), 5, "a new list lets it be asked for again");
+}
+
 /// The scopes the store already knows about say the calendar is
 /// withheld before any call goes out, so the refresh costs nothing.
 #[tokio::test]

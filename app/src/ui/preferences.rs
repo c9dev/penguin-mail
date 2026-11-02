@@ -273,6 +273,19 @@ fn appearance_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.show_avatars,
         Change::ShowAvatars,
     ));
+    // WebKitGTK takes the GPU by way of DMA-BUF buffers, which some
+    // drivers, hybrid laptops and virtual machines leave blank. macOS's
+    // engine has no such switch.
+    #[cfg(target_os = "linux")]
+    appearance.add(&switch(
+        app,
+        &gettext("Draw Messages Without the GPU"),
+        Some(&gettext(
+            "Turn on when messages show blank or garbled. Takes effect after a restart",
+        )),
+        settings.software_rendering,
+        Change::SoftwareRendering,
+    ));
     appearance.add(&language_row(app, settings));
     page.add(&appearance);
     page
