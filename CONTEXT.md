@@ -4,6 +4,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
+**Navigation direction**: the last move up or down between single rows in the mail list. Removing mail follows that direction, falling back to the other side at the list edge. Reading preferences can restore always choosing the next row. Refreshing the list or opening a row after removal does not change the direction; leaving the mailbox resets it. `ui::thread_list::Navigation`.
+
 **Column width**: the width chosen for the mailbox sidebar or message list by dragging its divider or using the keyboard. The app remembers these widths across restarts and keeps its narrow-window navigation. `settings::MailColumn` bounds saved widths; `ui::window::column_width` handles the dividers.
 
 **Account defaults**: the account choices in Preferences for new messages, replies, forwards, calendar events, assistant actions and startup. Each task keeps its context automatically, follows the general default, or uses a chosen account. The all-tasks switch uses the general default without erasing individual choices. An explicit account in a composer or assistant request takes precedence. `mailrs::settings::AccountDefaults`, `AccountChoice`, `AccountUse`.
@@ -146,6 +148,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Search engine**: where a local model's `web_search` sends its query: the Brave Search API with a key from the keyring, a SearXNG server asked for JSON, or the Keenable API, which answers without a key and takes an optional one from the keyring. `mailrs::assistant::sources::web::SearchEngine`, chosen under Web Search on the AI page. Claude never uses one: through the API or Claude Code it searches with Anthropic's own tools, and the web source offers it nothing, so it never sees two searches. _Avoid_: engine (which names gpg and gpgsm), search provider.
 **Turn**: one question to the assistant and everything the model did to answer it, in the order it arrived: what it thought, each tool call with its input and result, and the reply. `mailrs::assistant::turn::Turn` takes the model's events and says which step each one changed, and the pane draws a folded row per thinking step and tool call. While the turn runs its phase says what the model is doing now: waiting for the model, thinking, running a tool, waiting for the person to allow one, or writing. _Avoid_: exchange, message, round (which is one request to the model, and a turn can take several).
+
+**Round limit**: how many model requests one turn may make before the assistant gives up on it, set on the AI page as Model Requests per Answer. `Settings::ai.max_rounds`, kept inside `settings::MIN_ROUNDS` to `settings::MAX_ROUNDS` and applied by `mailrs_ai::Conversation::set_rounds`; `mailrs_ai::DEFAULT_ROUNDS` is what a settings file that never mentions it uses, and Claude Code keeps its own count. _Avoid_: retry limit, timeout.
 
 **Server space**: an account's reported storage use and limit. `mailrs::app::storage::ServerSpace` schedules startup, hourly and connection reads, publishes each answer as it arrives, and discards superseded answers and reports from removed accounts. Failed reads keep the last report; a server that stops reporting removes it. _Avoid_: disk space, local storage.
 

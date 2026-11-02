@@ -160,15 +160,17 @@ mod tests {
             .with_thinking()
             .with_format(schema.clone());
         chat.set_web(true);
+        chat.set_rounds(7);
         for kind in [1, 2, 0, 1] {
             chat.set_provider(config(kind));
             match &chat.inner {
                 State::Anthropic(state) => {
                     assert!(state.think && state.web);
                     assert_eq!(state.format, Some(schema.clone()));
+                    assert_eq!(state.rounds, 7);
                 }
                 State::ClaudeCode(state) => assert!(state.web),
-                State::OpenAi(_) => {}
+                State::OpenAi(state) => assert_eq!(state.rounds, 7),
             }
         }
     }

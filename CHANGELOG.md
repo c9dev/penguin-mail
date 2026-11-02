@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Choose how many model requests the assistant can make per answer in Preferences → AI.
 - Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
 - Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.
 - Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.
@@ -15,6 +16,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Improved
 
 - The mailbox sidebar can be narrower, with Mail and Calendar switching to icons when their labels do not fit.
+- Deleting, archiving, or moving mail selects a neighbor in your last navigation direction, with an option in Reading preferences to always select the next row.
 
 ### Fixed
 

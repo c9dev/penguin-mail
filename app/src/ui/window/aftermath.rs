@@ -251,7 +251,7 @@ pub(super) fn covers(target: &Target, row: &ThreadSummary) -> bool {
 
 impl MainWindow {
     /// Steps past the mail `view` shows. The main window opens the row
-    /// after the selection, or the one before when nothing follows, and
+    /// in the last navigation direction when enabled in preferences, and
     /// hides the conversation pane when the list has no other row. A
     /// conversation in a window of its own has nowhere to go, so the
     /// window closes.
@@ -259,14 +259,17 @@ impl MainWindow {
         if view.detached() {
             return view.close_detached();
         }
-        let next = self.list.neighbour_of_selected();
+        let follow_direction = self.settings_with(|s| s.follow_selection_direction);
+        let next = self.list.neighbour_of_selected(follow_direction);
         self.conversation.leave();
-        self.list.unselect();
         match next {
             Some(next) => self
                 .list
                 .select(next.account_id, &next.id, next.message_id.as_deref()),
-            None => self.nav.set_show_content(false),
+            None => {
+                self.list.unselect();
+                self.nav.set_show_content(false);
+            }
         }
     }
 
