@@ -3,6 +3,14 @@
 What a screen reader gets from Penguin Mail, how to check it, and what is
 still out of a keyboard's reach.
 
+## Mail navigation
+
+Moving between single rows with the keyboard or pointer sets the direction
+used after deleting, archiving, or moving mail. At the list edge, selection
+falls back to the other side. A new mailbox starts by choosing the next row.
+Turn off **Follow Navigation After Removing Mail** in Reading preferences
+to always prefer the next row.
+
 ## Names
 
 Every control a person acts on carries a name in the accessible tree. A
