@@ -2168,7 +2168,7 @@ msgstr "Priorytetowe"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail synchronizuje pocztę także po zamknięciu okna"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3446
+#: app/src/compose.rs:669 app/src/compose.rs:3453
 msgid "Add at least one recipient."
 msgstr "Dodaj co najmniej jednego odbiorcę."
 
@@ -2176,7 +2176,7 @@ msgstr "Dodaj co najmniej jednego odbiorcę."
 msgid "“{address}” is not an email address."
 msgstr "„{address}” nie jest adresem e-mail."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3452
+#: app/src/compose.rs:904 app/src/compose.rs:3459
 msgid "Choose a time in the future"
 msgstr "Wybierz termin w przyszłości"
 

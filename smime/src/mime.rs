@@ -9,7 +9,7 @@
 //! CMS travels as bytes rather than as armor, so every part built here is
 //! base64 and says so.
 
-use mail_builder::encoders::Base64Encoder;
+use encodify::base64::MIME;
 
 /// The `multipart/signed` body of RFC 8551: the part that was signed, then
 /// the signature over it.
@@ -62,10 +62,7 @@ pub fn enveloped(ciphertext: &[u8]) -> Vec<u8> {
 /// `bytes` as the body of a base64 part: lines of 76 characters ending in
 /// CRLF, and a CRLF after the last of them.
 pub fn base64(bytes: &[u8]) -> Vec<u8> {
-    let mut out = Base64Encoder::new()
-        .wrap_lines()
-        .encode(bytes)
-        .expect("base64 encoding writes to memory");
+    let mut out = MIME.encode(bytes).into_bytes();
     if !out.ends_with(b"\r\n") {
         out.extend_from_slice(b"\r\n");
     }

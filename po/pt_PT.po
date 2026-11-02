@@ -2128,7 +2128,7 @@ msgstr "Destaques"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3446
+#: app/src/compose.rs:669 app/src/compose.rs:3453
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
@@ -2136,7 +2136,7 @@ msgstr "Adicione pelo menos um destinatário."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3452
+#: app/src/compose.rs:904 app/src/compose.rs:3459
 msgid "Choose a time in the future"
 msgstr "Escolha uma hora no futuro"
 

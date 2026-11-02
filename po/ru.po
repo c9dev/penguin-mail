@@ -2165,7 +2165,7 @@ msgstr "Отсортированные"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail продолжает синхронизацию без открытого окна"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3446
+#: app/src/compose.rs:669 app/src/compose.rs:3453
 msgid "Add at least one recipient."
 msgstr "Добавьте хотя бы одного получателя."
 
@@ -2173,7 +2173,7 @@ msgstr "Добавьте хотя бы одного получателя."
 msgid "“{address}” is not an email address."
 msgstr "«{address}» не является адресом электронной почты."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3452
+#: app/src/compose.rs:904 app/src/compose.rs:3459
 msgid "Choose a time in the future"
 msgstr "Выберите время в будущем"
 
