@@ -558,6 +558,7 @@ impl FakeWindow {
             accent: "#3584e4".to_string(),
             accent_text: "#1a5fb4".to_string(),
             summarize: false,
+            colors: None,
             font: String::new(),
         };
         self.with(

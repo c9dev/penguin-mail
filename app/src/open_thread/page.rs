@@ -819,6 +819,7 @@ mod tests {
             accent: "#3584e4".to_string(),
             accent_text: "#1a5fb4".to_string(),
             summarize: false,
+            colors: None,
             font: String::new(),
         }
     }
@@ -1054,6 +1055,7 @@ mod tests {
         open.page(&theme());
         let offered = Theme {
             summarize: true,
+            colors: None,
             ..theme()
         };
         assert!(whole(open.page(&offered)).contains("mailrs:summarize"));
@@ -1428,6 +1430,7 @@ mod measure {
             accent: "#3584e4".to_string(),
             accent_text: "#1a5fb4".to_string(),
             summarize: false,
+            colors: None,
             font: String::new(),
         };
         let mut open = long_thread();

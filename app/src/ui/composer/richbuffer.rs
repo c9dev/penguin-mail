@@ -899,6 +899,7 @@ mod tests {
         }
         #[cfg(target_os = "linux")]
         crate::web::check_scheme_after_last_view_closes();
+        crate::ui::conversation::check_custom_theme_accent();
         let context = gtk::glib::MainContext::default();
         context.block_on(async {
             let other = context.spawn_local(async {});

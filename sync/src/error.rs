@@ -45,6 +45,9 @@ pub enum BackendError {
     NeedsPermission,
     #[error("refused: {0}")]
     Refused(String),
+    /// The account may sign in, but the server denies access to this resource.
+    #[error("refused: {0}")]
+    Forbidden(String),
     /// The server holds another version of what this write changed.
     #[error("it changed elsewhere first")]
     Changed,

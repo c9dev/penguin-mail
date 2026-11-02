@@ -51,6 +51,9 @@ jobs:
           flatpak_found=false
           for tag in $tags; do
               gh release download "$tag" --pattern '*.deb' --dir debs
+              # The Debian 13 build cannot run on the Ubuntu this
+              # repository serves, and its package says it updates by hand.
+              rm -f debs/*~deb13_*.deb
               assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
               if grep -q '\.rpm$' <<<"$assets"; then
                   gh release download "$tag" --pattern '*.rpm' --dir rpms
