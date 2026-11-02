@@ -42,6 +42,9 @@ and then the name it builds is the one a reader hears.
 The mailbox sidebar and message list have named, focusable dividers.
 Drag either divider, or Tab to it and use Left and Right to resize in
 12-pixel steps. Home and End select its minimum and maximum width.
+The Mail and Calendar buttons switch to icons when the sidebar is narrow.
+Their tooltips and accessible names keep the space name and unread or
+invitation count. Expanding the sidebar restores the labels.
 The widths are remembered between starts. In a narrow window, the
 existing sidebar overlay and one-page mail navigation take over, and
 hidden dividers leave the keyboard focus order.

@@ -314,10 +314,7 @@ pub struct Sidebar {
     unread: Cell<i64>,
     /// Invitations waiting for an answer, for the Calendar toggle's.
     waiting: Cell<i64>,
-    /// "Mailboxes" or "Calendars" while the switch hides. A label that
-    /// never shortens, unlike `adw::WindowTitle`: the header gives its
-    /// start what that asks for, and on macOS the window buttons share
-    /// the row, which left a shortening title at "Mail…".
+    /// "Mailboxes" or "Calendars" while the switch hides.
     title: gtk::Label,
     /// The mailbox list, or the calendar's own sidebar.
     content: gtk::Stack,
@@ -377,13 +374,16 @@ impl Sidebar {
             .build();
         let title = gtk::Label::builder()
             .label(gettext("Mailboxes"))
+            .ellipsize(pango::EllipsizeMode::End)
             .css_classes(["title"])
             .build();
         let switch = adw::ToggleGroup::builder()
             .css_classes(["round", "space-switch"])
+            .homogeneous(false)
             .valign(gtk::Align::Center)
             .visible(false)
             .build();
+        let mut labels = Vec::new();
         let badges = [
             (Space::Mail, "mail", gettext("Mail"), "mail-unread-symbolic"),
             (
@@ -408,6 +408,7 @@ impl Sidebar {
             let child = gtk::Box::builder().spacing(6).build();
             child.append(&content);
             child.append(&badge);
+            labels.push(content);
             let toggle = adw::Toggle::builder()
                 .name(name)
                 .label(&label)
@@ -417,19 +418,52 @@ impl Sidebar {
             (space, badge)
         });
         switch.set_active_name(Some("mail"));
-        // 8 px past the header's own padding puts the switch 14 px into
-        // the card, as mockups.py's `sidebar_shell` draws it.
-        let titles = gtk::Box::builder().margin_start(8).build();
+        let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         titles.append(&title);
         titles.append(&switch);
-        // At the start rather than as the title: a title widget is centred
-        // in the room beside the menu button, 8 px right of where the
-        // mockup puts the switch.
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
-            .show_title(false)
+            .show_title(true)
             .build();
-        header.pack_start(&titles);
+        // Measure both layouts in this locale, including the largest off-screen badge.
+        switch.set_visible(true);
+        title.set_visible(false);
+        badges[1].1.set_label(&gettext("99+"));
+        badges[1].1.set_visible(true);
+        let wide = titles.measure(gtk::Orientation::Horizontal, -1).1;
+        let height = titles.measure(gtk::Orientation::Vertical, -1).1;
+        for label in &labels {
+            label.set_label("");
+        }
+        switch.add_css_class("compact");
+        let compact = titles.measure(gtk::Orientation::Horizontal, -1).0;
+        switch.remove_css_class("compact");
+        labels[0].set_label(&gettext("Mail"));
+        labels[1].set_label(&gettext("Calendar"));
+        badges[1].1.set_visible(false);
+        switch.set_visible(false);
+        title.set_visible(true);
+        let adaptive = adw::BreakpointBin::builder()
+            .child(&titles)
+            .width_request(compact)
+            .height_request(height)
+            .hexpand(true)
+            .build();
+        let narrow = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+            adw::BreakpointConditionLengthType::MaxWidth,
+            f64::from(wide - 1),
+            adw::LengthUnit::Px,
+        ));
+        for label in &labels {
+            narrow.add_setter(label, "label", Some(&"".to_value()));
+        }
+        narrow.add_setter(
+            &switch,
+            "css-classes",
+            Some(&["round", "space-switch", "compact"].to_value()),
+        );
+        adaptive.add_breakpoint(narrow);
+        header.set_title_widget(Some(&adaptive));
         let content = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
@@ -764,7 +798,9 @@ impl Sidebar {
             badge.set_label(text.as_deref().unwrap_or_default());
             badge.set_visible(text.is_some());
             button.reset_relation(gtk::AccessibleRelation::LabelledBy);
-            super::name(&button, &toggle_name(*space, count));
+            let name = toggle_name(*space, count);
+            super::name(&button, &name);
+            button.set_tooltip_text(Some(&name));
         }
     }
 
@@ -2404,5 +2440,34 @@ mod badge_tests {
             "Calendar, 1 waiting for your answer"
         );
         assert_eq!(toggle_name(Space::Mail, 0), "Mail");
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+
+    pub fn run() {
+        let sidebar = Sidebar::new(|_| {}, |_| false, |_| {});
+        sidebar.set_switch_visible(true);
+        sidebar.set_waiting(100);
+        let bin = sidebar
+            .switch
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .downcast::<adw::BreakpointBin>()
+            .unwrap();
+        let least = bin.width_request();
+        let height = bin.height_request();
+        for width in [least, 800, least, 800] {
+            bin.allocate(width, height, -1, None);
+            assert_eq!(sidebar.switch.has_css_class("compact"), width == least);
+            assert_eq!(sidebar.switch.active_name().as_deref(), Some("mail"));
+            assert_eq!(sidebar.badges[1].1.label(), gettext("99+"));
+            assert!(sidebar.badges[1].1.is_visible());
+            assert_eq!(bin.measure(gtk::Orientation::Horizontal, -1).0, least);
+        }
     }
 }

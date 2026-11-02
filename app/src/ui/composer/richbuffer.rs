@@ -923,6 +923,7 @@ mod tests {
         crate::ui::calendar::attachments::checks::run();
         crate::ui::checks::run();
         crate::ui::thread_list::checks::run();
+        crate::ui::sidebar::checks::run();
         crate::ui::disclosure::checks::run();
         crate::ui::preferences::space::checks::run();
         crate::ui::preferences::dialog::checks::run();

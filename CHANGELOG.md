@@ -10,6 +10,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.
 - Penguin Mail builds and installs on Debian 13 from `scripts/package-debian.sh`, as a .deb against its GTK 4.18 and libadwaita 1.7.
 
+### Improved
+
+- The mailbox sidebar can be narrower, with Mail and Calendar switching to icons when their labels do not fit.
+
 ### Fixed
 
 - Closing or sending a message lets its window go, instead of keeping every composer ever opened alive in the background.
