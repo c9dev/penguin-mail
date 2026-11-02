@@ -833,6 +833,7 @@ async fn changing_the_system_prompt_keeps_the_conversation() {
         thinking: false,
         format: None,
         web: false,
+        rounds: crate::DEFAULT_ROUNDS,
     };
     let (events, _) = async_channel::unbounded();
     chat.set_system_prompt("Answer in Russian.".into());
@@ -861,4 +862,43 @@ async fn changing_the_system_prompt_keeps_the_conversation() {
         second["messages"][2]["content"][0]["text"],
         "Make it shorter"
     );
+}
+
+/// The same turn over and over: a tool call, and no answer in sight.
+fn calls_a_tool_every_time() -> ResponseTemplate {
+    let mut events = vec![
+        message_start(),
+        start(
+            0,
+            json!({"type": "tool_use", "id": "toolu_loop", "name": "search_mail",
+                "input": {"query": "invoice"}}),
+        ),
+        stop(0),
+    ];
+    events.extend(message_end("tool_use"));
+    sse(&events)
+}
+
+#[tokio::test]
+async fn a_turn_gives_up_after_the_rounds_it_was_given() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(calls_a_tool_every_time())
+        .mount(&server)
+        .await;
+
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = chat(&server);
+    chat.set_rounds(2);
+    let err = chat
+        .send("Find invoices".into(), Arc::new(FakeHost::default()), &tx)
+        .await
+        .unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        "stopped after 2 model requests without a final answer"
+    );
+    assert_eq!(server.received_requests().await.unwrap().len(), 2);
 }

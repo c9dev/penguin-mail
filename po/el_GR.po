@@ -4617,7 +4617,7 @@ msgstr "Μικρότερο από {size}"
 msgid "Larger than {size}"
 msgstr "Μεγαλύτερο από {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:899
+#: app/src/rules.rs:251 app/src/settings/mod.rs:913
 msgid "All mail"
 msgstr "Όλη η αλληλογραφία"
 
@@ -4715,8 +4715,8 @@ msgstr "Σε αυτόν τον υπολογιστή, όσο το Penguin Mail ε
 msgid "On the server"
 msgstr "Στον διακομιστή"
 
-#: app/src/settings/mod.rs:217 app/src/settings/mod.rs:412
-#: app/src/settings/mod.rs:811 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:217 app/src/settings/mod.rs:426
+#: app/src/settings/mod.rs:825 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1054
 msgid "Off"
 msgstr "Ανενεργό"
@@ -4768,168 +4768,168 @@ msgstr ""
 msgid "Same as the Assistant"
 msgstr "Όπως ο Βοηθός"
 
-#: app/src/settings/mod.rs:413
+#: app/src/settings/mod.rs:427
 msgid "Claude's own only"
 msgstr "Μόνο η αναζήτηση του Claude"
 
-#: app/src/settings/mod.rs:414
+#: app/src/settings/mod.rs:428
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:415
+#: app/src/settings/mod.rs:429
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:416
+#: app/src/settings/mod.rs:430
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:589
+#: app/src/settings/mod.rs:603
 msgid "Rich text"
 msgstr "Εμπλουτισμένο κείμενο"
 
-#: app/src/settings/mod.rs:590
+#: app/src/settings/mod.rs:604
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:609 app/src/settings/mod.rs:631
+#: app/src/settings/mod.rs:623 app/src/settings/mod.rs:645
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Αυτόματα"
 
-#: app/src/settings/mod.rs:610 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:624 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "Δευτέρα"
 
-#: app/src/settings/mod.rs:611 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:625 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "Κυριακή"
 
-#: app/src/settings/mod.rs:632
+#: app/src/settings/mod.rs:646
 msgid "12-hour (AM/PM)"
 msgstr ""
 
-#: app/src/settings/mod.rs:633
+#: app/src/settings/mod.rs:647
 msgid "24-hour"
 msgstr ""
 
-#: app/src/settings/mod.rs:671
+#: app/src/settings/mod.rs:685
 msgid "When opened"
 msgstr "Μόλις ανοίξει"
 
-#: app/src/settings/mod.rs:672
+#: app/src/settings/mod.rs:686
 msgid "After 2 seconds"
 msgstr "Μετά από 2 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:687
 msgid "Only when I choose"
 msgstr "Μόνο όταν το επιλέγω"
 
-#: app/src/settings/mod.rs:689 app/src/settings/mod.rs:707
+#: app/src/settings/mod.rs:703 app/src/settings/mod.rs:721
 msgid "Ask each time"
 msgstr "Ερώτηση κάθε φορά"
 
-#: app/src/settings/mod.rs:690
+#: app/src/settings/mod.rs:704
 msgid "Always load"
 msgstr "Πάντα φόρτωση"
 
-#: app/src/settings/mod.rs:708
+#: app/src/settings/mod.rs:722
 msgid "Never ask"
 msgstr "Ποτέ ερώτηση"
 
-#: app/src/settings/mod.rs:735
+#: app/src/settings/mod.rs:749
 msgid "No Preview"
 msgstr "Χωρίς προεπισκόπηση"
 
-#: app/src/settings/mod.rs:736
+#: app/src/settings/mod.rs:750
 msgid "1 Line"
 msgstr "1 γραμμή"
 
-#: app/src/settings/mod.rs:737
+#: app/src/settings/mod.rs:751
 msgid "2 Lines"
 msgstr "2 γραμμές"
 
-#: app/src/settings/mod.rs:771
+#: app/src/settings/mod.rs:785
 msgid "Small"
 msgstr "Μικρό"
 
-#: app/src/settings/mod.rs:772
+#: app/src/settings/mod.rs:786
 msgid "Default"
 msgstr "Προεπιλογή"
 
-#: app/src/settings/mod.rs:773
+#: app/src/settings/mod.rs:787
 msgid "Large"
 msgstr "Μεγάλο"
 
-#: app/src/settings/mod.rs:774
+#: app/src/settings/mod.rs:788
 msgid "Larger"
 msgstr "Μεγαλύτερο"
 
-#: app/src/settings/mod.rs:812
+#: app/src/settings/mod.rs:826
 msgid "5 seconds"
 msgstr "5 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:813
+#: app/src/settings/mod.rs:827
 msgid "10 seconds"
 msgstr "10 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:814
+#: app/src/settings/mod.rs:828
 msgid "20 seconds"
 msgstr "20 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:815
+#: app/src/settings/mod.rs:829
 msgid "30 seconds"
 msgstr "30 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:846
 msgid "Follow system"
 msgstr "Όπως το σύστημα"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:847
 msgid "Light"
 msgstr "Φωτεινό"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:848
 msgid "Dark"
 msgstr "Σκοτεινό"
 
-#: app/src/settings/mod.rs:868
+#: app/src/settings/mod.rs:882
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Κάθε δευτερόλεπτο"
 msgstr[1] "Κάθε {count} δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:876
+#: app/src/settings/mod.rs:890
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Κάθε λεπτό"
 msgstr[1] "Κάθε {count} λεπτά"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:907
 msgid "2 weeks"
 msgstr "2 εβδομάδες"
 
-#: app/src/settings/mod.rs:894
+#: app/src/settings/mod.rs:908
 msgid "30 days"
 msgstr "30 ημέρες"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:909
 msgid "90 days"
 msgstr "90 ημέρες"
 
-#: app/src/settings/mod.rs:896
+#: app/src/settings/mod.rs:910
 msgid "1 year"
 msgstr "1 έτος"
 
-#: app/src/settings/mod.rs:897
+#: app/src/settings/mod.rs:911
 msgid "2 years"
 msgstr "2 έτη"
 
-#: app/src/settings/mod.rs:898
+#: app/src/settings/mod.rs:912
 msgid "5 years"
 msgstr "5 έτη"
 
-#: app/src/settings/mod.rs:920
+#: app/src/settings/mod.rs:934
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4938,21 +4938,21 @@ msgstr ""
 "καταλαμβάνει πολύ χώρο στον δίσκο και πολλή μνήμη, και η παλαιότερη "
 "αλληλογραφία του λαμβάνεται στο παρασκήνιο."
 
-#: app/src/settings/mod.rs:922
+#: app/src/settings/mod.rs:936
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Ό,τι υπάρχει στα Εισερχόμενα παραμένει επίσης, και η παλαιότερη αλληλογραφία "
 "μένει διαθέσιμη στην αναζήτηση"
 
-#: app/src/settings/mod.rs:929
+#: app/src/settings/mod.rs:943
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:930
+#: app/src/settings/mod.rs:944
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:931
+#: app/src/settings/mod.rs:945
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5569,7 +5569,7 @@ msgstr "Αφήστε το όνομα χρήστη κενό για να συνδ�
 msgid "Use These Settings"
 msgstr "Χρήση αυτών των ρυθμίσεων"
 
-#: app/src/ui/add_account.rs:1814 app/src/ui/assistant_prefs.rs:76
+#: app/src/ui/add_account.rs:1814 app/src/ui/assistant_prefs.rs:78
 msgid "Server Address"
 msgstr "Διεύθυνση διακομιστή"
 
@@ -5889,15 +5889,15 @@ msgid "Manage in Preferences"
 msgstr "Διαχείριση στις Προτιμήσεις"
 
 #: app/src/ui/assistant/controls.rs:179 app/src/ui/assistant/controls.rs:181
-#: app/src/ui/assistant_prefs.rs:678
+#: app/src/ui/assistant_prefs.rs:697
 msgid "Search models"
 msgstr "Αναζήτηση μοντέλων"
 
-#: app/src/ui/assistant/controls.rs:230 app/src/ui/assistant_prefs.rs:695
+#: app/src/ui/assistant/controls.rs:230 app/src/ui/assistant_prefs.rs:714
 msgid "Asking for the model list…"
 msgstr "Αίτημα για τη λίστα μοντέλων…"
 
-#: app/src/ui/assistant/controls.rs:292 app/src/ui/assistant_prefs.rs:626
+#: app/src/ui/assistant/controls.rs:292 app/src/ui/assistant_prefs.rs:645
 msgid "Claude Code's own default"
 msgstr "Προεπιλογή του Claude Code"
 
@@ -6024,7 +6024,7 @@ msgstr "Διακριτικό Bearer (προαιρετικό)"
 msgid "Test the Server"
 msgstr "Δοκιμή του διακομιστή"
 
-#: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:386
+#: app/src/ui/assistant_mcp_prefs.rs:290 app/src/ui/assistant_prefs.rs:405
 #: app/src/ui/assistant_web_prefs.rs:70
 msgid "Test"
 msgstr "Δοκιμή"
@@ -6068,19 +6068,19 @@ msgstr "Η γραμμή εντολών δεν είναι έγκυρη: {problem}
 msgid "Connecting…"
 msgstr "Σύνδεση…"
 
-#: app/src/ui/assistant_prefs.rs:24
+#: app/src/ui/assistant_prefs.rs:26
 msgid "AI"
 msgstr "Τεχνητή νοημοσύνη"
 
-#: app/src/ui/assistant_prefs.rs:30
+#: app/src/ui/assistant_prefs.rs:32
 msgid "Safety"
 msgstr "Ασφάλεια"
 
-#: app/src/ui/assistant_prefs.rs:33
+#: app/src/ui/assistant_prefs.rs:35
 msgid "Ask Before Acting"
 msgstr "Ερώτηση πριν από ενέργειες"
 
-#: app/src/ui/assistant_prefs.rs:35
+#: app/src/ui/assistant_prefs.rs:37
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
@@ -6088,21 +6088,21 @@ msgstr ""
 "Εγκρίνετε κάθε μήνυμα που στέλνει ο βοηθός και κάθε αλλαγή στις ρυθμίσεις "
 "του Gmail, όπως οι αυτόματες απαντήσεις και οι κανόνες"
 
-#: app/src/ui/assistant_prefs.rs:50
+#: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:51
+#: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:66
+#: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
 msgstr "Συνδέσεις"
 
-#: app/src/ui/assistant_prefs.rs:68
+#: app/src/ui/assistant_prefs.rs:70
 msgid ""
 "A local server is LM Studio, Ollama, or any server with OpenAI's API. Local "
 "models keep your mail on this computer. With Anthropic or a Claude "
@@ -6113,59 +6113,59 @@ msgstr ""
 "αυτόν τον υπολογιστή. Με την Anthropic ή μια συνδρομή Claude, ό,τι διαβάζει "
 "μια λειτουργία αποστέλλεται στην Anthropic."
 
-#: app/src/ui/assistant_prefs.rs:81
+#: app/src/ui/assistant_prefs.rs:83
 msgid "API Key (Optional)"
 msgstr "Κλειδί API (προαιρετικό)"
 
-#: app/src/ui/assistant_prefs.rs:86
+#: app/src/ui/assistant_prefs.rs:88
 msgid "Anthropic API Key"
 msgstr "Κλειδί API της Anthropic"
 
-#: app/src/ui/assistant_prefs.rs:109
+#: app/src/ui/assistant_prefs.rs:111
 msgid "Uses your Claude subscription through {path}"
 msgstr "Χρησιμοποιεί τη συνδρομή σας στο Claude μέσω του {path}"
 
-#: app/src/ui/assistant_prefs.rs:112
+#: app/src/ui/assistant_prefs.rs:114
 msgid "Not found. Install Claude Code and sign in by running claude once."
 msgstr ""
 "Δεν βρέθηκε. Εγκαταστήστε το Claude Code και συνδεθείτε εκτελώντας μία φορά "
 "την εντολή claude."
 
-#: app/src/ui/assistant_prefs.rs:140
+#: app/src/ui/assistant_prefs.rs:142
 msgid "Removed the key"
 msgstr "Το κλειδί αφαιρέθηκε"
 
-#: app/src/ui/assistant_prefs.rs:142
+#: app/src/ui/assistant_prefs.rs:144
 msgid "Saved in the keyring"
 msgstr "Αποθηκεύτηκε στη κλειδοθήκη"
 
-#: app/src/ui/assistant_prefs.rs:149
+#: app/src/ui/assistant_prefs.rs:151
 msgid "Key saved in the keyring"
 msgstr "Το κλειδί αποθηκεύτηκε στη κλειδοθήκη"
 
-#: app/src/ui/assistant_prefs.rs:151
+#: app/src/ui/assistant_prefs.rs:153
 msgid "No key saved"
 msgstr "Δεν έχει αποθηκευτεί κλειδί"
 
-#: app/src/ui/assistant_prefs.rs:165
+#: app/src/ui/assistant_prefs.rs:167
 msgid "Anthropic API Key (Saved)"
 msgstr "Κλειδί API της Anthropic (αποθηκευμένο)"
 
-#: app/src/ui/assistant_prefs.rs:169
+#: app/src/ui/assistant_prefs.rs:171
 msgid "Used For"
 msgstr "Χρήση για"
 
-#: app/src/ui/assistant_prefs.rs:171
+#: app/src/ui/assistant_prefs.rs:173
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr ""
 "Κάθε λειτουργία στέλνει ό,τι διαβάζει στο μοντέλο που έχει επιλεγεί για "
 "αυτήν."
 
-#: app/src/ui/assistant_prefs.rs:191
+#: app/src/ui/assistant_prefs.rs:193
 msgid "Reasoning"
 msgstr "Συλλογισμός"
 
-#: app/src/ui/assistant_prefs.rs:193
+#: app/src/ui/assistant_prefs.rs:195
 msgid ""
 "Ask supported models to think before answering. Turning this off can make "
 "replies faster. Claude Code uses its own settings."
@@ -6174,34 +6174,44 @@ msgstr ""
 "απενεργοποιήσετε, οι απαντήσεις μπορεί να έρχονται πιο γρήγορα. Το Claude "
 "Code χρησιμοποιεί τις δικές του ρυθμίσεις."
 
-#: app/src/ui/assistant_prefs.rs:199
+#: app/src/ui/assistant_prefs.rs:201
 msgid "Assistant Chats"
 msgstr "Συνομιλίες βοηθού"
 
-#: app/src/ui/assistant_prefs.rs:204
+#: app/src/ui/assistant_prefs.rs:206
 msgid "Email Translations"
 msgstr "Μεταφράσεις μηνυμάτων"
 
-#: app/src/ui/assistant_prefs.rs:221 app/src/ui/conversation.rs:725
+#: app/src/ui/assistant_prefs.rs:223 app/src/ui/conversation.rs:725
 #: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "Συζήτηση"
 
-#: app/src/ui/assistant_prefs.rs:224
+#: app/src/ui/assistant_prefs.rs:226
 msgid "Show Details Expanded"
 msgstr "Εμφάνιση λεπτομερειών αναπτυγμένων"
 
-#: app/src/ui/assistant_prefs.rs:226
+#: app/src/ui/assistant_prefs.rs:228
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 "Άνοιγμα της σκέψης του μοντέλου και κάθε εργαλείου που εκτελεί καθώς "
 "εμφανίζονται"
 
-#: app/src/ui/assistant_prefs.rs:254 app/src/ui/assistant_prefs.rs:275
+#: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
+msgid "Model Requests per Answer"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:245
+msgid ""
+"How many times a turn may ask the model before the assistant gives up. Each "
+"tool it runs costs one."
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
 msgstr "Γλώσσα τεχνητής νοημοσύνης"
 
-#: app/src/ui/assistant_prefs.rs:256
+#: app/src/ui/assistant_prefs.rs:275
 msgid ""
 "Language for assistant responses, summaries, and translations. Email replies "
 "and drafts follow the language of the correspondence unless you ask "
@@ -6211,19 +6221,19 @@ msgstr ""
 "απαντήσεις σε μηνύματα και τα πρόχειρα ακολουθούν τη γλώσσα της "
 "αλληλογραφίας, εκτός αν ζητήσετε κάτι άλλο."
 
-#: app/src/ui/assistant_prefs.rs:261
+#: app/src/ui/assistant_prefs.rs:280
 msgid "Same as Interface"
 msgstr "Ίδια με τη διεπαφή"
 
-#: app/src/ui/assistant_prefs.rs:263
+#: app/src/ui/assistant_prefs.rs:282
 msgid "Other…"
 msgstr "Άλλη…"
 
-#: app/src/ui/assistant_prefs.rs:280
+#: app/src/ui/assistant_prefs.rs:299
 msgid "Language Name"
 msgstr "Όνομα γλώσσας"
 
-#: app/src/ui/assistant_prefs.rs:309
+#: app/src/ui/assistant_prefs.rs:328
 msgid ""
 "Enter a language name of up to 80 characters, using letters, spaces, "
 "hyphens, apostrophes, or parentheses."
@@ -6231,11 +6241,11 @@ msgstr ""
 "Εισαγάγετε ένα όνομα γλώσσας έως 80 χαρακτήρων, με γράμματα, κενά, ενωτικά, "
 "αποστρόφους ή παρενθέσεις."
 
-#: app/src/ui/assistant_prefs.rs:327
+#: app/src/ui/assistant_prefs.rs:346
 msgid "Always Allowed"
 msgstr "Επιτρέπονται πάντα"
 
-#: app/src/ui/assistant_prefs.rs:329
+#: app/src/ui/assistant_prefs.rs:348
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
@@ -6243,56 +6253,56 @@ msgstr ""
 "Εργαλεία από εξωτερικές πηγές που εκτελούνται χωρίς ερώτηση. Αφαιρέστε ένα "
 "για να ερωτηθείτε ξανά την επόμενη φορά."
 
-#: app/src/ui/assistant_prefs.rs:345
+#: app/src/ui/assistant_prefs.rs:364
 msgid "Ask Again"
 msgstr "Νέα ερώτηση"
 
-#: app/src/ui/assistant_prefs.rs:349
+#: app/src/ui/assistant_prefs.rs:368
 msgid "Ask again before {tool}"
 msgstr "Ερώτηση ξανά πριν από το {tool}"
 
-#: app/src/ui/assistant_prefs.rs:390
+#: app/src/ui/assistant_prefs.rs:409
 msgid "Test the Connection"
 msgstr "Δοκιμή της σύνδεσης"
 
-#: app/src/ui/assistant_prefs.rs:417 app/src/ui/assistant_web_prefs.rs:101
+#: app/src/ui/assistant_prefs.rs:436 app/src/ui/assistant_web_prefs.rs:101
 msgid "No answer: {reason}"
 msgstr "Καμία απάντηση: {reason}"
 
-#: app/src/ui/assistant_prefs.rs:480
+#: app/src/ui/assistant_prefs.rs:499
 msgid "Connection"
 msgstr "Σύνδεση"
 
-#: app/src/ui/assistant_prefs.rs:634
+#: app/src/ui/assistant_prefs.rs:653
 msgid "Model"
 msgstr "Μοντέλο"
 
-#: app/src/ui/assistant_prefs.rs:653 app/src/ui/assistant_prefs.rs:657
+#: app/src/ui/assistant_prefs.rs:672 app/src/ui/assistant_prefs.rs:676
 msgid "Models You Can Use"
 msgstr "Μοντέλα που μπορείτε να χρησιμοποιήσετε"
 
-#: app/src/ui/assistant_prefs.rs:811
+#: app/src/ui/assistant_prefs.rs:830
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 "Αυτός ο πάροχος δεν παραθέτει μοντέλα. Πληκτρολογήστε ένα όνομα στο πεδίο."
 
-#: app/src/ui/assistant_prefs.rs:846
+#: app/src/ui/assistant_prefs.rs:865
 msgid "alias"
 msgstr "ψευδώνυμο"
 
-#: app/src/ui/assistant_prefs.rs:886
+#: app/src/ui/assistant_prefs.rs:905
 msgid "Found on This Computer"
 msgstr "Βρέθηκαν σε αυτόν τον υπολογιστή"
 
-#: app/src/ui/assistant_prefs.rs:890
+#: app/src/ui/assistant_prefs.rs:909
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr "Αναζήτηση για LM Studio, Ollama, Unsloth και Claude Code…"
 
-#: app/src/ui/assistant_prefs.rs:906
+#: app/src/ui/assistant_prefs.rs:925
 msgid "Nothing found"
 msgstr "Δεν βρέθηκε τίποτα"
 
-#: app/src/ui/assistant_prefs.rs:908
+#: app/src/ui/assistant_prefs.rs:927
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
@@ -6300,17 +6310,17 @@ msgstr ""
 "Ξεκινήστε τον διακομιστή του LM Studio ή το Ollama, ή εγκαταστήστε το Claude "
 "Code, και μετά ανοίξτε ξανά τις «Προτιμήσεις»."
 
-#: app/src/ui/assistant_prefs.rs:920
+#: app/src/ui/assistant_prefs.rs:939
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] "{model} και {count} ακόμη"
 msgstr[1] "{model} και {count} ακόμη"
 
-#: app/src/ui/assistant_prefs.rs:932
+#: app/src/ui/assistant_prefs.rs:951
 msgid "Use"
 msgstr "Χρήση"
 
-#: app/src/ui/assistant_prefs.rs:937
+#: app/src/ui/assistant_prefs.rs:956
 msgid "Use {provider}"
 msgstr "Χρήση του {provider}"
 

@@ -25,9 +25,6 @@ pub(crate) use openai::{OpenAiChat, model_ids};
 #[cfg(test)]
 pub(crate) use think::{Piece, ThinkTags};
 
-/// Model requests per user message before the loop gives up.
-pub(crate) const MAX_ROUNDS: usize = 25;
-
 /// Longest tool preview shown in the UI, in characters.
 const PREVIEW_CHARS: usize = 160;
 
@@ -147,6 +144,16 @@ impl State {
         }
     }
 
+    /// How many model requests one turn may make before it gives up.
+    /// Claude Code runs its own turns and keeps its own count.
+    pub(crate) fn set_rounds(&mut self, rounds: usize) {
+        match self {
+            State::OpenAi(chat) => chat.set_rounds(rounds),
+            State::Anthropic(chat) => chat.set_rounds(rounds),
+            State::ClaudeCode(_) => {}
+        }
+    }
+
     pub(crate) async fn send(
         &mut self,
         text: String,
@@ -217,9 +224,11 @@ pub(crate) async fn error_text(response: reqwest::Response) -> (u16, String) {
     (status, message)
 }
 
-pub(crate) fn too_many_rounds() -> AiError {
+/// Says the turn gave up, with the number the person set, since a nameless
+/// "too many requests" tells them nothing about where to push.
+pub(crate) fn too_many_rounds(rounds: usize) -> AiError {
     AiError::Other(format!(
-        "stopped after {MAX_ROUNDS} model requests without a final answer"
+        "stopped after {rounds} model requests without a final answer"
     ))
 }
 

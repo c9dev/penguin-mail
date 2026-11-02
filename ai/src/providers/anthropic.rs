@@ -6,12 +6,14 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use super::{
-    MAX_ROUNDS, emit, error_text, finish_tool, http_client, network, outcome_text, refuse_tool,
-    run_tool, too_many_rounds, truncate,
+    emit, error_text, finish_tool, http_client, network, outcome_text, refuse_tool, run_tool,
+    too_many_rounds, truncate,
 };
 use crate::history::History;
 use crate::sse::SseReader;
-use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
+use crate::{
+    AgentEvent, AiError, DEFAULT_ROUNDS, Model, ModelList, ToolHost, ToolOutcome, ToolSpec,
+};
 
 pub(crate) const ANTHROPIC_BASE: &str = "https://api.anthropic.com";
 const API_VERSION: &str = "2023-06-01";
@@ -54,6 +56,8 @@ pub(crate) struct AnthropicChat {
     pub(crate) web: bool,
     /// A JSON schema the reply must follow, where the model takes one.
     pub(crate) format: Option<Value>,
+    /// Model requests this turn may make, from Preferences.
+    pub(super) rounds: usize,
 }
 
 /// A content block being assembled from stream events.
@@ -87,7 +91,14 @@ impl AnthropicChat {
             think: false,
             web: false,
             format: None,
+            rounds: DEFAULT_ROUNDS,
         }
+    }
+
+    /// One request at the very least, so a hand-edited setting of zero still
+    /// asks the model something before it gives up.
+    pub(crate) fn set_rounds(&mut self, rounds: usize) {
+        self.rounds = rounds.max(1);
     }
 
     pub(crate) async fn send(
@@ -111,7 +122,8 @@ impl AnthropicChat {
         events: &async_channel::Sender<AgentEvent>,
     ) -> Result<String, AiError> {
         let specs = host.specs();
-        for _ in 0..MAX_ROUNDS {
+        let rounds = self.rounds;
+        for _ in 0..rounds {
             let reply = self.round(&specs, events).await?;
             match reply.stop_reason.as_str() {
                 "refusal" => {
@@ -140,7 +152,7 @@ impl AnthropicChat {
                 _ => return Ok(reply_text(&reply.content)),
             }
         }
-        Err(too_many_rounds())
+        Err(too_many_rounds(rounds))
     }
 
     async fn round(
