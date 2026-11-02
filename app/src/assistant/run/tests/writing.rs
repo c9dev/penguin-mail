@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mail_parser::{MessageParser, MimeHeaders};
+use mail_parser::MessageParser;
 use mailrs_domain::{Address, Attachment, MessageBody, Protection};
 use mailrs_gmail::labels as gmail;
 use serde_json::json;

@@ -8,7 +8,7 @@
 //! the signature can still be made over the result. Skipping this produces
 //! mail that looks signed and verifies nowhere.
 
-use mail_builder::encoders::QuotedPrintableEncoder;
+use encodify::qp;
 
 /// How far down a nested part this will rewrite. A message from the app's
 /// own composer is two or three deep; anything past this is left alone
@@ -56,13 +56,10 @@ fn protect(part: &[u8], depth: u8) -> Vec<u8> {
     if matches!(encoding.as_str(), "base64" | "quoted-printable") || !at_risk(body) {
         return part;
     }
-    let encoded = QuotedPrintableEncoder::new()
-        .preserve_line_breaks()
-        .encode(body)
-        .expect("quoted-printable encoding writes to memory");
+    let encoded = qp::BODY.encode(body);
     let mut out = without_header(headers, "content-transfer-encoding");
     out.extend_from_slice(b"Content-Transfer-Encoding: quoted-printable\r\n\r\n");
-    out.extend_from_slice(&encoded);
+    out.extend_from_slice(encoded.as_bytes());
     out
 }
 

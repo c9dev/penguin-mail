@@ -9,9 +9,8 @@ use std::io::{self, Read, Seek, SeekFrom};
 use base64::Engine;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
-use mail_parser::decoders::quoted_printable::quoted_printable_decode;
-use mail_parser::parsers::MessageStream;
-use mail_parser::{Message, MessageParser, MessagePart, MimeHeaders, PartType};
+use encodify::qp;
+use mail_parser::{Message, MessageParser, MessagePart, MessageRef};
 use mailrs_domain::MessageBody;
 
 mod stream;
@@ -33,8 +32,14 @@ const BASE64: GeneralPurpose = GeneralPurpose::new(
 pub fn parts(raw: &[u8]) -> Option<Parts> {
     let message = MessageParser::default().parse(raw)?;
     let headers = message
-        .headers_raw()
-        .map(|(name, value)| (name.to_string(), unfold(value)))
+        .headers()
+        .iter()
+        .map(|header| {
+            (
+                header.raw_name().to_string(),
+                unfold(&String::from_utf8_lossy(header.raw_value())),
+            )
+        })
         .collect();
     // IMAP numbers the one body of a message that is not multipart "1",
     // and does not number a multipart root.
@@ -42,8 +47,7 @@ pub fn parts(raw: &[u8]) -> Option<Parts> {
         true => String::new(),
         false => "1".to_string(),
     };
-    let root = convert(&message, raw, 0, root_path, 0);
-    dismantle(message);
+    let root = convert(message.root_part(), root_path, 0);
     Some(Parts {
         headers,
         root,
@@ -97,7 +101,7 @@ fn describe(message: &Message<'_>) -> Described {
     };
     Described {
         skimmed: Part {
-            mime_type: mime_type(part),
+            mime_type: mime_type(&part),
             charset: attribute("charset"),
             protocol: attribute("protocol"),
             smime_type: attribute("smime-type"),
@@ -126,10 +130,16 @@ impl Skim {
     fn message(&mut self, raw: &[u8]) -> Option<Parts> {
         let message = MessageParser::default().parse_headers(raw)?;
         let headers = message
-            .headers_raw()
-            .map(|(name, value)| (name.to_string(), unfold(value)))
+            .headers()
+            .iter()
+            .map(|header| {
+                (
+                    header.raw_name().to_string(),
+                    unfold(&String::from_utf8_lossy(header.raw_value())),
+                )
+            })
             .collect();
-        let root_path = match mime_type(message.root_part()).starts_with("multipart/") {
+        let root_path = match mime_type(&message.root_part()).starts_with("multipart/") {
             true => String::new(),
             false => "1".to_string(),
         };
@@ -145,13 +155,6 @@ impl Skim {
     /// inside a forwarded message that had to be decoded first.
     fn part(&mut self, bytes: &[u8], at: Option<usize>, path: String, depth: usize) -> Part {
         let parser = MessageParser::default();
-        // A headers-only parse puts the body offset at the end of its
-        // input, so the stream says where the headers stop.
-        let mut stream = MessageStream::new(bytes);
-        stream.parse_headers(&parser, &mut Vec::new());
-        let body_start = stream.offset().min(bytes.len());
-        let body = &bytes[body_start..];
-        let body_at = at.map(|at| at + body_start);
         let Some(message) = parser.parse_headers(bytes) else {
             // A part with no headers is plain text (RFC 2045 section 5.2).
             let text = bytes
@@ -168,6 +171,9 @@ impl Skim {
                 ..Part::default()
             };
         };
+        let body_start = message.root_part().offset_body() as usize;
+        let body = &bytes[body_start..];
+        let body_at = at.map(|at| at + body_start);
         let Described {
             mut skimmed,
             boundary,
@@ -224,20 +230,32 @@ impl Skim {
         path: &str,
         depth: usize,
     ) -> Vec<Part> {
-        let mut stream = MessageStream::new(body);
-        if !stream.seek_next_part(boundary) {
+        let mut source = std::io::Cursor::new(body);
+        let mut stream = stream::Scan::new(&mut source, 0, body.len() as u64);
+        if !stream
+            .seek_next_part(boundary)
+            .expect("a memory cursor can be read")
+        {
             return Vec::new();
         }
-        stream.skip_crlf();
+        stream.skip_crlf().expect("a memory cursor can be read");
         let mut children = Vec::new();
         loop {
-            let start = stream.offset().min(body.len());
-            let (end, found) = stream.seek_part_end(Some(boundary));
-            let child = body.get(start..end.min(body.len())).unwrap_or_default();
+            let start = stream.offset() as usize;
+            let (end, found) = stream
+                .seek_part_end(boundary)
+                .expect("a memory cursor can be read");
+            let child = body
+                .get(start..(end as usize).min(body.len()))
+                .unwrap_or_default();
             let child_at = at.map(|at| at + start);
             let child_path = numbered(path, children.len());
             children.push(self.part(child, child_at, child_path, depth + 1));
-            if !found || stream.is_multipart_end() {
+            if !found
+                || stream
+                    .is_multipart_end()
+                    .expect("a memory cursor can be read")
+            {
                 return children;
             }
         }
@@ -268,7 +286,7 @@ impl Skim {
             return;
         };
         skimmed.subject = headers.subject().map(str::to_string);
-        skimmed.children = match mime_type(headers.root_part()).starts_with("multipart/") {
+        skimmed.children = match mime_type(&headers.root_part()).starts_with("multipart/") {
             true => {
                 self.part(inner, inner_at, path.to_string(), depth + 1)
                     .children
@@ -322,24 +340,6 @@ fn base64_size(bytes: &[u8]) -> Option<usize> {
     whole.then_some(letters * 3 / 4)
 }
 
-/// Drops a parsed message one level at a time. mail-parser parses a
-/// forwarded message inside a forwarded message without recursing, but
-/// holds each one inside the part above it, and the drop the compiler
-/// writes for that recurses once per level: ten thousand levels, a few
-/// hundred kilobytes of mail, overflow a worker thread's stack.
-fn dismantle(message: Message<'_>) {
-    let mut pending = vec![message];
-    while let Some(mut message) = pending.pop() {
-        for part in &mut message.parts {
-            if let PartType::Message(inner) =
-                std::mem::replace(&mut part.body, PartType::Text("".into()))
-            {
-                pending.push(inner);
-            }
-        }
-    }
-}
-
 /// The body of `raw`. Bytes mail-parser cannot read at all give an empty
 /// body.
 pub fn read(raw: &[u8]) -> MessageBody {
@@ -386,25 +386,22 @@ pub fn files(raw: &[u8]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-/// Part `id` and the parts under it, `depth` levels below the root.
-fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -> Part {
-    let Some(part) = message.part(id) else {
-        return Part::default();
-    };
+/// A part and the parts under it, `depth` levels below the root.
+fn convert(part: MessagePart<'_>, path: String, depth: usize) -> Part {
     let below = depth < MAX_DEPTH;
-    if let (Some(nested), true) = (part.message(), below) {
-        return nested_message(part, nested, raw, path, depth);
+    if let (Some(nested), true) = (part.nested(), below) {
+        return nested_message(part, nested, path, depth);
     }
-    let children = match below {
-        true => part.sub_parts().unwrap_or_default(),
-        false => &[],
-    }
-    .iter()
-    .enumerate()
-    .map(|(i, child)| convert(message, raw, *child, numbered(&path, i), depth + 1))
-    .collect();
+    let children = if below {
+        part.children()
+            .enumerate()
+            .map(|(i, child)| convert(child, numbered(&path, i), depth + 1))
+            .collect()
+    } else {
+        Vec::new()
+    };
     let data = (!part.is_multipart())
-        .then(|| transfer_decoded(raw, part))
+        .then(|| transfer_decoded(part))
         .flatten();
     let attribute = |name: &str| {
         part.content_type()
@@ -413,7 +410,7 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -
     };
     Part {
         path,
-        mime_type: mime_type(part),
+        mime_type: mime_type(&part),
         charset: attribute("charset"),
         protocol: attribute("protocol"),
         smime_type: attribute("smime-type"),
@@ -436,50 +433,27 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -
 /// "4.1", "4.2" for a multipart one; "4" itself is the whole
 /// encapsulated message.
 ///
-/// RFC 2045 forbids a transfer encoding on `message/rfc822`, but a
-/// sender out there sets one anyway. When `part` carries one mail-parser
-/// decodes its body first and parses `nested` from that decoded copy,
-/// so `nested`'s own parts carry offsets into it rather than into the
-/// outer message; `nested.raw_message()` is that copy. Without one,
-/// mail-parser parses `nested` by continuing the same scan over the
-/// outer bytes, so its offsets stay relative to them, and
-/// `nested.raw_message()` is a different thing here: a copy of the
-/// nested message's own bytes built separately, indexed from zero,
-/// that the child offsets do not match. Reading from the wrong one of
-/// the two returns the wrong slice, or one out of range.
 fn nested_message(
-    part: &MessagePart,
-    nested: &Message,
-    raw: &[u8],
+    part: MessagePart<'_>,
+    nested: MessageRef<'_>,
     path: String,
     depth: usize,
 ) -> Part {
-    // The part's own bytes, the forwarded message as a file, come from
-    // the outer message whatever its encoding says.
-    let data = transfer_decoded(raw, part);
-    let raw = match part.content_transfer_encoding() {
-        Some(cte)
-            if cte.eq_ignore_ascii_case("base64")
-                || cte.eq_ignore_ascii_case("quoted-printable") =>
-        {
-            nested.raw_message()
-        }
-        _ => raw,
-    };
+    // Each view resolves its bytes from the source that owns them, including
+    // a forwarded message decoded from a transfer encoding.
+    let data = transfer_decoded(part);
     let root = nested.root_part();
     let children = if root.is_multipart() {
-        root.sub_parts()
-            .unwrap_or_default()
-            .iter()
+        root.children()
             .enumerate()
-            .map(|(i, child)| convert(nested, raw, *child, numbered(&path, i), depth + 1))
+            .map(|(i, child)| convert(child, numbered(&path, i), depth + 1))
             .collect()
     } else {
-        vec![convert(nested, raw, 0, format!("{path}.1"), depth + 1)]
+        vec![convert(root, format!("{path}.1"), depth + 1)]
     };
     Part {
         path,
-        mime_type: mime_type(part),
+        mime_type: mime_type(&part),
         filename: part.attachment_name().map(str::to_string),
         content_id: part.content_id().map(content_id),
         subject: nested.subject().map(str::to_string),
@@ -515,16 +489,10 @@ fn mime_type(part: &MessagePart) -> String {
 /// belongs to the next boundary. `None` for base64 that does not decode
 /// at all.
 ///
-/// The header, not `part.encoding`, says which transfer encoding to
-/// undo: mail-parser rewrites `encoding` to `None` on base64 it could
-/// not decode itself, and recovers the raw bytes as text, which would
-/// otherwise show a corrupt attachment as garbled text instead of
-/// leaving it unreadable.
-fn transfer_decoded(raw: &[u8], part: &MessagePart) -> Option<Vec<u8>> {
-    let start = part.raw_body_offset() as usize;
-    let end = (part.raw_end_offset() as usize).min(raw.len());
-    let bytes = raw.get(start..end)?;
-    undo_transfer_encoding(part.content_transfer_encoding(), bytes)
+/// Decode from the raw body and its declared encoding so malformed base64
+/// remains unreadable rather than becoming a text attachment.
+fn transfer_decoded(part: MessagePart<'_>) -> Option<Vec<u8>> {
+    undo_transfer_encoding(part.content_transfer_encoding(), part.raw_body())
 }
 
 /// `bytes` with `encoding`, a part's Content-Transfer-Encoding, undone,
@@ -533,9 +501,13 @@ fn transfer_decoded(raw: &[u8], part: &MessagePart) -> Option<Vec<u8>> {
 pub fn undo_transfer_encoding(encoding: Option<&str>, bytes: &[u8]) -> Option<Vec<u8>> {
     match encoding {
         Some(cte) if cte.eq_ignore_ascii_case("base64") => base64_decoded(bytes),
-        Some(cte) if cte.eq_ignore_ascii_case("quoted-printable") => {
-            Some(quoted_printable_decode(bytes).unwrap_or_else(|| quoted_printable_lenient(bytes)))
-        }
+        Some(cte) if cte.eq_ignore_ascii_case("quoted-printable") => Some(
+            qp::BODY
+                .strict()
+                .decode(bytes)
+                .map(|decoded| decoded.into_owned())
+                .unwrap_or_else(|_| quoted_printable_lenient(bytes)),
+        ),
         _ => Some(bytes.to_vec()),
     }
 }
@@ -583,8 +555,8 @@ fn base64_by_line(bytes: &[u8]) -> Option<Vec<u8>> {
     (!decoded.is_empty()).then_some(decoded)
 }
 
-/// A lenient fallback for quoted-printable content mail-parser's own
-/// strict decoder refuses outright over one bad escape. Everything else
+/// A lenient fallback for quoted-printable content the strict decoder
+/// refuses over one bad escape. Everything else
 /// still decodes; the bad escape (`=` not followed by two hex digits, or
 /// by a line break) shows through exactly as written, since there is no
 /// way to know what the sender meant by it.

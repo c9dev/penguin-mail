@@ -2184,7 +2184,7 @@ msgstr "Εστιασμένα"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Το Penguin Mail συνεχίζει τον συγχρονισμό χωρίς ανοιχτό παράθυρο"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3446
+#: app/src/compose.rs:669 app/src/compose.rs:3453
 msgid "Add at least one recipient."
 msgstr "Προσθέστε τουλάχιστον έναν παραλήπτη."
 
@@ -2192,7 +2192,7 @@ msgstr "Προσθέστε τουλάχιστον έναν παραλήπτη."
 msgid "“{address}” is not an email address."
 msgstr "Το «{address}» δεν είναι διεύθυνση ηλεκτρονικού ταχυδρομείου."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3452
+#: app/src/compose.rs:904 app/src/compose.rs:3459
 msgid "Choose a time in the future"
 msgstr "Επιλέξτε μια μελλοντική ώρα"
 

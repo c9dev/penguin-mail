@@ -325,9 +325,9 @@ fn headers_of(raw: &[u8]) -> &[u8] {
     &raw[..blank]
 }
 
-fn addresses(list: Option<&mail_parser::Address>) -> Vec<Address> {
+fn addresses(list: Option<mail_parser::AddressList<'_>>) -> Vec<Address> {
     list.map(|list| {
-        list.iter()
+        list.mailboxes()
             .filter_map(|found| {
                 Some(Address {
                     name: found.name().map(str::to_string),
