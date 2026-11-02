@@ -80,7 +80,7 @@ reqwest = { version = "0.13.5", features = ["json", "form", "query"] }
 # Reads autoconfig files. It refuses a document type declaration, so a file
 # cannot expand entities.
 roxmltree = "0.21.1"
-rusqlite = { version = "0.40.2", features = ["bundled"] }
+rusqlite = { version = "0.41.0", features = ["bundled"] }
 # reqwest already brings both; discovery's probe uses them directly, with
 # the platform's certificate store.
 rustls = "0.23.46"
