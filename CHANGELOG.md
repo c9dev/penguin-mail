@@ -15,10 +15,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The mailbox sidebar can be narrower, with Mail and Calendar switching to icons when their labels do not fit.
 - Deleting, archiving, or moving mail selects a neighbor in your last navigation direction, with an option in Reading preferences to always select the next row.
 
 ### Fixed
 
+- Hidden calendar content and absent switch counts no longer keep the mailbox sidebar wide.
 - Summarize and Explain limit the mail sent to the model and say when some text was left out.
 - Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.
 - A skill command's saved approval covers its standard input as well as its command line.
