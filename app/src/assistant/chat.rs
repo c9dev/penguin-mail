@@ -121,6 +121,7 @@ impl Chat {
         };
         let web = !self.without_tools && settings.ai.web_search != WebSearch::Off;
         let reasoning = settings.ai.assistant_reasoning;
+        let rounds = settings.ai.max_rounds;
         let host: Arc<dyn ToolHost> = if self.without_tools {
             Arc::new(NoTools)
         } else {
@@ -137,6 +138,7 @@ impl Chat {
             let mut conversation = conversation.lock().await;
             conversation.set_provider(config);
             conversation.set_thinking(reasoning);
+            conversation.set_rounds(rounds);
             conversation.set_system_prompt(prompt);
             conversation.set_web(web);
             tokio::select! {
