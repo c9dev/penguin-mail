@@ -117,6 +117,7 @@ impl NextEvent {
         let bar = gtk::Box::builder().css_classes(["bar"]).build();
         let when = gtk::Label::builder()
             .xalign(0.0)
+            .ellipsize(pango::EllipsizeMode::End)
             .css_classes(["when"])
             .build();
         let what = gtk::Label::builder()
@@ -435,12 +436,12 @@ impl Sidebar {
         for label in &labels {
             label.set_label("");
         }
+        badges[1].1.set_visible(false);
         switch.add_css_class("compact");
         let compact = titles.measure(gtk::Orientation::Horizontal, -1).0;
         switch.remove_css_class("compact");
         labels[0].set_label(&gettext("Mail"));
         labels[1].set_label(&gettext("Calendar"));
-        badges[1].1.set_visible(false);
         switch.set_visible(false);
         title.set_visible(true);
         let adaptive = adw::BreakpointBin::builder()
@@ -462,9 +463,50 @@ impl Sidebar {
             "css-classes",
             Some(&["round", "space-switch", "compact"].to_value()),
         );
+        // The compact width follows the rooted widgets and the badges actually shown.
+        let resize: Rc<dyn Fn()> = {
+            let adaptive = adaptive.downgrade();
+            let switch = switch.downgrade();
+            let badges = badges.each_ref().map(|(_, badge)| badge.downgrade());
+            let icons = Cell::new(compact);
+            Rc::new(move || {
+                let (Some(adaptive), Some(switch)) = (adaptive.upgrade(), switch.upgrade()) else {
+                    return;
+                };
+                let extra: i32 = badges
+                    .iter()
+                    .filter_map(glib::WeakRef::upgrade)
+                    .filter(|badge| badge.is_visible())
+                    .map(|badge| badge.measure(gtk::Orientation::Horizontal, -1).0 + 6)
+                    .sum();
+                if switch.root().is_some() && switch.is_visible() && switch.has_css_class("compact")
+                {
+                    icons.set(switch.measure(gtk::Orientation::Horizontal, -1).0 - extra);
+                }
+                adaptive.set_width_request(icons.get() + extra);
+            })
+        };
+        for (_, badge) in &badges {
+            let resize = resize.clone();
+            badge.connect_notify_local(None, move |_, property| {
+                if matches!(property.name(), "label" | "visible") {
+                    resize();
+                }
+            });
+        }
+        let resized = resize.clone();
+        narrow.connect_apply(move |_| {
+            let resize = resized.clone();
+            glib::idle_add_local_once(move || resize());
+        });
+        switch.connect_map(move |_| {
+            let resize = resize.clone();
+            glib::idle_add_local_once(move || resize());
+        });
         adaptive.add_breakpoint(narrow);
         header.set_title_widget(Some(&adaptive));
         let content = gtk::Stack::builder()
+            .hhomogeneous(false)
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
             .build();
@@ -2450,7 +2492,6 @@ pub(crate) mod checks {
     pub fn run() {
         let sidebar = Sidebar::new(|_| {}, |_| false, |_| {});
         sidebar.set_switch_visible(true);
-        sidebar.set_waiting(100);
         let bin = sidebar
             .switch
             .parent()
@@ -2459,7 +2500,13 @@ pub(crate) mod checks {
             .unwrap()
             .downcast::<adw::BreakpointBin>()
             .unwrap();
+        let without_badge = bin.width_request();
+        sidebar.set_waiting(100);
         let least = bin.width_request();
+        assert!(least > without_badge);
+        sidebar.set_waiting(0);
+        assert_eq!(bin.width_request(), without_badge);
+        sidebar.set_waiting(100);
         let height = bin.height_request();
         for width in [least, 800, least, 800] {
             bin.allocate(width, height, -1, None);
@@ -2468,6 +2515,33 @@ pub(crate) mod checks {
             assert_eq!(sidebar.badges[1].1.label(), gettext("99+"));
             assert!(sidebar.badges[1].1.is_visible());
             assert_eq!(bin.measure(gtk::Orientation::Horizontal, -1).0, least);
+            if width == least {
+                assert!(sidebar.switch.measure(gtk::Orientation::Horizontal, -1).0 <= least);
+            }
         }
+        let mail_min = sidebar.content.measure(gtk::Orientation::Horizontal, -1).0;
+        let calendar = gtk::Box::builder().width_request(600).build();
+        sidebar.show_calendar(calendar.upcast_ref());
+        assert!(sidebar.content.measure(gtk::Orientation::Horizontal, -1).0 >= 600);
+        sidebar.show_mail();
+        assert_eq!(
+            sidebar.content.measure(gtk::Orientation::Horizontal, -1).0,
+            mail_min
+        );
+        sidebar.next.when.set_label("Next");
+        let event_min = sidebar
+            .next
+            .button
+            .measure(gtk::Orientation::Horizontal, -1)
+            .0;
+        sidebar.next.when.set_label(&"A long countdown ".repeat(20));
+        assert_eq!(
+            sidebar
+                .next
+                .button
+                .measure(gtk::Orientation::Horizontal, -1)
+                .0,
+            event_min
+        );
     }
 }

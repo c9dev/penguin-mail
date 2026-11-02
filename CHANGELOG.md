@@ -16,6 +16,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Hidden calendar content and absent switch counts no longer keep the mailbox sidebar wide.
+
 - Closing or sending a message lets its window go, instead of keeping every composer ever opened alive in the background.
 - A shared calendar the server refuses to show is left alone until the calendar list is read again, instead of being asked for and logged every minute.
 - A crash is written to the log with where it happened, so it can be reported.
