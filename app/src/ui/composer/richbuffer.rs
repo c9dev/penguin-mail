@@ -904,6 +904,7 @@ mod tests {
         context.block_on(async {
             let other = context.spawn_local(async {});
             crate::web::frame::check().await;
+            crate::ui::conversation::checks::metadata_preserves_disclosures().await;
             other
                 .await
                 .expect("another GTK task finishes during the frame check");

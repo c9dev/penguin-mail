@@ -548,11 +548,8 @@ impl ThreadRun {
             .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
             .collect();
         if fresh.is_empty() {
-            // Nothing in the store for a thread that has no messages on
-            // screen either is a load still fetching, not a deletion:
-            // clearing then would leave the conversation blank once the
-            // fetch lands. A thread that had messages and lost them is
-            // gone the way closing its row would say.
+            // The initial fetch may still be running. Clear only when a
+            // thread that already showed messages has lost them from the store.
             if self.thread(|open| !open.messages.is_empty()) == Some(true) {
                 wanted.on_screen(|effects| effects.clear());
             }

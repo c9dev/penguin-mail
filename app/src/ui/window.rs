@@ -1327,9 +1327,7 @@ impl MainWindow {
                     .map(|id| (*account_id, id.clone()))
                     .collect();
                 self.listing.changed(changed.clone());
-                // The rows went quiet through the listing; a conversation
-                // open on one of these threads reads its flags back from
-                // the store, so a read mark goes off the message too.
+                // Open conversations need the same metadata update as the list.
                 let named: HashSet<_> = changed.into_iter().collect();
                 self.refresh_open_threads(move |account_id, thread_id| {
                     named.contains(&(account_id, thread_id.to_string()))
