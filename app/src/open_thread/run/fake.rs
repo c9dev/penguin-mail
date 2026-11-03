@@ -944,7 +944,11 @@ impl Effects for FakeWindow {
     }
 
     fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
-        self.change(Step::Replace, |open| open.replace_messages(fresh))
+        let changed = self.change(Step::Replace, |open| open.replace_messages(fresh));
+        if !changed {
+            self.draw();
+        }
+        changed
     }
 
     fn bodies_arrived(&self, fetched: Fetched) {

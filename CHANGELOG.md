@@ -34,6 +34,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The message view scrolls at once with the wheel instead of animating each tick, which stuttered on some graphics drivers.
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
+- Marking mail read clears the unread mark inside the open conversation, not only in the list.
 
 ## 1.0.11 (2026-10-28)
 

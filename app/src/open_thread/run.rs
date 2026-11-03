@@ -519,8 +519,9 @@ impl ThreadRun {
     }
 
     /// Picks up label changes and new messages in the thread on screen.
-    /// Only a change in the set of messages fetches and redraws, so the
-    /// reading position survives a label change.
+    /// Only a change in the set of messages fetches; a change the store
+    /// makes to the messages themselves, a read mark among them, is drawn
+    /// in place by the view, so the reading position survives both.
     pub async fn refresh(&self) {
         let Some(wanted) = self.on_screen() else {
             return;
@@ -547,7 +548,14 @@ impl ThreadRun {
             .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
             .collect();
         if fresh.is_empty() {
-            wanted.on_screen(|effects| effects.clear());
+            // Nothing in the store for a thread that has no messages on
+            // screen either is a load still fetching, not a deletion:
+            // clearing then would leave the conversation blank once the
+            // fetch lands. A thread that had messages and lost them is
+            // gone the way closing its row would say.
+            if self.thread(|open| !open.messages.is_empty()) == Some(true) {
+                wanted.on_screen(|effects| effects.clear());
+            }
             return;
         }
         match wanted.on_screen(|effects| effects.replace_messages(fresh)) {

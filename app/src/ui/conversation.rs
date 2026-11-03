@@ -1412,11 +1412,17 @@ impl ConversationView {
     }
 
     /// Replaces the messages after the store changed under the thread, and
-    /// answers whether the ids differ from what was on screen. Nothing is
-    /// redrawn: that answer is what decides between a redraw and a fetch.
+    /// answers whether the ids differ from what was on screen. Same ids
+    /// means no fetch follows, so the page takes what the store brought
+    /// here: a read mark set while the thread was open goes off the message
+    /// as it does off the row. New ids are the caller's fetch to make, and
+    /// the bodies that come with them bring their own redraw.
     pub fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
-        self.change(|open| open.replace_messages(fresh))
-            .unwrap_or(false)
+        let changed = self.change(|open| open.replace_messages(fresh));
+        if changed == Some(false) {
+            self.render(false);
+        }
+        changed.unwrap_or(false)
     }
 
     /// Bodies as they come back from Gmail with their HTML cleaned, and the

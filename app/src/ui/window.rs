@@ -1322,8 +1322,18 @@ impl MainWindow {
                 account_id,
                 thread_ids,
             } => {
-                let changed = thread_ids.iter().map(|id| (*account_id, id.clone()));
-                self.listing.changed(changed.collect());
+                let changed: Vec<_> = thread_ids
+                    .iter()
+                    .map(|id| (*account_id, id.clone()))
+                    .collect();
+                self.listing.changed(changed.clone());
+                // The rows went quiet through the listing; a conversation
+                // open on one of these threads reads its flags back from
+                // the store, so a read mark goes off the message too.
+                let named: HashSet<_> = changed.into_iter().collect();
+                self.refresh_open_threads(move |account_id, thread_id| {
+                    named.contains(&(account_id, thread_id.to_string()))
+                });
             }
             ChangeEvent::NewMail { .. } => self.listing.everything(),
             ChangeEvent::WriteFailed { message, .. } => self.toast(message),
