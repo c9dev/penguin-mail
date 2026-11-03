@@ -679,13 +679,14 @@ mod imp {
 
         fn map(&self) {
             self.parent_map();
+            // A cached page may have spent hours off screen with its timer stopped.
+            self.obj().update_now();
             let weak = self.obj().downgrade();
             let source = glib::timeout_add_seconds_local(60, move || {
                 let Some(grid) = weak.upgrade() else {
                     return glib::ControlFlow::Break;
                 };
-                grid.imp().now.set(chrono::Local::now().timestamp_millis());
-                grid.queue_draw();
+                grid.update_now();
                 glib::ControlFlow::Continue
             });
             self.now_timer.replace(Some(source));
@@ -890,6 +891,11 @@ impl Default for TimeGrid {
 }
 
 impl TimeGrid {
+    fn update_now(&self) {
+        self.imp().now.set(chrono::Local::now().timestamp_millis());
+        self.queue_draw();
+    }
+
     pub fn new() -> TimeGrid {
         let grid = TimeGrid::default();
         // `Capture` so this sees a press on a card before the card's own
@@ -2669,6 +2675,82 @@ fn connect_more_clicked_strip(strip: &AllDayStrip, button: &gtk::Button, hidden:
             f(&strip, &hidden, button.upcast_ref());
         }
     });
+}
+
+#[cfg(test)]
+pub(crate) async fn check_clock() {
+    use glib::translate::ToGlibPtr;
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    async fn wait_for(ready: impl Fn() -> bool) -> bool {
+        for _ in 0..200 {
+            if ready() {
+                return true;
+            }
+            glib::timeout_future(Duration::from_millis(50)).await;
+        }
+        ready()
+    }
+
+    let grid = TimeGrid::new();
+    let now = chrono::Local::now();
+    let earlier = now.timestamp_millis() - 3_600_000;
+    grid.show(
+        &[now.date_naive()],
+        &[],
+        &HashMap::new(),
+        earlier,
+        &chrono::Local,
+        Default::default(),
+    );
+    let window = gtk::Window::builder()
+        .default_width(600)
+        .default_height(400)
+        .child(&gtk::ScrolledWindow::builder().child(&grid).build())
+        .build();
+    window.present();
+    assert!(wait_for(|| grid.is_mapped()).await, "the grid maps");
+    let painted = Rc::new(Cell::new(0));
+    let seen = Rc::clone(&painted);
+    let paintable = gtk::WidgetPaintable::new(Some(&grid));
+    paintable.connect_invalidate_contents(move |_| seen.set(seen.get() + 1));
+    grid.imp().now.set(earlier);
+    grid.queue_draw();
+    assert!(
+        wait_for(|| painted.get() > 0).await,
+        "the stale indicator paints"
+    );
+    let before = painted.get();
+    let source = {
+        let timer = grid.imp().now_timer.borrow();
+        glib::MainContext::default()
+            .find_source_by_id(timer.as_ref().expect("the visible grid has a clock"))
+            .unwrap()
+    };
+    // SAFETY: this owned source belongs to the GTK thread's main context.
+    unsafe { glib::ffi::g_source_set_ready_time(source.to_glib_none().0, 0) };
+    assert!(
+        wait_for(|| grid.imp().now.get() > earlier && painted.get() > before).await,
+        "the minute timer advances time and redraws the grid"
+    );
+    assert!(
+        painted.get() > before,
+        "the minute timer redraws the indicator"
+    );
+    window.set_visible(false);
+    assert!(grid.imp().now_timer.borrow().is_none());
+    grid.imp().now.set(earlier);
+    window.present();
+    assert!(
+        wait_for(|| grid.is_mapped() && grid.imp().now.get() > earlier).await,
+        "showing the grid catches up its clock"
+    );
+    window.close();
+    assert!(
+        grid.imp().now_timer.borrow().is_none(),
+        "closing stops the clock"
+    );
 }
 
 #[cfg(test)]

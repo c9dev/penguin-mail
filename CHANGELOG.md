@@ -20,6 +20,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The calendar time indicator catches up when shown and advances each minute while the calendar stays open.
 - On macOS, messages stay visible after shrinking and expanding the window.
 - Hidden calendar content and absent switch counts no longer keep the mailbox sidebar wide.
 - Summarize and Explain limit the mail sent to the model and say when some text was left out.
