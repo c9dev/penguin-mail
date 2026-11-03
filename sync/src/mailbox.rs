@@ -1344,7 +1344,8 @@ impl<A: Accounts> Mailboxes<A> {
     /// The rows for the threads a change event named, as they are now, with
     /// the mailbox's unread count so the header keeps up. A thread that left
     /// the mailbox is simply missing from `rows`, so a caller drops every row
-    /// of a named thread before splicing these in. `None` when the mailbox
+    /// of a named thread before splicing these in. An account-specific
+    /// mailbox ignores changes from other accounts. `None` when the mailbox
     /// has to be listed again from scratch.
     pub async fn changed(
         &self,
@@ -1364,8 +1365,15 @@ impl<A: Accounts> Mailboxes<A> {
         if changed.is_empty() {
             return Ok(None);
         }
+        // Mailbox IDs and roles can match in different accounts. Preserve
+        // the mailbox's account restriction before narrowing each query.
+        // Unified lists have no account restriction and accept every thread.
+        let account = mailbox.account();
         let mut per_account: HashMap<AccountId, Vec<String>> = HashMap::new();
         for (account_id, thread_id) in changed {
+            if account.is_some_and(|here| *account_id != here) {
+                continue;
+            }
             per_account
                 .entry(*account_id)
                 .or_default()

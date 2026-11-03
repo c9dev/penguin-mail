@@ -1265,3 +1265,88 @@ async fn quick_filters_keep_the_cursor_past_an_empty_server_page() {
     assert!(!second.more);
     assert!(!h.imap.message(FOLDER, 1).unwrap().flags.contains("\\Seen"));
 }
+
+/// A thread another account stored used to splice into the inbox on screen:
+/// the re-read aimed the on-screen mailbox's rule at the other account, and
+/// every account calls its inbox INBOX, so the rule matched there too.
+#[tokio::test]
+async fn another_accounts_inbox_is_not_a_row_in_this_one() {
+    use crate::fake::FakeSmtp;
+    use crate::mailbox::Standard;
+    use crate::{AccountServices, AccountSync};
+
+    let h = harness().await;
+    h.imap.add_mailbox("INBOX", None);
+    h.imap
+        .deliver("INBOX", message("mine", "Mine", ""), days_ago(1));
+    h.bootstrap().await;
+    let other_id =
+        h.db.write(|c| accounts::insert_account(c, "second@example.org", 0))
+            .await
+            .unwrap();
+    let other = Arc::new(FakeImap::new());
+    other.add_mailbox("INBOX", None);
+    other.deliver("INBOX", message("theirs", "Theirs", ""), days_ago(1));
+    let second = Arc::new(AccountSync::new(
+        other_id,
+        AccountServices::imap(other, Arc::new(FakeSmtp::default()), fake_settings()),
+        h.db.clone(),
+        async_channel::unbounded().0,
+    ));
+    second.bootstrap().await.unwrap();
+    let scope = Scope::of_mail_accounts(&h.db.read(accounts::list_accounts).await.unwrap());
+    let lists = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([
+            (h.account_id, Arc::clone(&h.sync)),
+            (other_id, second),
+        ]))),
+        h.db.clone(),
+    );
+    let grouped = view(true);
+    let (inbox, theirs) = (
+        Mailbox::Standard {
+            account_id: h.account_id,
+            which: Standard::Inbox,
+        },
+        Mailbox::Standard {
+            account_id: other_id,
+            which: Standard::Inbox,
+        },
+    );
+    let here = lists
+        .list(&inbox, &scope, &grouped, Loaded::nothing())
+        .await
+        .unwrap();
+    let there = lists
+        .list(&theirs, &scope, &grouped, Loaded::nothing())
+        .await
+        .unwrap();
+    assert_eq!(here.rows.len(), 1, "A's inbox holds A's mail");
+    assert_eq!(there.rows.len(), 1, "B's inbox holds B's mail");
+
+    // What B's sync says when it stores a thread of its own, read against
+    // the inbox the reader is looking at.
+    let fresh = lists
+        .changed(&inbox, &[(other_id, there.rows[0].id.clone())], &grouped)
+        .await
+        .unwrap()
+        .expect("an inbox re-reads threads on their own");
+    assert!(
+        fresh.rows.is_empty(),
+        "B's thread is no row of A's inbox: {:?}",
+        fresh
+            .rows
+            .iter()
+            .map(|row| (row.account_id, row.subject.as_str()))
+            .collect::<Vec<_>>()
+    );
+
+    // A's own thread still comes back, so nothing was lost on the way.
+    let own = lists
+        .changed(&inbox, &[(h.account_id, here.rows[0].id.clone())], &grouped)
+        .await
+        .unwrap()
+        .expect("still answerable");
+    assert_eq!(own.rows.len(), 1, "A's own thread still splices in");
+    assert_eq!(own.rows[0].account_id, h.account_id);
+}
