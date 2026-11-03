@@ -20,6 +20,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- On macOS, messages stay visible after shrinking and expanding the window.
 - Hidden calendar content and absent switch counts no longer keep the mailbox sidebar wide.
 - Summarize and Explain limit the mail sent to the model and say when some text was left out.
 - Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.
