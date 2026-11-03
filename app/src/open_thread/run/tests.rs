@@ -554,7 +554,7 @@ async fn an_engine_answer_for_a_thread_the_reader_left_goes_nowhere() {
 }
 
 #[tokio::test]
-async fn a_refresh_with_the_same_messages_redraws_only_the_buttons() {
+async fn a_refresh_with_the_same_messages_fetches_nothing() {
     let window = FakeWindow::new();
     window.run().open(row(THREAD)).await;
     window.with(|screen| screen.steps.clear());
@@ -562,6 +562,24 @@ async fn a_refresh_with_the_same_messages_redraws_only_the_buttons() {
     assert_eq!(
         window.steps(),
         [Step::Messages, Step::Replace, Step::Buttons]
+    );
+}
+
+/// The store marking the thread read while it is on screen, as the
+/// server does once the reader has it, reaches the page too: the read
+/// mark goes off the message as the listing takes it off the row.
+#[tokio::test]
+async fn a_refresh_clears_a_read_mark_the_store_set() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert!(page(&window).contains("message expanded unread"));
+    window.with(|screen| screen.messages = vec![meta("m1", false)]);
+    window.run().refresh().await;
+    assert_eq!(window.open(|open| open.unread()), Some(false));
+    assert!(
+        !page(&window).contains("message expanded unread"),
+        "{}",
+        page(&window)
     );
 }
 
@@ -588,6 +606,25 @@ async fn a_refresh_that_finds_the_thread_gone_clears_the_view() {
     window.with(|screen| screen.messages.clear());
     window.run().refresh().await;
     assert!(window.open(|_| ()).is_none());
+}
+
+/// A live account may still be fetching a thread's messages while it sits
+/// on screen, and a change report that races that read says nothing from
+/// the store. Clearing then would leave the conversation blank once the
+/// fetch lands, so a thread that has no messages yet keeps its place.
+#[tokio::test]
+async fn a_refresh_leaves_a_thread_that_never_had_messages_alone() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| {
+        screen.messages.clear();
+        if let Some(open) = screen.open.as_mut() {
+            open.messages.clear();
+        }
+    });
+    window.run().refresh().await;
+    assert!(!window.took(Step::Clear));
+    assert!(window.open(|_| ()).is_some());
 }
 
 #[tokio::test]

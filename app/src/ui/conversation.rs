@@ -21,6 +21,9 @@
 //! there before it, and then replaces the articles in place, which keeps
 //! the reader where they were.
 
+#[cfg(test)]
+pub(crate) mod checks;
+
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::{Rc, Weak};
@@ -163,12 +166,28 @@ const READY_SCRIPT: &str = "window.webkit.messageHandlers.mailrsReady.postMessag
 /// those roots out of a string, so a WebKit without it answers `whole` and
 /// the view loads the page instead. The first article still on screen
 /// keeps its place, since WebKit does no scroll anchoring of its own and
-/// an article above the reader that grew would push them down.
+/// an article above the reader that grew would push them down. Each
+/// replacement keeps disclosures open or closed as the reader left them,
+/// including quoted history inside the body's shadow root.
 const PATCH_SCRIPT: [&str; 2] = [
     r#"(function (patches) {
   if (window.mailrsHideLinkPreview) window.mailrsHideLinkPreview();
   var holder = document.createElement('template');
   if (typeof holder.setHTMLUnsafe !== 'function') return 'whole';
+  function keepDisclosures(before, after) {
+    var oldDetails = before.querySelectorAll('details');
+    var newDetails = after.querySelectorAll('details');
+    for (var i = 0; i < Math.min(oldDetails.length, newDetails.length); i++) {
+      newDetails[i].open = oldDetails[i].open;
+    }
+    var oldBodies = before.querySelectorAll('.body.html');
+    var newBodies = after.querySelectorAll('.body.html');
+    for (var i = 0; i < Math.min(oldBodies.length, newBodies.length); i++) {
+      if (oldBodies[i].shadowRoot && newBodies[i].shadowRoot) {
+        keepDisclosures(oldBodies[i].shadowRoot, newBodies[i].shadowRoot);
+      }
+    }
+  }
   var anchor = null;
   var messages = document.querySelectorAll('article.message');
   for (var i = 0; i < messages.length; i++) {
@@ -180,7 +199,10 @@ const PATCH_SCRIPT: [&str; 2] = [
     var old = document.getElementById('m-' + patch[0]);
     holder.setHTMLUnsafe(patch[1]);
     var fresh = holder.content.firstElementChild;
-    if (old && fresh) old.replaceWith(fresh); else missed++;
+    if (old && fresh) {
+      keepDisclosures(old, fresh);
+      old.replaceWith(fresh);
+    } else missed++;
   });
   if (anchor) {
     var now = document.getElementById(anchor);
@@ -1412,11 +1434,17 @@ impl ConversationView {
     }
 
     /// Replaces the messages after the store changed under the thread, and
-    /// answers whether the ids differ from what was on screen. Nothing is
-    /// redrawn: that answer is what decides between a redraw and a fetch.
+    /// answers whether the ids differ from what was on screen. Same ids
+    /// means no fetch follows, so the page takes what the store brought
+    /// here: a read mark set while the thread was open goes off the message
+    /// as it does off the row. New ids are the caller's fetch to make, and
+    /// the bodies that come with them bring their own redraw.
     pub fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
-        self.change(|open| open.replace_messages(fresh))
-            .unwrap_or(false)
+        let changed = self.change(|open| open.replace_messages(fresh));
+        if changed == Some(false) {
+            self.render(false);
+        }
+        changed.unwrap_or(false)
     }
 
     /// Bodies as they come back from Gmail with their HTML cleaned, and the
