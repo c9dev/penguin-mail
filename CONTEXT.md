@@ -4,6 +4,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
+**Navigation direction**: the last move up or down between single rows in the mail list. Removing mail follows that direction, falling back to the other side at the list edge. Reading preferences can restore always choosing the next row. Refreshing the list or opening a row after removal does not change the direction; leaving the mailbox resets it. `ui::thread_list::Navigation`.
+
 **Column width**: the width chosen for the mailbox sidebar or message list by dragging its divider or using the keyboard. The app remembers these widths across restarts and keeps its narrow-window navigation. `settings::MailColumn` bounds saved widths; `ui::window::column_width` handles the dividers.
 
 **Account defaults**: the account choices in Preferences for new messages, replies, forwards, calendar events, assistant actions and startup. Each task keeps its context automatically, follows the general default, or uses a chosen account. The all-tasks switch uses the general default without erasing individual choices. An explicit account in a composer or assistant request takes precedence. `mailrs::settings::AccountDefaults`, `AccountChoice`, `AccountUse`.

@@ -26,6 +26,7 @@ pub struct Settings {
     /// Group replies into conversations instead of listing each message.
     pub threading: bool,
     pub mark_read: MarkRead,
+    pub follow_selection_direction: bool,
     pub remote_images: RemoteImages,
     pub text_size: TextSize,
     pub preview_lines: PreviewLines,
@@ -498,6 +499,7 @@ impl Default for Settings {
         Settings {
             threading: true,
             mark_read: MarkRead::Immediately,
+            follow_selection_direction: true,
             remote_images: RemoteImages::Ask,
             text_size: TextSize::Normal,
             preview_lines: PreviewLines::Two,
@@ -573,7 +575,7 @@ pub enum MailColumn {
 impl MailColumn {
     pub fn limits(self) -> (i32, i32) {
         match self {
-            Self::Mailboxes => (220, 480),
+            Self::Mailboxes => (180, 480),
             Self::Messages => (300, 720),
         }
     }
@@ -1364,6 +1366,7 @@ mod tests {
         let mut settings = Settings {
             threading: false,
             text_size: TextSize::Large,
+            follow_selection_direction: false,
             calendar_clock: CalendarClock::Hour12,
             ..Settings::default()
         };
@@ -1376,6 +1379,7 @@ mod tests {
         let partial = Settings::load(&path);
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
+        assert!(partial.follow_selection_direction);
         assert!(partial.notifications, "missing keys take their defaults");
         assert_eq!(partial.calendar_clock, CalendarClock::Automatic);
     }

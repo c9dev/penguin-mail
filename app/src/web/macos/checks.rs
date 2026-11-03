@@ -63,10 +63,10 @@ async fn resize_with_a_cover() {
     overlay.set_child(Some(&page.widget()));
     overlay.add_overlay(&cover);
     page.cover(&cover);
-    let window = gtk::Window::builder().child(&overlay).build();
+    let window = adw::Window::builder().content(&overlay).build();
     window.present();
     let mut holes = None;
-    for (width, height) in [(400, 300), (600, 450), (500, 350)] {
+    for (width, height) in [(400, 300), (600, 450), (400, 250), (700, 500), (500, 350)] {
         window.set_default_size(width, height);
         for _ in 0..100 {
             glib::timeout_future(Duration::from_millis(50)).await;
@@ -91,6 +91,7 @@ async fn resize_with_a_cover() {
             assert_eq!(before, &current, "the cover has not moved");
         }
         holes = Some(current);
+        above_gtk_tiles(&page);
     }
     cover.set_visible(false);
     for _ in 0..100 {
@@ -103,6 +104,48 @@ async fn resize_with_a_cover() {
         page.0.view.layer().unwrap().mask().is_none(),
         "removing the cover clears the mask"
     );
+    let dialog = adw::Dialog::builder()
+        .child(&gtk::Label::new(Some("A dialog over the page")))
+        .build();
+    dialog.present(Some(&window));
+    for _ in 0..100 {
+        glib::timeout_future(Duration::from_millis(50)).await;
+        if page.0.clip.isHidden() {
+            break;
+        }
+    }
+    assert!(
+        page.0.clip.isHidden(),
+        "the native page gives way to a dialog"
+    );
+    assert!(page.0.picture.is_visible(), "a snapshot replaces the page");
+    dialog.close();
+    for _ in 0..100 {
+        glib::timeout_future(Duration::from_millis(50)).await;
+        if !page.0.clip.isHidden() {
+            break;
+        }
+    }
+    assert!(!page.0.clip.isHidden(), "the page returns after the dialog");
+    assert!(!page.0.picture.is_visible(), "the snapshot is removed");
+    above_gtk_tiles(&page);
     window.close();
     eprintln!("drive: resizing the native page with a stationary cover passed");
+}
+
+fn above_gtk_tiles(page: &WebView) {
+    let layer = page.0.clip.layer().expect("the native clip has a layer");
+    let parent = layer
+        .superlayer()
+        .expect("the clip is attached to the window");
+    let siblings = unsafe { parent.sublayers() }.expect("the window has layers");
+    assert!(siblings.len() > 1, "GTK has painted its tiles");
+    for sibling in siblings.iter() {
+        if sibling != layer {
+            assert!(
+                layer.zPosition() > sibling.zPosition(),
+                "the native page stays above GTK's replacement tiles"
+            );
+        }
+    }
 }
