@@ -4,6 +4,7 @@
 mod accounts;
 pub(crate) mod dialog;
 pub(crate) mod google_route;
+mod shared_mailbox;
 pub(crate) mod space;
 
 use std::cell::{Cell, RefCell};
@@ -476,7 +477,29 @@ fn accounts_page(
         row.add_row(&space_row);
         space_rows.push((account.id, update));
         google_route::rows(app, account, *offers, &row, &connect, contacts);
-        if let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email) {
+        if let Some(owner) = app.microsoft_owner(account.id) {
+            row.add_row(
+                &adw::ActionRow::builder()
+                    .title(gettext("Shared Mailbox"))
+                    .subtitle(format!(
+                        "{}\n{}",
+                        fill(
+                            &gettext("Signed in through {account}"),
+                            &[("account", &owner.email)]
+                        ),
+                        gettext("Shared mailboxes support mail only.")
+                    ))
+                    .use_markup(false)
+                    .build(),
+            );
+        } else if account.provider == mailrs_domain::Provider::Microsoft
+            && account.provider_name() == "Microsoft 365"
+        {
+            row.add_row(&shared_mailbox::row(app, account));
+        }
+        if app.microsoft_owner(account.id).is_none()
+            && let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email)
+        {
             let unavailable = adw::ActionRow::builder()
                 .use_markup(false)
                 .title(gettext("Not Available"))

@@ -3,14 +3,48 @@ use mailrs_store::accounts::{self, SyncCursor};
 use mailrs_store::{open_connection, open_in_memory, schema_version};
 
 #[test]
+fn shared_mailboxes_keep_an_owner_and_cannot_replace_existing_accounts() {
+    let conn = open_in_memory().unwrap();
+    let owner = accounts::insert_microsoft_account(&conn, "owner@contoso.com", "Microsoft 365", 0)
+        .unwrap()
+        .unwrap();
+    let shared = accounts::insert_shared_microsoft(&conn, owner, "sales@contoso.com", 0)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        accounts::microsoft_owner(&conn, shared).unwrap(),
+        Some(owner)
+    );
+    assert_eq!(accounts::microsoft_owner(&conn, owner).unwrap(), None);
+    assert!(
+        accounts::insert_shared_microsoft(&conn, owner, "SALES@contoso.com", 0)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        accounts::insert_shared_microsoft(&conn, shared, "other@contoso.com", 0)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        accounts::insert_microsoft_account(&conn, "sales@contoso.com", "Outlook", 0)
+            .unwrap()
+            .is_none()
+    );
+    assert!(accounts::delete_account(&conn, owner).is_err());
+    accounts::delete_account(&conn, shared).unwrap();
+    accounts::delete_account(&conn, owner).unwrap();
+}
+
+#[test]
 fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 66);
+    assert_eq!(schema_version(&conn).unwrap(), 68);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 66);
+    assert_eq!(schema_version(&conn).unwrap(), 68);
 }
 
 #[test]

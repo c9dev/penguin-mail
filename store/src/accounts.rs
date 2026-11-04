@@ -258,8 +258,9 @@ pub fn insert_microsoft_account(
     provider_name: &str,
     now: EpochMillis,
 ) -> Result<Option<AccountId>> {
-    if let Some(existing) = account_by_email(conn, email)? {
-        if existing.provider != Provider::Microsoft {
+    if let Some(existing) = account_by_microsoft_address(conn, email)? {
+        if existing.provider != Provider::Microsoft || microsoft_owner(conn, existing.id)?.is_some()
+        {
             return Ok(None);
         }
         conn.execute(
@@ -273,6 +274,100 @@ pub fn insert_microsoft_account(
         params![email, now, Provider::Microsoft.as_str(), provider_name],
     )?;
     Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Microsoft mailbox addresses are case insensitive. A row from another
+/// provider is returned too, so callers can refuse taking its address.
+pub fn account_by_microsoft_address(conn: &Connection, email: &str) -> Result<Option<Account>> {
+    let id = conn
+        .query_row(
+            "SELECT id FROM accounts WHERE email = ?1 COLLATE NOCASE",
+            [email],
+            |r| r.get(0),
+        )
+        .optional()?;
+    match id {
+        Some(id) => account(conn, id),
+        None => Ok(None),
+    }
+}
+
+/// The account whose Microsoft credentials serve this shared mailbox.
+pub fn microsoft_owner(conn: &Connection, id: AccountId) -> Result<Option<AccountId>> {
+    Ok(conn
+        .query_row(
+            "SELECT owner_id FROM microsoft_shared WHERE account_id = ?1",
+            [id],
+            |r| r.get(0),
+        )
+        .optional()?)
+}
+
+/// Identifies the grant whose refresh tasks may write this account's secrets.
+pub fn microsoft_session(conn: &Connection, id: AccountId) -> Result<Option<String>> {
+    Ok(conn
+        .query_row(
+            "SELECT microsoft_session FROM accounts WHERE id = ?1",
+            [id],
+            |r| r.get(0),
+        )
+        .optional()?
+        .flatten())
+}
+
+/// Retires refresh tasks from before an interactive sign-in.
+pub fn renew_microsoft_session(conn: &Connection, id: AccountId) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET microsoft_session = hex(randomblob(16)) WHERE id = ?1",
+        [id],
+    )?;
+    Ok(())
+}
+
+/// Gives an older account a session identity once, shared by its mailboxes.
+pub fn ensure_microsoft_session(conn: &Connection, id: AccountId) -> Result<String> {
+    conn.execute("UPDATE accounts SET microsoft_session = hex(randomblob(16)) WHERE id = ?1 AND microsoft_session IS NULL", [id])?;
+    Ok(conn.query_row(
+        "SELECT microsoft_session FROM accounts WHERE id = ?1",
+        [id],
+        |r| r.get(0),
+    )?)
+}
+
+pub fn shared_microsoft_mailboxes(conn: &Connection, owner: AccountId) -> Result<Vec<AccountId>> {
+    let mut query = conn.prepare(
+        "SELECT account_id FROM microsoft_shared WHERE owner_id = ?1 ORDER BY account_id",
+    )?;
+    Ok(query
+        .query_map([owner], |r| r.get(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Adds an independent mail store attached to a primary Microsoft account.
+/// An address already present, including another shared mailbox, is refused.
+pub fn insert_shared_microsoft(
+    conn: &Connection,
+    owner: AccountId,
+    email: &str,
+    now: EpochMillis,
+) -> Result<Option<AccountId>> {
+    let Some(parent) = account(conn, owner)? else {
+        return Ok(None);
+    };
+    if parent.provider != Provider::Microsoft
+        || microsoft_owner(conn, owner)?.is_some()
+        || account_by_microsoft_address(conn, email)?.is_some()
+    {
+        return Ok(None);
+    }
+    let Some(id) = insert_microsoft_account(conn, email, "Microsoft 365", now)? else {
+        return Ok(None);
+    };
+    conn.execute(
+        "INSERT INTO microsoft_shared (account_id, owner_id) VALUES (?1, ?2)",
+        params![id, owner],
+    )?;
+    Ok(Some(id))
 }
 
 /// Deletes the account and, through foreign keys, all of its mail.

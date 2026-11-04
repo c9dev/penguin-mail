@@ -1269,6 +1269,7 @@ pub async fn microsoft_signed_in<P: PasswordStore + 'static>(
     now: EpochMillis,
     asked: &str,
 ) -> Result<Account, MicrosoftSignInError> {
+    let _turn = secrets_turn().await;
     let NewMicrosoft {
         address,
         provider_name,
@@ -1277,10 +1278,15 @@ pub async fn microsoft_signed_in<P: PasswordStore + 'static>(
     } = new;
     let email = address.clone();
     let before = db
-        .read(move |c| accounts::account_by_email(c, &email))
+        .read(move |c| accounts::account_by_microsoft_address(c, &email))
         .await?;
     if let Some(held) = &before {
-        if held.provider != Provider::Microsoft {
+        let id = held.id;
+        let shared = db
+            .read(move |c| accounts::microsoft_owner(c, id))
+            .await?
+            .is_some();
+        if held.provider != Provider::Microsoft || shared {
             return Err(MicrosoftSignInError::Taken {
                 address,
                 provider: held.provider_name().to_string(),
@@ -1296,9 +1302,10 @@ pub async fn microsoft_signed_in<P: PasswordStore + 'static>(
             else {
                 // Another provider's account took the address between the
                 // read and this write.
-                let held = accounts::account_by_email(c, &email)?;
+                let held = accounts::account_by_microsoft_address(c, &email)?;
                 return Ok(Err(held.map(|a| a.provider_name().to_string())));
             };
+            accounts::renew_microsoft_session(c, id)?;
             if let Some(granted) = &granted {
                 accounts::set_granted(c, id, granted)?;
             }
@@ -1321,7 +1328,7 @@ pub async fn microsoft_signed_in<P: PasswordStore + 'static>(
         db.write(move |c| accounts::delete_account(c, id)).await?;
         return Err(err);
     }
-    db.read(move |c| accounts::account_by_email(c, &address))
+    db.read(move |c| accounts::account_by_microsoft_address(c, &address))
         .await?
         .ok_or(MicrosoftSignInError::Store(StoreError::Sqlite(
             rusqlite::Error::QueryReturnedNoRows,

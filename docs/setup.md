@@ -73,6 +73,29 @@ default is used. Delivery headers such as Delivered-To are not used, so
 mail received through a blind copy or forwarding may need a manual From
 choice. A reply to your own sent message can keep its original From.
 
+### Shared Microsoft 365 mailboxes
+
+In **Preferences → Accounts**, expand the Microsoft 365 account that has
+access and choose **Add Shared Mailbox**. Enter the shared mailbox's address
+and sign in as the account shown to grant shared-mail access. Penguin Mail
+checks access before adding the mailbox as a separate account in the sidebar.
+No password or separate sign-in is needed for the shared address.
+
+Your administrator must grant **Full Access** to read and manage its mail.
+Sending also requires **Send As** or **Send on Behalf** permission. Microsoft
+checks those permissions when sending. Mail sent through the shared mailbox
+is saved in its Sent Items by default, subject to your organization's policy.
+
+Shared mailboxes offer mail, folders, drafts and attachments. Their calendars,
+contacts, categories, rules and automatic replies are not included. Add each
+mailbox by address; automatic discovery and on-premises Exchange are not
+supported. Remove shared mailboxes before removing their sign-in account.
+
+Messages sent or saved as drafts in a shared mailbox must be at most 3 MB,
+including the encoded attachments. Make files smaller or send them apart to
+stay within this limit. Microsoft does not support large attachment uploads
+through delegated shared-mail access.
+
 ### Proton Mail Bridge
 
 Proton Mail needs Bridge for IMAP and SMTP. Set up its certificate before

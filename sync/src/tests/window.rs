@@ -242,6 +242,7 @@ fn outlook_sync_events(
     days: i64,
 ) -> (AccountSync, async_channel::Receiver<ChangeEvent>) {
     let settings = MicrosoftSettings {
+        shared: false,
         address: "me@outlook.com".into(),
         provider_name: "Outlook".into(),
         window_days: days,

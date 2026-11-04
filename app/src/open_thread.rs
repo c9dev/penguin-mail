@@ -463,6 +463,18 @@ impl OpenThread {
         cleaned: HashMap<String, Cleaned>,
     ) {
         for (id, body) in bodies {
+            // A delivery refresh must not replace content the engine already checked.
+            if self.marks.contains_key(&id)
+                && let Some(Ok(current)) = self.bodies.get_mut(&id)
+            {
+                if let Ok(fresh) = body
+                    && let Some(delivered_to) = &fresh.provenance.delivered_to
+                    && current.provenance.delivered_to.as_ref() != Some(delivered_to)
+                {
+                    Arc::make_mut(current).provenance.delivered_to = Some(delivered_to.clone());
+                }
+                continue;
+            }
             self.cleaned.remove(&id);
             self.bodies.insert(id, body);
         }
@@ -768,6 +780,81 @@ mod tests {
             open.answering(Some("m1"), true)
                 .is_some_and(|forward| forward.secret)
         );
+    }
+
+    #[test]
+    fn a_delayed_delivery_refresh_keeps_the_body_the_engine_opened() {
+        use mailrs_domain::{Attachment, MessageBody};
+        use std::sync::Arc;
+
+        for sealed in [false, true] {
+            for engine_first in [false, true] {
+                for refresh_fails in [false, true] {
+                    let mut open = thread(vec![message("m1", false)]);
+                    let original = MessageBody {
+                        text: Some("Original protected body".into()),
+                        html: Some("<p>Original protected body</p>".into()),
+                        ..Default::default()
+                    };
+                    open.bodies
+                        .insert("m1".into(), Ok(Arc::new(original.clone())));
+                    if !engine_first {
+                        assert_eq!(open.take_messages(&[]), ["m1"]);
+                    }
+                    let mut read = engine_read("Opened content", sealed);
+                    read.mark.title = "Signature checked".into();
+                    read.mark.tone = crate::protection::Tone::Good;
+                    let mark = read.mark.clone();
+                    let inside = read.body.as_mut().unwrap();
+                    inside.html = Some("<p>Opened content</p>".into());
+                    inside.attachments.push(Attachment {
+                        part_id: "0".into(),
+                        filename: "inside.txt".into(),
+                        mime_type: "text/plain".into(),
+                        size: 6,
+                        attachment_id: None,
+                        content_id: None,
+                    });
+                    read.files = vec![b"inside".to_vec()];
+                    open.asked.insert("m1".into());
+                    open.take_engine_answer("m1".into(), read);
+                    open.take_cleaned(open.to_clean().clean());
+                    if engine_first {
+                        assert_eq!(open.take_messages(&[]), ["m1"]);
+                    }
+
+                    let id = "m1".to_string();
+                    let mut fresh = original;
+                    fresh.provenance.delivered_to = Some(vec!["alias@example.com".into()]);
+                    let fresh = Arc::new(fresh);
+                    let cleaned = super::ToClean::of(1, [(&id, &fresh)]).clean();
+                    let result = if refresh_fails {
+                        Err("offline".into())
+                    } else {
+                        Ok(fresh)
+                    };
+                    open.take_bodies(vec![(id, result)], cleaned);
+                    open.take_cleaned(open.to_clean().clean());
+
+                    let body = open.bodies["m1"].as_ref().unwrap();
+                    assert_eq!(body.text.as_deref(), Some("Opened content"));
+                    assert_eq!(body.html.as_deref(), Some("<p>Opened content</p>"));
+                    assert_eq!(body.attachments[0].filename, "inside.txt");
+                    assert_eq!(open.opened_files["m1"], [b"inside".to_vec()]);
+                    assert_eq!(open.marks["m1"], mark);
+                    assert!(open.asked.contains("m1"));
+                    assert_eq!(open.sealed.contains("m1"), sealed);
+                    assert_eq!(
+                        body.provenance.delivered_to,
+                        (!refresh_fails).then(|| vec!["alias@example.com".into()])
+                    );
+                    assert!(open.to_clean().is_empty());
+                    let reply = open.answering(None, false).unwrap();
+                    assert_eq!(reply.text, "Opened content");
+                    assert_eq!(reply.secret, sealed);
+                }
+            }
+        }
     }
 
     #[test]
