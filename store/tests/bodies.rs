@@ -22,6 +22,7 @@ fn body(text: &str) -> MessageBody {
         calendar: Some("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n".into()),
         protection: Some(Protection::Signed),
         provenance: Provenance {
+            delivered_to: Some(vec!["list@example.com".into()]),
             mailed_by: Some("bounce.example.net".into()),
             signed_by: Some("example.net".into()),
             encrypted: Some(true),

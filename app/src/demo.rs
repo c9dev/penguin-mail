@@ -2742,6 +2742,7 @@ impl Sample {
             one_click_unsubscribe: self.one_click,
             calendar: self.invitation.as_ref().map(|invite| (invite.ics)(now)),
             provenance: Provenance {
+                delivered_to: None,
                 mailed_by: Some(sender_domain(self.from.1)),
                 signed_by: Some(sender_domain(self.from.1)),
                 encrypted: Some(!self.in_the_clear),

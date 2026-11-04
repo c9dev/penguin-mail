@@ -226,6 +226,10 @@ pub fn meta(id: &str, unread: bool) -> MessageMeta {
 pub fn body(text: &str) -> MessageBody {
     MessageBody {
         text: Some(text.to_string()),
+        provenance: mailrs_domain::Provenance {
+            delivered_to: Some(vec![]),
+            ..Default::default()
+        },
         ..MessageBody::default()
     }
 }
@@ -234,6 +238,10 @@ pub fn body(text: &str) -> MessageBody {
 pub fn html_body(html: &str) -> MessageBody {
     MessageBody {
         html: Some(html.to_string()),
+        provenance: mailrs_domain::Provenance {
+            delivered_to: Some(vec![]),
+            ..Default::default()
+        },
         ..MessageBody::default()
     }
 }

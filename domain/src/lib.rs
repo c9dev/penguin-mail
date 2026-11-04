@@ -584,6 +584,10 @@ pub struct Attachment {
 /// panel under a message shows it.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provenance {
+    /// Delivery addresses from transport headers, newest hop first within
+    /// each header kind. None means an older cache has not read them yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered_to: Option<Vec<String>>,
     /// The domain that handed the message over, from the envelope sender
     /// or from SPF.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -598,10 +602,16 @@ pub struct Provenance {
 }
 
 impl Provenance {
-    /// Whether it says anything at all. A message that answers none of
-    /// the three gets no details panel.
+    pub fn delivery_addresses(&self) -> &[String] {
+        self.delivered_to.as_deref().unwrap_or_default()
+    }
+
+    /// Whether there is no provenance or delivery-header cache state to store.
     pub fn is_empty(&self) -> bool {
-        self.mailed_by.is_none() && self.signed_by.is_none() && self.encrypted.is_none()
+        self.mailed_by.is_none()
+            && self.signed_by.is_none()
+            && self.encrypted.is_none()
+            && self.delivered_to.is_none()
     }
 }
 

@@ -2727,6 +2727,7 @@ impl MainWindow {
         let crate::open_thread::Answering {
             account_id,
             target,
+            delivered_to,
             text,
             html,
             thread,
@@ -2736,7 +2737,7 @@ impl MainWindow {
         let forwarded_html = html.clone();
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
-        let mine = app.my_addresses(account_id, &target);
+        let mine = app.my_addresses(account_id, &target, &delivered_to);
         let mut draft = compose::respond(
             kind,
             account_id,
@@ -2756,7 +2757,7 @@ impl MainWindow {
         {
             draft.use_account(outgoing, app.blank_draft(outgoing).from);
             if kind != ReplyKind::Forward {
-                let mine = app.my_addresses(outgoing, &target);
+                let mine = app.my_addresses(outgoing, &target, &delivered_to);
                 draft.to.retain(|to| {
                     !mine
                         .iter()
@@ -4607,13 +4608,8 @@ pub(super) fn read_cached_body(
 ) -> mailrs_store::Result<Option<MessageBody>> {
     // Readers cannot write, so this leaves the access time alone; the body
     // fetch that follows records the access.
-    let body = mailrs_store::bodies::peek_body(c, account_id, message_id)?;
-    // A body cached before this app read provenance has none, and nothing
-    // would ever put it there: the cache would answer for that message
-    // forever. Treating it as a miss costs one fetch, once, and fills the
-    // gap for good. A message with a body that truly says nothing about
-    // its origins is rare, and pays that fetch once as well.
-    Ok(body.filter(|body| !body.provenance.is_empty()))
+    // Keep old cached text visible while the thread run fills delivery headers.
+    mailrs_store::bodies::peek_body(c, account_id, message_id)
 }
 
 /// Whether the newest sender in `view` who is not the user is a VIP.
