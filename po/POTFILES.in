@@ -223,3 +223,4 @@ app/src/ui/assistant/files.rs
 sync/src/account/space.rs
 app/src/ui/window/trash.rs
 app/src/ui/thread_list/filters.rs
+app/src/ui/toolbar/customize.rs

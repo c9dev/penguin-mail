@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
+
 - Choose how many model requests the assistant can make per answer in Preferences → AI.
 - Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
 - Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.

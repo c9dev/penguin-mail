@@ -33,6 +33,8 @@ pub struct Settings {
     pub bold_unread: bool,
     pub bold_senders: bool,
     pub show_avatars: bool,
+    /// None keeps the default toolbar; an empty list hides all optional buttons.
+    pub toolbar: Option<Vec<crate::ui::toolbar::Slot>>,
     /// Draw messages on the CPU rather than through the GPU, for a
     /// computer whose graphics driver leaves them blank. Read once at
     /// startup, before the web engine starts.
@@ -506,6 +508,7 @@ impl Default for Settings {
             bold_unread: true,
             bold_senders: false,
             show_avatars: true,
+            toolbar: None,
             software_rendering: false,
             color_scheme: ColorScheme::System,
             language: String::new(),
@@ -1690,6 +1693,27 @@ mod tests {
         assert_eq!(settings.vips["ann@example.com"], "Ann Lee");
         assert!(!settings.toggle_vip("ANN@example.com", ""));
         assert!(settings.vips.is_empty());
+    }
+
+    #[test]
+    fn toolbar_choices_survive_restart_and_old_settings_keep_the_defaults() {
+        use crate::ui::toolbar::Slot;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        for toolbar in [
+            None,
+            Some(vec![]),
+            Some(vec![Slot::Print, Slot::Read, Slot::Source]),
+        ] {
+            let settings = Settings {
+                toolbar: toolbar.clone(),
+                ..Settings::default()
+            };
+            settings.save(&path).unwrap();
+            assert_eq!(Settings::load(&path).toolbar, toolbar);
+        }
+        std::fs::write(&path, "threading = true\n").unwrap();
+        assert_eq!(Settings::load(&path).toolbar, None);
     }
 
     #[test]

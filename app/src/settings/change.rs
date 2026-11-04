@@ -30,6 +30,7 @@ pub enum Change {
     BoldUnread(bool),
     BoldSenders(bool),
     ShowAvatars(bool),
+    Toolbar(Option<Vec<crate::ui::toolbar::Slot>>),
     SoftwareRendering(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
@@ -295,6 +296,9 @@ impl Change {
             Change::BoldUnread(on) => settings.bold_unread = on,
             Change::BoldSenders(on) => settings.bold_senders = on,
             Change::ShowAvatars(on) => settings.show_avatars = on,
+            Change::Toolbar(slots) => {
+                settings.toolbar = slots.map(|s| crate::ui::toolbar::layout(Some(&s)))
+            }
             Change::SoftwareRendering(on) => settings.software_rendering = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
@@ -670,6 +674,7 @@ settable! {
         calendar_view,
         last_calendar_account,
         folded_calendar_accounts,
+        toolbar,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -788,12 +793,13 @@ pub enum Effect {
     /// Which languages get no translation card, which the open
     /// conversation's card reads.
     Translation,
+    Toolbar,
 }
 
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 15] = [
+    pub const ALL: [Effect; 16] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -809,6 +815,7 @@ impl Effect {
         Effect::Language,
         Effect::Calendar,
         Effect::Translation,
+        Effect::Toolbar,
     ];
 }
 
@@ -889,6 +896,7 @@ impl Effects {
             bold_unread,
             bold_senders,
             show_avatars,
+            toolbar,
             software_rendering,
             color_scheme,
             language,
@@ -1052,6 +1060,7 @@ impl Effects {
                     (ai.provider, ai.model_on(ai.provider))
                         != (before.ai.provider, before.ai.model_on(before.ai.provider))
                 }
+                Effect::Toolbar => *toolbar != before.toolbar,
                 Effect::TextSize => *text_size != before.text_size,
                 Effect::Contacts => {
                     *contacts != before.contacts || *contact_accounts != before.contact_accounts
@@ -1683,6 +1692,7 @@ mod tests {
         after.language = "pt_PT".into();
         after.week_start = mailrs_domain::calendar::week::WeekStart::Monday;
         after.never_translate = vec!["pt".into()];
+        after.toolbar = Some(vec![]);
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
     }
@@ -1822,6 +1832,7 @@ mod tests {
     fn every_effect_has_a_change_that_causes_it() {
         // A window arm nothing can reach is dead code; this catches it.
         let changes = [
+            Change::Toolbar(Some(vec![])),
             Change::Threading(false),
             Change::BoldUnread(false),
             Change::AccountName {
