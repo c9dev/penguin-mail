@@ -67,7 +67,19 @@ fn is_attachment(part: &Part, path: &str) -> bool {
 }
 
 impl<G: GraphApi> Microsoft<G> {
+    fn check_shared_size(&self, raw: &[u8]) -> Result<(), BackendError> {
+        // Delegated shared mail cannot create attachment upload sessions.
+        // Refuse before making a remote draft that cannot be completed.
+        if self.settings.shared && raw.len() > MIME_LIMIT {
+            return Err(BackendError::Refused(gettext(
+                "Microsoft cannot send or save a shared mailbox message larger than 3 MB. Make the files smaller or send them apart.",
+            )));
+        }
+        Ok(())
+    }
+
     pub(super) async fn send_raw(&self, raw: &[u8]) -> Result<String, BackendError> {
+        self.check_shared_size(raw)?;
         let id = message_id_of(raw)
             .ok_or_else(|| BackendError::Refused(gettext("The message has no Message-ID.")))?;
         match raw.len() > MIME_LIMIT {
@@ -164,6 +176,7 @@ impl<G: GraphApi> Microsoft<G> {
         old: Option<&str>,
         raw: &[u8],
     ) -> Result<SavedDraft, BackendError> {
+        self.check_shared_size(raw)?;
         let made = self.graph().create_draft_mime(raw).await.map_err(backend)?;
         if let Some(old) = old {
             match self.graph().delete_message(old).await {

@@ -251,6 +251,15 @@ fn contact_control(
     withheld: Withheld,
     grant: impl Fn(AccountId) + 'static,
 ) -> gtk::Widget {
+    if app.microsoft_owner(account.id).is_some() {
+        return adw::SwitchRow::builder()
+            .title(gettext("Contacts"))
+            .subtitle(gettext("Shared mailboxes support mail only."))
+            .active(false)
+            .sensitive(false)
+            .build()
+            .upcast();
+    }
     match contacts_row(
         account,
         offers,

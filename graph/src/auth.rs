@@ -238,6 +238,7 @@ pub struct MicrosoftClient {
     client_id: String,
     authorize_url: String,
     token_url: String,
+    shared_mail: bool,
 }
 
 // By hand, so the id never reaches a log line.
@@ -260,7 +261,22 @@ impl MicrosoftClient {
             client_id: client_id.into(),
             authorize_url: AUTHORIZE_URL.into(),
             token_url: TOKEN_URL.into(),
+            shared_mail: false,
         }
+    }
+
+    /// Requests shared-mail consent for an existing organization's account.
+    pub fn with_shared_mail(mut self) -> Self {
+        self.shared_mail = true;
+        self
+    }
+
+    pub fn scopes(&self) -> String {
+        let mut scopes = SCOPES.join(" ");
+        if self.shared_mail {
+            scopes.push_str(" Mail.ReadWrite.Shared Mail.Send.Shared");
+        }
+        scopes
     }
 
     /// Points the client at other endpoints. Tests use this.
@@ -296,7 +312,7 @@ impl MicrosoftClient {
                 .append_pair("response_type", "code")
                 .append_pair("redirect_uri", redirect_uri)
                 .append_pair("response_mode", "query")
-                .append_pair("scope", &SCOPES.join(" "))
+                .append_pair("scope", &self.scopes())
                 .append_pair("state", state)
                 .append_pair("code_challenge", &pkce.challenge)
                 .append_pair("code_challenge_method", "S256")
@@ -320,17 +336,18 @@ impl MicrosoftClient {
             ("code", code),
             ("redirect_uri", redirect_uri),
             ("code_verifier", &pkce.verifier),
-            ("scope", &SCOPES.join(" ")),
+            ("scope", &self.scopes()),
         ])
         .await
     }
 
     pub async fn refresh(&self, refresh_token: &str) -> Result<Tokens, GraphError> {
+        // Omitting scope retains the original grant, including shared mail
+        // consent added after the primary account was first connected.
         self.post_token(&[
             ("grant_type", "refresh_token"),
             ("client_id", &self.client_id),
             ("refresh_token", refresh_token),
-            ("scope", &SCOPES.join(" ")),
         ])
         .await
     }

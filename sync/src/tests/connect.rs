@@ -21,6 +21,123 @@ use crate::{
 };
 use mailrs_domain::RemoveSetting;
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_late_microsoft_refresh_cannot_overwrite_a_replacement_accounts_secret_or_grant() {
+    late_microsoft_refresh(false).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn signing_in_again_retires_earlier_microsoft_refresh_callbacks() {
+    late_microsoft_refresh(true).await;
+}
+
+async fn late_microsoft_refresh(signed_in_again: bool) {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+    let (db, _dir) = store().await;
+    let owner = db
+        .write(|c| {
+            let id = accounts::insert_microsoft_account(c, "old@contoso.com", "Microsoft 365", 0)?
+                .unwrap();
+            accounts::account(c, id)
+        })
+        .await
+        .unwrap()
+        .unwrap();
+    let tokens = Arc::new(MemoryPasswords::default());
+    tokens.save(owner.id, "old-refresh").unwrap();
+    let server = MockServer::start().await;
+    let checking = Arc::new(tokio::sync::Notify::new());
+    let reached = checking.clone();
+    let (release, resumed) = std::sync::mpsc::channel();
+    let resumed = std::sync::Mutex::new(resumed);
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(move |_: &wiremock::Request| {
+            reached.notify_one();
+            resumed
+                .lock()
+                .unwrap()
+                .recv_timeout(std::time::Duration::from_secs(10))
+                .unwrap();
+            ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token":"old-access", "refresh_token":"old-rotated", "expires_in":3600,
+                "scope":"Mail.ReadWrite.Shared"
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/mailFolders"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"value":[]})))
+        .mount(&server)
+        .await;
+    let client = mailrs_graph::MicrosoftClient::new("test").with_endpoints(
+        format!("{}/authorize", server.uri()),
+        format!("{}/token", server.uri()),
+    );
+    let graph = crate::connect::microsoft_graph_within(
+        &db,
+        tokens.clone(),
+        client,
+        &owner,
+        &format!("{}/v1.0/", server.uri()),
+        std::time::Duration::from_secs(10),
+    )
+    .await
+    .unwrap();
+    let reading = tokio::spawn(async move { graph.folders(None, None).await });
+    tokio::time::timeout(std::time::Duration::from_secs(10), checking.notified())
+        .await
+        .unwrap();
+    let turn = crate::sign_in::secrets_turn().await;
+    let id = owner.id;
+    let replacement = db
+        .write(move |c| {
+            let replacement = if signed_in_again {
+                accounts::renew_microsoft_session(c, id)?;
+                id
+            } else {
+                accounts::delete_account(c, id)?;
+                let id =
+                    accounts::insert_microsoft_account(c, "new@contoso.com", "Microsoft 365", 1)?
+                        .unwrap();
+                accounts::ensure_microsoft_session(c, id)?;
+                id
+            };
+            accounts::set_granted(c, replacement, "Contacts.ReadWrite")?;
+            Ok(replacement)
+        })
+        .await
+        .unwrap();
+    assert_eq!(replacement, id);
+    tokens.save(replacement, "replacement-refresh").unwrap();
+    release.send(()).unwrap();
+    reading.await.unwrap().unwrap();
+    drop(turn);
+    // Rotation callbacks save off the HTTP task. Wait for their writes,
+    // including a wrong write from the retired session, to reach the store.
+    for _ in 0..100 {
+        if tokens.load(id).unwrap().as_deref() == Some("old-rotated") {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    assert_eq!(
+        tokens.load(id).unwrap().as_deref(),
+        Some("replacement-refresh")
+    );
+    assert_eq!(
+        db.read(move |c| accounts::consent(c, id))
+            .await
+            .unwrap()
+            .granted
+            .as_deref(),
+        Some("Contacts.ReadWrite")
+    );
+}
+
 #[tokio::test]
 async fn connecting_needs_a_stored_refresh_token() {
     let (db, _dir) = store().await;

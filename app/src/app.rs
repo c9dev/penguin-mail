@@ -84,6 +84,7 @@ pub struct App {
     /// The JMAP accounts that signed in through the browser, as
     /// `reload_accounts` last read them, so signing in again says where.
     through_browser: RefCell<HashSet<AccountId>>,
+    microsoft_owners: RefCell<HashMap<AccountId, AccountId>>,
     names: RefCell<HashMap<AccountId, String>>,
     tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
     /// The newest count for the tray, All Inboxes and each account's
@@ -195,6 +196,7 @@ impl App {
             consent: RefCell::new(HashMap::new()),
             google_sign_ins: RefCell::default(),
             through_browser: RefCell::default(),
+            microsoft_owners: RefCell::default(),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
             tray_unread: tokio::sync::watch::Sender::new((0, Vec::new())),
@@ -873,13 +875,17 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (mut loaded, order, consent, google_sign_ins, through_browser) = self
+        let (mut loaded, order, consent, google_sign_ins, through_browser, microsoft_owners) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
                 let mut order = HashMap::new();
                 let mut through_browser = HashSet::new();
+                let mut microsoft_owners = HashMap::new();
                 for account in accounts::list_accounts(c)? {
+                    if let Some(owner) = accounts::microsoft_owner(c, account.id)? {
+                        microsoft_owners.insert(account.id, owner);
+                    }
                     let account_labels = labels::list_labels(c, account.id)?;
                     order.insert(account.id, labels::positions(c, account.id)?);
                     if account.provider == Provider::Jmap
@@ -892,12 +898,20 @@ impl App {
                 }
                 let consent = accounts::all_consent(c)?;
                 let google_sign_ins = accounts::google_sign_ins(c)?;
-                Ok((out, order, consent, google_sign_ins, through_browser))
+                Ok((
+                    out,
+                    order,
+                    consent,
+                    google_sign_ins,
+                    through_browser,
+                    microsoft_owners,
+                ))
             })
             .await?;
         loaded.sort_by_key(|(account, _)| self.settings.borrow().account_rank(&account.email));
         *self.label_order.borrow_mut() = order;
         *self.through_browser.borrow_mut() = through_browser;
+        *self.microsoft_owners.borrow_mut() = microsoft_owners;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
         // A calendar account has no inbox for the tray and the Dock to count.
@@ -929,6 +943,13 @@ impl App {
     /// browser, as `reload_accounts` last read it.
     pub fn signs_in_through_browser(&self, account_id: AccountId) -> bool {
         self.through_browser.borrow().contains(&account_id)
+    }
+
+    pub fn microsoft_owner(&self, account_id: AccountId) -> Option<Account> {
+        self.microsoft_owners
+            .borrow()
+            .get(&account_id)
+            .and_then(|id| self.account(*id))
     }
 
     /// Every account's consent, as `reload_accounts` last read it: whether

@@ -8,6 +8,25 @@ use url::Url;
 const CLIENT: &str = "00000000-0000-0000-0000-000000000000";
 
 #[test]
+fn shared_mail_permissions_are_requested_only_when_adding_a_shared_mailbox() {
+    let pkce = Pkce::generate();
+    for (client, shared) in [
+        (MicrosoftClient::new(CLIENT), false),
+        (MicrosoftClient::new(CLIENT).with_shared_mail(), true),
+    ] {
+        let url = client
+            .authorize_url("http://localhost:4000", &pkce, "s", None)
+            .unwrap();
+        let url = Url::parse(&url).unwrap();
+        let scope = url.query_pairs().find(|(key, _)| key == "scope").unwrap().1;
+        let granted = Granted::parse(&scope);
+        assert_eq!(granted.has("Mail.ReadWrite.Shared"), shared);
+        assert_eq!(granted.has("Mail.Send.Shared"), shared);
+        assert!(granted.reads_mail());
+    }
+}
+
+#[test]
 fn a_build_without_a_client_id_has_no_client() {
     assert!(client_from(None).is_none());
     assert!(client_from(Some("  ")).is_none());
@@ -142,6 +161,36 @@ async fn the_loopback_answers_on_localhost() {
         "{reply}"
     );
     assert_eq!(waiting.await.unwrap().unwrap(), "c1");
+}
+
+#[tokio::test]
+async fn refreshing_keeps_the_shared_permissions_of_the_original_grant() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(|request: &wiremock::Request| {
+            let form: std::collections::HashMap<_, _> =
+                url::form_urlencoded::parse(&request.body).collect();
+            assert!(
+                !form.contains_key("scope"),
+                "refresh must not narrow an existing shared-mail grant"
+            );
+            ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token": "a", "expires_in": 3600,
+                "scope": "Mail.ReadWrite Mail.ReadWrite.Shared Mail.Send.Shared"
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = MicrosoftClient::new(CLIENT).with_endpoints(
+        format!("{}/authorize", server.uri()),
+        format!("{}/token", server.uri()),
+    );
+    let tokens = client.refresh("r").await.unwrap();
+    assert!(tokens.access.granted.unwrap().has("Mail.ReadWrite.Shared"));
 }
 
 #[tokio::test]

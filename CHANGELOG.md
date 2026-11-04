@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Add a shared Microsoft 365 mailbox by address in Accounts preferences, using an existing account's sign-in.
 - Choose how many model requests the assistant can make per answer in Preferences → AI.
 - Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
 - Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.

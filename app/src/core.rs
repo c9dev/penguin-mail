@@ -982,6 +982,7 @@ impl Core {
                     _ = cancel.recv() => bail!(gettext("Canceled.")),
                 };
                 let signed = waited.map_err(|_| BrowserTimedOut)??;
+                let signed_id = signed.account.id;
                 match signed.services {
                     mailrs_sync::Connected::Ready(services) => {
                         engine.start_account(signed.account.id, services)
@@ -997,6 +998,23 @@ impl Core {
                 // The sign-in may have granted the calendar permission, so the
                 // copy stops waiting out an earlier refusal.
                 calendar_copy.permission_changed(signed.account.id);
+                // Shared mailboxes keep sessions from before this consent.
+                // Restart them with the owner's newly saved grant.
+                let attached = db
+                    .read(move |c| {
+                        accounts::shared_microsoft_mailboxes(c, signed_id)?
+                            .into_iter()
+                            .map(|id| accounts::account(c, id))
+                            .collect::<mailrs_store::Result<Vec<_>>>()
+                    })
+                    .await?;
+                for account in attached.into_iter().flatten() {
+                    if let mailrs_sync::Connected::Ready(services) =
+                        connector.connect(&account).await?
+                    {
+                        start_shared_mailbox(&db, &engine, &account, signed_id, services).await?;
+                    }
+                }
                 Ok::<_, anyhow::Error>((signed.account, signed.name))
             })
             .await?;
@@ -1615,29 +1633,92 @@ impl Core {
         )
     }
 
+    /// Checks access and starts a shared mailbox without keeping another token.
+    pub async fn add_shared_mailbox(&self, owner: AccountId, address: String) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("Demo mode cannot add real accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let connector = self.connector();
+        let events = self.events_tx.clone();
+        self.call(async move {
+            let client = connector
+                .clients
+                .microsoft
+                .ok_or(BrowserSignInError::NoClient(Browser::Microsoft))?;
+            let (account, services) = mailrs_sync::shared_mailbox::add(
+                &connector.db,
+                connector.secrets.microsoft,
+                client,
+                owner,
+                address,
+                now_millis(),
+                connector.config.engine_config().window_days,
+            )
+            .await?;
+            if !start_shared_mailbox(&connector.db, &engine, &account, owner, services).await? {
+                bail!(gettext("Canceled."));
+            }
+            let _ = events
+                .send(ChangeEvent::LabelsChanged {
+                    account_id: account.id,
+                })
+                .await;
+            Ok::<_, anyhow::Error>(account)
+        })
+        .await
+    }
+
     /// Stops syncing an account and deletes its local mail and what signs
     /// it in: a Google or Microsoft account's refresh token, an IMAP account's
     /// password.
     pub async fn remove_account(&self, account: Account) -> Result<()> {
-        if let Some(engine) = self.engine.current() {
-            engine.stop_account(account.id);
-        }
-        // Nothing is left to reverse the account's actions through, and
-        // its mail goes with it.
-        self.actions.forget_account(account.id);
-        self.calendar_copy.forget(account.id);
         let (db, secrets, demo) = (self.db.clone(), self.secrets.clone(), self.demo);
+        let (engine, actions, calendar_copy) = (
+            Arc::clone(&self.engine),
+            Arc::clone(&self.actions),
+            Arc::clone(&self.calendar_copy),
+        );
         self.call(async move {
+            // Attachment and secret writes take the same turn as removal.
+            // Keep it in this task if the window stops awaiting its answer.
+            let _turn = mailrs_sync::sign_in::secrets_turn().await;
             let id = account.id;
-            // Read while the account's row is still there.
+            let expected = account.clone();
+            let (current, attached) = db
+                .read(move |c| {
+                    let current = accounts::account(c, id)?.is_some_and(|a| {
+                        a.email.eq_ignore_ascii_case(&expected.email)
+                            && a.provider == expected.provider
+                    });
+                    Ok((
+                        current,
+                        !accounts::shared_microsoft_mailboxes(c, id)?.is_empty(),
+                    ))
+                })
+                .await?;
+            if !current {
+                bail!(gettext("Canceled."));
+            }
+            if attached {
+                bail!(gettext(
+                    "Remove this account's shared mailboxes before removing its sign-in account."
+                ));
+            }
+            if let Some(engine) = engine.current() {
+                engine.stop_account(id);
+            }
+            // Nothing is left to reverse the account's actions through, and
+            // its mail goes with it.
+            actions.forget_account(id);
+            calendar_copy.forget(id);
             let grant = match demo {
                 true => None,
                 false => mailrs_sync::jmap_grant(&db, &account).await,
             };
-            // A calendar sign-in writing this account's password finishes
-            // first: once the row goes, the next account added may take
-            // its id, and must not find this one's password under it.
-            let _turn = mailrs_sync::sign_in::secrets_turn().await;
             db.write(move |c| accounts::delete_account(c, id)).await?;
             // Only now that the row is gone: retiring the session stops it
             // saving, and the token it answers is the one to revoke.
@@ -1656,6 +1737,34 @@ impl Core {
         })
         .await
     }
+}
+
+/// Starts services prepared for an attached mailbox after a network wait.
+async fn start_shared_mailbox(
+    db: &Db,
+    engine: &SyncEngine,
+    account: &Account,
+    owner: AccountId,
+    services: AccountServices,
+) -> Result<bool> {
+    let _turn = mailrs_sync::sign_in::secrets_turn().await;
+    let expected = account.clone();
+    let id = account.id;
+    let current = db
+        .write(move |c| {
+            let current = accounts::account(c, id)?.is_some_and(|a| {
+                a.email.eq_ignore_ascii_case(&expected.email) && a.provider == Provider::Microsoft
+            }) && accounts::microsoft_owner(c, id)? == Some(owner);
+            if current {
+                accounts::set_state(c, id, AccountState::Ok)?;
+            }
+            Ok(current)
+        })
+        .await?;
+    if current {
+        engine.start_account(id, services);
+    }
+    Ok(current)
 }
 
 /// The IMAP accounts in `accounts` not looked at yet this run, each noted
@@ -2261,6 +2370,206 @@ mod tests {
     /// tests hold this for as long as a core lives and the run keeps one
     /// in memory at a time.
     static DEMO: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn attaching_a_shared_mailbox_while_removal_waits_keeps_its_owner_running() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).unwrap();
+        let engine = core.engine.current().unwrap();
+        core.runtime.block_on(async {
+            let owner = core
+                .db
+                .write(|c| {
+                    let id = accounts::insert_microsoft_account(
+                        c,
+                        "owner@contoso.com",
+                        "Microsoft 365",
+                        0,
+                    )?
+                    .unwrap();
+                    Ok(accounts::account(c, id)?.unwrap())
+                })
+                .await
+                .unwrap();
+            engine.start_account(
+                owner.id,
+                mailrs_sync::AccountServices::fake_microsoft(Arc::new(
+                    mailrs_sync::fake::FakeGraph::default(),
+                )),
+            );
+            let turn = mailrs_sync::sign_in::secrets_turn().await;
+            let removal = core.remove_account(owner.clone());
+            tokio::pin!(removal);
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_millis(100), &mut removal)
+                    .await
+                    .is_err()
+            );
+            assert!(
+                engine.account(owner.id).is_ok(),
+                "removal must wait before stopping the owner"
+            );
+            core.db
+                .write(move |c| {
+                    accounts::insert_shared_microsoft(c, owner.id, "sales@contoso.com", 0)
+                })
+                .await
+                .unwrap()
+                .unwrap();
+            drop(turn);
+            assert!(removal.await.is_err());
+            assert!(
+                engine.account(owner.id).is_ok(),
+                "a refused removal must keep the owner running"
+            );
+        });
+    }
+
+    #[tokio::test]
+    async fn prepared_shared_services_cannot_replace_a_reused_mailbox_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = mailrs_store::Db::open(&dir.path().join("mail.db")).unwrap();
+        let (owner, shared) = db
+            .write(|c| {
+                let owner =
+                    accounts::insert_microsoft_account(c, "owner@contoso.com", "Microsoft 365", 0)?
+                        .unwrap();
+                let shared =
+                    accounts::insert_shared_microsoft(c, owner, "sales@contoso.com", 0)?.unwrap();
+                Ok((owner, accounts::account(c, shared)?.unwrap()))
+            })
+            .await
+            .unwrap();
+        let old_id = shared.id;
+        let replacement = db
+            .write(move |c| {
+                accounts::delete_account(c, old_id)?;
+                accounts::insert_microsoft_account(c, "replacement@contoso.com", "Microsoft 365", 0)
+            })
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(replacement, old_id);
+        let (engine, _) = mailrs_sync::SyncEngine::new(db.clone(), Default::default());
+        engine.set_network(false);
+        engine.start_account(
+            replacement,
+            mailrs_sync::AccountServices::fake_microsoft(Arc::new(
+                mailrs_sync::fake::FakeGraph::default(),
+            )),
+        );
+        let before = engine.account(replacement).unwrap();
+        super::start_shared_mailbox(
+            &db,
+            &engine,
+            &shared,
+            owner,
+            mailrs_sync::AccountServices::fake_microsoft(Arc::new(
+                mailrs_sync::fake::FakeGraph::default(),
+            )),
+        )
+        .await
+        .unwrap();
+        assert!(
+            Arc::ptr_eq(&before, &engine.account(replacement).unwrap()),
+            "prepared services must not replace another account's engine"
+        );
+    }
+
+    #[tokio::test]
+    async fn prepared_shared_services_require_the_original_owner_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = mailrs_store::Db::open(&dir.path().join("mail.db")).unwrap();
+        let (owner, other, shared) = db
+            .write(|c| {
+                let owner =
+                    accounts::insert_microsoft_account(c, "owner@contoso.com", "Microsoft 365", 0)?
+                        .unwrap();
+                let other =
+                    accounts::insert_microsoft_account(c, "other@contoso.com", "Microsoft 365", 0)?
+                        .unwrap();
+                let shared =
+                    accounts::insert_shared_microsoft(c, owner, "sales@contoso.com", 0)?.unwrap();
+                accounts::set_state(c, shared, mailrs_domain::AccountState::NeedsReauth)?;
+                Ok((owner, other, accounts::account(c, shared)?.unwrap()))
+            })
+            .await
+            .unwrap();
+        let (engine, _) = mailrs_sync::SyncEngine::new(db.clone(), Default::default());
+        engine.set_network(false);
+        let id = shared.id;
+        db.write(move |c| {
+            c.execute(
+                "UPDATE microsoft_shared SET owner_id = ?1 WHERE account_id = ?2",
+                [other, id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert!(
+            !super::start_shared_mailbox(
+                &db,
+                &engine,
+                &shared,
+                owner,
+                mailrs_sync::AccountServices::fake_microsoft(Arc::new(
+                    mailrs_sync::fake::FakeGraph::default()
+                ))
+            )
+            .await
+            .unwrap()
+        );
+        assert!(engine.account(id).is_err());
+        assert_eq!(
+            db.read(move |c| accounts::account(c, id))
+                .await
+                .unwrap()
+                .unwrap()
+                .state,
+            mailrs_domain::AccountState::NeedsReauth
+        );
+        assert!(
+            super::start_shared_mailbox(
+                &db,
+                &engine,
+                &shared,
+                other,
+                mailrs_sync::AccountServices::fake_microsoft(Arc::new(
+                    mailrs_sync::fake::FakeGraph::default()
+                ))
+            )
+            .await
+            .unwrap()
+        );
+        assert!(engine.account(id).is_ok());
+        assert_eq!(
+            db.read(move |c| accounts::account(c, id))
+                .await
+                .unwrap()
+                .unwrap()
+                .state,
+            mailrs_domain::AccountState::Ok
+        );
+        engine.stop_account(id);
+        db.write(move |c| accounts::delete_account(c, id))
+            .await
+            .unwrap();
+        assert!(
+            !super::start_shared_mailbox(
+                &db,
+                &engine,
+                &shared,
+                other,
+                mailrs_sync::AccountServices::fake_microsoft(Arc::new(
+                    mailrs_sync::fake::FakeGraph::default()
+                ))
+            )
+            .await
+            .unwrap()
+        );
+        assert!(engine.account(id).is_err());
+    }
 
     #[test]
     fn an_account_call_keeps_its_provider_and_original_error() {
