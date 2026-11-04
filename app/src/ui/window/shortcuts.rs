@@ -743,6 +743,7 @@ const MAIL_ONLY: &[&str] = &[
 pub(super) fn route(space: Space, name: &str) -> Route {
     match space {
         Space::Mail => Route::Run,
+        Space::Calendar if name == "customize-toolbar" => Route::Run,
         Space::Calendar if matches!(name, "find" | "search") => Route::Calendar,
         Space::Calendar
             if MAIL_ONLY.contains(&name) || VIEW_ACTIONS.iter().any(|(n, _)| *n == name) =>
@@ -892,6 +893,11 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
 /// What a conversation's keys and menus reach, in the main window and in a
 /// window of its own alike.
 pub(super) static VIEW_ACTIONS: &[(&str, ViewRun)] = &[
+    ("customize-toolbar", |win, view| {
+        if let Some(app) = win.app.upgrade() {
+            crate::ui::toolbar::customize::present(&app, &view.page);
+        }
+    }),
     ("reply", |win, view| win.reply(view, ReplyKind::Reply)),
     ("reply-all", |win, view| {
         win.reply(view, ReplyKind::ReplyAll)
@@ -1393,10 +1399,11 @@ mod tests {
     }
 
     #[test]
-    fn every_view_action_but_find_stops_in_the_calendar() {
+    fn only_reading_and_mail_actions_stop_in_the_calendar() {
         for (name, _) in VIEW_ACTIONS {
             let expected = match *name {
                 "find" => Route::Calendar,
+                "customize-toolbar" => Route::Run,
                 _ => Route::Skip,
             };
             assert_eq!(route(Space::Calendar, name), expected, "{name}");

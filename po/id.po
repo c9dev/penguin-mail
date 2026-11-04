@@ -2650,14 +2650,15 @@ msgstr "Penguin Mail Tidak Dapat Dimulai"
 msgid "Report a Problem"
 msgstr "Laporkan Masalah"
 
-#: app/src/notify.rs:61 app/src/ui/conversation.rs:459
-#: app/src/ui/conversation.rs:615 app/src/ui/conversation.rs:1146
-#: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
+#: app/src/notify.rs:61 app/src/ui/conversation.rs:467
+#: app/src/ui/conversation.rs:625 app/src/ui/conversation.rs:1124
+#: app/src/ui/toolbar/customize.rs:20 app/src/ui/window/message_menu.rs:132
+#: app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Arsipkan"
 
-#: app/src/notify.rs:62 app/src/ui/conversation.rs:460
-#: app/src/ui/conversation.rs:1190 app/src/ui/preferences.rs:185
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:468
+#: app/src/ui/conversation.rs:1168 app/src/ui/preferences.rs:185
 #: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "Tandai Sudah Dibaca"
@@ -2665,16 +2666,16 @@ msgstr "Tandai Sudah Dibaca"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/conversation.rs:601 app/src/ui/hide_my_email.rs:574
+#: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:108
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "Hapus"
 
-#: app/src/notify.rs:64 app/src/ui/conversation.rs:265
-#: app/src/ui/conversation.rs:609 app/src/ui/window/message_menu.rs:129
-#: app/src/ui/window/shortcuts.rs:475
+#: app/src/notify.rs:64 app/src/ui/conversation.rs:269
+#: app/src/ui/conversation.rs:619 app/src/ui/toolbar/customize.rs:16
+#: app/src/ui/window/message_menu.rs:129 app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Balas"
 
@@ -4157,8 +4158,8 @@ msgstr "Akun tersebut tidak terhubung."
 msgid "Could not save: {reason}"
 msgstr "Tidak dapat menyimpan: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2927
-#: app/src/ui/window.rs:2950
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2928
+#: app/src/ui/window.rs:2951
 msgid "Could not open the draft: {reason}"
 msgstr "Tidak dapat membuka draf: {reason}"
 
@@ -4212,8 +4213,9 @@ msgstr "Pesan ini tidak dapat dimuat: {reason}"
 msgid "This message could not be displayed"
 msgstr "Pesan ini tidak dapat ditampilkan"
 
-#: app/src/render.rs:433 app/src/ui/conversation.rs:271
-#: app/src/ui/conversation.rs:642
+#: app/src/render.rs:433 app/src/ui/conversation.rs:275
+#: app/src/ui/conversation.rs:546 app/src/ui/conversation.rs:652
+#: app/src/ui/toolbar/customize.rs:28
 msgid "View Source"
 msgstr "Lihat Sumber"
 
@@ -4285,7 +4287,7 @@ msgstr "Lihat Sekilas"
 
 #: app/src/render.rs:629 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
-#: app/src/ui/window/detached.rs:302
+#: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Simpan Sebagai…"
 
@@ -4418,7 +4420,7 @@ msgid "Set up a different project"
 msgstr "Siapkan proyek lain"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3280
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3281
 msgid "Set up your own Google project"
 msgstr "Siapkan proyek Google Anda sendiri"
 
@@ -4484,7 +4486,7 @@ msgstr "Lebih kecil dari {size}"
 msgid "Larger than {size}"
 msgstr "Lebih besar dari {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:913
+#: app/src/rules.rs:251 app/src/settings/mod.rs:916
 msgid "All mail"
 msgstr "Semua email"
 
@@ -4582,221 +4584,221 @@ msgstr "Di komputer ini, selama Penguin Mail terbuka"
 msgid "On the server"
 msgstr "Di server"
 
-#: app/src/settings/mod.rs:217 app/src/settings/mod.rs:426
-#: app/src/settings/mod.rs:825 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:219 app/src/settings/mod.rs:428
+#: app/src/settings/mod.rs:828 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1077
 msgid "Off"
 msgstr "Nonaktif"
 
-#: app/src/settings/mod.rs:218
+#: app/src/settings/mod.rs:220
 msgid "Local Server"
 msgstr "Server Lokal"
 
-#: app/src/settings/mod.rs:219
+#: app/src/settings/mod.rs:221
 msgid "Anthropic API"
 msgstr "API Anthropic"
 
-#: app/src/settings/mod.rs:220
+#: app/src/settings/mod.rs:222
 msgid "Claude Subscription"
 msgstr "Langganan Claude"
 
-#: app/src/settings/mod.rs:245 app/src/ui/window.rs:3653
-#: app/src/ui/window.rs:3733
+#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3654
+#: app/src/ui/window.rs:3738
 msgid "Assistant"
 msgstr "Asisten"
 
-#: app/src/settings/mod.rs:246 app/src/ui/preferences.rs:224
+#: app/src/settings/mod.rs:248 app/src/ui/preferences.rs:224
 msgid "Translation"
 msgstr "Penerjemahan"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:250
+#: app/src/settings/mod.rs:252
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Berhenti Berlangganan"
 
-#: app/src/settings/mod.rs:256
+#: app/src/settings/mod.rs:258
 msgid "Answers questions and acts on your mail"
 msgstr "Menjawab pertanyaan dan melakukan tindakan pada email Anda"
 
-#: app/src/settings/mod.rs:257
+#: app/src/settings/mod.rs:259
 msgid "Translates a message when you ask"
 msgstr "Menerjemahkan pesan saat Anda meminta"
 
-#: app/src/settings/mod.rs:259
+#: app/src/settings/mod.rs:261
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Membaca halaman berhenti berlangganan nawala jika aturan tidak dapat "
 "melakukannya"
 
-#: app/src/settings/mod.rs:297
+#: app/src/settings/mod.rs:299
 msgid "Same as the Assistant"
 msgstr "Sama dengan Asisten"
 
-#: app/src/settings/mod.rs:427
+#: app/src/settings/mod.rs:429
 msgid "Claude's own only"
 msgstr "Hanya milik Claude"
 
-#: app/src/settings/mod.rs:428
+#: app/src/settings/mod.rs:430
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:429
+#: app/src/settings/mod.rs:431
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:430
+#: app/src/settings/mod.rs:432
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:603
+#: app/src/settings/mod.rs:606
 msgid "Rich text"
 msgstr "Teks berformat"
 
-#: app/src/settings/mod.rs:604
+#: app/src/settings/mod.rs:607
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:623 app/src/settings/mod.rs:645
+#: app/src/settings/mod.rs:626 app/src/settings/mod.rs:648
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Otomatis"
 
-#: app/src/settings/mod.rs:624 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:627 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "Senin"
 
-#: app/src/settings/mod.rs:625 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:628 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "Minggu"
 
-#: app/src/settings/mod.rs:646
+#: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
 msgstr ""
 
-#: app/src/settings/mod.rs:647
+#: app/src/settings/mod.rs:650
 msgid "24-hour"
 msgstr ""
 
-#: app/src/settings/mod.rs:685
+#: app/src/settings/mod.rs:688
 msgid "When opened"
 msgstr "Saat dibuka"
 
-#: app/src/settings/mod.rs:686
+#: app/src/settings/mod.rs:689
 msgid "After 2 seconds"
 msgstr "Setelah 2 detik"
 
-#: app/src/settings/mod.rs:687
+#: app/src/settings/mod.rs:690
 msgid "Only when I choose"
 msgstr "Hanya saat saya memilih"
 
-#: app/src/settings/mod.rs:703 app/src/settings/mod.rs:721
+#: app/src/settings/mod.rs:706 app/src/settings/mod.rs:724
 msgid "Ask each time"
 msgstr "Tanyakan setiap kali"
 
-#: app/src/settings/mod.rs:704
+#: app/src/settings/mod.rs:707
 msgid "Always load"
 msgstr "Selalu muat"
 
-#: app/src/settings/mod.rs:722
+#: app/src/settings/mod.rs:725
 msgid "Never ask"
 msgstr "Jangan tanya"
 
-#: app/src/settings/mod.rs:749
+#: app/src/settings/mod.rs:752
 msgid "No Preview"
 msgstr "Tanpa Pratinjau"
 
-#: app/src/settings/mod.rs:750
+#: app/src/settings/mod.rs:753
 msgid "1 Line"
 msgstr "1 Baris"
 
-#: app/src/settings/mod.rs:751
+#: app/src/settings/mod.rs:754
 msgid "2 Lines"
 msgstr "2 Baris"
 
-#: app/src/settings/mod.rs:785
+#: app/src/settings/mod.rs:788
 msgid "Small"
 msgstr "Kecil"
 
-#: app/src/settings/mod.rs:786
+#: app/src/settings/mod.rs:789
 msgid "Default"
 msgstr "Bawaan"
 
-#: app/src/settings/mod.rs:787
+#: app/src/settings/mod.rs:790
 msgid "Large"
 msgstr "Besar"
 
-#: app/src/settings/mod.rs:788
+#: app/src/settings/mod.rs:791
 msgid "Larger"
 msgstr "Lebih besar"
 
-#: app/src/settings/mod.rs:826
+#: app/src/settings/mod.rs:829
 msgid "5 seconds"
 msgstr "5 detik"
 
-#: app/src/settings/mod.rs:827
+#: app/src/settings/mod.rs:830
 msgid "10 seconds"
 msgstr "10 detik"
 
-#: app/src/settings/mod.rs:828
+#: app/src/settings/mod.rs:831
 msgid "20 seconds"
 msgstr "20 detik"
 
-#: app/src/settings/mod.rs:829
+#: app/src/settings/mod.rs:832
 msgid "30 seconds"
 msgstr "30 detik"
 
-#: app/src/settings/mod.rs:846
+#: app/src/settings/mod.rs:849
 msgid "Follow system"
 msgstr "Ikuti sistem"
 
-#: app/src/settings/mod.rs:847
+#: app/src/settings/mod.rs:850
 msgid "Light"
 msgstr "Terang"
 
-#: app/src/settings/mod.rs:848
+#: app/src/settings/mod.rs:851
 msgid "Dark"
 msgstr "Gelap"
 
-#: app/src/settings/mod.rs:882
+#: app/src/settings/mod.rs:885
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Setiap {count} detik"
 msgstr[1] "Setiap {count} detik"
 
-#: app/src/settings/mod.rs:890
+#: app/src/settings/mod.rs:893
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Setiap {count} menit"
 msgstr[1] "Setiap {count} menit"
 
-#: app/src/settings/mod.rs:907
+#: app/src/settings/mod.rs:910
 msgid "2 weeks"
 msgstr "2 minggu"
 
-#: app/src/settings/mod.rs:908
+#: app/src/settings/mod.rs:911
 msgid "30 days"
 msgstr "30 hari"
 
-#: app/src/settings/mod.rs:909
+#: app/src/settings/mod.rs:912
 msgid "90 days"
 msgstr "90 hari"
 
-#: app/src/settings/mod.rs:910
+#: app/src/settings/mod.rs:913
 msgid "1 year"
 msgstr "1 tahun"
 
-#: app/src/settings/mod.rs:911
+#: app/src/settings/mod.rs:914
 msgid "2 years"
 msgstr "2 tahun"
 
-#: app/src/settings/mod.rs:912
+#: app/src/settings/mod.rs:915
 msgid "5 years"
 msgstr "5 tahun"
 
-#: app/src/settings/mod.rs:934
+#: app/src/settings/mod.rs:937
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4804,20 +4806,20 @@ msgstr ""
 "Semua pesan tetap di komputer ini. Akun besar memerlukan banyak ruang disk "
 "dan memori, dan email lamanya diunduh di latar belakang."
 
-#: app/src/settings/mod.rs:936
+#: app/src/settings/mod.rs:939
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Semua isi kotak masuk juga tetap disimpan, dan email lama tetap dapat dicari"
 
-#: app/src/settings/mod.rs:943
+#: app/src/settings/mod.rs:946
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:944
+#: app/src/settings/mod.rs:947
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:945
+#: app/src/settings/mod.rs:948
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5005,7 +5007,7 @@ msgstr "Buka Penguin Mail"
 msgid "New Message"
 msgstr "Pesan Baru"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2048 app/src/ui/window.rs:3659
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2048 app/src/ui/window.rs:3660
 msgid "Check for Mail"
 msgstr "Periksa Email"
 
@@ -5023,7 +5025,7 @@ msgstr "Yang Baru di {version}"
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3672
+#: app/src/tray.rs:266 app/src/ui/window.rs:3677
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Keluar"
@@ -5044,7 +5046,7 @@ msgstr "Yang Baru"
 msgid "Website"
 msgstr "Situs Web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3671
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3676
 msgid "Donate"
 msgstr "Donasi"
 
@@ -5052,7 +5054,7 @@ msgstr "Donasi"
 msgid "License"
 msgstr "Lisensi"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3670
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3675
 msgid "About Penguin Mail"
 msgstr "Tentang Penguin Mail"
 
@@ -5101,12 +5103,12 @@ msgid "The update to {version} failed"
 msgstr "Pembaruan ke {version} gagal"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1556
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1557
 msgid "Copy Command"
 msgstr "Salin Perintah"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1561
+#: app/src/ui/window.rs:1562
 msgid "Command copied"
 msgstr "Perintah disalin"
 
@@ -5216,7 +5218,7 @@ msgstr "Batal"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1500
+#: app/src/ui/window.rs:1501
 msgid "Sign In"
 msgstr "Masuk"
 
@@ -5339,7 +5341,7 @@ msgstr "Nanti Saja"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1633
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1634
 msgid "Grant Access"
 msgstr "Berikan Akses"
 
@@ -5488,7 +5490,7 @@ msgid "Sign In Again"
 msgstr "Masuk Lagi"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2235
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2236
 msgid "Open Google Cloud"
 msgstr "Buka Google Cloud"
 
@@ -5578,13 +5580,13 @@ msgstr "Buat draf balasan untuk percakapan yang terbuka"
 msgid "Choose a Model"
 msgstr "Pilih Model"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3780
-#: app/src/ui/window.rs:3781
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3785
+#: app/src/ui/window.rs:3786
 msgid "Detach"
 msgstr "Pisahkan"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4454
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4464
 msgid "Close"
 msgstr "Tutup"
 
@@ -5807,7 +5809,7 @@ msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3423
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3424
 msgid "Remove"
 msgstr "Hapus"
 
@@ -6034,8 +6036,8 @@ msgstr "Obrolan Asisten"
 msgid "Email Translations"
 msgstr "Terjemahan Email"
 
-#: app/src/ui/assistant_prefs.rs:223 app/src/ui/conversation.rs:747
-#: app/src/ui/window/detached.rs:69
+#: app/src/ui/assistant_prefs.rs:223 app/src/ui/conversation.rs:721
+#: app/src/ui/window/detached.rs:70
 msgid "Conversation"
 msgstr "Percakapan"
 
@@ -6464,8 +6466,8 @@ msgstr "Baru dan yang sudah ada"
 
 #: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:589
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
-#: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:74
-#: app/src/ui/window/loose.rs:156
+#: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
+#: app/src/ui/window/loose.rs:158
 msgid "Message"
 msgstr "Pesan"
 
@@ -7041,7 +7043,7 @@ msgstr ""
 "Kalender ini dihapus dari daftar kalender Google Calendar di semua "
 "perangkat. Anda dapat berlangganan lagi nanti."
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:448
+#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:456
 #: app/src/ui/unsubscribe.rs:143
 msgid "Unsubscribe"
 msgstr "Berhenti Berlangganan"
@@ -7139,7 +7141,7 @@ msgid "Show Calendars"
 msgstr "Tampilkan Kalender"
 
 #: app/src/ui/calendar/mod.rs:400 app/src/ui/calendar/mod.rs:404
-#: app/src/ui/conversation.rs:589 app/src/ui/conversation.rs:593
+#: app/src/ui/conversation.rs:599 app/src/ui/conversation.rs:603
 msgid "Assistant (Ctrl+J)"
 msgstr "Asisten (Ctrl+J)"
 
@@ -7576,7 +7578,7 @@ msgstr "Ganti Nama…"
 msgid "Delete…"
 msgstr "Hapus…"
 
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:647
+#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:661
 msgid "Unsubscribe…"
 msgstr "Berhenti Berlangganan…"
 
@@ -7805,7 +7807,7 @@ msgstr "Enkripsi"
 msgid "Request Read Receipt"
 msgstr "Minta Konfirmasi Baca"
 
-#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1826
+#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1804
 msgid "Choose a Time…"
 msgstr "Pilih Waktu…"
 
@@ -8262,7 +8264,7 @@ msgstr "Gunakan {host} untuk {account}"
 msgid "Find Again"
 msgstr "Cari Lagi"
 
-#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:599
+#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1673
 msgid "Edit…"
 msgstr "Edit…"
@@ -8326,222 +8328,233 @@ msgstr "Tambahkan {account} ke Akun Daring GNOME"
 msgid "Not allowed when you signed in"
 msgstr "Tidak diizinkan saat Anda masuk"
 
-#: app/src/ui/conversation.rs:266 app/src/ui/conversation.rs:610
-#: app/src/ui/window/message_menu.rs:130
+#: app/src/ui/conversation.rs:270 app/src/ui/conversation.rs:620
+#: app/src/ui/toolbar/customize.rs:17 app/src/ui/window/message_menu.rs:130
 msgid "Reply All"
 msgstr "Balas Semua"
 
-#: app/src/ui/conversation.rs:267 app/src/ui/conversation.rs:611
-#: app/src/ui/window/message_menu.rs:131 app/src/ui/window/shortcuts.rs:488
+#: app/src/ui/conversation.rs:271 app/src/ui/conversation.rs:621
+#: app/src/ui/toolbar/customize.rs:18 app/src/ui/window/message_menu.rs:131
+#: app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "Teruskan"
 
-#: app/src/ui/conversation.rs:270 app/src/ui/conversation.rs:641
+#: app/src/ui/conversation.rs:274 app/src/ui/conversation.rs:545
+#: app/src/ui/conversation.rs:651 app/src/ui/toolbar/customize.rs:27
 msgid "Print…"
 msgstr "Cetak…"
 
-#: app/src/ui/conversation.rs:272 app/src/ui/conversation.rs:643
+#: app/src/ui/conversation.rs:276 app/src/ui/conversation.rs:653
 #: app/src/ui/window/message_menu.rs:143
 msgid "Export…"
 msgstr "Ekspor…"
 
-#: app/src/ui/conversation.rs:276 app/src/ui/conversation.rs:649
+#: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
+#: app/src/ui/window.rs:3670
+#, fuzzy
+#| msgid "Custom…"
+msgid "Customize Toolbar…"
+msgstr "Khusus…"
+
+#: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
 msgstr "Selalu Muat Gambar…"
 
-#: app/src/ui/conversation.rs:436
+#: app/src/ui/conversation.rs:444
 msgid "No Conversation Selected"
 msgstr "Tidak Ada Percakapan Dipilih"
 
-#: app/src/ui/conversation.rs:442
+#: app/src/ui/conversation.rs:450
 msgid "Remote images are hidden to protect your privacy"
 msgstr "Gambar jarak jauh disembunyikan untuk melindungi privasi Anda"
 
-#: app/src/ui/conversation.rs:443 app/src/ui/window/images.rs:88
+#: app/src/ui/conversation.rs:451 app/src/ui/window/images.rs:88
 msgid "Load Images"
 msgstr "Muat Gambar"
 
-#: app/src/ui/conversation.rs:447
+#: app/src/ui/conversation.rs:455
 msgid "This message is from a mailing list"
 msgstr "Pesan ini berasal dari milis"
 
-#: app/src/ui/conversation.rs:461 app/src/ui/conversation.rs:1197
-#: app/src/ui/window/message_menu.rs:137
+#: app/src/ui/conversation.rs:469 app/src/ui/conversation.rs:1175
+#: app/src/ui/toolbar/customize.rs:24 app/src/ui/window/message_menu.rs:137
 msgid "Flag"
 msgstr "Beri Bendera"
 
-#: app/src/ui/conversation.rs:462 app/src/ui/conversation.rs:625
-#: app/src/ui/conversation.rs:963 app/src/ui/conversation.rs:1202
+#: app/src/ui/conversation.rs:470 app/src/ui/conversation.rs:635
+#: app/src/ui/conversation.rs:941 app/src/ui/conversation.rs:1180
 msgid "Mute"
 msgstr "Bisukan"
 
-#: app/src/ui/conversation.rs:464 app/src/ui/conversation.rs:616
-#: app/src/ui/conversation.rs:1134 app/src/ui/window/message_menu.rs:133
+#: app/src/ui/conversation.rs:472 app/src/ui/conversation.rs:626
+#: app/src/ui/conversation.rs:1112 app/src/ui/toolbar/customize.rs:21
+#: app/src/ui/window/message_menu.rs:133
 msgid "Move to Trash"
 msgstr "Pindahkan ke Sampah"
 
-#: app/src/ui/conversation.rs:491
+#: app/src/ui/conversation.rs:499
 msgid "Several Conversations Selected"
 msgstr "Beberapa Percakapan Dipilih"
 
-#: app/src/ui/conversation.rs:493
+#: app/src/ui/conversation.rs:501
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr "Tindakan dan pintasan berlaku untuk semuanya. Esc menghapus pilihan."
 
-#: app/src/ui/conversation.rs:539
+#: app/src/ui/conversation.rs:549
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr "Arsipkan (E atau Ctrl+Alt+A)"
 
-#: app/src/ui/conversation.rs:541 app/src/ui/conversation.rs:1117
+#: app/src/ui/conversation.rs:551 app/src/ui/conversation.rs:1095
 msgid "Move to Trash (Delete)"
 msgstr "Pindahkan ke Sampah (Delete)"
 
-#: app/src/ui/conversation.rs:542 app/src/ui/conversation.rs:1127
+#: app/src/ui/conversation.rs:552 app/src/ui/conversation.rs:1105
 msgid "Junk (Ctrl+Shift+J)"
 msgstr "Spam (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:545
+#: app/src/ui/conversation.rs:555
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "Tandai Belum Dibaca (Ctrl+Shift+U)"
 
-#: app/src/ui/conversation.rs:550 app/src/ui/conversation.rs:554
-#: app/src/ui/conversation.rs:1867
+#: app/src/ui/conversation.rs:560 app/src/ui/conversation.rs:564
+#: app/src/ui/conversation.rs:1845
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "Beri Bendera (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:551 app/src/ui/conversation.rs:557
+#: app/src/ui/conversation.rs:561 app/src/ui/conversation.rs:567
 msgid "Choose Flag Color"
 msgstr "Pilih Warna Bendera"
 
-#: app/src/ui/conversation.rs:558
+#: app/src/ui/conversation.rs:568
 msgid "Flags it in the color you chose last, or takes the flag off"
 msgstr "Beri bendera dengan warna terakhir yang dipilih, atau hapus bendera"
 
-#: app/src/ui/conversation.rs:562
+#: app/src/ui/conversation.rs:572
 msgid "Reply (Ctrl+R)"
 msgstr "Balas (Ctrl+R)"
 
-#: app/src/ui/conversation.rs:565
+#: app/src/ui/conversation.rs:575
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr "Balas Semua (Ctrl+Shift+R)"
 
-#: app/src/ui/conversation.rs:567
+#: app/src/ui/conversation.rs:577
 msgid "Forward (Ctrl+Shift+F)"
 msgstr "Teruskan (Ctrl+Shift+F)"
 
-#: app/src/ui/conversation.rs:569
+#: app/src/ui/conversation.rs:579 app/src/ui/toolbar/customize.rs:19
 msgid "Edit Draft"
 msgstr "Edit Draf"
 
-#: app/src/ui/conversation.rs:576 app/src/ui/conversation.rs:579
+#: app/src/ui/conversation.rs:586 app/src/ui/conversation.rs:589
 msgid "More Actions"
 msgstr "Tindakan Lainnya"
 
-#: app/src/ui/conversation.rs:600 app/src/ui/queued.rs:56
+#: app/src/ui/conversation.rs:610 app/src/ui/queued.rs:56
 msgid "Send Now"
 msgstr "Kirim Sekarang"
 
-#: app/src/ui/conversation.rs:620
+#: app/src/ui/conversation.rs:630
 msgid "Flag or Unflag"
 msgstr "Beri atau Hapus Bendera"
 
-#: app/src/ui/conversation.rs:622
+#: app/src/ui/conversation.rs:632 app/src/ui/toolbar/customize.rs:23
 msgid "Mark Read or Unread"
 msgstr "Tandai Sudah atau Belum Dibaca"
 
-#: app/src/ui/conversation.rs:630 app/src/ui/window/message_menu.rs:142
+#: app/src/ui/conversation.rs:640 app/src/ui/window/message_menu.rs:142
 msgid "Tags…"
 msgstr "Tag…"
 
-#: app/src/ui/conversation.rs:634 app/src/ui/sidebar.rs:1212
+#: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1212
 #: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Ingatkan Saya"
 
-#: app/src/ui/conversation.rs:638
+#: app/src/ui/conversation.rs:648
 msgid "Open in New Window"
 msgstr "Buka di Jendela Baru"
 
-#: app/src/ui/conversation.rs:646 app/src/ui/conversation.rs:930
+#: app/src/ui/conversation.rs:660 app/src/ui/conversation.rs:908
 msgid "Add Sender to VIPs"
 msgstr "Tambahkan Pengirim ke VIP"
 
 #. Both sender items leave a rule on the server, so an account
 #. without rules turns them off, and the menu leaves them out.
-#: app/src/ui/conversation.rs:654
+#: app/src/ui/conversation.rs:668
 msgid "Block Sender…"
 msgstr "Blokir Pengirim…"
 
-#: app/src/ui/conversation.rs:662 app/src/ui/conversation.rs:950
+#: app/src/ui/conversation.rs:676 app/src/ui/conversation.rs:928
 msgid "Categorize Sender"
 msgstr "Kategorikan Pengirim"
 
-#: app/src/ui/conversation.rs:690 app/src/ui/conversation.rs:692
+#: app/src/ui/conversation.rs:704 app/src/ui/conversation.rs:706
+#: app/src/ui/toolbar/customize.rs:26
 msgid "Tags"
 msgstr "Tag"
 
-#: app/src/ui/conversation.rs:928
+#: app/src/ui/conversation.rs:906
 msgid "Remove Sender from VIPs"
 msgstr "Hapus Pengirim dari VIP"
 
-#: app/src/ui/conversation.rs:961 app/src/ui/conversation.rs:1200
+#: app/src/ui/conversation.rs:939 app/src/ui/conversation.rs:1178
 msgid "Unmute"
 msgstr "Bunyikan Kembali"
 
-#: app/src/ui/conversation.rs:1116
+#: app/src/ui/conversation.rs:1094
 msgid "Delete Forever (Delete)"
 msgstr "Hapus Permanen (Delete)"
 
-#: app/src/ui/conversation.rs:1125
+#: app/src/ui/conversation.rs:1103
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Bukan Spam (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:1133 app/src/ui/window/message_menu.rs:134
+#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:134
 #: app/src/ui/window/press.rs:447
 msgid "Delete Forever"
 msgstr "Hapus Permanen"
 
-#: app/src/ui/conversation.rs:1138
+#: app/src/ui/conversation.rs:1116
 msgid "Not Junk"
 msgstr "Bukan Spam"
 
-#: app/src/ui/conversation.rs:1192 app/src/ui/window/message_menu.rs:136
+#: app/src/ui/conversation.rs:1170 app/src/ui/window/message_menu.rs:136
 msgid "Mark as Unread"
 msgstr "Tandai Belum Dibaca"
 
-#: app/src/ui/conversation.rs:1195 app/src/ui/window/message_menu.rs:138
+#: app/src/ui/conversation.rs:1173 app/src/ui/window/message_menu.rs:138
 msgid "Unflag"
 msgstr "Hapus Bendera"
 
-#: app/src/ui/conversation.rs:1211
+#: app/src/ui/conversation.rs:1189
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "{count} Percakapan Dipilih"
 msgstr[1] "{count} Percakapan Dipilih"
 
-#: app/src/ui/conversation.rs:1217
+#: app/src/ui/conversation.rs:1195
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "{count} Pesan Dipilih"
 msgstr[1] "{count} Pesan Dipilih"
 
-#: app/src/ui/conversation.rs:1866
+#: app/src/ui/conversation.rs:1844
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Hapus Bendera (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:1879
+#: app/src/ui/conversation.rs:1857
 msgid "Mark as Read (U)"
 msgstr "Tandai Sudah Dibaca (U)"
 
-#: app/src/ui/conversation.rs:1880
+#: app/src/ui/conversation.rs:1858
 msgid "Mark as Unread (U)"
 msgstr "Tandai Belum Dibaca (U)"
 
-#: app/src/ui/conversation.rs:2154
+#: app/src/ui/conversation.rs:2156
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2171 app/src/ui/window/message_menu.rs:269
+#: app/src/ui/conversation.rs:2173 app/src/ui/window/message_menu.rs:269
 msgid "Clear Flag"
 msgstr "Hapus Bendera"
 
@@ -8903,7 +8916,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Izinkan Sembunyikan Email Saya"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3874
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3879
 msgid "Add an account first"
 msgstr "Tambahkan akun terlebih dahulu"
 
@@ -10099,7 +10112,7 @@ msgstr "Pindahkan {account} ke Bawah"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3668 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3673 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferensi"
 
@@ -10619,7 +10632,7 @@ msgstr "Balasan Otomatis…"
 msgid "Rules…"
 msgstr "Aturan…"
 
-#: app/src/ui/sidebar.rs:1959 app/src/ui/window.rs:3662
+#: app/src/ui/sidebar.rs:1959 app/src/ui/window.rs:3663
 msgid "Hide My Email…"
 msgstr "Sembunyikan Email Saya…"
 
@@ -10901,6 +10914,44 @@ msgstr "{sender}, {subject}, {snippet}"
 msgid "On the server, {lines}"
 msgstr "Di server, {lines}"
 
+#: app/src/ui/toolbar/customize.rs:25
+#, fuzzy
+#| msgid "Move to Folder"
+msgid "Labels or Move to Folder"
+msgstr "Pindahkan ke Folder"
+
+#: app/src/ui/toolbar/customize.rs:116
+#, fuzzy
+#| msgid "Move {account} Up"
+msgid "Move {button} Up"
+msgstr "Pindahkan {account} ke Atas"
+
+#: app/src/ui/toolbar/customize.rs:120
+#, fuzzy
+#| msgid "Move {account} Down"
+msgid "Move {button} Down"
+msgstr "Pindahkan {account} ke Bawah"
+
+#: app/src/ui/toolbar/customize.rs:178
+#, fuzzy
+#| msgid "Drag to Reorder Accounts"
+msgid "Drag to Reorder Buttons"
+msgstr "Seret untuk Mengurutkan Akun"
+
+#: app/src/ui/toolbar/customize.rs:231
+msgid "Choose buttons, then drag them or use the arrows to change their order."
+msgstr ""
+
+#: app/src/ui/toolbar/customize.rs:238
+#, fuzzy
+#| msgid "Defaults"
+msgid "Restore Defaults"
+msgstr "Bawaan"
+
+#: app/src/ui/toolbar/customize.rs:259
+msgid "Customize Toolbar"
+msgstr ""
+
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
 msgid "Translate"
@@ -11148,7 +11199,7 @@ msgstr "Tidak dapat memuat email: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} ditambahkan. Mengunduh email…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3042
+#: app/src/ui/window.rs:362 app/src/ui/window.rs:3043
 msgid "{account} is signed in again."
 msgstr "{account} sudah masuk kembali."
 
@@ -11291,59 +11342,59 @@ msgstr[1] "{count} pesan dipindahkan ke Kotak Masuk"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:1386
+#: app/src/ui/window.rs:1387
 msgid "Could not read accounts: {reason}"
 msgstr "Tidak dapat membaca akun: {reason}"
 
-#: app/src/ui/window.rs:2126
+#: app/src/ui/window.rs:2127
 msgid "Could not delete the mail: {reason}"
 msgstr "Tidak dapat menghapus email: {reason}"
 
-#: app/src/ui/window.rs:2233
+#: app/src/ui/window.rs:2234
 msgid "Turn On the {service}"
 msgstr "Aktifkan {service}"
 
-#: app/src/ui/window.rs:2418 app/src/ui/window.rs:2421
+#: app/src/ui/window.rs:2419 app/src/ui/window.rs:2422
 msgid "Move to Inbox"
 msgstr "Pindahkan ke Kotak Masuk"
 
-#: app/src/ui/window.rs:2616
+#: app/src/ui/window.rs:2617
 msgid "Select mail from one account to tag it."
 msgstr "Pilih email dari satu akun untuk memberinya tag."
 
-#: app/src/ui/window.rs:2628
+#: app/src/ui/window.rs:2629
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Akun ini belum memiliki tag. Buat tag di Outlook."
 
-#: app/src/ui/window.rs:2721
+#: app/src/ui/window.rs:2722
 msgid "Add an account to reply or forward"
 msgstr "Tambahkan akun untuk membalas atau meneruskan"
 
-#: app/src/ui/window.rs:2825
+#: app/src/ui/window.rs:2826
 msgid "Could not include {file}: {reason}"
 msgstr "Tidak dapat menyertakan {file}: {reason}"
 
-#: app/src/ui/window.rs:2906
+#: app/src/ui/window.rs:2907
 msgid "The server had already sent this message."
 msgstr "Server sudah mengirim pesan ini."
 
-#: app/src/ui/window.rs:2911
+#: app/src/ui/window.rs:2912
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Pesan ini dibatalkan di aplikasi lain dan tidak lagi berada di Draf."
 
-#: app/src/ui/window.rs:3227
+#: app/src/ui/window.rs:3228
 msgid "Continue in your browser"
 msgstr "Lanjutkan di peramban Anda"
 
-#: app/src/ui/window.rs:3277
+#: app/src/ui/window.rs:3278
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Salinan Penguin Mail ini dibuat tanpa dukungan masuk Google."
 
-#: app/src/ui/window.rs:3299
+#: app/src/ui/window.rs:3300
 msgid "Get a Release"
 msgstr "Dapatkan Rilis"
 
-#: app/src/ui/window.rs:3409
+#: app/src/ui/window.rs:3410
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11351,80 +11402,80 @@ msgstr ""
 "Tidak dapat memeriksa pesan yang ditahan server untuk dikirim nanti, "
 "sehingga {account} tetap ada: {reason}"
 
-#: app/src/ui/window.rs:3420
+#: app/src/ui/window.rs:3421
 msgid "Remove {account}?"
 msgstr "Hapus {account}?"
 
-#: app/src/ui/window.rs:3439
+#: app/src/ui/window.rs:3440
 msgid "Remove Anyway"
 msgstr "Tetap Hapus"
 
-#: app/src/ui/window.rs:3452
+#: app/src/ui/window.rs:3453
 msgid "Removed {account}"
 msgstr "{account} dihapus"
 
-#: app/src/ui/window.rs:3454
+#: app/src/ui/window.rs:3455
 msgid "Could not remove {account}: {reason}"
 msgstr "Tidak dapat menghapus {account}: {reason}"
 
-#: app/src/ui/window.rs:3640
+#: app/src/ui/window.rs:3641
 msgid "Refresh"
 msgstr "Segarkan"
 
-#: app/src/ui/window.rs:3644
+#: app/src/ui/window.rs:3645
 msgid "Show Declined Events"
 msgstr "Tampilkan Acara yang Ditolak"
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3661
 msgid "Add Account…"
 msgstr "Tambahkan Akun…"
 
-#: app/src/ui/window.rs:3661
+#: app/src/ui/window.rs:3662
 msgid "New Smart Mailbox…"
 msgstr "Kotak Surat Cerdas Baru…"
 
-#: app/src/ui/window.rs:3669 app/src/ui/window/shortcuts.rs:812
+#: app/src/ui/window.rs:3674 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Pintasan Papan Ketik"
 
-#: app/src/ui/window.rs:3678 app/src/ui/window.rs:3680
+#: app/src/ui/window.rs:3683 app/src/ui/window.rs:3685
 msgid "Main Menu"
 msgstr "Menu Utama"
 
-#: app/src/ui/window.rs:3745 app/src/ui/window.rs:3746
+#: app/src/ui/window.rs:3750 app/src/ui/window.rs:3751
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:3875
+#: app/src/ui/window.rs:3880
 msgid "Add a mail account first"
 msgstr "Tambahkan akun email terlebih dahulu"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4126
+#: app/src/ui/window.rs:4131
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Kalender dan kontak {account} telah terhubung."
 
-#: app/src/ui/window.rs:4242
+#: app/src/ui/window.rs:4247
 msgid "Open a message from the person first"
 msgstr "Buka pesan dari orang tersebut terlebih dahulu"
 
-#: app/src/ui/window.rs:4337
+#: app/src/ui/window.rs:4347
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/window.rs:4339 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4349 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Mulai Ulang"
 
-#: app/src/ui/window.rs:4403
+#: app/src/ui/window.rs:4413
 msgid "Show Rules"
 msgstr "Tampilkan Aturan"
 
-#: app/src/ui/window.rs:4429
+#: app/src/ui/window.rs:4439
 msgid "Messages That Will Not Download"
 msgstr "Pesan yang Tidak Dapat Diunduh"
 
-#: app/src/ui/window.rs:4431
+#: app/src/ui/window.rs:4441
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11555,7 +11606,7 @@ msgstr ""
 msgid "Open a conversation first"
 msgstr "Buka percakapan terlebih dahulu"
 
-#: app/src/ui/window/detached.rs:257 app/src/ui/window/export.rs:82
+#: app/src/ui/window/detached.rs:258 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
 #: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
@@ -11563,20 +11614,20 @@ msgstr "Buka percakapan terlebih dahulu"
 msgid "That account is not connected"
 msgstr "Akun tersebut tidak terhubung"
 
-#: app/src/ui/window/detached.rs:270
+#: app/src/ui/window/detached.rs:271
 msgid "Could not load the source: {reason}"
 msgstr "Tidak dapat memuat sumber: {reason}"
 
-#: app/src/ui/window/detached.rs:300 app/src/ui/window/detached.rs:306
-#: app/src/ui/window/detached.rs:318
+#: app/src/ui/window/detached.rs:301 app/src/ui/window/detached.rs:307
+#: app/src/ui/window/detached.rs:319
 msgid "Message Source"
 msgstr "Sumber Pesan"
 
-#: app/src/ui/window/detached.rs:303
+#: app/src/ui/window/detached.rs:304
 msgid "Save as an .eml file"
 msgstr "Simpan sebagai berkas .eml"
 
-#: app/src/ui/window/detached.rs:341
+#: app/src/ui/window/detached.rs:342
 msgid "Save Message"
 msgstr "Simpan Pesan"
 
@@ -11765,7 +11816,7 @@ msgstr "Dibalas melalui email kepada {organizer}"
 msgid "Replied by email"
 msgstr "Dibalas melalui email"
 
-#: app/src/ui/window/loose.rs:165
+#: app/src/ui/window/loose.rs:167
 msgid "Attached to {subject}"
 msgstr "Terlampir di {subject}"
 
@@ -12279,7 +12330,7 @@ msgstr "Tampilkan atau sembunyikan asisten"
 msgid "Close window"
 msgstr "Tutup jendela"
 
-#: app/src/ui/window/shortcuts.rs:851
+#: app/src/ui/window/shortcuts.rs:852
 msgid "Checking for mail"
 msgstr "Memeriksa email"
 
@@ -13653,6 +13704,9 @@ msgstr "Pindahkan ke {folder}"
 #~ msgid "Bodies of mail you have read, kept for opening offline"
 #~ msgstr "Isi email yang telah dibaca, disimpan agar dapat dibuka saat luring"
 
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "Akun ini sudah dipindahkan ke cara masuk yang baru."
+
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
 #~ "another way."
@@ -13734,6 +13788,9 @@ msgstr "Pindahkan ke {folder}"
 
 #~ msgid "Choose how this account signs in to get new mail"
 #~ msgstr "Pilih cara akun ini masuk untuk mendapatkan email baru"
+
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "Masuk dengan akses masuk komputer ini."
 
 #~ msgid ""
 #~ "Every control named for screen readers and reachable from the keyboard, "
