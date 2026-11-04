@@ -45,6 +45,13 @@ widget the list view wraps for itself cannot be named from outside
 without crashing GTK. The thread row takes the `ListItem` role instead,
 and then the name it builds is the one a reader hears.
 
+## Toolbar customization
+
+Customize Toolbar is in the main menu and the conversation’s More Actions menu.
+Checkboxes choose buttons; Move Up and Move Down reorder them without dragging.
+Restore Defaults restores the original set. Changes apply to open conversation
+windows and persist across starts. Narrow windows keep secondary actions in More.
+
 ## Column widths
 
 The mailbox sidebar and message list have named, focusable dividers.

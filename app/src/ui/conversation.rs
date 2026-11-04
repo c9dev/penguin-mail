@@ -225,6 +225,8 @@ struct Buttons {
     trash: gtk::Button,
     junk: gtk::Button,
     read: gtk::Button,
+    print: gtk::Button,
+    source: gtk::Button,
     star: adw::SplitButton,
     reply: gtk::Button,
     reply_all: gtk::Button,
@@ -250,6 +252,8 @@ fn slot_widget(
         Slot::Trash => buttons.trash.clone().upcast(),
         Slot::Junk => buttons.junk.clone().upcast(),
         Slot::Read => buttons.read.clone().upcast(),
+        Slot::Print => buttons.print.clone().upcast(),
+        Slot::Source => buttons.source.clone().upcast(),
         Slot::Flag => buttons.star.clone().upcast(),
         Slot::Labels => labels.clone().upcast(),
         Slot::Tags => tags.clone().upcast(),
@@ -271,6 +275,10 @@ fn loose_menu() -> gio::Menu {
     views.append(Some(&gettext("View Source")), Some("win.view-source"));
     views.append(Some(&gettext("Export…")), Some("win.export"));
     more.append_section(None, &views);
+    more.append(
+        Some(&gettext("Customize Toolbar…")),
+        Some("win.customize-toolbar"),
+    );
     let sender = gio::Menu::new();
     sender.append(
         Some(&gettext("Always Load Images…")),
@@ -357,9 +365,9 @@ pub struct ConversationView {
     /// Remind Me times, recomputed whenever a conversation opens.
     remind: gio::Menu,
     buttons: Buttons,
-    /// One linked box per capsule of the header bar, in the order of
-    /// `toolbar::CAPSULES`.
-    capsules: Vec<gtk::Box>,
+    /// Capsules in the saved order, with the slots each one holds.
+    capsules: RefCell<Vec<(gtk::Box, Vec<toolbar::Slot>)>>,
+    toolbar_layout: RefCell<Option<Vec<toolbar::Slot>>>,
     /// The menu for one message. One popover serves the whole thread: the
     /// model changes with the message the menu was asked for.
     menu: gtk::PopoverMenu,
@@ -534,6 +542,8 @@ impl ConversationView {
             button
         };
         let buttons = Buttons {
+            print: button("document-print-symbolic", gettext("Print…")),
+            source: button("text-x-generic-symbolic", gettext("View Source")),
             archive: button(
                 "penguin-mail-archive-symbolic",
                 gettext("Archive (E or Ctrl+Alt+A)"),
@@ -642,6 +652,10 @@ impl ConversationView {
         views.append(Some(&gettext("View Source")), Some("win.view-source"));
         views.append(Some(&gettext("Export…")), Some("win.export"));
         more.append_section(None, &views);
+        more.append(
+            Some(&gettext("Customize Toolbar…")),
+            Some("win.customize-toolbar"),
+        );
         let sender = gio::Menu::new();
         sender.append(Some(&gettext("Add Sender to VIPs")), Some("win.toggle-vip"));
         sender.append(Some(&gettext("Unsubscribe…")), Some("win.unsubscribe"));
@@ -690,46 +704,6 @@ impl ConversationView {
             .tooltip_text(gettext("Tags"))
             .build();
         name(&tag_button, &gettext("Tags"));
-        // The capsules run from the start of the bar in the order the
-        // mockup gives them; More stays a round button at the end.
-        let capsules: Vec<gtk::Box> = toolbar::CAPSULES
-            .iter()
-            .enumerate()
-            .map(|(index, slots)| {
-                let draft = slots.contains(&toolbar::Slot::Edit);
-                // GTK's own "linked" box style gives grouped buttons a
-                // background of its own, which fights the capsule's flat
-                // buttons over one pill; the capsule draws its pill and
-                // its separators itself, so it skips "linked".
-                let capsule = gtk::Box::builder()
-                    .css_classes([if draft {
-                        "draft-capsule"
-                    } else {
-                        "toolbar-capsule"
-                    }])
-                    .valign(gtk::Align::Center)
-                    .build();
-                for &slot in slots.iter() {
-                    let widget = slot_widget(&buttons, &label_button, &tag_button, slot);
-                    // Edit Draft keeps its suggested look; the rest sit
-                    // flat inside the capsule's one pill.
-                    if !draft {
-                        widget.add_css_class("flat");
-                    }
-                    capsule.append(&widget);
-                }
-                // The header bar already spaces its packed children 6 px
-                // apart (style.css's note on button.new-event), so the
-                // margins here make up the rest of the mockup's 16 px
-                // from the pane's start and 10 px between capsules.
-                if index == 0 {
-                    capsule.set_margin_start(10);
-                }
-                capsule.set_margin_end(4);
-                header.pack_start(&capsule);
-                capsule
-            })
-            .collect();
         header.pack_end(&buttons.more);
         header.pack_end(&assistant_toggle);
         let menu_popover = gtk::PopoverMenu::from_model(None::<&gio::Menu>);
@@ -757,6 +731,8 @@ impl ConversationView {
         wire(&buttons.junk, || Action::Junk);
         wire(&buttons.trash, || Action::Trash);
         wire(&buttons.read, || Action::ToggleRead);
+        buttons.print.set_action_name(Some("win.print"));
+        buttons.source.set_action_name(Some("win.view-source"));
         {
             let on_action = Rc::clone(&on_action);
             buttons
@@ -806,7 +782,8 @@ impl ConversationView {
             thread_menu,
             remind,
             buttons,
-            capsules,
+            capsules: RefCell::new(Vec::new()),
+            toolbar_layout: RefCell::new(None),
             menu: menu_popover,
             menu_at: Cell::new((0, 0)),
             menu_popover: RefCell::new(None),
@@ -847,6 +824,7 @@ impl ConversationView {
             }
         });
         let weak = Rc::downgrade(&view);
+        view.set_toolbar(None);
         view.webview.on_message("mailrsReady", move |value| {
             if let (Some(view), Ok(load)) = (weak.upgrade(), value.parse()) {
                 view.page_ready(load);
@@ -1898,6 +1876,39 @@ impl ConversationView {
         fill_categorize(&self.categorize_menu, set);
     }
 
+    pub fn set_toolbar(&self, saved: Option<&[toolbar::Slot]>) {
+        for (capsule, _) in self.capsules.borrow_mut().drain(..) {
+            while let Some(child) = capsule.first_child() {
+                capsule.remove(&child);
+            }
+            self.header.remove(&capsule);
+        }
+        *self.toolbar_layout.borrow_mut() = saved.map(Vec::from);
+        for (index, slots) in toolbar::capsules(saved).into_iter().enumerate() {
+            let draft = slots.contains(&toolbar::Slot::Edit);
+            let capsule = gtk::Box::builder()
+                .css_classes([if draft {
+                    "draft-capsule"
+                } else {
+                    "toolbar-capsule"
+                }])
+                .valign(gtk::Align::Center)
+                .margin_start(if index == 0 { 10 } else { 0 })
+                .margin_end(4)
+                .build();
+            for &slot in &slots {
+                let widget = slot_widget(&self.buttons, &self.label_button, &self.tag_button, slot);
+                if !draft {
+                    widget.add_css_class("flat");
+                }
+                capsule.append(&widget);
+            }
+            self.header.pack_start(&capsule);
+            self.capsules.borrow_mut().push((capsule, slots));
+        }
+        self.follow_holds();
+    }
+
     /// On phone widths, secondary actions move into the "more" menu.
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
@@ -1924,23 +1935,14 @@ impl ConversationView {
             detached: self.detached.get(),
             tags: self.tags.get(),
         };
+        let chosen = toolbar::layout(self.toolbar_layout.borrow().as_deref());
         for slot in toolbar::Slot::ALL {
             slot_widget(&self.buttons, &self.label_button, &self.tag_button, slot)
-                .set_visible(toolbar::shows(slot, on));
+                .set_visible(chosen.contains(&slot) && toolbar::shows(slot, on));
         }
-        for (capsule, slots) in self.capsules.iter().zip(toolbar::CAPSULES) {
+        for (capsule, slots) in self.capsules.borrow().iter() {
             capsule.set_visible(slots.iter().any(|&slot| toolbar::shows(slot, on)));
         }
-        // A capsule shown here always agrees with toolbar::groups, which
-        // decides the same thing in the abstract and is what the tests
-        // check; this catches the two falling out of step. `get_visible`
-        // reads each capsule's own flag: `is_visible` would read false
-        // while the header or a parent is hidden and fail inside a signal
-        // handler, which cannot unwind.
-        debug_assert_eq!(
-            self.capsules.iter().filter(|c| c.get_visible()).count(),
-            toolbar::groups(on).len()
-        );
         self.buttons.more.set_visible(toolbar::more_shows(on));
     }
 

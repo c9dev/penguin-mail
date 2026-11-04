@@ -1132,6 +1132,7 @@ impl MainWindow {
         let photos = app.photos();
         window.list.set_photos(Rc::clone(&photos));
         let settings = window.settings();
+        window.conversation.set_toolbar(settings.toolbar.as_deref());
         window.list.set_appearance(
             settings.preview_lines,
             settings.bold_unread,
@@ -3666,6 +3667,10 @@ impl MainWindow {
             menu.append_section(None, &self.update_menu);
         }
         let second = gio::Menu::new();
+        second.append(
+            Some(&gettext("Customize Toolbar…")),
+            Some("win.customize-toolbar"),
+        );
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
         second.append(Some(&gettext("About Penguin Mail")), Some("win.about"));
@@ -4304,6 +4309,11 @@ impl MainWindow {
                 self.assistant.refresh();
                 self.offer_summary();
                 self.sync_assistant_toggle();
+            }
+            Effect::Toolbar => {
+                for view in self.views() {
+                    view.set_toolbar(settings.toolbar.as_deref());
+                }
             }
             Effect::TextSize => {
                 for view in self.views() {
