@@ -607,13 +607,14 @@ impl AccountServices {
 
     /// A Microsoft account: every service over the one Graph client.
     pub fn microsoft(graph: impl Into<AnyGraph>, settings: MicrosoftSettings) -> Self {
+        let shared = settings.shared;
         let adapter = Microsoft::new(Arc::new(graph.into()), settings);
         AccountServices {
             mail: AnyMail::Microsoft(adapter.clone()),
-            calendar: Some(AnyCalendar::Microsoft(adapter.clone())),
-            contacts: Some(AnyContacts::Microsoft(adapter.clone())),
-            rules: Some(AnyRules::Microsoft(adapter.clone())),
-            auto_reply: Some(AnyAutoReply::Microsoft(adapter.clone())),
+            calendar: (!shared).then(|| AnyCalendar::Microsoft(adapter.clone())),
+            contacts: (!shared).then(|| AnyContacts::Microsoft(adapter.clone())),
+            rules: (!shared).then(|| AnyRules::Microsoft(adapter.clone())),
+            auto_reply: (!shared).then(|| AnyAutoReply::Microsoft(adapter.clone())),
             identities: AnyIdentities::Microsoft(adapter),
         }
     }
@@ -622,6 +623,7 @@ impl AccountServices {
     #[cfg(any(test, feature = "fake"))]
     pub fn fake_microsoft(fake: Arc<FakeGraph>) -> Self {
         let settings = MicrosoftSettings {
+            shared: false,
             address: "me@outlook.com".into(),
             provider_name: "Outlook".into(),
             window_days: crate::DEFAULT_WINDOW_DAYS,

@@ -390,7 +390,51 @@ pub(crate) async fn connect_microsoft_within<P: PasswordStore + 'static>(
     base: &str,
     wait: Duration,
 ) -> Result<AccountServices, SyncError> {
-    let id = account.id;
+    let graph = microsoft_graph_within(db, tokens, client, account, base, wait).await?;
+    let shared = graph.is_shared_mailbox();
+    Ok(AccountServices::microsoft(
+        graph,
+        MicrosoftSettings {
+            shared,
+            address: account.email.clone(),
+            provider_name: account.provider_name().to_string(),
+            window_days,
+        },
+    ))
+}
+
+pub(crate) async fn microsoft_graph_within<P: PasswordStore + 'static>(
+    db: &Db,
+    tokens: Arc<P>,
+    client: MicrosoftClient,
+    account: &Account,
+    base: &str,
+    wait: Duration,
+) -> Result<mailrs_graph::Graph, SyncError> {
+    let turn = bounded(account.id, KEYRING, wait, async {
+        Ok::<_, SyncError>(crate::sign_in::secrets_turn().await)
+    })
+    .await?;
+    let account_id = account.id;
+    let expected = account.clone();
+    let owner = bounded(
+        account_id,
+        "the mail store",
+        wait,
+        db.read(move |c| {
+            let current = accounts::account(c, account_id)?;
+            if !current.is_some_and(|a| {
+                a.provider == expected.provider && a.email.eq_ignore_ascii_case(&expected.email)
+            }) {
+                return Ok(None);
+            }
+            let owner = accounts::microsoft_owner(c, account_id)?;
+            Ok(Some(owner))
+        }),
+    )
+    .await?
+    .ok_or(BackendError::NotFound)?;
+    let id = owner.unwrap_or(account_id);
     let Some(refresh) = read_secret(Arc::clone(&tokens), id, wait).await? else {
         let marked = db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth));
         bounded(id, "the mail store", wait, marked).await?;
@@ -404,13 +448,35 @@ pub(crate) async fn connect_microsoft_within<P: PasswordStore + 'static>(
     )
     .await?;
     let granted = consent.granted.as_deref().map(mailrs_graph::Granted::parse);
+    let session_id = bounded(
+        id,
+        "the mail store",
+        wait,
+        db.write(move |c| accounts::ensure_microsoft_session(c, id)),
+    )
+    .await?;
+    drop(turn);
     let saver = Arc::clone(&tokens);
     let store = db.clone();
+    let token_store = db.clone();
+    let token_session = session_id.clone();
     let session = mailrs_graph::Session::new(client, refresh)
         .with_granted(granted)
         .on_rotated(move |token| {
             let saver = Arc::clone(&saver);
+            let (store, session_id) = (token_store.clone(), token_session.clone());
             tokio::spawn(async move {
+                // A removed account's id may now belong to someone else.
+                // Keep this turn until the keyring finishes the write.
+                let _turn = crate::sign_in::secrets_turn().await;
+                let current = match store.read(move |c| accounts::microsoft_session(c, id)).await {
+                    Ok(current) => current,
+                    Err(err) => {
+                        tracing::warn!(account = id, %err, "could not check Microsoft's refresh session");
+                        return;
+                    }
+                };
+                if current.as_deref() != Some(&session_id) { return; }
                 let saved = tokio::task::spawn_blocking(move || saver.save(id, &token)).await;
                 if !matches!(saved, Ok(Ok(()))) {
                     tracing::warn!(account = id, "could not keep Microsoft's new refresh token");
@@ -418,10 +484,16 @@ pub(crate) async fn connect_microsoft_within<P: PasswordStore + 'static>(
             });
         })
         .on_granted(move |granted| {
-            let (store, scope) = (store.clone(), granted.to_scope());
+            let (store, scope, session_id) = (store.clone(), granted.to_scope(), session_id.clone());
             tokio::spawn(async move {
+                let _turn = crate::sign_in::secrets_turn().await;
                 if let Err(err) = store
-                    .write(move |c| accounts::set_granted(c, id, &scope))
+                    .write(move |c| {
+                        if accounts::microsoft_session(c, id)?.as_deref() == Some(&session_id) {
+                            accounts::set_granted(c, id, &scope)?;
+                        }
+                        Ok(())
+                    })
                     .await
                 {
                     tracing::warn!(account = id, %err, "could not save the granted scopes");
@@ -430,14 +502,12 @@ pub(crate) async fn connect_microsoft_within<P: PasswordStore + 'static>(
         });
     let graph = mailrs_graph::Graph::with_base(Arc::new(session), base)
         .map_err(crate::services::microsoft::backend)?;
-    Ok(AccountServices::microsoft(
-        graph,
-        MicrosoftSettings {
-            address: account.email.clone(),
-            provider_name: account.provider_name().to_string(),
-            window_days,
-        },
-    ))
+    match owner {
+        Some(_) => graph
+            .shared_mailbox(&account.email)
+            .map_err(|e| crate::services::microsoft::backend(e).into()),
+        None => Ok(graph),
+    }
 }
 
 /// The services for an IMAP account, from the servers the store keeps

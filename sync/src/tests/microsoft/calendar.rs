@@ -229,6 +229,7 @@ async fn outlook_fields_do_not_stop_a_calendar_read() {
     let adapter = crate::services::Microsoft::new(
         Arc::new(graph),
         crate::services::MicrosoftSettings {
+            shared: false,
             address: "me@outlook.com".into(),
             provider_name: "Microsoft 365".into(),
             window_days: 30,

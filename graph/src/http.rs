@@ -172,6 +172,7 @@ pub struct Graph {
     http: reqwest::Client,
     base: Url,
     session: Arc<Session>,
+    mailbox: Option<String>,
 }
 
 impl std::fmt::Debug for Graph {
@@ -201,7 +202,46 @@ impl Graph {
             http,
             base,
             session,
+            mailbox: None,
         })
+    }
+
+    /// Addresses mail in another mailbox with the signed-in user's session.
+    pub fn shared_mailbox(&self, address: &str) -> Result<Graph, GraphError> {
+        let Some((local, domain)) = address.split_once('@') else {
+            return Err(GraphError::Decode(
+                "a shared mailbox needs an email address".into(),
+            ));
+        };
+        if local.is_empty()
+            || domain.is_empty()
+            || domain.contains('@')
+            || address
+                .chars()
+                .any(|c| c.is_whitespace() || c.is_control() || "/\\?#%".contains(c))
+        {
+            return Err(GraphError::Decode("invalid shared mailbox address".into()));
+        }
+        let mut url = self.base.clone();
+        url.path_segments_mut()
+            .map_err(|_| GraphError::Decode("invalid Graph base".into()))?
+            .clear()
+            .push(address);
+        let mut graph = self.clone();
+        graph.mailbox = Some(format!("users{}", url.path()));
+        Ok(graph)
+    }
+
+    pub fn is_shared_mailbox(&self) -> bool {
+        self.mailbox.is_some()
+    }
+
+    fn mailbox_path(&self, path: &str) -> String {
+        let path = path.trim_start_matches('/');
+        match (&self.mailbox, path.strip_prefix("me/")) {
+            (Some(mailbox), Some(rest)) => format!("{mailbox}/{rest}"),
+            _ => path.to_string(),
+        }
     }
 
     /// The scopes the account's token carries, once a token was issued.
@@ -212,7 +252,7 @@ impl Graph {
     fn url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url, GraphError> {
         let mut url = self
             .base
-            .join(path)
+            .join(&self.mailbox_path(path))
             .map_err(|e| GraphError::Decode(format!("bad path {path}: {e}")))?;
         if !query.is_empty() {
             url.query_pairs_mut().extend_pairs(query);
@@ -456,7 +496,7 @@ impl Graph {
                 let mut entry = json!({
                     "id": (i + 1).to_string(),
                     "method": r.method.as_str(),
-                    "url": format!("/{}", r.url.trim_start_matches('/')),
+                    "url": format!("/{}", self.mailbox_path(&r.url)),
                 });
                 if !headers.is_empty() {
                     entry["headers"] = Value::Object(headers);
