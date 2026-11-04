@@ -130,6 +130,22 @@ msgstr ""
 "en el navegador. Penguin Mail está hecho con GTK y libadwaita y encaja mejor "
 "en GNOME, pero funciona en cualquier escritorio Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "email"
+msgstr "correo electrónico"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "mail"
+msgstr "correo"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:57
+msgid "inbox"
+msgstr "bandeja de entrada"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Todas tus cuentas en una bandeja de entrada, con una respuesta abierta"
@@ -13668,18 +13684,6 @@ msgstr "Marcar como correo deseado"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover a {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "correo electrónico"
-
-#~ msgid "mail"
-#~ msgstr "correo"
-
-#~ msgid "inbox"
-#~ msgstr "bandeja de entrada"
 
 #~ msgid ""
 #~ "Run this command for the skill {skill}?\n"

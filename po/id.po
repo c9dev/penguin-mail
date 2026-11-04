@@ -127,6 +127,22 @@ msgstr ""
 "peramban. Penguin Mail dibuat dengan GTK dan libadwaita dan paling cocok "
 "dengan GNOME, tetapi dapat berjalan di desktop Linux mana pun."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "email"
+msgstr "email"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "mail"
+msgstr "surat"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:57
+msgid "inbox"
+msgstr "kotak masuk"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Semua akun dalam satu kotak masuk, dengan balasan terbuka"
@@ -13609,18 +13625,6 @@ msgstr "Tandai bukan spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Pindahkan ke {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "email"
-
-#~ msgid "mail"
-#~ msgstr "surat"
-
-#~ msgid "inbox"
-#~ msgstr "kotak masuk"
 
 #~ msgid ""
 #~ "Run this command for the skill {skill}?\n"

@@ -132,6 +132,22 @@ msgstr ""
 "navigator. Penguin Mail este construit cu GTK și libadwaita și se potrivește "
 "cel mai bine în GNOME, dar rulează pe orice desktop Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "email"
+msgstr "e-mail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "mail"
+msgstr "corespondență"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:57
+msgid "inbox"
+msgstr "mesaje primite"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
@@ -13848,18 +13864,6 @@ msgstr "Marchează ca nefiind spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mută în {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "e-mail"
-
-#~ msgid "mail"
-#~ msgstr "corespondență"
-
-#~ msgid "inbox"
-#~ msgstr "mesaje primite"
 
 #~ msgid ""
 #~ "Run this command for the skill {skill}?\n"

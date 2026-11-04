@@ -128,6 +128,22 @@ msgstr ""
 "Penguin Mail usa GTK e libadwaita e si integra al meglio con GNOME, ma "
 "funziona su qualsiasi ambiente desktop Linux."
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+msgid "email"
+msgstr "email"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+msgid "mail"
+msgstr "posta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:57
+msgid "inbox"
+msgstr "posta in arrivo"
+
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
@@ -13670,18 +13686,6 @@ msgstr "Segna come non indesiderato"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Sposta in {folder}"
-
-#~ msgid "gmail"
-#~ msgstr "gmail"
-
-#~ msgid "email"
-#~ msgstr "email"
-
-#~ msgid "mail"
-#~ msgstr "posta"
-
-#~ msgid "inbox"
-#~ msgstr "posta in arrivo"
 
 #~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
