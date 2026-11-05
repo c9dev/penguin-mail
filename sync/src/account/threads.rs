@@ -1,15 +1,16 @@
 //! What the UI needs when a thread opens: all of its messages and their bodies.
 
-use std::collections::BTreeSet;
-use std::sync::Arc;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::{Arc, PoisonError};
 
 use mailrs_domain::{MessageBody, MessageMeta};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, bodies, messages};
 
 use super::AccountSync;
+use super::outbox::raw_batches;
 use super::fetch::{Fetched, overtaken};
-use crate::{SyncError, Want, now_millis};
+use crate::{BackendError, RAW_LIMIT, SyncError, Want, now_millis};
 
 /// Fetches of one thread before an answer history keeps overtaking is
 /// written anyway, adding only what the store lacks.
@@ -257,6 +258,125 @@ impl AccountSync {
             }
         }
         Ok(body)
+    }
+
+    /// [`AccountSync::body_with_delivery`] for each of `message_ids`, in the
+    /// same order. Where one `fetch_raw` carries several messages for about
+    /// the cost of one (`MailCapabilities::fetches_raw_together`), the small
+    /// messages the store lacks come in a few calls instead of one call
+    /// each. Opening a 33-message thread over IMAP took 33 round trips;
+    /// it now takes two. A call that fails leaves its messages to be asked
+    /// for one by one, so a message the server refuses does not hold back
+    /// the others. Everything else goes one message at a time, `alongside`
+    /// at once.
+    pub async fn bodies_with_delivery(
+        &self,
+        message_ids: &[String],
+        alongside: usize,
+    ) -> Vec<(String, Result<MessageBody, SyncError>)> {
+        use futures::StreamExt;
+
+        let mut done: HashMap<String, Result<MessageBody, SyncError>> = HashMap::new();
+        if self.mail.capabilities().fetches_raw_together {
+            self.bodies_together(message_ids, &mut done).await;
+        }
+        let rest: Vec<String> = message_ids
+            .iter()
+            .filter(|id| !done.contains_key(id.as_str()))
+            .cloned()
+            .collect();
+        let alone: Vec<(String, Result<MessageBody, SyncError>)> = futures::stream::iter(rest)
+            .map(|id| async move {
+                let body = self.body_with_delivery(&id).await;
+                (id, body)
+            })
+            .buffered(alongside.max(1))
+            .collect()
+            .await;
+        done.extend(alone);
+        message_ids
+            .iter()
+            .map(|id| {
+                let body = done
+                    .remove(id)
+                    .unwrap_or_else(|| Err(BackendError::NotFound.into()));
+                (id.clone(), body)
+            })
+            .collect()
+    }
+
+    /// Fetches together the bodies [`AccountSync::bodies_with_delivery`] can:
+    /// messages with no stored body, or one stored before delivery headers
+    /// were kept, that are small by their stored size and not in the raw
+    /// cache. Each body that arrives and is stored lands in `done`, as
+    /// `body_with_delivery` would have made it.
+    async fn bodies_together(
+        &self,
+        message_ids: &[String],
+        done: &mut HashMap<String, Result<MessageBody, SyncError>>,
+    ) {
+        let (account_id, ids) = (self.account_id, message_ids.to_vec());
+        let Ok(stored) = self
+            .db
+            .read(move |c| {
+                ids.into_iter()
+                    .map(|id| {
+                        let cached = bodies::peek_body(c, account_id, &id)?;
+                        let size = messages::size_of(c, account_id, &id)?;
+                        Ok((id, cached, size))
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .await
+        else {
+            return;
+        };
+        let wanted: Vec<(String, Option<MessageBody>, i64)> = stored
+            .into_iter()
+            .filter_map(|(id, cached, size)| {
+                let size = size.filter(|s| *s > 0 && *s < RAW_LIMIT)?;
+                let usable = cached
+                    .as_ref()
+                    .is_some_and(|body| body.provenance.delivered_to.is_some());
+                (!usable && self.cached_raw(&id).is_none()).then_some((id, cached, size))
+            })
+            .collect();
+        let sizes: Vec<Option<i64>> = wanted.iter().map(|(_, _, size)| Some(*size)).collect();
+        for batch in raw_batches(&sizes) {
+            let batch = &wanted[batch];
+            // One message alone costs the same either way.
+            if batch.len() < 2 {
+                continue;
+            }
+            let ids: Vec<String> = batch.iter().map(|(id, _, _)| id.clone()).collect();
+            let Ok(raws) = self.mail.fetch_raw(&ids).await else {
+                continue;
+            };
+            let now = now_millis();
+            for ((id, cached, _), raw) in batch.iter().zip(raws) {
+                if raw.id != *id {
+                    continue;
+                }
+                let bytes = Arc::new(raw.bytes);
+                self.raw.lock().unwrap_or_else(PoisonError::into_inner).put(
+                    self.account_id,
+                    id.clone(),
+                    Arc::clone(&bytes),
+                );
+                let fresh = mailrs_mime::read(&bytes);
+                // A body kept from before keeps everything but the delivery
+                // headers, as `body_with_delivery` keeps it.
+                let body = match cached.clone() {
+                    Some(mut kept) => {
+                        kept.provenance.delivered_to = fresh.provenance.delivered_to;
+                        kept
+                    }
+                    None => fresh,
+                };
+                let stored = self.store_body(id, &body, now, false).await;
+                done.insert(id.clone(), stored.map(|_| body));
+            }
+        }
     }
 
     /// Fetches one body ahead of a read. A cache race counts as success, and

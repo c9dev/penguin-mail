@@ -437,6 +437,9 @@ async fn show_thread(db: &Db, config: &Config, email: &str, thread_id: &str) -> 
     if messages.is_empty() {
         bail!("Gmail has no thread {thread_id} in {email}");
     }
+    // Every body first, so an IMAP server is asked once for the lot.
+    let ids: Vec<String> = messages.iter().map(|m| m.id.clone()).collect();
+    let mut bodies = sync.bodies_with_delivery(&ids, 10).await.into_iter();
     for message in messages {
         println!(
             "From:    {}",
@@ -448,7 +451,10 @@ async fn show_thread(db: &Db, config: &Config, email: &str, thread_id: &str) -> 
         );
         println!("Date:    {}", format_date(message.date));
         println!("Subject: {}\n", message.subject);
-        let body = sync.body(&message.id).await?;
+        let body = match bodies.next() {
+            Some((_, body)) => body?,
+            None => sync.body(&message.id).await?,
+        };
         println!("{}", body.text.or(body.html).unwrap_or_default().trim_end());
         println!("{}", "-".repeat(72));
     }

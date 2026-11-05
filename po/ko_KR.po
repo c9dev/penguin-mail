@@ -12025,7 +12025,7 @@ msgstr "저장 공간 확인"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "다음 실행까지 저장 공간 경고 숨기기"
 
-#: app/src/ui/window/thread.rs:639
+#: app/src/ui/window/thread.rs:643
 msgid "The account is not connected yet."
 msgstr "아직 계정이 연결되지 않았습니다."
 
@@ -12850,15 +12850,15 @@ msgstr ""
 msgid "Penguin Mail cannot save this repeat to a JMAP calendar."
 msgstr "Penguin Mail은 이 반복을 JMAP 캘린더에 저장할 수 없습니다."
 
-#: sync/src/services/jmap/mod.rs:311
+#: sync/src/services/jmap/mod.rs:312
 msgid "This server keeps no colors for its mailboxes."
 msgstr "이 서버는 메일함의 색상을 저장하지 않습니다."
 
-#: sync/src/services/jmap/mod.rs:420
+#: sync/src/services/jmap/mod.rs:421
 msgid "This server files sent mail itself."
 msgstr "이 서버는 보낸 메일을 직접 보관합니다."
 
-#: sync/src/services/jmap/mod.rs:603
+#: sync/src/services/jmap/mod.rs:604
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "서버가 Penguin Mail이 읽을 수 없는 주소를 만들었습니다."
 
@@ -13013,14 +13013,14 @@ msgstr "Outlook이 응답했지만 자동 회신을 저장하지 않았습니다
 msgid "A folder needs a name."
 msgstr "폴더에는 이름이 필요합니다."
 
-#: sync/src/services/pop3/mod.rs:472
+#: sync/src/services/pop3/mod.rs:473
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail은 받은편지함, 보낸편지함, 임시보관함, 휴지통, 스팸함, 보관함의 "
 "이름을 유지합니다."
 
-#: sync/src/services/pop3/mod.rs:488
+#: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail은 받은편지함, 보낸편지함, 임시보관함, 휴지통, 스팸함, 보관함을 "

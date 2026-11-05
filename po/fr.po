@@ -12487,7 +12487,7 @@ msgstr "Vérifier le stockage"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Masquer l’alerte d’espace jusqu’au prochain lancement"
 
-#: app/src/ui/window/thread.rs:639
+#: app/src/ui/window/thread.rs:643
 msgid "The account is not connected yet."
 msgstr "Le compte n’est pas encore connecté."
 
@@ -13346,15 +13346,15 @@ msgid "Penguin Mail cannot save this repeat to a JMAP calendar."
 msgstr ""
 "Penguin Mail ne peut pas enregistrer cette répétition dans un agenda JMAP."
 
-#: sync/src/services/jmap/mod.rs:311
+#: sync/src/services/jmap/mod.rs:312
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Ce serveur ne conserve pas de couleur pour ses boîtes aux lettres."
 
-#: sync/src/services/jmap/mod.rs:420
+#: sync/src/services/jmap/mod.rs:421
 msgid "This server files sent mail itself."
 msgstr "Ce serveur classe lui-même le courrier envoyé."
 
-#: sync/src/services/jmap/mod.rs:603
+#: sync/src/services/jmap/mod.rs:604
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "Le serveur a créé une adresse que Penguin Mail ne sait pas lire."
 
@@ -13516,14 +13516,14 @@ msgstr "Outlook a répondu mais n’a pas conservé la réponse automatique."
 msgid "A folder needs a name."
 msgstr "Un dossier a besoin d’un nom."
 
-#: sync/src/services/pop3/mod.rs:472
+#: sync/src/services/pop3/mod.rs:473
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail réserve les noms Boîte de réception, Envoyés, Brouillons, "
 "Corbeille, Indésirables et Archives."
 
-#: sync/src/services/pop3/mod.rs:488
+#: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail conserve Boîte de réception, Envoyés, Brouillons, Corbeille, "

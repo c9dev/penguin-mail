@@ -1205,6 +1205,17 @@ impl ImapApi for FakeImap {
         })
     }
 
+    async fn bodies(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<(u32, Vec<u8>)>, ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("bodies {mailbox} {uids}"), |s| {
+            let m = s.selectable(mailbox)?;
+            Ok(uids
+                .iter()
+                .filter_map(|uid| Some((uid, m.messages.get(&uid)?.raw.clone())))
+                .collect())
+        })
+    }
+
     async fn structure(&self, mailbox: &str, uid: u32) -> Result<Option<BodyStructure>, ImapError> {
         check_name(mailbox)?;
         self.call(format!("structure {mailbox} {uid}"), |s| {

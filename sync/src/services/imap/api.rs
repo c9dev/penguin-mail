@@ -110,6 +110,14 @@ pub trait ImapApi: Send + Sync + 'static {
         section: &str,
     ) -> impl Future<Output = Result<Option<Vec<u8>>, ImapError>> + Send;
 
+    /// The whole messages `uids` names in `mailbox`, in one command, each
+    /// beside its UID, in no set order. A UID with no message is left out.
+    fn bodies(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> impl Future<Output = Result<Vec<(u32, Vec<u8>)>, ImapError>> + Send;
+
     /// The message's BODYSTRUCTURE. `None` when there is no such UID.
     fn structure(
         &self,
@@ -260,6 +268,10 @@ impl ImapApi for ImapClient {
         section: &str,
     ) -> Result<Option<Vec<u8>>, ImapError> {
         ImapClient::body(self, mailbox, uid, section).await
+    }
+
+    async fn bodies(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<(u32, Vec<u8>)>, ImapError> {
+        ImapClient::bodies(self, mailbox, uids).await
     }
 
     async fn structure(&self, mailbox: &str, uid: u32) -> Result<Option<BodyStructure>, ImapError> {

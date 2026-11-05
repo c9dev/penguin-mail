@@ -127,6 +127,12 @@ pub struct MailCapabilities {
     pub tags: bool,
     /// The server sorts the inbox into Focused and Other.
     pub focus: bool,
+    /// One `fetch_raw` call for several messages costs about one round
+    /// trip, as one IMAP command per mailbox does, so reading a thread's
+    /// bodies asks once instead of once per message. Where it is false,
+    /// as for an API that answers one message a request, the bodies are
+    /// asked for one by one, several at a time.
+    pub fetches_raw_together: bool,
     /// The account's mailboxes live only in the store, as a POP3 account's
     /// do. A move, a flag or a mailbox change is complete once the store
     /// has it, so the engine sends nothing, and nothing prunes or relists
@@ -1828,6 +1834,7 @@ mod tests {
         assert_eq!(
             services.capabilities(),
             MailCapabilities {
+                fetches_raw_together: false,
                 labels: true,
                 server_threads: true,
                 files_sent_mail: true,

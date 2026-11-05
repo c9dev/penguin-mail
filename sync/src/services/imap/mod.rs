@@ -347,6 +347,7 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
 
     fn capabilities(&self) -> MailCapabilities {
         MailCapabilities {
+            fetches_raw_together: true,
             labels: false,
             server_threads: false,
             files_sent_mail: self.settings.files_sent_mail,

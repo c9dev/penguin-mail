@@ -18,7 +18,8 @@ use tokio::time::Instant;
 use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
-    MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SelectReader, StructureReader,
+    MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SectionsReader, SelectReader,
+    StructureReader,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::types::{check_label, label_text};
@@ -453,6 +454,29 @@ impl<S: Stream> Conn<S> {
         )
         .await?;
         Ok(reader.bytes)
+    }
+
+    /// Several whole messages of `mailbox` in one `UID FETCH`, each beside
+    /// its UID. A message the mailbox no longer holds is left out. One
+    /// command for a thread's messages costs one round trip where a
+    /// command each cost one per message.
+    pub(crate) async fn bodies(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> Result<Vec<(u32, Vec<u8>)>, ImapError> {
+        if uids.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.ensure_selected(mailbox).await?;
+        let mut reader = SectionsReader::new(uids);
+        self.exec(
+            &format!("UID FETCH {uids} (UID BODY.PEEK[])"),
+            Doing::Mailbox(mailbox),
+            &mut reader,
+        )
+        .await?;
+        Ok(reader.bodies)
     }
 
     pub(crate) async fn structure(
@@ -1782,6 +1806,49 @@ mod tests {
             .await
             .err();
         assert_eq!(err, Some(ImapError::Unsupported("CONDSTORE")));
+    }
+
+    #[tokio::test]
+    async fn several_messages_come_in_one_fetch_each_under_its_uid() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                // The server answers in its own order and leaves out a
+                // message it no longer holds.
+                "UID FETCH 5,7:8 (UID BODY.PEEK[])" => vec![
+                    "* 3 FETCH (UID 8 BODY[] {5}".into(),
+                    "eight)".into(),
+                    "* 1 FETCH (UID 5 BODY[] {4}".into(),
+                    "five)".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let mut bodies = conn
+            .bodies("INBOX", &UidSet::from_uids([5, 7, 8]))
+            .await
+            .unwrap();
+        bodies.sort();
+        assert_eq!(
+            bodies,
+            [(5, b"five".to_vec()), (8, b"eight".to_vec())],
+            "7 is missing, and the others are under their own UIDs"
+        );
+        assert!(
+            conn.bodies("INBOX", &UidSet::from_uids([]))
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let fetches = seen(&log)
+            .iter()
+            .filter(|c| c.starts_with("UID FETCH") || c.starts_with("SELECT"))
+            .count();
+        assert_eq!(fetches, 2, "one SELECT and one FETCH: {:?}", seen(&log));
     }
 
     #[tokio::test]

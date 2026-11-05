@@ -259,6 +259,7 @@ either_client! {
         fn gmail_flags(mailbox: &str, uids: &UidSet, changed_since: Option<u64>) -> Imapped<Vec<FlagsOf>>;
         fn store_labels(mailbox: &str, uids: &UidSet, add: bool, labels: &[String]) -> Imapped<()>;
         fn body(mailbox: &str, uid: u32, section: &str) -> Imapped<Option<Vec<u8>>>;
+        fn bodies(mailbox: &str, uids: &UidSet) -> Imapped<Vec<(u32, Vec<u8>)>>;
         fn structure(mailbox: &str, uid: u32) -> Imapped<Option<BodyStructure>>;
         fn store(mailbox: &str, uids: &UidSet, add: bool, flags: &[String]) -> Imapped<()>;
         fn move_to(mailbox: &str, uids: &UidSet, to: &str) -> Imapped<Option<CopyUid>>;
