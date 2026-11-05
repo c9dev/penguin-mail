@@ -1122,26 +1122,20 @@ msgid "Summarize this conversation"
 msgstr "이 대화 요약"
 
 #: app/src/assistant/mod.rs:227
-#, fuzzy
-#| msgid "Summarize this conversation"
 msgid "Explain this conversation"
-msgstr "이 대화 요약"
+msgstr "이 대화 설명"
 
 #: app/src/assistant/mod.rs:260
 msgid "Wait for the conversation to finish loading, then try again."
-msgstr ""
+msgstr "대화가 모두 로드될 때까지 기다린 후 다시 시도하세요."
 
 #: app/src/assistant/mod.rs:285
-#, fuzzy
-#| msgid "This message is too large to open."
 msgid "This message's headers are too large to analyze."
-msgstr "메시지가 너무 커서 열 수 없습니다."
+msgstr "이 메시지의 헤더가 너무 커서 분석할 수 없습니다."
 
 #: app/src/assistant/mod.rs:295
-#, fuzzy
-#| msgid "Open a conversation first"
 msgid "Open a conversation first."
-msgstr "먼저 대화를 여세요"
+msgstr "먼저 대화를 여세요."
 
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
@@ -1942,20 +1936,14 @@ msgid ""
 "Standard input:\n"
 "{stdin}"
 msgstr ""
+"표준 입력:\n"
+"{stdin}"
 
 #: app/src/assistant/sources/skills/shell.rs:189
 msgid "No standard input."
-msgstr ""
+msgstr "표준 입력 없음."
 
 #: app/src/assistant/sources/skills/shell.rs:193
-#, fuzzy
-#| msgid ""
-#| "Run this command for the skill {skill}?\n"
-#| "\n"
-#| "{command}\n"
-#| "\n"
-#| "It runs in a sandbox with no access to your mail or home folder. "
-#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -1966,12 +1954,14 @@ msgid ""
 "It runs in a sandbox with no access to your mail or home folder. {network} "
 "Always Allow covers this exact command and standard input only."
 msgstr ""
-"{skill} 스킬의 이 명령을 실행할까요?\n"
+"스킬 {skill}에 대해 이 명령을 실행할까요?\n"
 "\n"
 "{command}\n"
 "\n"
-"메일이나 홈 폴더에 접근할 수 없는 샌드박스에서 실행합니다. {network} 항상 허"
-"용은 이 명령에만 적용합니다."
+"{stdin}\n"
+"\n"
+"메일이나 홈 폴더에 접근할 수 없는 샌드박스에서 실행됩니다. {network} 항상 허"
+"용은 이 명령과 표준 입력이 정확히 일치하는 경우에만 적용됩니다."
 
 #: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
@@ -2201,11 +2191,9 @@ msgstr ""
 "않습니다."
 
 #: app/src/core.rs:1708
-#, fuzzy
-#| msgid "This account is already moving to its new sign-in."
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
-msgstr "이 계정은 이미 새 로그인 방식으로 옮기는 중입니다."
+msgstr "로그인 계정을 제거하기 전에 이 계정의 공유 사서함을 제거하세요."
 
 #: app/src/core.rs:1886 app/src/core.rs:1986
 msgid "The demo cannot switch accounts."
@@ -3437,10 +3425,8 @@ msgstr ""
 "린 후 다시 시도하세요."
 
 #: app/src/packaging.rs:147
-#, fuzzy
-#| msgid "Download a new AppImage to update"
 msgid "Download a new .deb to update"
-msgstr "업데이트하려면 새 AppImage를 다운로드하세요"
+msgstr "새 .deb 파일을 다운로드하여 업데이트"
 
 #: app/src/packaging.rs:148
 msgid "Updates come from dnf"
@@ -4037,7 +4023,7 @@ msgstr "요약"
 
 #: app/src/render.rs:198
 msgid "Explain"
-msgstr ""
+msgstr "설명"
 
 #: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
@@ -4106,7 +4092,7 @@ msgstr "받는 사람"
 
 #: app/src/render.rs:549
 msgid "delivered-to"
-msgstr ""
+msgstr "배달 주소"
 
 #: app/src/render.rs:552
 msgid "cc"
@@ -4534,11 +4520,11 @@ msgstr "일요일"
 
 #: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
-msgstr ""
+msgstr "12시간제 (AM/PM)"
 
 #: app/src/settings/mod.rs:650
 msgid "24-hour"
-msgstr ""
+msgstr "24시간제"
 
 #: app/src/settings/mod.rs:688
 msgid "When opened"
@@ -5481,12 +5467,16 @@ msgid ""
 "Some conversation text was left out because it is too long. This answer "
 "covers only the included text."
 msgstr ""
+"대화 텍스트의 일부가 너무 길어 제외되었습니다. 이 답변은 포함된 텍스트만 다룹"
+"니다."
 
 #: app/src/ui/assistant.rs:490
 msgid ""
 "Tools are off for this conversation and its follow-up questions. Choose New "
 "Chat to use tools again."
 msgstr ""
+"이 대화와 후속 질문에서는 도구가 꺼져 있습니다. 도구를 다시 사용하려면 새 채"
+"팅을 선택하세요."
 
 #: app/src/ui/assistant.rs:588
 msgid "Stop"
@@ -5779,13 +5769,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
-msgstr ""
+msgstr "요약 및 설명에서 도구 허용"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
+"이 채팅에서 다른 메일을 읽고, 작업을 수행하고, 외부 서비스에 연결하도록 허용"
+"합니다. 기본적으로 꺼져 있습니다."
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
@@ -5881,13 +5873,15 @@ msgstr "모델의 생각과 도구 실행 내용을 표시될 때 펼칩니다"
 
 #: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
-msgstr ""
+msgstr "답변당 모델 요청 수"
 
 #: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
+"도우미가 중단하기 전 한 턴에서 모델에 요청할 수 있는 횟수입니다. 도구를 실행"
+"할 때마다 한 번으로 계산됩니다."
 
 #: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
@@ -8064,7 +8058,7 @@ msgstr "편집…"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
 msgid "Shared mailboxes support mail only."
-msgstr ""
+msgstr "공유 사서함은 메일만 지원합니다."
 
 #: app/src/ui/contacts_prefs.rs:291
 msgid ""
@@ -8141,10 +8135,8 @@ msgstr "내보내기…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
 #: app/src/ui/window.rs:3671
-#, fuzzy
-#| msgid "Custom…"
 msgid "Customize Toolbar…"
-msgstr "사용자 지정…"
+msgstr "도구 모음 사용자 지정…"
 
 #: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
@@ -9247,13 +9239,14 @@ msgstr "보낸 지 3일이 지나도 회신이 없는 메일을 표시합니다"
 
 #: app/src/ui/preferences.rs:192
 msgid "Follow Navigation After Removing Mail"
-msgstr ""
+msgstr "메일 제거 후 탐색 방향 따르기"
 
 #: app/src/ui/preferences.rs:194
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
 msgstr ""
+"메일을 삭제, 보관 또는 이동한 후 마지막으로 이동한 방향의 이웃 메일 선택"
 
 #: app/src/ui/preferences.rs:201
 msgid "Images and Receipts"
@@ -9321,12 +9314,12 @@ msgstr "메시지 목록에 연락처 사진이나 이니셜을 표시합니다"
 
 #: app/src/ui/preferences.rs:292
 msgid "Draw Messages Without the GPU"
-msgstr ""
+msgstr "GPU 없이 메시지 그리기"
 
 #: app/src/ui/preferences.rs:294
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
-msgstr ""
+msgstr "메시지가 비어 있거나 깨져 보일 때 켜세요. 다시 시작한 후 적용됩니다"
 
 #: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
 msgid "Notifications"
@@ -9401,16 +9394,12 @@ msgid "Space on the Server"
 msgstr "서버 저장 공간"
 
 #: app/src/ui/preferences.rs:483
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox"
-msgstr "스마트 메일함"
+msgstr "공유 사서함"
 
 #: app/src/ui/preferences.rs:487
-#, fuzzy
-#| msgid "Sign in again to {account}"
 msgid "Signed in through {account}"
-msgstr "{account}에 다시 로그인"
+msgstr "{account}을(를) 통해 로그인됨"
 
 #: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
@@ -9708,16 +9697,12 @@ msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
 #: app/src/ui/preferences.rs:1386
-#, fuzzy
-#| msgid "Format"
 msgid "Time Format"
-msgstr "서식 적용"
+msgstr "시간 형식"
 
 #: app/src/ui/preferences.rs:1390
-#, fuzzy
-#| msgid "Automatic follows the locale's own first day of the week"
 msgid "Automatic follows the system clock format"
-msgstr "자동을 선택하면 지역 설정의 주 시작 요일을 따릅니다"
+msgstr "자동은 시스템 시간 형식을 따릅니다"
 
 #: app/src/ui/preferences.rs:1404
 msgid "Week Starts On"
@@ -9928,34 +9913,28 @@ msgstr "gmail.com에서"
 #: app/src/ui/preferences/shared_mailbox.rs:15
 #: app/src/ui/preferences/shared_mailbox.rs:33
 #: app/src/ui/preferences/shared_mailbox.rs:49
-#, fuzzy
-#| msgid "Edit Smart Mailbox"
 msgid "Add Shared Mailbox"
-msgstr "스마트 메일함 편집"
+msgstr "공유 사서함 추가"
 
 #: app/src/ui/preferences/shared_mailbox.rs:17
-#, fuzzy
-#| msgid "Signed in with this computer's sign-in."
 msgid "Open a shared mailbox using this account's sign-in."
-msgstr "이 컴퓨터의 로그인으로 로그인했습니다."
+msgstr "이 계정의 로그인으로 공유 사서함을 엽니다."
 
 #: app/src/ui/preferences/shared_mailbox.rs:41
 msgid ""
 "Enter the shared mailbox address. Sign in as {account} to allow access. Your "
 "administrator must have granted you Full Access to the mailbox."
 msgstr ""
+"공유 사서함 주소를 입력하세요. 접근을 허용하려면 {account}(으)로 로그인하세"
+"요. 관리자가 사서함에 대한 모든 액세스 권한을 부여했어야 합니다."
 
 #: app/src/ui/preferences/shared_mailbox.rs:44
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox Address"
-msgstr "스마트 메일함"
+msgstr "공유 사서함 주소"
 
 #: app/src/ui/preferences/shared_mailbox.rs:75
-#, fuzzy
-#| msgid "Finish signing in on {provider}'s page in your browser."
 msgid "Finish signing in with Microsoft, then return here."
-msgstr "브라우저에서 {provider}의 페이지를 열어 로그인을 완료하세요."
+msgstr "Microsoft 로그인을 완료한 후 여기로 돌아오세요."
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10647,42 +10626,32 @@ msgid "On the server, {lines}"
 msgstr "서버에 있음, {lines}"
 
 #: app/src/ui/toolbar/customize.rs:25
-#, fuzzy
-#| msgid "Move to Folder"
 msgid "Labels or Move to Folder"
-msgstr "폴더로 이동"
+msgstr "라벨 또는 폴더로 이동"
 
 #: app/src/ui/toolbar/customize.rs:116
-#, fuzzy
-#| msgid "Move {account} Up"
 msgid "Move {button} Up"
-msgstr "{account} 위로 이동"
+msgstr "{button} 위로 이동"
 
 #: app/src/ui/toolbar/customize.rs:120
-#, fuzzy
-#| msgid "Move {account} Down"
 msgid "Move {button} Down"
-msgstr "{account} 아래로 이동"
+msgstr "{button} 아래로 이동"
 
 #: app/src/ui/toolbar/customize.rs:178
-#, fuzzy
-#| msgid "Drag to Reorder Accounts"
 msgid "Drag to Reorder Buttons"
-msgstr "끌어서 계정 순서 변경"
+msgstr "끌어서 버튼 순서 변경"
 
 #: app/src/ui/toolbar/customize.rs:231
 msgid "Choose buttons, then drag them or use the arrows to change their order."
-msgstr ""
+msgstr "버튼을 선택한 후 끌거나 화살표를 사용하여 순서를 변경하세요."
 
 #: app/src/ui/toolbar/customize.rs:238
-#, fuzzy
-#| msgid "Defaults"
 msgid "Restore Defaults"
-msgstr "기본값"
+msgstr "기본값 복원"
 
 #: app/src/ui/toolbar/customize.rs:259
 msgid "Customize Toolbar"
-msgstr ""
+msgstr "도구 모음 사용자 지정"
 
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
@@ -10730,10 +10699,8 @@ msgid "Show Translation"
 msgstr "번역 표시"
 
 #: app/src/ui/unsubscribe.rs:66
-#, fuzzy
-#| msgid "Unsubscribe"
 msgid "Load Unsubscribe Pages?"
-msgstr "구독 해지"
+msgstr "구독 취소 페이지를 로드할까요?"
 
 #: app/src/ui/unsubscribe.rs:68
 msgid ""
@@ -10741,12 +10708,13 @@ msgid ""
 "sender may learn that you opened the link, and opening it may unsubscribe "
 "you. You will be asked again before a form is submitted."
 msgstr ""
+"이 페이지를 로드하면 서버에 연결하고 스크립트를 실행합니다. 보낸 사람이 링크"
+"를 열었다는 사실을 알 수 있으며, 링크를 열면 구독이 취소될 수도 있습니다. 양"
+"식을 제출하기 전에 다시 확인합니다."
 
 #: app/src/ui/unsubscribe.rs:79
-#, fuzzy
-#| msgid "Load Images"
 msgid "Load Pages"
-msgstr "이미지 불러오기"
+msgstr "페이지 로드"
 
 #: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
@@ -11368,16 +11336,12 @@ msgid_plural "{count} sent messages have had no reply"
 msgstr[0] "보낸 메시지 {count}개에 답장이 없습니다"
 
 #: app/src/ui/window/images.rs:74
-#, fuzzy
-#| msgid "Unknown sender"
 msgid "Unknown Sender"
-msgstr "알 수 없는 발신자"
+msgstr "알 수 없는 보낸 사람"
 
 #: app/src/ui/window/images.rs:81
-#, fuzzy
-#| msgid "Stop Loading Images from This Sender"
 msgid "Load Images from Multiple Senders?"
-msgstr "이 발신자의 이미지 로드 중지"
+msgstr "여러 보낸 사람의 이미지를 로드할까요?"
 
 #: app/src/ui/window/images.rs:83
 msgid ""
@@ -11386,6 +11350,10 @@ msgid ""
 "\n"
 "{senders}"
 msgstr ""
+"이 대화의 여러 이메일 주소에서 원격 이미지를 로드합니다. 각 보낸 사람이 메일"
+"을 연 시간을 알 수 있습니다.\n"
+"\n"
+"{senders}"
 
 #: app/src/ui/window/images.rs:127
 msgid "Always"
@@ -13010,16 +12978,12 @@ msgstr ""
 "니다."
 
 #: sync/src/services/microsoft/outgoing.rs:75
-#, fuzzy
-#| msgid ""
-#| "Microsoft cannot send a signed or encrypted message larger than 3 MB. "
-#| "Make the files smaller or send them apart."
 msgid ""
 "Microsoft cannot send or save a shared mailbox message larger than 3 MB. "
 "Make the files smaller or send them apart."
 msgstr ""
-"Microsoft는 3 MB보다 큰 서명 또는 암호화된 메시지를 보낼 수 없습니다. 파일 크"
-"기를 줄이거나 나누어 보내세요."
+"Microsoft는 3 MB가 넘는 공유 사서함 메시지를 보내거나 저장할 수 없습니다. 파"
+"일 크기를 줄이거나 나누어 보내세요."
 
 #: sync/src/services/microsoft/outgoing.rs:84
 msgid "The message has no Message-ID."
@@ -13108,23 +13072,23 @@ msgstr "규칙이 수행할 작업을 선택하세요"
 
 #: sync/src/shared_mailbox.rs:59
 msgid "Choose a Microsoft 365 account that has access to this shared mailbox."
-msgstr ""
+msgstr "이 공유 사서함에 접근할 수 있는 Microsoft 365 계정을 선택하세요."
 
 #: sync/src/shared_mailbox.rs:72
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Enter a valid shared mailbox address."
-msgstr "스마트 메일함"
+msgstr "올바른 공유 사서함 주소를 입력하세요."
 
 #: sync/src/shared_mailbox.rs:76
 msgid ""
 "Microsoft could not open this shared mailbox. Check its address and ask your "
 "administrator for Full Access permission."
 msgstr ""
+"Microsoft가 이 공유 사서함을 열지 못했습니다. 주소를 확인하고 관리자에게 모"
+"든 액세스 권한을 요청하세요."
 
 #: sync/src/shared_mailbox.rs:100
 msgid "This mailbox is already added, or its sign-in account was removed."
-msgstr ""
+msgstr "이 사서함이 이미 추가되었거나 로그인 계정이 제거되었습니다."
 
 #: sync/src/sign_in.rs:367
 msgid ""

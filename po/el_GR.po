@@ -1202,26 +1202,20 @@ msgid "Summarize this conversation"
 msgstr "Σύνοψη αυτής της συζήτησης"
 
 #: app/src/assistant/mod.rs:227
-#, fuzzy
-#| msgid "Summarize this conversation"
 msgid "Explain this conversation"
-msgstr "Σύνοψη αυτής της συζήτησης"
+msgstr "Εξήγηση αυτής της συνομιλίας"
 
 #: app/src/assistant/mod.rs:260
 msgid "Wait for the conversation to finish loading, then try again."
-msgstr ""
+msgstr "Περιμένετε να ολοκληρωθεί η φόρτωση της συνομιλίας και δοκιμάστε ξανά."
 
 #: app/src/assistant/mod.rs:285
-#, fuzzy
-#| msgid "This message is too large to open."
 msgid "This message's headers are too large to analyze."
-msgstr "Αυτό το μήνυμα είναι πολύ μεγάλο για να ανοίξει."
+msgstr "Οι κεφαλίδες αυτού του μηνύματος είναι πολύ μεγάλες για ανάλυση."
 
 #: app/src/assistant/mod.rs:295
-#, fuzzy
-#| msgid "Open a conversation first"
 msgid "Open a conversation first."
-msgstr "Ανοίξτε πρώτα μια συζήτηση"
+msgstr "Ανοίξτε πρώτα μια συνομιλία."
 
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
@@ -2064,20 +2058,14 @@ msgid ""
 "Standard input:\n"
 "{stdin}"
 msgstr ""
+"Τυπική είσοδος:\n"
+"{stdin}"
 
 #: app/src/assistant/sources/skills/shell.rs:189
 msgid "No standard input."
-msgstr ""
+msgstr "Χωρίς τυπική είσοδο."
 
 #: app/src/assistant/sources/skills/shell.rs:193
-#, fuzzy
-#| msgid ""
-#| "Run this command for the skill {skill}?\n"
-#| "\n"
-#| "{command}\n"
-#| "\n"
-#| "It runs in a sandbox with no access to your mail or home folder. "
-#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -2088,13 +2076,15 @@ msgid ""
 "It runs in a sandbox with no access to your mail or home folder. {network} "
 "Always Allow covers this exact command and standard input only."
 msgstr ""
-"Εκτέλεση αυτής της εντολής για τη δεξιότητα {skill};\n"
+"Να εκτελεστεί αυτή η εντολή για τη δεξιότητα {skill};\n"
 "\n"
 "{command}\n"
 "\n"
-"Εκτελείται σε περιβάλλον απομόνωσης χωρίς πρόσβαση στην αλληλογραφία ή στον "
-"προσωπικό σας φάκελο. {network} Η επιλογή «Να επιτρέπεται πάντα» καλύπτει "
-"μόνο αυτήν ακριβώς την εντολή."
+"{stdin}\n"
+"\n"
+"Εκτελείται σε απομονωμένο περιβάλλον χωρίς πρόσβαση στην αλληλογραφία ή στον "
+"προσωπικό σας φάκελο. {network} Η επιλογή Να επιτρέπεται πάντα καλύπτει μόνο "
+"αυτήν ακριβώς την εντολή και την τυπική είσοδο."
 
 #: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
@@ -2340,11 +2330,11 @@ msgstr ""
 "διακομιστής ημερολογίου ή επαφών."
 
 #: app/src/core.rs:1708
-#, fuzzy
-#| msgid "This account is already moving to its new sign-in."
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
-msgstr "Αυτός ο λογαριασμός μεταφέρεται ήδη στη νέα του σύνδεση."
+msgstr ""
+"Αφαιρέστε τα κοινόχρηστα γραμματοκιβώτια αυτού του λογαριασμού πριν "
+"αφαιρέσετε τον λογαριασμό σύνδεσής του."
 
 #: app/src/core.rs:1886 app/src/core.rs:1986
 msgid "The demo cannot switch accounts."
@@ -3674,10 +3664,8 @@ msgstr ""
 "ζητήσει άδεια. Ενεργοποιήστε το, περιμένετε ένα λεπτό και δοκιμάστε ξανά."
 
 #: app/src/packaging.rs:147
-#, fuzzy
-#| msgid "Download a new AppImage to update"
 msgid "Download a new .deb to update"
-msgstr "Κατεβάστε ένα νέο AppImage για ενημέρωση"
+msgstr "Κάντε λήψη νέου αρχείου .deb για ενημέρωση"
 
 #: app/src/packaging.rs:148
 msgid "Updates come from dnf"
@@ -4313,7 +4301,7 @@ msgstr "Σύνοψη"
 
 #: app/src/render.rs:198
 msgid "Explain"
-msgstr ""
+msgstr "Εξήγηση"
 
 #: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
@@ -4383,7 +4371,7 @@ msgstr "προς"
 
 #: app/src/render.rs:549
 msgid "delivered-to"
-msgstr ""
+msgstr "διεύθυνση παράδοσης"
 
 #: app/src/render.rs:552
 msgid "cc"
@@ -4821,11 +4809,11 @@ msgstr "Κυριακή"
 
 #: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
-msgstr ""
+msgstr "12ωρη (AM/PM)"
 
 #: app/src/settings/mod.rs:650
 msgid "24-hour"
-msgstr ""
+msgstr "24ωρη"
 
 #: app/src/settings/mod.rs:688
 msgid "When opened"
@@ -5800,12 +5788,16 @@ msgid ""
 "Some conversation text was left out because it is too long. This answer "
 "covers only the included text."
 msgstr ""
+"Ένα μέρος του κειμένου της συνομιλίας παραλείφθηκε επειδή είναι πολύ μεγάλο. "
+"Αυτή η απάντηση καλύπτει μόνο το κείμενο που συμπεριλήφθηκε."
 
 #: app/src/ui/assistant.rs:490
 msgid ""
 "Tools are off for this conversation and its follow-up questions. Choose New "
 "Chat to use tools again."
 msgstr ""
+"Τα εργαλεία είναι απενεργοποιημένα για αυτήν τη συνομιλία και τις επόμενες "
+"ερωτήσεις. Επιλέξτε Νέα συνομιλία για να τα χρησιμοποιήσετε ξανά."
 
 #: app/src/ui/assistant.rs:588
 msgid "Stop"
@@ -6104,13 +6096,16 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
-msgstr ""
+msgstr "Να επιτρέπονται εργαλεία σε περιλήψεις και εξηγήσεις"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
+"Επιτρέψτε σε αυτές τις συνομιλίες να διαβάζουν άλλα μηνύματα, να εκτελούν "
+"ενέργειες και να επικοινωνούν με εξωτερικές υπηρεσίες. Απενεργοποιημένο από "
+"προεπιλογή."
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
@@ -6213,13 +6208,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
-msgstr ""
+msgstr "Αιτήματα μοντέλου ανά απάντηση"
 
 #: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
+"Πόσες φορές μπορεί ένας γύρος να ρωτήσει το μοντέλο πριν σταματήσει ο "
+"βοηθός. Κάθε εργαλείο που εκτελείται μετρά ως ένα αίτημα."
 
 #: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
@@ -8448,7 +8445,7 @@ msgstr "Επεξεργασία…"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
 msgid "Shared mailboxes support mail only."
-msgstr ""
+msgstr "Τα κοινόχρηστα γραμματοκιβώτια υποστηρίζουν μόνο αλληλογραφία."
 
 #: app/src/ui/contacts_prefs.rs:291
 msgid ""
@@ -8529,10 +8526,8 @@ msgstr "Εξαγωγή…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
 #: app/src/ui/window.rs:3671
-#, fuzzy
-#| msgid "Custom…"
 msgid "Customize Toolbar…"
-msgstr "Προσαρμογή…"
+msgstr "Προσαρμογή γραμμής εργαλείων…"
 
 #: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
@@ -9699,13 +9694,15 @@ msgstr ""
 
 #: app/src/ui/preferences.rs:192
 msgid "Follow Navigation After Removing Mail"
-msgstr ""
+msgstr "Ακολουθήστε την κατεύθυνση πλοήγησης μετά την αφαίρεση μηνυμάτων"
 
 #: app/src/ui/preferences.rs:194
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
 msgstr ""
+"Μετά τη διαγραφή, αρχειοθέτηση ή μετακίνηση μηνυμάτων, επιλέξτε το γειτονικό "
+"μήνυμα στην τελευταία κατεύθυνση πλοήγησης"
 
 #: app/src/ui/preferences.rs:201
 msgid "Images and Receipts"
@@ -9777,12 +9774,14 @@ msgstr "Εμφάνιση εικόνων ή αρχικών επαφών στη λ
 
 #: app/src/ui/preferences.rs:292
 msgid "Draw Messages Without the GPU"
-msgstr ""
+msgstr "Σχεδίαση μηνυμάτων χωρίς GPU"
 
 #: app/src/ui/preferences.rs:294
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr ""
+"Ενεργοποιήστε το όταν τα μηνύματα εμφανίζονται κενά ή αλλοιωμένα. "
+"Εφαρμόζεται μετά από επανεκκίνηση"
 
 #: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
 msgid "Notifications"
@@ -9865,16 +9864,12 @@ msgid "Space on the Server"
 msgstr "Χώρος στον διακομιστή"
 
 #: app/src/ui/preferences.rs:483
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox"
-msgstr "Έξυπνα γραμματοκιβώτια"
+msgstr "Κοινόχρηστο γραμματοκιβώτιο"
 
 #: app/src/ui/preferences.rs:487
-#, fuzzy
-#| msgid "Sign in again to {account}"
 msgid "Signed in through {account}"
-msgstr "Συνδεθείτε ξανά στο {account}"
+msgstr "Σύνδεση μέσω {account}"
 
 #: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
@@ -10186,18 +10181,12 @@ msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
 #: app/src/ui/preferences.rs:1386
-#, fuzzy
-#| msgid "Format"
 msgid "Time Format"
-msgstr "Μορφοποίηση"
+msgstr "Μορφή ώρας"
 
 #: app/src/ui/preferences.rs:1390
-#, fuzzy
-#| msgid "Automatic follows the locale's own first day of the week"
 msgid "Automatic follows the system clock format"
-msgstr ""
-"Η αυτόματη επιλογή ακολουθεί την πρώτη ημέρα της εβδομάδας των τοπικών "
-"ρυθμίσεων"
+msgstr "Η αυτόματη επιλογή ακολουθεί τη μορφή ώρας του συστήματος"
 
 #: app/src/ui/preferences.rs:1404
 msgid "Week Starts On"
@@ -10411,35 +10400,30 @@ msgstr "Στο gmail.com"
 #: app/src/ui/preferences/shared_mailbox.rs:15
 #: app/src/ui/preferences/shared_mailbox.rs:33
 #: app/src/ui/preferences/shared_mailbox.rs:49
-#, fuzzy
-#| msgid "Edit Smart Mailbox"
 msgid "Add Shared Mailbox"
-msgstr "Επεξεργασία έξυπνου γραμματοκιβωτίου"
+msgstr "Προσθήκη κοινόχρηστου γραμματοκιβωτίου"
 
 #: app/src/ui/preferences/shared_mailbox.rs:17
-#, fuzzy
-#| msgid "Signed in with this computer's sign-in."
 msgid "Open a shared mailbox using this account's sign-in."
-msgstr "Συνδεδεμένο με τη σύνδεση αυτού του υπολογιστή."
+msgstr ""
+"Ανοίξτε ένα κοινόχρηστο γραμματοκιβώτιο με τη σύνδεση αυτού του λογαριασμού."
 
 #: app/src/ui/preferences/shared_mailbox.rs:41
 msgid ""
 "Enter the shared mailbox address. Sign in as {account} to allow access. Your "
 "administrator must have granted you Full Access to the mailbox."
 msgstr ""
+"Εισαγάγετε τη διεύθυνση του κοινόχρηστου γραμματοκιβωτίου. Συνδεθείτε ως "
+"{account} για να επιτρέψετε την πρόσβαση. Ο διαχειριστής πρέπει να σας έχει "
+"παραχωρήσει πλήρη πρόσβαση στο γραμματοκιβώτιο."
 
 #: app/src/ui/preferences/shared_mailbox.rs:44
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox Address"
-msgstr "Έξυπνα γραμματοκιβώτια"
+msgstr "Διεύθυνση κοινόχρηστου γραμματοκιβωτίου"
 
 #: app/src/ui/preferences/shared_mailbox.rs:75
-#, fuzzy
-#| msgid "Finish signing in on {provider}'s page in your browser."
 msgid "Finish signing in with Microsoft, then return here."
-msgstr ""
-"Ολοκληρώστε τη σύνδεση στη σελίδα του {provider} στο πρόγραμμα περιήγησης."
+msgstr "Ολοκληρώστε τη σύνδεση στη Microsoft και επιστρέψτε εδώ."
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -11147,42 +11131,34 @@ msgid "On the server, {lines}"
 msgstr "Στον διακομιστή, {lines}"
 
 #: app/src/ui/toolbar/customize.rs:25
-#, fuzzy
-#| msgid "Move to Folder"
 msgid "Labels or Move to Folder"
-msgstr "Μετακίνηση σε φάκελο"
+msgstr "Ετικέτες ή μετακίνηση σε φάκελο"
 
 #: app/src/ui/toolbar/customize.rs:116
-#, fuzzy
-#| msgid "Move {account} Up"
 msgid "Move {button} Up"
-msgstr "Μετακίνηση του {account} πάνω"
+msgstr "Μετακίνηση του {button} επάνω"
 
 #: app/src/ui/toolbar/customize.rs:120
-#, fuzzy
-#| msgid "Move {account} Down"
 msgid "Move {button} Down"
-msgstr "Μετακίνηση του {account} κάτω"
+msgstr "Μετακίνηση του {button} κάτω"
 
 #: app/src/ui/toolbar/customize.rs:178
-#, fuzzy
-#| msgid "Drag to Reorder Accounts"
 msgid "Drag to Reorder Buttons"
-msgstr "Σύρετε για αναδιάταξη των λογαριασμών"
+msgstr "Σύρετε για αναδιάταξη κουμπιών"
 
 #: app/src/ui/toolbar/customize.rs:231
 msgid "Choose buttons, then drag them or use the arrows to change their order."
 msgstr ""
+"Επιλέξτε κουμπιά και σύρετέ τα ή χρησιμοποιήστε τα βέλη για να αλλάξετε τη "
+"σειρά τους."
 
 #: app/src/ui/toolbar/customize.rs:238
-#, fuzzy
-#| msgid "Defaults"
 msgid "Restore Defaults"
-msgstr "Προεπιλογές"
+msgstr "Επαναφορά προεπιλογών"
 
 #: app/src/ui/toolbar/customize.rs:259
 msgid "Customize Toolbar"
-msgstr ""
+msgstr "Προσαρμογή γραμμής εργαλείων"
 
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
@@ -11230,10 +11206,8 @@ msgid "Show Translation"
 msgstr "Εμφάνιση μετάφρασης"
 
 #: app/src/ui/unsubscribe.rs:66
-#, fuzzy
-#| msgid "Unsubscribe"
 msgid "Load Unsubscribe Pages?"
-msgstr "Κατάργηση εγγραφής"
+msgstr "Να φορτωθούν οι σελίδες κατάργησης εγγραφής;"
 
 #: app/src/ui/unsubscribe.rs:68
 msgid ""
@@ -11241,12 +11215,14 @@ msgid ""
 "sender may learn that you opened the link, and opening it may unsubscribe "
 "you. You will be asked again before a form is submitted."
 msgstr ""
+"Η φόρτωση αυτών των σελίδων επικοινωνεί με τους διακομιστές τους και εκτελεί "
+"τα σενάριά τους. Ο αποστολέας μπορεί να μάθει ότι ανοίξατε τον σύνδεσμο και "
+"το άνοιγμα μπορεί να καταργήσει την εγγραφή σας. Θα ερωτηθείτε ξανά πριν "
+"υποβληθεί μια φόρμα."
 
 #: app/src/ui/unsubscribe.rs:79
-#, fuzzy
-#| msgid "Load Images"
 msgid "Load Pages"
-msgstr "Φόρτωση εικόνων"
+msgstr "Φόρτωση σελίδων"
 
 #: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
@@ -11903,16 +11879,12 @@ msgstr[0] "{count} απεσταλμένο μήνυμα δεν έχει λάβε�
 msgstr[1] "{count} απεσταλμένα μηνύματα δεν έχουν λάβει απάντηση"
 
 #: app/src/ui/window/images.rs:74
-#, fuzzy
-#| msgid "Unknown sender"
 msgid "Unknown Sender"
 msgstr "Άγνωστος αποστολέας"
 
 #: app/src/ui/window/images.rs:81
-#, fuzzy
-#| msgid "Stop Loading Images from This Sender"
 msgid "Load Images from Multiple Senders?"
-msgstr "Διακοπή φόρτωσης εικόνων από αυτόν τον αποστολέα"
+msgstr "Να φορτωθούν εικόνες από πολλούς αποστολείς;"
 
 #: app/src/ui/window/images.rs:83
 msgid ""
@@ -11921,6 +11893,11 @@ msgid ""
 "\n"
 "{senders}"
 msgstr ""
+"Αυτό φορτώνει απομακρυσμένες εικόνες από περισσότερες από μία διευθύνσεις "
+"email σε αυτήν τη συνομιλία. Κάθε αποστολέας μπορεί να μάθει πότε ανοίξατε "
+"το μήνυμά του.\n"
+"\n"
+"{senders}"
 
 #: app/src/ui/window/images.rs:127
 msgid "Always"
@@ -13644,16 +13621,13 @@ msgstr ""
 "οργανισμού σας, στον οποίο το Penguin Mail δεν έχει πρόσβαση."
 
 #: sync/src/services/microsoft/outgoing.rs:75
-#, fuzzy
-#| msgid ""
-#| "Microsoft cannot send a signed or encrypted message larger than 3 MB. "
-#| "Make the files smaller or send them apart."
 msgid ""
 "Microsoft cannot send or save a shared mailbox message larger than 3 MB. "
 "Make the files smaller or send them apart."
 msgstr ""
-"Η Microsoft δεν μπορεί να στείλει υπογεγραμμένο ή κρυπτογραφημένο μήνυμα "
-"μεγαλύτερο από 3 MB. Μικρύνετε τα αρχεία ή στείλτε τα χωριστά."
+"Η Microsoft δεν μπορεί να στείλει ή να αποθηκεύσει μήνυμα κοινόχρηστου "
+"γραμματοκιβωτίου μεγαλύτερο από 3 MB. Μειώστε το μέγεθος των αρχείων ή "
+"στείλτε τα χωριστά."
 
 #: sync/src/services/microsoft/outgoing.rs:84
 msgid "The message has no Message-ID."
@@ -13747,22 +13721,26 @@ msgstr "Επιλέξτε τι κάνει ο κανόνας"
 #: sync/src/shared_mailbox.rs:59
 msgid "Choose a Microsoft 365 account that has access to this shared mailbox."
 msgstr ""
+"Επιλέξτε λογαριασμό Microsoft 365 με πρόσβαση σε αυτό το κοινόχρηστο "
+"γραμματοκιβώτιο."
 
 #: sync/src/shared_mailbox.rs:72
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Enter a valid shared mailbox address."
-msgstr "Έξυπνα γραμματοκιβώτια"
+msgstr "Εισαγάγετε έγκυρη διεύθυνση κοινόχρηστου γραμματοκιβωτίου."
 
 #: sync/src/shared_mailbox.rs:76
 msgid ""
 "Microsoft could not open this shared mailbox. Check its address and ask your "
 "administrator for Full Access permission."
 msgstr ""
+"Η Microsoft δεν μπόρεσε να ανοίξει αυτό το κοινόχρηστο γραμματοκιβώτιο. "
+"Ελέγξτε τη διεύθυνση και ζητήστε από τον διαχειριστή πλήρη πρόσβαση."
 
 #: sync/src/shared_mailbox.rs:100
 msgid "This mailbox is already added, or its sign-in account was removed."
 msgstr ""
+"Αυτό το γραμματοκιβώτιο έχει ήδη προστεθεί ή ο λογαριασμός σύνδεσής του έχει "
+"αφαιρεθεί."
 
 #: sync/src/sign_in.rs:367
 msgid ""

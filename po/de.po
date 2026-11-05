@@ -1193,26 +1193,22 @@ msgid "Summarize this conversation"
 msgstr "Diese Unterhaltung zusammenfassen"
 
 #: app/src/assistant/mod.rs:227
-#, fuzzy
-#| msgid "Summarize this conversation"
 msgid "Explain this conversation"
-msgstr "Diese Unterhaltung zusammenfassen"
+msgstr "Diese Unterhaltung erklären"
 
 #: app/src/assistant/mod.rs:260
 msgid "Wait for the conversation to finish loading, then try again."
 msgstr ""
+"Warten Sie, bis die Unterhaltung vollständig geladen ist, und versuchen Sie "
+"es erneut."
 
 #: app/src/assistant/mod.rs:285
-#, fuzzy
-#| msgid "This message is too large to open."
 msgid "This message's headers are too large to analyze."
-msgstr "Diese Nachricht ist zu groß zum Öffnen."
+msgstr "Die Kopfzeilen dieser Nachricht sind zu groß für die Analyse."
 
 #: app/src/assistant/mod.rs:295
-#, fuzzy
-#| msgid "Open a conversation first"
 msgid "Open a conversation first."
-msgstr "Öffnen Sie zuerst eine Unterhaltung"
+msgstr "Öffnen Sie zuerst eine Unterhaltung."
 
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
@@ -2055,20 +2051,14 @@ msgid ""
 "Standard input:\n"
 "{stdin}"
 msgstr ""
+"Standardeingabe:\n"
+"{stdin}"
 
 #: app/src/assistant/sources/skills/shell.rs:189
 msgid "No standard input."
-msgstr ""
+msgstr "Keine Standardeingabe."
 
 #: app/src/assistant/sources/skills/shell.rs:193
-#, fuzzy
-#| msgid ""
-#| "Run this command for the skill {skill}?\n"
-#| "\n"
-#| "{command}\n"
-#| "\n"
-#| "It runs in a sandbox with no access to your mail or home folder. "
-#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -2083,9 +2073,11 @@ msgstr ""
 "\n"
 "{command}\n"
 "\n"
+"{stdin}\n"
+"\n"
 "Er läuft in einer Sandbox ohne Zugriff auf Ihre E-Mails oder Ihren "
 "persönlichen Ordner. {network} „Immer erlauben“ gilt nur für genau diesen "
-"Befehl."
+"Befehl und diese Standardeingabe."
 
 #: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
@@ -2327,11 +2319,11 @@ msgstr ""
 "annimmt."
 
 #: app/src/core.rs:1708
-#, fuzzy
-#| msgid "This account is already moving to its new sign-in."
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
-msgstr "Dieses Konto wird gerade auf die neue Anmeldung umgestellt."
+msgstr ""
+"Entfernen Sie die freigegebenen Postfächer dieses Kontos, bevor Sie das zur "
+"Anmeldung verwendete Konto entfernen."
 
 #: app/src/core.rs:1886 app/src/core.rs:1986
 msgid "The demo cannot switch accounts."
@@ -3637,10 +3629,8 @@ msgstr ""
 "erneut."
 
 #: app/src/packaging.rs:147
-#, fuzzy
-#| msgid "Download a new AppImage to update"
 msgid "Download a new .deb to update"
-msgstr "Laden Sie ein neues AppImage herunter, um zu aktualisieren"
+msgstr "Laden Sie eine neue .deb-Datei herunter, um zu aktualisieren"
 
 #: app/src/packaging.rs:148
 msgid "Updates come from dnf"
@@ -4278,7 +4268,7 @@ msgstr "Zusammenfassen"
 
 #: app/src/render.rs:198
 msgid "Explain"
-msgstr ""
+msgstr "Erklären"
 
 #: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
@@ -4348,7 +4338,7 @@ msgstr "an"
 
 #: app/src/render.rs:549
 msgid "delivered-to"
-msgstr ""
+msgstr "Zustelladresse"
 
 #: app/src/render.rs:552
 msgid "cc"
@@ -4784,11 +4774,11 @@ msgstr "Sonntag"
 
 #: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
-msgstr ""
+msgstr "12 Stunden (AM/PM)"
 
 #: app/src/settings/mod.rs:650
 msgid "24-hour"
-msgstr ""
+msgstr "24 Stunden"
 
 #: app/src/settings/mod.rs:688
 msgid "When opened"
@@ -5760,12 +5750,16 @@ msgid ""
 "Some conversation text was left out because it is too long. This answer "
 "covers only the included text."
 msgstr ""
+"Ein Teil der Unterhaltung wurde ausgelassen, weil er zu lang ist. Diese "
+"Antwort bezieht sich nur auf den enthaltenen Text."
 
 #: app/src/ui/assistant.rs:490
 msgid ""
 "Tools are off for this conversation and its follow-up questions. Choose New "
 "Chat to use tools again."
 msgstr ""
+"Werkzeuge sind für diese Unterhaltung und ihre Folgefragen deaktiviert. "
+"Wählen Sie Neuer Chat, um Werkzeuge wieder zu verwenden."
 
 #: app/src/ui/assistant.rs:588
 msgid "Stop"
@@ -6066,13 +6060,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
-msgstr ""
+msgstr "Werkzeuge in Zusammenfassungen und Erklärungen erlauben"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
+"Diesen Chats erlauben, andere E-Mails zu lesen, Aktionen auszuführen und "
+"externe Dienste zu kontaktieren. Standardmäßig deaktiviert."
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
@@ -6173,13 +6169,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
-msgstr ""
+msgstr "Modellanfragen pro Antwort"
 
 #: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
+"Wie oft ein Durchgang das Modell fragen darf, bevor der Assistent aufgibt. "
+"Jedes ausgeführte Werkzeug zählt als eine Anfrage."
 
 #: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
@@ -8400,7 +8398,7 @@ msgstr "Bearbeiten …"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
 msgid "Shared mailboxes support mail only."
-msgstr ""
+msgstr "Freigegebene Postfächer unterstützen nur E-Mails."
 
 #: app/src/ui/contacts_prefs.rs:291
 msgid ""
@@ -8480,10 +8478,8 @@ msgstr "Exportieren …"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
 #: app/src/ui/window.rs:3671
-#, fuzzy
-#| msgid "Custom…"
 msgid "Customize Toolbar…"
-msgstr "Benutzerdefiniert …"
+msgstr "Werkzeugleiste anpassen…"
 
 #: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
@@ -9636,13 +9632,15 @@ msgstr "Gesendete E-Mails auflisten, die seit drei Tagen unbeantwortet sind"
 
 #: app/src/ui/preferences.rs:192
 msgid "Follow Navigation After Removing Mail"
-msgstr ""
+msgstr "Nach dem Entfernen von E-Mails der Navigationsrichtung folgen"
 
 #: app/src/ui/preferences.rs:194
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
 msgstr ""
+"Nach dem Löschen, Archivieren oder Verschieben von E-Mails den Nachbarn in "
+"der zuletzt verwendeten Richtung auswählen"
 
 #: app/src/ui/preferences.rs:201
 msgid "Images and Receipts"
@@ -9711,12 +9709,14 @@ msgstr "Kontaktbilder oder Initialen in der Nachrichtenliste anzeigen"
 
 #: app/src/ui/preferences.rs:292
 msgid "Draw Messages Without the GPU"
-msgstr ""
+msgstr "Nachrichten ohne GPU darstellen"
 
 #: app/src/ui/preferences.rs:294
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr ""
+"Aktivieren, wenn Nachrichten leer oder fehlerhaft erscheinen. Wird nach "
+"einem Neustart wirksam"
 
 #: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
 msgid "Notifications"
@@ -9797,16 +9797,12 @@ msgid "Space on the Server"
 msgstr "Speicher auf dem Server"
 
 #: app/src/ui/preferences.rs:483
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox"
-msgstr "Intelligente Postfächer"
+msgstr "Freigegebenes Postfach"
 
 #: app/src/ui/preferences.rs:487
-#, fuzzy
-#| msgid "Sign in again to {account}"
 msgid "Signed in through {account}"
-msgstr "Erneut bei {account} anmelden"
+msgstr "Über {account} angemeldet"
 
 #: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
@@ -10117,16 +10113,12 @@ msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
 #: app/src/ui/preferences.rs:1386
-#, fuzzy
-#| msgid "Format"
 msgid "Time Format"
-msgstr "Formatieren"
+msgstr "Zeitformat"
 
 #: app/src/ui/preferences.rs:1390
-#, fuzzy
-#| msgid "Automatic follows the locale's own first day of the week"
 msgid "Automatic follows the system clock format"
-msgstr "„Automatisch“ folgt dem ersten Wochentag der Region"
+msgstr "Automatisch folgt dem Zeitformat des Systems"
 
 #: app/src/ui/preferences.rs:1404
 msgid "Week Starts On"
@@ -10337,35 +10329,31 @@ msgstr "Auf gmail.com"
 #: app/src/ui/preferences/shared_mailbox.rs:15
 #: app/src/ui/preferences/shared_mailbox.rs:33
 #: app/src/ui/preferences/shared_mailbox.rs:49
-#, fuzzy
-#| msgid "Edit Smart Mailbox"
 msgid "Add Shared Mailbox"
-msgstr "Intelligentes Postfach bearbeiten"
+msgstr "Freigegebenes Postfach hinzufügen"
 
 #: app/src/ui/preferences/shared_mailbox.rs:17
-#, fuzzy
-#| msgid "Signed in with this computer's sign-in."
 msgid "Open a shared mailbox using this account's sign-in."
-msgstr "Mit der Anmeldung dieses Rechners angemeldet."
+msgstr "Ein freigegebenes Postfach mit der Anmeldung dieses Kontos öffnen."
 
 #: app/src/ui/preferences/shared_mailbox.rs:41
 msgid ""
 "Enter the shared mailbox address. Sign in as {account} to allow access. Your "
 "administrator must have granted you Full Access to the mailbox."
 msgstr ""
+"Geben Sie die Adresse des freigegebenen Postfachs ein. Melden Sie sich als "
+"{account} an, um den Zugriff zu erlauben. Ihr Administrator muss Ihnen "
+"Vollzugriff auf das Postfach gewährt haben."
 
 #: app/src/ui/preferences/shared_mailbox.rs:44
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox Address"
-msgstr "Intelligente Postfächer"
+msgstr "Adresse des freigegebenen Postfachs"
 
 #: app/src/ui/preferences/shared_mailbox.rs:75
-#, fuzzy
-#| msgid "Finish signing in on {provider}'s page in your browser."
 msgid "Finish signing in with Microsoft, then return here."
 msgstr ""
-"Schließen Sie die Anmeldung auf der Seite von {provider} in Ihrem Browser ab."
+"Schließen Sie die Anmeldung bei Microsoft ab und kehren Sie dann hierher "
+"zurück."
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -11071,42 +11059,34 @@ msgid "On the server, {lines}"
 msgstr "Auf dem Server, {lines}"
 
 #: app/src/ui/toolbar/customize.rs:25
-#, fuzzy
-#| msgid "Move to Folder"
 msgid "Labels or Move to Folder"
-msgstr "In Ordner verschieben"
+msgstr "Labels oder in Ordner verschieben"
 
 #: app/src/ui/toolbar/customize.rs:116
-#, fuzzy
-#| msgid "Move {account} Up"
 msgid "Move {button} Up"
-msgstr "{account} nach oben verschieben"
+msgstr "{button} nach oben verschieben"
 
 #: app/src/ui/toolbar/customize.rs:120
-#, fuzzy
-#| msgid "Move {account} Down"
 msgid "Move {button} Down"
-msgstr "{account} nach unten verschieben"
+msgstr "{button} nach unten verschieben"
 
 #: app/src/ui/toolbar/customize.rs:178
-#, fuzzy
-#| msgid "Drag to Reorder Accounts"
 msgid "Drag to Reorder Buttons"
-msgstr "Konten durch Ziehen neu anordnen"
+msgstr "Zum Anordnen der Schaltflächen ziehen"
 
 #: app/src/ui/toolbar/customize.rs:231
 msgid "Choose buttons, then drag them or use the arrows to change their order."
 msgstr ""
+"Wählen Sie Schaltflächen und ändern Sie ihre Reihenfolge durch Ziehen oder "
+"mit den Pfeilen."
 
 #: app/src/ui/toolbar/customize.rs:238
-#, fuzzy
-#| msgid "Defaults"
 msgid "Restore Defaults"
-msgstr "Standardwerte"
+msgstr "Standardwerte wiederherstellen"
 
 #: app/src/ui/toolbar/customize.rs:259
 msgid "Customize Toolbar"
-msgstr ""
+msgstr "Werkzeugleiste anpassen"
 
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
@@ -11154,10 +11134,8 @@ msgid "Show Translation"
 msgstr "Übersetzung anzeigen"
 
 #: app/src/ui/unsubscribe.rs:66
-#, fuzzy
-#| msgid "Unsubscribe"
 msgid "Load Unsubscribe Pages?"
-msgstr "Abbestellen"
+msgstr "Abmeldeseiten laden?"
 
 #: app/src/ui/unsubscribe.rs:68
 msgid ""
@@ -11165,12 +11143,14 @@ msgid ""
 "sender may learn that you opened the link, and opening it may unsubscribe "
 "you. You will be asked again before a form is submitted."
 msgstr ""
+"Beim Laden dieser Seiten werden ihre Server kontaktiert und ihre Skripte "
+"ausgeführt. Der Absender erfährt möglicherweise, dass Sie den Link geöffnet "
+"haben. Das Öffnen kann Sie abmelden. Vor dem Absenden eines Formulars werden "
+"Sie erneut gefragt."
 
 #: app/src/ui/unsubscribe.rs:79
-#, fuzzy
-#| msgid "Load Images"
 msgid "Load Pages"
-msgstr "Bilder laden"
+msgstr "Seiten laden"
 
 #: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
@@ -11826,16 +11806,12 @@ msgstr[0] "{count} gesendete Nachricht ist unbeantwortet"
 msgstr[1] "{count} gesendete Nachrichten sind unbeantwortet"
 
 #: app/src/ui/window/images.rs:74
-#, fuzzy
-#| msgid "Unknown sender"
 msgid "Unknown Sender"
 msgstr "Unbekannter Absender"
 
 #: app/src/ui/window/images.rs:81
-#, fuzzy
-#| msgid "Stop Loading Images from This Sender"
 msgid "Load Images from Multiple Senders?"
-msgstr "Bilder dieses Absenders nicht mehr laden"
+msgstr "Bilder von mehreren Absendern laden?"
 
 #: app/src/ui/window/images.rs:83
 msgid ""
@@ -11844,6 +11820,11 @@ msgid ""
 "\n"
 "{senders}"
 msgstr ""
+"Dies lädt externe Bilder von mehreren E-Mail-Adressen dieser Unterhaltung. "
+"Jeder Absender erfährt möglicherweise, wann Sie seine E-Mail geöffnet "
+"haben.\n"
+"\n"
+"{senders}"
 
 #: app/src/ui/window/images.rs:127
 msgid "Always"
@@ -13545,16 +13526,12 @@ msgstr ""
 "den Penguin Mail nicht erreichen kann."
 
 #: sync/src/services/microsoft/outgoing.rs:75
-#, fuzzy
-#| msgid ""
-#| "Microsoft cannot send a signed or encrypted message larger than 3 MB. "
-#| "Make the files smaller or send them apart."
 msgid ""
 "Microsoft cannot send or save a shared mailbox message larger than 3 MB. "
 "Make the files smaller or send them apart."
 msgstr ""
-"Microsoft kann keine signierte oder verschlüsselte Nachricht senden, die "
-"größer als 3 MB ist. Verkleinern Sie die Dateien oder senden Sie sie "
+"Microsoft kann Nachrichten eines freigegebenen Postfachs über 3 MB nicht "
+"senden oder speichern. Verkleinern Sie die Dateien oder senden Sie sie "
 "getrennt."
 
 #: sync/src/services/microsoft/outgoing.rs:84
@@ -13650,22 +13627,26 @@ msgstr "Wählen Sie, was die Regel tut"
 #: sync/src/shared_mailbox.rs:59
 msgid "Choose a Microsoft 365 account that has access to this shared mailbox."
 msgstr ""
+"Wählen Sie ein Microsoft 365-Konto, das Zugriff auf dieses freigegebene "
+"Postfach hat."
 
 #: sync/src/shared_mailbox.rs:72
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Enter a valid shared mailbox address."
-msgstr "Intelligente Postfächer"
+msgstr "Geben Sie eine gültige Adresse für das freigegebene Postfach ein."
 
 #: sync/src/shared_mailbox.rs:76
 msgid ""
 "Microsoft could not open this shared mailbox. Check its address and ask your "
 "administrator for Full Access permission."
 msgstr ""
+"Microsoft konnte dieses freigegebene Postfach nicht öffnen. Prüfen Sie die "
+"Adresse und bitten Sie Ihren Administrator um Vollzugriff."
 
 #: sync/src/shared_mailbox.rs:100
 msgid "This mailbox is already added, or its sign-in account was removed."
 msgstr ""
+"Dieses Postfach wurde bereits hinzugefügt oder sein Anmeldekonto wurde "
+"entfernt."
 
 #: sync/src/sign_in.rs:367
 msgid ""

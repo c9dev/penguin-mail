@@ -1156,26 +1156,20 @@ msgid "Summarize this conversation"
 msgstr "Ringkas percakapan ini"
 
 #: app/src/assistant/mod.rs:227
-#, fuzzy
-#| msgid "Summarize this conversation"
 msgid "Explain this conversation"
-msgstr "Ringkas percakapan ini"
+msgstr "Jelaskan percakapan ini"
 
 #: app/src/assistant/mod.rs:260
 msgid "Wait for the conversation to finish loading, then try again."
-msgstr ""
+msgstr "Tunggu hingga percakapan selesai dimuat, lalu coba lagi."
 
 #: app/src/assistant/mod.rs:285
-#, fuzzy
-#| msgid "This message is too large to open."
 msgid "This message's headers are too large to analyze."
-msgstr "Pesan ini terlalu besar untuk dibuka."
+msgstr "Header pesan ini terlalu besar untuk dianalisis."
 
 #: app/src/assistant/mod.rs:295
-#, fuzzy
-#| msgid "Open a conversation first"
 msgid "Open a conversation first."
-msgstr "Buka percakapan terlebih dahulu"
+msgstr "Buka percakapan terlebih dahulu."
 
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
@@ -2004,20 +1998,14 @@ msgid ""
 "Standard input:\n"
 "{stdin}"
 msgstr ""
+"Masukan standar:\n"
+"{stdin}"
 
 #: app/src/assistant/sources/skills/shell.rs:189
 msgid "No standard input."
-msgstr ""
+msgstr "Tidak ada masukan standar."
 
 #: app/src/assistant/sources/skills/shell.rs:193
-#, fuzzy
-#| msgid ""
-#| "Run this command for the skill {skill}?\n"
-#| "\n"
-#| "{command}\n"
-#| "\n"
-#| "It runs in a sandbox with no access to your mail or home folder. "
-#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -2032,8 +2020,11 @@ msgstr ""
 "\n"
 "{command}\n"
 "\n"
-"Perintah berjalan dalam kotak pasir tanpa akses ke email atau folder pribadi "
-"Anda. Selalu Izinkan hanya berlaku untuk perintah yang persis sama. {network}"
+"{stdin}\n"
+"\n"
+"Perintah dijalankan dalam sandbox tanpa akses ke surel atau folder pribadi "
+"Anda. {network} Selalu Izinkan hanya mencakup perintah dan masukan standar "
+"yang sama persis ini."
 
 #: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
@@ -2271,11 +2262,11 @@ msgstr ""
 "kontak."
 
 #: app/src/core.rs:1708
-#, fuzzy
-#| msgid "This account is already moving to its new sign-in."
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
-msgstr "Akun ini sudah dipindahkan ke cara masuk yang baru."
+msgstr ""
+"Hapus kotak surat bersama akun ini sebelum menghapus akun yang digunakan "
+"untuk masuk."
 
 #: app/src/core.rs:1886 app/src/core.rs:1986
 msgid "The demo cannot switch accounts."
@@ -3540,10 +3531,8 @@ msgstr ""
 "layanan tersebut, tunggu sebentar, lalu coba lagi."
 
 #: app/src/packaging.rs:147
-#, fuzzy
-#| msgid "Download a new AppImage to update"
 msgid "Download a new .deb to update"
-msgstr "Unduh AppImage baru untuk memperbarui"
+msgstr "Unduh berkas .deb baru untuk memperbarui"
 
 #: app/src/packaging.rs:148
 msgid "Updates come from dnf"
@@ -4175,7 +4164,7 @@ msgstr "Ringkas"
 
 #: app/src/render.rs:198
 msgid "Explain"
-msgstr ""
+msgstr "Jelaskan"
 
 #: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
@@ -4245,7 +4234,7 @@ msgstr "kepada"
 
 #: app/src/render.rs:549
 msgid "delivered-to"
-msgstr ""
+msgstr "alamat pengiriman"
 
 #: app/src/render.rs:552
 msgid "cc"
@@ -4680,11 +4669,11 @@ msgstr "Minggu"
 
 #: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
-msgstr ""
+msgstr "12 jam (AM/PM)"
 
 #: app/src/settings/mod.rs:650
 msgid "24-hour"
-msgstr ""
+msgstr "24 jam"
 
 #: app/src/settings/mod.rs:688
 msgid "When opened"
@@ -5644,12 +5633,16 @@ msgid ""
 "Some conversation text was left out because it is too long. This answer "
 "covers only the included text."
 msgstr ""
+"Sebagian teks percakapan dihilangkan karena terlalu panjang. Jawaban ini "
+"hanya mencakup teks yang disertakan."
 
 #: app/src/ui/assistant.rs:490
 msgid ""
 "Tools are off for this conversation and its follow-up questions. Choose New "
 "Chat to use tools again."
 msgstr ""
+"Alat dinonaktifkan untuk percakapan ini dan pertanyaan lanjutannya. Pilih "
+"Obrolan Baru untuk menggunakan alat lagi."
 
 #: app/src/ui/assistant.rs:588
 msgid "Stop"
@@ -5950,13 +5943,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
-msgstr ""
+msgstr "Izinkan Alat dalam Ringkasan dan Penjelasan"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
+"Izinkan obrolan ini membaca surel lain, melakukan tindakan, dan menghubungi "
+"layanan eksternal. Nonaktif secara bawaan."
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
@@ -6055,13 +6050,15 @@ msgstr "Buka penalaran model dan setiap alat yang dijalankannya saat muncul"
 
 #: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
-msgstr ""
+msgstr "Permintaan Model per Jawaban"
 
 #: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
+"Berapa kali satu giliran dapat meminta model sebelum asisten berhenti. "
+"Setiap alat yang dijalankan dihitung satu permintaan."
 
 #: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
@@ -8275,7 +8272,7 @@ msgstr "Edit…"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
 msgid "Shared mailboxes support mail only."
-msgstr ""
+msgstr "Kotak surat bersama hanya mendukung surel."
 
 #: app/src/ui/contacts_prefs.rs:291
 msgid ""
@@ -8355,10 +8352,8 @@ msgstr "Ekspor…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
 #: app/src/ui/window.rs:3671
-#, fuzzy
-#| msgid "Custom…"
 msgid "Customize Toolbar…"
-msgstr "Khusus…"
+msgstr "Sesuaikan Bilah Alat…"
 
 #: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
@@ -9493,13 +9488,15 @@ msgstr "Tampilkan email terkirim yang belum dibalas selama tiga hari"
 
 #: app/src/ui/preferences.rs:192
 msgid "Follow Navigation After Removing Mail"
-msgstr ""
+msgstr "Ikuti Arah Navigasi Setelah Menghapus Surel"
 
 #: app/src/ui/preferences.rs:194
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
 msgstr ""
+"Setelah menghapus, mengarsipkan, atau memindahkan surel, pilih tetangga "
+"dalam arah perpindahan terakhir"
 
 #: app/src/ui/preferences.rs:201
 msgid "Images and Receipts"
@@ -9571,12 +9568,13 @@ msgstr "Tampilkan foto atau inisial kontak di daftar pesan"
 
 #: app/src/ui/preferences.rs:292
 msgid "Draw Messages Without the GPU"
-msgstr ""
+msgstr "Gambar Pesan Tanpa GPU"
 
 #: app/src/ui/preferences.rs:294
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr ""
+"Aktifkan jika pesan tampak kosong atau rusak. Berlaku setelah mulai ulang"
 
 #: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
 msgid "Notifications"
@@ -9655,16 +9653,12 @@ msgid "Space on the Server"
 msgstr "Ruang di Server"
 
 #: app/src/ui/preferences.rs:483
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox"
-msgstr "Kotak Surat Cerdas"
+msgstr "Kotak Surat Bersama"
 
 #: app/src/ui/preferences.rs:487
-#, fuzzy
-#| msgid "Sign in again to {account}"
 msgid "Signed in through {account}"
-msgstr "Masuk kembali ke {account}"
+msgstr "Masuk melalui {account}"
 
 #: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
@@ -9970,16 +9964,12 @@ msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
 #: app/src/ui/preferences.rs:1386
-#, fuzzy
-#| msgid "Format"
 msgid "Time Format"
-msgstr "Format"
+msgstr "Format Waktu"
 
 #: app/src/ui/preferences.rs:1390
-#, fuzzy
-#| msgid "Automatic follows the locale's own first day of the week"
 msgid "Automatic follows the system clock format"
-msgstr "Otomatis mengikuti hari pertama dalam seminggu menurut lokal"
+msgstr "Otomatis mengikuti format waktu sistem"
 
 #: app/src/ui/preferences.rs:1404
 msgid "Week Starts On"
@@ -10190,34 +10180,29 @@ msgstr "Di gmail.com"
 #: app/src/ui/preferences/shared_mailbox.rs:15
 #: app/src/ui/preferences/shared_mailbox.rs:33
 #: app/src/ui/preferences/shared_mailbox.rs:49
-#, fuzzy
-#| msgid "Edit Smart Mailbox"
 msgid "Add Shared Mailbox"
-msgstr "Edit Kotak Surat Cerdas"
+msgstr "Tambahkan Kotak Surat Bersama"
 
 #: app/src/ui/preferences/shared_mailbox.rs:17
-#, fuzzy
-#| msgid "Signed in with this computer's sign-in."
 msgid "Open a shared mailbox using this account's sign-in."
-msgstr "Masuk dengan akses masuk komputer ini."
+msgstr "Buka kotak surat bersama menggunakan proses masuk akun ini."
 
 #: app/src/ui/preferences/shared_mailbox.rs:41
 msgid ""
 "Enter the shared mailbox address. Sign in as {account} to allow access. Your "
 "administrator must have granted you Full Access to the mailbox."
 msgstr ""
+"Masukkan alamat kotak surat bersama. Masuk sebagai {account} untuk "
+"mengizinkan akses. Administrator harus sudah memberi Anda Akses Penuh ke "
+"kotak surat tersebut."
 
 #: app/src/ui/preferences/shared_mailbox.rs:44
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox Address"
-msgstr "Kotak Surat Cerdas"
+msgstr "Alamat Kotak Surat Bersama"
 
 #: app/src/ui/preferences/shared_mailbox.rs:75
-#, fuzzy
-#| msgid "Finish signing in on {provider}'s page in your browser."
 msgid "Finish signing in with Microsoft, then return here."
-msgstr "Selesaikan proses masuk di halaman {provider} dalam peramban Anda."
+msgstr "Selesaikan proses masuk Microsoft, lalu kembali ke sini."
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10919,42 +10904,32 @@ msgid "On the server, {lines}"
 msgstr "Di server, {lines}"
 
 #: app/src/ui/toolbar/customize.rs:25
-#, fuzzy
-#| msgid "Move to Folder"
 msgid "Labels or Move to Folder"
-msgstr "Pindahkan ke Folder"
+msgstr "Label atau Pindahkan ke Folder"
 
 #: app/src/ui/toolbar/customize.rs:116
-#, fuzzy
-#| msgid "Move {account} Up"
 msgid "Move {button} Up"
-msgstr "Pindahkan {account} ke Atas"
+msgstr "Pindahkan {button} ke Atas"
 
 #: app/src/ui/toolbar/customize.rs:120
-#, fuzzy
-#| msgid "Move {account} Down"
 msgid "Move {button} Down"
-msgstr "Pindahkan {account} ke Bawah"
+msgstr "Pindahkan {button} ke Bawah"
 
 #: app/src/ui/toolbar/customize.rs:178
-#, fuzzy
-#| msgid "Drag to Reorder Accounts"
 msgid "Drag to Reorder Buttons"
-msgstr "Seret untuk Mengurutkan Akun"
+msgstr "Seret untuk Mengurutkan Ulang Tombol"
 
 #: app/src/ui/toolbar/customize.rs:231
 msgid "Choose buttons, then drag them or use the arrows to change their order."
-msgstr ""
+msgstr "Pilih tombol, lalu seret atau gunakan panah untuk mengubah urutannya."
 
 #: app/src/ui/toolbar/customize.rs:238
-#, fuzzy
-#| msgid "Defaults"
 msgid "Restore Defaults"
-msgstr "Bawaan"
+msgstr "Pulihkan Bawaan"
 
 #: app/src/ui/toolbar/customize.rs:259
 msgid "Customize Toolbar"
-msgstr ""
+msgstr "Sesuaikan Bilah Alat"
 
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
@@ -11002,10 +10977,8 @@ msgid "Show Translation"
 msgstr "Tampilkan Terjemahan"
 
 #: app/src/ui/unsubscribe.rs:66
-#, fuzzy
-#| msgid "Unsubscribe"
 msgid "Load Unsubscribe Pages?"
-msgstr "Berhenti Berlangganan"
+msgstr "Muat Halaman Berhenti Berlangganan?"
 
 #: app/src/ui/unsubscribe.rs:68
 msgid ""
@@ -11013,12 +10986,13 @@ msgid ""
 "sender may learn that you opened the link, and opening it may unsubscribe "
 "you. You will be asked again before a form is submitted."
 msgstr ""
+"Memuat halaman ini menghubungi servernya dan menjalankan skripnya. Pengirim "
+"mungkin mengetahui bahwa Anda membuka tautan, dan membukanya mungkin "
+"menghentikan langganan Anda. Anda akan ditanya lagi sebelum formulir dikirim."
 
 #: app/src/ui/unsubscribe.rs:79
-#, fuzzy
-#| msgid "Load Images"
 msgid "Load Pages"
-msgstr "Muat Gambar"
+msgstr "Muat Halaman"
 
 #: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
@@ -11669,16 +11643,12 @@ msgstr[0] "{count} pesan terkirim belum mendapat balasan"
 msgstr[1] "{count} pesan terkirim belum mendapat balasan"
 
 #: app/src/ui/window/images.rs:74
-#, fuzzy
-#| msgid "Unknown sender"
 msgid "Unknown Sender"
-msgstr "Pengirim tidak dikenal"
+msgstr "Pengirim Tidak Dikenal"
 
 #: app/src/ui/window/images.rs:81
-#, fuzzy
-#| msgid "Stop Loading Images from This Sender"
 msgid "Load Images from Multiple Senders?"
-msgstr "Berhenti Memuat Gambar dari Pengirim Ini"
+msgstr "Muat Gambar dari Beberapa Pengirim?"
 
 #: app/src/ui/window/images.rs:83
 msgid ""
@@ -11687,6 +11657,10 @@ msgid ""
 "\n"
 "{senders}"
 msgstr ""
+"Ini memuat gambar jarak jauh dari beberapa alamat surel dalam percakapan "
+"ini. Setiap pengirim mungkin mengetahui kapan Anda membuka surelnya.\n"
+"\n"
+"{senders}"
 
 #: app/src/ui/window/images.rs:127
 msgid "Always"
@@ -13367,16 +13341,12 @@ msgstr ""
 "yang tidak dapat diakses Penguin Mail."
 
 #: sync/src/services/microsoft/outgoing.rs:75
-#, fuzzy
-#| msgid ""
-#| "Microsoft cannot send a signed or encrypted message larger than 3 MB. "
-#| "Make the files smaller or send them apart."
 msgid ""
 "Microsoft cannot send or save a shared mailbox message larger than 3 MB. "
 "Make the files smaller or send them apart."
 msgstr ""
-"Microsoft tidak dapat mengirim pesan bertanda tangan atau terenkripsi yang "
-"lebih besar dari 3 MB. Kecilkan ukuran berkas atau kirim secara terpisah."
+"Microsoft tidak dapat mengirim atau menyimpan pesan kotak surat bersama yang "
+"lebih besar dari 3 MB. Perkecil berkas atau kirim secara terpisah."
 
 #: sync/src/services/microsoft/outgoing.rs:84
 msgid "The message has no Message-ID."
@@ -13466,22 +13436,23 @@ msgstr "Pilih tindakan aturan"
 #: sync/src/shared_mailbox.rs:59
 msgid "Choose a Microsoft 365 account that has access to this shared mailbox."
 msgstr ""
+"Pilih akun Microsoft 365 yang memiliki akses ke kotak surat bersama ini."
 
 #: sync/src/shared_mailbox.rs:72
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Enter a valid shared mailbox address."
-msgstr "Kotak Surat Cerdas"
+msgstr "Masukkan alamat kotak surat bersama yang valid."
 
 #: sync/src/shared_mailbox.rs:76
 msgid ""
 "Microsoft could not open this shared mailbox. Check its address and ask your "
 "administrator for Full Access permission."
 msgstr ""
+"Microsoft tidak dapat membuka kotak surat bersama ini. Periksa alamatnya dan "
+"minta izin Akses Penuh kepada administrator."
 
 #: sync/src/shared_mailbox.rs:100
 msgid "This mailbox is already added, or its sign-in account was removed."
-msgstr ""
+msgstr "Kotak surat ini sudah ditambahkan, atau akun masuknya telah dihapus."
 
 #: sync/src/sign_in.rs:367
 msgid ""

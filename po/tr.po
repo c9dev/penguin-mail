@@ -1162,26 +1162,20 @@ msgid "Summarize this conversation"
 msgstr "Bu yazışmayı özetle"
 
 #: app/src/assistant/mod.rs:227
-#, fuzzy
-#| msgid "Summarize this conversation"
 msgid "Explain this conversation"
-msgstr "Bu yazışmayı özetle"
+msgstr "Bu konuşmayı açıkla"
 
 #: app/src/assistant/mod.rs:260
 msgid "Wait for the conversation to finish loading, then try again."
-msgstr ""
+msgstr "Konuşmanın yüklenmesini bekleyip yeniden deneyin."
 
 #: app/src/assistant/mod.rs:285
-#, fuzzy
-#| msgid "This message is too large to open."
 msgid "This message's headers are too large to analyze."
-msgstr "Bu ileti açılamayacak kadar büyük."
+msgstr "Bu iletinin üstbilgileri analiz edilemeyecek kadar büyük."
 
 #: app/src/assistant/mod.rs:295
-#, fuzzy
-#| msgid "Open a conversation first"
 msgid "Open a conversation first."
-msgstr "Önce bir yazışma açın"
+msgstr "Önce bir konuşma açın."
 
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
@@ -2008,20 +2002,14 @@ msgid ""
 "Standard input:\n"
 "{stdin}"
 msgstr ""
+"Standart girdi:\n"
+"{stdin}"
 
 #: app/src/assistant/sources/skills/shell.rs:189
 msgid "No standard input."
-msgstr ""
+msgstr "Standart girdi yok."
 
 #: app/src/assistant/sources/skills/shell.rs:193
-#, fuzzy
-#| msgid ""
-#| "Run this command for the skill {skill}?\n"
-#| "\n"
-#| "{command}\n"
-#| "\n"
-#| "It runs in a sandbox with no access to your mail or home folder. "
-#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -2036,8 +2024,11 @@ msgstr ""
 "\n"
 "{command}\n"
 "\n"
-"Postanıza ve ev klasörünüze erişemeyen korumalı bir alanda çalışır. "
-"{network} Her Zaman İzin Ver yalnızca bu komutu kapsar."
+"{stdin}\n"
+"\n"
+"Postanıza veya ev klasörünüze erişimi olmayan bir korumalı alanda çalışır. "
+"{network} Her Zaman İzin Ver yalnızca tam olarak bu komutu ve standart "
+"girdiyi kapsar."
 
 #: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
@@ -2272,11 +2263,11 @@ msgstr ""
 "değil."
 
 #: app/src/core.rs:1708
-#, fuzzy
-#| msgid "This account is already moving to its new sign-in."
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
-msgstr "Bu hesap yeni oturum açma yöntemine zaten geçiyor."
+msgstr ""
+"Oturum açma hesabını kaldırmadan önce bu hesabın paylaşılan posta kutularını "
+"kaldırın."
 
 #: app/src/core.rs:1886 app/src/core.rs:1986
 msgid "The demo cannot switch accounts."
@@ -3538,10 +3529,8 @@ msgstr ""
 "açın, bir dakika bekleyin ve tekrar deneyin."
 
 #: app/src/packaging.rs:147
-#, fuzzy
-#| msgid "Download a new AppImage to update"
 msgid "Download a new .deb to update"
-msgstr "Güncellemek için yeni bir AppImage indirin"
+msgstr "Güncellemek için yeni bir .deb dosyası indirin"
 
 #: app/src/packaging.rs:148
 msgid "Updates come from dnf"
@@ -4149,7 +4138,7 @@ msgstr "Özetle"
 
 #: app/src/render.rs:198
 msgid "Explain"
-msgstr ""
+msgstr "Açıkla"
 
 #: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
@@ -4219,7 +4208,7 @@ msgstr "alıcı"
 
 #: app/src/render.rs:549
 msgid "delivered-to"
-msgstr ""
+msgstr "teslim adresi"
 
 #: app/src/render.rs:552
 msgid "cc"
@@ -4652,11 +4641,11 @@ msgstr "Pazar"
 
 #: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
-msgstr ""
+msgstr "12 saat (AM/PM)"
 
 #: app/src/settings/mod.rs:650
 msgid "24-hour"
-msgstr ""
+msgstr "24 saat"
 
 #: app/src/settings/mod.rs:688
 msgid "When opened"
@@ -5610,12 +5599,16 @@ msgid ""
 "Some conversation text was left out because it is too long. This answer "
 "covers only the included text."
 msgstr ""
+"Konuşma metninin bir kısmı çok uzun olduğu için çıkarıldı. Bu yanıt yalnızca "
+"dahil edilen metni kapsar."
 
 #: app/src/ui/assistant.rs:490
 msgid ""
 "Tools are off for this conversation and its follow-up questions. Choose New "
 "Chat to use tools again."
 msgstr ""
+"Bu konuşma ve devam soruları için araçlar kapalıdır. Araçları yeniden "
+"kullanmak için Yeni Sohbet'i seçin."
 
 #: app/src/ui/assistant.rs:588
 msgid "Stop"
@@ -5912,13 +5905,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
-msgstr ""
+msgstr "Özetlerde ve Açıklamalarda Araçlara İzin Ver"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
+"Bu sohbetlerin diğer postaları okumasına, eylem gerçekleştirmesine ve dış "
+"hizmetlerle iletişim kurmasına izin verin. Varsayılan olarak kapalıdır."
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
@@ -6015,13 +6010,15 @@ msgstr "Modelin düşünmesini ve çalıştırdığı her aracı göründükçe 
 
 #: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
-msgstr ""
+msgstr "Yanıt Başına Model İsteği"
 
 #: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
+"Asistanın vazgeçmeden önce bir turda modele kaç kez sorabileceği. "
+"Çalıştırılan her araç bir istek sayılır."
 
 #: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
@@ -8226,7 +8223,7 @@ msgstr "Düzenle…"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
 msgid "Shared mailboxes support mail only."
-msgstr ""
+msgstr "Paylaşılan posta kutuları yalnızca postayı destekler."
 
 #: app/src/ui/contacts_prefs.rs:291
 msgid ""
@@ -8306,10 +8303,8 @@ msgstr "Dışa Aktar…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
 #: app/src/ui/window.rs:3671
-#, fuzzy
-#| msgid "Custom…"
 msgid "Customize Toolbar…"
-msgstr "Özel…"
+msgstr "Araç Çubuğunu Özelleştir…"
 
 #: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
@@ -9443,13 +9438,15 @@ msgstr "Üç gündür yanıt almayan gönderilmiş postaları listele"
 
 #: app/src/ui/preferences.rs:192
 msgid "Follow Navigation After Removing Mail"
-msgstr ""
+msgstr "Posta Kaldırıldıktan Sonra Gezinme Yönünü İzle"
 
 #: app/src/ui/preferences.rs:194
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
 msgstr ""
+"Postayı sildikten, arşivledikten veya taşıdıktan sonra son hareket yönündeki "
+"komşuyu seç"
 
 #: app/src/ui/preferences.rs:201
 msgid "Images and Receipts"
@@ -9517,12 +9514,14 @@ msgstr "İleti listesinde kişi resimlerini veya baş harflerini göster"
 
 #: app/src/ui/preferences.rs:292
 msgid "Draw Messages Without the GPU"
-msgstr ""
+msgstr "İletileri GPU Olmadan Çiz"
 
 #: app/src/ui/preferences.rs:294
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr ""
+"İletiler boş veya bozuk görünüyorsa açın. Yeniden başlatıldıktan sonra "
+"uygulanır"
 
 #: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
 msgid "Notifications"
@@ -9600,16 +9599,12 @@ msgid "Space on the Server"
 msgstr "Sunucudaki Alan"
 
 #: app/src/ui/preferences.rs:483
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox"
-msgstr "Akıllı Posta Kutuları"
+msgstr "Paylaşılan Posta Kutusu"
 
 #: app/src/ui/preferences.rs:487
-#, fuzzy
-#| msgid "Sign in again to {account}"
 msgid "Signed in through {account}"
-msgstr "{account} hesabında yeniden oturum aç"
+msgstr "{account} üzerinden oturum açıldı"
 
 #: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
@@ -9913,16 +9908,12 @@ msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
 #: app/src/ui/preferences.rs:1386
-#, fuzzy
-#| msgid "Format"
 msgid "Time Format"
-msgstr "Biçimlendir"
+msgstr "Saat Biçimi"
 
 #: app/src/ui/preferences.rs:1390
-#, fuzzy
-#| msgid "Automatic follows the locale's own first day of the week"
 msgid "Automatic follows the system clock format"
-msgstr "Otomatik, yerel ayarın haftanın ilk gününü izler"
+msgstr "Otomatik, sistemin saat biçimini izler"
 
 #: app/src/ui/preferences.rs:1404
 msgid "Week Starts On"
@@ -10133,34 +10124,29 @@ msgstr "gmail.com'da"
 #: app/src/ui/preferences/shared_mailbox.rs:15
 #: app/src/ui/preferences/shared_mailbox.rs:33
 #: app/src/ui/preferences/shared_mailbox.rs:49
-#, fuzzy
-#| msgid "Edit Smart Mailbox"
 msgid "Add Shared Mailbox"
-msgstr "Akıllı Posta Kutusunu Düzenle"
+msgstr "Paylaşılan Posta Kutusu Ekle"
 
 #: app/src/ui/preferences/shared_mailbox.rs:17
-#, fuzzy
-#| msgid "Signed in with this computer's sign-in."
 msgid "Open a shared mailbox using this account's sign-in."
-msgstr "Bu bilgisayarın oturum açmasıyla oturum açıldı."
+msgstr "Bu hesabın oturumunu kullanarak paylaşılan bir posta kutusu açın."
 
 #: app/src/ui/preferences/shared_mailbox.rs:41
 msgid ""
 "Enter the shared mailbox address. Sign in as {account} to allow access. Your "
 "administrator must have granted you Full Access to the mailbox."
 msgstr ""
+"Paylaşılan posta kutusunun adresini girin. Erişime izin vermek için "
+"{account} olarak oturum açın. Yöneticinizin posta kutusuna Tam Erişim izni "
+"vermiş olması gerekir."
 
 #: app/src/ui/preferences/shared_mailbox.rs:44
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox Address"
-msgstr "Akıllı Posta Kutuları"
+msgstr "Paylaşılan Posta Kutusu Adresi"
 
 #: app/src/ui/preferences/shared_mailbox.rs:75
-#, fuzzy
-#| msgid "Finish signing in on {provider}'s page in your browser."
 msgid "Finish signing in with Microsoft, then return here."
-msgstr "Tarayıcınızda {provider} sayfasında oturum açmayı tamamlayın."
+msgstr "Microsoft oturum açma işlemini tamamlayıp buraya dönün."
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10861,42 +10847,34 @@ msgid "On the server, {lines}"
 msgstr "Sunucuda, {lines}"
 
 #: app/src/ui/toolbar/customize.rs:25
-#, fuzzy
-#| msgid "Move to Folder"
 msgid "Labels or Move to Folder"
-msgstr "Klasöre Taşı"
+msgstr "Etiketler veya Klasöre Taşı"
 
 #: app/src/ui/toolbar/customize.rs:116
-#, fuzzy
-#| msgid "Move {account} Up"
 msgid "Move {button} Up"
-msgstr "{account} Hesabını Yukarı Taşı"
+msgstr "{button} Düğmesini Yukarı Taşı"
 
 #: app/src/ui/toolbar/customize.rs:120
-#, fuzzy
-#| msgid "Move {account} Down"
 msgid "Move {button} Down"
-msgstr "{account} Hesabını Aşağı Taşı"
+msgstr "{button} Düğmesini Aşağı Taşı"
 
 #: app/src/ui/toolbar/customize.rs:178
-#, fuzzy
-#| msgid "Drag to Reorder Accounts"
 msgid "Drag to Reorder Buttons"
-msgstr "Hesapları Sıralamak İçin Sürükleyin"
+msgstr "Düğmeleri Yeniden Sıralamak İçin Sürükleyin"
 
 #: app/src/ui/toolbar/customize.rs:231
 msgid "Choose buttons, then drag them or use the arrows to change their order."
 msgstr ""
+"Düğmeleri seçin, ardından sıralarını değiştirmek için sürükleyin veya okları "
+"kullanın."
 
 #: app/src/ui/toolbar/customize.rs:238
-#, fuzzy
-#| msgid "Defaults"
 msgid "Restore Defaults"
-msgstr "Varsayılanlar"
+msgstr "Varsayılanları Geri Yükle"
 
 #: app/src/ui/toolbar/customize.rs:259
 msgid "Customize Toolbar"
-msgstr ""
+msgstr "Araç Çubuğunu Özelleştir"
 
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
@@ -10944,10 +10922,8 @@ msgid "Show Translation"
 msgstr "Çeviriyi Göster"
 
 #: app/src/ui/unsubscribe.rs:66
-#, fuzzy
-#| msgid "Unsubscribe"
 msgid "Load Unsubscribe Pages?"
-msgstr "Abonelikten Çık"
+msgstr "Abonelikten Çıkma Sayfaları Yüklensin mi?"
 
 #: app/src/ui/unsubscribe.rs:68
 msgid ""
@@ -10955,12 +10931,13 @@ msgid ""
 "sender may learn that you opened the link, and opening it may unsubscribe "
 "you. You will be asked again before a form is submitted."
 msgstr ""
+"Bu sayfaların yüklenmesi sunucularıyla iletişim kurar ve betiklerini "
+"çalıştırır. Gönderen, bağlantıyı açtığınızı öğrenebilir ve açılması "
+"aboneliğinizi iptal edebilir. Form gönderilmeden önce yeniden sorulacaktır."
 
 #: app/src/ui/unsubscribe.rs:79
-#, fuzzy
-#| msgid "Load Images"
 msgid "Load Pages"
-msgstr "Resimleri Yükle"
+msgstr "Sayfaları Yükle"
 
 #: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
@@ -11612,16 +11589,12 @@ msgstr[0] "Gönderilen {count} iletiye yanıt gelmedi"
 msgstr[1] "Gönderilen {count} iletiye yanıt gelmedi"
 
 #: app/src/ui/window/images.rs:74
-#, fuzzy
-#| msgid "Unknown sender"
 msgid "Unknown Sender"
-msgstr "Bilinmeyen gönderen"
+msgstr "Bilinmeyen Gönderen"
 
 #: app/src/ui/window/images.rs:81
-#, fuzzy
-#| msgid "Stop Loading Images from This Sender"
 msgid "Load Images from Multiple Senders?"
-msgstr "Bu Gönderenin Resimlerini Yüklemeyi Durdur"
+msgstr "Birden Fazla Gönderenden Görseller Yüklensin mi?"
 
 #: app/src/ui/window/images.rs:83
 msgid ""
@@ -11630,6 +11603,10 @@ msgid ""
 "\n"
 "{senders}"
 msgstr ""
+"Bu, konuşmadaki birden fazla e-posta adresinden uzak görseller yükler. Her "
+"gönderen, postasını ne zaman açtığınızı öğrenebilir.\n"
+"\n"
+"{senders}"
 
 #: app/src/ui/window/images.rs:127
 msgid "Always"
@@ -13294,16 +13271,12 @@ msgstr ""
 "ona erişemiyor."
 
 #: sync/src/services/microsoft/outgoing.rs:75
-#, fuzzy
-#| msgid ""
-#| "Microsoft cannot send a signed or encrypted message larger than 3 MB. "
-#| "Make the files smaller or send them apart."
 msgid ""
 "Microsoft cannot send or save a shared mailbox message larger than 3 MB. "
 "Make the files smaller or send them apart."
 msgstr ""
-"Microsoft, 3 MB'dan büyük imzalı veya şifreli ileti gönderemez. Dosyaları "
-"küçültün veya ayrı gönderin."
+"Microsoft, 3 MB'den büyük paylaşılan posta kutusu iletilerini gönderemez "
+"veya kaydedemez. Dosyaları küçültün veya ayrı gönderin."
 
 #: sync/src/services/microsoft/outgoing.rs:84
 msgid "The message has no Message-ID."
@@ -13393,22 +13366,23 @@ msgstr "Kuralın yapacağı işlemi seçin"
 #: sync/src/shared_mailbox.rs:59
 msgid "Choose a Microsoft 365 account that has access to this shared mailbox."
 msgstr ""
+"Bu paylaşılan posta kutusuna erişimi olan bir Microsoft 365 hesabı seçin."
 
 #: sync/src/shared_mailbox.rs:72
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Enter a valid shared mailbox address."
-msgstr "Akıllı Posta Kutuları"
+msgstr "Geçerli bir paylaşılan posta kutusu adresi girin."
 
 #: sync/src/shared_mailbox.rs:76
 msgid ""
 "Microsoft could not open this shared mailbox. Check its address and ask your "
 "administrator for Full Access permission."
 msgstr ""
+"Microsoft bu paylaşılan posta kutusunu açamadı. Adresini kontrol edin ve "
+"yöneticinizden Tam Erişim izni isteyin."
 
 #: sync/src/shared_mailbox.rs:100
 msgid "This mailbox is already added, or its sign-in account was removed."
-msgstr ""
+msgstr "Bu posta kutusu zaten eklenmiş veya oturum açma hesabı kaldırılmış."
 
 #: sync/src/sign_in.rs:367
 msgid ""

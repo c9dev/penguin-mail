@@ -1140,26 +1140,20 @@ msgid "Summarize this conversation"
 msgstr "このスレッドを要約して"
 
 #: app/src/assistant/mod.rs:227
-#, fuzzy
-#| msgid "Summarize this conversation"
 msgid "Explain this conversation"
-msgstr "このスレッドを要約して"
+msgstr "この会話を説明"
 
 #: app/src/assistant/mod.rs:260
 msgid "Wait for the conversation to finish loading, then try again."
-msgstr ""
+msgstr "会話の読み込みが完了してから、もう一度お試しください。"
 
 #: app/src/assistant/mod.rs:285
-#, fuzzy
-#| msgid "This message is too large to open."
 msgid "This message's headers are too large to analyze."
-msgstr "メッセージが大きすぎて開けません。"
+msgstr "このメッセージのヘッダーは大きすぎるため解析できません。"
 
 #: app/src/assistant/mod.rs:295
-#, fuzzy
-#| msgid "Open a conversation first"
 msgid "Open a conversation first."
-msgstr "先にスレッドを開いてください"
+msgstr "先に会話を開いてください。"
 
 #: app/src/assistant/run.rs:1102
 msgid "Move {count} conversation to the Trash?"
@@ -1961,20 +1955,14 @@ msgid ""
 "Standard input:\n"
 "{stdin}"
 msgstr ""
+"標準入力：\n"
+"{stdin}"
 
 #: app/src/assistant/sources/skills/shell.rs:189
 msgid "No standard input."
-msgstr ""
+msgstr "標準入力はありません。"
 
 #: app/src/assistant/sources/skills/shell.rs:193
-#, fuzzy
-#| msgid ""
-#| "Run this command for the skill {skill}?\n"
-#| "\n"
-#| "{command}\n"
-#| "\n"
-#| "It runs in a sandbox with no access to your mail or home folder. "
-#| "{network} Always Allow covers this exact command only."
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -1985,12 +1973,15 @@ msgid ""
 "It runs in a sandbox with no access to your mail or home folder. {network} "
 "Always Allow covers this exact command and standard input only."
 msgstr ""
-"スキル {skill} のこのコマンドを実行しますか？\n"
+"スキル {skill} のためにこのコマンドを実行しますか？\n"
 "\n"
 "{command}\n"
 "\n"
+"{stdin}\n"
+"\n"
 "メールやホームフォルダーにアクセスできないサンドボックスで実行します。"
-"{network}「常に許可」は、このコマンドだけに適用します。"
+"{network}「常に許可」は、このコマンドと標準入力が完全に一致する場合にのみ適用"
+"されます。"
 
 #: app/src/assistant/sources/web.rs:78
 msgid "Add a Brave Search API key."
@@ -2221,11 +2212,11 @@ msgstr ""
 "ていません。"
 
 #: app/src/core.rs:1708
-#, fuzzy
-#| msgid "This account is already moving to its new sign-in."
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
-msgstr "このアカウントはすでに新しいログイン方法に移行しています。"
+msgstr ""
+"サインインに使うアカウントを削除する前に、そのアカウントの共有メールボックス"
+"を削除してください。"
 
 #: app/src/core.rs:1886 app/src/core.rs:1986
 msgid "The demo cannot switch accounts."
@@ -3468,10 +3459,8 @@ msgstr ""
 "い。"
 
 #: app/src/packaging.rs:147
-#, fuzzy
-#| msgid "Download a new AppImage to update"
 msgid "Download a new .deb to update"
-msgstr "更新するには新しい AppImage をダウンロードしてください"
+msgstr "新しい .deb ファイルをダウンロードして更新"
 
 #: app/src/packaging.rs:148
 msgid "Updates come from dnf"
@@ -4072,7 +4061,7 @@ msgstr "要約"
 
 #: app/src/render.rs:198
 msgid "Explain"
-msgstr ""
+msgstr "説明"
 
 #: app/src/render.rs:285 app/src/ui/thread_row.rs:447
 msgid "Unknown sender"
@@ -4142,7 +4131,7 @@ msgstr "宛先"
 
 #: app/src/render.rs:549
 msgid "delivered-to"
-msgstr ""
+msgstr "配信先"
 
 #: app/src/render.rs:552
 msgid "cc"
@@ -4571,11 +4560,11 @@ msgstr "日曜日"
 
 #: app/src/settings/mod.rs:649
 msgid "12-hour (AM/PM)"
-msgstr ""
+msgstr "12時間制（AM/PM）"
 
 #: app/src/settings/mod.rs:650
 msgid "24-hour"
-msgstr ""
+msgstr "24時間制"
 
 #: app/src/settings/mod.rs:688
 msgid "When opened"
@@ -5529,12 +5518,16 @@ msgid ""
 "Some conversation text was left out because it is too long. This answer "
 "covers only the included text."
 msgstr ""
+"会話の一部は長すぎるため省略しました。この回答は含まれているテキストのみを対"
+"象とします。"
 
 #: app/src/ui/assistant.rs:490
 msgid ""
 "Tools are off for this conversation and its follow-up questions. Choose New "
 "Chat to use tools again."
 msgstr ""
+"この会話と追加の質問ではツールが無効です。再び使うには「新しいチャット」を選"
+"択してください。"
 
 #: app/src/ui/assistant.rs:588
 msgid "Stop"
@@ -5828,13 +5821,15 @@ msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:52
 msgid "Allow Tools in Summaries and Explanations"
-msgstr ""
+msgstr "要約と説明でツールを許可"
 
 #: app/src/ui/assistant_prefs.rs:53
 msgid ""
 "Allow these chats to read other mail, take actions, and contact external "
 "services. Off by default."
 msgstr ""
+"これらのチャットに、他のメールの読み取り、操作の実行、外部サービスへの接続を"
+"許可します。初期設定では無効です。"
 
 #: app/src/ui/assistant_prefs.rs:68
 msgid "Connections"
@@ -5932,13 +5927,15 @@ msgstr "モデルの思考とツールの実行を、表示されるたびに展
 
 #: app/src/ui/assistant_prefs.rs:243 app/src/ui/assistant_prefs.rs:249
 msgid "Model Requests per Answer"
-msgstr ""
+msgstr "回答ごとのモデルリクエスト数"
 
 #: app/src/ui/assistant_prefs.rs:245
 msgid ""
 "How many times a turn may ask the model before the assistant gives up. Each "
 "tool it runs costs one."
 msgstr ""
+"アシスタントが中止するまでに、1ターンでモデルに問い合わせることができる回数で"
+"す。ツールの実行ごとに1回と数えます。"
 
 #: app/src/ui/assistant_prefs.rs:273 app/src/ui/assistant_prefs.rs:294
 msgid "AI Language"
@@ -8111,7 +8108,7 @@ msgstr "編集…"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
 msgid "Shared mailboxes support mail only."
-msgstr ""
+msgstr "共有メールボックスはメールのみ対応しています。"
 
 #: app/src/ui/contacts_prefs.rs:291
 msgid ""
@@ -8188,10 +8185,8 @@ msgstr "エクスポート…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
 #: app/src/ui/window.rs:3671
-#, fuzzy
-#| msgid "Custom…"
 msgid "Customize Toolbar…"
-msgstr "カスタム…"
+msgstr "ツールバーをカスタマイズ…"
 
 #: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
 msgid "Always Load Images…"
@@ -9303,13 +9298,13 @@ msgstr "送信から3日間返信がないメールを一覧に表示します"
 
 #: app/src/ui/preferences.rs:192
 msgid "Follow Navigation After Removing Mail"
-msgstr ""
+msgstr "メールの削除・移動後に移動方向に従う"
 
 #: app/src/ui/preferences.rs:194
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
-msgstr ""
+msgstr "削除、アーカイブ、移動後に、最後に移動した方向の隣のメールを選択する"
 
 #: app/src/ui/preferences.rs:201
 msgid "Images and Receipts"
@@ -9377,12 +9372,13 @@ msgstr "メッセージ一覧に連絡先の写真またはイニシャルを表
 
 #: app/src/ui/preferences.rs:292
 msgid "Draw Messages Without the GPU"
-msgstr ""
+msgstr "GPUを使わずにメッセージを描画"
 
 #: app/src/ui/preferences.rs:294
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr ""
+"メッセージが空白や乱れた表示になる場合に有効にします。再起動後に反映されます"
 
 #: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
 msgid "Notifications"
@@ -9457,16 +9453,12 @@ msgid "Space on the Server"
 msgstr "サーバーの使用容量"
 
 #: app/src/ui/preferences.rs:483
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox"
-msgstr "スマートメールボックス"
+msgstr "共有メールボックス"
 
 #: app/src/ui/preferences.rs:487
-#, fuzzy
-#| msgid "Sign in again to {account}"
 msgid "Signed in through {account}"
-msgstr "{account} に再ログイン"
+msgstr "{account} 経由でサインイン"
 
 #: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
@@ -9767,16 +9759,12 @@ msgid "{time}, {days}"
 msgstr "{time}、{days}"
 
 #: app/src/ui/preferences.rs:1386
-#, fuzzy
-#| msgid "Format"
 msgid "Time Format"
-msgstr "書式を適用"
+msgstr "時刻の形式"
 
 #: app/src/ui/preferences.rs:1390
-#, fuzzy
-#| msgid "Automatic follows the locale's own first day of the week"
 msgid "Automatic follows the system clock format"
-msgstr "自動では、ロケールに応じた週の始まりを使います"
+msgstr "自動ではシステムの時刻形式に従います"
 
 #: app/src/ui/preferences.rs:1404
 msgid "Week Starts On"
@@ -9987,34 +9975,29 @@ msgstr "gmail.com で"
 #: app/src/ui/preferences/shared_mailbox.rs:15
 #: app/src/ui/preferences/shared_mailbox.rs:33
 #: app/src/ui/preferences/shared_mailbox.rs:49
-#, fuzzy
-#| msgid "Edit Smart Mailbox"
 msgid "Add Shared Mailbox"
-msgstr "スマートメールボックスを編集"
+msgstr "共有メールボックスを追加"
 
 #: app/src/ui/preferences/shared_mailbox.rs:17
-#, fuzzy
-#| msgid "Signed in with this computer's sign-in."
 msgid "Open a shared mailbox using this account's sign-in."
-msgstr "このコンピューターのログインでログイン中です。"
+msgstr "このアカウントのサインインで共有メールボックスを開きます。"
 
 #: app/src/ui/preferences/shared_mailbox.rs:41
 msgid ""
 "Enter the shared mailbox address. Sign in as {account} to allow access. Your "
 "administrator must have granted you Full Access to the mailbox."
 msgstr ""
+"共有メールボックスのアドレスを入力してください。{account} としてサインインし"
+"てアクセスを許可します。管理者がメールボックスへのフルアクセス権を付与してい"
+"る必要があります。"
 
 #: app/src/ui/preferences/shared_mailbox.rs:44
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Shared Mailbox Address"
-msgstr "スマートメールボックス"
+msgstr "共有メールボックスのアドレス"
 
 #: app/src/ui/preferences/shared_mailbox.rs:75
-#, fuzzy
-#| msgid "Finish signing in on {provider}'s page in your browser."
 msgid "Finish signing in with Microsoft, then return here."
-msgstr "ブラウザーの{provider}のページでログインを完了してください。"
+msgstr "Microsoftへのサインインを完了してから、ここに戻ってください。"
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10711,42 +10694,32 @@ msgid "On the server, {lines}"
 msgstr "サーバー上、{lines}"
 
 #: app/src/ui/toolbar/customize.rs:25
-#, fuzzy
-#| msgid "Move to Folder"
 msgid "Labels or Move to Folder"
-msgstr "フォルダーに移動"
+msgstr "ラベルまたはフォルダーに移動"
 
 #: app/src/ui/toolbar/customize.rs:116
-#, fuzzy
-#| msgid "Move {account} Up"
 msgid "Move {button} Up"
-msgstr "{account}を上に移動"
+msgstr "{button} を上に移動"
 
 #: app/src/ui/toolbar/customize.rs:120
-#, fuzzy
-#| msgid "Move {account} Down"
 msgid "Move {button} Down"
-msgstr "{account}を下に移動"
+msgstr "{button} を下に移動"
 
 #: app/src/ui/toolbar/customize.rs:178
-#, fuzzy
-#| msgid "Drag to Reorder Accounts"
 msgid "Drag to Reorder Buttons"
-msgstr "ドラッグしてアカウントを並べ替え"
+msgstr "ドラッグしてボタンを並べ替え"
 
 #: app/src/ui/toolbar/customize.rs:231
 msgid "Choose buttons, then drag them or use the arrows to change their order."
-msgstr ""
+msgstr "ボタンを選び、ドラッグするか矢印を使って順序を変更します。"
 
 #: app/src/ui/toolbar/customize.rs:238
-#, fuzzy
-#| msgid "Defaults"
 msgid "Restore Defaults"
-msgstr "既定値"
+msgstr "初期設定に戻す"
 
 #: app/src/ui/toolbar/customize.rs:259
 msgid "Customize Toolbar"
-msgstr ""
+msgstr "ツールバーをカスタマイズ"
 
 #: app/src/ui/translation.rs:60 app/src/ui/translation.rs:123
 #: app/src/ui/translation.rs:165
@@ -10794,10 +10767,8 @@ msgid "Show Translation"
 msgstr "翻訳を表示"
 
 #: app/src/ui/unsubscribe.rs:66
-#, fuzzy
-#| msgid "Unsubscribe"
 msgid "Load Unsubscribe Pages?"
-msgstr "購読を解除"
+msgstr "登録解除ページを読み込みますか？"
 
 #: app/src/ui/unsubscribe.rs:68
 msgid ""
@@ -10805,12 +10776,13 @@ msgid ""
 "sender may learn that you opened the link, and opening it may unsubscribe "
 "you. You will be asked again before a form is submitted."
 msgstr ""
+"これらのページを読み込むと、サーバーに接続してスクリプトを実行します。送信者"
+"にリンクを開いたことが伝わる場合があり、開くと登録が解除される場合もありま"
+"す。フォームを送信する前にもう一度確認します。"
 
 #: app/src/ui/unsubscribe.rs:79
-#, fuzzy
-#| msgid "Load Images"
 msgid "Load Pages"
-msgstr "画像を読み込む"
+msgstr "ページを読み込む"
 
 #: app/src/ui/unsubscribe.rs:247
 msgid "Unsubscribe from {sender}?"
@@ -11440,16 +11412,12 @@ msgid_plural "{count} sent messages have had no reply"
 msgstr[0] "送信した{count}件のメッセージに返信がありません"
 
 #: app/src/ui/window/images.rs:74
-#, fuzzy
-#| msgid "Unknown sender"
 msgid "Unknown Sender"
 msgstr "不明な送信者"
 
 #: app/src/ui/window/images.rs:81
-#, fuzzy
-#| msgid "Stop Loading Images from This Sender"
 msgid "Load Images from Multiple Senders?"
-msgstr "この差出人の画像の自動読み込みを停止"
+msgstr "複数の送信者から画像を読み込みますか？"
 
 #: app/src/ui/window/images.rs:83
 msgid ""
@@ -11458,6 +11426,10 @@ msgid ""
 "\n"
 "{senders}"
 msgstr ""
+"この会話にある複数のメールアドレスからリモート画像を読み込みます。各送信者"
+"に、メールを開いた時刻が伝わる場合があります。\n"
+"\n"
+"{senders}"
 
 #: app/src/ui/window/images.rs:127
 msgid "Always"
@@ -13091,16 +13063,12 @@ msgstr ""
 "できません。"
 
 #: sync/src/services/microsoft/outgoing.rs:75
-#, fuzzy
-#| msgid ""
-#| "Microsoft cannot send a signed or encrypted message larger than 3 MB. "
-#| "Make the files smaller or send them apart."
 msgid ""
 "Microsoft cannot send or save a shared mailbox message larger than 3 MB. "
 "Make the files smaller or send them apart."
 msgstr ""
-"Microsoftでは、署名または暗号化した3 MBを超えるメッセージを送信できません。"
-"ファイルを小さくするか、分けて送信してください。"
+"Microsoftでは、3 MBを超える共有メールボックスのメッセージを送信または保存でき"
+"ません。ファイルを小さくするか、分けて送信してください。"
 
 #: sync/src/services/microsoft/outgoing.rs:84
 msgid "The message has no Message-ID."
@@ -13190,22 +13158,25 @@ msgstr "ルールの操作を選んでください"
 #: sync/src/shared_mailbox.rs:59
 msgid "Choose a Microsoft 365 account that has access to this shared mailbox."
 msgstr ""
+"この共有メールボックスにアクセスできるMicrosoft 365アカウントを選択してくださ"
+"い。"
 
 #: sync/src/shared_mailbox.rs:72
-#, fuzzy
-#| msgid "Smart Mailboxes"
 msgid "Enter a valid shared mailbox address."
-msgstr "スマートメールボックス"
+msgstr "有効な共有メールボックスのアドレスを入力してください。"
 
 #: sync/src/shared_mailbox.rs:76
 msgid ""
 "Microsoft could not open this shared mailbox. Check its address and ask your "
 "administrator for Full Access permission."
 msgstr ""
+"Microsoftはこの共有メールボックスを開けませんでした。アドレスを確認し、管理者"
+"にフルアクセス権を依頼してください。"
 
 #: sync/src/shared_mailbox.rs:100
 msgid "This mailbox is already added, or its sign-in account was removed."
 msgstr ""
+"このメールボックスは追加済みか、サインイン用のアカウントが削除されています。"
 
 #: sync/src/sign_in.rs:367
 msgid ""
