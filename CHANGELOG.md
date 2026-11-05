@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
+
 ## 1.0.12 (2026-11-05)
 
 ### New

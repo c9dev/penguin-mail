@@ -358,6 +358,57 @@ pub struct LabelDrop {
     pub zone: tree::Zone,
 }
 
+fn align_header_title(header: &adw::HeaderBar, titles: &gtk::Box) {
+    fn start_controls(widget: &gtk::Widget) -> Option<gtk::WindowControls> {
+        if let Some(controls) = widget.downcast_ref::<gtk::WindowControls>()
+            && controls.side() == gtk::PackType::Start
+        {
+            return Some(controls.clone());
+        }
+        let mut child = widget.first_child();
+        while let Some(widget) = child {
+            if let Some(controls) = start_controls(&widget) {
+                return Some(controls);
+            }
+            child = widget.next_sibling();
+        }
+        None
+    }
+
+    let titles = titles.downgrade();
+    // Header bars create their window controls when they join a window.
+    header.connect_root_notify(move |header| {
+        if header.root().is_none() {
+            return;
+        }
+        let Some(controls) = start_controls(header.upcast_ref()) else {
+            return;
+        };
+        let header = header.downgrade();
+        let titles = titles.clone();
+        let update = Rc::new(move |controls: &gtk::WindowControls| {
+            let (Some(header), Some(titles)) = (header.upgrade(), titles.upgrade()) else {
+                return;
+            };
+            let center = controls.is_empty() || !controls.get_visible();
+            titles.set_halign(if center {
+                gtk::Align::Center
+            } else {
+                gtk::Align::Fill
+            });
+            header.set_centering_policy(if center {
+                adw::CenteringPolicy::Strict
+            } else {
+                adw::CenteringPolicy::Loose
+            });
+        });
+        update(&controls);
+        let changed = update.clone();
+        controls.connect_empty_notify(move |controls| changed(controls));
+        controls.connect_visible_notify(move |controls| update(controls));
+    });
+}
+
 impl Sidebar {
     pub fn new(
         on_select: impl Fn(Mailbox) + 'static,
@@ -505,6 +556,7 @@ impl Sidebar {
         });
         adaptive.add_breakpoint(narrow);
         header.set_title_widget(Some(&adaptive));
+        align_header_title(&header, &titles);
         let content = gtk::Stack::builder()
             .hhomogeneous(false)
             .transition_type(gtk::StackTransitionType::Crossfade)
@@ -2543,5 +2595,39 @@ pub(crate) mod checks {
                 .0,
             event_min
         );
+        sidebar.set_waiting(0);
+        let window = adw::Window::new();
+        window.set_content(Some(&sidebar.page));
+        let menu = gtk::MenuButton::builder()
+            .icon_name("open-menu-symbolic")
+            .build();
+        sidebar.header.pack_end(&menu);
+        let titles = sidebar.switch.parent().unwrap();
+        for layout in [":close", "close:", ":", ":minimize,maximize,close"] {
+            sidebar.header.set_decoration_layout(Some(layout));
+            let centered = layout.starts_with(':');
+            for width in [240, 360] {
+                sidebar.header.allocate(width, 48, -1, None);
+                if centered {
+                    assert_eq!(titles.halign(), gtk::Align::Center);
+                    let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
+                    // GTK keeps the menu reachable when the full title cannot fit.
+                    if bounds.width() + 2.0 * (menu.width() + 12) as f32
+                        <= sidebar.header.width() as f32
+                    {
+                        assert!(
+                            (bounds.x() + bounds.width() / 2.0
+                                - sidebar.header.width() as f32 / 2.0)
+                                .abs()
+                                <= 1.0,
+                            "{layout} at {width}: {bounds:?}"
+                        );
+                    }
+                } else {
+                    assert_eq!(titles.halign(), gtk::Align::Fill);
+                }
+            }
+        }
+        window.set_content(gtk::Widget::NONE);
     }
 }
