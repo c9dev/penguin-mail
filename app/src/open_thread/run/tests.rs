@@ -89,12 +89,89 @@ async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
     let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
     assert!(at(Step::Stored) < at(Step::Show));
     assert!(at(Step::Show) < at(Step::Ensure));
-    assert!(at(Step::Ensure) < at(Step::Bodies));
+    assert!(at(Step::Show) < at(Step::Bodies));
     assert!(at(Step::Bodies) < at(Step::BodiesArrived));
     let text = window
         .open(|open| open.bodies["m1"].clone().ok()?.text.clone())
         .flatten();
     assert_eq!(text.as_deref(), Some("Hello"));
+}
+
+/// Lets the run go on until it takes `step`, for a second at most.
+async fn until(window: &FakeWindow, step: Step) {
+    for _ in 0..1000 {
+        if window.took(step) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+}
+
+/// The bodies the store lacked are asked for while the server is still
+/// answering about the thread, and go on the page before it has. What
+/// follows the bodies waits for the whole thread, and comes once.
+#[tokio::test]
+async fn the_missing_bodies_come_while_the_server_is_asked_about_the_thread() {
+    let window = FakeWindow::new();
+    let (release, held) = futures::channel::oneshot::channel();
+    window.with(|screen| screen.ensure_hold = Some(held));
+    let run = window.run();
+    futures::join!(run.open(row(THREAD)), async {
+        until(&window, Step::BodiesArrived).await;
+        assert!(window.took(Step::BodiesArrived), "{:?}", window.steps());
+        assert!(!window.took(Step::Messages), "the server has not answered");
+        assert!(!window.took(Step::Sleep), "the read mark waits for it");
+        let _ = release.send(());
+    });
+    assert_eq!(window.with(|s| s.asked.clone()), [vec!["m1".to_string()]]);
+    let steps = window.steps();
+    let count = |step| steps.iter().filter(|s| **s == step).count();
+    assert_eq!(count(Step::BodiesArrived), 1);
+    assert_eq!(count(Step::Sleep), 1);
+    assert_eq!(window.0.borrow().marked, [target(None)]);
+}
+
+/// A message the server's answer adds was unknown when the bodies were
+/// first asked for, so its body is asked for once the answer is in, and
+/// the one already fetched is not asked for again.
+#[tokio::test]
+async fn a_message_the_server_adds_gets_its_body_afterwards() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.messages.push(meta("m2", true));
+        screen.gmail.insert("m2".to_string(), body("Later"));
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(
+        window.with(|s| s.asked.clone()),
+        [vec!["m1".to_string()], vec!["m2".to_string()]]
+    );
+    for (id, text) in [("m1", "Hello"), ("m2", "Later")] {
+        let got = window
+            .open(|open| open.bodies[id].clone().ok()?.text.clone())
+            .flatten();
+        assert_eq!(got.as_deref(), Some(text), "{id}");
+    }
+    assert_eq!(window.0.borrow().marked, [target(None)]);
+}
+
+/// The reader leaves while the server is still answering. The bodies
+/// fetched meanwhile stay off the thread that took their place.
+#[tokio::test]
+async fn bodies_fetched_while_the_server_answers_stay_off_the_next_thread() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.moves_on = Some(Step::Bodies));
+    let (release, held) = futures::channel::oneshot::channel();
+    window.with(|screen| screen.ensure_hold = Some(held));
+    let run = window.run();
+    futures::join!(run.open(row(THREAD)), async {
+        until(&window, Step::Bodies).await;
+        let _ = release.send(());
+    });
+    assert!(window.took(Step::Bodies));
+    assert!(!window.took(Step::BodiesArrived));
+    assert!(!window.took(Step::MessagesArrived));
+    assert!(!window.took(Step::MarkRead));
 }
 
 /// The person left this sender's list before, so the thread opens with no
