@@ -533,6 +533,21 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
         },
     );
     row(gettext("to"), escape(&addresses(&meta.to)));
+    let delivered: Vec<&str> = provenance
+        .delivery_addresses()
+        .iter()
+        .filter(|email| {
+            !meta
+                .to
+                .iter()
+                .chain(&meta.cc)
+                .any(|a| a.email.eq_ignore_ascii_case(email))
+        })
+        .map(String::as_str)
+        .collect();
+    if !delivered.is_empty() {
+        row(gettext("delivered-to"), escape(&delivered.join(", ")));
+    }
     if !meta.cc.is_empty() {
         row(gettext("cc"), escape(&addresses(&meta.cc)));
     }
@@ -1927,10 +1942,15 @@ mod tests {
 
     #[test]
     fn the_details_panel_says_who_really_sent_it() {
-        let m = meta("m1", "Ann", &["bo@example.com"]);
+        let m = meta("m1", "Ann", &[]);
         let body = MessageBody {
             text: Some("Hello".into()),
             provenance: mailrs_domain::Provenance {
+                delivered_to: Some(vec![
+                    "BOB@EXAMPLE.COM".into(),
+                    "list+news@example.com".into(),
+                    "<unsafe>@example.com".into(),
+                ]),
                 mailed_by: Some("bounce.example.net".into()),
                 signed_by: Some("example.net".into()),
                 encrypted: Some(true),
@@ -1956,6 +1976,9 @@ mod tests {
         assert!(html.contains("<th>signed-by</th><td>example.net</td>"));
         assert!(html.contains("Standard encryption (TLS)"));
         assert!(html.contains("<th>subject</th>"));
+        assert!(html.contains(
+            "<th>delivered-to</th><td>list+news@example.com, &lt;unsafe&gt;@example.com</td>"
+        ));
         // The page carries no JavaScript, so the panel must open on its own.
         assert!(!html.contains("mailrs:details"));
     }

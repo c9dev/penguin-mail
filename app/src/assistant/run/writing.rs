@@ -461,6 +461,12 @@ impl<A: Accounts> Tools<A> {
                 .await?;
             let parent = found.iter().rev().find(|m| !m.in_role(Role::Drafts));
             if let Some(parent) = parent {
+                let parent_id = parent.id.clone();
+                let delivered = self
+                    .read(move |c| mailrs_store::bodies::peek_body(c, source_id, &parent_id))
+                    .await?
+                    .map(|body| body.provenance.delivery_addresses().to_vec())
+                    .unwrap_or_default();
                 let mail = self.modules.accounts.services(source_id).map(|s| s.mail);
                 let masked = |email: &str| {
                     mail.as_ref()
@@ -469,10 +475,12 @@ impl<A: Accounts> Tools<A> {
                 let mut mine = compose::reply_addresses(
                     &self.desk.settings().senders(&reply_account.email),
                     parent,
+                    &delivered,
                     masked,
                 );
                 if source_id == account.id {
-                    if let Some(from) = compose::reply_from(&mine, parent) {
+                    if let Some(from) = compose::reply_from(&mine, parent).or_else(|| mine.first())
+                    {
                         draft.from = from.clone();
                     }
                 } else {

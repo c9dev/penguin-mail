@@ -239,6 +239,26 @@ impl AccountSync {
         Ok(body)
     }
 
+    /// Opening a message fills delivery headers missing from an older cache.
+    /// Previews and rules keep using body(), which never refreshes a cache hit.
+    pub async fn body_with_delivery(&self, message_id: &str) -> Result<MessageBody, SyncError> {
+        let mut body = self.body(message_id).await?;
+        if body.provenance.delivered_to.is_none() {
+            match self.download_body(message_id, true).await {
+                Ok((fresh, true)) => {
+                    body.provenance.delivered_to = fresh.provenance.delivered_to;
+                    self.store_body(message_id, &body, now_millis(), false)
+                        .await?;
+                }
+                Ok((_, false)) => {}
+                Err(error) => {
+                    tracing::debug!(%error, "delivery headers are unavailable; keeping the cached body")
+                }
+            }
+        }
+        Ok(body)
+    }
+
     /// Fetches one body ahead of a read. A cache race counts as success, and
     /// the stored body does not count as read until a person opens it.
     pub(super) async fn prefetch_body(&self, message_id: &str) -> Result<bool, SyncError> {

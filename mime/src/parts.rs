@@ -143,6 +143,7 @@ pub fn body(parts: &Parts) -> MessageBody {
         read_report: crate::receipt::report(&parts.root),
         ..MessageBody::default()
     };
+    body.provenance.delivered_to = Some(crate::delivery::addresses(&parts.headers));
     let start = match body.protection {
         // What the signature covers is the first part; the second is the
         // signature itself.

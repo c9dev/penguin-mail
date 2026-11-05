@@ -2200,7 +2200,7 @@ mod tests {
             vec![addr(None, "cy@example.com")],
         );
         let masked = |email: &str| email.eq_ignore_ascii_case("tern.quill@fastmail.example");
-        let mine = reply_addresses(&senders, &original, masked);
+        let mine = reply_addresses(&senders, &original, &[], masked);
         let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "", None, &[]);
         assert_eq!(
             draft.from,
@@ -2256,6 +2256,65 @@ mod tests {
         assert_eq!(draft.from, sales());
         // Neither of the account's own addresses belongs in the answer.
         assert_eq!(draft.to, vec![addr(Some("Ann"), "ann@example.com")]);
+    }
+
+    #[test]
+    fn delivery_headers_choose_only_an_allowed_sender_and_to_cc_still_win() {
+        let senders = vec![
+            SendAsAddress {
+                email: me().email,
+                default: true,
+                ..Default::default()
+            },
+            SendAsAddress {
+                email: sales().email,
+                suffixes: Suffixes {
+                    plus: true,
+                    dot: false,
+                },
+                ..Default::default()
+            },
+        ];
+        let mut original = message(
+            "m1",
+            addr(None, "news@example.net"),
+            vec![addr(None, "list@example.net")],
+            vec![],
+        );
+        for (delivery, expected) in [
+            (vec!["stranger@example.com".into()], me().email),
+            (vec![sales().email], sales().email),
+            (
+                vec!["sales+news@example.com".into()],
+                "sales+news@example.com".into(),
+            ),
+            (
+                vec!["stranger@example.com".into(), sales().email],
+                sales().email,
+            ),
+        ] {
+            let mine = reply_addresses(&senders, &original, &delivery, |_| false);
+            for kind in [ReplyKind::Reply, ReplyKind::ReplyAll] {
+                let draft = respond(kind, 1, &mine, &original, "text", None, &[]);
+                assert_eq!(draft.from.email, expected);
+                assert!(
+                    !draft
+                        .to
+                        .iter()
+                        .chain(&draft.cc)
+                        .any(|a| a.email == expected)
+                );
+                assert_eq!(draft.to[0].email, "news@example.net");
+            }
+        }
+        original.cc = vec![me()];
+        let mine = reply_addresses(&senders, &original, &[sales().email], |_| false);
+        assert_eq!(
+            respond(ReplyKind::Reply, 1, &mine, &original, "", None, &[])
+                .from
+                .email,
+            me().email
+        );
     }
 
     #[test]
@@ -2315,7 +2374,7 @@ mod tests {
                     addr(None, "cy@example.com"),
                 ],
             );
-            let mine = reply_addresses(&senders, &original, |_| false);
+            let mine = reply_addresses(&senders, &original, &[], |_| false);
             let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "hello", None, &[]);
             assert_eq!(draft.from, addr(Some("Our Name"), &email));
             assert_eq!(draft.to, vec![addr(None, "ann@example.com")]);
@@ -2363,7 +2422,7 @@ mod tests {
                 addr(None, "user.shop@example.com"),
             ],
         );
-        let mine = reply_addresses(&senders, &original, |_| false);
+        let mine = reply_addresses(&senders, &original, &[], |_| false);
         let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "", None, &[]);
         assert_eq!(draft.from.email, "user+shop@example.com");
         assert!(

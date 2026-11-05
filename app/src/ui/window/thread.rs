@@ -316,7 +316,10 @@ impl Effects for Ports {
                 async move {
                     let key = id.clone();
                     let result = core
-                        .call_for(account_id, async move { sync.body(&key).await })
+                        .call_for(
+                            account_id,
+                            async move { sync.body_with_delivery(&key).await },
+                        )
                         .await;
                     (id, result.map_err(|err| err.to_string()))
                 }

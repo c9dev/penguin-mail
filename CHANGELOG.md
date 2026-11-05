@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.
+
 - Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
 - Add a shared Microsoft 365 mailbox by address in Accounts preferences, using an existing account's sign-in.
 - Choose how many model requests the assistant can make per answer in Preferences → AI.
@@ -21,6 +23,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Deleting, archiving, or moving mail selects a neighbor in your last navigation direction, with an option in Reading preferences to always select the next row.
 
 ### Fixed
+
+- Refreshing delivery headers keeps decrypted or verified message content and attachments intact.
 
 - The calendar time indicator catches up when shown and advances each minute while the calendar stays open.
 - On macOS, messages stay visible after shrinking and expanding the window.

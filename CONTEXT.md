@@ -4,6 +4,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
+**Delivery address**: an address from Delivered-To, X-Original-To or a Received for clause, kept with body provenance. It can explain delivery through a mailing list or blind copy when To/Cc omit the reader. Reply selection uses only a configured sender, an enabled suffix or a known masked address; headers never authorize a new sending identity. `mailrs_mime::delivery`.
+
 **Toolbar layout**: the saved order of conversation header buttons. Customize Toolbar chooses, reorders and restores them; narrow windows keep secondary actions in More. `ui::toolbar`.
 
 **Navigation direction**: the last move up or down between single rows in the mail list. Removing mail follows that direction, falling back to the other side at the list edge. Reading preferences can restore always choosing the next row. Refreshing the list or opening a row after removal does not change the direction; leaving the mailbox resets it. `ui::thread_list::Navigation`.

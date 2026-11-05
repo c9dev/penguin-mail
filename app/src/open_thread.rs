@@ -31,6 +31,7 @@ pub use queued::Unsent;
 pub struct Answering {
     pub account_id: AccountId,
     pub target: MessageMeta,
+    pub delivered_to: Vec<String>,
     /// The words to quote.
     pub text: String,
     pub html: Option<String>,
@@ -230,6 +231,9 @@ impl OpenThread {
             .and_then(|body| body.as_ref().ok());
         Some(Answering {
             account_id: self.account_id,
+            delivered_to: body
+                .map(|b| b.provenance.delivery_addresses().to_vec())
+                .unwrap_or_default(),
             text: match body {
                 Some(body) => crate::compose::body_text(body),
                 None => target.snippet.clone(),
@@ -428,7 +432,11 @@ impl OpenThread {
         }
         self.messages
             .iter()
-            .filter(|m| !self.bodies.contains_key(&m.id))
+            .filter(|m| match self.bodies.get(&m.id) {
+                None => true,
+                Some(Ok(body)) => body.provenance.delivered_to.is_none(),
+                Some(Err(_)) => false,
+            })
             .map(|m| m.id.clone())
             .collect()
     }
@@ -455,6 +463,18 @@ impl OpenThread {
         cleaned: HashMap<String, Cleaned>,
     ) {
         for (id, body) in bodies {
+            // A delivery refresh must not replace content the engine already checked.
+            if self.marks.contains_key(&id)
+                && let Some(Ok(current)) = self.bodies.get_mut(&id)
+            {
+                if let Ok(fresh) = body
+                    && let Some(delivered_to) = &fresh.provenance.delivered_to
+                    && current.provenance.delivered_to.as_ref() != Some(delivered_to)
+                {
+                    Arc::make_mut(current).provenance.delivered_to = Some(delivered_to.clone());
+                }
+                continue;
+            }
             self.cleaned.remove(&id);
             self.bodies.insert(id, body);
         }
@@ -475,9 +495,13 @@ impl OpenThread {
     /// its own files.
     pub fn take_engine_answer(&mut self, message_id: String, read: protection::Read) -> bool {
         self.marks.insert(message_id.clone(), read.mark);
-        let Some(body) = read.body else {
+        let Some(mut body) = read.body else {
             return false;
         };
+        // Delivery belongs to the outer transport headers, not the signed part.
+        if let Some(Ok(original)) = self.bodies.get(&message_id) {
+            body.provenance.delivered_to = original.provenance.delivered_to.clone();
+        }
         if read.sealed {
             self.sealed.insert(message_id.clone());
         }
@@ -733,6 +757,16 @@ mod tests {
     #[test]
     fn a_reply_to_a_message_that_arrived_encrypted_starts_encrypted() {
         let mut open = thread(vec![message("m1", false)]);
+        open.bodies.insert(
+            "m1".into(),
+            Ok(std::sync::Arc::new(mailrs_domain::MessageBody {
+                provenance: mailrs_domain::Provenance {
+                    delivered_to: Some(vec!["alias@example.com".into()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })),
+        );
         open.take_engine_answer(
             "m1".to_string(),
             engine_read("The key is under the mat.", true),
@@ -740,11 +774,87 @@ mod tests {
 
         let answering = open.answering(None, false).expect("something to answer");
         assert!(answering.secret);
+        assert_eq!(answering.delivered_to, ["alias@example.com"]);
         assert_eq!(answering.text, "The key is under the mat.");
         assert!(
             open.answering(Some("m1"), true)
                 .is_some_and(|forward| forward.secret)
         );
+    }
+
+    #[test]
+    fn a_delayed_delivery_refresh_keeps_the_body_the_engine_opened() {
+        use mailrs_domain::{Attachment, MessageBody};
+        use std::sync::Arc;
+
+        for sealed in [false, true] {
+            for engine_first in [false, true] {
+                for refresh_fails in [false, true] {
+                    let mut open = thread(vec![message("m1", false)]);
+                    let original = MessageBody {
+                        text: Some("Original protected body".into()),
+                        html: Some("<p>Original protected body</p>".into()),
+                        ..Default::default()
+                    };
+                    open.bodies
+                        .insert("m1".into(), Ok(Arc::new(original.clone())));
+                    if !engine_first {
+                        assert_eq!(open.take_messages(&[]), ["m1"]);
+                    }
+                    let mut read = engine_read("Opened content", sealed);
+                    read.mark.title = "Signature checked".into();
+                    read.mark.tone = crate::protection::Tone::Good;
+                    let mark = read.mark.clone();
+                    let inside = read.body.as_mut().unwrap();
+                    inside.html = Some("<p>Opened content</p>".into());
+                    inside.attachments.push(Attachment {
+                        part_id: "0".into(),
+                        filename: "inside.txt".into(),
+                        mime_type: "text/plain".into(),
+                        size: 6,
+                        attachment_id: None,
+                        content_id: None,
+                    });
+                    read.files = vec![b"inside".to_vec()];
+                    open.asked.insert("m1".into());
+                    open.take_engine_answer("m1".into(), read);
+                    open.take_cleaned(open.to_clean().clean());
+                    if engine_first {
+                        assert_eq!(open.take_messages(&[]), ["m1"]);
+                    }
+
+                    let id = "m1".to_string();
+                    let mut fresh = original;
+                    fresh.provenance.delivered_to = Some(vec!["alias@example.com".into()]);
+                    let fresh = Arc::new(fresh);
+                    let cleaned = super::ToClean::of(1, [(&id, &fresh)]).clean();
+                    let result = if refresh_fails {
+                        Err("offline".into())
+                    } else {
+                        Ok(fresh)
+                    };
+                    open.take_bodies(vec![(id, result)], cleaned);
+                    open.take_cleaned(open.to_clean().clean());
+
+                    let body = open.bodies["m1"].as_ref().unwrap();
+                    assert_eq!(body.text.as_deref(), Some("Opened content"));
+                    assert_eq!(body.html.as_deref(), Some("<p>Opened content</p>"));
+                    assert_eq!(body.attachments[0].filename, "inside.txt");
+                    assert_eq!(open.opened_files["m1"], [b"inside".to_vec()]);
+                    assert_eq!(open.marks["m1"], mark);
+                    assert!(open.asked.contains("m1"));
+                    assert_eq!(open.sealed.contains("m1"), sealed);
+                    assert_eq!(
+                        body.provenance.delivered_to,
+                        (!refresh_fails).then(|| vec!["alias@example.com".into()])
+                    );
+                    assert!(open.to_clean().is_empty());
+                    let reply = open.answering(None, false).unwrap();
+                    assert_eq!(reply.text, "Opened content");
+                    assert_eq!(reply.secret, sealed);
+                }
+            }
+        }
     }
 
     #[test]
@@ -854,6 +964,23 @@ mod tests {
             .insert("m1".to_string(), Err("gone".to_string()));
         let missing = open.take_messages(&[message("m1", false), message("m2", false)]);
         assert_eq!(missing, ["m2"]);
+    }
+
+    #[test]
+    fn old_cached_text_stays_visible_while_delivery_headers_are_requested() {
+        let mut open = thread(vec![message("m1", false)]);
+        let mut cached = mailrs_domain::MessageBody {
+            text: Some("Cached text".into()),
+            ..Default::default()
+        };
+        open.bodies
+            .insert("m1".into(), Ok(std::sync::Arc::new(cached.clone())));
+        assert_eq!(open.take_messages(&[]), ["m1"]);
+        assert_eq!(open.answering(None, false).unwrap().text, "Cached text");
+        cached.provenance.delivered_to = Some(vec![]);
+        open.bodies
+            .insert("m1".into(), Ok(std::sync::Arc::new(cached)));
+        assert!(open.take_messages(&[]).is_empty());
     }
 
     #[test]

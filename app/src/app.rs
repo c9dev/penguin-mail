@@ -686,6 +686,7 @@ impl App {
         &self,
         account_id: AccountId,
         original: &mailrs_domain::MessageMeta,
+        delivered_to: &[String],
     ) -> Vec<Address> {
         let account = self.account_email(account_id);
         let mut senders = self.settings.borrow().senders(&account);
@@ -702,7 +703,7 @@ impl App {
             mail.as_ref()
                 .is_some_and(|mail| mail.is_masked(email) == Some(true))
         };
-        crate::compose::reply_addresses(&senders, original, masked)
+        crate::compose::reply_addresses(&senders, original, delivered_to, masked)
     }
 
     /// The dictionaries a composer for `account_id` should check against.
