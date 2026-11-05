@@ -130,6 +130,16 @@ jobs:
       # repository's key, which it has compiled in; it refuses a release
       # without one. The private key lives in a keyring of its own for this
       # step only, as in the rpm job.
+      - name: Normalize release asset filenames
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # GitHub replaces the tilde on upload. Sign the downloadable name.
+          for file in dist/*~deb13_*.deb; do
+              target=${file/~deb13_/.deb13_}
+              test ! -e "$target"
+              mv -- "$file" "$target"
+          done
       - name: Write and sign the checksums
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
