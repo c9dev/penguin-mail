@@ -219,6 +219,13 @@ impl<D: Dial> ImapClient<D> {
         on_worker!(self, conn => conn.select(mailbox, since))
     }
 
+    /// The UIDVALIDITY of `mailbox`, and the SELECT's answer when the
+    /// connection that took the call had to select it. A connection that
+    /// has the mailbox selected already answers without asking the server.
+    pub async fn uidvalidity(&self, mailbox: &str) -> Result<(u32, Option<Selected>), ImapError> {
+        on_worker!(self, conn => conn.uidvalidity(mailbox))
+    }
+
     pub async fn flags(
         &self,
         mailbox: &str,

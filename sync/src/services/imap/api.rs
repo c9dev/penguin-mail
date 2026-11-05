@@ -37,6 +37,14 @@ pub trait ImapApi: Send + Sync + 'static {
         since: Option<Since>,
     ) -> impl Future<Output = Result<Selected, ImapError>> + Send;
 
+    /// The UIDVALIDITY of `mailbox`, and the SELECT's answer when one was
+    /// needed to know it. A connection that has the mailbox selected
+    /// already answers without a SELECT.
+    fn uidvalidity(
+        &self,
+        mailbox: &str,
+    ) -> impl Future<Output = Result<(u32, Option<Selected>), ImapError>> + Send;
+
     /// The flags of the messages in `uids`, only those whose MODSEQ passed
     /// `changed_since` when it is given. `changed_since` needs CONDSTORE:
     /// without it the answer is `ImapError::Unsupported("CONDSTORE")`.
@@ -199,6 +207,10 @@ impl ImapApi for ImapClient {
 
     async fn select(&self, mailbox: &str, since: Option<Since>) -> Result<Selected, ImapError> {
         ImapClient::select(self, mailbox, since.as_ref()).await
+    }
+
+    async fn uidvalidity(&self, mailbox: &str) -> Result<(u32, Option<Selected>), ImapError> {
+        ImapClient::uidvalidity(self, mailbox).await
     }
 
     async fn flags(

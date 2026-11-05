@@ -28,8 +28,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// change the same UID can name another message, so the old location
     /// answers `NotFound` until the feed relists the mailbox.
     pub(super) async fn checked(&self, at: Location) -> Result<Location, BackendError> {
-        let selected = self.select(&at.mailbox, None).await?;
-        match selected.uidvalidity == at.uidvalidity {
+        let (uidvalidity, selected) = self.api.uidvalidity(&at.mailbox).await?;
+        if let Some(selected) = &selected {
+            self.note_keywords(&at.mailbox, selected);
+        }
+        match uidvalidity == at.uidvalidity {
             true => Ok(at),
             false => Err(BackendError::NotFound),
         }

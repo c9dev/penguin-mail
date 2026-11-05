@@ -251,6 +251,7 @@ either_client! {
         fn capabilities() -> Imapped<Capabilities>;
         fn list() -> Imapped<Vec<Listed>>;
         fn select(mailbox: &str, since: Option<Since>) -> Imapped<Selected>;
+        fn uidvalidity(mailbox: &str) -> Imapped<(u32, Option<Selected>)>;
         fn flags(mailbox: &str, uids: &UidSet, changed_since: Option<u64>) -> Imapped<Vec<FlagsOf>>;
         fn search(mailbox: &str, keys: &str) -> Imapped<Vec<u32>>;
         fn headers(mailbox: &str, uids: &UidSet) -> Imapped<Vec<mailrs_imap::Fetched>>;

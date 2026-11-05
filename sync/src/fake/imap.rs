@@ -932,6 +932,13 @@ impl ImapApi for FakeImap {
         })
     }
 
+    /// Selects every time, so the call shows in the log as the SELECT it
+    /// was before the real client learned to skip it.
+    async fn uidvalidity(&self, mailbox: &str) -> Result<(u32, Option<Selected>), ImapError> {
+        let selected = self.select(mailbox, None).await?;
+        Ok((selected.uidvalidity, Some(selected)))
+    }
+
     async fn select(&self, mailbox: &str, since: Option<Since>) -> Result<Selected, ImapError> {
         check_name(mailbox)?;
         // The client sends QRESYNC parameters only with the extension on

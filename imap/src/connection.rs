@@ -44,6 +44,10 @@ pub(crate) struct Conn<S: Stream> {
     pub(crate) capabilities: Capabilities,
     /// The mailbox the server has selected on this connection.
     selected: Option<String>,
+    /// The UIDVALIDITY the last SELECT reported, which holds for as long as
+    /// `selected` names that mailbox: a server may not change it while the
+    /// mailbox stays selected (RFC 3501 section 2.3.1.1).
+    uidvalidity: u32,
     /// When a command last went out, to tell a connection a router may
     /// have dropped in silence.
     last_used: Instant,
@@ -184,6 +188,7 @@ impl<S: Stream> Conn<S> {
             session,
             capabilities: Capabilities::default(),
             selected: None,
+            uidvalidity: 0,
             last_used: Instant::now(),
         };
         let mut after = CapabilityReader::default();
@@ -272,11 +277,29 @@ impl<S: Stream> Conn<S> {
         let mut reader = SelectReader::new(since.and_then(|s| s.known.as_ref()));
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
             .await?;
-        self.selected = Some(mailbox.to_string());
-        Ok(Selected {
+        let selected = Selected {
             qresync: since.is_some(),
             ..reader.finish()?
-        })
+        };
+        self.selected = Some(mailbox.to_string());
+        self.uidvalidity = selected.uidvalidity;
+        Ok(selected)
+    }
+
+    /// The UIDVALIDITY of `mailbox`, and the SELECT's answer when this
+    /// connection had to select it to know. A mailbox already selected
+    /// here costs no round trip: opening a thread checks it once for each
+    /// message, and on a slow server each SELECT took as long as the
+    /// fetch it guarded.
+    pub(crate) async fn uidvalidity(
+        &mut self,
+        mailbox: &str,
+    ) -> Result<(u32, Option<Selected>), ImapError> {
+        if self.selected.as_deref() == Some(mailbox) {
+            return Ok((self.uidvalidity, None));
+        }
+        let selected = self.select(mailbox, None).await?;
+        Ok((selected.uidvalidity, Some(selected)))
     }
 
     pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
@@ -627,6 +650,7 @@ impl<S: Stream> Conn<S> {
             session,
             capabilities,
             selected,
+            uidvalidity,
             ..
         } = self;
         let mut handle = session.idle();
@@ -678,6 +702,7 @@ impl<S: Stream> Conn<S> {
                 session,
                 capabilities,
                 selected,
+                uidvalidity,
                 last_used: Instant::now(),
             },
             woke,
@@ -1757,6 +1782,41 @@ mod tests {
             .await
             .err();
         assert_eq!(err, Some(ImapError::Unsupported("CONDSTORE")));
+    }
+
+    #[tokio::test]
+    async fn a_selected_mailbox_answers_its_uidvalidity_without_a_select() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let selects = || {
+            seen(&log)
+                .iter()
+                .filter(|c| c.starts_with("SELECT"))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+
+        let (uidvalidity, answer) = conn.uidvalidity("INBOX").await.unwrap();
+        assert_eq!(uidvalidity, 7);
+        assert_eq!(answer.map(|s| s.permanent_flags.len()), Some(3));
+        assert_eq!(selects().len(), 1);
+
+        let (uidvalidity, answer) = conn.uidvalidity("INBOX").await.unwrap();
+        assert_eq!(uidvalidity, 7);
+        assert!(answer.is_none(), "INBOX is selected already");
+        conn.body("INBOX", 5, "").await.unwrap();
+        assert_eq!(selects().len(), 1, "the fetch needs no SELECT either");
+
+        conn.uidvalidity("Sent").await.unwrap();
+        assert_eq!(selects().len(), 2, "another mailbox is selected first");
+        assert!(selects()[1].starts_with("SELECT \"Sent\""), "{:?}", selects());
     }
 
     #[tokio::test]

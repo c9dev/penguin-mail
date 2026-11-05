@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- On IMAP accounts, the messages of a conversation opened for the first time load faster.
+
 ### Fixed
 
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
