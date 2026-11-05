@@ -4735,7 +4735,7 @@ msgstr "開啟 Penguin Mail"
 msgid "New Message"
 msgstr "新增郵件"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2100 app/src/ui/window.rs:3661
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3661
 msgid "Check for Mail"
 msgstr "檢查郵件"
 
@@ -6351,7 +6351,7 @@ msgstr "僅有可變更此行事曆的人能檢視詳細資料"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2117
+#: app/src/ui/sidebar.rs:2142
 msgid "Color"
 msgstr "顏色"
 
@@ -7194,19 +7194,19 @@ msgstr "授予 {account} 存取權"
 msgid "Sign in again to {account}"
 msgstr "重新登入 {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2122
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
 msgid "Sign In Again…"
 msgstr "重新登入…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2130
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
 msgid "Remove Account…"
 msgstr "移除帳號…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2137
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
 msgid "Account options"
 msgstr "帳號選項"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2142
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
 msgid "Options for {account}"
 msgstr "{account} 的選項"
 
@@ -7235,7 +7235,7 @@ msgid "Original Color"
 msgstr "原始顏色"
 
 #: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2107
+#: app/src/ui/sidebar.rs:2132
 msgid "Rename…"
 msgstr "重新命名…"
 
@@ -7356,7 +7356,7 @@ msgstr "{date}，有活動"
 msgid "Offline, last updated {time}"
 msgstr "離線，上次更新於 {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2200
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
 msgid "Offline"
 msgstr "離線"
 
@@ -10037,7 +10037,7 @@ msgstr "新增地址"
 msgid "Default sender"
 msgstr "預設寄件者"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2009
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
 msgid "Signature…"
 msgstr "簽名…"
 
@@ -10106,7 +10106,7 @@ msgid "Mail"
 msgstr "郵件"
 
 #: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2567
+#: app/src/ui/sidebar.rs:2592
 msgid "99+"
 msgstr "99+"
 
@@ -10147,12 +10147,12 @@ msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "行事曆，{count} 個邀請等候回覆"
 
 #: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2118
+#: app/src/ui/sidebar.rs:2143
 msgid "Move Up"
 msgstr "上移"
 
 #: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2119
+#: app/src/ui/sidebar.rs:2144
 msgid "Move Down"
 msgstr "下移"
 
@@ -10160,61 +10160,61 @@ msgstr "下移"
 msgid "Empty Trash…"
 msgstr "清空垃圾桶…"
 
-#: app/src/ui/sidebar.rs:2008
+#: app/src/ui/sidebar.rs:2033
 msgid "Automatic Reply…"
 msgstr "自動回覆…"
 
-#: app/src/ui/sidebar.rs:2010
+#: app/src/ui/sidebar.rs:2035
 msgid "Rules…"
 msgstr "規則…"
 
-#: app/src/ui/sidebar.rs:2011 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3664
 msgid "Hide My Email…"
 msgstr "隱藏電子郵件地址…"
 
-#: app/src/ui/sidebar.rs:2020
+#: app/src/ui/sidebar.rs:2045
 msgid "On this computer"
 msgstr "在此電腦上"
 
-#: app/src/ui/sidebar.rs:2028
+#: app/src/ui/sidebar.rs:2053
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "在此電腦上。顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2029
+#: app/src/ui/sidebar.rs:2054
 msgid "Show or hide this account's mailboxes"
 msgstr "顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2148
 msgid "Switch to JMAP…"
 msgstr "切換至 JMAP…"
 
-#: app/src/ui/sidebar.rs:2125
+#: app/src/ui/sidebar.rs:2150
 msgid "Messages That Will Not Download…"
 msgstr "無法下載的郵件…"
 
-#: app/src/ui/sidebar.rs:2198
+#: app/src/ui/sidebar.rs:2223
 msgid "Sign in again to keep syncing"
 msgstr "請重新登入以繼續同步"
 
-#: app/src/ui/sidebar.rs:2204
+#: app/src/ui/sidebar.rs:2229
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} 未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2215
+#: app/src/ui/sidebar.rs:2240
 msgid "The keyring is not responding; retrying"
 msgstr "鑰匙圈未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2218
+#: app/src/ui/sidebar.rs:2243
 msgid "Downloading mail"
 msgstr "正在下載郵件"
 
-#: app/src/ui/sidebar.rs:2222
+#: app/src/ui/sidebar.rs:2247
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "因錯誤而停止同步；請重新啟動 Penguin Mail 以重試"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2254
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
