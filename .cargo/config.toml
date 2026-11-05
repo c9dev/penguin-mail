@@ -1,0 +1,11 @@
+[env]
+# SQLite keeps process-wide memory statistics unless told not to, and takes
+# one global mutex on every allocation and free to keep them. Nothing here
+# reads them. The app holds several connections on several threads, and the
+# test suite runs 16 tests at once in one process, each with a store of its
+# own: the sync tests spent five times as long in the kernel, waiting on that
+# mutex, as in their own code. Without it the whole suite ran in 118 s
+# instead of 311 s. SQLite lists this among the options it recommends.
+# rusqlite builds SQLite from source ("bundled"), and libsqlite3-sys reads
+# this when it does.
+LIBSQLITE3_FLAGS = "-DSQLITE_DEFAULT_MEMSTATUS=0"
