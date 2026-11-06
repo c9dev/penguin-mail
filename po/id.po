@@ -4561,7 +4561,7 @@ msgstr "{host} menolak masuk: {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:444 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1646 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1650 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Kalender"
 
@@ -4982,7 +4982,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] "{count} pesan belum dibaca"
 msgstr[1] "{count} pesan belum dibaca"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1670
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1674
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} pesan belum dibaca"
@@ -5006,7 +5006,7 @@ msgstr "Buka Penguin Mail"
 msgid "New Message"
 msgstr "Pesan Baru"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3725
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2129 app/src/ui/window.rs:3725
 msgid "Check for Mail"
 msgstr "Periksa Email"
 
@@ -6669,8 +6669,8 @@ msgstr ""
 "Hanya orang yang dapat mengubah kalender ini yang dapat melihat detailnya"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2143
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1846
+#: app/src/ui/sidebar.rs:2147
 msgid "Color"
 msgstr "Warna"
 
@@ -7535,19 +7535,19 @@ msgstr "Berikan Akses untuk {account}"
 msgid "Sign in again to {account}"
 msgstr "Masuk kembali ke {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2148
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2152
 msgid "Sign In Again…"
 msgstr "Masuk Lagi…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2156
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2160
 msgid "Remove Account…"
 msgstr "Hapus Akun…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2163
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2167
 msgid "Account options"
 msgstr "Opsi akun"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2168
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2172
 msgid "Options for {account}"
 msgstr "Opsi untuk {account}"
 
@@ -7575,13 +7575,13 @@ msgstr "Sembunyikan dari Daftar"
 msgid "Original Color"
 msgstr "Warna Asli"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2133
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1834
+#: app/src/ui/sidebar.rs:2137
 msgid "Rename…"
 msgstr "Ganti Nama…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1731
-#: app/src/ui/sidebar.rs:1858
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1735
+#: app/src/ui/sidebar.rs:1862
 msgid "Delete…"
 msgstr "Hapus…"
 
@@ -7703,7 +7703,7 @@ msgstr "{date}, memiliki acara"
 msgid "Offline, last updated {time}"
 msgstr "Luring, terakhir diperbarui {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2228
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2232
 msgid "Offline"
 msgstr "Luring"
 
@@ -8272,7 +8272,7 @@ msgid "Find Again"
 msgstr "Cari Lagi"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1725
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1729
 msgid "Edit…"
 msgstr "Edit…"
 
@@ -9386,25 +9386,25 @@ msgstr ""
 msgid "Folders of {account}"
 msgstr "Aturan untuk {account}"
 
-#: app/src/ui/manage_folders.rs:296
+#: app/src/ui/manage_folders.rs:302
 msgid "Hide the folders in {folder}"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:297
+#: app/src/ui/manage_folders.rs:303
 #, fuzzy
 #| msgid "Show the calendar"
 msgid "Show the folders in {folder}"
 msgstr "Tampilkan kalender"
 
-#: app/src/ui/manage_folders.rs:315
+#: app/src/ui/manage_folders.rs:321
 msgid "{folder}, always shown"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:351 app/src/ui/preferences.rs:631
+#: app/src/ui/manage_folders.rs:357 app/src/ui/preferences.rs:631
 msgid "This account is not syncing yet"
 msgstr "Akun ini belum menyinkronkan"
 
-#: app/src/ui/manage_folders.rs:453
+#: app/src/ui/manage_folders.rs:459
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the subscription: {reason}"
@@ -10571,7 +10571,7 @@ msgstr "Tambahkan Alamat"
 msgid "Default sender"
 msgstr "Pengirim bawaan"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2038
 msgid "Signature…"
 msgstr "Tanda Tangan…"
 
@@ -10641,12 +10641,12 @@ msgid "Mailboxes"
 msgstr "Kotak Surat"
 
 #: app/src/ui/sidebar.rs:440 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:1645 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:1649 app/src/ui/thread_list.rs:372
 msgid "Mail"
 msgstr "Email"
 
-#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1640
+#: app/src/ui/sidebar.rs:2599
 msgid "99+"
 msgstr "99+"
 
@@ -10666,99 +10666,99 @@ msgstr "Kotak Keluar"
 msgid "Holds folders, not mail"
 msgstr "Berisi folder, bukan email"
 
-#: app/src/ui/sidebar.rs:1595
+#: app/src/ui/sidebar.rs:1599
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} pesan belum dibaca"
 msgstr[1] "{mailbox}, {count} pesan belum dibaca"
 
-#: app/src/ui/sidebar.rs:1601
+#: app/src/ui/sidebar.rs:1605
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} pesan"
 msgstr[1] "{mailbox}, {count} pesan"
 
-#: app/src/ui/sidebar.rs:1648
+#: app/src/ui/sidebar.rs:1652
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Email, {count} belum dibaca"
 msgstr[1] "Email, {count} belum dibaca"
 
-#: app/src/ui/sidebar.rs:1654
+#: app/src/ui/sidebar.rs:1658
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Kalender, {count} menunggu jawaban Anda"
 msgstr[1] "Kalender, {count} menunggu jawaban Anda"
 
-#: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2144
+#: app/src/ui/sidebar.rs:1731 app/src/ui/sidebar.rs:1853
+#: app/src/ui/sidebar.rs:2148
 msgid "Move Up"
 msgstr "Pindahkan ke Atas"
 
-#: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2145
+#: app/src/ui/sidebar.rs:1732 app/src/ui/sidebar.rs:1856
+#: app/src/ui/sidebar.rs:2149
 msgid "Move Down"
 msgstr "Pindahkan ke Bawah"
 
-#: app/src/ui/sidebar.rs:1880
+#: app/src/ui/sidebar.rs:1884
 msgid "Empty Trash…"
 msgstr "Kosongkan Sampah…"
 
-#: app/src/ui/sidebar.rs:2033
+#: app/src/ui/sidebar.rs:2037
 msgid "Automatic Reply…"
 msgstr "Balasan Otomatis…"
 
-#: app/src/ui/sidebar.rs:2035
+#: app/src/ui/sidebar.rs:2039
 msgid "Rules…"
 msgstr "Aturan…"
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3728
+#: app/src/ui/sidebar.rs:2040 app/src/ui/window.rs:3728
 msgid "Hide My Email…"
 msgstr "Sembunyikan Email Saya…"
 
-#: app/src/ui/sidebar.rs:2045
+#: app/src/ui/sidebar.rs:2049
 msgid "On this computer"
 msgstr "Di komputer ini"
 
-#: app/src/ui/sidebar.rs:2053
+#: app/src/ui/sidebar.rs:2057
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "Di komputer ini. Tampilkan atau sembunyikan kotak surat akun ini"
 
-#: app/src/ui/sidebar.rs:2054
+#: app/src/ui/sidebar.rs:2058
 msgid "Show or hide this account's mailboxes"
 msgstr "Tampilkan atau sembunyikan kotak surat akun ini"
 
-#: app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2134
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Folder Baru…"
 
-#: app/src/ui/sidebar.rs:2149
+#: app/src/ui/sidebar.rs:2153
 msgid "Switch to JMAP…"
 msgstr "Beralih ke JMAP…"
 
-#: app/src/ui/sidebar.rs:2151
+#: app/src/ui/sidebar.rs:2155
 msgid "Messages That Will Not Download…"
 msgstr "Pesan yang Tidak Dapat Diunduh…"
 
-#: app/src/ui/sidebar.rs:2226
+#: app/src/ui/sidebar.rs:2230
 msgid "Sign in again to keep syncing"
 msgstr "Masuk kembali untuk melanjutkan sinkronisasi"
 
-#: app/src/ui/sidebar.rs:2232
+#: app/src/ui/sidebar.rs:2236
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} tidak merespons; mencoba lagi"
 
-#: app/src/ui/sidebar.rs:2243
+#: app/src/ui/sidebar.rs:2247
 msgid "The keyring is not responding; retrying"
 msgstr "Gantungan kunci tidak merespons; mencoba lagi"
 
-#: app/src/ui/sidebar.rs:2246
+#: app/src/ui/sidebar.rs:2250
 msgid "Downloading mail"
 msgstr "Mengunduh email"
 
-#: app/src/ui/sidebar.rs:2250
+#: app/src/ui/sidebar.rs:2254
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Sinkronisasi terhenti setelah terjadi kesalahan; mulai ulang Penguin Mail "
@@ -10766,7 +10766,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2257
+#: app/src/ui/sidebar.rs:2261
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
