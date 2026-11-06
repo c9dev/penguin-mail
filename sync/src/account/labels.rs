@@ -21,6 +21,22 @@ impl AccountSync {
         self.store_listing(remote).await
     }
 
+    /// Lists the mailboxes once a run. The hourly relisting resumes from
+    /// the last run's hour, so without this a start would show the old
+    /// list for up to an hour: a folder made or subscribed to elsewhere,
+    /// or a change to which folders the account shows, which restarts it.
+    pub async fn list_mailboxes_once(&self) -> Result<(), SyncError> {
+        use std::sync::atomic::Ordering;
+        if self.mailboxes_listed.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+        if let Err(err) = self.refresh_labels().await {
+            self.mailboxes_listed.store(false, Ordering::SeqCst);
+            return Err(err);
+        }
+        Ok(())
+    }
+
     /// Every folder on an IMAP account's server, for Manage Folders.
     pub async fn folder_subscriptions(
         &self,
