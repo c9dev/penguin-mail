@@ -1438,6 +1438,16 @@ impl MainWindow {
             .await
             .map(|ids| ids.into_iter().collect())
             .unwrap_or_default();
+        // The sidebar leaves out what the account hides, such as an IMAP
+        // folder nobody subscribes to; everything else here still knows it.
+        let data = data
+            .into_iter()
+            .map(|(account, labels)| {
+                let hidden = app.hidden_labels(account.id);
+                let shown = labels.into_iter().filter(|l| !hidden.contains(&l.id));
+                (account, shown.collect())
+            })
+            .collect();
         let (data, extras) = self.arrange(data, &settings, not_downloading, self.core.switchable());
         // Each IMAP account is looked at once a run; finding a JMAP
         // session for one rebuilds its row with Switch to JMAP.
