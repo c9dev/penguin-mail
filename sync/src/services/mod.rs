@@ -431,6 +431,7 @@ pub fn gmail_over_imap(
             provider_name: "Gmail".to_string(),
             files_sent_mail: true,
             window_days,
+            all_folders: false,
         },
     ));
     (
@@ -656,6 +657,7 @@ impl AccountServices {
             provider_name: "Fastmail".into(),
             files_sent_mail: false,
             window_days: crate::DEFAULT_WINDOW_DAYS,
+            all_folders: false,
         };
         AccountServices::imap(imap, smtp, settings)
     }

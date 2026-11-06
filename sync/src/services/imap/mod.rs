@@ -57,6 +57,8 @@ pub struct ImapSettings {
     pub files_sent_mail: bool,
     /// Days of mail the account keeps besides the whole Inbox.
     pub window_days: i64,
+    /// List every folder on the server, not only the subscribed ones.
+    pub all_folders: bool,
 }
 
 /// The keywords every server stores: its system flags.

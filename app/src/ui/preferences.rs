@@ -485,6 +485,9 @@ fn accounts_page(
         );
         row.add_row(&space_row);
         space_rows.push((account.id, update));
+        if account.provider == mailrs_domain::Provider::Imap {
+            row.add_row(&subscribed_row(app, account, dialog));
+        }
         google_route::rows(app, account, *offers, &row, &connect, contacts);
         if let Some(owner) = app.microsoft_owner(account.id) {
             row.add_row(
@@ -1549,6 +1552,71 @@ fn switch(
     switch_with(app, title, subtitle, active, move |app, on| {
         app.change_settings(change(on));
     })
+}
+
+/// Whether an IMAP account's sidebar lists only the folders the person
+/// subscribes to. The store holds the answer, so the switch waits,
+/// insensitive, until it is read; a change starts the account again, and
+/// a failure puts the switch back.
+fn subscribed_row(app: &Rc<App>, account: &Account, toasts: &adw::ToastOverlay) -> adw::SwitchRow {
+    let row = adw::SwitchRow::builder()
+        .title(gettext("Show Only Subscribed Folders"))
+        .subtitle(gettext(
+            "Folders you do not subscribe to on the server stay out of the sidebar.",
+        ))
+        .active(true)
+        .sensitive(false)
+        .build();
+    // Set while the switch shows what the store says, so that showing it
+    // is not taken for a change.
+    let settling = Rc::new(Cell::new(true));
+    let (weak, id, shown, quiet) = (
+        Rc::downgrade(app),
+        account.id,
+        row.downgrade(),
+        Rc::clone(&settling),
+    );
+    glib::spawn_future_local(async move {
+        let Some(app) = weak.upgrade() else { return };
+        let all = app.core.all_folders(id).await;
+        if let Some(row) = shown.upgrade() {
+            row.set_active(!all);
+            row.set_sensitive(true);
+        }
+        quiet.set(false);
+    });
+    let (weak, account, toasts) = (Rc::downgrade(app), account.clone(), toasts.downgrade());
+    row.connect_active_notify(move |row| {
+        if settling.get() {
+            return;
+        }
+        let Some(app) = weak.upgrade() else { return };
+        let only = row.is_active();
+        row.set_sensitive(false);
+        let (row, account, toasts, settling) = (
+            row.clone(),
+            account.clone(),
+            toasts.clone(),
+            Rc::clone(&settling),
+        );
+        glib::spawn_future_local(async move {
+            if let Err(err) = app.core.set_all_folders(account, !only).await {
+                settling.set(true);
+                row.set_active(!only);
+                settling.set(false);
+                if let Some(toasts) = toasts.upgrade() {
+                    let said = with_reason(
+                        &gettext("Could not change the folders: {reason}"),
+                        &err,
+                        &[],
+                    );
+                    toasts.add_toast(crate::ui::toast(&said));
+                }
+            }
+            row.set_sensitive(true);
+        });
+    });
+    row
 }
 
 /// A switch whose change the app has to do more about than save it.

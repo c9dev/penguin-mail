@@ -1620,6 +1620,29 @@ impl Core {
         .await
     }
 
+    /// Whether the IMAP account lists every folder on the server, as last
+    /// saved; the subscribed ones alone by default.
+    pub async fn all_folders(&self, account_id: AccountId) -> bool {
+        self.read(move |c| mailrs_store::accounts::all_folders(c, account_id))
+            .await
+            .unwrap_or(false)
+    }
+
+    /// Saves whether the IMAP account lists every folder, then starts the
+    /// account again: the adapter reads the setting when it connects, and
+    /// lists its folders afresh as it starts.
+    pub async fn set_all_folders(&self, account: Account, all: bool) -> Result<()> {
+        let (db, engine) = (self.db.clone(), self.engine.current());
+        let connector = self.connector();
+        let id = account.id;
+        self.call(async move {
+            db.write(move |c| mailrs_store::accounts::set_all_folders(c, id, all))
+                .await?;
+            restart_services(&connector, engine, &account).await
+        })
+        .await
+    }
+
     /// Why the account's calendar and contacts servers last refused the
     /// login, for the Preferences rows.
     pub fn login_refusals(&self, account_id: AccountId) -> (Option<String>, Option<String>) {
