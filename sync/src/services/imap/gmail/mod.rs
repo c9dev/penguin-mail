@@ -97,6 +97,7 @@ impl<I: ImapApi, S: Submit> MailBackend for GmailImap<I, S> {
             .map(|f| f.id.clone())
             .unwrap_or_default();
         MailCapabilities {
+            fetches_raw_together: false,
             labels: true,
             server_threads: true,
             files_sent_mail: true,

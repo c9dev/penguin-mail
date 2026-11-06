@@ -12603,7 +12603,7 @@ msgstr "Έλεγχος χώρου αποθήκευσης"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Απόκρυψη προειδοποίησης χώρου έως την επόμενη εκκίνηση"
 
-#: app/src/ui/window/thread.rs:639
+#: app/src/ui/window/thread.rs:643
 msgid "The account is not connected yet."
 msgstr "Ο λογαριασμός δεν έχει συνδεθεί ακόμη."
 
@@ -13476,15 +13476,15 @@ msgstr ""
 "Το Penguin Mail δεν μπορεί να αποθηκεύσει αυτή την επανάληψη σε ημερολόγιο "
 "JMAP."
 
-#: sync/src/services/jmap/mod.rs:311
+#: sync/src/services/jmap/mod.rs:312
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Αυτός ο διακομιστής δεν κρατά χρώματα για τα γραμματοκιβώτιά του."
 
-#: sync/src/services/jmap/mod.rs:420
+#: sync/src/services/jmap/mod.rs:421
 msgid "This server files sent mail itself."
 msgstr "Αυτός ο διακομιστής αρχειοθετεί μόνος του τα απεσταλμένα μηνύματα."
 
-#: sync/src/services/jmap/mod.rs:603
+#: sync/src/services/jmap/mod.rs:604
 msgid "The server made an address Penguin Mail cannot read."
 msgstr ""
 "Ο διακομιστής δημιούργησε μια διεύθυνση που το Penguin Mail δεν μπορεί να "
@@ -13657,14 +13657,14 @@ msgstr "Το Outlook απάντησε αλλά δεν κράτησε την αυ
 msgid "A folder needs a name."
 msgstr "Ένας φάκελος χρειάζεται όνομα."
 
-#: sync/src/services/pop3/mod.rs:472
+#: sync/src/services/pop3/mod.rs:473
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Το Penguin Mail διατηρεί τα ονόματα των Εισερχομένων, Απεσταλμένων, "
 "Πρόχειρων, Κάδου, Ανεπιθύμητων και Αρχείου."
 
-#: sync/src/services/pop3/mod.rs:488
+#: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Το Penguin Mail διατηρεί τα Εισερχόμενα, τα Απεσταλμένα, τα Πρόχειρα, τον "

@@ -11814,7 +11814,7 @@ msgstr "檢視儲存空間"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "隱藏空間警告至下次啟動"
 
-#: app/src/ui/window/thread.rs:639
+#: app/src/ui/window/thread.rs:643
 msgid "The account is not connected yet."
 msgstr "帳號尚未連線。"
 
@@ -12618,15 +12618,15 @@ msgstr ""
 msgid "Penguin Mail cannot save this repeat to a JMAP calendar."
 msgstr "Penguin Mail 無法將此重複設定儲存到 JMAP 行事曆。"
 
-#: sync/src/services/jmap/mod.rs:311
+#: sync/src/services/jmap/mod.rs:312
 msgid "This server keeps no colors for its mailboxes."
 msgstr "此伺服器不會儲存信箱的顏色。"
 
-#: sync/src/services/jmap/mod.rs:420
+#: sync/src/services/jmap/mod.rs:421
 msgid "This server files sent mail itself."
 msgstr "此伺服器會自行歸檔寄出的郵件。"
 
-#: sync/src/services/jmap/mod.rs:603
+#: sync/src/services/jmap/mod.rs:604
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "伺服器建立的地址無法由 Penguin Mail 讀取。"
 
@@ -12771,13 +12771,13 @@ msgstr "Outlook 已回應，但未保留自動回覆。"
 msgid "A folder needs a name."
 msgstr "資料夾需要名稱。"
 
-#: sync/src/services/pop3/mod.rs:472
+#: sync/src/services/pop3/mod.rs:473
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail 保留收件匣、寄件備份、草稿、垃圾桶、垃圾郵件及封存的名稱。"
 
-#: sync/src/services/pop3/mod.rs:488
+#: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail 保留收件匣、寄件備份、草稿、垃圾桶、垃圾郵件及封存。"
 

@@ -30,6 +30,7 @@ pub struct NoMail;
 impl MailBackend for NoMail {
     fn capabilities(&self) -> MailCapabilities {
         MailCapabilities {
+            fetches_raw_together: false,
             labels: false,
             server_threads: false,
             files_sent_mail: false,

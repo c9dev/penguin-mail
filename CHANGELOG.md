@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+
+- On IMAP accounts, the messages of a conversation opened for the first time load faster.
 - An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.
 
 ### Fixed

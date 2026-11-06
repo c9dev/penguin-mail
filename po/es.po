@@ -12413,7 +12413,7 @@ msgstr "Revisar almacenamiento"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Ocultar el aviso de espacio hasta el próximo inicio"
 
-#: app/src/ui/window/thread.rs:639
+#: app/src/ui/window/thread.rs:643
 msgid "The account is not connected yet."
 msgstr "La cuenta aún no está conectada."
 
@@ -13263,15 +13263,15 @@ msgstr ""
 msgid "Penguin Mail cannot save this repeat to a JMAP calendar."
 msgstr "Penguin Mail no puede guardar esta repetición en un calendario JMAP."
 
-#: sync/src/services/jmap/mod.rs:311
+#: sync/src/services/jmap/mod.rs:312
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Este servidor no guarda colores para sus buzones."
 
-#: sync/src/services/jmap/mod.rs:420
+#: sync/src/services/jmap/mod.rs:421
 msgid "This server files sent mail itself."
 msgstr "Este servidor archiva por sí mismo el correo enviado."
 
-#: sync/src/services/jmap/mod.rs:603
+#: sync/src/services/jmap/mod.rs:604
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "El servidor ha creado una dirección que Penguin Mail no puede leer."
 
@@ -13432,14 +13432,14 @@ msgstr "Outlook ha respondido pero no ha guardado la respuesta automática."
 msgid "A folder needs a name."
 msgstr "Una carpeta necesita un nombre."
 
-#: sync/src/services/pop3/mod.rs:472
+#: sync/src/services/pop3/mod.rs:473
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail reserva los nombres Bandeja de entrada, Enviados, Borradores, "
 "Papelera, Correo no deseado y Archivo."
 
-#: sync/src/services/pop3/mod.rs:488
+#: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Penguin Mail reserva Bandeja de entrada, Enviados, Borradores, Papelera, "

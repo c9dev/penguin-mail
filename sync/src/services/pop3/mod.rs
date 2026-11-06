@@ -388,6 +388,7 @@ impl<S, P> Pop3<S, P> {
 impl<S: Submit, P: Pop3Api> MailBackend for Pop3<S, P> {
     fn capabilities(&self) -> MailCapabilities {
         MailCapabilities {
+            fetches_raw_together: false,
             labels: false,
             server_threads: false,
             files_sent_mail: false,
