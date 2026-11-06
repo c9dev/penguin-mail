@@ -5093,7 +5093,7 @@ msgstr "Deschide Penguin Mail"
 msgid "New Message"
 msgstr "Mesaj nou"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2100 app/src/ui/window.rs:3661
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3661
 msgid "Check for Mail"
 msgstr "Verifică corespondența"
 
@@ -6768,7 +6768,7 @@ msgstr "Doar persoanele care pot modifica acest calendar văd detaliile"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2117
+#: app/src/ui/sidebar.rs:2142
 msgid "Color"
 msgstr "Culoare"
 
@@ -7640,19 +7640,19 @@ msgstr "Acordați acces pentru {account}"
 msgid "Sign in again to {account}"
 msgstr "Conectați-vă din nou la {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2122
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
 msgid "Sign In Again…"
 msgstr "Conectare din nou…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2130
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
 msgid "Remove Account…"
 msgstr "Elimină contul…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2137
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
 msgid "Account options"
 msgstr "Opțiunile contului"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2142
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
 msgid "Options for {account}"
 msgstr "Opțiuni pentru {account}"
 
@@ -7681,7 +7681,7 @@ msgid "Original Color"
 msgstr "Culoarea originală"
 
 #: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2107
+#: app/src/ui/sidebar.rs:2132
 msgid "Rename…"
 msgstr "Redenumește…"
 
@@ -7814,7 +7814,7 @@ msgstr "{date}, are evenimente"
 msgid "Offline, last updated {time}"
 msgstr "Deconectat, actualizat ultima dată la {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2200
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
 msgid "Offline"
 msgstr "Deconectat"
 
@@ -10647,7 +10647,7 @@ msgstr "Adaugă o adresă"
 msgid "Default sender"
 msgstr "Expeditor implicit"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2009
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
 msgid "Signature…"
 msgstr "Semnătură…"
 
@@ -10718,7 +10718,7 @@ msgid "Mail"
 msgstr "Corespondență"
 
 #: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2567
+#: app/src/ui/sidebar.rs:2592
 msgid "99+"
 msgstr "99+"
 
@@ -10767,12 +10767,12 @@ msgstr[1] "Calendar, {count} așteaptă răspunsul dumneavoastră"
 msgstr[2] "Calendar, {count} așteaptă răspunsul dumneavoastră"
 
 #: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2118
+#: app/src/ui/sidebar.rs:2143
 msgid "Move Up"
 msgstr "Mută în sus"
 
 #: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2119
+#: app/src/ui/sidebar.rs:2144
 msgid "Move Down"
 msgstr "Mută în jos"
 
@@ -10780,56 +10780,56 @@ msgstr "Mută în jos"
 msgid "Empty Trash…"
 msgstr "Golește coșul de gunoi…"
 
-#: app/src/ui/sidebar.rs:2008
+#: app/src/ui/sidebar.rs:2033
 msgid "Automatic Reply…"
 msgstr "Răspuns automat…"
 
-#: app/src/ui/sidebar.rs:2010
+#: app/src/ui/sidebar.rs:2035
 msgid "Rules…"
 msgstr "Reguli…"
 
-#: app/src/ui/sidebar.rs:2011 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3664
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
-#: app/src/ui/sidebar.rs:2020
+#: app/src/ui/sidebar.rs:2045
 msgid "On this computer"
 msgstr "Pe acest calculator"
 
-#: app/src/ui/sidebar.rs:2028
+#: app/src/ui/sidebar.rs:2053
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "Pe acest calculator. Afișează sau ascunde căsuțele poștale ale acestui cont"
 
-#: app/src/ui/sidebar.rs:2029
+#: app/src/ui/sidebar.rs:2054
 msgid "Show or hide this account's mailboxes"
 msgstr "Afișează sau ascunde căsuțele poștale ale acestui cont"
 
-#: app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2148
 msgid "Switch to JMAP…"
 msgstr "Comută la JMAP…"
 
-#: app/src/ui/sidebar.rs:2125
+#: app/src/ui/sidebar.rs:2150
 msgid "Messages That Will Not Download…"
 msgstr "Mesaje care nu se descarcă…"
 
-#: app/src/ui/sidebar.rs:2198
+#: app/src/ui/sidebar.rs:2223
 msgid "Sign in again to keep syncing"
 msgstr "Conectați-vă din nou pentru a continua sincronizarea"
 
-#: app/src/ui/sidebar.rs:2204
+#: app/src/ui/sidebar.rs:2229
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} nu răspunde; se reîncearcă"
 
-#: app/src/ui/sidebar.rs:2215
+#: app/src/ui/sidebar.rs:2240
 msgid "The keyring is not responding; retrying"
 msgstr "Inelul de chei nu răspunde; se reîncearcă"
 
-#: app/src/ui/sidebar.rs:2218
+#: app/src/ui/sidebar.rs:2243
 msgid "Downloading mail"
 msgstr "Se descarcă mesajele"
 
-#: app/src/ui/sidebar.rs:2222
+#: app/src/ui/sidebar.rs:2247
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Sincronizarea s-a oprit după o eroare; reporniți Penguin Mail pentru a "
@@ -10837,7 +10837,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2254
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
