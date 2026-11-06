@@ -269,3 +269,20 @@ async fn a_deleted_folder_takes_its_subscription_along() {
 
     assert!(h.imap.calls().contains(&"unsubscribe Spare".to_string()));
 }
+
+#[tokio::test]
+async fn unread_counts_ask_only_the_folders_that_show() {
+    use crate::MailBackend;
+    let (imap, adapter) = super::adapter(crate::fake::FakeImap::new());
+    imap.add_mailbox("Lists", None);
+    imap.add_mailbox("Old", None);
+    imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+
+    adapter.unread_counts().await.unwrap();
+
+    let calls = imap.calls();
+    assert!(calls.contains(&"unread Lists".to_string()), "{calls:?}");
+    assert!(!calls.contains(&"unread Old".to_string()), "{calls:?}");
+}
