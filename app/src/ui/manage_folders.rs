@@ -6,6 +6,8 @@
 //! `gtk::ListView` whose rows are made as they scroll into view, with no
 //! menu of their own: per-row menus were what made the sidebar heavy.
 
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -39,17 +41,40 @@ pub struct Line {
     pub label: String,
     pub depth: usize,
     pub check: Check,
+    /// Other folders sit under it, so it can open and close. Never in a
+    /// search, whose rows are flat.
+    pub children: bool,
+    /// Its children show.
+    pub expanded: bool,
 }
 
-/// The rows for `folders`: the tree, Inbox first and then by name, or
-/// with a `query`, the folders whose path holds it, flat.
-pub fn lines(folders: &[FolderSubscription], query: &str) -> Vec<Line> {
+/// The paths above `name`, nearest last: `a` and `a/b` for `a/b/c`.
+fn ancestors(name: &str) -> impl Iterator<Item = &str> {
+    name.match_indices('/').map(move |(at, _)| &name[..at])
+}
+
+/// The rows for `folders`: the tree, Inbox first and then by name, each
+/// folder showing while every folder above it is in `expanded`; or with
+/// a `query`, every folder whose path holds it, flat.
+pub fn lines(folders: &[FolderSubscription], query: &str, expanded: &HashSet<String>) -> Vec<Line> {
+    let names: HashSet<&str> = folders.iter().map(|f| f.name.as_str()).collect();
+    let parents: HashSet<&str> = folders.iter().flat_map(|f| ancestors(&f.name)).collect();
     let mut sorted: Vec<&FolderSubscription> = folders.iter().collect();
-    sorted.sort_by_key(|f| (!f.id.eq_ignore_ascii_case("INBOX"), f.name.to_lowercase()));
+    // By each part of the path, so a subtree stays together: as one
+    // string, `a-b` would sort between `a` and `a/b`.
+    sorted.sort_by_cached_key(|f| {
+        let parts: Vec<String> = f.name.split('/').map(str::to_lowercase).collect();
+        (!f.id.eq_ignore_ascii_case("INBOX"), parts)
+    });
     let query = query.trim().to_lowercase();
     sorted
         .into_iter()
-        .filter(|f| query.is_empty() || f.name.to_lowercase().contains(&query))
+        .filter(|f| match query.is_empty() {
+            true => ancestors(&f.name)
+                .filter(|above| names.contains(above))
+                .all(|above| expanded.contains(above)),
+            false => f.name.to_lowercase().contains(&query),
+        })
         .map(|f| {
             let (label, depth) = match query.is_empty() {
                 true => (
@@ -65,14 +90,27 @@ pub fn lines(folders: &[FolderSubscription], query: &str) -> Vec<Line> {
             } else {
                 Check::Toggle(f.subscribed)
             };
+            let children = query.is_empty() && parents.contains(f.name.as_str());
             Line {
                 id: f.id.clone(),
                 path: f.name.clone(),
                 label,
                 depth,
                 check,
+                children,
+                expanded: children && expanded.contains(&f.name),
             }
         })
+        .collect()
+}
+
+/// The folders open when the dialog starts: every one above a folder the
+/// person subscribes to, so the list opens on what they chose.
+pub fn opened_for(folders: &[FolderSubscription]) -> HashSet<String> {
+    folders
+        .iter()
+        .filter(|f| f.subscribed && !f.always_shown)
+        .flat_map(|f| ancestors(&f.name).map(str::to_string))
         .collect()
 }
 
@@ -90,7 +128,9 @@ const INDENT: i32 = 18;
 struct Dialog {
     core: Rc<Core>,
     account: Account,
-    folders: std::cell::RefCell<Vec<FolderSubscription>>,
+    folders: RefCell<Vec<FolderSubscription>>,
+    /// The paths whose children show.
+    expanded: RefCell<HashSet<String>>,
     store: gio::ListStore,
     search: gtk::SearchEntry,
     stack: gtk::Stack,
@@ -166,6 +206,7 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
         core: Rc::clone(core),
         account,
         folders: Default::default(),
+        expanded: Default::default(),
         store,
         search: search.clone(),
         stack,
@@ -179,15 +220,31 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
             .expect("list items are ListItems");
         item.set_activatable(false);
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        let arrow = gtk::Button::builder()
+            .css_classes(["flat", "circular"])
+            .valign(gtk::Align::Center)
+            .build();
         let check = gtk::CheckButton::new();
         let label = gtk::Label::builder()
             .xalign(0.0)
             .hexpand(true)
             .ellipsize(gtk::pango::EllipsizeMode::Middle)
             .build();
+        row.append(&arrow);
         row.append(&check);
         row.append(&label);
         item.set_child(Some(&row));
+        {
+            let (weak, item) = (weak.clone(), item.downgrade());
+            arrow.connect_clicked(move |_| {
+                let (Some(this), Some(item)) = (weak.upgrade(), item.upgrade()) else {
+                    return;
+                };
+                if let Some(line) = line_of(&item).filter(|l| l.children) {
+                    this.flip(&line.path, item.position());
+                }
+            });
+        }
         let (weak, item) = (weak.clone(), item.downgrade());
         check.connect_toggled(move |check| {
             let (Some(this), Some(item)) = (weak.upgrade(), item.upgrade()) else {
@@ -210,16 +267,38 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
             return;
         };
         let row = row.downcast::<gtk::Box>().expect("the row is a box");
-        let check = row
+        let arrow = row
             .first_child()
+            .and_downcast::<gtk::Button>()
+            .expect("the row starts with its arrow");
+        let check = arrow
+            .next_sibling()
             .and_downcast::<gtk::CheckButton>()
-            .expect("the row starts with its check box");
+            .expect("the arrow is followed by the check box");
         let label = row
             .last_child()
             .and_downcast::<gtk::Label>()
             .expect("the row ends with its label");
         row.set_margin_start(line.depth as i32 * INDENT);
         label.set_label(&line.label);
+        // A folder with nothing under it keeps the arrow's room, so the
+        // names line up, but there is nothing to open.
+        arrow.set_opacity(if line.children { 1.0 } else { 0.0 });
+        arrow.set_can_focus(line.children);
+        arrow.set_can_target(line.children);
+        arrow.set_icon_name(if line.expanded {
+            "pan-down-symbolic"
+        } else {
+            "pan-end-symbolic"
+        });
+        if line.children {
+            let said = match line.expanded {
+                true => gettext("Hide the folders in {folder}"),
+                false => gettext("Show the folders in {folder}"),
+            };
+            crate::ui::name(&arrow, &fill(&said, &[("folder", &line.path)]));
+            arrow.update_state(&[gtk::accessible::State::Expanded(Some(line.expanded))]);
+        }
         let (active, sensitive, visible) = match line.check {
             Check::Toggle(on) => (on, true, true),
             Check::AlwaysShown => (true, false, true),
@@ -278,6 +357,7 @@ impl Dialog {
                 .await
             {
                 Ok(folders) => {
+                    *this.expanded.borrow_mut() = opened_for(&folders);
                     *this.folders.borrow_mut() = folders;
                     this.show();
                 }
@@ -291,7 +371,7 @@ impl Dialog {
 
     /// Fills the list from the folders and the search.
     fn show(&self) {
-        let lines = lines(&self.folders.borrow(), &self.search.text());
+        let lines = self.lines();
         let items: Vec<glib::BoxedAnyObject> =
             lines.into_iter().map(glib::BoxedAnyObject::new).collect();
         self.store.splice(0, self.store.n_items(), &items);
@@ -300,6 +380,52 @@ impl Dialog {
                 0 => "empty",
                 _ => "list",
             });
+    }
+
+    fn lines(&self) -> Vec<Line> {
+        lines(
+            &self.folders.borrow(),
+            &self.search.text(),
+            &self.expanded.borrow(),
+        )
+    }
+
+    /// Opens or closes the folder at `path`, on the row at `position`.
+    /// Only the rows under it change, so the rest keep their place and the
+    /// focus stays on the arrow.
+    fn flip(&self, path: &str, position: u32) {
+        {
+            let mut expanded = self.expanded.borrow_mut();
+            if !expanded.remove(path) {
+                expanded.insert(path.to_string());
+            }
+        }
+        let depth_at = |position: u32| {
+            self.store
+                .item(position)
+                .and_downcast::<glib::BoxedAnyObject>()
+                .map(|object| object.borrow::<Line>().depth)
+        };
+        let Some(depth) = depth_at(position) else {
+            return self.show();
+        };
+        let mut shown_under = 0;
+        while depth_at(position + 1 + shown_under).is_some_and(|d| d > depth) {
+            shown_under += 1;
+        }
+        let fresh = self.lines();
+        let Some(at) = fresh.iter().position(|l| l.path == path) else {
+            return self.show();
+        };
+        let under: Vec<glib::BoxedAnyObject> = fresh[at + 1..]
+            .iter()
+            .take_while(|l| l.depth > depth)
+            .cloned()
+            .map(glib::BoxedAnyObject::new)
+            .collect();
+        let row = glib::BoxedAnyObject::new(fresh[at].clone());
+        self.store
+            .splice(position, 1 + shown_under, &[&[row], &under[..]].concat());
     }
 
     /// Sends the change to the server. The box shows it at once; a
@@ -334,7 +460,7 @@ impl Dialog {
 
     /// Puts the folder's line in the list again, so its row binds anew.
     fn refresh_line(&self, id: &str) {
-        let fresh = lines(&self.folders.borrow(), &self.search.text());
+        let fresh = self.lines();
         let Some(line) = fresh.into_iter().find(|l| l.id == id) else {
             return;
         };
@@ -383,7 +509,8 @@ mod tests {
             folder("INBOX", true),
         ];
 
-        let lines = lines(&folders, "");
+        let open = opened_for(&folders);
+        let lines = lines(&folders, "", &open);
 
         let shown: Vec<_> = lines
             .iter()
@@ -409,10 +536,60 @@ mod tests {
             folder("Projects/Plans", true),
         ];
 
-        let lines = lines(&folders, "  archive ");
+        let lines = lines(&folders, "  archive ", &HashSet::new());
 
         let shown: Vec<_> = lines.iter().map(|l| (l.label.as_str(), l.depth)).collect();
         assert_eq!(shown, [("Archive/2019", 0), ("Projects/Archive", 0)]);
+    }
+
+    #[test]
+    fn a_closed_folder_hides_its_subtree_and_a_subtree_stays_together() {
+        let mut shared = folder("shared", false);
+        shared.parent_only = true;
+        let folders = [
+            shared,
+            folder("shared/lists", false),
+            folder("shared/lists/dev", false),
+            folder("shared/lists-old", false),
+            folder("INBOX", true),
+        ];
+
+        let closed = lines(&folders, "", &HashSet::new());
+        let shown: Vec<_> = closed
+            .iter()
+            .map(|l| (l.path.as_str(), l.children, l.expanded))
+            .collect();
+        assert_eq!(shown, [("INBOX", false, false), ("shared", true, false)]);
+
+        let open = HashSet::from(["shared".to_string(), "shared/lists".to_string()]);
+        let paths: Vec<_> = lines(&folders, "", &open)
+            .into_iter()
+            .map(|l| l.path)
+            .collect();
+        assert_eq!(
+            paths,
+            [
+                "INBOX",
+                "shared",
+                "shared/lists",
+                "shared/lists/dev",
+                "shared/lists-old"
+            ]
+        );
+    }
+
+    #[test]
+    fn the_dialog_opens_on_the_folders_subscribed_to() {
+        let folders = [
+            folder("a/b/c", true),
+            folder("a/b", false),
+            folder("a", false),
+            folder("x/y", false),
+        ];
+        assert_eq!(
+            opened_for(&folders),
+            HashSet::from(["a".to_string(), "a/b".to_string()])
+        );
     }
 
     #[test]

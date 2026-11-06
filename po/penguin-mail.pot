@@ -8801,37 +8801,45 @@ msgstr ""
 msgid "This link contains hidden or direction-changing characters."
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:104 app/src/ui/manage_folders.rs:107
+#: app/src/ui/manage_folders.rs:144 app/src/ui/manage_folders.rs:147
 msgid "Search folders"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:123
+#: app/src/ui/manage_folders.rs:163
 msgid "Could Not List the Folders"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:127
+#: app/src/ui/manage_folders.rs:167
 msgid "No Matching Folders"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:141
+#: app/src/ui/manage_folders.rs:181
 msgid ""
 "The sidebar shows the folders you subscribe to. Inbox and the folders mail "
 "is filed into always show."
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:158
+#: app/src/ui/manage_folders.rs:198
 msgid "Folders of {account}"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:236
+#: app/src/ui/manage_folders.rs:296
+msgid "Hide the folders in {folder}"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:297
+msgid "Show the folders in {folder}"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:315
 msgid "{folder}, always shown"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:272 app/src/ui/preferences.rs:622
+#: app/src/ui/manage_folders.rs:351 app/src/ui/preferences.rs:622
 msgid "This account is not syncing yet"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:327
+#: app/src/ui/manage_folders.rs:453
 msgid "Could not change the subscription: {reason}"
 msgstr ""
 
