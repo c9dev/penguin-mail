@@ -2127,6 +2127,7 @@ fn heading(
     for (label, action) in account_settings(offers) {
         settings.append_item(&item(&label, action));
     }
+    settings.append_item(&item(&gettext("Manage Folders…"), "account.manage-folders"));
     menu.append_section(None, &settings);
     let look = gio::Menu::new();
     look.append_item(&item(&gettext("Rename…"), "win.account-rename"));
@@ -2205,6 +2206,8 @@ fn heading(
     add_own("not-downloading", not_downloading);
     // On while a look found a JMAP session for this IMAP account.
     add_own("switch-jmap", switchable);
+    // Only an IMAP server keeps folder subscriptions.
+    add_own("manage-folders", account.provider == Provider::Imap);
     row.insert_action_group("account", Some(&own));
     describe(
         &row,

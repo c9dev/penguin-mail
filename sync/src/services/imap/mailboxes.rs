@@ -26,6 +26,21 @@ pub(super) struct Folder {
     pub hidden: bool,
 }
 
+/// One folder on the server, as Manage Folders lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FolderSubscription {
+    /// The server's name, still encoded: what SUBSCRIBE takes.
+    pub id: String,
+    /// The name a person reads, nested by slashes.
+    pub name: String,
+    pub subscribed: bool,
+    /// A role folder, which shows whether subscribed or not, so its
+    /// subscription changes nothing a person would see.
+    pub always_shown: bool,
+    /// A parent that holds no mail, listed for the tree under it.
+    pub parent_only: bool,
+}
+
 /// Names servers give their role mailboxes without marking them, compared
 /// without case. The research lists GMX, Web.de, mail.com, Yandex and
 /// older Dovecot and Courier setups as needing them.
@@ -330,6 +345,33 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             tracing::debug!(%err, "the deleted folder's subscription stays");
         }
         self.list_mailboxes().await?;
+        Ok(())
+    }
+
+    /// Every folder on the server, asked afresh, in the server's order.
+    pub(crate) async fn subscriptions(&self) -> Result<Vec<FolderSubscription>, BackendError> {
+        let listed = self.api.list().await?;
+        let (folders, _) = read_listing(&listed, self.settings.all_folders);
+        Ok(folders
+            .into_iter()
+            .zip(&listed)
+            .map(|(folder, l)| FolderSubscription {
+                name: display_name(&l.name, l.delimiter),
+                id: folder.id,
+                subscribed: folder.subscribed,
+                always_shown: folder.role.is_some() || folder.flagged,
+                parent_only: folder.parent_only,
+            })
+            .collect())
+    }
+
+    /// Subscribes to `id` or lets it go. The caller lists the folders
+    /// again to show the change.
+    pub(crate) async fn set_subscribed(&self, id: &str, on: bool) -> Result<(), BackendError> {
+        match on {
+            true => self.api.subscribe(id).await?,
+            false => self.api.unsubscribe(id).await?,
+        }
         Ok(())
     }
 

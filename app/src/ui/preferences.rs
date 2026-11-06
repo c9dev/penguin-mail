@@ -1562,7 +1562,7 @@ fn subscribed_row(app: &Rc<App>, account: &Account, toasts: &adw::ToastOverlay) 
     let row = adw::SwitchRow::builder()
         .title(gettext("Show Only Subscribed Folders"))
         .subtitle(gettext(
-            "Folders you do not subscribe to on the server stay out of the sidebar.",
+            "Folders you do not subscribe to stay out of the sidebar. Choose them in Manage Folders, in the account's menu.",
         ))
         .active(true)
         .sensitive(false)

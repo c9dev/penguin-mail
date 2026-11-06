@@ -10,6 +10,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
+- Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
 
 ### Improved
 
