@@ -11,6 +11,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
 - Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
+- Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
 
 ### Improved
 
