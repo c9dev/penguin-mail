@@ -4311,7 +4311,7 @@ msgstr "{host} 拒絕登入：{reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:444 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1646 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1650 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "行事曆"
 
@@ -4712,7 +4712,7 @@ msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] "{count} 封未讀郵件"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1670
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1674
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}，{count} 封未讀郵件"
@@ -4735,7 +4735,7 @@ msgstr "開啟 Penguin Mail"
 msgid "New Message"
 msgstr "新增郵件"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3724
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2129 app/src/ui/window.rs:3724
 msgid "Check for Mail"
 msgstr "檢查郵件"
 
@@ -6350,8 +6350,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "僅有可變更此行事曆的人能檢視詳細資料"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2143
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1846
+#: app/src/ui/sidebar.rs:2147
 msgid "Color"
 msgstr "顏色"
 
@@ -7194,19 +7194,19 @@ msgstr "授予 {account} 存取權"
 msgid "Sign in again to {account}"
 msgstr "重新登入 {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2148
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2152
 msgid "Sign In Again…"
 msgstr "重新登入…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2156
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2160
 msgid "Remove Account…"
 msgstr "移除帳號…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2163
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2167
 msgid "Account options"
 msgstr "帳號選項"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2168
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2172
 msgid "Options for {account}"
 msgstr "{account} 的選項"
 
@@ -7234,13 +7234,13 @@ msgstr "從清單隱藏"
 msgid "Original Color"
 msgstr "原始顏色"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2133
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1834
+#: app/src/ui/sidebar.rs:2137
 msgid "Rename…"
 msgstr "重新命名…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1731
-#: app/src/ui/sidebar.rs:1858
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1735
+#: app/src/ui/sidebar.rs:1862
 msgid "Delete…"
 msgstr "刪除…"
 
@@ -7356,7 +7356,7 @@ msgstr "{date}，有活動"
 msgid "Offline, last updated {time}"
 msgstr "離線，上次更新於 {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2228
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2232
 msgid "Offline"
 msgstr "離線"
 
@@ -7908,7 +7908,7 @@ msgid "Find Again"
 msgstr "再次尋找"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1725
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1729
 msgid "Edit…"
 msgstr "編輯…"
 
@@ -8969,25 +8969,25 @@ msgstr ""
 msgid "Folders of {account}"
 msgstr "{account} 的規則"
 
-#: app/src/ui/manage_folders.rs:296
+#: app/src/ui/manage_folders.rs:302
 msgid "Hide the folders in {folder}"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:297
+#: app/src/ui/manage_folders.rs:303
 #, fuzzy
 #| msgid "Show the calendar"
 msgid "Show the folders in {folder}"
 msgstr "顯示行事曆"
 
-#: app/src/ui/manage_folders.rs:315
+#: app/src/ui/manage_folders.rs:321
 msgid "{folder}, always shown"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:351 app/src/ui/preferences.rs:622
+#: app/src/ui/manage_folders.rs:357 app/src/ui/preferences.rs:622
 msgid "This account is not syncing yet"
 msgstr "此帳號尚未開始同步"
 
-#: app/src/ui/manage_folders.rs:453
+#: app/src/ui/manage_folders.rs:459
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the subscription: {reason}"
@@ -10103,7 +10103,7 @@ msgstr "新增地址"
 msgid "Default sender"
 msgstr "預設寄件者"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2038
 msgid "Signature…"
 msgstr "簽名…"
 
@@ -10167,12 +10167,12 @@ msgid "Mailboxes"
 msgstr "信箱"
 
 #: app/src/ui/sidebar.rs:440 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:1645 app/src/ui/thread_list.rs:369
+#: app/src/ui/sidebar.rs:1649 app/src/ui/thread_list.rs:369
 msgid "Mail"
 msgstr "郵件"
 
-#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1640
+#: app/src/ui/sidebar.rs:2599
 msgid "99+"
 msgstr "99+"
 
@@ -10192,101 +10192,101 @@ msgstr "寄件匣"
 msgid "Holds folders, not mail"
 msgstr "存放資料夾，不存放郵件"
 
-#: app/src/ui/sidebar.rs:1595
+#: app/src/ui/sidebar.rs:1599
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}，{count} 封未讀郵件"
 
-#: app/src/ui/sidebar.rs:1601
+#: app/src/ui/sidebar.rs:1605
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}，{count} 封郵件"
 
-#: app/src/ui/sidebar.rs:1648
+#: app/src/ui/sidebar.rs:1652
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "郵件，{count} 封未讀"
 
-#: app/src/ui/sidebar.rs:1654
+#: app/src/ui/sidebar.rs:1658
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "行事曆，{count} 個邀請等候回覆"
 
-#: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2144
+#: app/src/ui/sidebar.rs:1731 app/src/ui/sidebar.rs:1853
+#: app/src/ui/sidebar.rs:2148
 msgid "Move Up"
 msgstr "上移"
 
-#: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2145
+#: app/src/ui/sidebar.rs:1732 app/src/ui/sidebar.rs:1856
+#: app/src/ui/sidebar.rs:2149
 msgid "Move Down"
 msgstr "下移"
 
-#: app/src/ui/sidebar.rs:1880
+#: app/src/ui/sidebar.rs:1884
 msgid "Empty Trash…"
 msgstr "清空垃圾桶…"
 
-#: app/src/ui/sidebar.rs:2033
+#: app/src/ui/sidebar.rs:2037
 msgid "Automatic Reply…"
 msgstr "自動回覆…"
 
-#: app/src/ui/sidebar.rs:2035
+#: app/src/ui/sidebar.rs:2039
 msgid "Rules…"
 msgstr "規則…"
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3727
+#: app/src/ui/sidebar.rs:2040 app/src/ui/window.rs:3727
 msgid "Hide My Email…"
 msgstr "隱藏電子郵件地址…"
 
-#: app/src/ui/sidebar.rs:2045
+#: app/src/ui/sidebar.rs:2049
 msgid "On this computer"
 msgstr "在此電腦上"
 
-#: app/src/ui/sidebar.rs:2053
+#: app/src/ui/sidebar.rs:2057
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "在此電腦上。顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2054
+#: app/src/ui/sidebar.rs:2058
 msgid "Show or hide this account's mailboxes"
 msgstr "顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2134
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "新增資料夾…"
 
-#: app/src/ui/sidebar.rs:2149
+#: app/src/ui/sidebar.rs:2153
 msgid "Switch to JMAP…"
 msgstr "切換至 JMAP…"
 
-#: app/src/ui/sidebar.rs:2151
+#: app/src/ui/sidebar.rs:2155
 msgid "Messages That Will Not Download…"
 msgstr "無法下載的郵件…"
 
-#: app/src/ui/sidebar.rs:2226
+#: app/src/ui/sidebar.rs:2230
 msgid "Sign in again to keep syncing"
 msgstr "請重新登入以繼續同步"
 
-#: app/src/ui/sidebar.rs:2232
+#: app/src/ui/sidebar.rs:2236
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} 未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2243
+#: app/src/ui/sidebar.rs:2247
 msgid "The keyring is not responding; retrying"
 msgstr "鑰匙圈未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2246
+#: app/src/ui/sidebar.rs:2250
 msgid "Downloading mail"
 msgstr "正在下載郵件"
 
-#: app/src/ui/sidebar.rs:2250
+#: app/src/ui/sidebar.rs:2254
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "因錯誤而停止同步；請重新啟動 Penguin Mail 以重試"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2257
+#: app/src/ui/sidebar.rs:2261
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."

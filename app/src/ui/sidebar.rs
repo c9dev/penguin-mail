@@ -1311,6 +1311,10 @@ impl Sidebar {
         row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
         // The keys stop on it and Enter opens its menu (`row_keys`).
         row.add_css_class(GROUP_CLASS);
+        // Grayed, as Thunderbird draws a folder that holds no mail.
+        if let Some(content) = row.child() {
+            content.add_css_class("dim-label");
+        }
         row
     }
 

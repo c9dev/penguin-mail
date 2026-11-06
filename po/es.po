@@ -4587,7 +4587,7 @@ msgstr "{host} ha rechazado el inicio de sesión: {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:444 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1646 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1650 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Calendario"
 
@@ -5005,7 +5005,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] "{count} mensaje sin leer"
 msgstr[1] "{count} mensajes sin leer"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1670
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1674
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} mensaje sin leer"
@@ -5029,7 +5029,7 @@ msgstr "Abrir Penguin Mail"
 msgid "New Message"
 msgstr "Mensaje nuevo"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3724
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2129 app/src/ui/window.rs:3724
 msgid "Check for Mail"
 msgstr "Comprobar el correo"
 
@@ -6702,8 +6702,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Solo las personas que pueden cambiar este calendario ven los detalles"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2143
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1846
+#: app/src/ui/sidebar.rs:2147
 msgid "Color"
 msgstr "Color"
 
@@ -7569,19 +7569,19 @@ msgstr "Conceder acceso para {account}"
 msgid "Sign in again to {account}"
 msgstr "Volver a iniciar sesión en {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2148
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2152
 msgid "Sign In Again…"
 msgstr "Volver a iniciar sesión…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2156
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2160
 msgid "Remove Account…"
 msgstr "Quitar cuenta…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2163
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2167
 msgid "Account options"
 msgstr "Opciones de la cuenta"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2168
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2172
 msgid "Options for {account}"
 msgstr "Opciones de {account}"
 
@@ -7609,13 +7609,13 @@ msgstr "Ocultar de la lista"
 msgid "Original Color"
 msgstr "Color original"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2133
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1834
+#: app/src/ui/sidebar.rs:2137
 msgid "Rename…"
 msgstr "Renombrar…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1731
-#: app/src/ui/sidebar.rs:1858
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1735
+#: app/src/ui/sidebar.rs:1862
 msgid "Delete…"
 msgstr "Eliminar…"
 
@@ -7737,7 +7737,7 @@ msgstr "{date}, tiene eventos"
 msgid "Offline, last updated {time}"
 msgstr "Sin conexión, actualizado por última vez {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2228
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2232
 msgid "Offline"
 msgstr "Sin conexión"
 
@@ -8304,7 +8304,7 @@ msgid "Find Again"
 msgstr "Volver a buscar"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1725
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1729
 msgid "Edit…"
 msgstr "Editar…"
 
@@ -9423,25 +9423,25 @@ msgstr ""
 msgid "Folders of {account}"
 msgstr "Reglas de {account}"
 
-#: app/src/ui/manage_folders.rs:296
+#: app/src/ui/manage_folders.rs:302
 msgid "Hide the folders in {folder}"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:297
+#: app/src/ui/manage_folders.rs:303
 #, fuzzy
 #| msgid "Show the calendar"
 msgid "Show the folders in {folder}"
 msgstr "Mostrar el calendario"
 
-#: app/src/ui/manage_folders.rs:315
+#: app/src/ui/manage_folders.rs:321
 msgid "{folder}, always shown"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:351 app/src/ui/preferences.rs:622
+#: app/src/ui/manage_folders.rs:357 app/src/ui/preferences.rs:622
 msgid "This account is not syncing yet"
 msgstr "Esta cuenta todavía no se está sincronizando"
 
-#: app/src/ui/manage_folders.rs:453
+#: app/src/ui/manage_folders.rs:459
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the subscription: {reason}"
@@ -10601,7 +10601,7 @@ msgstr "Añadir dirección"
 msgid "Default sender"
 msgstr "Remitente predeterminado"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2038
 msgid "Signature…"
 msgstr "Firma…"
 
@@ -10667,12 +10667,12 @@ msgid "Mailboxes"
 msgstr "Buzones"
 
 #: app/src/ui/sidebar.rs:440 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:1645 app/src/ui/thread_list.rs:369
+#: app/src/ui/sidebar.rs:1649 app/src/ui/thread_list.rs:369
 msgid "Mail"
 msgstr "Correo"
 
-#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1640
+#: app/src/ui/sidebar.rs:2599
 msgid "99+"
 msgstr "99+"
 
@@ -10692,99 +10692,99 @@ msgstr "Bandeja de salida"
 msgid "Holds folders, not mail"
 msgstr "Contiene carpetas, no correo"
 
-#: app/src/ui/sidebar.rs:1595
+#: app/src/ui/sidebar.rs:1599
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} mensaje sin leer"
 msgstr[1] "{mailbox}, {count} mensajes sin leer"
 
-#: app/src/ui/sidebar.rs:1601
+#: app/src/ui/sidebar.rs:1605
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mensaje"
 msgstr[1] "{mailbox}, {count} mensajes"
 
-#: app/src/ui/sidebar.rs:1648
+#: app/src/ui/sidebar.rs:1652
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Correo, {count} sin leer"
 msgstr[1] "Correo, {count} sin leer"
 
-#: app/src/ui/sidebar.rs:1654
+#: app/src/ui/sidebar.rs:1658
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Calendario, {count} esperando tu respuesta"
 msgstr[1] "Calendario, {count} esperando tu respuesta"
 
-#: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2144
+#: app/src/ui/sidebar.rs:1731 app/src/ui/sidebar.rs:1853
+#: app/src/ui/sidebar.rs:2148
 msgid "Move Up"
 msgstr "Subir"
 
-#: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2145
+#: app/src/ui/sidebar.rs:1732 app/src/ui/sidebar.rs:1856
+#: app/src/ui/sidebar.rs:2149
 msgid "Move Down"
 msgstr "Bajar"
 
-#: app/src/ui/sidebar.rs:1880
+#: app/src/ui/sidebar.rs:1884
 msgid "Empty Trash…"
 msgstr "Vaciar la papelera…"
 
-#: app/src/ui/sidebar.rs:2033
+#: app/src/ui/sidebar.rs:2037
 msgid "Automatic Reply…"
 msgstr "Respuesta automática…"
 
-#: app/src/ui/sidebar.rs:2035
+#: app/src/ui/sidebar.rs:2039
 msgid "Rules…"
 msgstr "Reglas…"
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3727
+#: app/src/ui/sidebar.rs:2040 app/src/ui/window.rs:3727
 msgid "Hide My Email…"
 msgstr "Ocultar mi correo…"
 
-#: app/src/ui/sidebar.rs:2045
+#: app/src/ui/sidebar.rs:2049
 msgid "On this computer"
 msgstr "En este equipo"
 
-#: app/src/ui/sidebar.rs:2053
+#: app/src/ui/sidebar.rs:2057
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "En este equipo. Mostrar u ocultar los buzones de esta cuenta"
 
-#: app/src/ui/sidebar.rs:2054
+#: app/src/ui/sidebar.rs:2058
 msgid "Show or hide this account's mailboxes"
 msgstr "Mostrar u ocultar los buzones de esta cuenta"
 
-#: app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2134
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Carpeta nueva…"
 
-#: app/src/ui/sidebar.rs:2149
+#: app/src/ui/sidebar.rs:2153
 msgid "Switch to JMAP…"
 msgstr "Cambiar a JMAP…"
 
-#: app/src/ui/sidebar.rs:2151
+#: app/src/ui/sidebar.rs:2155
 msgid "Messages That Will Not Download…"
 msgstr "Mensajes que no se descargan…"
 
-#: app/src/ui/sidebar.rs:2226
+#: app/src/ui/sidebar.rs:2230
 msgid "Sign in again to keep syncing"
 msgstr "Vuelve a iniciar sesión para seguir sincronizando"
 
-#: app/src/ui/sidebar.rs:2232
+#: app/src/ui/sidebar.rs:2236
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} no responde; reintentando"
 
-#: app/src/ui/sidebar.rs:2243
+#: app/src/ui/sidebar.rs:2247
 msgid "The keyring is not responding; retrying"
 msgstr "El depósito de claves no responde; reintentando"
 
-#: app/src/ui/sidebar.rs:2246
+#: app/src/ui/sidebar.rs:2250
 msgid "Downloading mail"
 msgstr "Descargando correo"
 
-#: app/src/ui/sidebar.rs:2250
+#: app/src/ui/sidebar.rs:2254
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "La sincronización se ha detenido tras un error; reinicia Penguin Mail para "
@@ -10792,7 +10792,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2257
+#: app/src/ui/sidebar.rs:2261
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."

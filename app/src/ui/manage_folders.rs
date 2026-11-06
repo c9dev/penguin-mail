@@ -281,6 +281,12 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
             .expect("the row ends with its label");
         row.set_margin_start(line.depth as i32 * INDENT);
         label.set_label(&line.label);
+        // Grayed, as Thunderbird draws a folder that holds no mail. Rows
+        // are reused as the list scrolls, so the class comes off too.
+        match line.check {
+            Check::None => label.add_css_class("dim-label"),
+            _ => label.remove_css_class("dim-label"),
+        }
         // A folder with nothing under it keeps the arrow's room, so the
         // names line up, but there is nothing to open.
         arrow.set_opacity(if line.children { 1.0 } else { 0.0 });
