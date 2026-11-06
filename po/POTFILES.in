@@ -95,6 +95,7 @@ app/src/ui/copied.rs
 app/src/ui/conversation.rs
 app/src/ui/eml_file.rs
 app/src/ui/link_preview.rs
+app/src/ui/manage_folders.rs
 app/src/ui/find.rs
 app/src/ui/gmail_password_page.rs
 app/src/ui/goa_page.rs

@@ -5,16 +5,23 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
+- Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
+- Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
+
 ### Improved
 
-
 - On IMAP accounts, the messages of a conversation opened for the first time load faster.
+- An IMAP account counts unread mail only in the folders it shows, which takes far fewer trips to a server with hundreds of folders.
 - An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.
 
 ### Fixed
 
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
+- Microsoft accounts no longer list the folders Outlook keeps hidden.
 
 ## 1.0.12 (2026-11-05)
 

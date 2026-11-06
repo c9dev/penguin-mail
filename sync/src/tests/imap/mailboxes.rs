@@ -182,3 +182,195 @@ async fn unread_counts_keep_completed_folders_when_one_status_times_out() {
     assert_eq!(counts[&MailSet::Role(Role::Inbox)], 3);
     assert!(!counts.contains_key(&MailSet::Role(Role::Archive)));
 }
+
+/// The mailboxes stored for the account, by id, with whether each is
+/// hidden.
+async fn hidden(h: &crate::tests::ImapHarness) -> Vec<(String, bool)> {
+    let account_id = h.account_id;
+    h.db.read(move |c| mailboxes::listed(c, account_id))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|m| (m.id, m.hidden))
+        .collect()
+}
+
+#[tokio::test]
+async fn a_folder_nobody_subscribes_to_is_hidden_while_its_tree_holds() {
+    let h = imap_harness().await;
+    for name in ["Lists", "Lists/Rust", "Old", "Old/2019"] {
+        h.imap.add_mailbox(name, None);
+    }
+    h.imap.with(|s| {
+        s.unsubscribed
+            .extend(["Lists", "Old", "Old/2019", "Sent"].map(String::from));
+    });
+
+    h.sync.refresh_labels().await.unwrap();
+
+    let hidden = hidden(&h).await;
+    let of = |id: &str| hidden.iter().find(|(m, _)| m == id).map(|(_, h)| *h);
+    assert_eq!(of("Lists/Rust"), Some(false), "subscribed");
+    assert_eq!(of("Lists"), Some(false), "above a folder that shows");
+    assert_eq!(of("Old"), Some(true));
+    assert_eq!(of("Old/2019"), Some(true));
+    assert_eq!(of("Sent"), Some(false), "the app files mail into it");
+    assert_eq!(of("INBOX"), Some(false));
+}
+
+#[tokio::test]
+async fn a_folder_made_here_is_subscribed_and_shows() {
+    let h = imap_harness().await;
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.create_label("Receipts/2026").await.unwrap();
+
+    assert!(
+        h.imap
+            .calls()
+            .contains(&"subscribe Receipts/2026".to_string())
+    );
+    let hidden = hidden(&h).await;
+    assert!(
+        hidden.contains(&("Receipts/2026".into(), false)),
+        "{hidden:?}"
+    );
+}
+
+/// The fake leaves subscriptions behind on RENAME, as many servers do.
+#[tokio::test]
+async fn a_renamed_folder_keeps_its_subscription_and_its_children_theirs() {
+    let h = imap_harness().await;
+    for name in ["Work", "Work/Plans", "Work/Old"] {
+        h.imap.add_mailbox(name, None);
+    }
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Work/Old".into());
+    });
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.rename_label("Work", "Job").await.unwrap();
+
+    let hidden = hidden(&h).await;
+    assert!(hidden.contains(&("Job".into(), false)), "{hidden:?}");
+    assert!(hidden.contains(&("Job/Plans".into(), false)), "{hidden:?}");
+    assert!(hidden.contains(&("Job/Old".into(), true)), "{hidden:?}");
+    let unsubscribed = h.imap.with(|s| s.unsubscribed.clone());
+    assert!(unsubscribed.contains("Work") && unsubscribed.contains("Work/Plans"));
+}
+
+#[tokio::test]
+async fn a_deleted_folder_takes_its_subscription_along() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Spare", None);
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.delete_label("Spare").await.unwrap();
+
+    assert!(h.imap.calls().contains(&"unsubscribe Spare".to_string()));
+}
+
+#[tokio::test]
+async fn unread_counts_ask_only_the_folders_that_show() {
+    use crate::MailBackend;
+    let (imap, adapter) = super::adapter(crate::fake::FakeImap::new());
+    imap.add_mailbox("Lists", None);
+    imap.add_mailbox("Old", None);
+    imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+
+    adapter.unread_counts().await.unwrap();
+
+    let calls = imap.calls();
+    assert!(calls.contains(&"unread Lists".to_string()), "{calls:?}");
+    assert!(!calls.contains(&"unread Old".to_string()), "{calls:?}");
+}
+
+#[tokio::test]
+async fn manage_folders_lists_every_folder_with_its_subscription() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.extend(["Old", "Sent"].map(String::from));
+    });
+
+    let folders = h.sync.folder_subscriptions().await.unwrap();
+
+    let old = folders.iter().find(|f| f.id == "Old").unwrap();
+    assert!(!old.subscribed && !old.always_shown);
+    let sent = folders.iter().find(|f| f.id == "Sent").unwrap();
+    assert!(!sent.subscribed && sent.always_shown, "{sent:?}");
+}
+
+#[tokio::test]
+async fn subscribing_in_manage_folders_brings_the_folder_to_the_sidebar() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+    h.sync.refresh_labels().await.unwrap();
+    assert!(hidden(&h).await.contains(&("Old".into(), true)));
+    h.drain();
+
+    h.sync.set_folder_subscribed("Old", true).await.unwrap();
+
+    assert!(hidden(&h).await.contains(&("Old".into(), false)));
+    assert!(
+        h.drain()
+            .iter()
+            .any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })),
+        "the sidebar hears of it"
+    );
+
+    h.sync.set_folder_subscribed("Old", false).await.unwrap();
+    assert!(hidden(&h).await.contains(&("Old".into(), true)));
+}
+
+/// The hourly relisting resumes from the last run's hour, so a start
+/// within it would keep the folders it stored before.
+#[tokio::test]
+async fn a_start_within_the_hour_lists_the_folders_once() {
+    use std::time::Duration;
+    use tokio::time::Instant;
+
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+    let (mut next_poll, mut next_prune, mut stagger) = (
+        Instant::now(),
+        Instant::now() + Duration::from_secs(3600),
+        Duration::ZERO,
+    );
+    let config = crate::EngineConfig::default();
+
+    crate::engine::tick(
+        &h.sync,
+        &mut next_poll,
+        &mut next_prune,
+        &mut stagger,
+        &config,
+    )
+    .await
+    .unwrap();
+    assert!(hidden(&h).await.contains(&("Old".into(), true)));
+
+    let lists =
+        |h: &crate::tests::ImapHarness| h.imap.calls().iter().filter(|c| *c == "list").count();
+    let before = lists(&h);
+    next_poll = Instant::now();
+    crate::engine::tick(
+        &h.sync,
+        &mut next_poll,
+        &mut next_prune,
+        &mut stagger,
+        &config,
+    )
+    .await
+    .unwrap();
+    assert_eq!(lists(&h), before, "once a run");
+}
