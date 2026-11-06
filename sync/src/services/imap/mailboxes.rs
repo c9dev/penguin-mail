@@ -172,7 +172,10 @@ pub(super) fn server_name(name: &str, delimiter: Option<char>) -> String {
 /// The listing as the adapter remembers it and as the store keeps it, in
 /// the server's order. Each role goes to one mailbox: the first the
 /// server marks with it, else the first the name table knows.
-pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox>) {
+pub(super) fn read_listing(
+    listed: &[Listed],
+    all_folders: bool,
+) -> (Vec<Folder>, Vec<RemoteMailbox>) {
     let mut folders: Vec<Folder> = listed
         .iter()
         .map(|l| Folder {
@@ -210,7 +213,9 @@ pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox
             taken.push(role);
         }
     }
-    hide_unsubscribed(&mut folders, listed);
+    if !all_folders {
+        hide_unsubscribed(&mut folders, listed);
+    }
     let remote = folders
         .iter()
         .zip(listed)
@@ -261,7 +266,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// answer at once know the roles and the delimiter.
     pub(super) async fn list_mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
         let listed = self.api.list().await?;
-        let (folders, remote) = read_listing(&listed);
+        let (folders, remote) = read_listing(&listed, self.settings.all_folders);
         let delimiter = listed.iter().find_map(|l| l.delimiter);
         let mut known = self.known();
         known
@@ -354,7 +359,7 @@ mod tests {
     }
 
     fn roles(listing: &[Listed]) -> Vec<(String, Option<Role>)> {
-        read_listing(listing)
+        read_listing(listing, false)
             .0
             .into_iter()
             .map(|f| (f.id, f.role))
@@ -428,11 +433,14 @@ mod tests {
 
     #[test]
     fn a_noselect_parent_lists_as_a_group_that_holds_no_mail() {
-        let (folders, remote) = read_listing(&[
-            listed("INBOX", '/', None),
-            parent("Archive", '/'),
-            listed("Archive/2025", '/', None),
-        ]);
+        let (folders, remote) = read_listing(
+            &[
+                listed("INBOX", '/', None),
+                parent("Archive", '/'),
+                listed("Archive/2025", '/', None),
+            ],
+            false,
+        );
         assert!(folders[1].parent_only);
         assert_eq!(folders[1].role, None, "a parent holds no mail to archive");
         assert_eq!(remote[1].kind, MailboxKind::Group);
@@ -442,10 +450,13 @@ mod tests {
 
     #[test]
     fn a_flagged_view_is_a_system_mailbox_without_a_role() {
-        let (folders, remote) = read_listing(&[
-            listed("INBOX", '/', None),
-            listed("Starred", '/', Some(SpecialUse::Flagged)),
-        ]);
+        let (folders, remote) = read_listing(
+            &[
+                listed("INBOX", '/', None),
+                listed("Starred", '/', Some(SpecialUse::Flagged)),
+            ],
+            false,
+        );
         assert!(folders[1].flagged);
         assert_eq!(
             (remote[1].kind, remote[1].role),
@@ -465,7 +476,7 @@ mod tests {
     }
 
     fn hidden(listing: &[Listed]) -> Vec<(String, bool)> {
-        read_listing(listing)
+        read_listing(listing, false)
             .1
             .into_iter()
             .map(|m| (m.id, m.hidden))
