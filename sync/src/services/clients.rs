@@ -269,6 +269,8 @@ either_client! {
         fn create(mailbox: &str) -> Imapped<()>;
         fn rename(from: &str, to: &str) -> Imapped<()>;
         fn delete(mailbox: &str) -> Imapped<()>;
+        fn subscribe(mailbox: &str) -> Imapped<()>;
+        fn unsubscribe(mailbox: &str) -> Imapped<()>;
         fn idle(mailbox: &str, limit: Duration) -> Imapped<Woke>;
     }
 }

@@ -182,3 +182,90 @@ async fn unread_counts_keep_completed_folders_when_one_status_times_out() {
     assert_eq!(counts[&MailSet::Role(Role::Inbox)], 3);
     assert!(!counts.contains_key(&MailSet::Role(Role::Archive)));
 }
+
+/// The mailboxes stored for the account, by id, with whether each is
+/// hidden.
+async fn hidden(h: &crate::tests::ImapHarness) -> Vec<(String, bool)> {
+    let account_id = h.account_id;
+    h.db.read(move |c| mailboxes::listed(c, account_id))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|m| (m.id, m.hidden))
+        .collect()
+}
+
+#[tokio::test]
+async fn a_folder_nobody_subscribes_to_is_hidden_while_its_tree_holds() {
+    let h = imap_harness().await;
+    for name in ["Lists", "Lists/Rust", "Old", "Old/2019"] {
+        h.imap.add_mailbox(name, None);
+    }
+    h.imap.with(|s| {
+        s.unsubscribed
+            .extend(["Lists", "Old", "Old/2019", "Sent"].map(String::from));
+    });
+
+    h.sync.refresh_labels().await.unwrap();
+
+    let hidden = hidden(&h).await;
+    let of = |id: &str| hidden.iter().find(|(m, _)| m == id).map(|(_, h)| *h);
+    assert_eq!(of("Lists/Rust"), Some(false), "subscribed");
+    assert_eq!(of("Lists"), Some(false), "above a folder that shows");
+    assert_eq!(of("Old"), Some(true));
+    assert_eq!(of("Old/2019"), Some(true));
+    assert_eq!(of("Sent"), Some(false), "the app files mail into it");
+    assert_eq!(of("INBOX"), Some(false));
+}
+
+#[tokio::test]
+async fn a_folder_made_here_is_subscribed_and_shows() {
+    let h = imap_harness().await;
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.create_label("Receipts/2026").await.unwrap();
+
+    assert!(
+        h.imap
+            .calls()
+            .contains(&"subscribe Receipts/2026".to_string())
+    );
+    let hidden = hidden(&h).await;
+    assert!(
+        hidden.contains(&("Receipts/2026".into(), false)),
+        "{hidden:?}"
+    );
+}
+
+/// The fake leaves subscriptions behind on RENAME, as many servers do.
+#[tokio::test]
+async fn a_renamed_folder_keeps_its_subscription_and_its_children_theirs() {
+    let h = imap_harness().await;
+    for name in ["Work", "Work/Plans", "Work/Old"] {
+        h.imap.add_mailbox(name, None);
+    }
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Work/Old".into());
+    });
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.rename_label("Work", "Job").await.unwrap();
+
+    let hidden = hidden(&h).await;
+    assert!(hidden.contains(&("Job".into(), false)), "{hidden:?}");
+    assert!(hidden.contains(&("Job/Plans".into(), false)), "{hidden:?}");
+    assert!(hidden.contains(&("Job/Old".into(), true)), "{hidden:?}");
+    let unsubscribed = h.imap.with(|s| s.unsubscribed.clone());
+    assert!(unsubscribed.contains("Work") && unsubscribed.contains("Work/Plans"));
+}
+
+#[tokio::test]
+async fn a_deleted_folder_takes_its_subscription_along() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Spare", None);
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.delete_label("Spare").await.unwrap();
+
+    assert!(h.imap.calls().contains(&"unsubscribe Spare".to_string()));
+}

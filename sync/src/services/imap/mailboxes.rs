@@ -20,6 +20,10 @@ pub(super) struct Folder {
     pub parent_only: bool,
     /// `\Flagged`: a view of the flagged mail in other mailboxes.
     pub flagged: bool,
+    /// The person subscribes to it on the server.
+    pub subscribed: bool,
+    /// Kept out of the sidebar: see [`hide_unsubscribed`].
+    pub hidden: bool,
 }
 
 /// Names servers give their role mailboxes without marking them, compared
@@ -182,6 +186,8 @@ pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox
             },
             parent_only: l.no_select,
             flagged: l.special_use == Some(SpecialUse::Flagged),
+            subscribed: l.subscribed,
+            hidden: false,
         })
         .collect();
     let mut taken: Vec<Role> = Vec::new();
@@ -204,6 +210,7 @@ pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox
             taken.push(role);
         }
     }
+    hide_unsubscribed(&mut folders, listed);
     let remote = folders
         .iter()
         .zip(listed)
@@ -219,10 +226,34 @@ pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox
             },
             role: folder.role,
             color: None,
-            hidden: false,
+            hidden: folder.hidden,
         })
         .collect();
     (folders, remote)
+}
+
+/// Hides every folder the person does not subscribe to, as Thunderbird
+/// does, with two exceptions. A role folder shows whatever its
+/// subscription, since the app files mail into it. A folder above one
+/// that shows shows too, so the tree holds together. An account
+/// subscribed to nothing shows its role folders alone.
+fn hide_unsubscribed(folders: &mut [Folder], listed: &[Listed]) {
+    let shown: Vec<bool> = folders
+        .iter()
+        .map(|f| f.subscribed || f.role.is_some() || f.flagged)
+        .collect();
+    let names: Vec<String> = listed
+        .iter()
+        .map(|l| display_name(&l.name, l.delimiter))
+        .collect();
+    for (i, folder) in folders.iter_mut().enumerate() {
+        let prefix = format!("{}/", names[i]);
+        let above_shown = names
+            .iter()
+            .zip(&shown)
+            .any(|(name, shown)| *shown && name.starts_with(&prefix));
+        folder.hidden = !shown[i] && !above_shown;
+    }
 }
 
 impl<I: ImapApi, S: Submit> Imap<I, S> {
@@ -242,25 +273,57 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 
     /// Makes the mailbox a person named. Slashes nest it under another.
+    /// CREATE does not subscribe, so the app does, or the folder the
+    /// person just made would stay out of the sidebar.
     pub(super) async fn make_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
         let id = server_name(name, self.known().delimiter);
         self.api.create(&id).await?;
+        self.api.subscribe(&id).await?;
         self.listed_as(&id).await
     }
 
+    /// RFC 3501 leaves it to the server whether a subscription follows a
+    /// rename, and many leave it behind. Each subscribed folder renamed,
+    /// children included, is subscribed again under its new name and its
+    /// old name let go.
     pub(super) async fn rename_mailbox_to(
         &self,
         id: &str,
         name: &str,
     ) -> Result<RemoteMailbox, BackendError> {
-        let renamed = server_name(name, self.known().delimiter);
+        let (renamed, moved) = {
+            let known = self.known();
+            let renamed = server_name(name, known.delimiter);
+            let below = known.delimiter.map(|d| format!("{id}{d}"));
+            let moved: Vec<(String, String)> = known
+                .folders
+                .iter()
+                .filter(|f| f.subscribed)
+                .filter(|f| f.id == id || below.as_ref().is_some_and(|b| f.id.starts_with(b)))
+                .map(|f| (f.id.clone(), format!("{renamed}{}", &f.id[id.len()..])))
+                .collect();
+            (renamed, moved)
+        };
         self.api.rename(id, &renamed).await?;
         self.known().rename(id, &renamed);
+        for (old, new) in moved {
+            self.api.subscribe(&new).await?;
+            // A server that moved the subscription itself may refuse to
+            // drop a name it no longer holds; the folder is right either way.
+            if let Err(err) = self.api.unsubscribe(&old).await {
+                tracing::debug!(%err, "the old name's subscription stays");
+            }
+        }
         self.listed_as(&renamed).await
     }
 
+    /// A subscription outlives its folder (RFC 3501), and a folder made
+    /// later under the same name would show at once, so it goes too.
     pub(super) async fn remove_mailbox(&self, id: &str) -> Result<(), BackendError> {
         self.api.delete(id).await?;
+        if let Err(err) = self.api.unsubscribe(id).await {
+            tracing::debug!(%err, "the deleted folder's subscription stays");
+        }
         self.list_mailboxes().await?;
         Ok(())
     }
@@ -399,5 +462,49 @@ mod tests {
         assert_eq!(display_name("Reports/Q1", Some('/')), "Reports/Q1");
         assert_eq!(server_name("Entwürfe/2026", Some('.')), "Entw&APw-rfe.2026");
         assert_eq!(server_name("R&D", Some('/')), "R&-D");
+    }
+
+    fn hidden(listing: &[Listed]) -> Vec<(String, bool)> {
+        read_listing(listing)
+            .1
+            .into_iter()
+            .map(|m| (m.id, m.hidden))
+            .collect()
+    }
+
+    #[test]
+    fn an_account_subscribed_to_nothing_shows_its_role_folders_alone() {
+        let listing = [
+            listed("INBOX", '/', None),
+            listed("Sent", '/', Some(SpecialUse::Sent)),
+            listed("Trash", '/', None),
+            listed("Projects", '/', None),
+        ];
+        assert_eq!(
+            hidden(&listing),
+            [
+                ("INBOX".into(), false),
+                ("Sent".into(), false),
+                ("Trash".into(), false),
+                ("Projects".into(), true),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_parent_shows_for_a_subscribed_child_whatever_the_delimiter() {
+        let listing = [
+            parent("INBOX.Lists", '.'),
+            listed("INBOX.Lists.Rust", '.', None).subscribed(true),
+            listed("INBOX.Listsmore", '.', None),
+        ];
+        assert_eq!(
+            hidden(&listing),
+            [
+                ("INBOX.Lists".into(), false),
+                ("INBOX.Lists.Rust".into(), false),
+                ("INBOX.Listsmore".into(), true),
+            ]
+        );
     }
 }

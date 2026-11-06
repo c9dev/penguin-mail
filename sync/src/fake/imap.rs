@@ -101,6 +101,11 @@ pub struct ImapState {
     pub gmail: bool,
     /// The X-GM-MSGID the next delivery gets.
     next_msgid: u64,
+    /// The names the person does not subscribe to. Every mailbox a test
+    /// makes starts subscribed; CREATE and RENAME leave the name they make
+    /// unsubscribed, as a server that keeps subscriptions apart from its
+    /// mailboxes does.
+    pub unsubscribed: BTreeSet<String>,
 }
 
 pub struct FakeMailbox {
@@ -298,6 +303,7 @@ impl FakeImap {
                 answered: 0,
                 next_uidvalidity: 1000,
                 gmail: false,
+                unsubscribed: BTreeSet::new(),
                 next_msgid: 0x18c2_f0a1_b2c3_d4e5,
             }),
             changed: Notify::new(),
@@ -927,6 +933,7 @@ impl ImapApi for FakeImap {
                         m.special_use.filter(|_| special_use),
                         m.no_select,
                     )
+                    .subscribed(!s.unsubscribed.contains(name))
                 })
                 .collect())
         })
@@ -1379,6 +1386,7 @@ impl ImapApi for FakeImap {
             let uidvalidity = s.fresh_uidvalidity();
             s.mailboxes
                 .insert(mailbox.to_string(), FakeMailbox::new(uidvalidity, None));
+            s.unsubscribed.insert(mailbox.to_string());
             Ok(())
         })
     }
@@ -1405,8 +1413,9 @@ impl ImapApi for FakeImap {
                 .collect();
             for name in names {
                 if let Some(mailbox) = s.mailboxes.remove(&name) {
-                    s.mailboxes
-                        .insert(format!("{to}{}", &name[from.len()..]), mailbox);
+                    let renamed = format!("{to}{}", &name[from.len()..]);
+                    s.unsubscribed.insert(renamed.clone());
+                    s.mailboxes.insert(renamed, mailbox);
                 }
             }
             Ok(())
@@ -1420,6 +1429,22 @@ impl ImapApi for FakeImap {
                 Some(_) => Ok(()),
                 None => Err(ImapError::NoMailbox(mailbox.to_string())),
             }
+        })
+    }
+
+    async fn subscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("subscribe {mailbox}"), |s| {
+            s.unsubscribed.remove(mailbox);
+            Ok(())
+        })
+    }
+
+    async fn unsubscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("unsubscribe {mailbox}"), |s| {
+            s.unsubscribed.insert(mailbox.to_string());
+            Ok(())
         })
     }
 
