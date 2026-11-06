@@ -69,6 +69,9 @@ rustPlatform.buildRustPackage {
   PENGUIN_MAIL_GOOGLE_CLIENT_SECRET = googleClientSecret;
   PENGUIN_MAIL_MICROSOFT_CLIENT_ID = microsoftClientId;
   PENGUIN_MAIL_SKILL_RUNTIME = skillRuntime;
+  # The same setting as .cargo/config.toml, which the fileset above leaves
+  # out: SQLite without its memory statistics and their global mutex.
+  LIBSQLITE3_FLAGS = "-DSQLITE_DEFAULT_MEMSTATUS=0";
 
   passthru = { inherit skillRuntime; };
 
