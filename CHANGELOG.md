@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
+
 ### Improved
 
 

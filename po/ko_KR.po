@@ -2093,31 +2093,31 @@ msgstr "중요"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "열린 창이 없어도 Penguin Mail은 동기화를 계속합니다"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:677 app/src/compose.rs:3546
 msgid "Add at least one recipient."
 msgstr "받는 사람을 한 명 이상 추가하세요."
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:686
 msgid "“{address}” is not an email address."
 msgstr "\"{address}\"는 이메일 주소가 아닙니다."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:912 app/src/compose.rs:3552
 msgid "Choose a time in the future"
 msgstr "미래 시간을 선택하세요"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1241
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}에 {sender}님이 작성:"
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1247
 msgid "{sender} wrote:"
 msgstr "{sender}님이 작성:"
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1526
 msgid "Penguin Mail could not put the message together."
 msgstr "메시지를 구성할 수 없습니다."
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1550
 msgid "The list did not give one address to write to."
 msgstr "메일링 리스트에서 보낼 주소를 제공하지 않았습니다."
 
@@ -3998,8 +3998,8 @@ msgstr ""
 "임시보관 메일을 저장하지 못했습니다. 암호화된 메시지는 내 키로 암호화하여 임"
 "시보관함에 보관하지만 이 컴퓨터에는 {address}의 키나 인증서가 없습니다."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2094
-#: app/src/ui/composer/mod.rs:2097
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2096
+#: app/src/ui/composer/mod.rs:2099
 msgid "That account is not connected."
 msgstr "해당 계정이 연결되어 있지 않습니다."
 
@@ -4126,7 +4126,7 @@ msgstr "표준 암호화(TLS)"
 msgid "Not encrypted in transit"
 msgstr "전송 중 암호화되지 않음"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2194
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2196
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "첨부 파일 {count}개"
@@ -5030,8 +5030,8 @@ msgstr "링크 복사"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1989 app/src/ui/composer/mod.rs:2111
-#: app/src/ui/composer/mod.rs:2455 app/src/ui/composer/mod.rs:2909
+#: app/src/ui/composer/mod.rs:1991 app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2457 app/src/ui/composer/mod.rs:2911
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5432,7 +5432,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1924
+#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1926
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "보내기"
@@ -5594,7 +5594,7 @@ msgid "No models found."
 msgstr "모델을 찾지 못했습니다."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2234
+#: app/src/ui/composer/mod.rs:2236
 msgid "Remove {file}"
 msgstr "{file} 제거"
 
@@ -5634,7 +5634,7 @@ msgid "Edit {server}"
 msgstr "{server} 편집"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2232 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3425
 msgid "Remove"
 msgstr "제거"
@@ -5675,7 +5675,7 @@ msgstr ""
 "NAME=value로 지정하세요. URL은 HTTP를 통해 서버에 연결합니다."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2904 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2906 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "이름"
@@ -5711,7 +5711,7 @@ msgstr "테스트"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2909
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2911
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -7603,7 +7603,7 @@ msgstr "수신 확인 요청"
 msgid "Choose a Time…"
 msgstr "시간 선택…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2004
+#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2006
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "예약 발송"
@@ -7722,253 +7722,253 @@ msgstr "가려진 주소를 만들 수 없습니다: {reason}"
 msgid "Scheduled to send {when}"
 msgstr "{when} 발송 예약됨"
 
-#: app/src/ui/composer/mod.rs:1593 app/src/ui/composer/mod.rs:2026
+#: app/src/ui/composer/mod.rs:1593 app/src/ui/composer/mod.rs:2028
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "발신자를 선택하고 허용된 주소 접미사를 입력하세요."
 
-#: app/src/ui/composer/mod.rs:1763 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1765 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "보내기 취소"
 
-#: app/src/ui/composer/mod.rs:1916 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1918 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "보내는 중…"
 
-#: app/src/ui/composer/mod.rs:1956
+#: app/src/ui/composer/mod.rs:1958
 msgid "Attachment Missing?"
 msgstr "첨부 파일이 빠졌나요?"
 
-#: app/src/ui/composer/mod.rs:1958
+#: app/src/ui/composer/mod.rs:1960
 msgid "The message says “{sentence}” and carries no file."
 msgstr "메시지에 \"{sentence}\" 문구가 있지만 첨부 파일이 없습니다."
 
-#: app/src/ui/composer/mod.rs:1963
+#: app/src/ui/composer/mod.rs:1965
 msgid "Add Attachment"
 msgstr "첨부 파일 추가"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "Send Anyway"
 msgstr "그대로 보내기"
 
-#: app/src/ui/composer/mod.rs:1982
+#: app/src/ui/composer/mod.rs:1984
 msgid "Send Without Encryption?"
 msgstr "암호화 없이 보낼까요?"
 
-#: app/src/ui/composer/mod.rs:1984
+#: app/src/ui/composer/mod.rs:1986
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "이 메시지는 암호화하여 보내도록 설정했으나 암호화할 수 없습니다. {reason}"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:1992
 msgid "Send Readable"
 msgstr "암호화 없이 보내기"
 
-#: app/src/ui/composer/mod.rs:2005
+#: app/src/ui/composer/mod.rs:2007
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "트레이에 있을 때도 Penguin Mail이 실행 중이면 이 시간에 보냅니다."
 
-#: app/src/ui/composer/mod.rs:2006
+#: app/src/ui/composer/mod.rs:2008
 msgid "Schedule"
 msgstr "예약"
 
-#: app/src/ui/composer/mod.rs:2068
+#: app/src/ui/composer/mod.rs:2070
 msgid "Draft saved, encrypted to your own key"
 msgstr "내 키로 암호화하여 임시보관 메일 저장됨"
 
-#: app/src/ui/composer/mod.rs:2070
+#: app/src/ui/composer/mod.rs:2072
 msgid "Draft saved"
 msgstr "임시보관 메일 저장됨"
 
-#: app/src/ui/composer/mod.rs:2106
+#: app/src/ui/composer/mod.rs:2108
 msgid "Save as Draft?"
 msgstr "임시보관 메일로 저장할까요?"
 
-#: app/src/ui/composer/mod.rs:2110
+#: app/src/ui/composer/mod.rs:2112
 msgid "Discard"
 msgstr "버리기"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2114
 msgid "Save Draft"
 msgstr "임시보관 메일 저장"
 
-#: app/src/ui/composer/mod.rs:2153
+#: app/src/ui/composer/mod.rs:2155
 msgid "Attach Files"
 msgstr "파일 첨부"
 
-#: app/src/ui/composer/mod.rs:2189
+#: app/src/ui/composer/mod.rs:2191
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2271
+#: app/src/ui/composer/mod.rs:2273
 msgid "Bold (Ctrl+B)"
 msgstr "굵게(Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2272
+#: app/src/ui/composer/mod.rs:2274
 msgid "Italic (Ctrl+I)"
 msgstr "기울임(Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2275
+#: app/src/ui/composer/mod.rs:2277
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "취소선(Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2278
+#: app/src/ui/composer/mod.rs:2280
 msgid "Code (Ctrl+E)"
 msgstr "코드(Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2315
+#: app/src/ui/composer/mod.rs:2317
 msgid "Link (Ctrl+K)"
 msgstr "링크(Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2325
+#: app/src/ui/composer/mod.rs:2327
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "글머리 기호 목록(Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2330
+#: app/src/ui/composer/mod.rs:2332
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "번호 목록(Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2335
+#: app/src/ui/composer/mod.rs:2337
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "인용(Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2352
+#: app/src/ui/composer/mod.rs:2354
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "이미지 삽입(Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2362
+#: app/src/ui/composer/mod.rs:2364
 msgid "Paragraph"
 msgstr "문단"
 
-#: app/src/ui/composer/mod.rs:2363
+#: app/src/ui/composer/mod.rs:2365
 msgid "Heading 1"
 msgstr "제목 1"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2366
 msgid "Heading 2"
 msgstr "제목 2"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2367
 msgid "Heading 3"
 msgstr "제목 3"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2368
 msgid "Code Block"
 msgstr "코드 블록"
 
-#: app/src/ui/composer/mod.rs:2380
+#: app/src/ui/composer/mod.rs:2382
 msgid "Turn Markdown into Formatting"
 msgstr "Markdown을 서식으로 변환"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2386
 msgid "Clear Formatting"
 msgstr "서식 지우기"
 
-#: app/src/ui/composer/mod.rs:2390
+#: app/src/ui/composer/mod.rs:2392
 msgid "Write in Markdown"
 msgstr "Markdown으로 작성"
 
-#: app/src/ui/composer/mod.rs:2397 app/src/ui/composer/mod.rs:2401
+#: app/src/ui/composer/mod.rs:2399 app/src/ui/composer/mod.rs:2403
 msgid "More Formatting"
 msgstr "서식 더 보기"
 
-#: app/src/ui/composer/mod.rs:2438
+#: app/src/ui/composer/mod.rs:2440
 msgid "Add a Link"
 msgstr "링크 추가"
 
-#: app/src/ui/composer/mod.rs:2444
+#: app/src/ui/composer/mod.rs:2446
 msgid "Text"
 msgstr "텍스트"
 
-#: app/src/ui/composer/mod.rs:2456
+#: app/src/ui/composer/mod.rs:2458
 msgid "Add Link"
 msgstr "링크 추가"
 
-#: app/src/ui/composer/mod.rs:2492
+#: app/src/ui/composer/mod.rs:2494
 msgid "Markdown formatted"
 msgstr "Markdown 서식 적용됨"
 
-#: app/src/ui/composer/mod.rs:2608
+#: app/src/ui/composer/mod.rs:2610
 msgid "Pasted as rich text"
 msgstr "서식 있는 텍스트로 붙여넣음"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2611
 msgid "Paste as Plain Text"
 msgstr "Markdown으로 편집 중"
 
-#: app/src/ui/composer/mod.rs:2643
+#: app/src/ui/composer/mod.rs:2645
 msgid "Editing as Markdown"
 msgstr "이미지"
 
-#: app/src/ui/composer/mod.rs:2679
+#: app/src/ui/composer/mod.rs:2681
 msgid "Images"
 msgstr "이미지"
 
-#: app/src/ui/composer/mod.rs:2684
+#: app/src/ui/composer/mod.rs:2686
 msgid "Insert Image"
 msgstr "이미지 삽입"
 
-#: app/src/ui/composer/mod.rs:2728
+#: app/src/ui/composer/mod.rs:2730
 msgid "Could not read the file: {reason}"
 msgstr "파일을 읽을 수 없습니다: {reason}"
 
-#: app/src/ui/composer/mod.rs:2803
+#: app/src/ui/composer/mod.rs:2805
 msgid "Could not paste the image"
 msgstr "이미지를 붙여넣을 수 없습니다"
 
-#: app/src/ui/composer/mod.rs:2848
+#: app/src/ui/composer/mod.rs:2850
 msgid "No Templates Yet"
 msgstr "아직 템플릿 없음"
 
-#: app/src/ui/composer/mod.rs:2898
+#: app/src/ui/composer/mod.rs:2900
 msgid "Save as Template"
 msgstr "템플릿으로 저장"
 
-#: app/src/ui/composer/mod.rs:2900
+#: app/src/ui/composer/mod.rs:2902
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "{{first_name}} 같은 자리표시자는 사용할 때마다 채워집니다."
 
-#: app/src/ui/composer/mod.rs:2923 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2925 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "템플릿 이름을 입력하세요"
 
-#: app/src/ui/composer/mod.rs:2931
+#: app/src/ui/composer/mod.rs:2933
 msgid "Template saved"
 msgstr "템플릿 저장됨"
 
-#: app/src/ui/composer/mod.rs:2934
+#: app/src/ui/composer/mod.rs:2936
 msgid "Template not saved: {reason}"
 msgstr "템플릿을 저장하지 못했습니다: {reason}"
 
-#: app/src/ui/composer/mod.rs:3006
+#: app/src/ui/composer/mod.rs:3008
 msgid "This looks like Markdown"
 msgstr "Markdown으로 보입니다"
 
-#: app/src/ui/composer/mod.rs:3012
+#: app/src/ui/composer/mod.rs:3014
 msgid "Format"
 msgstr "서식 적용"
 
-#: app/src/ui/composer/mod.rs:3013
+#: app/src/ui/composer/mod.rs:3015
 msgid "Turn the Markdown into rich text"
 msgstr "Markdown을 서식 있는 텍스트로 변환"
 
-#: app/src/ui/composer/mod.rs:3019 app/src/ui/composer/mod.rs:3023
+#: app/src/ui/composer/mod.rs:3021 app/src/ui/composer/mod.rs:3025
 msgid "Dismiss"
 msgstr "닫기"
 
-#: app/src/ui/composer/mod.rs:3106
+#: app/src/ui/composer/mod.rs:3108
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "임시보관 메일은 이 컴퓨터에 보관하므로 나중에 여기서 마저 작성할 수 있습니다."
 
-#: app/src/ui/composer/mod.rs:3110
+#: app/src/ui/composer/mod.rs:3112
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "임시보관 메일은 {provider}에 보관하므로 나중에 어떤 기기에서든 마저 작성할 "
 "수 있습니다."
 
-#: app/src/ui/composer/mod.rs:3114
+#: app/src/ui/composer/mod.rs:3116
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9406,10 +9406,15 @@ msgid "Signature"
 msgstr "서명"
 
 #: app/src/ui/preferences.rs:577
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "이 계정과 자체 서명이 없는 주소에 사용됩니다. Markdown을 쓸 수 있습니다. "
 "<email>은 접미사를 포함한 보내는 주소로, <domain>은 그 도메인으로 바뀝니다."
@@ -9744,7 +9749,7 @@ msgstr "언어"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/preferences.rs:1689 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1693 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "서명 없음"
 
@@ -10260,9 +10265,13 @@ msgid "Custom Signature"
 msgstr "사용자 지정 서명"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "Markdown을 쓸 수 있습니다. <email>은 접미사를 포함한 보내는 주소로, <domain>"
 "은 그 도메인으로 바뀝니다."

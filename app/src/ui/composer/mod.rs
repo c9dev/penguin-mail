@@ -1733,6 +1733,8 @@ impl Composer {
         draft.sign = self.sign.is_active();
         draft.encrypt = self.encrypt.is_active() && self.encrypt.is_sensitive();
         draft.receipt = self.receipt.is_active();
+        draft.html_signature =
+            crate::compose::expand_html_signature(&identity.signature, &draft.from.email);
         // A signature on an encrypted message goes inside the encryption,
         // so the recipients' standard carries both.
         draft.standard = match draft.encrypt {
