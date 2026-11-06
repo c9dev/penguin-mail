@@ -708,6 +708,79 @@ impl Reads for SectionReader {
     }
 }
 
+/// Several whole messages from one mailbox: the bytes of `BODY[]` for each
+/// UID asked for, in the order the server sent them. A UID the mailbox no
+/// longer holds is missing from the answer.
+pub(crate) struct SectionsReader {
+    uids: UidSet,
+    /// The UID whose literal [`Reads::wants`] last claimed, for
+    /// [`Reads::keep`] to file it under.
+    claimed: std::cell::Cell<Option<u32>>,
+    pub(crate) bodies: Vec<(u32, Vec<u8>)>,
+}
+
+impl SectionsReader {
+    pub(crate) fn new(uids: &UidSet) -> Self {
+        SectionsReader {
+            uids: uids.clone(),
+            claimed: std::cell::Cell::new(None),
+            bodies: Vec::new(),
+        }
+    }
+
+    /// The UID and attributes of a FETCH answer about one of the UIDs.
+    fn answer<'r, 'a>(&self, response: &'r Response<'a>) -> Option<(u32, &'r [AttributeValue<'a>])> {
+        let Response::Fetch(_, attributes) = response else {
+            return None;
+        };
+        let uid = attributes.iter().find_map(|a| match a {
+            AttributeValue::Uid(uid) => Some(*uid),
+            _ => None,
+        })?;
+        self.uids.contains(uid).then_some((uid, attributes.as_slice()))
+    }
+}
+
+impl Reads for SectionsReader {
+    fn read(&mut self, response: &Response<'_>) {
+        let Some((uid, attributes)) = self.answer(response) else {
+            return;
+        };
+        for attribute in attributes {
+            if let AttributeValue::BodySection { data, .. } = attribute {
+                let bytes = data.as_deref().map(<[u8]>::to_vec).unwrap_or_default();
+                self.bodies.push((uid, bytes));
+            }
+        }
+    }
+
+    fn kept(&self) -> usize {
+        self.bodies.len()
+    }
+
+    fn bytes(&self) -> u64 {
+        BODY_BYTES
+    }
+
+    fn wants<'r>(&self, response: &'r Response<'_>) -> Option<&'r [u8]> {
+        let (uid, attributes) = self.answer(response)?;
+        let data = attributes.iter().find_map(|attribute| match attribute {
+            AttributeValue::BodySection {
+                data: Some(data), ..
+            } => Some(data.as_ref()),
+            _ => None,
+        })?;
+        self.claimed.set(Some(uid));
+        Some(data)
+    }
+
+    fn keep(&mut self, bytes: Vec<u8>) {
+        if let Some(uid) = self.claimed.take() {
+            self.bodies.push((uid, bytes));
+        }
+    }
+}
+
 /// The attributes of a FETCH answer about `uid`.
 fn fetched_for<'r, 'a>(response: &'r Response<'a>, uid: u32) -> Option<&'r [AttributeValue<'a>]> {
     match response {

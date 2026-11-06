@@ -1890,12 +1890,19 @@ fn row_menu(row: &gtk::ListBoxRow, menu: &gio::Menu, filing: Filing, name: &str)
     };
     let options = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
-        .menu_model(menu)
         .css_classes(["flat", "circular", "label-options"])
         .valign(gtk::Align::Center)
         .halign(gtk::Align::End)
         .tooltip_text(filing.options_tooltip())
         .build();
+    // The button gets its menu when it first opens, for the reason
+    // `context_menu` gives.
+    let model = menu.clone();
+    options.set_create_popup_func(move |options| {
+        if options.menu_model().is_none() {
+            options.set_menu_model(Some(&model));
+        }
+    });
     super::name(&options, &filing.options_name(name));
     super::name_menu_items_of(&options);
     // `.options-open` keeps the count hidden while the menu is open and
@@ -1924,15 +1931,19 @@ fn row_menu(row: &gtk::ListBoxRow, menu: &gio::Menu, filing: Filing, name: &str)
 }
 
 /// Opens `menu` at the pointer on a right click or long press of `row`.
+///
+/// The popover is built the first time it opens. GTK builds every item of a
+/// menu as soon as it has its model, and an account with 807 folders spent
+/// 285 MB of memory on menus nobody had opened.
 fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
-    let popover = gtk::PopoverMenu::from_model(Some(menu));
-    super::name_menu_items(&popover);
-    popover.set_has_arrow(false);
-    popover.set_halign(gtk::Align::Start);
-    popover.set_parent(row);
+    let popover: Rc<std::cell::OnceCell<gtk::PopoverMenu>> = Rc::default();
     let show = {
-        let popover = popover.clone();
+        let (popover, menu, row) = (Rc::clone(&popover), menu.clone(), row.downgrade());
         move |x: f64, y: f64| {
+            let Some(row) = row.upgrade() else {
+                return;
+            };
+            let popover = popover.get_or_init(|| context_popover(&row, &menu));
             popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
             popover.popup();
         }
@@ -1966,7 +1977,21 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
         glib::Propagation::Stop
     });
     row.add_controller(keys);
-    row.connect_destroy(move |_| popover.unparent());
+    row.connect_destroy(move |_| {
+        if let Some(popover) = popover.get() {
+            popover.unparent();
+        }
+    });
+}
+
+/// The right-click menu of `row`, built when it first opens.
+fn context_popover(row: &gtk::ListBoxRow, menu: &gio::Menu) -> gtk::PopoverMenu {
+    let popover = gtk::PopoverMenu::from_model(Some(menu));
+    super::name_menu_items(&popover);
+    popover.set_has_arrow(false);
+    popover.set_halign(gtk::Align::Start);
+    popover.set_parent(row);
+    popover
 }
 
 /// The class on a group row, a server folder that holds only folders.
@@ -2628,6 +2653,48 @@ pub(crate) mod checks {
                 }
             }
         }
+        window.set_content(gtk::Widget::NONE);
+        a_folder_menu_is_built_when_it_opens();
+    }
+
+    /// A folder row holds no popover until its menu opens. Hundreds of
+    /// folders would otherwise each carry two finished menus.
+    fn a_folder_menu_is_built_when_it_opens() {
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        content.append(&gtk::Label::new(Some("Projects")));
+        content.append(&gtk::Label::new(None));
+        let row = gtk::ListBoxRow::builder().child(&content).build();
+        let menu = gio::Menu::new();
+        menu.append(Some("Rename…"), Some("win.label-rename"));
+        row_menu(&row, &menu, Filing::Folders, "Projects");
+        let list = gtk::ListBox::new();
+        list.append(&row);
+        let window = adw::Window::new();
+        window.set_content(Some(&list));
+        let options = {
+            let mut stack: Vec<gtk::Widget> = row.first_child().into_iter().collect();
+            let mut found = None;
+            while let Some(widget) = stack.pop() {
+                if let Ok(button) = widget.clone().downcast::<gtk::MenuButton>() {
+                    found = Some(button);
+                    break;
+                }
+                stack.extend(widget.next_sibling());
+                stack.extend(widget.first_child());
+            }
+            found.expect("the row has an options button")
+        };
+        assert!(options.popover().is_none());
+        assert!(options.menu_model().is_none());
+        assert!(
+            !std::iter::successors(row.first_child(), |w| w.next_sibling())
+                .any(|w| w.is::<gtk::Popover>()),
+            "the right-click menu waits for a right click"
+        );
+        options.popup();
+        assert_eq!(options.menu_model().as_ref(), Some(menu.upcast_ref()));
+        assert!(options.popover().is_some());
+        options.popdown();
         window.set_content(gtk::Widget::NONE);
     }
 }

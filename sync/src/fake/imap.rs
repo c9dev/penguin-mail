@@ -932,6 +932,13 @@ impl ImapApi for FakeImap {
         })
     }
 
+    /// Selects every time, so the call shows in the log as the SELECT it
+    /// was before the real client learned to skip it.
+    async fn uidvalidity(&self, mailbox: &str) -> Result<(u32, Option<Selected>), ImapError> {
+        let selected = self.select(mailbox, None).await?;
+        Ok((selected.uidvalidity, Some(selected)))
+    }
+
     async fn select(&self, mailbox: &str, since: Option<Since>) -> Result<Selected, ImapError> {
         check_name(mailbox)?;
         // The client sends QRESYNC parameters only with the extension on
@@ -1195,6 +1202,17 @@ impl ImapApi for FakeImap {
                 // bytes go out already decoded.
                 path => mailrs_mime::part(raw, path).unwrap_or_default(),
             }))
+        })
+    }
+
+    async fn bodies(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<(u32, Vec<u8>)>, ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("bodies {mailbox} {uids}"), |s| {
+            let m = s.selectable(mailbox)?;
+            Ok(uids
+                .iter()
+                .filter_map(|uid| Some((uid, m.messages.get(&uid)?.raw.clone())))
+                .collect())
         })
     }
 

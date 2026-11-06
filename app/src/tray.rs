@@ -366,6 +366,37 @@ mod tests {
         }
     }
 
+    /// KDE's panel draws the tray's symbolic glyphs itself, and it recolours
+    /// an icon only through the stylesheet named `current-color-scheme`.
+    /// A glyph with a fixed fill stays near black on a dark panel. GTK
+    /// recolours the same file its own way.
+    #[test]
+    fn the_symbolic_tray_glyphs_take_the_panels_color() {
+        let apps =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data/icons/scalable/apps");
+        for name in [
+            "io.github.c9dev.PenguinMail-symbolic",
+            "io.github.c9dev.PenguinMail-unread-symbolic",
+        ] {
+            let svg = std::fs::read_to_string(apps.join(format!("{name}.svg"))).unwrap();
+            assert!(
+                svg.contains(r#"<style id="current-color-scheme" type="text/css">.ColorScheme-Text{"#),
+                "{name} names KDE's color scheme"
+            );
+            let shapes = ["<path", "<rect", "<circle"]
+                .iter()
+                .map(|tag| svg.matches(tag).count())
+                .sum::<usize>();
+            assert!(shapes > 0, "{name}");
+            assert_eq!(
+                svg.matches(r#"class="ColorScheme-Text" fill="currentColor""#)
+                    .count(),
+                shapes,
+                "every shape in {name} follows the panel's text color"
+            );
+        }
+    }
+
     /// An install's icons sit in share/icons beside the bin folder that
     /// holds the program. A snap's are not on the host's search path, so
     /// the tray names the folder; a build run from target/ has none.

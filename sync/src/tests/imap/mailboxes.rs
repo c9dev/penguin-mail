@@ -17,6 +17,7 @@ fn an_imap_account_files_mail_in_folders_and_threads_it_here() {
     assert_eq!(
         services.capabilities(),
         MailCapabilities {
+            fetches_raw_together: true,
             labels: false,
             server_threads: false,
             files_sent_mail: false,

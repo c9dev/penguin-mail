@@ -46,6 +46,7 @@ use crate::{BackendError, MailOp};
 
 /// What a Microsoft account's mail service can do.
 const MICROSOFT: MailCapabilities = MailCapabilities {
+    fetches_raw_together: false,
     labels: false,
     server_threads: true,
     files_sent_mail: true,

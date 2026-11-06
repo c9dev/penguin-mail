@@ -18,7 +18,8 @@ use tokio::time::Instant;
 use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
-    MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SelectReader, StructureReader,
+    MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SectionsReader, SelectReader,
+    StructureReader,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::types::{check_label, label_text};
@@ -44,6 +45,10 @@ pub(crate) struct Conn<S: Stream> {
     pub(crate) capabilities: Capabilities,
     /// The mailbox the server has selected on this connection.
     selected: Option<String>,
+    /// The UIDVALIDITY the last SELECT reported, which holds for as long as
+    /// `selected` names that mailbox: a server may not change it while the
+    /// mailbox stays selected (RFC 3501 section 2.3.1.1).
+    uidvalidity: u32,
     /// When a command last went out, to tell a connection a router may
     /// have dropped in silence.
     last_used: Instant,
@@ -184,6 +189,7 @@ impl<S: Stream> Conn<S> {
             session,
             capabilities: Capabilities::default(),
             selected: None,
+            uidvalidity: 0,
             last_used: Instant::now(),
         };
         let mut after = CapabilityReader::default();
@@ -272,11 +278,29 @@ impl<S: Stream> Conn<S> {
         let mut reader = SelectReader::new(since.and_then(|s| s.known.as_ref()));
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
             .await?;
-        self.selected = Some(mailbox.to_string());
-        Ok(Selected {
+        let selected = Selected {
             qresync: since.is_some(),
             ..reader.finish()?
-        })
+        };
+        self.selected = Some(mailbox.to_string());
+        self.uidvalidity = selected.uidvalidity;
+        Ok(selected)
+    }
+
+    /// The UIDVALIDITY of `mailbox`, and the SELECT's answer when this
+    /// connection had to select it to know. A mailbox already selected
+    /// here costs no round trip: opening a thread checks it once for each
+    /// message, and on a slow server each SELECT took as long as the
+    /// fetch it guarded.
+    pub(crate) async fn uidvalidity(
+        &mut self,
+        mailbox: &str,
+    ) -> Result<(u32, Option<Selected>), ImapError> {
+        if self.selected.as_deref() == Some(mailbox) {
+            return Ok((self.uidvalidity, None));
+        }
+        let selected = self.select(mailbox, None).await?;
+        Ok((selected.uidvalidity, Some(selected)))
     }
 
     pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
@@ -430,6 +454,29 @@ impl<S: Stream> Conn<S> {
         )
         .await?;
         Ok(reader.bytes)
+    }
+
+    /// Several whole messages of `mailbox` in one `UID FETCH`, each beside
+    /// its UID. A message the mailbox no longer holds is left out. One
+    /// command for a thread's messages costs one round trip where a
+    /// command each cost one per message.
+    pub(crate) async fn bodies(
+        &mut self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> Result<Vec<(u32, Vec<u8>)>, ImapError> {
+        if uids.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.ensure_selected(mailbox).await?;
+        let mut reader = SectionsReader::new(uids);
+        self.exec(
+            &format!("UID FETCH {uids} (UID BODY.PEEK[])"),
+            Doing::Mailbox(mailbox),
+            &mut reader,
+        )
+        .await?;
+        Ok(reader.bodies)
     }
 
     pub(crate) async fn structure(
@@ -627,6 +674,7 @@ impl<S: Stream> Conn<S> {
             session,
             capabilities,
             selected,
+            uidvalidity,
             ..
         } = self;
         let mut handle = session.idle();
@@ -678,6 +726,7 @@ impl<S: Stream> Conn<S> {
                 session,
                 capabilities,
                 selected,
+                uidvalidity,
                 last_used: Instant::now(),
             },
             woke,
@@ -1757,6 +1806,84 @@ mod tests {
             .await
             .err();
         assert_eq!(err, Some(ImapError::Unsupported("CONDSTORE")));
+    }
+
+    #[tokio::test]
+    async fn several_messages_come_in_one_fetch_each_under_its_uid() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                // The server answers in its own order and leaves out a
+                // message it no longer holds.
+                "UID FETCH 5,7:8 (UID BODY.PEEK[])" => vec![
+                    "* 3 FETCH (UID 8 BODY[] {5}".into(),
+                    "eight)".into(),
+                    "* 1 FETCH (UID 5 BODY[] {4}".into(),
+                    "five)".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let mut bodies = conn
+            .bodies("INBOX", &UidSet::from_uids([5, 7, 8]))
+            .await
+            .unwrap();
+        bodies.sort();
+        assert_eq!(
+            bodies,
+            [(5, b"five".to_vec()), (8, b"eight".to_vec())],
+            "7 is missing, and the others are under their own UIDs"
+        );
+        assert!(
+            conn.bodies("INBOX", &UidSet::from_uids([]))
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let fetches = seen(&log)
+            .iter()
+            .filter(|c| c.starts_with("UID FETCH") || c.starts_with("SELECT"))
+            .count();
+        assert_eq!(fetches, 2, "one SELECT and one FETCH: {:?}", seen(&log));
+    }
+
+    #[tokio::test]
+    async fn a_selected_mailbox_answers_its_uidvalidity_without_a_select() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let selects = || {
+            seen(&log)
+                .iter()
+                .filter(|c| c.starts_with("SELECT"))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+
+        let (uidvalidity, answer) = conn.uidvalidity("INBOX").await.unwrap();
+        assert_eq!(uidvalidity, 7);
+        assert_eq!(answer.map(|s| s.permanent_flags.len()), Some(3));
+        assert_eq!(selects().len(), 1);
+
+        let (uidvalidity, answer) = conn.uidvalidity("INBOX").await.unwrap();
+        assert_eq!(uidvalidity, 7);
+        assert!(answer.is_none(), "INBOX is selected already");
+        conn.body("INBOX", 5, "").await.unwrap();
+        assert_eq!(selects().len(), 1, "the fetch needs no SELECT either");
+
+        conn.uidvalidity("Sent").await.unwrap();
+        assert_eq!(selects().len(), 2, "another mailbox is selected first");
+        assert!(selects()[1].starts_with("SELECT \"Sent\""), "{:?}", selects());
     }
 
     #[tokio::test]

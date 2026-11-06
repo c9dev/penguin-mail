@@ -70,6 +70,7 @@ const POLL_TRAY: Duration = Duration::from_secs(5 * 60);
 
 /// What Gmail's mail service can do.
 const GMAIL: MailCapabilities = MailCapabilities {
+    fetches_raw_together: false,
     labels: true,
     server_threads: true,
     files_sent_mail: true,
@@ -947,6 +948,7 @@ mod tests {
         assert_eq!(
             google.capabilities(),
             MailCapabilities {
+                fetches_raw_together: false,
                 labels: true,
                 server_threads: true,
                 files_sent_mail: true,

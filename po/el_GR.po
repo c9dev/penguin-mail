@@ -5143,7 +5143,7 @@ msgstr "Άνοιγμα του Penguin Mail"
 msgid "New Message"
 msgstr "Νέο μήνυμα"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2100 app/src/ui/window.rs:3661
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3661
 msgid "Check for Mail"
 msgstr "Έλεγχος για αλληλογραφία"
 
@@ -6829,7 +6829,7 @@ msgstr ""
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2117
+#: app/src/ui/sidebar.rs:2142
 msgid "Color"
 msgstr "Χρώμα"
 
@@ -7697,19 +7697,19 @@ msgstr "Παραχώρηση πρόσβασης για {account}"
 msgid "Sign in again to {account}"
 msgstr "Συνδεθείτε ξανά στο {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2122
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
 msgid "Sign In Again…"
 msgstr "Νέα σύνδεση…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2130
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
 msgid "Remove Account…"
 msgstr "Αφαίρεση λογαριασμού…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2137
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
 msgid "Account options"
 msgstr "Επιλογές λογαριασμού"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2142
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
 msgid "Options for {account}"
 msgstr "Επιλογές για {account}"
 
@@ -7738,7 +7738,7 @@ msgid "Original Color"
 msgstr "Αρχικό χρώμα"
 
 #: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2107
+#: app/src/ui/sidebar.rs:2132
 msgid "Rename…"
 msgstr "Μετονομασία…"
 
@@ -7865,7 +7865,7 @@ msgstr "{date}, έχει συμβάντα"
 msgid "Offline, last updated {time}"
 msgstr "Εκτός σύνδεσης, τελευταία ενημέρωση {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2200
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
 msgid "Offline"
 msgstr "Εκτός σύνδεσης"
 
@@ -10708,7 +10708,7 @@ msgstr "Προσθήκη διεύθυνσης"
 msgid "Default sender"
 msgstr "Προεπιλεγμένος αποστολέας"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2009
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
 msgid "Signature…"
 msgstr "Υπογραφή…"
 
@@ -10779,7 +10779,7 @@ msgid "Mail"
 msgstr "Αλληλογραφία"
 
 #: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2567
+#: app/src/ui/sidebar.rs:2592
 msgid "99+"
 msgstr "99+"
 
@@ -10824,12 +10824,12 @@ msgstr[0] "Ημερολόγιο, {count} αναμένει την απάντησ�
 msgstr[1] "Ημερολόγιο, {count} αναμένουν την απάντησή σας"
 
 #: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2118
+#: app/src/ui/sidebar.rs:2143
 msgid "Move Up"
 msgstr "Μετακίνηση πάνω"
 
 #: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2119
+#: app/src/ui/sidebar.rs:2144
 msgid "Move Down"
 msgstr "Μετακίνηση κάτω"
 
@@ -10837,57 +10837,57 @@ msgstr "Μετακίνηση κάτω"
 msgid "Empty Trash…"
 msgstr "Άδειασμα κάδου…"
 
-#: app/src/ui/sidebar.rs:2008
+#: app/src/ui/sidebar.rs:2033
 msgid "Automatic Reply…"
 msgstr "Αυτόματη απάντηση…"
 
-#: app/src/ui/sidebar.rs:2010
+#: app/src/ui/sidebar.rs:2035
 msgid "Rules…"
 msgstr "Κανόνες…"
 
-#: app/src/ui/sidebar.rs:2011 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3664
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
-#: app/src/ui/sidebar.rs:2020
+#: app/src/ui/sidebar.rs:2045
 msgid "On this computer"
 msgstr "Σε αυτόν τον υπολογιστή"
 
-#: app/src/ui/sidebar.rs:2028
+#: app/src/ui/sidebar.rs:2053
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "Σε αυτόν τον υπολογιστή. Εμφάνιση ή απόκρυψη των γραμματοκιβωτίων αυτού του "
 "λογαριασμού"
 
-#: app/src/ui/sidebar.rs:2029
+#: app/src/ui/sidebar.rs:2054
 msgid "Show or hide this account's mailboxes"
 msgstr "Εμφάνιση ή απόκρυψη των γραμματοκιβωτίων αυτού του λογαριασμού"
 
-#: app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2148
 msgid "Switch to JMAP…"
 msgstr "Μετάβαση σε JMAP…"
 
-#: app/src/ui/sidebar.rs:2125
+#: app/src/ui/sidebar.rs:2150
 msgid "Messages That Will Not Download…"
 msgstr "Μηνύματα που δεν λαμβάνονται…"
 
-#: app/src/ui/sidebar.rs:2198
+#: app/src/ui/sidebar.rs:2223
 msgid "Sign in again to keep syncing"
 msgstr "Συνδεθείτε ξανά για να συνεχιστεί ο συγχρονισμός"
 
-#: app/src/ui/sidebar.rs:2204
+#: app/src/ui/sidebar.rs:2229
 msgid "{provider} is not responding; retrying"
 msgstr "Το {provider} δεν αποκρίνεται· νέα προσπάθεια"
 
-#: app/src/ui/sidebar.rs:2215
+#: app/src/ui/sidebar.rs:2240
 msgid "The keyring is not responding; retrying"
 msgstr "Η κλειδοθήκη δεν αποκρίνεται· νέα προσπάθεια"
 
-#: app/src/ui/sidebar.rs:2218
+#: app/src/ui/sidebar.rs:2243
 msgid "Downloading mail"
 msgstr "Λήψη αλληλογραφίας"
 
-#: app/src/ui/sidebar.rs:2222
+#: app/src/ui/sidebar.rs:2247
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Ο συγχρονισμός σταμάτησε μετά από σφάλμα· επανεκκινήστε το Penguin Mail για "
@@ -10895,7 +10895,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2254
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -12603,7 +12603,7 @@ msgstr "Έλεγχος χώρου αποθήκευσης"
 msgid "Hide Storage Warning Until Next Launch"
 msgstr "Απόκρυψη προειδοποίησης χώρου έως την επόμενη εκκίνηση"
 
-#: app/src/ui/window/thread.rs:639
+#: app/src/ui/window/thread.rs:643
 msgid "The account is not connected yet."
 msgstr "Ο λογαριασμός δεν έχει συνδεθεί ακόμη."
 
@@ -13476,15 +13476,15 @@ msgstr ""
 "Το Penguin Mail δεν μπορεί να αποθηκεύσει αυτή την επανάληψη σε ημερολόγιο "
 "JMAP."
 
-#: sync/src/services/jmap/mod.rs:311
+#: sync/src/services/jmap/mod.rs:312
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Αυτός ο διακομιστής δεν κρατά χρώματα για τα γραμματοκιβώτιά του."
 
-#: sync/src/services/jmap/mod.rs:420
+#: sync/src/services/jmap/mod.rs:421
 msgid "This server files sent mail itself."
 msgstr "Αυτός ο διακομιστής αρχειοθετεί μόνος του τα απεσταλμένα μηνύματα."
 
-#: sync/src/services/jmap/mod.rs:603
+#: sync/src/services/jmap/mod.rs:604
 msgid "The server made an address Penguin Mail cannot read."
 msgstr ""
 "Ο διακομιστής δημιούργησε μια διεύθυνση που το Penguin Mail δεν μπορεί να "
@@ -13657,14 +13657,14 @@ msgstr "Το Outlook απάντησε αλλά δεν κράτησε την αυ
 msgid "A folder needs a name."
 msgstr "Ένας φάκελος χρειάζεται όνομα."
 
-#: sync/src/services/pop3/mod.rs:472
+#: sync/src/services/pop3/mod.rs:473
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Το Penguin Mail διατηρεί τα ονόματα των Εισερχομένων, Απεσταλμένων, "
 "Πρόχειρων, Κάδου, Ανεπιθύμητων και Αρχείου."
 
-#: sync/src/services/pop3/mod.rs:488
+#: sync/src/services/pop3/mod.rs:489
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "Το Penguin Mail διατηρεί τα Εισερχόμενα, τα Απεσταλμένα, τα Πρόχειρα, τον "

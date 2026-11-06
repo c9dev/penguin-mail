@@ -41,6 +41,71 @@ async fn a_small_message_is_read_whole_and_kept_for_its_files() {
     assert!(h.sync.cached_raw("INBOX/1001/1").is_some());
 }
 
+/// Three small messages in the inbox, synced, and the ids asked for in an
+/// order of their own.
+async fn three_in_the_inbox() -> (crate::tests::ImapHarness, Vec<String>, usize) {
+    let h = imap_harness().await;
+    for (tag, subject) in [("a", "One"), ("b", "Two"), ("c", "Three")] {
+        h.imap
+            .deliver_flagged("INBOX", &message(tag, subject, ""), &[], days_ago(1));
+    }
+    h.bootstrap().await;
+    let ids = ["INBOX/1001/3", "INBOX/1001/1", "INBOX/1001/2"].map(String::from);
+    let before = h.imap.calls().len();
+    (h, ids.to_vec(), before)
+}
+
+#[tokio::test]
+async fn a_threads_small_bodies_come_in_one_fetch_in_the_order_asked() {
+    let (h, ids, before) = three_in_the_inbox().await;
+
+    let bodies = h.sync.bodies_with_delivery(&ids, 4).await;
+
+    let order: Vec<&str> = bodies.iter().map(|(id, _)| id.as_str()).collect();
+    assert_eq!(order, ["INBOX/1001/3", "INBOX/1001/1", "INBOX/1001/2"]);
+    for (id, body) in &bodies {
+        let body = body.as_ref().unwrap();
+        assert_eq!(body.text.as_deref().map(str::trim), Some("Hi."), "{id}");
+        assert!(body.provenance.delivered_to.is_some(), "{id}");
+    }
+    let calls = h.imap.calls()[before..].to_vec();
+    assert_eq!(
+        calls.iter().filter(|c| c.starts_with("bodies ")).count(),
+        1,
+        "{calls:?}"
+    );
+    assert!(!calls.iter().any(|c| c.starts_with("body ")), "{calls:?}");
+    let account_id = h.account_id;
+    for id in ids {
+        let kept = h
+            .db
+            .read(move |c| bodies::peek_body(c, account_id, &id))
+            .await
+            .unwrap();
+        assert!(kept.is_some());
+    }
+}
+
+#[tokio::test]
+async fn a_message_gone_from_the_server_does_not_hold_back_the_others() {
+    let (h, ids, before) = three_in_the_inbox().await;
+    h.imap.remote_expunge("INBOX", 1);
+
+    let bodies = h.sync.bodies_with_delivery(&ids, 4).await;
+
+    let failed: Vec<&str> = bodies
+        .iter()
+        .filter(|(_, body)| body.is_err())
+        .map(|(id, _)| id.as_str())
+        .collect();
+    assert_eq!(failed, ["INBOX/1001/1"]);
+    assert_eq!(bodies.len(), 3);
+    // The batch came back short, so each message was asked for alone.
+    let calls = h.imap.calls()[before..].to_vec();
+    assert!(calls.iter().any(|c| c.starts_with("bodies ")), "{calls:?}");
+    assert!(calls.iter().any(|c| c == "body INBOX 3 "), "{calls:?}");
+}
+
 #[tokio::test]
 async fn prefetch_keeps_an_inbox_message_unread_and_leaves_its_file_on_the_server() {
     let h = imap_harness().await;

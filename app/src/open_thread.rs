@@ -430,6 +430,13 @@ impl OpenThread {
             self.restrict_images(&fresh);
             self.messages = fresh;
         }
+        self.missing_bodies()
+    }
+
+    /// The messages whose bodies are still to fetch: none stored, or one
+    /// stored before delivery headers were kept. A body that failed to
+    /// come is not asked for again.
+    pub fn missing_bodies(&self) -> Vec<String> {
         self.messages
             .iter()
             .filter(|m| match self.bodies.get(&m.id) {

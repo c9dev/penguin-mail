@@ -37,6 +37,14 @@ pub trait ImapApi: Send + Sync + 'static {
         since: Option<Since>,
     ) -> impl Future<Output = Result<Selected, ImapError>> + Send;
 
+    /// The UIDVALIDITY of `mailbox`, and the SELECT's answer when one was
+    /// needed to know it. A connection that has the mailbox selected
+    /// already answers without a SELECT.
+    fn uidvalidity(
+        &self,
+        mailbox: &str,
+    ) -> impl Future<Output = Result<(u32, Option<Selected>), ImapError>> + Send;
+
     /// The flags of the messages in `uids`, only those whose MODSEQ passed
     /// `changed_since` when it is given. `changed_since` needs CONDSTORE:
     /// without it the answer is `ImapError::Unsupported("CONDSTORE")`.
@@ -101,6 +109,14 @@ pub trait ImapApi: Send + Sync + 'static {
         uid: u32,
         section: &str,
     ) -> impl Future<Output = Result<Option<Vec<u8>>, ImapError>> + Send;
+
+    /// The whole messages `uids` names in `mailbox`, in one command, each
+    /// beside its UID, in no set order. A UID with no message is left out.
+    fn bodies(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> impl Future<Output = Result<Vec<(u32, Vec<u8>)>, ImapError>> + Send;
 
     /// The message's BODYSTRUCTURE. `None` when there is no such UID.
     fn structure(
@@ -201,6 +217,10 @@ impl ImapApi for ImapClient {
         ImapClient::select(self, mailbox, since.as_ref()).await
     }
 
+    async fn uidvalidity(&self, mailbox: &str) -> Result<(u32, Option<Selected>), ImapError> {
+        ImapClient::uidvalidity(self, mailbox).await
+    }
+
     async fn flags(
         &self,
         mailbox: &str,
@@ -248,6 +268,10 @@ impl ImapApi for ImapClient {
         section: &str,
     ) -> Result<Option<Vec<u8>>, ImapError> {
         ImapClient::body(self, mailbox, uid, section).await
+    }
+
+    async fn bodies(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<(u32, Vec<u8>)>, ImapError> {
+        ImapClient::bodies(self, mailbox, uids).await
     }
 
     async fn structure(&self, mailbox: &str, uid: u32) -> Result<Option<BodyStructure>, ImapError> {
