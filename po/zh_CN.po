@@ -8940,45 +8940,55 @@ msgstr "这个网址包含可能掩饰目的地的用户名。"
 msgid "This link contains hidden or direction-changing characters."
 msgstr "这个链接包含隐藏字符或更改文本方向的字符。"
 
-#: app/src/ui/manage_folders.rs:104 app/src/ui/manage_folders.rs:107
+#: app/src/ui/manage_folders.rs:144 app/src/ui/manage_folders.rs:147
 #, fuzzy
 #| msgid "Search models"
 msgid "Search folders"
 msgstr "搜索模型"
 
-#: app/src/ui/manage_folders.rs:123
+#: app/src/ui/manage_folders.rs:163
 #, fuzzy
 #| msgid "Could Not Load the Rules"
 msgid "Could Not List the Folders"
 msgstr "无法加载规则"
 
-#: app/src/ui/manage_folders.rs:127
+#: app/src/ui/manage_folders.rs:167
 #, fuzzy
 #| msgid "No Matching Mail"
 msgid "No Matching Folders"
 msgstr "没有符合条件的邮件"
 
-#: app/src/ui/manage_folders.rs:141
+#: app/src/ui/manage_folders.rs:181
 msgid ""
 "The sidebar shows the folders you subscribe to. Inbox and the folders mail "
 "is filed into always show."
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:158
+#: app/src/ui/manage_folders.rs:198
 #, fuzzy
 #| msgid "Rules for {account}"
 msgid "Folders of {account}"
 msgstr "{account} 的规则"
 
-#: app/src/ui/manage_folders.rs:236
+#: app/src/ui/manage_folders.rs:296
+msgid "Hide the folders in {folder}"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:297
+#, fuzzy
+#| msgid "Show the calendar"
+msgid "Show the folders in {folder}"
+msgstr "显示日历"
+
+#: app/src/ui/manage_folders.rs:315
 msgid "{folder}, always shown"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:272 app/src/ui/preferences.rs:631
+#: app/src/ui/manage_folders.rs:351 app/src/ui/preferences.rs:631
 msgid "This account is not syncing yet"
 msgstr "此账号尚未开始同步"
 
-#: app/src/ui/manage_folders.rs:327
+#: app/src/ui/manage_folders.rs:453
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the subscription: {reason}"
