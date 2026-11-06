@@ -327,3 +327,50 @@ async fn subscribing_in_manage_folders_brings_the_folder_to_the_sidebar() {
     h.sync.set_folder_subscribed("Old", false).await.unwrap();
     assert!(hidden(&h).await.contains(&("Old".into(), true)));
 }
+
+/// The hourly relisting resumes from the last run's hour, so a start
+/// within it would keep the folders it stored before.
+#[tokio::test]
+async fn a_start_within_the_hour_lists_the_folders_once() {
+    use std::time::Duration;
+    use tokio::time::Instant;
+
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+    let (mut next_poll, mut next_prune, mut stagger) = (
+        Instant::now(),
+        Instant::now() + Duration::from_secs(3600),
+        Duration::ZERO,
+    );
+    let config = crate::EngineConfig::default();
+
+    crate::engine::tick(
+        &h.sync,
+        &mut next_poll,
+        &mut next_prune,
+        &mut stagger,
+        &config,
+    )
+    .await
+    .unwrap();
+    assert!(hidden(&h).await.contains(&("Old".into(), true)));
+
+    let lists =
+        |h: &crate::tests::ImapHarness| h.imap.calls().iter().filter(|c| *c == "list").count();
+    let before = lists(&h);
+    next_poll = Instant::now();
+    crate::engine::tick(
+        &h.sync,
+        &mut next_poll,
+        &mut next_prune,
+        &mut stagger,
+        &config,
+    )
+    .await
+    .unwrap();
+    assert_eq!(lists(&h), before, "once a run");
+}
