@@ -2,7 +2,7 @@
 //! content filter, identities, and the engine event loop.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -76,6 +76,9 @@ pub struct App {
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     /// Where the person put each account's labels among their siblings.
     label_order: RefCell<HashMap<AccountId, HashMap<String, i64>>>,
+    /// The labels each account keeps out of the sidebar, by id, as
+    /// `reload_accounts` last read them.
+    hidden_labels: RefCell<HashMap<AccountId, BTreeSet<String>>>,
     /// Each account's consent, read in the same pass as `accounts` so the
     /// Grant Access banner never waits on a round trip of its own.
     consent: RefCell<HashMap<AccountId, accounts::Consent>>,
@@ -193,6 +196,7 @@ impl App {
             account_waiters: RefCell::new(Vec::new()),
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
+            hidden_labels: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
             google_sign_ins: RefCell::default(),
             through_browser: RefCell::default(),
@@ -849,6 +853,15 @@ impl App {
         self.labels.borrow().clone()
     }
 
+    /// The labels of `account_id` the sidebar leaves out, by id.
+    pub fn hidden_labels(&self, account_id: AccountId) -> BTreeSet<String> {
+        self.hidden_labels
+            .borrow()
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
     /// One account's labels, system labels included.
     pub fn labels_of(&self, account_id: AccountId) -> Vec<Label> {
         self.labels
@@ -876,11 +889,19 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (mut loaded, order, consent, google_sign_ins, through_browser, microsoft_owners) = self
+        let (
+            mut loaded,
+            (order, hidden),
+            consent,
+            google_sign_ins,
+            through_browser,
+            microsoft_owners,
+        ) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
                 let mut order = HashMap::new();
+                let mut hidden = HashMap::new();
                 let mut through_browser = HashSet::new();
                 let mut microsoft_owners = HashMap::new();
                 for account in accounts::list_accounts(c)? {
@@ -889,6 +910,7 @@ impl App {
                     }
                     let account_labels = labels::list_labels(c, account.id)?;
                     order.insert(account.id, labels::positions(c, account.id)?);
+                    hidden.insert(account.id, labels::hidden_ids(c, account.id)?);
                     if account.provider == Provider::Jmap
                         && mailrs_store::jmap::load(c, account.id)?
                             .is_some_and(|saved| saved.auth == mailrs_store::jmap::JmapAuth::OAuth)
@@ -901,7 +923,7 @@ impl App {
                 let google_sign_ins = accounts::google_sign_ins(c)?;
                 Ok((
                     out,
-                    order,
+                    (order, hidden),
                     consent,
                     google_sign_ins,
                     through_browser,
@@ -911,6 +933,7 @@ impl App {
             .await?;
         loaded.sort_by_key(|(account, _)| self.settings.borrow().account_rank(&account.email));
         *self.label_order.borrow_mut() = order;
+        *self.hidden_labels.borrow_mut() = hidden;
         *self.through_browser.borrow_mut() = through_browser;
         *self.microsoft_owners.borrow_mut() = microsoft_owners;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
