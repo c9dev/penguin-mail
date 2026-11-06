@@ -408,7 +408,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             .known()
             .folders
             .iter()
-            .filter(|f| !f.parent_only)
+            // A hidden folder has no row to count for, and on an account
+            // with hundreds of folders asking each one costs a round trip
+            // apiece.
+            .filter(|f| !f.parent_only && !f.hidden)
             .map(|f| (f.id.clone(), f.role))
             .collect();
         let mut counts = HashMap::new();
