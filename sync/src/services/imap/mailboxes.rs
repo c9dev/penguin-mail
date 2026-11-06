@@ -252,6 +252,34 @@ pub(super) fn read_listing(
     (folders, remote)
 }
 
+/// The listing with every missing parent filled in as one that holds no
+/// mail. RFC 3501 lets a server leave a parent out of `LIST "" "*"`, and
+/// Dovecot does for a shared namespace: `shared/lists/teams/kites`
+/// comes without `shared` or `shared/lists/teams`. Without them the
+/// sidebar has no row to nest the child under, and it lands under
+/// whichever folder precedes it.
+pub(super) fn with_parents(mut listed: Vec<Listed>) -> Vec<Listed> {
+    let known: std::collections::HashSet<String> = listed.iter().map(|l| l.name.clone()).collect();
+    let mut added = std::collections::BTreeSet::new();
+    for l in &listed {
+        let Some(delimiter) = l.delimiter else {
+            continue;
+        };
+        for (at, _) in l.name.match_indices(delimiter) {
+            let parent = &l.name[..at];
+            if !parent.is_empty() && !known.contains(parent) {
+                added.insert((parent.to_string(), delimiter));
+            }
+        }
+    }
+    listed.extend(
+        added
+            .into_iter()
+            .map(|(name, delimiter)| Listed::new(name, Some(delimiter), None, true)),
+    );
+    listed
+}
+
 /// Hides every folder the person does not subscribe to, as Thunderbird
 /// does, with two exceptions. A role folder shows whatever its
 /// subscription, since the app files mail into it. A folder above one
@@ -280,7 +308,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// Lists the server's mailboxes and remembers them, so the calls that
     /// answer at once know the roles and the delimiter.
     pub(super) async fn list_mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
-        let listed = self.api.list().await?;
+        let listed = with_parents(self.api.list().await?);
         let (folders, remote) = read_listing(&listed, self.settings.all_folders);
         let delimiter = listed.iter().find_map(|l| l.delimiter);
         let mut known = self.known();
@@ -350,7 +378,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
 
     /// Every folder on the server, asked afresh, in the server's order.
     pub(crate) async fn subscriptions(&self) -> Result<Vec<FolderSubscription>, BackendError> {
-        let listed = self.api.list().await?;
+        let listed = with_parents(self.api.list().await?);
         let (folders, _) = read_listing(&listed, self.settings.all_folders);
         Ok(folders
             .into_iter()
@@ -390,7 +418,7 @@ mod tests {
     use mailrs_domain::{MailboxKind, Role};
     use mailrs_imap::{Listed, SpecialUse};
 
-    use super::{display_name, read_listing, server_name};
+    use super::{display_name, read_listing, server_name, with_parents};
 
     fn listed(name: &str, delimiter: char, special_use: Option<SpecialUse>) -> Listed {
         Listed::new(name, Some(delimiter), special_use, false)
@@ -515,6 +543,54 @@ mod tests {
         assert_eq!(display_name("Reports/Q1", Some('/')), "Reports/Q1");
         assert_eq!(server_name("Entwürfe/2026", Some('.')), "Entw&APw-rfe.2026");
         assert_eq!(server_name("R&D", Some('/')), "R&-D");
+    }
+
+    #[test]
+    fn an_account_set_to_list_every_folder_hides_none() {
+        let listing = [listed("INBOX", '/', None), listed("Old", '/', None)];
+        let remote = read_listing(&listing, true).1;
+        assert!(remote.iter().all(|m| !m.hidden), "{remote:?}");
+    }
+
+    #[test]
+    fn a_parent_the_server_leaves_out_is_filled_in_holding_no_mail() {
+        let listing = with_parents(vec![
+            listed("INBOX", '/', None),
+            listed("shared/lists/dev", '/', None),
+            listed("shared/lists/teams/kites", '/', None).subscribed(true),
+            parent("shared/lists", '/'),
+        ]);
+        let names: Vec<_> = listing
+            .iter()
+            .map(|l| (l.name.as_str(), l.no_select))
+            .collect();
+        assert_eq!(
+            names,
+            [
+                ("INBOX", false),
+                ("shared/lists/dev", false),
+                ("shared/lists/teams/kites", false),
+                ("shared/lists", true),
+                ("shared", true),
+                ("shared/lists/teams", true),
+            ]
+        );
+        let shown: Vec<_> = read_listing(&listing, false)
+            .1
+            .into_iter()
+            .filter(|m| !m.hidden)
+            .map(|m| (m.id, m.kind))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                ("INBOX".to_string(), MailboxKind::System),
+                ("shared/lists/teams/kites".into(), MailboxKind::Folder),
+                ("shared/lists".into(), MailboxKind::Group),
+                ("shared".into(), MailboxKind::Group),
+                ("shared/lists/teams".into(), MailboxKind::Group),
+            ]
+        );
     }
 
     fn hidden(listing: &[Listed]) -> Vec<(String, bool)> {
