@@ -26,9 +26,6 @@ pub struct Capabilities {
     pub special_use: bool,
     /// QUOTA (RFC 9208, RFC 2087): GETQUOTAROOT says how full the account is.
     pub quota: bool,
-    /// LIST-EXTENDED (RFC 5258): one LIST can say which mailboxes the
-    /// person subscribes to, where otherwise an LSUB has to follow it.
-    pub list_extended: bool,
     /// X-GM-EXT-1: Gmail's message and thread ids, labels and raw search.
     /// [`Capabilities::all`] leaves it off, as only Gmail offers it.
     pub gmail: bool,
@@ -45,7 +42,6 @@ impl Capabilities {
             uidplus: true,
             special_use: true,
             quota: true,
-            list_extended: true,
             gmail: false,
         }
     }
@@ -66,7 +62,6 @@ impl Capabilities {
                 "UIDPLUS" => caps.uidplus = true,
                 "SPECIAL-USE" => caps.special_use = true,
                 "QUOTA" => caps.quota = true,
-                "LIST-EXTENDED" => caps.list_extended = true,
                 "X-GM-EXT-1" => caps.gmail = true,
                 atom if atom.starts_with("QUOTA=") => caps.quota = true,
                 _ => {}

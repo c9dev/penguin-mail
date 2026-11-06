@@ -217,29 +217,38 @@ impl<S: Stream> Conn<S> {
     }
 
     /// Every mailbox on the server, each marked with whether the person
-    /// subscribes to it. A server with LIST-EXTENDED says so in the LIST
-    /// itself; any other answers an LSUB after it.
+    /// subscribes to it, from an LSUB after the LIST.
+    ///
+    /// LIST-EXTENDED's `RETURN (SUBSCRIBED)` would say so in one command,
+    /// but a server may answer it with extended data after the name, such
+    /// as `INBOX ("CHILDINFO" ("SUBSCRIBED"))`, which imap-proto cannot
+    /// read, and the whole listing fails. LSUB answers in RFC 3501's shape
+    /// everywhere. A server that refuses LSUB has every mailbox counted as
+    /// subscribed, so nothing goes missing from the sidebar.
     pub(crate) async fn list(&mut self) -> Result<Vec<Listed>, ImapError> {
-        let caps = self.capabilities;
-        let command = match (caps.list_extended, caps.special_use) {
-            (true, true) => "LIST \"\" \"*\" RETURN (SUBSCRIBED SPECIAL-USE)",
-            (true, false) => "LIST \"\" \"*\" RETURN (SUBSCRIBED)",
-            (false, true) => "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
-            (false, false) => "LIST \"\" \"*\"",
+        let command = match self.capabilities.special_use {
+            true => "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
+            false => "LIST \"\" \"*\"",
         };
         let mut reader = ListReader::default();
         self.exec(command, Doing::Other, &mut reader).await?;
-        if caps.list_extended {
-            return Ok(reader.listed);
-        }
         let mut subscribed = SubscribedReader::default();
-        self.exec("LSUB \"\" \"*\"", Doing::Other, &mut subscribed)
-            .await?;
+        let known = match self
+            .exec("LSUB \"\" \"*\"", Doing::Other, &mut subscribed)
+            .await
+        {
+            Ok(()) => Some(subscribed.names),
+            Err(err) if err.drops_connection() => return Err(err),
+            Err(err) => {
+                tracing::debug!(%err, "LSUB refused; every mailbox counts as subscribed");
+                None
+            }
+        };
         Ok(reader
             .listed
             .into_iter()
             .map(|l| {
-                let on = subscribed.names.contains(&l.name);
+                let on = known.as_ref().is_none_or(|names| names.contains(&l.name));
                 l.subscribed(on)
             })
             .collect())
@@ -1801,20 +1810,30 @@ mod tests {
         assert!(seen(&log).contains(&"LIST \"\" \"*\" RETURN (SPECIAL-USE)".to_string()));
     }
 
+    /// The answer RETURN (SUBSCRIBED) drew from a real server, which
+    /// imap-proto cannot read. Asking with LSUB instead never brings it.
     #[tokio::test]
-    async fn a_server_with_list_extended_marks_subscriptions_in_the_list() {
+    async fn a_server_with_list_extended_is_still_asked_with_lsub() {
         let log = log();
         let caps = "IDLE QRESYNC CONDSTORE MOVE UIDPLUS SPECIAL-USE ENABLE LIST-EXTENDED";
         let stream = pipe(
             GREETING,
-            server(caps, log.clone(), |command| match command {
-                c if c.starts_with("LIST") => vec![
-                    "* LIST (\\HasNoChildren \\Subscribed) \"/\" INBOX".into(),
-                    "* LIST (\\HasNoChildren) \"/\" Archive/2019".into(),
-                    "* LIST (\\Subscribed \\Sent) \"/\" Sent".into(),
+            server(caps, log.clone(), |command| {
+                match command {
+                c if c.contains("SUBSCRIBED") => vec![
+                    "* LIST (\\Subscribed \\HasChildren) \"/\" INBOX (\"CHILDINFO\" (\"SUBSCRIBED\"))".into(),
                     "{tag} OK".into(),
                 ],
+                c if c.starts_with("LIST") => vec![
+                    "* LIST (\\HasChildren) \"/\" INBOX".into(),
+                    "* LIST (\\HasNoChildren) \"/\" Archive/2019".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LSUB") => {
+                    vec!["* LSUB () \"/\" INBOX".into(), "{tag} OK".into()]
+                }
                 _ => vec!["{tag} OK".into()],
+            }
             }),
         );
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
@@ -1825,17 +1844,29 @@ mod tests {
             .iter()
             .map(|l| (l.name.as_str(), l.subscribed))
             .collect();
-        assert_eq!(
-            subscribed,
-            [("INBOX", true), ("Archive/2019", false), ("Sent", true)]
+        assert_eq!(subscribed, [("INBOX", true), ("Archive/2019", false)]);
+    }
+
+    #[tokio::test]
+    async fn a_server_that_refuses_lsub_has_every_mailbox_subscribed() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("LIST") => vec![
+                    "* LIST () \"/\" INBOX".into(),
+                    "* LIST () \"/\" Old".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LSUB") => vec!["{tag} NO LSUB is not offered".into()],
+                _ => vec!["{tag} OK".into()],
+            }),
         );
-        assert_eq!(listed[2].special_use, Some(crate::SpecialUse::Sent));
-        let seen = seen(&log);
-        assert!(seen.contains(&"LIST \"\" \"*\" RETURN (SUBSCRIBED SPECIAL-USE)".to_string()));
-        assert!(
-            !seen.iter().any(|line| line.starts_with("LSUB")),
-            "{seen:?}"
-        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        let listed = conn.list().await.unwrap();
+
+        assert!(listed.iter().all(|l| l.subscribed), "{listed:?}");
     }
 
     /// LSUB may name a mailbox that no longer exists (RFC 3501 6.3.9); it
