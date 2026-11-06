@@ -21,6 +21,21 @@ impl AccountSync {
         self.store_listing(remote).await
     }
 
+    /// Every folder on an IMAP account's server, for Manage Folders.
+    pub async fn folder_subscriptions(
+        &self,
+    ) -> Result<Vec<crate::services::imap::FolderSubscription>, SyncError> {
+        Ok(self.services().mail.folder_subscriptions().await?)
+    }
+
+    /// Subscribes to an IMAP folder or lets it go, then lists the folders
+    /// again so the sidebar follows.
+    pub async fn set_folder_subscribed(&self, id: &str, on: bool) -> Result<(), SyncError> {
+        self.services().mail.set_folder_subscribed(id, on).await?;
+        self.refresh_labels().await?;
+        Ok(())
+    }
+
     /// Brings the stored mailboxes in line with `remote`, the server's
     /// listing.
     pub(crate) async fn store_listing(

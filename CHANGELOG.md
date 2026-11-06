@@ -8,6 +8,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### New
 
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
+- Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
 
 ### Improved
 

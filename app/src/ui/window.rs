@@ -3554,6 +3554,12 @@ impl MainWindow {
             Box::new(|win, account| win.switch_to_jmap(account)),
         );
         with_account(
+            "account-manage-folders",
+            Box::new(|win, account| {
+                crate::ui::manage_folders::present(&win.core, &win.window, account)
+            }),
+        );
+        with_account(
             "account-not-downloading",
             Box::new(|win, account| win.show_not_downloading(account)),
         );

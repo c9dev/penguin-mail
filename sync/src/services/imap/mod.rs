@@ -22,6 +22,7 @@ mod writes;
 
 pub use api::{ImapApi, Submit};
 pub use gmail::GmailImap;
+pub use mailboxes::FolderSubscription;
 pub(crate) use outgoing::{envelope_of, submit_over, without_bcc};
 
 use std::collections::{BTreeSet, HashMap, VecDeque};

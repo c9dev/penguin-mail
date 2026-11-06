@@ -4701,8 +4701,8 @@ msgstr "Anthropic-API"
 msgid "Claude Subscription"
 msgstr "Claude-Abonnement"
 
-#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3665
-#: app/src/ui/window.rs:3749
+#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3671
+#: app/src/ui/window.rs:3755
 msgid "Assistant"
 msgstr "Assistent"
 
@@ -5105,7 +5105,7 @@ msgstr "Penguin Mail öffnen"
 msgid "New Message"
 msgstr "Neue Nachricht"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3671
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3677
 msgid "Check for Mail"
 msgstr "Nach E-Mails sehen"
 
@@ -5123,7 +5123,7 @@ msgstr "Neuigkeiten in {version}"
 msgid "Check for Updates"
 msgstr "Nach Aktualisierungen suchen"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3688
+#: app/src/tray.rs:266 app/src/ui/window.rs:3694
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Beenden"
@@ -5144,7 +5144,7 @@ msgstr "Neuigkeiten"
 msgid "Website"
 msgstr "Webseite"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3687
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3693
 msgid "Donate"
 msgstr "Spenden"
 
@@ -5152,7 +5152,7 @@ msgstr "Spenden"
 msgid "License"
 msgstr "Lizenz"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3686
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3692
 msgid "About Penguin Mail"
 msgstr "Info zu Penguin Mail"
 
@@ -5689,13 +5689,13 @@ msgstr "Eine Antwort auf die geöffnete Unterhaltung entwerfen"
 msgid "Choose a Model"
 msgstr "Modell wählen"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3796
-#: app/src/ui/window.rs:3797
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3802
+#: app/src/ui/window.rs:3803
 msgid "Detach"
 msgstr "Abtrennen"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4475
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4481
 msgid "Close"
 msgstr "Schließen"
 
@@ -6786,7 +6786,7 @@ msgstr "Nur Personen, die diesen Kalender ändern können, sehen die Details"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2142
+#: app/src/ui/sidebar.rs:2143
 msgid "Color"
 msgstr "Farbe"
 
@@ -7653,19 +7653,19 @@ msgstr "Zugriff für {account} gewähren"
 msgid "Sign in again to {account}"
 msgstr "Erneut bei {account} anmelden"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2148
 msgid "Sign In Again…"
 msgstr "Erneut anmelden …"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2156
 msgid "Remove Account…"
 msgstr "Konto entfernen …"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2163
 msgid "Account options"
 msgstr "Kontooptionen"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2168
 msgid "Options for {account}"
 msgstr "Optionen für {account}"
 
@@ -7694,7 +7694,7 @@ msgid "Original Color"
 msgstr "Ursprüngliche Farbe"
 
 #: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2132
+#: app/src/ui/sidebar.rs:2133
 msgid "Rename…"
 msgstr "Umbenennen …"
 
@@ -7821,7 +7821,7 @@ msgstr "{date}, hat Termine"
 msgid "Offline, last updated {time}"
 msgstr "Offline, zuletzt aktualisiert {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2228
 msgid "Offline"
 msgstr "Offline"
 
@@ -8477,7 +8477,7 @@ msgid "Export…"
 msgstr "Exportieren …"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3681
+#: app/src/ui/window.rs:3687
 msgid "Customize Toolbar…"
 msgstr "Werkzeugleiste anpassen…"
 
@@ -9046,7 +9046,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Hide My Email erlauben"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3890
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3896
 msgid "Add an account first"
 msgstr "Fügen Sie zuerst ein Konto hinzu"
 
@@ -9490,7 +9490,51 @@ msgstr ""
 "Dieser Link enthält unsichtbare Zeichen oder Zeichen, die die Textrichtung "
 "ändern."
 
-#: app/src/ui/mod.rs:556
+#: app/src/ui/manage_folders.rs:104 app/src/ui/manage_folders.rs:107
+#, fuzzy
+#| msgid "Search models"
+msgid "Search folders"
+msgstr "Modelle durchsuchen"
+
+#: app/src/ui/manage_folders.rs:123
+#, fuzzy
+#| msgid "Could Not Load the Rules"
+msgid "Could Not List the Folders"
+msgstr "Die Regeln konnten nicht geladen werden"
+
+#: app/src/ui/manage_folders.rs:127
+#, fuzzy
+#| msgid "No Matching Mail"
+msgid "No Matching Folders"
+msgstr "Keine passenden E-Mails"
+
+#: app/src/ui/manage_folders.rs:141
+msgid ""
+"The sidebar shows the folders you subscribe to. Inbox and the folders mail "
+"is filed into always show."
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:158
+#, fuzzy
+#| msgid "Rules for {account}"
+msgid "Folders of {account}"
+msgstr "Regeln für {account}"
+
+#: app/src/ui/manage_folders.rs:236
+msgid "{folder}, always shown"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:272 app/src/ui/preferences.rs:622
+msgid "This account is not syncing yet"
+msgstr "Dieses Konto wird noch nicht abgeglichen"
+
+#: app/src/ui/manage_folders.rs:327
+#, fuzzy
+#| msgid "Could not change the color: {reason}"
+msgid "Could not change the subscription: {reason}"
+msgstr "Die Farbe konnte nicht geändert werden: {reason}"
+
+#: app/src/ui/mod.rs:557
 msgid "Gray"
 msgstr "Grau"
 
@@ -9827,10 +9871,6 @@ msgstr "Signatur für {account}"
 msgid "Import from Gmail"
 msgstr "Aus Gmail importieren"
 
-#: app/src/ui/preferences.rs:622
-msgid "This account is not syncing yet"
-msgstr "Dieses Konto wird noch nicht abgeglichen"
-
 #: app/src/ui/preferences.rs:638
 msgid "Imported the signature from Gmail"
 msgstr "Signatur aus Gmail importiert"
@@ -10145,7 +10185,9 @@ msgid "Show Only Subscribed Folders"
 msgstr ""
 
 #: app/src/ui/preferences.rs:1556
-msgid "Folders you do not subscribe to on the server stay out of the sidebar."
+msgid ""
+"Folders you do not subscribe to stay out of the sidebar. Choose them in "
+"Manage Folders, in the account's menu."
 msgstr ""
 
 #: app/src/ui/preferences.rs:1600
@@ -10269,7 +10311,7 @@ msgstr "{account} nach unten verschieben"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3684 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3690 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Einstellungen"
 
@@ -10723,7 +10765,7 @@ msgid "Mail"
 msgstr "E-Mail"
 
 #: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2592
+#: app/src/ui/sidebar.rs:2595
 msgid "99+"
 msgstr "99+"
 
@@ -10768,12 +10810,12 @@ msgstr[0] "Kalender, {count} wartet auf Ihre Antwort"
 msgstr[1] "Kalender, {count} warten auf Ihre Antwort"
 
 #: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2143
+#: app/src/ui/sidebar.rs:2144
 msgid "Move Up"
 msgstr "Nach oben"
 
 #: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2144
+#: app/src/ui/sidebar.rs:2145
 msgid "Move Down"
 msgstr "Nach unten"
 
@@ -10789,7 +10831,7 @@ msgstr "Automatische Antwort …"
 msgid "Rules…"
 msgstr "Regeln …"
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3674
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3680
 msgid "Hide My Email…"
 msgstr "Hide My Email …"
 
@@ -10805,31 +10847,37 @@ msgstr "Auf diesem Rechner. Postfächer dieses Kontos ein- oder ausblenden"
 msgid "Show or hide this account's mailboxes"
 msgstr "Postfächer dieses Kontos ein- oder ausblenden"
 
-#: app/src/ui/sidebar.rs:2148
+#: app/src/ui/sidebar.rs:2130
+#, fuzzy
+#| msgid "New Folder…"
+msgid "Manage Folders…"
+msgstr "Neuer Ordner …"
+
+#: app/src/ui/sidebar.rs:2149
 msgid "Switch to JMAP…"
 msgstr "Zu JMAP wechseln …"
 
-#: app/src/ui/sidebar.rs:2150
+#: app/src/ui/sidebar.rs:2151
 msgid "Messages That Will Not Download…"
 msgstr "Nachrichten, die sich nicht herunterladen lassen …"
 
-#: app/src/ui/sidebar.rs:2223
+#: app/src/ui/sidebar.rs:2226
 msgid "Sign in again to keep syncing"
 msgstr "Melden Sie sich erneut an, um weiter abzugleichen"
 
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2232
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} antwortet nicht, neuer Versuch läuft"
 
-#: app/src/ui/sidebar.rs:2240
+#: app/src/ui/sidebar.rs:2243
 msgid "The keyring is not responding; retrying"
 msgstr "Der Schlüsselbund antwortet nicht, neuer Versuch läuft"
 
-#: app/src/ui/sidebar.rs:2243
+#: app/src/ui/sidebar.rs:2246
 msgid "Downloading mail"
 msgstr "E-Mails werden heruntergeladen"
 
-#: app/src/ui/sidebar.rs:2247
+#: app/src/ui/sidebar.rs:2250
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Der Abgleich wurde nach einem Fehler beendet; starten Sie Penguin Mail neu, "
@@ -10837,7 +10885,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2254
+#: app/src/ui/sidebar.rs:2257
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11572,64 +11620,64 @@ msgstr "{account} entfernt"
 msgid "Could not remove {account}: {reason}"
 msgstr "{account} konnte nicht entfernt werden: {reason}"
 
-#: app/src/ui/window.rs:3652
+#: app/src/ui/window.rs:3658
 msgid "Refresh"
 msgstr "Aktualisieren"
 
-#: app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3662
 msgid "Show Declined Events"
 msgstr "Abgelehnte Termine anzeigen"
 
-#: app/src/ui/window.rs:3672
+#: app/src/ui/window.rs:3678
 msgid "Add Account…"
 msgstr "Konto hinzufügen …"
 
-#: app/src/ui/window.rs:3673
+#: app/src/ui/window.rs:3679
 msgid "New Smart Mailbox…"
 msgstr "Neues intelligentes Postfach …"
 
-#: app/src/ui/window.rs:3685 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3691 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: app/src/ui/window.rs:3694 app/src/ui/window.rs:3696
+#: app/src/ui/window.rs:3700 app/src/ui/window.rs:3702
 msgid "Main Menu"
 msgstr "Hauptmenü"
 
-#: app/src/ui/window.rs:3761 app/src/ui/window.rs:3762
+#: app/src/ui/window.rs:3767 app/src/ui/window.rs:3768
 msgid "Dock"
 msgstr "Andocken"
 
-#: app/src/ui/window.rs:3891
+#: app/src/ui/window.rs:3897
 msgid "Add a mail account first"
 msgstr "Fügen Sie zuerst ein E-Mail-Konto hinzu"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4142
+#: app/src/ui/window.rs:4148
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Kalender und Kontakte von {account} sind verbunden."
 
-#: app/src/ui/window.rs:4258
+#: app/src/ui/window.rs:4264
 msgid "Open a message from the person first"
 msgstr "Öffnen Sie zuerst eine Nachricht dieser Person"
 
-#: app/src/ui/window.rs:4358
+#: app/src/ui/window.rs:4364
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail zeigt die neue Sprache nach einem Neustart an"
 
-#: app/src/ui/window.rs:4360 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4366 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Neu starten"
 
-#: app/src/ui/window.rs:4424
+#: app/src/ui/window.rs:4430
 msgid "Show Rules"
 msgstr "Regeln anzeigen"
 
-#: app/src/ui/window.rs:4450
+#: app/src/ui/window.rs:4456
 msgid "Messages That Will Not Download"
 msgstr "Nachrichten, die sich nicht herunterladen lassen"
 
-#: app/src/ui/window.rs:4452
+#: app/src/ui/window.rs:4458
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."

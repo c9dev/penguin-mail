@@ -286,3 +286,44 @@ async fn unread_counts_ask_only_the_folders_that_show() {
     assert!(calls.contains(&"unread Lists".to_string()), "{calls:?}");
     assert!(!calls.contains(&"unread Old".to_string()), "{calls:?}");
 }
+
+#[tokio::test]
+async fn manage_folders_lists_every_folder_with_its_subscription() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.extend(["Old", "Sent"].map(String::from));
+    });
+
+    let folders = h.sync.folder_subscriptions().await.unwrap();
+
+    let old = folders.iter().find(|f| f.id == "Old").unwrap();
+    assert!(!old.subscribed && !old.always_shown);
+    let sent = folders.iter().find(|f| f.id == "Sent").unwrap();
+    assert!(!sent.subscribed && sent.always_shown, "{sent:?}");
+}
+
+#[tokio::test]
+async fn subscribing_in_manage_folders_brings_the_folder_to_the_sidebar() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+    h.sync.refresh_labels().await.unwrap();
+    assert!(hidden(&h).await.contains(&("Old".into(), true)));
+    h.drain();
+
+    h.sync.set_folder_subscribed("Old", true).await.unwrap();
+
+    assert!(hidden(&h).await.contains(&("Old".into(), false)));
+    assert!(
+        h.drain()
+            .iter()
+            .any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })),
+        "the sidebar hears of it"
+    );
+
+    h.sync.set_folder_subscribed("Old", false).await.unwrap();
+    assert!(hidden(&h).await.contains(&("Old".into(), true)));
+}
