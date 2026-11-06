@@ -3797,8 +3797,8 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2939
-#: app/src/ui/window.rs:2962
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2986
+#: app/src/ui/window.rs:3009
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -4057,7 +4057,7 @@ msgid "Set up a different project"
 msgstr ""
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3292
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3339
 msgid "Set up your own Google project"
 msgstr ""
 
@@ -4232,8 +4232,8 @@ msgstr ""
 msgid "Claude Subscription"
 msgstr ""
 
-#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3671
-#: app/src/ui/window.rs:3755
+#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3718
+#: app/src/ui/window.rs:3802
 msgid "Assistant"
 msgstr ""
 
@@ -4618,7 +4618,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3677
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3724
 msgid "Check for Mail"
 msgstr ""
 
@@ -4636,7 +4636,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3694
+#: app/src/tray.rs:266 app/src/ui/window.rs:3741
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr ""
@@ -4657,7 +4657,7 @@ msgstr ""
 msgid "Website"
 msgstr ""
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3693
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3740
 msgid "Donate"
 msgstr ""
 
@@ -4665,7 +4665,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3692
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3739
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -5174,13 +5174,13 @@ msgstr ""
 msgid "Choose a Model"
 msgstr ""
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3802
-#: app/src/ui/window.rs:3803
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3849
+#: app/src/ui/window.rs:3850
 msgid "Detach"
 msgstr ""
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4481
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4528
 msgid "Close"
 msgstr ""
 
@@ -5392,7 +5392,7 @@ msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3435
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3482
 msgid "Remove"
 msgstr ""
 
@@ -7848,7 +7848,7 @@ msgid "Export…"
 msgstr ""
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3687
+#: app/src/ui/window.rs:3734
 msgid "Customize Toolbar…"
 msgstr ""
 
@@ -8387,7 +8387,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3896
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3943
 msgid "Add an account first"
 msgstr ""
 
@@ -9570,7 +9570,7 @@ msgstr ""
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3690 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3737 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr ""
 
@@ -10053,7 +10053,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3680
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3727
 msgid "Hide My Email…"
 msgstr ""
 
@@ -10595,7 +10595,7 @@ msgstr ""
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3054
+#: app/src/ui/window.rs:362 app/src/ui/window.rs:3101
 msgid "{account} is signed in again."
 msgstr ""
 
@@ -10753,122 +10753,126 @@ msgstr ""
 msgid "Move to Inbox"
 msgstr ""
 
-#: app/src/ui/window.rs:2627
+#: app/src/ui/window.rs:2600 app/src/ui/window.rs:2605
+msgid "Search all folders"
+msgstr ""
+
+#: app/src/ui/window.rs:2674
 msgid "Select mail from one account to tag it."
 msgstr ""
 
-#: app/src/ui/window.rs:2639
+#: app/src/ui/window.rs:2686
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr ""
 
-#: app/src/ui/window.rs:2732
+#: app/src/ui/window.rs:2779
 msgid "Add an account to reply or forward"
 msgstr ""
 
-#: app/src/ui/window.rs:2837
+#: app/src/ui/window.rs:2884
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2918
+#: app/src/ui/window.rs:2965
 msgid "The server had already sent this message."
 msgstr ""
 
-#: app/src/ui/window.rs:2923
+#: app/src/ui/window.rs:2970
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 
-#: app/src/ui/window.rs:3239
+#: app/src/ui/window.rs:3286
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:3289
+#: app/src/ui/window.rs:3336
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:3311
+#: app/src/ui/window.rs:3358
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:3421
+#: app/src/ui/window.rs:3468
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:3432
+#: app/src/ui/window.rs:3479
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:3451
+#: app/src/ui/window.rs:3498
 msgid "Remove Anyway"
 msgstr ""
 
-#: app/src/ui/window.rs:3464
+#: app/src/ui/window.rs:3511
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:3466
+#: app/src/ui/window.rs:3513
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:3658
+#: app/src/ui/window.rs:3705
 msgid "Refresh"
 msgstr ""
 
-#: app/src/ui/window.rs:3662
+#: app/src/ui/window.rs:3709
 msgid "Show Declined Events"
 msgstr ""
 
-#: app/src/ui/window.rs:3678
+#: app/src/ui/window.rs:3725
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:3679
+#: app/src/ui/window.rs:3726
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:3691 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3738 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:3700 app/src/ui/window.rs:3702
+#: app/src/ui/window.rs:3747 app/src/ui/window.rs:3749
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:3767 app/src/ui/window.rs:3768
+#: app/src/ui/window.rs:3814 app/src/ui/window.rs:3815
 msgid "Dock"
 msgstr ""
 
-#: app/src/ui/window.rs:3897
+#: app/src/ui/window.rs:3944
 msgid "Add a mail account first"
 msgstr ""
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4148
+#: app/src/ui/window.rs:4195
 msgid "The calendar and contacts of {account} are connected."
 msgstr ""
 
-#: app/src/ui/window.rs:4264
+#: app/src/ui/window.rs:4311
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:4364
+#: app/src/ui/window.rs:4411
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:4366 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4413 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
-#: app/src/ui/window.rs:4430
+#: app/src/ui/window.rs:4477
 msgid "Show Rules"
 msgstr ""
 
-#: app/src/ui/window.rs:4456
+#: app/src/ui/window.rs:4503
 msgid "Messages That Will Not Download"
 msgstr ""
 
-#: app/src/ui/window.rs:4458
+#: app/src/ui/window.rs:4505
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
