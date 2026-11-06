@@ -4847,7 +4847,7 @@ msgstr "Mở Penguin Mail"
 msgid "New Message"
 msgstr "Thư mới"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2100 app/src/ui/window.rs:3661
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3661
 msgid "Check for Mail"
 msgstr "Kiểm tra thư"
 
@@ -6494,7 +6494,7 @@ msgstr "Chỉ người có quyền sửa lịch này mới thấy chi tiết"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2117
+#: app/src/ui/sidebar.rs:2142
 msgid "Color"
 msgstr "Màu"
 
@@ -7345,19 +7345,19 @@ msgstr "Cấp quyền cho {account}"
 msgid "Sign in again to {account}"
 msgstr "Đăng nhập lại vào {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2122
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
 msgid "Sign In Again…"
 msgstr "Đăng nhập lại…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2130
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
 msgid "Remove Account…"
 msgstr "Xóa tài khoản…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2137
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
 msgid "Account options"
 msgstr "Tùy chọn tài khoản"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2142
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
 msgid "Options for {account}"
 msgstr "Tùy chọn cho {account}"
 
@@ -7386,7 +7386,7 @@ msgid "Original Color"
 msgstr "Màu ban đầu"
 
 #: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2107
+#: app/src/ui/sidebar.rs:2132
 msgid "Rename…"
 msgstr "Đổi tên…"
 
@@ -7507,7 +7507,7 @@ msgstr "{date}, có sự kiện"
 msgid "Offline, last updated {time}"
 msgstr "Ngoại tuyến, cập nhật lần cuối {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2200
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
 msgid "Offline"
 msgstr "Ngoại tuyến"
 
@@ -10240,7 +10240,7 @@ msgstr "Thêm địa chỉ"
 msgid "Default sender"
 msgstr "Người gửi mặc định"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2009
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
 msgid "Signature…"
 msgstr "Chữ ký…"
 
@@ -10311,7 +10311,7 @@ msgid "Mail"
 msgstr "Thư"
 
 #: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2567
+#: app/src/ui/sidebar.rs:2592
 msgid "99+"
 msgstr "99+"
 
@@ -10352,12 +10352,12 @@ msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Lịch, {count} đang chờ bạn trả lời"
 
 #: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2118
+#: app/src/ui/sidebar.rs:2143
 msgid "Move Up"
 msgstr "Chuyển lên"
 
 #: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2119
+#: app/src/ui/sidebar.rs:2144
 msgid "Move Down"
 msgstr "Chuyển xuống"
 
@@ -10365,61 +10365,61 @@ msgstr "Chuyển xuống"
 msgid "Empty Trash…"
 msgstr "Dọn thùng rác…"
 
-#: app/src/ui/sidebar.rs:2008
+#: app/src/ui/sidebar.rs:2033
 msgid "Automatic Reply…"
 msgstr "Trả lời tự động…"
 
-#: app/src/ui/sidebar.rs:2010
+#: app/src/ui/sidebar.rs:2035
 msgid "Rules…"
 msgstr "Quy tắc…"
 
-#: app/src/ui/sidebar.rs:2011 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3664
 msgid "Hide My Email…"
 msgstr "Ẩn email của tôi…"
 
-#: app/src/ui/sidebar.rs:2020
+#: app/src/ui/sidebar.rs:2045
 msgid "On this computer"
 msgstr "Trên máy tính này"
 
-#: app/src/ui/sidebar.rs:2028
+#: app/src/ui/sidebar.rs:2053
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "Trên máy tính này. Hiện hoặc ẩn hộp thư của tài khoản"
 
-#: app/src/ui/sidebar.rs:2029
+#: app/src/ui/sidebar.rs:2054
 msgid "Show or hide this account's mailboxes"
 msgstr "Hiện hoặc ẩn hộp thư của tài khoản này"
 
-#: app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2148
 msgid "Switch to JMAP…"
 msgstr "Chuyển sang JMAP…"
 
-#: app/src/ui/sidebar.rs:2125
+#: app/src/ui/sidebar.rs:2150
 msgid "Messages That Will Not Download…"
 msgstr "Thư không thể tải…"
 
-#: app/src/ui/sidebar.rs:2198
+#: app/src/ui/sidebar.rs:2223
 msgid "Sign in again to keep syncing"
 msgstr "Đăng nhập lại để tiếp tục đồng bộ"
 
-#: app/src/ui/sidebar.rs:2204
+#: app/src/ui/sidebar.rs:2229
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} chưa phản hồi; đang thử lại"
 
-#: app/src/ui/sidebar.rs:2215
+#: app/src/ui/sidebar.rs:2240
 msgid "The keyring is not responding; retrying"
 msgstr "Kho khóa chưa phản hồi; đang thử lại"
 
-#: app/src/ui/sidebar.rs:2218
+#: app/src/ui/sidebar.rs:2243
 msgid "Downloading mail"
 msgstr "Đang tải thư"
 
-#: app/src/ui/sidebar.rs:2222
+#: app/src/ui/sidebar.rs:2247
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "Đồng bộ dừng sau lỗi; khởi động lại Penguin Mail để thử lại"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2254
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."

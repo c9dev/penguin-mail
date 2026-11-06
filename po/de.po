@@ -5105,7 +5105,7 @@ msgstr "Penguin Mail öffnen"
 msgid "New Message"
 msgstr "Neue Nachricht"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2100 app/src/ui/window.rs:3661
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3661
 msgid "Check for Mail"
 msgstr "Nach E-Mails sehen"
 
@@ -6786,7 +6786,7 @@ msgstr "Nur Personen, die diesen Kalender ändern können, sehen die Details"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2117
+#: app/src/ui/sidebar.rs:2142
 msgid "Color"
 msgstr "Farbe"
 
@@ -7653,19 +7653,19 @@ msgstr "Zugriff für {account} gewähren"
 msgid "Sign in again to {account}"
 msgstr "Erneut bei {account} anmelden"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2122
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
 msgid "Sign In Again…"
 msgstr "Erneut anmelden …"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2130
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
 msgid "Remove Account…"
 msgstr "Konto entfernen …"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2137
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
 msgid "Account options"
 msgstr "Kontooptionen"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2142
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
 msgid "Options for {account}"
 msgstr "Optionen für {account}"
 
@@ -7694,7 +7694,7 @@ msgid "Original Color"
 msgstr "Ursprüngliche Farbe"
 
 #: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2107
+#: app/src/ui/sidebar.rs:2132
 msgid "Rename…"
 msgstr "Umbenennen …"
 
@@ -7821,7 +7821,7 @@ msgstr "{date}, hat Termine"
 msgid "Offline, last updated {time}"
 msgstr "Offline, zuletzt aktualisiert {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2200
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
 msgid "Offline"
 msgstr "Offline"
 
@@ -10638,7 +10638,7 @@ msgstr "Adresse hinzufügen"
 msgid "Default sender"
 msgstr "Standardabsender"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2009
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
 msgid "Signature…"
 msgstr "Signatur …"
 
@@ -10709,7 +10709,7 @@ msgid "Mail"
 msgstr "E-Mail"
 
 #: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2567
+#: app/src/ui/sidebar.rs:2592
 msgid "99+"
 msgstr "99+"
 
@@ -10754,12 +10754,12 @@ msgstr[0] "Kalender, {count} wartet auf Ihre Antwort"
 msgstr[1] "Kalender, {count} warten auf Ihre Antwort"
 
 #: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2118
+#: app/src/ui/sidebar.rs:2143
 msgid "Move Up"
 msgstr "Nach oben"
 
 #: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2119
+#: app/src/ui/sidebar.rs:2144
 msgid "Move Down"
 msgstr "Nach unten"
 
@@ -10767,55 +10767,55 @@ msgstr "Nach unten"
 msgid "Empty Trash…"
 msgstr "Papierkorb leeren …"
 
-#: app/src/ui/sidebar.rs:2008
+#: app/src/ui/sidebar.rs:2033
 msgid "Automatic Reply…"
 msgstr "Automatische Antwort …"
 
-#: app/src/ui/sidebar.rs:2010
+#: app/src/ui/sidebar.rs:2035
 msgid "Rules…"
 msgstr "Regeln …"
 
-#: app/src/ui/sidebar.rs:2011 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3664
 msgid "Hide My Email…"
 msgstr "Hide My Email …"
 
-#: app/src/ui/sidebar.rs:2020
+#: app/src/ui/sidebar.rs:2045
 msgid "On this computer"
 msgstr "Auf diesem Rechner"
 
-#: app/src/ui/sidebar.rs:2028
+#: app/src/ui/sidebar.rs:2053
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "Auf diesem Rechner. Postfächer dieses Kontos ein- oder ausblenden"
 
-#: app/src/ui/sidebar.rs:2029
+#: app/src/ui/sidebar.rs:2054
 msgid "Show or hide this account's mailboxes"
 msgstr "Postfächer dieses Kontos ein- oder ausblenden"
 
-#: app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2148
 msgid "Switch to JMAP…"
 msgstr "Zu JMAP wechseln …"
 
-#: app/src/ui/sidebar.rs:2125
+#: app/src/ui/sidebar.rs:2150
 msgid "Messages That Will Not Download…"
 msgstr "Nachrichten, die sich nicht herunterladen lassen …"
 
-#: app/src/ui/sidebar.rs:2198
+#: app/src/ui/sidebar.rs:2223
 msgid "Sign in again to keep syncing"
 msgstr "Melden Sie sich erneut an, um weiter abzugleichen"
 
-#: app/src/ui/sidebar.rs:2204
+#: app/src/ui/sidebar.rs:2229
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} antwortet nicht, neuer Versuch läuft"
 
-#: app/src/ui/sidebar.rs:2215
+#: app/src/ui/sidebar.rs:2240
 msgid "The keyring is not responding; retrying"
 msgstr "Der Schlüsselbund antwortet nicht, neuer Versuch läuft"
 
-#: app/src/ui/sidebar.rs:2218
+#: app/src/ui/sidebar.rs:2243
 msgid "Downloading mail"
 msgstr "E-Mails werden heruntergeladen"
 
-#: app/src/ui/sidebar.rs:2222
+#: app/src/ui/sidebar.rs:2247
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Der Abgleich wurde nach einem Fehler beendet; starten Sie Penguin Mail neu, "
@@ -10823,7 +10823,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2254
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
