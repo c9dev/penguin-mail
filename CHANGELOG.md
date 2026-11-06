@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.
+
 ### Fixed
 
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
