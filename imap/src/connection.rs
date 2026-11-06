@@ -19,7 +19,7 @@ use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SectionsReader, SelectReader,
-    StructureReader,
+    StructureReader, SubscribedReader,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::types::{check_label, label_text};
@@ -216,14 +216,43 @@ impl<S: Stream> Conn<S> {
         self.exec("NOOP", Doing::Other, &mut ()).await
     }
 
+    /// Every mailbox on the server, each marked with whether the person
+    /// subscribes to it. A server with LIST-EXTENDED says so in the LIST
+    /// itself; any other answers an LSUB after it.
     pub(crate) async fn list(&mut self) -> Result<Vec<Listed>, ImapError> {
-        let command = match self.capabilities.special_use {
-            true => "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
-            false => "LIST \"\" \"*\"",
+        let caps = self.capabilities;
+        let command = match (caps.list_extended, caps.special_use) {
+            (true, true) => "LIST \"\" \"*\" RETURN (SUBSCRIBED SPECIAL-USE)",
+            (true, false) => "LIST \"\" \"*\" RETURN (SUBSCRIBED)",
+            (false, true) => "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
+            (false, false) => "LIST \"\" \"*\"",
         };
         let mut reader = ListReader::default();
         self.exec(command, Doing::Other, &mut reader).await?;
-        Ok(reader.listed)
+        if caps.list_extended {
+            return Ok(reader.listed);
+        }
+        let mut subscribed = SubscribedReader::default();
+        self.exec("LSUB \"\" \"*\"", Doing::Other, &mut subscribed)
+            .await?;
+        Ok(reader
+            .listed
+            .into_iter()
+            .map(|l| {
+                let on = subscribed.names.contains(&l.name);
+                l.subscribed(on)
+            })
+            .collect())
+    }
+
+    pub(crate) async fn subscribe(&mut self, mailbox: &str) -> Result<(), ImapError> {
+        let command = format!("SUBSCRIBE {}", quoted(mailbox)?);
+        self.exec(&command, Doing::Other, &mut ()).await
+    }
+
+    pub(crate) async fn unsubscribe(&mut self, mailbox: &str) -> Result<(), ImapError> {
+        let command = format!("UNSUBSCRIBE {}", quoted(mailbox)?);
+        self.exec(&command, Doing::Other, &mut ()).await
     }
 
     pub(crate) async fn unread(&mut self, mailbox: &str) -> Result<u32, ImapError> {
@@ -1770,6 +1799,104 @@ mod tests {
         assert_eq!(listed.len(), 2);
         assert_eq!(listed[1].special_use, Some(crate::SpecialUse::Sent));
         assert!(seen(&log).contains(&"LIST \"\" \"*\" RETURN (SPECIAL-USE)".to_string()));
+    }
+
+    #[tokio::test]
+    async fn a_server_with_list_extended_marks_subscriptions_in_the_list() {
+        let log = log();
+        let caps = "IDLE QRESYNC CONDSTORE MOVE UIDPLUS SPECIAL-USE ENABLE LIST-EXTENDED";
+        let stream = pipe(
+            GREETING,
+            server(caps, log.clone(), |command| match command {
+                c if c.starts_with("LIST") => vec![
+                    "* LIST (\\HasNoChildren \\Subscribed) \"/\" INBOX".into(),
+                    "* LIST (\\HasNoChildren) \"/\" Archive/2019".into(),
+                    "* LIST (\\Subscribed \\Sent) \"/\" Sent".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        let listed = conn.list().await.unwrap();
+
+        let subscribed: Vec<_> = listed
+            .iter()
+            .map(|l| (l.name.as_str(), l.subscribed))
+            .collect();
+        assert_eq!(
+            subscribed,
+            [("INBOX", true), ("Archive/2019", false), ("Sent", true)]
+        );
+        assert_eq!(listed[2].special_use, Some(crate::SpecialUse::Sent));
+        let seen = seen(&log);
+        assert!(seen.contains(&"LIST \"\" \"*\" RETURN (SUBSCRIBED SPECIAL-USE)".to_string()));
+        assert!(
+            !seen.iter().any(|line| line.starts_with("LSUB")),
+            "{seen:?}"
+        );
+    }
+
+    /// LSUB may name a mailbox that no longer exists (RFC 3501 6.3.9); it
+    /// adds nothing to the list.
+    #[tokio::test]
+    async fn without_list_extended_an_lsub_says_which_are_subscribed() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("LIST") => vec![
+                    "* LIST (\\HasNoChildren) \"/\" INBOX".into(),
+                    "* LIST (\\HasNoChildren) \"/\" \"Projekt/B&AOQ-r\"".into(),
+                    "* LIST (\\HasNoChildren) \"/\" Old".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LSUB") => vec![
+                    "* LSUB () \"/\" INBOX".into(),
+                    "* LSUB () \"/\" \"Projekt/B&AOQ-r\"".into(),
+                    "* LSUB () \"/\" Gone".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        let listed = conn.list().await.unwrap();
+
+        let subscribed: Vec<_> = listed
+            .iter()
+            .map(|l| (l.display.as_str(), l.subscribed))
+            .collect();
+        assert_eq!(
+            subscribed,
+            [("INBOX", true), ("Projekt/Bär", true), ("Old", false)]
+        );
+        assert!(seen(&log).contains(&"LSUB \"\" \"*\"".to_string()));
+    }
+
+    #[tokio::test]
+    async fn subscribing_names_the_mailbox_as_the_server_spells_it() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |_| vec!["{tag} OK".into()]),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        conn.subscribe("Projekt/B&AOQ-r").await.unwrap();
+        conn.unsubscribe("Old Mail").await.unwrap();
+
+        let seen = seen(&log);
+        assert!(
+            seen.contains(&"SUBSCRIBE \"Projekt/B&AOQ-r\"".to_string()),
+            "{seen:?}"
+        );
+        assert!(
+            seen.contains(&"UNSUBSCRIBE \"Old Mail\"".to_string()),
+            "{seen:?}"
+        );
     }
 
     #[tokio::test]
