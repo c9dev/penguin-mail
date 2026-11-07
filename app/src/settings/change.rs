@@ -31,6 +31,7 @@ pub enum Change {
     BoldSenders(bool),
     ShowAvatars(bool),
     Toolbar(Option<Vec<crate::ui::toolbar::Slot>>),
+    Sidebar(super::SidebarLayout),
     SoftwareRendering(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
@@ -299,6 +300,7 @@ impl Change {
             Change::Toolbar(slots) => {
                 settings.toolbar = slots.map(|s| crate::ui::toolbar::layout(Some(&s)))
             }
+            Change::Sidebar(layout) => settings.sidebar = layout,
             Change::SoftwareRendering(on) => settings.software_rendering = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
@@ -675,6 +677,7 @@ settable! {
         last_calendar_account,
         folded_calendar_accounts,
         toolbar,
+        sidebar,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -897,6 +900,7 @@ impl Effects {
             bold_senders,
             show_avatars,
             toolbar,
+            sidebar,
             software_rendering,
             color_scheme,
             language,
@@ -1035,6 +1039,7 @@ impl Effects {
                     smart_changed
                         || colors_changed
                         || vips_changed
+                        || *sidebar != before.sidebar
                         || *account_order != before.account_order
                         || *account_names != before.account_names
                 }

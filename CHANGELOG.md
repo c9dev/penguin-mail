@@ -5,8 +5,21 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The smart mailbox folder picker groups folders by account and searches only the accounts chosen for each folder.
+
+- The smart mailbox folder picker shows readable folder names in a wider list.
+- Favorites stay visible when their account is collapsed, and folder moves respect the customized order.
+
+### New
+
+- Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
+- Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
+
 ### Improved
 
+- Customize Mailboxes separates sections into tabs and places available mailboxes beside editable, draggable Favorites.
 
 - On IMAP accounts, the messages of a conversation opened for the first time load faster.
 - An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.

@@ -58,7 +58,9 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Press**: one use of a mail button, a key, a menu item or a drop on a sidebar mailbox, and the plan it comes to: the targets, the mail action and whether Undo keeps it, whether the window moves on first, the question before erasing, the toast's words, or what Delete calls off in Send Later and the Outbox. `ui::window::press::plan` reads the reach, the mailbox and whether the press covers what is shown, rows carried by a drag, or one message, and `press::carry_out` makes the plan happen through `PressEffects`, which the window stands behind and the tests fake. `press::trash_words` words the Delete button from the same table in each mailbox. _Avoid_: click, command, handler.
 
-**Favorites**: the first section of the mail sidebar: All Inboxes, VIPs, Flagged with a row per flag colour in use, and Follow Up. The unified mailboxes that follow sit under Mailboxes, and each account's own under Accounts. `mailrs::ui::sidebar::sections::LAYOUT`. _Avoid_: pinned, starred mailboxes.
+**Favorites**: the first section of the mail sidebar. It starts with All Inboxes, VIPs when present, Flagged with a row per flag colour in use, and Follow Up. A person can add other mailboxes, reorder them and give each a name independent of its name under Mailboxes or Accounts. `mailrs::settings::SidebarLayout`, `mailrs::ui::sidebar`. _Avoid_: pinned, starred mailboxes.
+
+**Sidebar layout**: which sidebar sections, account headings and mailbox rows a person shows, plus their order. Hiding a mailbox in its ordinary section does not remove it from Favorites. `mailrs::settings::SidebarLayout`. _Avoid_: mailbox sync settings.
 
 **Mailbox**: one choice in the sidebar, and what the thread list then shows: a standard mailbox in one account or across all, a person's label, a mail set with no row of its own that the assistant asks for by name, a folder, a search, a smart mailbox, a flag colour, VIP mail, Follow Up, Remind Me, Send Later, or the Outbox. `mailrs_sync::Mailbox`. _Avoid_: view, source, box.
 
@@ -70,7 +72,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Mailbox on screen**: the mailbox the main window lists, the one a search goes back to when it closes, the inbox category, and the list feed that loads its rows. `ui::window::on_screen::OnScreen`. The sidebar, the search bar, a notification, a deleted label and a settings change each make one transition on it, and every transition answers with a `Redraw` naming what it left stale, such as the selection, the title, the buttons that hang on the mailbox, and a first page to list, which the listing run carries out. A conversation in a window of its own keeps the mailbox it was opened from instead. _Avoid_: current mailbox, view state, navigation.
 
-**Smart mailbox**: conditions saved in Preferences that become a query tree, such as "from Ann" and "newer than 7 days". Gmail receives the tree as a search. `mailrs_domain::SmartMailbox`. _Avoid_: saved search, filter.
+**Smart mailbox**: conditions saved in Preferences that become a query tree, such as "from Ann", "newer than 7 days" or "in any of these folders". A folder condition combines its chosen folders with OR and keeps each folder’s account; the account choice limits where the query runs. Older folder choices without an account still apply to every account in scope. `mailrs_domain::SmartMailbox`. _Avoid_: saved search, filter.
 
 **Listing**: one page of a mailbox, with its rows, its unread count, the title and subtitle the header shows, and what an empty list should say. `mailrs_sync::Mailboxes` produces it for the window and the assistant alike, so only it knows which mailboxes the store answers and which Gmail does. _Avoid_: result, page, query.
 

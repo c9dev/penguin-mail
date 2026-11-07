@@ -53,6 +53,7 @@ mod assistant;
 mod attachments;
 mod categories;
 mod column_width;
+mod customize_mailboxes;
 mod detached;
 mod export;
 mod flags;
@@ -3375,6 +3376,19 @@ impl MainWindow {
     }
 
     fn label_order(&self, account_id: AccountId) -> HashMap<String, i64> {
+        if let Some(account) = self.account(account_id)
+            && let Some(ids) = self
+                .settings()
+                .sidebar
+                .label_order
+                .get(&format!("account:{}", account.email.to_ascii_lowercase()))
+        {
+            return ids
+                .iter()
+                .enumerate()
+                .map(|(position, id)| (id.clone(), position as i64))
+                .collect();
+        }
         self.app
             .upgrade()
             .map(|app| app.label_order(account_id))
@@ -3670,6 +3684,10 @@ impl MainWindow {
         second.append(
             Some(&gettext("Customize Toolbar…")),
             Some("win.customize-toolbar"),
+        );
+        second.append(
+            Some(&gettext("Customize Mailboxes…")),
+            Some("win.customize-mailboxes"),
         );
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));

@@ -607,7 +607,7 @@ pub struct Counts {
 /// but charges 5 units for each message's metadata, so the ids are kept
 /// and the metadata is fetched a screen at a time.
 struct RemoteListing {
-    query: SearchQuery,
+    queries: Vec<SearchQuery>,
     accounts: Vec<AccountId>,
     /// Each account's count of mail changes when the search went out. A
     /// change since, such as mail trashed from this folder or into it,
@@ -636,11 +636,11 @@ impl RemoteListing {
     /// enough to answer from.
     fn answers(
         &self,
-        query: &SearchQuery,
+        queries: &[SearchQuery],
         accounts: &[AccountId],
         changes: &[Option<u64>],
     ) -> bool {
-        self.query == *query
+        self.queries == queries
             && self.accounts == accounts
             && self.changes == changes
             && self.at.elapsed() < REMOTE_FRESH
@@ -1026,15 +1026,22 @@ impl<A: Accounts> Mailboxes<A> {
                 })
             }
             Mailbox::Smart(smart) => {
-                let Some(query) = smart.query() else {
+                let Some(_) = smart.query() else {
                     return Ok(Listing {
                         notices: vec![gettext("This smart mailbox has no conditions")],
                         ..base
                     });
                 };
-                let only = smart.account.as_deref().and_then(|e| scope.id_of(e));
-                let query = SearchQuery::Tree(query);
-                self.remote(&query, only, scope, view, base, Reading { from, stop })
+                let (targets, queries): (Vec<_>, Vec<_>) = scope
+                    .searched(None)
+                    .into_iter()
+                    .filter_map(|account| {
+                        smart
+                            .query_for(&account.email)
+                            .map(|query| (account, SearchQuery::Tree(query)))
+                    })
+                    .unzip();
+                self.remote_queries(queries, targets, view, base, Reading { from, stop })
                     .await
             }
             Mailbox::Scheduled => self.scheduled(view, base, from).await,
@@ -1493,8 +1500,24 @@ impl<A: Accounts> Mailboxes<A> {
         base: Listing,
         Reading { from, stop }: Reading<'_>,
     ) -> Result<Listing, SyncError> {
-        let limit = view.limit.unwrap_or(REMOTE_LIMIT);
         let targets = scope.searched(only);
+        let queries = vec![query.clone(); targets.len()];
+        self.remote_queries(queries, targets, view, base, Reading { from, stop })
+            .await
+    }
+
+    async fn remote_queries(
+        &self,
+        queries: Vec<SearchQuery>,
+        targets: Vec<&Account>,
+        view: &View,
+        base: Listing,
+        Reading { from, stop }: Reading<'_>,
+    ) -> Result<Listing, SyncError> {
+        if targets.is_empty() {
+            return Ok(base);
+        }
+        let limit = view.limit.unwrap_or(REMOTE_LIMIT);
         let ids: Vec<AccountId> = targets.iter().map(|a| a.id).collect();
         // Read before the search goes out, so a change made while it runs
         // leaves the next listing asking again.
@@ -1506,12 +1529,12 @@ impl<A: Accounts> Mailboxes<A> {
         let kept = {
             let mut held = self.remote.lock().expect("remote listing poisoned");
             match held.take() {
-                Some(listing) if listing.answers(query, &ids, &changes) => Some(listing),
+                Some(listing) if listing.answers(&queries, &ids, &changes) => Some(listing),
                 _ => None,
             }
         };
         let mut listing = kept.unwrap_or_else(|| RemoteListing {
-            query: query.clone(),
+            queries,
             accounts: ids,
             changes,
             at: Instant::now(),
@@ -1562,9 +1585,9 @@ impl<A: Accounts> Mailboxes<A> {
         let loads = targets
             .iter()
             .zip(listing.pages.drain(..))
-            .map(|(account, mut page)| {
+            .zip(&listing.queries)
+            .map(|((account, mut page), query)| {
                 let sync = self.accounts.account(account.id);
-                let query = listing.query.clone();
                 async move {
                     let Some(sync) = sync else {
                         return Ok((page, false));
@@ -1574,7 +1597,7 @@ impl<A: Accounts> Mailboxes<A> {
                         return Ok((page, store_only));
                     }
                     if !page.listed {
-                        let found = sync.search_listing(&query, limit).await?;
+                        let found = sync.search_listing(query, limit).await?;
                         page.ids = found.refs;
                         store_only = found.store_only;
                         page.listed = true;

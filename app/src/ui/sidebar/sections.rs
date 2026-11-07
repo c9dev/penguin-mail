@@ -46,6 +46,21 @@ pub enum Place {
     Folder(Folder),
 }
 
+impl Place {
+    pub fn key(self) -> String {
+        match self {
+            Place::Unified(which) => format!("all:{}", which.key()),
+            Place::Vips => "vips".into(),
+            Place::FlagColors => "flag-colors".into(),
+            Place::Outbox => "outbox".into(),
+            Place::Scheduled => "scheduled".into(),
+            Place::Reminders => "reminders".into(),
+            Place::FollowUp => "follow-up".into(),
+            Place::Folder(folder) => format!("all:{folder:?}"),
+        }
+    }
+}
+
 /// The unified mailboxes under their two headings, in order.
 pub const LAYOUT: [(Section, &[Place]); 2] = [
     (

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::query::{self, MEGABYTE, Query, Term};
 use crate::translate::gettext;
+use crate::{MailSet, Role};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SmartMailbox {
@@ -40,6 +41,7 @@ pub enum Field {
     Subject,
     Words,
     Label,
+    InMailbox,
     /// Received within this many days.
     NewerThanDays,
     /// Bigger than this many megabytes.
@@ -50,12 +52,13 @@ pub enum Field {
 }
 
 impl Field {
-    pub const ALL: [Field; 10] = [
+    pub const ALL: [Field; 11] = [
         Field::From,
         Field::To,
         Field::Subject,
         Field::Words,
         Field::Label,
+        Field::InMailbox,
         Field::NewerThanDays,
         Field::LargerThanMb,
         Field::HasAttachment,
@@ -71,6 +74,7 @@ impl Field {
             Field::Subject => gettext("Subject contains"),
             Field::Words => gettext("Message contains"),
             Field::Label => gettext("Has label"),
+            Field::InMailbox => gettext("In mailbox"),
             Field::NewerThanDays => gettext("Received in the last (days)"),
             Field::LargerThanMb => gettext("Larger than (MB)"),
             Field::HasAttachment => gettext("Has an attachment"),
@@ -85,11 +89,80 @@ impl Field {
     }
 }
 
+/// A saved folder choice. Older choices apply to every account in scope.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MailboxChoice {
+    AllAccounts(String),
+    InAccount { account: String, mailbox: String },
+}
+
+impl MailboxChoice {
+    pub fn parse(value: &str) -> Vec<Self> {
+        serde_json::from_str(value).unwrap_or_else(|_| {
+            (!value.trim().is_empty())
+                .then(|| Self::AllAccounts(value.to_string()))
+                .into_iter()
+                .collect()
+        })
+    }
+
+    pub fn account(&self) -> Option<&str> {
+        match self {
+            Self::AllAccounts(_) => None,
+            Self::InAccount { account, .. } => Some(account),
+        }
+    }
+
+    pub fn mailbox(&self) -> &str {
+        match self {
+            Self::AllAccounts(mailbox) | Self::InAccount { mailbox, .. } => mailbox,
+        }
+    }
+}
+
 impl Condition {
     /// The condition as a query term, or `None` when the value is missing
     /// or unusable. Text keeps what the person typed, trimmed.
-    fn term(&self) -> Option<Term> {
+    fn query(&self, account: Option<&str>) -> Option<Query> {
         let value = self.value.trim();
+        if self.field == Field::InMailbox {
+            let selected = MailboxChoice::parse(value);
+            let mut folders: Vec<Query> = selected
+                .into_iter()
+                .filter(|choice| {
+                    account.is_none_or(|email| {
+                        choice
+                            .account()
+                            .is_none_or(|a| a.eq_ignore_ascii_case(email))
+                    })
+                })
+                .filter_map(|choice| {
+                    let name = choice.mailbox().trim();
+                    if name.is_empty() {
+                        return None;
+                    }
+                    let term = match name.strip_prefix("role:") {
+                        Some("inbox") => Term::In(MailSet::Role(Role::Inbox)),
+                        Some("sent") => Term::In(MailSet::Role(Role::Sent)),
+                        Some("drafts") => Term::In(MailSet::Role(Role::Drafts)),
+                        Some("archive") => Term::In(MailSet::Role(Role::Archive)),
+                        Some("junk") => Term::In(MailSet::Role(Role::Junk)),
+                        Some("trash") => Term::In(MailSet::Role(Role::Trash)),
+                        Some("all") => Term::In(MailSet::Role(Role::All)),
+                        _ => Term::MailboxNamed(
+                            name.strip_prefix("label:").unwrap_or(name).to_string(),
+                        ),
+                    };
+                    Some(Query::Term(term))
+                })
+                .collect();
+            return match folders.len() {
+                0 => None,
+                1 => folders.pop(),
+                _ => Some(Query::Or(folders)),
+            };
+        }
         // Quotes and parentheses alone name nothing to search for.
         let text = || (!query::plain(value).is_empty()).then(|| value.to_string());
         // A label name keeps its inner spaces, which Gmail spells as
@@ -101,30 +174,54 @@ impl Condition {
                 .then(|| value.to_string())
         };
         let number = || value.parse::<u32>().ok().filter(|n| *n > 0);
-        Some(match self.field {
+        Some(Query::Term(match self.field {
             Field::From => Term::From(text()?),
             Field::To => Term::To(text()?),
             Field::Subject => Term::Subject(text()?),
             Field::Words => Term::Words(text()?),
             Field::Label => Term::MailboxNamed(label()?),
+            Field::InMailbox => unreachable!(),
             Field::NewerThanDays => Term::NewerThan(number()?),
             Field::LargerThanMb => Term::Larger(i64::from(number()?) * MEGABYTE),
             Field::HasAttachment => Term::HasAttachment,
             Field::Unread => Term::Unread,
             Field::Flagged => Term::Flagged,
-        })
+        }))
     }
 }
 
 impl SmartMailbox {
-    /// The query for this mailbox, or `None` with no usable condition.
+    /// A query without account restrictions, for validating conditions.
+    /// Use `query_for` when searching an account.
     pub fn query(&self) -> Option<Query> {
-        let mut terms: Vec<Query> = self
-            .conditions
-            .iter()
-            .filter_map(Condition::term)
-            .map(Query::Term)
-            .collect();
+        self.query_in(None)
+    }
+
+    /// Resolves folder choices before sending a query to one account.
+    /// No query means this account cannot match the saved conditions.
+    pub fn query_for(&self, account: &str) -> Option<Query> {
+        if self
+            .account
+            .as_deref()
+            .is_some_and(|a| !a.eq_ignore_ascii_case(account))
+        {
+            return None;
+        }
+        self.query_in(Some(account))
+    }
+
+    fn query_in(&self, account: Option<&str>) -> Option<Query> {
+        let mut terms = Vec::new();
+        for condition in &self.conditions {
+            if let Some(query) = condition.query(account) {
+                terms.push(query);
+            } else if self.match_all
+                && condition.field == Field::InMailbox
+                && condition.query(None).is_some()
+            {
+                return None;
+            }
+        }
         match terms.len() {
             0 => None,
             1 => terms.pop(),
@@ -180,6 +277,102 @@ mod tests {
         let subject = Some(Query::Term(Term::Subject("quarterly report".into())));
         assert_eq!(mailbox(true, one.clone()).query(), subject);
         assert_eq!(mailbox(false, one).query(), subject);
+    }
+
+    #[test]
+    fn an_account_can_match_its_received_and_sent_mail() {
+        let mut smart = mailbox(
+            true,
+            vec![
+                cond(
+                    Field::InMailbox,
+                    "[\"role:inbox\",\"role:sent\",\"label:Work/Clients\"]",
+                ),
+                cond(Field::Unread, ""),
+            ],
+        );
+        smart.account = Some("ann@example.com".into());
+        assert_eq!(
+            smart.query(),
+            Some(Query::And(vec![
+                Query::Or(vec![
+                    Query::is_in(MailSet::Role(Role::Inbox)),
+                    Query::is_in(MailSet::Role(Role::Sent)),
+                    Query::Term(Term::MailboxNamed("Work/Clients".into())),
+                ]),
+                Query::Term(Term::Unread),
+            ]))
+        );
+    }
+
+    #[test]
+    fn a_folder_name_keeps_its_own_label_prefix() {
+        assert_eq!(
+            mailbox(true, vec![cond(Field::InMailbox, "[\"label:label:Work\"]")],).query(),
+            Some(Query::Term(Term::MailboxNamed("label:Work".into())))
+        );
+    }
+
+    #[test]
+    fn folder_choices_keep_their_accounts_in_all_and_any_conditions() {
+        let folders = cond(
+            Field::InMailbox,
+            r#"[{"account":"ann@example.com","mailbox":"role:inbox"},{"account":"bob@example.com","mailbox":"role:sent"},{"account":"ann@example.com","mailbox":"label:Clients"}]"#,
+        );
+        let mut smart = mailbox(true, vec![folders, cond(Field::Unread, "")]);
+        assert_eq!(
+            smart.query_for("ANN@example.com"),
+            Some(Query::And(vec![
+                Query::Or(vec![
+                    Query::is_in(MailSet::Role(Role::Inbox)),
+                    Query::term(Term::MailboxNamed("Clients".into()))
+                ]),
+                Query::term(Term::Unread),
+            ]))
+        );
+        assert_eq!(
+            smart.query_for("bob@example.com"),
+            Some(Query::And(vec![
+                Query::is_in(MailSet::Role(Role::Sent)),
+                Query::term(Term::Unread)
+            ]))
+        );
+        assert_eq!(smart.query_for("other@example.com"), None);
+        smart.match_all = false;
+        assert_eq!(
+            smart.query_for("other@example.com"),
+            Some(Query::term(Term::Unread))
+        );
+        smart.account = Some("ann@example.com".into());
+        assert_eq!(smart.query_for("bob@example.com"), None);
+    }
+
+    #[test]
+    fn separate_folder_conditions_do_not_drop_a_nonmatching_account() {
+        let smart = mailbox(
+            true,
+            vec![
+                cond(
+                    Field::InMailbox,
+                    r#"[{"account":"ann@example.com","mailbox":"role:inbox"}]"#,
+                ),
+                cond(
+                    Field::InMailbox,
+                    r#"[{"account":"bob@example.com","mailbox":"role:inbox"}]"#,
+                ),
+            ],
+        );
+        assert_eq!(smart.query_for("ann@example.com"), None);
+        assert_eq!(smart.query_for("bob@example.com"), None);
+        let legacy = mailbox(
+            true,
+            vec![cond(Field::InMailbox, r#"["role:inbox","label:Clients"]"#)],
+        );
+        assert_eq!(
+            legacy.query_for("ann@example.com"),
+            legacy.query_for("bob@example.com")
+        );
+        assert!(legacy.query_for("ann@example.com").is_some());
     }
 
     #[test]
