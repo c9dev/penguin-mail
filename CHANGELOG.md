@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The smart mailbox folder picker groups folders by account and searches only the accounts chosen for each folder.
+
 - The smart mailbox folder picker shows readable folder names in a wider list.
 - Favorites stay visible when their account is collapsed, and folder moves respect the customized order.
 

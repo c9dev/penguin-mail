@@ -80,14 +80,18 @@ impl MainWindow {
             self.settings_with(|s| s.smart_mailboxes.iter().find(|m| m.id == id).cloned())
         });
         let accounts: Vec<String> = self.mail_accounts().into_iter().map(|a| a.email).collect();
-        let mailboxes: Vec<String> = self
+        let mailboxes: Vec<(String, Vec<String>)> = self
             .mail_accounts()
             .iter()
-            .flat_map(|a| {
-                self.labels_of(a.id)
-                    .into_iter()
-                    .filter(|label| label.kind == mailrs_domain::LabelKind::User)
-                    .map(|label| label.name)
+            .map(|a| {
+                (
+                    a.email.clone(),
+                    self.labels_of(a.id)
+                        .into_iter()
+                        .filter(|label| label.kind == mailrs_domain::LabelKind::User)
+                        .map(|label| label.name)
+                        .collect(),
+                )
             })
             .collect();
         let weak = Rc::downgrade(self);

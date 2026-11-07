@@ -358,13 +358,21 @@ impl<A: Accounts> Tools<A> {
 
     fn smart_json(&self, mailbox: &SmartMailbox) -> Value {
         let native_search = self.native_search(mailbox.account.as_deref());
+        // One search string cannot express folders belonging to different accounts.
+        let scoped_folders = mailbox.conditions.iter().any(|condition| {
+            condition.field == mailrs_domain::smart::Field::InMailbox
+                && mailrs_domain::smart::MailboxChoice::parse(&condition.value)
+                    .iter()
+                    .any(|choice| choice.account().is_some())
+        });
+        let query = (!scoped_folders).then(|| mailbox.query()).flatten();
         json!({
             "id": mailbox.id,
             "name": mailbox.name,
             "account": mailbox.account,
             "match_all": mailbox.match_all,
             "conditions": mailbox.conditions,
-            "query": mailbox.query().map(|query| query_words(&query, native_search)),
+            "query": query.map(|query| query_words(&query, native_search)),
         })
     }
 

@@ -1235,7 +1235,7 @@ msgstr "Hapus aturan dari {account}?"
 msgid "Load remote images from every sender?"
 msgstr "Muat gambar jarak jauh dari semua pengirim?"
 
-#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:644
+#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:652
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 "Memuat gambar jarak jauh memberi tahu pengirim kapan Anda membuka email "
@@ -1736,59 +1736,59 @@ msgstr[1] ""
 "Hapus folder “{label}” dari {account}? Ada {count} percakapan di dalamnya. "
 "Email dalam folder ikut dihapus."
 
-#: app/src/assistant/run/manage.rs:397
+#: app/src/assistant/run/manage.rs:405
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr ""
 "Hapus kotak surat cerdas “{name}”? Email yang ditampilkannya tetap berada di "
 "tempatnya."
 
-#: app/src/assistant/run/manage.rs:458
+#: app/src/assistant/run/manage.rs:466
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr ""
 "Ganti templat “{name}” dengan templat ini? Templat yang tersimpan akan "
 "hilang."
 
-#: app/src/assistant/run/manage.rs:462
+#: app/src/assistant/run/manage.rs:470
 msgid "Save a template called “{name}”?"
 msgstr "Simpan templat bernama “{name}”?"
 
-#: app/src/assistant/run/manage.rs:500
+#: app/src/assistant/run/manage.rs:508
 msgid "Delete the template “{name}”?"
 msgstr "Hapus templat “{name}”?"
 
-#: app/src/assistant/run/manage.rs:531
+#: app/src/assistant/run/manage.rs:539
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "Tambahkan {contact} ke kontak {account}?"
 
-#: app/src/assistant/run/manage.rs:575
+#: app/src/assistant/run/manage.rs:583
 msgid "this contact"
 msgstr "kontak ini"
 
-#: app/src/assistant/run/manage.rs:587
+#: app/src/assistant/run/manage.rs:595
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "Ubah {contact} dalam kontak {account}?"
 
-#: app/src/assistant/run/manage.rs:634
+#: app/src/assistant/run/manage.rs:642
 msgid "Always load images from anyone at {domain}?"
 msgstr "Selalu muat gambar dari siapa pun di {domain}?"
 
-#: app/src/assistant/run/manage.rs:638
+#: app/src/assistant/run/manage.rs:646
 msgid "Always load images from {sender}?"
 msgstr "Selalu muat gambar dari {sender}?"
 
-#: app/src/assistant/run/manage.rs:669
+#: app/src/assistant/run/manage.rs:677
 msgid "Stop loading images from {sender}?"
 msgstr "Berhenti memuat gambar dari {sender}?"
 
-#: app/src/assistant/run/manage.rs:704
+#: app/src/assistant/run/manage.rs:712
 msgid "Export {what} to {file}?"
 msgstr "Ekspor {what} ke {file}?"
 
-#: app/src/assistant/run/manage.rs:710
+#: app/src/assistant/run/manage.rs:718
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "Berkas dengan nama tersebut sudah ada dan akan diganti saat ekspor."
 
-#: app/src/assistant/run/manage.rs:790
+#: app/src/assistant/run/manage.rs:798
 msgid "the message “{subject}”"
 msgstr "pesan “{subject}”"
 
@@ -2659,7 +2659,7 @@ msgstr "Tandai Sudah Dibaca"
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
-#: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:125
+#: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
 #: app/src/ui/window/organize.rs:232
 msgid "Delete"
 msgstr "Hapus"
@@ -5197,11 +5197,11 @@ msgstr "Salin Tautan"
 #: app/src/ui/composer/mod.rs:2455 app/src/ui/composer/mod.rs:2909
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:256 app/src/ui/switch_jmap.rs:174
+#: app/src/ui/smart_editor.rs:293 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
 #: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
 #: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
-#: app/src/ui/window/arrange.rs:165 app/src/ui/window/images.rs:87
+#: app/src/ui/window/arrange.rs:169 app/src/ui/window/images.rs:87
 #: app/src/ui/window/images.rs:157 app/src/ui/window/organize.rs:78
 #: app/src/ui/window/organize.rs:127
 msgid "Cancel"
@@ -5887,8 +5887,8 @@ msgstr "Uji"
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2909
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:250 app/src/ui/templates.rs:234
-#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:165
+#: app/src/ui/smart_editor.rs:287 app/src/ui/templates.rs:234
+#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:169
 #: app/src/ui/window/save_contacts.rs:112
 msgid "Save"
 msgstr "Simpan"
@@ -7058,7 +7058,7 @@ msgid "New Calendar"
 msgstr "Kalender Baru"
 
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
-#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:252
+#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:289
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:378
 msgid "Create"
@@ -10692,7 +10692,7 @@ msgstr "Favorit"
 msgid "Smart Mailboxes"
 msgstr "Kotak Surat Cerdas"
 
-#: app/src/ui/smart_editor.rs:41
+#: app/src/ui/smart_editor.rs:41 app/src/ui/smart_editor.rs:170
 msgid "All Accounts"
 msgstr "Semua Akun"
 
@@ -10720,37 +10720,37 @@ msgstr "Tambahkan Kondisi"
 msgid "All Mail"
 msgstr "Semua Email"
 
-#: app/src/ui/smart_editor.rs:167 app/src/ui/smart_editor.rs:171
+#: app/src/ui/smart_editor.rs:204 app/src/ui/smart_editor.rs:208
 #, fuzzy
 #| msgid "Show Mailboxes"
 msgid "Choose Mailboxes"
 msgstr "Tampilkan Kotak Surat"
 
-#: app/src/ui/smart_editor.rs:206 app/src/ui/smart_editor.rs:212
+#: app/src/ui/smart_editor.rs:243 app/src/ui/smart_editor.rs:249
 msgid "Remove Condition"
 msgstr "Hapus Kondisi"
 
-#: app/src/ui/smart_editor.rs:210
+#: app/src/ui/smart_editor.rs:247
 msgid "Condition"
 msgstr "Kondisi"
 
-#: app/src/ui/smart_editor.rs:211
+#: app/src/ui/smart_editor.rs:248
 msgid "Matches"
 msgstr "Cocok"
 
-#: app/src/ui/smart_editor.rs:268
+#: app/src/ui/smart_editor.rs:305
 msgid "Edit Smart Mailbox"
 msgstr "Edit Kotak Surat Cerdas"
 
-#: app/src/ui/smart_editor.rs:270
+#: app/src/ui/smart_editor.rs:307
 msgid "New Smart Mailbox"
 msgstr "Kotak Surat Cerdas Baru"
 
-#: app/src/ui/smart_editor.rs:299
+#: app/src/ui/smart_editor.rs:336
 msgid "Give the mailbox a name"
 msgstr "Beri nama kotak surat"
 
-#: app/src/ui/smart_editor.rs:303
+#: app/src/ui/smart_editor.rs:340
 msgid "Add a condition with a value"
 msgstr "Tambahkan kondisi dengan nilai"
 
@@ -11490,21 +11490,21 @@ msgstr ""
 "mencoba lagi pada setiap pemeriksaan, kecuali untuk pesan yang terlalu besar "
 "untuk diunduh."
 
-#: app/src/ui/window/arrange.rs:123 app/src/ui/window/organize.rs:230
+#: app/src/ui/window/arrange.rs:127 app/src/ui/window/organize.rs:230
 msgid "Delete “{name}”?"
 msgstr "Hapus “{name}”?"
 
-#: app/src/ui/window/arrange.rs:124
+#: app/src/ui/window/arrange.rs:128
 msgid "Only the smart mailbox goes. The mail it shows stays where it is."
 msgstr ""
 "Hanya kotak surat cerdas yang dihapus. Email yang ditampilkan tetap di "
 "tempatnya."
 
-#: app/src/ui/window/arrange.rs:158
+#: app/src/ui/window/arrange.rs:162
 msgid "Name This Account"
 msgstr "Beri Nama Akun Ini"
 
-#: app/src/ui/window/arrange.rs:160
+#: app/src/ui/window/arrange.rs:164
 msgid ""
 "The sidebar shows the name instead of the address. Leave it empty for the "
 "address."
@@ -13056,81 +13056,81 @@ msgstr "Ubah filter atau muat lebih banyak pesan jika ada."
 msgid "This smart mailbox has no conditions"
 msgstr "Kotak surat cerdas ini tidak memiliki kondisi"
 
-#: sync/src/mailbox.rs:1605
+#: sync/src/mailbox.rs:1628
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Hasil untuk {account} hanya berasal dari email di komputer ini"
 
-#: sync/src/mailbox.rs:1813
+#: sync/src/mailbox.rs:1836
 msgid "Returns {when}"
 msgstr "Kembali {when}"
 
-#: sync/src/mailbox.rs:1856 sync/src/mailbox.rs:1959
+#: sync/src/mailbox.rs:1879 sync/src/mailbox.rs:1982
 msgid "No recipients"
 msgstr "Tidak ada penerima"
 
-#: sync/src/mailbox.rs:1859 sync/src/mailbox.rs:1962
+#: sync/src/mailbox.rs:1882 sync/src/mailbox.rs:1985
 msgid "To {recipients}"
 msgstr "Kepada {recipients}"
 
-#: sync/src/mailbox.rs:1902
+#: sync/src/mailbox.rs:1925
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} belum dibaca · {category}"
 msgstr[1] "{count} belum dibaca · {category}"
 
-#: sync/src/mailbox.rs:1907
+#: sync/src/mailbox.rs:1930
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} belum dibaca"
 msgstr[1] "{count} belum dibaca"
 
-#: sync/src/mailbox.rs:1914
+#: sync/src/mailbox.rs:1937
 msgid "Sent yesterday, no reply yet"
 msgstr "Dikirim kemarin, belum ada balasan"
 
-#: sync/src/mailbox.rs:1916
+#: sync/src/mailbox.rs:1939
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Dikirim {days} hari lalu, belum ada balasan"
 msgstr[1] "Dikirim {days} hari lalu, belum ada balasan"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2023
 msgid "The server has not sent this message yet."
 msgstr "Server belum mengirim pesan ini."
 
-#: sync/src/mailbox.rs:2001
+#: sync/src/mailbox.rs:2024
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail belum memastikan bahwa server menerima pesan ini."
 
-#: sync/src/mailbox.rs:2011
+#: sync/src/mailbox.rs:2034
 msgid "Sends {when}."
 msgstr "Dikirim {when}."
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2035
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Server tetap mengirimnya meskipun Penguin Mail ditutup."
 
-#: sync/src/mailbox.rs:2014
+#: sync/src/mailbox.rs:2037
 msgid "Sends {when}"
 msgstr "Dikirim {when}"
 
-#: sync/src/mailbox.rs:2021
+#: sync/src/mailbox.rs:2044
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Periksa Terkirim. Penguin Mail tidak dapat memastikan pesan terkirim."
 
-#: sync/src/mailbox.rs:2024
+#: sync/src/mailbox.rs:2047
 msgid "Canceled in another app."
 msgstr "Dibatalkan di aplikasi lain."
 
-#: sync/src/mailbox.rs:2026
+#: sync/src/mailbox.rs:2049
 msgid "Not sent"
 msgstr "Tidak dikirim"
 
-#: sync/src/mailbox.rs:2033
+#: sync/src/mailbox.rs:2056
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Mencoba lagi {when}"
 
-#: sync/src/mailbox.rs:2040
+#: sync/src/mailbox.rs:2063
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail berhenti mencoba"
 

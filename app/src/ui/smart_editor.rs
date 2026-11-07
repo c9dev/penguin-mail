@@ -5,14 +5,14 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 
-use mailrs_domain::smart::{Condition, Field, SmartMailbox};
+use mailrs_domain::smart::{Condition, Field, MailboxChoice, SmartMailbox};
 use mailrs_domain::translate::gettext;
 
 struct ConditionRow {
     row: adw::ActionRow,
     field: gtk::DropDown,
     value: gtk::Entry,
-    _choices: Rc<Vec<(String, gtk::CheckButton)>>,
+    _choices: Rc<Vec<(MailboxChoice, gtk::CheckButton)>>,
 }
 
 /// Shows the editor. `accounts` lists addresses for the scope menu;
@@ -21,7 +21,7 @@ pub fn present(
     parent: &impl IsA<gtk::Widget>,
     existing: Option<SmartMailbox>,
     accounts: Vec<String>,
-    mailboxes: Vec<String>,
+    mailboxes: Vec<(String, Vec<String>)>,
     on_save: impl Fn(SmartMailbox) + 'static,
 ) {
     let editing = existing.is_some();
@@ -79,7 +79,7 @@ pub fn present(
         .build();
     conditions.set_header_suffix(Some(&add));
     let rows: Rc<RefCell<Vec<ConditionRow>>> = Rc::new(RefCell::new(Vec::new()));
-    let mut choices = vec![
+    let roles = vec![
         ("role:inbox".to_string(), gettext("Inbox")),
         ("role:sent".to_string(), gettext("Sent")),
         ("role:drafts".to_string(), gettext("Drafts")),
@@ -88,10 +88,25 @@ pub fn present(
         ("role:trash".to_string(), gettext("Trash")),
         ("role:all".to_string(), gettext("All Mail")),
     ];
-    for mailbox in mailboxes {
-        let id = format!("label:{mailbox}");
-        if !choices.iter().any(|(known, _)| known == &id) {
-            choices.push((id, mailbox));
+    let mut choices = Vec::new();
+    for (account, folders) in mailboxes {
+        for (key, title) in &roles {
+            choices.push((
+                MailboxChoice::InAccount {
+                    account: account.clone(),
+                    mailbox: key.clone(),
+                },
+                title.clone(),
+            ));
+        }
+        for folder in folders {
+            let choice = MailboxChoice::InAccount {
+                account: account.clone(),
+                mailbox: format!("label:{folder}"),
+            };
+            if !choices.iter().any(|(known, _)| known == &choice) {
+                choices.push((choice, folder));
+            }
         }
     }
     let add_row = {
@@ -116,19 +131,24 @@ pub fn present(
                 .visible(condition.field != Field::InMailbox)
                 .build();
             let mut choices = choices.clone();
-            let selected: Vec<String> = if condition.field == Field::InMailbox {
-                serde_json::from_str(&condition.value).unwrap_or_else(|_| {
-                    (!condition.value.is_empty())
-                        .then(|| condition.value.clone())
-                        .into_iter()
-                        .collect()
-                })
+            let selected = if condition.field == Field::InMailbox {
+                MailboxChoice::parse(&condition.value)
             } else {
                 Vec::new()
             };
             for id in &selected {
                 if !choices.iter().any(|(known, _)| known == id) {
-                    choices.push((id.clone(), id.clone()));
+                    let title = roles
+                        .iter()
+                        .find(|(key, _)| key == id.mailbox())
+                        .map(|(_, title)| title.clone())
+                        .unwrap_or_else(|| {
+                            id.mailbox()
+                                .strip_prefix("label:")
+                                .unwrap_or(id.mailbox())
+                                .to_string()
+                        });
+                    choices.push((id.clone(), title));
                 }
             }
             let options = gtk::Box::builder()
@@ -139,11 +159,28 @@ pub fn present(
                 .margin_start(12)
                 .margin_end(12)
                 .build();
-            let checks: Rc<Vec<(String, gtk::CheckButton)>> = Rc::new(
+            let mut group = None;
+            let checks: Rc<Vec<(MailboxChoice, gtk::CheckButton)>> = Rc::new(
                 choices
                     .into_iter()
                     .map(|(id, title)| {
+                        let account = id
+                            .account()
+                            .map(str::to_string)
+                            .unwrap_or_else(|| gettext("All Accounts"));
+                        if group.as_ref() != Some(&account) {
+                            let heading = gtk::Label::builder()
+                                .label(&account)
+                                .xalign(0.0)
+                                .margin_top(8)
+                                .css_classes(["heading"])
+                                .build();
+                            options.append(&heading);
+                            group = Some(account.clone());
+                        }
                         let check = gtk::CheckButton::with_label(&title);
+                        crate::ui::name(&check, &format!("{title} ({account})"));
+                        check.set_tooltip_text(Some(&account));
                         check.set_active(selected.contains(&id));
                         options.append(&check);
                         (id, check)
@@ -174,10 +211,10 @@ pub fn present(
                 let chosen = value.clone();
                 check.connect_toggled(move |_| {
                     let Some(checks) = weak.upgrade() else { return };
-                    let ids: Vec<&str> = checks
+                    let ids: Vec<&MailboxChoice> = checks
                         .iter()
                         .filter(|(_, check)| check.is_active())
-                        .map(|(id, _)| id.as_str())
+                        .map(|(id, _)| id)
                         .collect();
                     chosen.set_text(&serde_json::to_string(&ids).unwrap());
                 });
