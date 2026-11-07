@@ -53,6 +53,7 @@ mod assistant;
 mod attachments;
 mod categories;
 mod column_width;
+mod customize_mailboxes;
 mod detached;
 mod export;
 mod flags;
@@ -3670,6 +3671,10 @@ impl MainWindow {
         second.append(
             Some(&gettext("Customize Toolbar…")),
             Some("win.customize-toolbar"),
+        );
+        second.append(
+            Some(&gettext("Customize Mailboxes…")),
+            Some("win.customize-mailboxes"),
         );
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));

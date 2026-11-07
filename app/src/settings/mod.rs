@@ -13,11 +13,13 @@ mod accounts;
 mod change;
 mod file;
 pub mod mcp;
+mod sidebar;
 mod signatures;
 
 pub use accounts::{AccountChoice, AccountDefaults, AccountUse, accounts_for, preferred_calendar};
 pub use change::{AiChange, Change, Effect, Effects, Setting};
 pub use file::{Opened, Saver};
+pub use sidebar::{FavoriteMailbox, SidebarLayout};
 pub use signatures::SignatureMode;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,6 +37,8 @@ pub struct Settings {
     pub show_avatars: bool,
     /// None keeps the default toolbar; an empty list hides all optional buttons.
     pub toolbar: Option<Vec<crate::ui::toolbar::Slot>>,
+    /// Visible sidebar rows and favorites.
+    pub sidebar: SidebarLayout,
     /// Draw messages on the CPU rather than through the GPU, for a
     /// computer whose graphics driver leaves them blank. Read once at
     /// startup, before the web engine starts.
@@ -509,6 +513,7 @@ impl Default for Settings {
             bold_senders: false,
             show_avatars: true,
             toolbar: None,
+            sidebar: SidebarLayout::default(),
             software_rendering: false,
             color_scheme: ColorScheme::System,
             language: String::new(),

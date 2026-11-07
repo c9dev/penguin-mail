@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
+- Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
+
 ### Improved
 
 

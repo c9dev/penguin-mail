@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::query::{self, MEGABYTE, Query, Term};
 use crate::translate::gettext;
+use crate::{MailSet, Role};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SmartMailbox {
@@ -40,6 +41,7 @@ pub enum Field {
     Subject,
     Words,
     Label,
+    InMailbox,
     /// Received within this many days.
     NewerThanDays,
     /// Bigger than this many megabytes.
@@ -50,12 +52,13 @@ pub enum Field {
 }
 
 impl Field {
-    pub const ALL: [Field; 10] = [
+    pub const ALL: [Field; 11] = [
         Field::From,
         Field::To,
         Field::Subject,
         Field::Words,
         Field::Label,
+        Field::InMailbox,
         Field::NewerThanDays,
         Field::LargerThanMb,
         Field::HasAttachment,
@@ -71,6 +74,7 @@ impl Field {
             Field::Subject => gettext("Subject contains"),
             Field::Words => gettext("Message contains"),
             Field::Label => gettext("Has label"),
+            Field::InMailbox => gettext("In mailbox"),
             Field::NewerThanDays => gettext("Received in the last (days)"),
             Field::LargerThanMb => gettext("Larger than (MB)"),
             Field::HasAttachment => gettext("Has an attachment"),
@@ -88,8 +92,37 @@ impl Field {
 impl Condition {
     /// The condition as a query term, or `None` when the value is missing
     /// or unusable. Text keeps what the person typed, trimmed.
-    fn term(&self) -> Option<Term> {
+    fn query(&self) -> Option<Query> {
         let value = self.value.trim();
+        if self.field == Field::InMailbox {
+            let selected: Vec<String> =
+                serde_json::from_str(value).unwrap_or_else(|_| vec![value.to_string()]);
+            let mut folders: Vec<Query> = selected
+                .into_iter()
+                .filter_map(|name| {
+                    let name = name.trim();
+                    if name.is_empty() {
+                        return None;
+                    }
+                    let term = match name.strip_prefix("role:") {
+                        Some("inbox") => Term::In(MailSet::Role(Role::Inbox)),
+                        Some("sent") => Term::In(MailSet::Role(Role::Sent)),
+                        Some("drafts") => Term::In(MailSet::Role(Role::Drafts)),
+                        Some("archive") => Term::In(MailSet::Role(Role::Archive)),
+                        Some("junk") => Term::In(MailSet::Role(Role::Junk)),
+                        Some("trash") => Term::In(MailSet::Role(Role::Trash)),
+                        Some("all") => Term::In(MailSet::Role(Role::All)),
+                        _ => Term::MailboxNamed(name.trim_start_matches("label:").to_string()),
+                    };
+                    Some(Query::Term(term))
+                })
+                .collect();
+            return match folders.len() {
+                0 => None,
+                1 => folders.pop(),
+                _ => Some(Query::Or(folders)),
+            };
+        }
         // Quotes and parentheses alone name nothing to search for.
         let text = || (!query::plain(value).is_empty()).then(|| value.to_string());
         // A label name keeps its inner spaces, which Gmail spells as
@@ -101,18 +134,19 @@ impl Condition {
                 .then(|| value.to_string())
         };
         let number = || value.parse::<u32>().ok().filter(|n| *n > 0);
-        Some(match self.field {
+        Some(Query::Term(match self.field {
             Field::From => Term::From(text()?),
             Field::To => Term::To(text()?),
             Field::Subject => Term::Subject(text()?),
             Field::Words => Term::Words(text()?),
             Field::Label => Term::MailboxNamed(label()?),
+            Field::InMailbox => unreachable!(),
             Field::NewerThanDays => Term::NewerThan(number()?),
             Field::LargerThanMb => Term::Larger(i64::from(number()?) * MEGABYTE),
             Field::HasAttachment => Term::HasAttachment,
             Field::Unread => Term::Unread,
             Field::Flagged => Term::Flagged,
-        })
+        }))
     }
 }
 
@@ -122,8 +156,7 @@ impl SmartMailbox {
         let mut terms: Vec<Query> = self
             .conditions
             .iter()
-            .filter_map(Condition::term)
-            .map(Query::Term)
+            .filter_map(Condition::query)
             .collect();
         match terms.len() {
             0 => None,
@@ -180,6 +213,32 @@ mod tests {
         let subject = Some(Query::Term(Term::Subject("quarterly report".into())));
         assert_eq!(mailbox(true, one.clone()).query(), subject);
         assert_eq!(mailbox(false, one).query(), subject);
+    }
+
+    #[test]
+    fn an_account_can_match_its_received_and_sent_mail() {
+        let mut smart = mailbox(
+            true,
+            vec![
+                cond(
+                    Field::InMailbox,
+                    "[\"role:inbox\",\"role:sent\",\"label:Work/Clients\"]",
+                ),
+                cond(Field::Unread, ""),
+            ],
+        );
+        smart.account = Some("ann@example.com".into());
+        assert_eq!(
+            smart.query(),
+            Some(Query::And(vec![
+                Query::Or(vec![
+                    Query::is_in(MailSet::Role(Role::Inbox)),
+                    Query::is_in(MailSet::Role(Role::Sent)),
+                    Query::Term(Term::MailboxNamed("Work/Clients".into())),
+                ]),
+                Query::Term(Term::Unread),
+            ]))
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! The dialog that creates or edits a smart mailbox.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -12,6 +12,7 @@ struct ConditionRow {
     row: adw::ActionRow,
     field: gtk::DropDown,
     value: gtk::Entry,
+    _choices: Rc<Vec<(String, gtk::CheckButton)>>,
 }
 
 /// Shows the editor. `accounts` lists addresses for the scope menu;
@@ -20,6 +21,7 @@ pub fn present(
     parent: &impl IsA<gtk::Widget>,
     existing: Option<SmartMailbox>,
     accounts: Vec<String>,
+    mailboxes: Vec<String>,
     on_save: impl Fn(SmartMailbox) + 'static,
 ) {
     let editing = existing.is_some();
@@ -77,8 +79,24 @@ pub fn present(
         .build();
     conditions.set_header_suffix(Some(&add));
     let rows: Rc<RefCell<Vec<ConditionRow>>> = Rc::new(RefCell::new(Vec::new()));
+    let mut choices = vec![
+        ("role:inbox".to_string(), gettext("Inbox")),
+        ("role:sent".to_string(), gettext("Sent")),
+        ("role:drafts".to_string(), gettext("Drafts")),
+        ("role:archive".to_string(), gettext("Archive")),
+        ("role:junk".to_string(), gettext("Junk")),
+        ("role:trash".to_string(), gettext("Trash")),
+        ("role:all".to_string(), gettext("All Mail")),
+    ];
+    for mailbox in mailboxes {
+        let id = format!("label:{mailbox}");
+        if !choices.iter().any(|(known, _)| known == &id) {
+            choices.push((id, mailbox));
+        }
+    }
     let add_row = {
         let (conditions, rows) = (conditions.clone(), Rc::clone(&rows));
+        let choices = choices.clone();
         Rc::new(move |condition: &Condition| {
             let labels: Vec<String> = Field::ALL.iter().map(|f| f.label()).collect();
             let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
@@ -95,11 +113,86 @@ pub fn present(
                 .valign(gtk::Align::Center)
                 .hexpand(true)
                 .sensitive(condition.field.takes_value())
+                .visible(condition.field != Field::InMailbox)
                 .build();
+            let mut choices = choices.clone();
+            let selected: Vec<String> =
+                serde_json::from_str(&condition.value).unwrap_or_else(|_| {
+                    (!condition.value.is_empty())
+                        .then(|| condition.value.clone())
+                        .into_iter()
+                        .collect()
+                });
+            for id in &selected {
+                if !choices.iter().any(|(known, _)| known == id) {
+                    choices.push((id.clone(), id.clone()));
+                }
+            }
+            let options = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .spacing(6)
+                .margin_top(12)
+                .margin_bottom(12)
+                .margin_start(12)
+                .margin_end(12)
+                .build();
+            let checks: Rc<Vec<(String, gtk::CheckButton)>> = Rc::new(
+                choices
+                    .into_iter()
+                    .map(|(id, title)| {
+                        let check = gtk::CheckButton::with_label(&title);
+                        check.set_active(selected.contains(&id));
+                        options.append(&check);
+                        (id, check)
+                    })
+                    .collect(),
+            );
+            let popover = gtk::Popover::builder()
+                .child(
+                    &gtk::ScrolledWindow::builder()
+                        .min_content_height(280)
+                        .max_content_height(360)
+                        .child(&options)
+                        .build(),
+                )
+                .build();
+            let picker = gtk::MenuButton::builder()
+                .label(gettext("Choose Mailboxes"))
+                .popover(&popover)
+                .build();
+            picker.set_visible(condition.field == Field::InMailbox);
+            crate::ui::name(&picker, &gettext("Choose Mailboxes"));
+            for (_, check) in checks.iter() {
+                let weak = Rc::downgrade(&checks);
+                let chosen = value.clone();
+                check.connect_toggled(move |_| {
+                    let Some(checks) = weak.upgrade() else { return };
+                    let ids: Vec<&str> = checks
+                        .iter()
+                        .filter(|(_, check)| check.is_active())
+                        .map(|(id, _)| id.as_str())
+                        .collect();
+                    chosen.set_text(&serde_json::to_string(&ids).unwrap());
+                });
+            }
             let entry = value.clone();
+            let button = picker.clone();
+            let checkboxes = Rc::clone(&checks);
+            let previous = Cell::new(condition.field);
             field.connect_selected_notify(move |field| {
                 let chosen = Field::ALL[field.selected() as usize];
                 entry.set_sensitive(chosen.takes_value());
+                entry.set_visible(chosen != Field::InMailbox);
+                button.set_visible(chosen == Field::InMailbox);
+                if chosen == Field::InMailbox {
+                    for (_, check) in checkboxes.iter() {
+                        check.set_active(false);
+                    }
+                    entry.set_text("[]");
+                } else if previous.get() == Field::InMailbox {
+                    entry.set_text("");
+                }
+                previous.set(chosen);
             });
             let remove = gtk::Button::builder()
                 .icon_name("list-remove-symbolic")
@@ -113,6 +206,7 @@ pub fn present(
             let row = adw::ActionRow::new();
             row.add_prefix(&field);
             row.add_suffix(&value);
+            row.add_suffix(&picker);
             row.add_suffix(&remove);
             conditions.add(&row);
             let (group, all, gone) = (conditions.clone(), Rc::clone(&rows), row.clone());
@@ -120,7 +214,12 @@ pub fn present(
                 group.remove(&gone);
                 all.borrow_mut().retain(|r| r.row != gone);
             });
-            rows.borrow_mut().push(ConditionRow { row, field, value });
+            rows.borrow_mut().push(ConditionRow {
+                row,
+                field,
+                value,
+                _choices: checks,
+            });
         })
     };
     for condition in &mailbox.conditions {
