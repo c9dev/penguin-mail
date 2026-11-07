@@ -116,13 +116,16 @@ pub fn present(
                 .visible(condition.field != Field::InMailbox)
                 .build();
             let mut choices = choices.clone();
-            let selected: Vec<String> =
+            let selected: Vec<String> = if condition.field == Field::InMailbox {
                 serde_json::from_str(&condition.value).unwrap_or_else(|_| {
                     (!condition.value.is_empty())
                         .then(|| condition.value.clone())
                         .into_iter()
                         .collect()
-                });
+                })
+            } else {
+                Vec::new()
+            };
             for id in &selected {
                 if !choices.iter().any(|(known, _)| known == id) {
                     choices.push((id.clone(), id.clone()));
@@ -150,8 +153,12 @@ pub fn present(
             let popover = gtk::Popover::builder()
                 .child(
                     &gtk::ScrolledWindow::builder()
+                        .min_content_width(320)
+                        .max_content_width(480)
+                        .propagate_natural_width(true)
                         .min_content_height(280)
                         .max_content_height(360)
+                        .propagate_natural_height(true)
                         .child(&options)
                         .build(),
                 )

@@ -2716,7 +2716,7 @@ msgstr "Marquer comme lu"
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:125
-#: app/src/ui/window/organize.rs:217
+#: app/src/ui/window/organize.rs:232
 msgid "Delete"
 msgstr "Supprimer"
 
@@ -4627,7 +4627,7 @@ msgstr "{host} a refusé la connexion : {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:445 app/src/ui/sidebar.rs:496
-#: app/src/ui/sidebar.rs:1754 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1756 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Agenda"
 
@@ -4667,8 +4667,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Abonnement Claude"
 
-#: app/src/settings/mod.rs:251 app/src/ui/window.rs:3656
-#: app/src/ui/window.rs:3744
+#: app/src/settings/mod.rs:251 app/src/ui/window.rs:3669
+#: app/src/ui/window.rs:3757
 msgid "Assistant"
 msgstr "Assistant"
 
@@ -5050,7 +5050,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] "{count} message non lu"
 msgstr[1] "{count} messages non lus"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1778
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1780
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} message non lu"
@@ -5074,7 +5074,7 @@ msgstr "Ouvrir Penguin Mail"
 msgid "New Message"
 msgstr "Nouveau message"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2371 app/src/ui/window.rs:3662
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2373 app/src/ui/window.rs:3675
 msgid "Check for Mail"
 msgstr "Relever le courrier"
 
@@ -5092,7 +5092,7 @@ msgstr "Nouveautés de la version {version}"
 msgid "Check for Updates"
 msgstr "Rechercher des mises à jour"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3683
+#: app/src/tray.rs:266 app/src/ui/window.rs:3696
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Quitter"
@@ -5114,7 +5114,7 @@ msgstr "Nouveautés"
 msgid "Website"
 msgstr "Site web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3682
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3695
 msgid "Donate"
 msgstr "Faire un don"
 
@@ -5122,7 +5122,7 @@ msgstr "Faire un don"
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3681
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3694
 msgid "About Penguin Mail"
 msgstr "À propos de Penguin Mail"
 
@@ -5272,7 +5272,7 @@ msgstr "Copier le lien"
 #: app/src/ui/composer/mod.rs:2455 app/src/ui/composer/mod.rs:2909
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:249 app/src/ui/switch_jmap.rs:174
+#: app/src/ui/smart_editor.rs:256 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
 #: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
 #: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
@@ -5654,13 +5654,13 @@ msgstr "Rédiger une réponse à la conversation ouverte"
 msgid "Choose a Model"
 msgstr "Choisir un modèle"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3791
-#: app/src/ui/window.rs:3792
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3804
+#: app/src/ui/window.rs:3805
 msgid "Detach"
 msgstr "Détacher"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4470
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4483
 msgid "Close"
 msgstr "Fermer"
 
@@ -5888,7 +5888,7 @@ msgstr "Modifier {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3439
 msgid "Remove"
 msgstr "Supprimer"
 
@@ -5969,7 +5969,7 @@ msgstr "Tester"
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2909
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:243 app/src/ui/templates.rs:234
+#: app/src/ui/smart_editor.rs:250 app/src/ui/templates.rs:234
 #: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:165
 #: app/src/ui/window/save_contacts.rs:112
 msgid "Save"
@@ -6752,8 +6752,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Seules les personnes pouvant modifier cet agenda voient les détails"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2088
-#: app/src/ui/sidebar.rs:2388
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2090
+#: app/src/ui/sidebar.rs:2390
 msgid "Color"
 msgstr "Couleur"
 
@@ -7089,7 +7089,7 @@ msgstr "Un agenda à vous sur {account}, sur tous les appareils."
 msgid "Could not change the calendar list: {reason}"
 msgstr "Impossible de modifier la liste des agendas : {reason}"
 
-#: app/src/ui/calendar/manage.rs:163 app/src/ui/window/organize.rs:270
+#: app/src/ui/calendar/manage.rs:163 app/src/ui/window/organize.rs:285
 msgid "Could not change the color: {reason}"
 msgstr "Impossible de changer la couleur : {reason}"
 
@@ -7147,9 +7147,9 @@ msgid "New Calendar"
 msgstr "Nouvel agenda"
 
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
-#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:245
+#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:252
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
-#: app/src/ui/window/organize.rs:363
+#: app/src/ui/window/organize.rs:378
 msgid "Create"
 msgstr "Créer"
 
@@ -7619,19 +7619,19 @@ msgstr "Accorder l’accès pour {account}"
 msgid "Sign in again to {account}"
 msgstr "Se reconnecter à {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2393
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2395
 msgid "Sign In Again…"
 msgstr "Se reconnecter…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2401
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2403
 msgid "Remove Account…"
 msgstr "Supprimer le compte…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2408
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2410
 msgid "Account options"
 msgstr "Options du compte"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2413
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2415
 msgid "Options for {account}"
 msgstr "Options de {account}"
 
@@ -7659,13 +7659,13 @@ msgstr "Masquer de la liste"
 msgid "Original Color"
 msgstr "Couleur d’origine"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2076
-#: app/src/ui/sidebar.rs:2378
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2078
+#: app/src/ui/sidebar.rs:2380
 msgid "Rename…"
 msgstr "Renommer…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1977
-#: app/src/ui/sidebar.rs:2104
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1979
+#: app/src/ui/sidebar.rs:2106
 msgid "Delete…"
 msgstr "Supprimer…"
 
@@ -7786,7 +7786,7 @@ msgstr "{date}, a des événements"
 msgid "Offline, last updated {time}"
 msgstr "Hors ligne, dernière mise à jour {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2471
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2473
 msgid "Offline"
 msgstr "Hors ligne"
 
@@ -7902,7 +7902,7 @@ msgid "Choose a Time…"
 msgstr "Choisir une heure…"
 
 #: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2004
-#: app/src/ui/sidebar.rs:1364 app/src/ui/sidebar.rs:1857
+#: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1859
 msgid "Send Later"
 msgstr "Envoyer plus tard"
 
@@ -8315,7 +8315,7 @@ msgstr "Autre courriel"
 msgid "Phone"
 msgstr "Téléphone"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1327
+#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1329
 msgid "Remove from VIPs"
 msgstr "Retirer des VIP"
 
@@ -8353,7 +8353,7 @@ msgid "Find Again"
 msgstr "Rechercher à nouveau"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1971
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1973
 msgid "Edit…"
 msgstr "Modifier…"
 
@@ -8438,7 +8438,7 @@ msgid "Export…"
 msgstr "Exporter…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3672
+#: app/src/ui/window.rs:3685
 msgid "Customize Toolbar…"
 msgstr "Personnaliser la barre d'outils…"
 
@@ -8553,8 +8553,8 @@ msgstr "Marquer comme lu ou non lu"
 msgid "Tags…"
 msgstr "Mots-clés…"
 
-#: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1372
-#: app/src/ui/sidebar.rs:1863 app/src/ui/window/reminders.rs:25
+#: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1374
+#: app/src/ui/sidebar.rs:1865 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Me le rappeler"
@@ -9012,7 +9012,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Autoriser Masquer mon adresse"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3885
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3898
 msgid "Add an account first"
 msgstr "Ajoutez d’abord un compte"
 
@@ -9727,7 +9727,7 @@ msgstr ""
 
 #: app/src/ui/preferences.rs:402 app/src/ui/preferences.rs:409
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:45
-#: app/src/ui/window/customize_mailboxes.rs:453
+#: app/src/ui/window/customize_mailboxes.rs:636
 msgid "Accounts"
 msgstr "Comptes"
 
@@ -10220,7 +10220,7 @@ msgstr "Déplacer {account} vers le bas"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3679 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3692 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Préférences"
 
@@ -10602,7 +10602,7 @@ msgstr "Ajouter une adresse"
 msgid "Default sender"
 msgstr "Expéditeur par défaut"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2280
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2282
 msgid "Signature…"
 msgstr "Signature…"
 
@@ -10664,17 +10664,17 @@ msgstr "Empêcher le message de partir"
 
 #: app/src/ui/sidebar.rs:429 app/src/ui/sidebar.rs:854
 #: app/src/ui/sidebar/sections.rs:26
-#: app/src/ui/window/customize_mailboxes.rs:339
+#: app/src/ui/window/customize_mailboxes.rs:522
 msgid "Mailboxes"
 msgstr "Boîtes aux lettres"
 
 #: app/src/ui/sidebar.rs:441 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1753 app/src/ui/thread_list.rs:369
+#: app/src/ui/sidebar.rs:1755 app/src/ui/thread_list.rs:369
 msgid "Mail"
 msgstr "Courrier"
 
-#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1744
-#: app/src/ui/sidebar.rs:2838
+#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1746
+#: app/src/ui/sidebar.rs:2840
 msgid "99+"
 msgstr "99+"
 
@@ -10682,107 +10682,107 @@ msgstr "99+"
 msgid "Calendars"
 msgstr "Agendas"
 
-#: app/src/ui/sidebar.rs:1314 app/src/ui/sidebar.rs:1316
-#: app/src/ui/sidebar.rs:1880 app/src/ui/sidebar.rs:1882
+#: app/src/ui/sidebar.rs:1316 app/src/ui/sidebar.rs:1318
+#: app/src/ui/sidebar.rs:1882 app/src/ui/sidebar.rs:1884
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/sidebar.rs:1356 app/src/ui/sidebar.rs:1851
+#: app/src/ui/sidebar.rs:1358 app/src/ui/sidebar.rs:1853
 msgid "Outbox"
 msgstr "Boîte d’envoi"
 
-#: app/src/ui/sidebar.rs:1419
+#: app/src/ui/sidebar.rs:1421
 msgid "Holds folders, not mail"
 msgstr "Contient des dossiers, pas du courrier"
 
-#: app/src/ui/sidebar.rs:1703
+#: app/src/ui/sidebar.rs:1705
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} message non lu"
 msgstr[1] "{mailbox}, {count} messages non lus"
 
-#: app/src/ui/sidebar.rs:1709
+#: app/src/ui/sidebar.rs:1711
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} message"
 msgstr[1] "{mailbox}, {count} messages"
 
-#: app/src/ui/sidebar.rs:1756
+#: app/src/ui/sidebar.rs:1758
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Courrier, {count} non lu"
 msgstr[1] "Courrier, {count} non lus"
 
-#: app/src/ui/sidebar.rs:1762
+#: app/src/ui/sidebar.rs:1764
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Agenda, {count} en attente de votre réponse"
 msgstr[1] "Agenda, {count} en attente de votre réponse"
 
-#: app/src/ui/sidebar.rs:1973 app/src/ui/sidebar.rs:2095
-#: app/src/ui/sidebar.rs:2389
+#: app/src/ui/sidebar.rs:1975 app/src/ui/sidebar.rs:2097
+#: app/src/ui/sidebar.rs:2391
 msgid "Move Up"
 msgstr "Monter"
 
-#: app/src/ui/sidebar.rs:1974 app/src/ui/sidebar.rs:2098
-#: app/src/ui/sidebar.rs:2390
+#: app/src/ui/sidebar.rs:1976 app/src/ui/sidebar.rs:2100
+#: app/src/ui/sidebar.rs:2392
 msgid "Move Down"
 msgstr "Descendre"
 
-#: app/src/ui/sidebar.rs:2126
+#: app/src/ui/sidebar.rs:2128
 msgid "Empty Trash…"
 msgstr "Vider la corbeille…"
 
-#: app/src/ui/sidebar.rs:2279
+#: app/src/ui/sidebar.rs:2281
 msgid "Automatic Reply…"
 msgstr "Réponse automatique…"
 
-#: app/src/ui/sidebar.rs:2281
+#: app/src/ui/sidebar.rs:2283
 msgid "Rules…"
 msgstr "Règles…"
 
-#: app/src/ui/sidebar.rs:2282 app/src/ui/window.rs:3665
+#: app/src/ui/sidebar.rs:2284 app/src/ui/window.rs:3678
 msgid "Hide My Email…"
 msgstr "Masquer mon adresse…"
 
-#: app/src/ui/sidebar.rs:2291
+#: app/src/ui/sidebar.rs:2293
 msgid "On this computer"
 msgstr "Sur cet ordinateur"
 
-#: app/src/ui/sidebar.rs:2299
+#: app/src/ui/sidebar.rs:2301
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "Sur cet ordinateur. Afficher ou masquer les boîtes aux lettres de ce compte"
 
-#: app/src/ui/sidebar.rs:2300
+#: app/src/ui/sidebar.rs:2302
 msgid "Show or hide this account's mailboxes"
 msgstr "Afficher ou masquer les boîtes aux lettres de ce compte"
 
-#: app/src/ui/sidebar.rs:2394
+#: app/src/ui/sidebar.rs:2396
 msgid "Switch to JMAP…"
 msgstr "Passer à JMAP…"
 
-#: app/src/ui/sidebar.rs:2396
+#: app/src/ui/sidebar.rs:2398
 msgid "Messages That Will Not Download…"
 msgstr "Messages qui ne se téléchargent pas…"
 
-#: app/src/ui/sidebar.rs:2469
+#: app/src/ui/sidebar.rs:2471
 msgid "Sign in again to keep syncing"
 msgstr "Reconnectez-vous pour continuer la synchronisation"
 
-#: app/src/ui/sidebar.rs:2475
+#: app/src/ui/sidebar.rs:2477
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} ne répond pas ; nouvelle tentative"
 
-#: app/src/ui/sidebar.rs:2486
+#: app/src/ui/sidebar.rs:2488
 msgid "The keyring is not responding; retrying"
 msgstr "Le trousseau ne répond pas ; nouvelle tentative"
 
-#: app/src/ui/sidebar.rs:2489
+#: app/src/ui/sidebar.rs:2491
 msgid "Downloading mail"
 msgstr "Téléchargement du courrier"
 
-#: app/src/ui/sidebar.rs:2493
+#: app/src/ui/sidebar.rs:2495
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "La synchronisation s’est arrêtée après une erreur ; redémarrez Penguin Mail "
@@ -10790,7 +10790,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2500
+#: app/src/ui/sidebar.rs:2502
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -10799,12 +10799,13 @@ msgstr ""
 "chaque jour. Penguin Mail réessaiera plus tard."
 
 #: app/src/ui/sidebar/sections.rs:25
-#: app/src/ui/window/customize_mailboxes.rs:235
+#: app/src/ui/window/customize_mailboxes.rs:294
+#: app/src/ui/window/customize_mailboxes.rs:304
 msgid "Favorites"
 msgstr "Favoris"
 
 #: app/src/ui/sidebar/sections.rs:27
-#: app/src/ui/window/customize_mailboxes.rs:416
+#: app/src/ui/window/customize_mailboxes.rs:599
 msgid "Smart Mailboxes"
 msgstr "Boîtes intelligentes"
 
@@ -10836,37 +10837,37 @@ msgstr "Ajouter une condition"
 msgid "All Mail"
 msgstr "Tous les messages"
 
-#: app/src/ui/smart_editor.rs:160 app/src/ui/smart_editor.rs:164
+#: app/src/ui/smart_editor.rs:167 app/src/ui/smart_editor.rs:171
 #, fuzzy
 #| msgid "Show Mailboxes"
 msgid "Choose Mailboxes"
 msgstr "Afficher les boîtes aux lettres"
 
-#: app/src/ui/smart_editor.rs:199 app/src/ui/smart_editor.rs:205
+#: app/src/ui/smart_editor.rs:206 app/src/ui/smart_editor.rs:212
 msgid "Remove Condition"
 msgstr "Retirer la condition"
 
-#: app/src/ui/smart_editor.rs:203
+#: app/src/ui/smart_editor.rs:210
 msgid "Condition"
 msgstr "Condition"
 
-#: app/src/ui/smart_editor.rs:204
+#: app/src/ui/smart_editor.rs:211
 msgid "Matches"
 msgstr "Correspond à"
 
-#: app/src/ui/smart_editor.rs:261
+#: app/src/ui/smart_editor.rs:268
 msgid "Edit Smart Mailbox"
 msgstr "Modifier la boîte intelligente"
 
-#: app/src/ui/smart_editor.rs:263
+#: app/src/ui/smart_editor.rs:270
 msgid "New Smart Mailbox"
 msgstr "Nouvelle boîte intelligente"
 
-#: app/src/ui/smart_editor.rs:292
+#: app/src/ui/smart_editor.rs:299
 msgid "Give the mailbox a name"
 msgstr "Donnez un nom à la boîte"
 
-#: app/src/ui/smart_editor.rs:296
+#: app/src/ui/smart_editor.rs:303
 msgid "Add a condition with a value"
 msgstr "Ajoutez une condition avec une valeur"
 
@@ -11041,12 +11042,14 @@ msgid "Labels or Move to Folder"
 msgstr "Libellés ou déplacer vers un dossier"
 
 #: app/src/ui/toolbar/customize.rs:116
-#: app/src/ui/window/customize_mailboxes.rs:117
+#: app/src/ui/window/customize_mailboxes.rs:123
+#: app/src/ui/window/customize_mailboxes.rs:340
 msgid "Move {button} Up"
 msgstr "Monter {button}"
 
 #: app/src/ui/toolbar/customize.rs:120
-#: app/src/ui/window/customize_mailboxes.rs:121
+#: app/src/ui/window/customize_mailboxes.rs:127
+#: app/src/ui/window/customize_mailboxes.rs:344
 msgid "Move {button} Down"
 msgstr "Descendre {button}"
 
@@ -11061,7 +11064,7 @@ msgstr ""
 "changer leur ordre."
 
 #: app/src/ui/toolbar/customize.rs:238
-#: app/src/ui/window/customize_mailboxes.rs:639
+#: app/src/ui/window/customize_mailboxes.rs:822
 msgid "Restore Defaults"
 msgstr "Rétablir les valeurs par défaut"
 
@@ -11515,7 +11518,7 @@ msgstr "Cette version de Penguin Mail a été compilée sans la connexion Google
 msgid "Get a Release"
 msgstr "Obtenir une version publiée"
 
-#: app/src/ui/window.rs:3412
+#: app/src/ui/window.rs:3425
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11523,86 +11526,86 @@ msgstr ""
 "Impossible de vérifier les messages que le serveur garde pour un envoi "
 "ultérieur, donc {account} reste : {reason}"
 
-#: app/src/ui/window.rs:3423
+#: app/src/ui/window.rs:3436
 msgid "Remove {account}?"
 msgstr "Supprimer {account} ?"
 
-#: app/src/ui/window.rs:3442
+#: app/src/ui/window.rs:3455
 msgid "Remove Anyway"
 msgstr "Supprimer quand même"
 
-#: app/src/ui/window.rs:3455
+#: app/src/ui/window.rs:3468
 msgid "Removed {account}"
 msgstr "{account} supprimé"
 
-#: app/src/ui/window.rs:3457
+#: app/src/ui/window.rs:3470
 msgid "Could not remove {account}: {reason}"
 msgstr "Impossible de supprimer {account} : {reason}"
 
-#: app/src/ui/window.rs:3643
+#: app/src/ui/window.rs:3656
 msgid "Refresh"
 msgstr "Actualiser"
 
-#: app/src/ui/window.rs:3647
+#: app/src/ui/window.rs:3660
 msgid "Show Declined Events"
 msgstr "Afficher les événements refusés"
 
-#: app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3676
 msgid "Add Account…"
 msgstr "Ajouter un compte…"
 
-#: app/src/ui/window.rs:3664
+#: app/src/ui/window.rs:3677
 msgid "New Smart Mailbox…"
 msgstr "Nouvelle boîte intelligente…"
 
-#: app/src/ui/window.rs:3676
+#: app/src/ui/window.rs:3689
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Personnaliser la barre d'outils…"
 
-#: app/src/ui/window.rs:3680 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3693 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Raccourcis clavier"
 
-#: app/src/ui/window.rs:3689 app/src/ui/window.rs:3691
+#: app/src/ui/window.rs:3702 app/src/ui/window.rs:3704
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:3756 app/src/ui/window.rs:3757
+#: app/src/ui/window.rs:3769 app/src/ui/window.rs:3770
 msgid "Dock"
 msgstr "Ancrer"
 
-#: app/src/ui/window.rs:3886
+#: app/src/ui/window.rs:3899
 msgid "Add a mail account first"
 msgstr "Ajoutez d’abord un compte de courrier"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4137
+#: app/src/ui/window.rs:4150
 msgid "The calendar and contacts of {account} are connected."
 msgstr "L’agenda et les contacts de {account} sont connectés."
 
-#: app/src/ui/window.rs:4253
+#: app/src/ui/window.rs:4266
 msgid "Open a message from the person first"
 msgstr "Ouvrez d’abord un message de cette personne"
 
-#: app/src/ui/window.rs:4353
+#: app/src/ui/window.rs:4366
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail affiche la nouvelle langue après un redémarrage"
 
-#: app/src/ui/window.rs:4355 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4368 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Redémarrer"
 
-#: app/src/ui/window.rs:4419
+#: app/src/ui/window.rs:4432
 msgid "Show Rules"
 msgstr "Afficher les règles"
 
-#: app/src/ui/window.rs:4445
+#: app/src/ui/window.rs:4458
 msgid "Messages That Will Not Download"
 msgstr "Messages qui ne se téléchargent pas"
 
-#: app/src/ui/window.rs:4447
+#: app/src/ui/window.rs:4460
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11611,7 +11614,7 @@ msgstr ""
 "{address}. Il réessaie à chaque vérification, sauf pour un message trop "
 "volumineux."
 
-#: app/src/ui/window/arrange.rs:123 app/src/ui/window/organize.rs:215
+#: app/src/ui/window/arrange.rs:123 app/src/ui/window/organize.rs:230
 msgid "Delete “{name}”?"
 msgstr "Supprimer « {name} » ?"
 
@@ -11728,23 +11731,41 @@ msgstr ""
 "Faites glisser pour redimensionner, ou utilisez les touches Gauche et "
 "Droite. Début et Fin choisissent la largeur minimale et maximale."
 
-#: app/src/ui/window/customize_mailboxes.rs:112
+#: app/src/ui/window/customize_mailboxes.rs:118
 #, fuzzy
 #| msgid "Show Mailboxes"
 msgid "Show {mailbox}"
 msgstr "Afficher les boîtes aux lettres"
 
-#: app/src/ui/window/customize_mailboxes.rs:248
+#: app/src/ui/window/customize_mailboxes.rs:303
+#, fuzzy
+#| msgid "Smart Mailboxes"
+msgid "Available Mailboxes"
+msgstr "Boîtes intelligentes"
+
+#: app/src/ui/window/customize_mailboxes.rs:333
+#, fuzzy
+#| msgid "Favorites"
+msgid "Add to Favorites"
+msgstr "Favoris"
+
+#: app/src/ui/window/customize_mailboxes.rs:336
+#, fuzzy
+#| msgid "Remove from VIPs"
+msgid "Remove from Favorites"
+msgstr "Retirer des VIP"
+
+#: app/src/ui/window/customize_mailboxes.rs:357
 #, fuzzy
 #| msgid "Favorites"
 msgid "Favorite name"
 msgstr "Favoris"
 
-#: app/src/ui/window/customize_mailboxes.rs:255
+#: app/src/ui/window/customize_mailboxes.rs:365
 msgid "Name for {mailbox} in Favorites"
 msgstr ""
 
-#: app/src/ui/window/customize_mailboxes.rs:650
+#: app/src/ui/window/customize_mailboxes.rs:837
 #, fuzzy
 #| msgid "Show Mailboxes"
 msgid "Customize Mailboxes"
@@ -11758,7 +11779,7 @@ msgstr "Ouvrez d’abord une conversation"
 #: app/src/ui/window/detached.rs:258 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
-#: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
+#: app/src/ui/window/organize.rs:241 app/src/ui/window/organize.rs:270
 #: app/src/ui/window/senders.rs:296
 msgid "That account is not connected"
 msgstr "Ce compte n’est pas connecté"
@@ -11999,11 +12020,11 @@ msgstr "Nom, ou Parent/Nom pour l’imbriquer"
 msgid "Created “{name}”"
 msgstr "« {name} » créé"
 
-#: app/src/ui/window/organize.rs:237
+#: app/src/ui/window/organize.rs:252
 msgid "Deleted “{name}”"
 msgstr "« {name} » supprimé"
 
-#: app/src/ui/window/organize.rs:365
+#: app/src/ui/window/organize.rs:380
 msgid "Only Where It Exists"
 msgstr "Seulement là où il existe"
 

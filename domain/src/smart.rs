@@ -112,7 +112,9 @@ impl Condition {
                         Some("junk") => Term::In(MailSet::Role(Role::Junk)),
                         Some("trash") => Term::In(MailSet::Role(Role::Trash)),
                         Some("all") => Term::In(MailSet::Role(Role::All)),
-                        _ => Term::MailboxNamed(name.trim_start_matches("label:").to_string()),
+                        _ => Term::MailboxNamed(
+                            name.strip_prefix("label:").unwrap_or(name).to_string(),
+                        ),
                     };
                     Some(Query::Term(term))
                 })
@@ -238,6 +240,14 @@ mod tests {
                 ]),
                 Query::Term(Term::Unread),
             ]))
+        );
+    }
+
+    #[test]
+    fn a_folder_name_keeps_its_own_label_prefix() {
+        assert_eq!(
+            mailbox(true, vec![cond(Field::InMailbox, "[\"label:label:Work\"]")],).query(),
+            Some(Query::Term(Term::MailboxNamed("label:Work".into())))
         );
     }
 

@@ -3376,6 +3376,19 @@ impl MainWindow {
     }
 
     fn label_order(&self, account_id: AccountId) -> HashMap<String, i64> {
+        if let Some(account) = self.account(account_id)
+            && let Some(ids) = self
+                .settings()
+                .sidebar
+                .label_order
+                .get(&format!("account:{}", account.email.to_ascii_lowercase()))
+        {
+            return ids
+                .iter()
+                .enumerate()
+                .map(|(position, id)| (id.clone(), position as i64))
+                .collect();
+        }
         self.app
             .upgrade()
             .map(|app| app.label_order(account_id))

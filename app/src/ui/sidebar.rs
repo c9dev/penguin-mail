@@ -995,7 +995,9 @@ impl Sidebar {
                 .count
                 .set_visible(!open && heading.count.label() != "0");
             for row in self.rows.borrow().iter() {
-                if row.mailbox.account() == Some(heading.account_id) {
+                if row.mailbox.account() == Some(heading.account_id)
+                    && row.row.index() > heading.row.index()
+                {
                     row.row
                         .set_visible(open || selected.as_ref() == Some(&row.row));
                 }

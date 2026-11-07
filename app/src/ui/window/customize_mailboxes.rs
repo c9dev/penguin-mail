@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
+use gtk::{gdk, glib};
 use mailrs_domain::translate::{fill, gettext};
 
 use super::MainWindow;
@@ -33,7 +34,12 @@ fn set_visible(win: &MainWindow, key: &str, shown: bool) {
     save(win, layout);
 }
 
-fn reorder_siblings(mut ids: Vec<String>, siblings: &[String]) -> Vec<String> {
+pub(super) fn reorder_siblings(mut ids: Vec<String>, siblings: &[String]) -> Vec<String> {
+    for id in siblings {
+        if !ids.contains(id) {
+            ids.push(id.clone());
+        }
+    }
     let slots: Vec<usize> = ids
         .iter()
         .enumerate()
@@ -128,7 +134,9 @@ fn row(title: &str) -> (adw::ActionRow, gtk::CheckButton, gtk::Button, gtk::Butt
 struct FavoriteRow {
     choice: MailboxChoice,
     row: adw::ActionRow,
-    check: gtk::CheckButton,
+    check: gtk::Button,
+    available: adw::ActionRow,
+    add: gtk::Button,
     name: gtk::Entry,
     up: gtk::Button,
     down: gtk::Button,
@@ -139,9 +147,48 @@ struct Editor {
     list: gtk::ListBox,
     favorites: Vec<FavoriteRow>,
     changing: Cell<bool>,
+    dragging: RefCell<Option<String>>,
 }
 
 type AccountBlocks = Rc<RefCell<Vec<(String, Vec<adw::ActionRow>)>>>;
+
+fn favorite_neighbor(
+    favorites: &[FavoriteMailbox],
+    visible: &[&str],
+    key: &str,
+    step: isize,
+) -> Option<usize> {
+    let indices: Vec<usize> = favorites
+        .iter()
+        .enumerate()
+        .filter_map(|(index, favorite)| visible.contains(&favorite.key.as_str()).then_some(index))
+        .collect();
+    let at = indices
+        .iter()
+        .position(|index| favorites[*index].key == key)?;
+    indices.get(at.checked_add_signed(step)?).copied()
+}
+
+fn place_favorite(
+    favorites: &mut Vec<FavoriteMailbox>,
+    moved: &str,
+    target: &str,
+    after: bool,
+) -> bool {
+    if moved == target || !favorites.iter().any(|favorite| favorite.key == target) {
+        return false;
+    }
+    let Some(from) = favorites.iter().position(|favorite| favorite.key == moved) else {
+        return false;
+    };
+    let favorite = favorites.remove(from);
+    let at = favorites
+        .iter()
+        .position(|favorite| favorite.key == target)
+        .unwrap();
+    favorites.insert(at + usize::from(after), favorite);
+    true
+}
 
 impl Editor {
     fn layout(&self) -> Option<SidebarLayout> {
@@ -159,6 +206,11 @@ impl Editor {
         let Some(layout) = self.layout() else { return };
         self.changing.set(true);
         let favorites = layout.favorites();
+        let visible: Vec<&str> = self
+            .favorites
+            .iter()
+            .map(|row| row.choice.key.as_str())
+            .collect();
         let mut keys: Vec<String> = favorites
             .iter()
             .map(|favorite| favorite.key.clone())
@@ -178,15 +230,15 @@ impl Editor {
                 self.list.insert(&row.row, index as i32);
             }
             let chosen = favorites.iter().find(|favorite| favorite.key == *key);
-            row.check.set_active(chosen.is_some());
+            row.row.set_visible(chosen.is_some());
+            row.available.set_visible(chosen.is_none());
             row.name.set_visible(chosen.is_some());
             row.name
                 .set_text(chosen.map_or("", |favorite| favorite.name.as_str()));
-            let position = favorites.iter().position(|favorite| favorite.key == *key);
             row.up
-                .set_sensitive(position.is_some_and(|position| position > 0));
+                .set_sensitive(favorite_neighbor(&favorites, &visible, key, -1).is_some());
             row.down
-                .set_sensitive(position.is_some_and(|position| position + 1 < favorites.len()));
+                .set_sensitive(favorite_neighbor(&favorites, &visible, key, 1).is_some());
         }
         self.changing.set(false);
     }
@@ -206,15 +258,17 @@ impl MainWindow {
             .map(|(email, name)| (email.clone(), name.clone()))
             .collect();
         let choices = mailbox_choices(&data, &settings.smart_mailboxes, &vips);
-        let page = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(24)
-            .margin_top(18)
-            .margin_bottom(18)
-            .margin_start(18)
-            .margin_end(18)
-            .build();
+        let stack = gtk::Stack::new();
+        stack.set_vexpand(true);
         let section = |title: String, key: &'static str| {
+            let page = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .spacing(24)
+                .margin_top(18)
+                .margin_bottom(18)
+                .margin_start(18)
+                .margin_end(18)
+                .build();
             let header = gtk::CheckButton::with_label(&title);
             header.set_active(settings.sidebar.visible(key, true));
             header.add_css_class("heading");
@@ -230,24 +284,80 @@ impl MainWindow {
                 .css_classes(["boxed-list"])
                 .build();
             page.append(&list);
-            list
+            let scroll = gtk::ScrolledWindow::builder()
+                .hscrollbar_policy(gtk::PolicyType::Never)
+                .child(&page)
+                .build();
+            stack.add_titled(&scroll, Some(key), &title);
+            (page, list)
         };
-        let favorite_list = section(gettext("Favorites"), "section:favorites");
+        let (favorite_page, favorite_list) = section(gettext("Favorites"), "section:favorites");
+        favorite_page.remove(&favorite_list);
+        let available_list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(["boxed-list"])
+            .build();
+        let columns = gtk::Box::new(gtk::Orientation::Horizontal, 18);
+        columns.set_vexpand(true);
+        for (title, list) in [
+            (gettext("Available Mailboxes"), &available_list),
+            (gettext("Favorites"), &favorite_list),
+        ] {
+            let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
+            column.set_hexpand(true);
+            let heading = gtk::Label::builder()
+                .label(title)
+                .xalign(0.0)
+                .css_classes(["heading"])
+                .build();
+            column.append(&heading);
+            let scroll = gtk::ScrolledWindow::builder()
+                .hscrollbar_policy(gtk::PolicyType::Never)
+                .vexpand(true)
+                .min_content_height(380)
+                .child(list)
+                .build();
+            column.append(&scroll);
+            columns.append(&column);
+        }
+        favorite_page.append(&columns);
         let favorites: Vec<_> = choices
             .iter()
             .map(|choice| {
-                let (row, check, up, down) = row(&choice.name);
+                let row = crate::ui::plain_row().build();
+                row.set_title(&choice.name);
+                row.set_title_lines(1);
+                let available = crate::ui::plain_row().build();
+                available.set_title(&choice.name);
+                available.set_title_lines(1);
+                let add = control("go-next-symbolic", &gettext("Add to Favorites"));
+                available.add_suffix(&add);
+                available_list.append(&available);
+                let check = control("go-previous-symbolic", &gettext("Remove from Favorites"));
+                row.add_prefix(&check);
+                let up = control(
+                    "penguin-mail-move-up-symbolic",
+                    &fill(&gettext("Move {button} Up"), &[("button", &choice.name)]),
+                );
+                let down = control(
+                    "penguin-mail-move-down-symbolic",
+                    &fill(&gettext("Move {button} Down"), &[("button", &choice.name)]),
+                );
+                row.add_suffix(&up);
+                row.add_suffix(&down);
                 if let Some(account) = choice
                     .key
                     .strip_prefix("account:")
                     .and_then(|rest| rest.split(':').next())
                 {
                     row.set_subtitle(account);
+                    available.set_subtitle(account);
                 }
                 let name = gtk::Entry::builder()
                     .placeholder_text(gettext("Favorite name"))
                     .valign(gtk::Align::Center)
-                    .width_chars(14)
+                    .width_chars(10)
+                    .max_width_chars(14)
                     .build();
                 crate::ui::name(
                     &name,
@@ -262,6 +372,8 @@ impl MainWindow {
                     choice: choice.clone(),
                     row,
                     check,
+                    available,
+                    add,
                     name,
                     up,
                     down,
@@ -273,12 +385,84 @@ impl MainWindow {
             list: favorite_list,
             favorites,
             changing: Cell::new(false),
+            dragging: RefCell::new(None),
         });
         editor.refresh();
         for item in &editor.favorites {
             let key = item.choice.key.clone();
             let weak = Rc::downgrade(&editor);
-            item.check.connect_toggled(move |check| {
+            item.add.connect_clicked(move |_| {
+                let Some(editor) = weak.upgrade() else { return };
+                let Some(mut layout) = editor.layout() else {
+                    return;
+                };
+                let mut favorites = layout.favorites();
+                if !favorites.iter().any(|favorite| favorite.key == key) {
+                    favorites.push(FavoriteMailbox {
+                        key: key.clone(),
+                        name: String::new(),
+                    });
+                    layout.favorites = Some(favorites);
+                    editor.save(layout);
+                }
+            });
+            let handle = gtk::Image::from_icon_name("list-drag-handle-symbolic");
+            item.row.add_prefix(&handle);
+            let source = gtk::DragSource::new();
+            source.set_actions(gdk::DragAction::MOVE);
+            source.connect_prepare(|_, _, _| {
+                Some(gdk::ContentProvider::for_value(
+                    &"penguin-favorite".to_value(),
+                ))
+            });
+            let weak = Rc::downgrade(&editor);
+            let key = item.choice.key.clone();
+            source.connect_drag_begin(move |_, _| {
+                if let Some(editor) = weak.upgrade() {
+                    *editor.dragging.borrow_mut() = Some(key.clone());
+                }
+            });
+            let weak = Rc::downgrade(&editor);
+            source.connect_drag_end(move |_, _, _| {
+                if let Some(editor) = weak.upgrade() {
+                    editor.dragging.borrow_mut().take();
+                }
+            });
+            handle.add_controller(source);
+            let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
+            let weak = Rc::downgrade(&editor);
+            let row = item.row.downgrade();
+            let key = item.choice.key.clone();
+            target.connect_drop(move |_, value, _, y| {
+                if value.get::<String>().ok().as_deref() != Some("penguin-favorite") {
+                    return false;
+                }
+                let (Some(editor), Some(row)) = (weak.upgrade(), row.upgrade()) else {
+                    return false;
+                };
+                let Some(moved) = editor.dragging.borrow().clone() else {
+                    return false;
+                };
+                let Some(mut layout) = editor.layout() else {
+                    return false;
+                };
+                let mut favorites = layout.favorites();
+                if !place_favorite(
+                    &mut favorites,
+                    &moved,
+                    &key,
+                    y > f64::from(row.height()) / 2.0,
+                ) {
+                    return false;
+                }
+                layout.favorites = Some(favorites);
+                editor.save(layout);
+                true
+            });
+            item.row.add_controller(target);
+            let key = item.choice.key.clone();
+            let weak = Rc::downgrade(&editor);
+            item.check.connect_clicked(move |_| {
                 let Some(editor) = weak.upgrade() else { return };
                 if editor.changing.get() {
                     return;
@@ -288,12 +472,7 @@ impl MainWindow {
                 };
                 let mut favorites = layout.favorites();
                 favorites.retain(|favorite| favorite.key != key);
-                if check.is_active() {
-                    favorites.push(FavoriteMailbox {
-                        key: key.clone(),
-                        name: String::new(),
-                    });
-                }
+
                 layout.favorites = Some(favorites);
                 editor.save(layout);
             });
@@ -325,9 +504,13 @@ impl MainWindow {
                         return;
                     };
                     let mut favorites = layout.favorites();
+                    let visible: Vec<&str> = editor
+                        .favorites
+                        .iter()
+                        .map(|row| row.choice.key.as_str())
+                        .collect();
                     if let Some(index) = favorites.iter().position(|favorite| favorite.key == key)
-                        && let Some(next) = index.checked_add_signed(step)
-                        && next < favorites.len()
+                        && let Some(next) = favorite_neighbor(&favorites, &visible, &key, step)
                     {
                         favorites.swap(index, next);
                         layout.favorites = Some(favorites);
@@ -336,7 +519,7 @@ impl MainWindow {
                 });
             }
         }
-        let mailbox_list = section(gettext("Mailboxes"), "section:mailboxes");
+        let (_, mailbox_list) = section(gettext("Mailboxes"), "section:mailboxes");
         let mut places: Vec<Place> = [
             Place::Unified(Standard::Inbox),
             Place::Unified(Standard::Flagged),
@@ -413,7 +596,7 @@ impl MainWindow {
             }
         }
         if !settings.smart_mailboxes.is_empty() {
-            let smart_list = section(gettext("Smart Mailboxes"), "section:smart");
+            let (_, smart_list) = section(gettext("Smart Mailboxes"), "section:smart");
             for smart in &settings.smart_mailboxes {
                 let key = format!("smart:{}", smart.id);
                 let (item, check, up, down) = row(&smart.name);
@@ -450,7 +633,7 @@ impl MainWindow {
                 }
             }
         }
-        let accounts_list = section(gettext("Accounts"), "section:accounts");
+        let (_, accounts_list) = section(gettext("Accounts"), "section:accounts");
         let blocks: AccountBlocks = Rc::new(RefCell::new(Vec::new()));
         for account in &accounts {
             let root = format!("account:{}", account.email.to_ascii_lowercase());
@@ -637,19 +820,23 @@ impl MainWindow {
             blocks.borrow_mut().push((root, block));
         }
         let reset = gtk::Button::with_label(&gettext("Restore Defaults"));
-        page.append(&reset);
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        content.append(&stack);
+        reset.set_halign(gtk::Align::Center);
+        reset.set_margin_bottom(12);
+        content.append(&reset);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&adw::HeaderBar::new());
-        toolbar.set_content(Some(
-            &gtk::ScrolledWindow::builder()
-                .hscrollbar_policy(gtk::PolicyType::Never)
-                .child(&page)
-                .build(),
-        ));
+        let tabs = gtk::StackSwitcher::builder()
+            .stack(&stack)
+            .halign(gtk::Align::Center)
+            .build();
+        toolbar.add_top_bar(&tabs);
+        toolbar.set_content(Some(&content));
         let dialog = adw::Dialog::builder()
             .title(gettext("Customize Mailboxes"))
-            .content_width(620)
-            .content_height(700)
+            .content_width(1000)
+            .content_height(640)
             .child(&toolbar)
             .build();
         let weak = Rc::downgrade(self);
@@ -669,7 +856,56 @@ impl MainWindow {
 
 #[cfg(test)]
 mod tests {
-    use super::reorder_siblings;
+    use super::{FavoriteMailbox, favorite_neighbor, place_favorite, reorder_siblings};
+
+    fn favorites() -> Vec<FavoriteMailbox> {
+        ["inbox", "vips", "flagged", "follow-up"]
+            .map(|key| FavoriteMailbox {
+                key: key.into(),
+                name: format!("Name for {key}"),
+            })
+            .to_vec()
+    }
+
+    #[test]
+    fn arrows_skip_unavailable_favorites() {
+        let favorites = favorites();
+        let visible = ["inbox", "flagged", "follow-up"];
+        assert_eq!(
+            favorite_neighbor(&favorites, &visible, "flagged", -1),
+            Some(0)
+        );
+        assert_eq!(favorite_neighbor(&favorites, &visible, "inbox", 1), Some(2));
+        assert_eq!(favorite_neighbor(&favorites, &visible, "inbox", -1), None);
+        assert_eq!(
+            favorite_neighbor(&favorites, &visible, "follow-up", 1),
+            None
+        );
+    }
+
+    #[test]
+    fn dragging_places_a_favorite_before_or_after_its_target_and_keeps_its_name() {
+        let mut favorites = favorites();
+        assert!(place_favorite(&mut favorites, "inbox", "follow-up", true));
+        assert_eq!(favorites.last().unwrap().name, "Name for inbox");
+        assert!(place_favorite(&mut favorites, "inbox", "vips", false));
+        assert_eq!(favorites.first().unwrap().key, "inbox");
+        let before = favorites.clone();
+        assert!(!place_favorite(&mut favorites, "inbox", "inbox", true));
+        assert!(!place_favorite(&mut favorites, "missing", "inbox", true));
+        assert!(!place_favorite(&mut favorites, "inbox", "missing", true));
+        assert_eq!(favorites, before);
+    }
+
+    #[test]
+    fn moving_a_new_folder_keeps_existing_sibling_positions() {
+        let ids = ["work", "work/client", "home"].map(str::to_string).to_vec();
+        let siblings = ["new", "home", "work"].map(str::to_string);
+        assert_eq!(
+            reorder_siblings(ids, &siblings),
+            ["new", "work/client", "home", "work"]
+        );
+    }
 
     #[test]
     fn moving_a_parent_keeps_child_slots_in_the_tree() {
