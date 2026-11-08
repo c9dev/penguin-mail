@@ -1284,11 +1284,11 @@ msgstr ""
 msgid "Change the setting {name} to {value}?"
 msgstr "Die Einstellung {name} auf {value} ändern?"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "Ihre Signatur für {account} entfernen?"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1298,7 +1298,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
@@ -1306,19 +1306,19 @@ msgstr ""
 "Hide My Email braucht maskierte Adressen oder Labels, und {provider} bietet "
 "für dieses Konto keines von beiden."
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr ""
 "{address} ausschalten? An diese Adresse gesendete E-Mails landen dann im "
 "Papierkorb."
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr ""
 "{address} wieder einschalten? An diese Adresse gesendete E-Mails kommen dann "
 "wieder an."
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1326,7 +1326,7 @@ msgstr ""
 "E-Mails von {sender} in {account} nach {category} verschieben und künftige E-"
 "Mails dieses Absenders ebenfalls dorthin leiten?"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2211,31 +2211,31 @@ msgstr "Relevant"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail gleicht weiter ab, auch ohne geöffnetes Fenster"
 
-#: app/src/compose.rs:677 app/src/compose.rs:3546
+#: app/src/compose.rs:680 app/src/compose.rs:3548
 msgid "Add at least one recipient."
 msgstr "Fügen Sie mindestens einen Empfänger hinzu."
 
-#: app/src/compose.rs:686
+#: app/src/compose.rs:689
 msgid "“{address}” is not an email address."
 msgstr "„{address}“ ist keine E-Mail-Adresse."
 
-#: app/src/compose.rs:912 app/src/compose.rs:3552
+#: app/src/compose.rs:915 app/src/compose.rs:3554
 msgid "Choose a time in the future"
 msgstr "Wählen Sie eine Zeit in der Zukunft"
 
-#: app/src/compose.rs:1241
+#: app/src/compose.rs:1244
 msgid "On {date}, {sender} wrote:"
 msgstr "Am {date} schrieb {sender}:"
 
-#: app/src/compose.rs:1247
+#: app/src/compose.rs:1250
 msgid "{sender} wrote:"
 msgstr "{sender} schrieb:"
 
-#: app/src/compose.rs:1526
+#: app/src/compose.rs:1529
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail konnte die Nachricht nicht zusammenstellen."
 
-#: app/src/compose.rs:1550
+#: app/src/compose.rs:1553
 msgid "The list did not give one address to write to."
 msgstr "Die Liste hat keine Adresse zum Anschreiben angegeben."
 

@@ -11,7 +11,10 @@
 mod html_signature;
 mod senders;
 
-pub use html_signature::{HtmlSignature, expand as expand_html_signature, is_html as is_html_signature};
+pub use html_signature::{
+    HtmlSignature, expand as expand_html_signature, is_html as is_html_signature,
+    names_local_file as signature_names_local_file,
+};
 pub use senders::{Suffixes, reply_addresses, sender_address, sender_for};
 
 use mail_builder::MessageBuilder;
@@ -1681,8 +1684,7 @@ fn written(draft: &Draft, purpose: Purpose) -> (String, String, Vec<OutgoingAtta
         && let Some((markdown, rich)) =
             html_signature::marked(&draft.markdown, draft.rich.as_ref(), &signature.shown)
     {
-        let (_, marked) =
-            written_body(&markdown, rich.as_ref(), draft.quoted.as_deref(), purpose);
+        let (_, marked) = written_body(&markdown, rich.as_ref(), draft.quoted.as_deref(), purpose);
         let (signature, found) = html_signature::with_inline_pictures(&signature.html);
         html = html_signature::put(&marked, &signature);
         pictures = found;

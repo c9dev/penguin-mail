@@ -1170,11 +1170,11 @@ msgstr "加载远程图片会让发件人知道何时打开邮件。"
 msgid "Change the setting {name} to {value}?"
 msgstr "是否将设置 {name} 改为 {value}？"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "是否移除 {account} 的签名？"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1184,22 +1184,22 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
 msgstr ""
 "隐藏电子邮件地址需要隐藏地址或标签，而 {provider} 在这个账号上两者皆未提供。"
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "是否停用 {address}？寄至该地址的邮件会移至 [回收站]。"
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "是否重新启用 {address}？寄至该地址的邮件会再次送达。"
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1207,7 +1207,7 @@ msgstr ""
 "是否将 {sender} 的邮件移至 {category}（账号：{account}），并将该发件人日后寄"
 "来的邮件也移至此处？"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2046,31 +2046,31 @@ msgstr "重点"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "即使未打开窗口，Penguin Mail 也会持续同步"
 
-#: app/src/compose.rs:677 app/src/compose.rs:3546
+#: app/src/compose.rs:680 app/src/compose.rs:3548
 msgid "Add at least one recipient."
 msgstr "请至少添加一位收件人。"
 
-#: app/src/compose.rs:686
+#: app/src/compose.rs:689
 msgid "“{address}” is not an email address."
 msgstr "「{address}」不是电子邮件地址。"
 
-#: app/src/compose.rs:912 app/src/compose.rs:3552
+#: app/src/compose.rs:915 app/src/compose.rs:3554
 msgid "Choose a time in the future"
 msgstr "请选择未来的时间"
 
-#: app/src/compose.rs:1241
+#: app/src/compose.rs:1244
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}，{sender} 写道："
 
-#: app/src/compose.rs:1247
+#: app/src/compose.rs:1250
 msgid "{sender} wrote:"
 msgstr "{sender} 写道："
 
-#: app/src/compose.rs:1526
+#: app/src/compose.rs:1529
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail 无法组成这封邮件。"
 
-#: app/src/compose.rs:1550
+#: app/src/compose.rs:1553
 msgid "The list did not give one address to write to."
 msgstr "此邮件列表未提供唯一的收件地址。"
 

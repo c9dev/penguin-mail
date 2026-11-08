@@ -49,6 +49,49 @@ pub fn is_html(template: &str) -> bool {
     rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '!') && trimmed.contains("</")
 }
 
+/// Whether the HTML signature `template` names a picture on this computer,
+/// which every message sent with it would then carry. The assistant may not
+/// save such a signature: a message it read could ask for one that sends a
+/// private picture out with all mail, and the HTML it shows for approval
+/// does not make that plain.
+pub fn names_local_file(template: &str) -> bool {
+    is_html(template) && sources(template).any(|source| local_path(source).is_some())
+}
+
+/// The quoted values of the `src` attributes in `html`.
+fn sources(html: &str) -> impl Iterator<Item = &str> {
+    let lower = html.to_ascii_lowercase();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while let Some(offset) = lower[at..].find("src=") {
+        let start = at + offset + "src=".len();
+        at = start;
+        let Some(quote) = html[start..]
+            .chars()
+            .next()
+            .filter(|c| *c == '"' || *c == '\'')
+        else {
+            continue;
+        };
+        let Some(len) = html[start + 1..].find(quote) else {
+            break;
+        };
+        found.push(&html[start + 1..start + 1 + len]);
+        at = start + 1 + len;
+    }
+    found.into_iter()
+}
+
+/// The file `source` names, when it is a `file:` URL or an absolute path.
+fn local_path(source: &str) -> Option<std::path::PathBuf> {
+    match url::Url::parse(source) {
+        Ok(url) if url.scheme() == "file" => url.to_file_path().ok(),
+        Ok(_) => None,
+        Err(_) if source.starts_with('/') => Some(std::path::PathBuf::from(source)),
+        Err(_) => None,
+    }
+}
+
 /// The signature `template` makes for `email`, when it is HTML.
 ///
 /// `<email>` and `<domain>` are filled in as they are in Markdown. A whole
@@ -79,7 +122,9 @@ fn text_of(html: &str) -> String {
         cells.push_str(&html[at..at + found]);
         cells.push_str("<br>");
         at += found;
-        let tag_end = lower[at..].find('>').map_or(lower.len(), |end| at + end + 1);
+        let tag_end = lower[at..]
+            .find('>')
+            .map_or(lower.len(), |end| at + end + 1);
         cells.push_str(&html[at..tag_end]);
         at = tag_end;
     }
@@ -222,7 +267,9 @@ fn picture(source: &str, number: usize) -> Option<OutgoingAttachment> {
             let data = base64::engine::general_purpose::STANDARD
                 .decode(payload)
                 .ok()?;
-            let extension = mime_type.trim_start_matches("image/").replace("svg+xml", "svg");
+            let extension = mime_type
+                .trim_start_matches("image/")
+                .replace("svg+xml", "svg");
             (
                 data,
                 mime_type.to_string(),
@@ -230,12 +277,7 @@ fn picture(source: &str, number: usize) -> Option<OutgoingAttachment> {
             )
         }
         _ => {
-            let path = match url::Url::parse(source) {
-                Ok(url) if url.scheme() == "file" => url.to_file_path().ok()?,
-                Ok(_) => return None,
-                Err(_) if source.starts_with('/') => std::path::PathBuf::from(source),
-                Err(_) => return None,
-            };
+            let path = local_path(source)?;
             let extension = path.extension()?.to_str()?.to_ascii_lowercase();
             let mime_type = match extension.as_str() {
                 "png" => "image/png",
@@ -272,7 +314,9 @@ mod tests {
     #[test]
     fn html_is_told_apart_from_markdown() {
         assert!(is_html(CARD));
-        assert!(is_html("<!DOCTYPE html><html><body><p>Dana</p></body></html>"));
+        assert!(is_html(
+            "<!DOCTYPE html><html><body><p>Dana</p></body></html>"
+        ));
         assert!(!is_html("<email>\n**Sales**"));
         assert!(!is_html("**Dana**\n<https://example.com>"));
         assert!(!is_html("Dana"));
@@ -399,5 +443,19 @@ mod tests {
         assert_eq!(pictures[0].filename, "logo.PNG");
         assert_eq!(&*pictures[1].data, b"logo");
         assert!(out.contains("missing.png"), "{out}");
+    }
+
+    #[test]
+    fn only_a_picture_on_this_computer_counts_as_a_local_file() {
+        assert!(names_local_file(
+            "<div><img src=\"/home/dana/Pictures/id.png\"></div>"
+        ));
+        assert!(names_local_file(
+            "<div><IMG SRC='file:///home/dana/logo.png'></div>"
+        ));
+        assert!(!names_local_file(
+            "<div><img src=\"https://example.com/logo.png\"><img src=\"data:image/png;base64,bG9nbw==\"></div>"
+        ));
+        assert!(!names_local_file("**Dana**\n/home/dana/logo.png"));
     }
 }

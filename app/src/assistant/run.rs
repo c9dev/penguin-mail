@@ -1639,6 +1639,13 @@ impl<A: Accounts> Tools<A> {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string();
+        if crate::compose::signature_names_local_file(&text) {
+            return Err(
+                "An HTML signature from the assistant may only show pictures as data: or https: \
+                 addresses. Set one that uses a file on this computer in Preferences."
+                    .into(),
+            );
+        }
         let question = match text.trim() {
             "" => fill(
                 &gettext("Remove your signature for {account}?"),
