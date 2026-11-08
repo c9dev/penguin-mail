@@ -592,6 +592,7 @@ async fn a_smart_mailbox_asks_gmail_and_says_when_it_has_no_conditions() {
     let h = seeded().await;
     let smart = |conditions| {
         Mailbox::Smart(SmartMailbox {
+            unread_count: Default::default(),
             id: "s1".into(),
             name: "From Ann".into(),
             account: None,
@@ -624,6 +625,7 @@ async fn smart_folders_search_only_the_selected_account_and_cache_its_query() {
     let lists = lists(&h);
     let make = |account: &str, folder: &str| {
         Mailbox::Smart(SmartMailbox {
+            unread_count: Default::default(),
             id: "scoped".into(),
             name: "Selected folders".into(),
             account: None,
@@ -715,6 +717,7 @@ async fn smart_folders_keep_each_accounts_selected_mailbox() {
         provider_name: None,
     });
     let smart = Mailbox::Smart(SmartMailbox {
+        unread_count: Default::default(),
         id: "two-accounts".into(),
         name: "Selected folders".into(),
         account: None,
@@ -765,6 +768,7 @@ async fn folders_and_smart_mailboxes_send_gmail_the_text_they_sent_before() {
         list(&h, &mailbox, &view()).await;
     }
     let smart = Mailbox::Smart(SmartMailbox {
+        unread_count: Default::default(),
         id: "s1".into(),
         name: "Ann, unread".into(),
         account: None,

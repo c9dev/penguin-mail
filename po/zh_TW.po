@@ -1163,7 +1163,7 @@ msgstr "是否從 {account} 刪除規則？"
 msgid "Load remote images from every sender?"
 msgstr "是否載入所有寄件者的遠端圖片？"
 
-#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:652
+#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:653
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr "載入遠端圖片會讓寄件者知道何時開啟郵件。"
 
@@ -1185,22 +1185,22 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1794
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
 msgstr ""
 "隱藏電子郵件地址需要遮罩地址或標籤，而 {provider} 在這個帳號上兩者皆未提供。"
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1862
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "是否停用 {address}？寄至該地址的郵件會移至 [垃圾桶]。"
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1866
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "是否重新啟用 {address}？寄至該地址的郵件會再次送達。"
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1975
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1208,7 +1208,7 @@ msgstr ""
 "是否將 {sender} 的郵件移至 {category}（帳號：{account}），並將該寄件者日後寄"
 "來的郵件也移至此處？"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1987
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -1645,55 +1645,55 @@ msgstr[0] ""
 "是否刪除「{label}」資料夾（帳號：{account}）？有 {count} 個對話在其中。資料夾"
 "中的郵件也會一併刪除。"
 
-#: app/src/assistant/run/manage.rs:405
+#: app/src/assistant/run/manage.rs:406
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr "是否刪除「{name}」智慧信箱？列出的郵件會留在原處。"
 
-#: app/src/assistant/run/manage.rs:466
+#: app/src/assistant/run/manage.rs:467
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr "是否以此範本取代「{name}」範本？原先儲存的範本會消失。"
 
-#: app/src/assistant/run/manage.rs:470
+#: app/src/assistant/run/manage.rs:471
 msgid "Save a template called “{name}”?"
 msgstr "是否儲存名稱為「{name}」的範本？"
 
-#: app/src/assistant/run/manage.rs:508
+#: app/src/assistant/run/manage.rs:509
 msgid "Delete the template “{name}”?"
 msgstr "是否刪除「{name}」範本？"
 
-#: app/src/assistant/run/manage.rs:539
+#: app/src/assistant/run/manage.rs:540
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "是否將 {contact} 加入 {account} 的聯絡人？"
 
-#: app/src/assistant/run/manage.rs:583
+#: app/src/assistant/run/manage.rs:584
 msgid "this contact"
 msgstr "此聯絡人"
 
-#: app/src/assistant/run/manage.rs:595
+#: app/src/assistant/run/manage.rs:596
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "是否變更 {contact}（{account} 的聯絡人）？"
 
-#: app/src/assistant/run/manage.rs:642
+#: app/src/assistant/run/manage.rs:643
 msgid "Always load images from anyone at {domain}?"
 msgstr "是否一律載入來自 {domain} 網域的圖片？"
 
-#: app/src/assistant/run/manage.rs:646
+#: app/src/assistant/run/manage.rs:647
 msgid "Always load images from {sender}?"
 msgstr "是否一律載入 {sender} 的圖片？"
 
-#: app/src/assistant/run/manage.rs:677
+#: app/src/assistant/run/manage.rs:678
 msgid "Stop loading images from {sender}?"
 msgstr "是否停止載入 {sender} 的圖片？"
 
-#: app/src/assistant/run/manage.rs:712
+#: app/src/assistant/run/manage.rs:713
 msgid "Export {what} to {file}?"
 msgstr "是否將 {what} 匯出至 {file}？"
 
-#: app/src/assistant/run/manage.rs:718
+#: app/src/assistant/run/manage.rs:719
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "已有同名檔案，匯出會取代原檔案。"
 
-#: app/src/assistant/run/manage.rs:798
+#: app/src/assistant/run/manage.rs:799
 msgid "the message “{subject}”"
 msgstr "「{subject}」郵件"
 
@@ -2510,7 +2510,7 @@ msgstr "回報問題"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:467
 #: app/src/ui/conversation.rs:625 app/src/ui/conversation.rs:1124
-#: app/src/ui/smart_editor.rs:86 app/src/ui/toolbar/customize.rs:20
+#: app/src/ui/smart_editor.rs:110 app/src/ui/toolbar/customize.rs:20
 #: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "封存"
@@ -4311,7 +4311,7 @@ msgstr "{host} 拒絕登入：{reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:445 app/src/ui/sidebar.rs:496
-#: app/src/ui/sidebar.rs:1756 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1789 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "行事曆"
 
@@ -4712,7 +4712,7 @@ msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] "{count} 封未讀郵件"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1780
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1813
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}，{count} 封未讀郵件"
@@ -4735,7 +4735,7 @@ msgstr "開啟 Penguin Mail"
 msgid "New Message"
 msgstr "新增郵件"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2373 app/src/ui/window.rs:3675
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2406 app/src/ui/window.rs:3675
 msgid "Check for Mail"
 msgstr "檢查郵件"
 
@@ -4932,7 +4932,7 @@ msgstr "複製連結"
 #: app/src/ui/composer/mod.rs:2455 app/src/ui/composer/mod.rs:2909
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:293 app/src/ui/switch_jmap.rs:174
+#: app/src/ui/smart_editor.rs:317 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
 #: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
 #: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
@@ -5563,7 +5563,7 @@ msgstr ""
 "設定環境變數。URL 則透過 HTTP 連線至伺服器。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2904 app/src/ui/smart_editor.rs:39
+#: app/src/ui/composer/mod.rs:2904 app/src/ui/smart_editor.rs:40
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "名稱"
@@ -5602,7 +5602,7 @@ msgstr "測試"
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2909
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:287 app/src/ui/templates.rs:234
+#: app/src/ui/smart_editor.rs:311 app/src/ui/templates.rs:234
 #: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:169
 #: app/src/ui/window/save_contacts.rs:112
 msgid "Save"
@@ -6350,8 +6350,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "僅有可變更此行事曆的人能檢視詳細資料"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2090
-#: app/src/ui/sidebar.rs:2390
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2423
 msgid "Color"
 msgstr "顏色"
 
@@ -6729,7 +6729,7 @@ msgid "New Calendar"
 msgstr "新增行事曆"
 
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
-#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:289
+#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:313
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:378
 msgid "Create"
@@ -7194,19 +7194,19 @@ msgstr "授予 {account} 存取權"
 msgid "Sign in again to {account}"
 msgstr "重新登入 {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2395
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2428
 msgid "Sign In Again…"
 msgstr "重新登入…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2403
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2436
 msgid "Remove Account…"
 msgstr "移除帳號…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2410
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2443
 msgid "Account options"
 msgstr "帳號選項"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2415
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2448
 msgid "Options for {account}"
 msgstr "{account} 的選項"
 
@@ -7234,13 +7234,13 @@ msgstr "從清單隱藏"
 msgid "Original Color"
 msgstr "原始顏色"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2078
-#: app/src/ui/sidebar.rs:2380
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2111
+#: app/src/ui/sidebar.rs:2413
 msgid "Rename…"
 msgstr "重新命名…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1979
-#: app/src/ui/sidebar.rs:2106
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:2012
+#: app/src/ui/sidebar.rs:2139
 msgid "Delete…"
 msgstr "刪除…"
 
@@ -7356,7 +7356,7 @@ msgstr "{date}，有活動"
 msgid "Offline, last updated {time}"
 msgstr "離線，上次更新於 {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2473
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2506
 msgid "Offline"
 msgstr "離線"
 
@@ -7466,7 +7466,7 @@ msgid "Choose a Time…"
 msgstr "選擇時間…"
 
 #: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2004
-#: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1859
+#: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1892
 msgid "Send Later"
 msgstr "排程傳送"
 
@@ -7908,7 +7908,7 @@ msgid "Find Again"
 msgstr "再次尋找"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1973
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2006
 msgid "Edit…"
 msgstr "編輯…"
 
@@ -8101,7 +8101,7 @@ msgid "Tags…"
 msgstr "標記…"
 
 #: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1374
-#: app/src/ui/sidebar.rs:1865 app/src/ui/window/reminders.rs:25
+#: app/src/ui/sidebar.rs:1898 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "提醒我"
@@ -9200,7 +9200,7 @@ msgid ""
 msgstr "依活動或行事曆設定的時間，在每個活動開始前通知"
 
 #: app/src/ui/preferences.rs:402 app/src/ui/preferences.rs:409
-#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:45
+#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:46
 #: app/src/ui/window/customize_mailboxes.rs:636
 msgid "Accounts"
 msgstr "帳號"
@@ -10039,7 +10039,7 @@ msgstr "新增地址"
 msgid "Default sender"
 msgstr "預設寄件者"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2282
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2315
 msgid "Signature…"
 msgstr "簽名…"
 
@@ -10104,12 +10104,12 @@ msgid "Mailboxes"
 msgstr "信箱"
 
 #: app/src/ui/sidebar.rs:441 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1755 app/src/ui/thread_list.rs:369
+#: app/src/ui/sidebar.rs:1788 app/src/ui/thread_list.rs:369
 msgid "Mail"
 msgstr "郵件"
 
-#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1746
-#: app/src/ui/sidebar.rs:2840
+#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1779
+#: app/src/ui/sidebar.rs:2873
 msgid "99+"
 msgstr "99+"
 
@@ -10118,11 +10118,11 @@ msgid "Calendars"
 msgstr "行事曆"
 
 #: app/src/ui/sidebar.rs:1316 app/src/ui/sidebar.rs:1318
-#: app/src/ui/sidebar.rs:1882 app/src/ui/sidebar.rs:1884
+#: app/src/ui/sidebar.rs:1915 app/src/ui/sidebar.rs:1917
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/sidebar.rs:1358 app/src/ui/sidebar.rs:1853
+#: app/src/ui/sidebar.rs:1358 app/src/ui/sidebar.rs:1886
 msgid "Outbox"
 msgstr "寄件匣"
 
@@ -10130,95 +10130,118 @@ msgstr "寄件匣"
 msgid "Holds folders, not mail"
 msgstr "存放資料夾，不存放郵件"
 
-#: app/src/ui/sidebar.rs:1705
+#: app/src/ui/sidebar.rs:1646
+msgid "Approximate unread message count from downloaded mail"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1649
+#, fuzzy
+#| msgid "The message is larger than the server sends."
+msgid "Unread messages counted on the server"
+msgstr "郵件超過伺服器的寄送大小上限。"
+
+#: app/src/ui/sidebar.rs:1652
+#, fuzzy
+#| msgid "{count} unread message"
+#| msgid_plural "{count} unread messages"
+msgid "Counting unread messages on the server…"
+msgstr "{count} 封未讀郵件"
+
+#: app/src/ui/sidebar.rs:1655
+msgid ""
+"Unread count unavailable. The account may be offline or the server may not "
+"support these conditions."
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1738
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}，{count} 封未讀郵件"
 
-#: app/src/ui/sidebar.rs:1711
+#: app/src/ui/sidebar.rs:1744
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}，{count} 封郵件"
 
-#: app/src/ui/sidebar.rs:1758
+#: app/src/ui/sidebar.rs:1791
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "郵件，{count} 封未讀"
 
-#: app/src/ui/sidebar.rs:1764
+#: app/src/ui/sidebar.rs:1797
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "行事曆，{count} 個邀請等候回覆"
 
-#: app/src/ui/sidebar.rs:1975 app/src/ui/sidebar.rs:2097
-#: app/src/ui/sidebar.rs:2391
+#: app/src/ui/sidebar.rs:2008 app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2424
 msgid "Move Up"
 msgstr "上移"
 
-#: app/src/ui/sidebar.rs:1976 app/src/ui/sidebar.rs:2100
-#: app/src/ui/sidebar.rs:2392
+#: app/src/ui/sidebar.rs:2009 app/src/ui/sidebar.rs:2133
+#: app/src/ui/sidebar.rs:2425
 msgid "Move Down"
 msgstr "下移"
 
-#: app/src/ui/sidebar.rs:2128
+#: app/src/ui/sidebar.rs:2161
 msgid "Empty Trash…"
 msgstr "清空垃圾桶…"
 
-#: app/src/ui/sidebar.rs:2281
+#: app/src/ui/sidebar.rs:2314
 msgid "Automatic Reply…"
 msgstr "自動回覆…"
 
-#: app/src/ui/sidebar.rs:2283
+#: app/src/ui/sidebar.rs:2316
 msgid "Rules…"
 msgstr "規則…"
 
-#: app/src/ui/sidebar.rs:2284 app/src/ui/window.rs:3678
+#: app/src/ui/sidebar.rs:2317 app/src/ui/window.rs:3678
 msgid "Hide My Email…"
 msgstr "隱藏電子郵件地址…"
 
-#: app/src/ui/sidebar.rs:2293
+#: app/src/ui/sidebar.rs:2326
 msgid "On this computer"
 msgstr "在此電腦上"
 
-#: app/src/ui/sidebar.rs:2301
+#: app/src/ui/sidebar.rs:2334
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "在此電腦上。顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2302
+#: app/src/ui/sidebar.rs:2335
 msgid "Show or hide this account's mailboxes"
 msgstr "顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2396
+#: app/src/ui/sidebar.rs:2429
 msgid "Switch to JMAP…"
 msgstr "切換至 JMAP…"
 
-#: app/src/ui/sidebar.rs:2398
+#: app/src/ui/sidebar.rs:2431
 msgid "Messages That Will Not Download…"
 msgstr "無法下載的郵件…"
 
-#: app/src/ui/sidebar.rs:2471
+#: app/src/ui/sidebar.rs:2504
 msgid "Sign in again to keep syncing"
 msgstr "請重新登入以繼續同步"
 
-#: app/src/ui/sidebar.rs:2477
+#: app/src/ui/sidebar.rs:2510
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} 未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2488
+#: app/src/ui/sidebar.rs:2521
 msgid "The keyring is not responding; retrying"
 msgstr "鑰匙圈未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2491
+#: app/src/ui/sidebar.rs:2524
 msgid "Downloading mail"
 msgstr "正在下載郵件"
 
-#: app/src/ui/sidebar.rs:2495
+#: app/src/ui/sidebar.rs:2528
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "因錯誤而停止同步；請重新啟動 Penguin Mail 以重試"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2502
+#: app/src/ui/sidebar.rs:2535
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -10235,65 +10258,99 @@ msgstr "我的最愛"
 msgid "Smart Mailboxes"
 msgstr "智慧信箱"
 
-#: app/src/ui/smart_editor.rs:41 app/src/ui/smart_editor.rs:170
+#: app/src/ui/smart_editor.rs:42 app/src/ui/smart_editor.rs:194
 msgid "All Accounts"
 msgstr "所有帳號"
 
-#: app/src/ui/smart_editor.rs:56
+#: app/src/ui/smart_editor.rs:57
 msgid "Match"
 msgstr "符合"
 
-#: app/src/ui/smart_editor.rs:58
+#: app/src/ui/smart_editor.rs:59
 msgid "All of the conditions"
 msgstr "所有條件"
 
-#: app/src/ui/smart_editor.rs:59
+#: app/src/ui/smart_editor.rs:60
 msgid "Any of the conditions"
 msgstr "任一條件"
 
+#: app/src/ui/smart_editor.rs:65
+#, fuzzy
+#| msgid "read contacts"
+msgid "Unread count"
+msgstr "讀取聯絡人"
+
+#: app/src/ui/smart_editor.rs:67
+msgid "Do not show"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:68
+msgid "Fast, approximate"
+msgstr ""
+
 #: app/src/ui/smart_editor.rs:69
+msgid "Slow, exact"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:79
+msgid "Counts downloaded unread messages. Older mail may be missing."
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:80
+msgid ""
+"Counts unread messages on the server in the background. Some servers or "
+"conditions are unsupported."
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:81
+#, fuzzy
+#| msgid "Creating a smart mailbox"
+msgid "No unread count beside this smart mailbox."
+msgstr "正在建立智慧信箱"
+
+#: app/src/ui/smart_editor.rs:93
 msgid "Conditions"
 msgstr "條件"
 
-#: app/src/ui/smart_editor.rs:75
+#: app/src/ui/smart_editor.rs:99
 msgid "Add Condition"
 msgstr "新增條件"
 
-#: app/src/ui/smart_editor.rs:89
+#: app/src/ui/smart_editor.rs:113
 msgid "All Mail"
 msgstr "所有郵件"
 
-#: app/src/ui/smart_editor.rs:204 app/src/ui/smart_editor.rs:208
+#: app/src/ui/smart_editor.rs:228 app/src/ui/smart_editor.rs:232
 #, fuzzy
 #| msgid "Show Mailboxes"
 msgid "Choose Mailboxes"
 msgstr "顯示信箱"
 
-#: app/src/ui/smart_editor.rs:243 app/src/ui/smart_editor.rs:249
+#: app/src/ui/smart_editor.rs:267 app/src/ui/smart_editor.rs:273
 msgid "Remove Condition"
 msgstr "移除條件"
 
-#: app/src/ui/smart_editor.rs:247
+#: app/src/ui/smart_editor.rs:271
 msgid "Condition"
 msgstr "條件"
 
-#: app/src/ui/smart_editor.rs:248
+#: app/src/ui/smart_editor.rs:272
 msgid "Matches"
 msgstr "符合"
 
-#: app/src/ui/smart_editor.rs:305
+#: app/src/ui/smart_editor.rs:329
 msgid "Edit Smart Mailbox"
 msgstr "編輯智慧信箱"
 
-#: app/src/ui/smart_editor.rs:307
+#: app/src/ui/smart_editor.rs:331
 msgid "New Smart Mailbox"
 msgstr "新增智慧信箱"
 
-#: app/src/ui/smart_editor.rs:336
+#: app/src/ui/smart_editor.rs:365
 msgid "Give the mailbox a name"
 msgstr "請為信箱命名"
 
-#: app/src/ui/smart_editor.rs:340
+#: app/src/ui/smart_editor.rs:369
 msgid "Add a condition with a value"
 msgstr "請新增條件並填入值"
 
@@ -12197,45 +12254,45 @@ msgstr "請回到 Penguin Mail 查看原因並重試。可以關閉此分頁。"
 msgid "Nothing here"
 msgstr "此處沒有內容"
 
-#: domain/src/smart.rs:72
+#: domain/src/smart.rs:84
 msgid "From contains"
 msgstr "寄件者包含"
 
-#: domain/src/smart.rs:73
+#: domain/src/smart.rs:85
 msgid "To contains"
 msgstr "收件者包含"
 
-#: domain/src/smart.rs:74
+#: domain/src/smart.rs:86
 msgid "Subject contains"
 msgstr "主旨包含"
 
-#: domain/src/smart.rs:75
+#: domain/src/smart.rs:87
 msgid "Message contains"
 msgstr "郵件包含"
 
-#: domain/src/smart.rs:76
+#: domain/src/smart.rs:88
 msgid "Has label"
 msgstr "帶有標籤"
 
-#: domain/src/smart.rs:77
+#: domain/src/smart.rs:89
 #, fuzzy
 #| msgid "Reading a mailbox"
 msgid "In mailbox"
 msgstr "正在讀取信箱"
 
-#: domain/src/smart.rs:78
+#: domain/src/smart.rs:90
 msgid "Received in the last (days)"
 msgstr "最近幾天收到（天數）"
 
-#: domain/src/smart.rs:79
+#: domain/src/smart.rs:91
 msgid "Larger than (MB)"
 msgstr "大於（MB）"
 
-#: domain/src/smart.rs:81
+#: domain/src/smart.rs:93
 msgid "Is unread"
 msgstr "未讀"
 
-#: domain/src/smart.rs:82
+#: domain/src/smart.rs:94
 msgid "Is flagged"
 msgstr "有旗標"
 
@@ -12381,170 +12438,170 @@ msgstr "{host} 拒絕取消訂閱請求（HTTP {status}）"
 msgid "could not reach {host}"
 msgstr "無法連線至 {host}"
 
-#: sync/src/mailbox.rs:195
+#: sync/src/mailbox.rs:196
 msgid "{color} Flag"
 msgstr "{color}旗標"
 
-#: sync/src/mailbox.rs:325
+#: sync/src/mailbox.rs:329
 msgid "No Results"
 msgstr "沒有結果"
 
-#: sync/src/mailbox.rs:327
+#: sync/src/mailbox.rs:331
 msgid "Try other words, or fewer of them."
 msgstr "請嘗試其他字詞，或減少字詞數量。"
 
-#: sync/src/mailbox.rs:331
+#: sync/src/mailbox.rs:335
 msgid "Nothing Scheduled"
 msgstr "沒有排程郵件"
 
-#: sync/src/mailbox.rs:334
+#: sync/src/mailbox.rs:338
 msgid "Outbox Is Empty"
 msgstr "寄件匣是空的"
 
-#: sync/src/mailbox.rs:338
+#: sync/src/mailbox.rs:342
 msgid "No Reminders"
 msgstr "沒有提醒"
 
-#: sync/src/mailbox.rs:340
+#: sync/src/mailbox.rs:344
 msgid "Choose Remind Me on a conversation to bring it back here later."
 msgstr "請在對話中選擇 [提醒我]，稍後就會將對話移回此處。"
 
-#: sync/src/mailbox.rs:344
+#: sync/src/mailbox.rs:348
 msgid "No Follow-Ups"
 msgstr "沒有追蹤郵件"
 
-#: sync/src/mailbox.rs:347
+#: sync/src/mailbox.rs:351
 msgid "No Flagged Mail"
 msgstr "沒有加上旗標的郵件"
 
-#: sync/src/mailbox.rs:349
+#: sync/src/mailbox.rs:353
 msgid "No Mail from VIPs"
 msgstr "沒有 VIP 寄件者的郵件"
 
-#: sync/src/mailbox.rs:351 sync/src/mailbox.rs:520
+#: sync/src/mailbox.rs:355 sync/src/mailbox.rs:524
 msgid "No Matching Mail"
 msgstr "沒有符合條件的郵件"
 
-#: sync/src/mailbox.rs:356
+#: sync/src/mailbox.rs:360
 msgid "No Archived Mail"
 msgstr "沒有封存郵件"
 
-#: sync/src/mailbox.rs:357
+#: sync/src/mailbox.rs:361
 msgid "No Junk"
 msgstr "沒有垃圾郵件"
 
-#: sync/src/mailbox.rs:358
+#: sync/src/mailbox.rs:362
 msgid "Trash Is Empty"
 msgstr "垃圾桶是空的"
 
-#: sync/src/mailbox.rs:364
+#: sync/src/mailbox.rs:368
 msgid "Inbox Zero"
 msgstr "收件匣已清空"
 
-#: sync/src/mailbox.rs:365
+#: sync/src/mailbox.rs:369
 msgid "No Starred Mail"
 msgstr "沒有加上星號的郵件"
 
-#: sync/src/mailbox.rs:366
+#: sync/src/mailbox.rs:370
 msgid "No Sent Mail"
 msgstr "沒有寄件備份"
 
-#: sync/src/mailbox.rs:368
+#: sync/src/mailbox.rs:372
 msgid "No Drafts"
 msgstr "沒有草稿"
 
-#: sync/src/mailbox.rs:370
+#: sync/src/mailbox.rs:374
 msgid "Close a message without sending it and Penguin Mail keeps it here."
 msgstr "關閉尚未傳送的郵件時，Penguin Mail 會將郵件保留在此處。"
 
-#: sync/src/mailbox.rs:372
+#: sync/src/mailbox.rs:376
 msgid "No Muted Mail"
 msgstr "沒有靜音郵件"
 
-#: sync/src/mailbox.rs:413
+#: sync/src/mailbox.rs:417
 msgid "Could not load mail for {account}: {reason}"
 msgstr "無法載入 {account} 的郵件：{reason}"
 
-#: sync/src/mailbox.rs:521
+#: sync/src/mailbox.rs:525
 msgid "Change the filters or load more messages if available."
 msgstr "請變更篩選條件，或在有更多郵件時繼續載入。"
 
-#: sync/src/mailbox.rs:1031
+#: sync/src/mailbox.rs:1051
 msgid "This smart mailbox has no conditions"
 msgstr "此智慧信箱沒有條件"
 
-#: sync/src/mailbox.rs:1628
+#: sync/src/mailbox.rs:1652
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account} 的結果僅來自此電腦上的郵件"
 
-#: sync/src/mailbox.rs:1836
+#: sync/src/mailbox.rs:1860
 msgid "Returns {when}"
 msgstr "於 {when} 移回"
 
-#: sync/src/mailbox.rs:1879 sync/src/mailbox.rs:1982
+#: sync/src/mailbox.rs:1903 sync/src/mailbox.rs:2006
 msgid "No recipients"
 msgstr "沒有收件者"
 
-#: sync/src/mailbox.rs:1882 sync/src/mailbox.rs:1985
+#: sync/src/mailbox.rs:1906 sync/src/mailbox.rs:2009
 msgid "To {recipients}"
 msgstr "收件者：{recipients}"
 
-#: sync/src/mailbox.rs:1925
+#: sync/src/mailbox.rs:1949
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} 封未讀 · {category}"
 
-#: sync/src/mailbox.rs:1930
+#: sync/src/mailbox.rs:1954
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} 封未讀"
 
-#: sync/src/mailbox.rs:1937
+#: sync/src/mailbox.rs:1961
 msgid "Sent yesterday, no reply yet"
 msgstr "昨天傳送，尚未收到回覆"
 
-#: sync/src/mailbox.rs:1939
+#: sync/src/mailbox.rs:1963
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days} 天前傳送，尚未收到回覆"
 
-#: sync/src/mailbox.rs:2023
+#: sync/src/mailbox.rs:2047
 msgid "The server has not sent this message yet."
 msgstr "伺服器尚未寄出這封郵件。"
 
-#: sync/src/mailbox.rs:2024
+#: sync/src/mailbox.rs:2048
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail 尚未確認伺服器已收下這封郵件。"
 
-#: sync/src/mailbox.rs:2034
+#: sync/src/mailbox.rs:2058
 msgid "Sends {when}."
 msgstr "於 {when} 傳送。"
 
-#: sync/src/mailbox.rs:2035
+#: sync/src/mailbox.rs:2059
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "即使 Penguin Mail 已關閉，伺服器仍會寄出。"
 
-#: sync/src/mailbox.rs:2037
+#: sync/src/mailbox.rs:2061
 msgid "Sends {when}"
 msgstr "於 {when} 傳送"
 
-#: sync/src/mailbox.rs:2044
+#: sync/src/mailbox.rs:2068
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "請查看寄件備份。Penguin Mail 無法確認是否已寄出。"
 
-#: sync/src/mailbox.rs:2047
+#: sync/src/mailbox.rs:2071
 msgid "Canceled in another app."
 msgstr "已在其他應用程式中取消。"
 
-#: sync/src/mailbox.rs:2049
+#: sync/src/mailbox.rs:2073
 msgid "Not sent"
 msgstr "未傳送"
 
-#: sync/src/mailbox.rs:2056
+#: sync/src/mailbox.rs:2080
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}。將於 {when} 重試"
 
-#: sync/src/mailbox.rs:2063
+#: sync/src/mailbox.rs:2087
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}。Penguin Mail 已停止重試"
 
@@ -12692,11 +12749,11 @@ msgstr "Penguin Mail 無法將此重複設定儲存到 JMAP 行事曆。"
 msgid "This server keeps no colors for its mailboxes."
 msgstr "此伺服器不會儲存信箱的顏色。"
 
-#: sync/src/services/jmap/mod.rs:421
+#: sync/src/services/jmap/mod.rs:425
 msgid "This server files sent mail itself."
 msgstr "此伺服器會自行歸檔寄出的郵件。"
 
-#: sync/src/services/jmap/mod.rs:604
+#: sync/src/services/jmap/mod.rs:608
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "伺服器建立的地址無法由 Penguin Mail 讀取。"
 

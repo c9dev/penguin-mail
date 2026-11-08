@@ -438,6 +438,7 @@ mod tests {
     #[test]
     fn a_smart_mailbox_or_a_search_lists_again_after_any_change() {
         let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            unread_count: Default::default(),
             id: "s1".into(),
             name: "Ann".into(),
             account: None,

@@ -22,6 +22,7 @@ use mailrs_store::{Db, flags, follow_ups, messages, outbox, reminders, threads};
 use crate::{Accounts, MailBackend, MovedFrom, SearchQuery, SyncError};
 
 mod browse;
+mod smart_counts;
 
 /// Rows in one page of a stored mailbox.
 pub const PAGE: usize = 500;
@@ -285,7 +286,10 @@ impl Mailbox {
             .is_some_and(|which| which != Standard::Drafts)
             || matches!(
                 self,
-                Mailbox::Vips { .. } | Mailbox::Label { .. } | Mailbox::Folder { .. }
+                Mailbox::Vips { .. }
+                    | Mailbox::Label { .. }
+                    | Mailbox::Folder { .. }
+                    | Mailbox::Smart(_)
             )
     }
 
@@ -600,6 +604,16 @@ pub struct Counts {
     pub mailboxes: HashMap<Mailbox, i64>,
     /// Unread mail in each category of the inbox on screen.
     pub categories: HashMap<Category, i64>,
+    pub smart: HashMap<Mailbox, SmartCountState>,
+}
+
+/// The source or availability of a smart mailbox's unread message count.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SmartCountState {
+    Local,
+    Server,
+    Pending,
+    Unavailable,
 }
 
 /// What one Gmail search returned, so the folder it fills does not ask
@@ -720,6 +734,7 @@ pub struct Mailboxes<A: Accounts> {
     remote: Mutex<Option<RemoteListing>>,
     browsed: Mutex<browse::Browser>,
     unread: Arc<Mutex<HashMap<AccountId, UnreadCounts>>>,
+    smart_unread: Arc<Mutex<HashMap<(SmartMailbox, AccountId), smart_counts::Cached>>>,
     unread_request: AtomicU64,
     unread_changed: tokio::sync::watch::Sender<()>,
 }
@@ -732,6 +747,7 @@ impl<A: Accounts> Mailboxes<A> {
             remote: Mutex::new(None),
             browsed: Mutex::new(browse::Browser::default()),
             unread: Arc::new(Mutex::new(HashMap::new())),
+            smart_unread: Arc::new(Mutex::new(HashMap::new())),
             unread_request: AtomicU64::new(0),
             unread_changed: tokio::sync::watch::channel(()).0,
         }
@@ -748,6 +764,10 @@ impl<A: Accounts> Mailboxes<A> {
     pub fn forget_remote(&self) {
         *self.remote.lock().expect("remote listing poisoned") = None;
         self.unread.lock().expect("unread counts poisoned").clear();
+        self.smart_unread
+            .lock()
+            .expect("smart counts poisoned")
+            .clear();
     }
 
     /// Whether this listing needs a server, including an explicit mailbox
@@ -1203,6 +1223,9 @@ impl<A: Accounts> Mailboxes<A> {
         };
         let sidebar = sidebar.to_vec();
         let remote_counts = self.server_counts(&sidebar, refresh);
+        let (smart_counts, smart) = self
+            .smart_counts(&sidebar, refresh && !light, view.local_now())
+            .await?;
         let category_base = view
             .category
             .is_some()
@@ -1251,7 +1274,7 @@ impl<A: Accounts> Mailboxes<A> {
                     .flatten()
                     .collect();
                 let from_vips = threads::sender_counts(c, &vips)?;
-                let mut mailboxes = HashMap::new();
+                let mut mailboxes = smart_counts;
                 if !light {
                     mailboxes.insert(Mailbox::FollowUp, waiting);
                     mailboxes.insert(Mailbox::Scheduled, scheduled);
@@ -1343,6 +1366,7 @@ impl<A: Accounts> Mailboxes<A> {
                 Ok(Counts {
                     mailboxes,
                     categories,
+                    smart,
                 })
             })
             .await?)

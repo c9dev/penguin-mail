@@ -338,6 +338,7 @@ mod tests {
     fn a_saved_smart_mailbox_on_screen_takes_its_new_conditions() {
         let mut screen = screen();
         let old = SmartMailbox {
+            unread_count: Default::default(),
             id: "s1".into(),
             name: "Ann".into(),
             account: None,

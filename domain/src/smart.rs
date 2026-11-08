@@ -19,6 +19,18 @@ pub struct SmartMailbox {
     pub match_all: bool,
     #[serde(default)]
     pub conditions: Vec<Condition>,
+    #[serde(default)]
+    pub unread_count: UnreadCount,
+}
+
+/// How a smart mailbox obtains its unread message count.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UnreadCount {
+    #[default]
+    Hidden,
+    Local,
+    Server,
 }
 
 fn yes() -> bool {
@@ -244,6 +256,7 @@ mod tests {
 
     fn mailbox(match_all: bool, conditions: Vec<Condition>) -> SmartMailbox {
         SmartMailbox {
+            unread_count: Default::default(),
             id: "s1".into(),
             name: "Test".into(),
             account: None,
@@ -402,5 +415,25 @@ mod tests {
             mailbox(true, largest).query(),
             Some(Query::Term(Term::Larger(4_294_967_295 * MEGABYTE)))
         );
+    }
+}
+
+#[cfg(test)]
+mod unread_tests {
+    use super::*;
+
+    #[test]
+    fn old_settings_hide_counts_and_each_mode_round_trips() {
+        let old = r#"{"id":"s1","name":"Work","conditions":[]}"#;
+        let mut smart: SmartMailbox = serde_json::from_str(old).unwrap();
+        assert_eq!(smart.unread_count, UnreadCount::Hidden);
+        for mode in [UnreadCount::Hidden, UnreadCount::Local, UnreadCount::Server] {
+            smart.unread_count = mode;
+            assert_eq!(
+                serde_json::from_str::<SmartMailbox>(&serde_json::to_string(&smart).unwrap())
+                    .unwrap(),
+                smart
+            );
+        }
     }
 }

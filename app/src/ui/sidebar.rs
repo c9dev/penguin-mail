@@ -1607,7 +1607,9 @@ impl Sidebar {
     }
 
     /// Unread counts for mailboxes, totals for drafts and queued mail.
-    pub fn set_counts(&self, counts: &HashMap<Mailbox, i64>) {
+    pub fn set_counts(&self, result: &mailrs_sync::mailbox::Counts) {
+        use mailrs_sync::mailbox::SmartCountState;
+        let counts = &result.mailboxes;
         let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
@@ -1637,6 +1639,37 @@ impl Sidebar {
             }
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
+            if matches!(row.mailbox, Mailbox::Smart(_)) {
+                let state = result.smart.get(&row.mailbox);
+                let description = match state {
+                    Some(SmartCountState::Local) => {
+                        gettext("Approximate unread message count from downloaded mail")
+                    }
+                    Some(SmartCountState::Server) => {
+                        gettext("Unread messages counted on the server")
+                    }
+                    Some(SmartCountState::Pending) => {
+                        gettext("Counting unread messages on the server…")
+                    }
+                    Some(SmartCountState::Unavailable) => gettext(
+                        "Unread count unavailable. The account may be offline or the server may not support these conditions.",
+                    ),
+                    None => String::new(),
+                };
+                row.count.set_tooltip_text(Some(&description));
+                super::describe(&row.row, &row.name, &description);
+                match state {
+                    Some(SmartCountState::Pending) => {
+                        row.count.set_label("…");
+                        row.count.set_visible(true);
+                    }
+                    Some(SmartCountState::Unavailable) => {
+                        row.count.set_label("?");
+                        row.count.set_visible(true);
+                    }
+                    _ => {}
+                }
+            }
             super::name(
                 &row.row,
                 &mailbox_row_name(

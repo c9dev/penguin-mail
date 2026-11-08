@@ -33,6 +33,7 @@ fn cond(field: Field, value: &str) -> Condition {
 
 fn smart(match_all: bool, conditions: Vec<Condition>) -> SmartMailbox {
     SmartMailbox {
+        unread_count: Default::default(),
         id: "s1".into(),
         name: "Golden".into(),
         account: None,

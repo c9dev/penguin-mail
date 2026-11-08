@@ -372,6 +372,7 @@ impl<A: Accounts> Tools<A> {
             "account": mailbox.account,
             "match_all": mailbox.match_all,
             "conditions": mailbox.conditions,
+            "unread_count": mailbox.unread_count,
             "query": query.map(|query| query_words(&query, native_search)),
         })
     }

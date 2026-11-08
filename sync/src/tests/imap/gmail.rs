@@ -492,3 +492,30 @@ async fn a_gmail_account_offers_no_label_colours() {
     assert!(h.sync.services().offers().labels);
     assert!(!h.sync.services().offers().label_colors);
 }
+
+#[tokio::test]
+async fn exact_count_includes_each_requested_gmail_location_once() {
+    use mailrs_domain::query::{Query, Term};
+    use mailrs_domain::{MailSet, Role};
+    let imap = FakeImap::gmail();
+    imap.deliver_gmail(
+        &["\\Inbox", "Work"],
+        message("a", "Inbox", ""),
+        days_ago(400),
+    );
+    let trash = imap.deliver_gmail(&[], message("b", "Trash", ""), days_ago(400));
+    imap.remote_trash(trash);
+    let (_, adapter) = adapter_on(imap);
+    let folders = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Trash)),
+        Query::term(Term::MailboxNamed("Work".into())),
+    ]);
+    assert_eq!(
+        adapter
+            .count_query(&Query::And(vec![folders, Query::term(Term::Unread)]))
+            .await
+            .unwrap(),
+        2
+    );
+}

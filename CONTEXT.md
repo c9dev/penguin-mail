@@ -4,6 +4,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
+**Smart unread count**: a smart mailbox's optional count of unread messages, not conversations. Local mode counts downloaded messages once across overlapping folders, so mail outside the sync window can be missing. Server mode asks each matching account in the background and shows a count only when all have answered. Gmail, IMAP, Gmail over IMAP and JMAP support it for conditions their servers can express; unsupported searches and offline accounts show an unavailable count. Answers expire after a minute or a local mail change. Hidden is the default. `smart::UnreadCount`, `mailbox::smart_counts`.
+
 **Delivery address**: an address from Delivered-To, X-Original-To or a Received for clause, kept with body provenance. It can explain delivery through a mailing list or blind copy when To/Cc omit the reader. Reply selection uses only a configured sender, an enabled suffix or a known masked address; headers never authorize a new sending identity. `mailrs_mime::delivery`.
 
 **Toolbar layout**: the saved order of conversation header buttons. Customize Toolbar chooses, reorders and restores them; narrow windows keep secondary actions in More. `ui::toolbar`.

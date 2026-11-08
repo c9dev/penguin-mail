@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 
-use mailrs_domain::smart::{Condition, Field, MailboxChoice, SmartMailbox};
+use mailrs_domain::smart::{Condition, Field, MailboxChoice, SmartMailbox, UnreadCount};
 use mailrs_domain::translate::gettext;
 
 struct ConditionRow {
@@ -26,6 +26,7 @@ pub fn present(
 ) {
     let editing = existing.is_some();
     let mailbox = existing.unwrap_or_else(|| SmartMailbox {
+        unread_count: Default::default(),
         id: format!("smart-{}", mailrs_gmail::random_token(6)),
         name: String::new(),
         account: None,
@@ -60,10 +61,33 @@ pub fn present(
         ]))
         .selected(if mailbox.match_all { 0 } else { 1 })
         .build();
+    let unread = adw::ComboRow::builder()
+        .title(gettext("Unread count"))
+        .model(&gtk::StringList::new(&[
+            &gettext("Do not show"),
+            &gettext("Fast, approximate"),
+            &gettext("Slow, exact"),
+        ]))
+        .selected(match mailbox.unread_count {
+            UnreadCount::Hidden => 0,
+            UnreadCount::Local => 1,
+            UnreadCount::Server => 2,
+        })
+        .build();
+    let explain = |row: &adw::ComboRow| {
+        row.set_subtitle(&match row.selected() {
+            1 => gettext("Counts downloaded unread messages. Older mail may be missing."),
+            2 => gettext("Counts unread messages on the server in the background. Some servers or conditions are unsupported."),
+            _ => gettext("No unread count beside this smart mailbox."),
+        });
+    };
+    explain(&unread);
+    unread.connect_selected_notify(explain);
     let about = adw::PreferencesGroup::new();
     about.add(&name);
     about.add(&scope);
     about.add(&matching);
+    about.add(&unread);
 
     let conditions = adw::PreferencesGroup::builder()
         .title(gettext("Conditions"))
@@ -307,7 +331,7 @@ pub fn present(
             gettext("New Smart Mailbox")
         })
         .content_width(620)
-        .content_height(560)
+        .content_height(660)
         .child(&toolbar)
         .build();
     let closer = dialog.clone();
@@ -317,6 +341,11 @@ pub fn present(
     let closer = dialog.clone();
     save.connect_clicked(move |_| {
         let result = SmartMailbox {
+            unread_count: match unread.selected() {
+                1 => UnreadCount::Local,
+                2 => UnreadCount::Server,
+                _ => UnreadCount::Hidden,
+            },
             id: mailbox.id.clone(),
             name: name.text().trim().to_string(),
             account: (scope.selected() > 0)

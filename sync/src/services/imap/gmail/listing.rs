@@ -237,6 +237,34 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         Ok(Backfill { refs, next })
     }
 
+    pub(in crate::services::imap) async fn gm_count(
+        &self,
+        query: &mailrs_domain::query::Query,
+    ) -> Result<i64, BackendError> {
+        use mailrs_domain::{MailSet, Role};
+        let boxes = self.gm_synced().await?;
+        let text = mailrs_gmail::query::print(query);
+        let keys = format!("{} UNDELETED", gm_raw(&text)?);
+        let mut mailboxes = vec![&boxes.all];
+        if query.asks_for(&MailSet::Role(Role::Junk)) {
+            mailboxes.push(&boxes.spam);
+        }
+        if query.asks_for(&MailSet::Role(Role::Trash)) {
+            mailboxes.push(&boxes.trash);
+        }
+        let mut ids = std::collections::HashSet::new();
+        for mailbox in mailboxes {
+            let (validity, uids) = self.gm_matching(mailbox, &keys).await?;
+            ids.extend(
+                self.gm_refs(mailbox, validity, &uids)
+                    .await?
+                    .into_iter()
+                    .map(|hit| hit.id),
+            );
+        }
+        Ok(ids.len() as i64)
+    }
+
     /// A search in Gmail's syntax, run by Gmail. A tree prints as the text
     /// the folders and smart mailboxes sent before they became trees.
     pub(in crate::services::imap) async fn gm_search(

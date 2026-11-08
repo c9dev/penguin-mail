@@ -1708,7 +1708,7 @@ impl MainWindow {
 
     /// What the sidebar, the space badge and the category switcher show.
     fn show_counts(&self, counted: &Counted) {
-        self.sidebar.set_counts(&counted.counts.mailboxes);
+        self.sidebar.set_counts(&counted.counts);
         self.sidebar.set_unread(counted.all_inboxes());
         self.set_follow_up_count(counted.of(&Mailbox::FollowUp) as usize);
         self.set_category_counts(&counted.counts.categories);
@@ -4793,6 +4793,7 @@ mod tests {
         };
         let unified = Mailbox::Unified(super::super::Standard::Inbox);
         let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            unread_count: Default::default(),
             id: "smart-1".into(),
             name: "Big mail".into(),
             account: None,
