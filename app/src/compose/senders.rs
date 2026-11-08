@@ -93,8 +93,16 @@ pub fn sender_for<'a>(senders: &'a [SendAsAddress], email: &str) -> Option<&'a S
 pub fn reply_addresses(
     senders: &[SendAsAddress],
     original: &MessageMeta,
+    delivered_to: &[String],
     masked: impl Fn(&str) -> bool,
 ) -> Vec<Address> {
+    let delivered: Vec<Address> = delivered_to
+        .iter()
+        .map(|email| Address {
+            name: None,
+            email: email.clone(),
+        })
+        .collect();
     let mut mine: Vec<Address> = senders
         .iter()
         .map(|s| Address {
@@ -102,7 +110,13 @@ pub fn reply_addresses(
             email: s.email.clone(),
         })
         .collect();
-    for address in original.to.iter().chain(&original.cc).chain(&original.from) {
+    for address in original
+        .to
+        .iter()
+        .chain(&original.cc)
+        .chain(&original.from)
+        .chain(&delivered)
+    {
         if !mine
             .iter()
             .any(|a| a.email.eq_ignore_ascii_case(&address.email))
@@ -119,7 +133,7 @@ pub fn reply_addresses(
         .find(|s| s.default)
         .or(senders.first())
         .and_then(|s| s.name.clone());
-    for address in original.to.iter().chain(&original.cc) {
+    for address in original.to.iter().chain(&original.cc).chain(&delivered) {
         if !mine
             .iter()
             .any(|a| a.email.eq_ignore_ascii_case(&address.email))
@@ -130,6 +144,15 @@ pub fn reply_addresses(
                 email: address.email.clone(),
             });
         }
+    }
+    // To/Cc and our own sent From still win in reply_from. For list mail,
+    // prefer the first delivery address this account is allowed to send as.
+    if let Some(index) = delivered.iter().find_map(|delivered| {
+        mine.iter()
+            .position(|own| own.email.eq_ignore_ascii_case(&delivered.email))
+    }) {
+        let preferred = mine.remove(index);
+        mine.insert(0, preferred);
     }
     mine
 }

@@ -71,13 +71,34 @@ other files, such as pictures, it can name but not read.
 It lists the newsletters you have had in the last three months, with how
 many messages each sender wrote and how their list lets go, so "the Figma
 one" is enough to name. It leaves up to twenty of them in one go. A list
-that only lets go through its own page has that page loaded out of sight,
-filled in and pressed, the way the Unsubscribe button does it, and one
+that only lets go through its own page first asks permission to load it,
+showing the addresses and warning that the pages run scripts and contact
+their servers. Opening a link may itself unsubscribe you. After approval,
+the page loads out of sight, the way the Unsubscribe button does it. A second
 dialog names every list, the button it will press and the address it will
 type. A list you untick there is left alone. One page takes up to 45
 seconds, so twenty of them can take minutes. Each list comes back as
 done, sent but unconfirmed, failed, opened in your browser for you to
 finish, or declined.
+
+## Summarize and Explain
+
+The Summarize and Explain buttons above a conversation start a fresh chat
+with only that conversation's loaded text. They cannot call mail tools,
+skills, MCP servers, or web search by default. Follow-up questions keep
+that restriction, even if you change preferences. New Chat returns to the
+ordinary assistant. The matching starting suggestions use the same controls;
+a request typed into an ordinary chat still has that chat's tools.
+
+Analysis includes up to 8,000 characters from each message and at most
+64,000 bytes of conversation data, including headers and JSON formatting.
+Messages that do not fit and the messages after them are left out. The chat
+says when text is omitted; the model also receives truncation markers.
+
+Under Preferences > AI > Safety, Allow Tools in Summaries and Explanations
+lets new analysis chats use the ordinary assistant tools. This is off by
+default. Turning it on allows those chats to read other mail, take actions,
+and contact external services, subject to their usual approval rules.
 
 ## Writing and drafts
 
@@ -192,6 +213,17 @@ new connection. It does not repeat past actions. Model and tool changes apply
 to the next question. New Chat starts over when you choose it.
 The model menu keeps the current connection's list for five minutes and
 refreshes it when the connection or its credentials change.
+
+## How long a turn runs
+
+Every tool the assistant runs costs a request to the model, so a wide job
+makes many. **Model Requests per Answer** on the AI page sets how many
+requests one turn may make before the assistant gives up and says so, from 1
+to 100, with 25 the default. Raise it for a job that works through a hundred
+messages one at a time, and lower it for a model that wanders, so you hear
+sooner. Stop ends a turn whenever you like and keeps the chat's earlier
+turns. The next question follows whatever number you set. Claude Code runs
+its own turns and keeps its own count.
 
 ## Choose the AI language
 
@@ -459,8 +491,9 @@ and reads the rest only when a request calls for it.
 
 A skill with scripts (a `scripts/` folder, or files such as `.py` and
 `.sh`) can run commands. The assistant asks before each one and shows you
-the exact command. **Always Allow** covers that exact command in that
-skill, and any other command asks again. The **Always Allowed** list on
+the exact command and its standard input. **Always Allow** covers that
+command, input, skill, and network permission together. Changing any of
+these asks again, and old command-only permissions must be approved again. The **Always Allowed** list on
 the AI page shows each allowed command and takes it back. The command
 runs in a sandbox made with
 [bubblewrap](https://github.com/containers/bubblewrap), which must be
@@ -528,6 +561,6 @@ rules described above.
 
 Attach adds removable file chips to the question. The assistant receives their paths, not their contents. When it puts a file into a draft or sends it, Penguin Mail shows the existing approval question and the full paths before reading the files. The question box grows to four lines and scrolls after that. Enter sends; Shift+Enter starts a line.
 
-Each question has You above it. What it did folds the turn's thoughts and tool calls into one row; open a tool to read its input, result and identifier. Show Details Expanded in Preferences opens the outer row. The five starting suggestions sit under This conversation and Your mail.
+Each question has You above it. What it did folds the turn's thoughts and tool calls into one row; open a tool to read its input, result and identifier. Show Details Expanded in Preferences opens the outer row. The six starting suggestions sit under This conversation and Your mail.
 
 Detach sits before the window controls and moves the same chat into its own window. The main window controls appear above the assistant while it is docked and open, and above the message or calendar when the assistant is closed or detached. Dock returns it to the mail window, preserving your question, file chips and pending approval. Closing the detached window docks the chat and hides it. Ctrl+J in the mail window presents a detached chat. Stop declines a pending approval and stops the turn.

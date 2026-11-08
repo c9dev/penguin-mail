@@ -1,17 +1,12 @@
-//! Which buttons the conversation's header bar shows, and how they group
-//! into capsules. The header packs one linked box per capsule in the
-//! order of [`CAPSULES`] and hides a capsule whose buttons are all
-//! hidden, so this module decides everything the header shows and the
-//! widgets only follow it.
-//!
-//! The mockup (`mockups.py`'s `capsule()`) draws four groups: replying,
-//! filing, Move with its chevron, then the flag with its chevron. It has
-//! no Read button; `U`, the More menu and the message menu keep marking a
-//! message read or unread. [`Slot::Read`] stays in the enum for those
-//! menus to name, but [`shows`] never shows it here.
+//! Saved choices and visibility of the conversation toolbar.
+
+pub mod customize;
+
+use serde::{Deserialize, Serialize};
 
 /// One button of the header bar.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum Slot {
     Reply,
     ReplyAll,
@@ -24,10 +19,12 @@ pub enum Slot {
     Flag,
     Labels,
     Tags,
+    Print,
+    Source,
 }
 
 impl Slot {
-    pub const ALL: [Slot; 11] = [
+    pub const ALL: [Slot; 13] = [
         Slot::Reply,
         Slot::ReplyAll,
         Slot::Forward,
@@ -39,6 +36,8 @@ impl Slot {
         Slot::Flag,
         Slot::Labels,
         Slot::Tags,
+        Slot::Print,
+        Slot::Source,
     ];
 }
 
@@ -93,9 +92,13 @@ pub fn shows(slot: Slot, on: On) -> bool {
         Slot::Edit => on.holds == Holds::Draft,
         Slot::Archive | Slot::Trash => any,
         Slot::Junk => any && wide,
-        // The mockup gives Read no button of its own; U, the More menu
-        // and the message menu still mark a message read or unread.
-        Slot::Read => false,
+        Slot::Read => any && wide,
+        Slot::Print | Slot::Source => {
+            wide && matches!(
+                on.holds,
+                Holds::Message | Holds::Draft | Holds::Loose { .. }
+            )
+        }
         Slot::Flag => any && wide,
         Slot::Labels => any && wide && !on.detached,
         // Tags sit with the Labels button, in the same window, and show
@@ -110,14 +113,54 @@ pub fn more_shows(on: On) -> bool {
     matches!(on.holds, Holds::Message | Holds::Loose { .. })
 }
 
-/// The capsules that show, each with the buttons in it that show.
-pub fn groups(on: On) -> Vec<Vec<Slot>> {
-    CAPSULES
-        .iter()
-        .map(|capsule| {
-            capsule
-                .iter()
-                .copied()
+/// Saved layouts keep the first occurrence of each button.
+pub fn layout(saved: Option<&[Slot]>) -> Vec<Slot> {
+    let mut slots = Vec::new();
+    for &slot in saved.unwrap_or(DEFAULT) {
+        if !slots.contains(&slot) {
+            slots.push(slot);
+        }
+    }
+    slots
+}
+
+pub const DEFAULT: &[Slot] = &[
+    Slot::Reply,
+    Slot::ReplyAll,
+    Slot::Forward,
+    Slot::Edit,
+    Slot::Archive,
+    Slot::Trash,
+    Slot::Junk,
+    Slot::Labels,
+    Slot::Tags,
+    Slot::Flag,
+];
+
+/// Adjacent buttons from the same family share a capsule.
+pub fn capsules(saved: Option<&[Slot]>) -> Vec<Vec<Slot>> {
+    let family = |slot: Slot| CAPSULES.iter().position(|group| group.contains(&slot));
+    let mut groups: Vec<Vec<Slot>> = Vec::new();
+    for slot in layout(saved) {
+        if let Some(last) = groups.last_mut()
+            && family(slot).is_some()
+            && family(last[0]) == family(slot)
+        {
+            last.push(slot);
+        } else {
+            groups.push(vec![slot]);
+        }
+    }
+    groups
+}
+
+#[cfg(test)]
+fn groups(on: On) -> Vec<Vec<Slot>> {
+    capsules(None)
+        .into_iter()
+        .map(|group| {
+            group
+                .into_iter()
                 .filter(|&slot| shows(slot, on))
                 .collect::<Vec<_>>()
         })
@@ -244,15 +287,42 @@ mod tests {
     }
 
     #[test]
+    fn custom_order_can_include_read_print_and_source_without_duplicates() {
+        assert_eq!(
+            layout(Some(&[Print, Read, Source, Print])),
+            [Print, Read, Source]
+        );
+        assert!(layout(Some(&[])).is_empty());
+        assert_eq!(layout(None), DEFAULT);
+        for slot in [Print, Source] {
+            assert!(shows(slot, on(Holds::Message)));
+            assert!(shows(slot, on(Holds::Loose { answerable: false })));
+            assert!(!shows(slot, on(Holds::Many)));
+            assert!(!shows(
+                slot,
+                On {
+                    compact: true,
+                    ..on(Holds::Message)
+                }
+            ));
+        }
+        assert!(!shows(Read, on(Holds::Loose { answerable: true })));
+        assert_eq!(
+            capsules(Some(&[Trash, Archive, Print, ReplyAll, Reply])),
+            [vec![Trash, Archive], vec![Print], vec![ReplyAll, Reply]]
+        );
+    }
+
+    #[test]
     fn nothing_open_shows_nothing() {
         assert!(groups(on(Holds::Nothing)).is_empty());
         assert!(!more_shows(on(Holds::Nothing)));
     }
 
     #[test]
-    fn read_never_shows_in_the_header() {
+    fn read_can_be_added_to_the_header() {
         for holds in [Holds::Nothing, Holds::Many, Holds::Message, Holds::Draft] {
-            assert!(!shows(Read, on(holds)));
+            assert_eq!(shows(Read, on(holds)), holds != Holds::Nothing);
         }
     }
 }

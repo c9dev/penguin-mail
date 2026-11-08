@@ -110,6 +110,48 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.12" date="2026-11-05">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.12</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.</li>
+          <li>Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.</li>
+          <li>Add a shared Microsoft 365 mailbox by address in Accounts preferences, using an existing account's sign-in.</li>
+          <li>Choose how many model requests the assistant can make per answer in Preferences → AI.</li>
+          <li>Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.</li>
+          <li>Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.</li>
+          <li>Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.</li>
+          <li>Penguin Mail builds and installs on Debian 13 from <code>scripts/package-debian.sh</code>, as a .deb against its GTK 4.18 and libadwaita 1.7.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>The mailbox sidebar can be narrower, with Mail and Calendar switching to icons when their labels do not fit.</li>
+          <li>Deleting, archiving, or moving mail selects a neighbor in your last navigation direction, with an option in Reading preferences to always select the next row.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Refreshing delivery headers keeps decrypted or verified message content and attachments intact.</li>
+          <li>The calendar time indicator catches up when shown and advances each minute while the calendar stays open.</li>
+          <li>On macOS, messages stay visible after shrinking and expanding the window.</li>
+          <li>Hidden calendar content and absent switch counts no longer keep the mailbox sidebar wide.</li>
+          <li>Summarize and Explain limit the mail sent to the model and say when some text was left out.</li>
+          <li>Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.</li>
+          <li>A skill command's saved approval covers its standard input as well as its command line.</li>
+          <li>Closing or sending a message lets its window go, instead of keeping every composer ever opened alive in the background.</li>
+          <li>A shared calendar the server refuses to show is left alone until the calendar list is read again, instead of being asked for and logged every minute.</li>
+          <li>A crash is written to the log with where it happened, so it can be reported.</li>
+          <li>The message pane takes its colors from a GTK theme loaded over libadwaita, instead of staying near black under a theme of its own.</li>
+          <li>Adding a reminder to an event no longer stacks another Add Reminder row each time.</li>
+          <li>The week and day views keep their day headings over their columns on desktops without overlay scrollbars.</li>
+          <li>The message view scrolls at once with the wheel instead of animating each tick, which stuttered on some graphics drivers.</li>
+          <li>Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.</li>
+          <li>Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.</li>
+          <li>Marking mail read clears the unread mark in the list and open conversation while keeping expanded message details and quoted text open.</li>
+          <li>Mail belonging to one account no longer turns up as a row in the mailbox you are looking at in another account, whether it arrived or was read, starred or moved elsewhere.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.11" date="2026-10-28">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.11</url>
       <description translate="no">

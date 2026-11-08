@@ -49,6 +49,10 @@ async fn bodies_are_fetched_once_then_served_from_the_cache() {
     let body = MessageBody {
         html: None,
         text: Some("hello".into()),
+        provenance: mailrs_domain::Provenance {
+            delivered_to: Some(vec![]),
+            ..Default::default()
+        },
         ..Default::default()
     };
     h.fake.with(|s| {

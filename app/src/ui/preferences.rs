@@ -4,6 +4,7 @@
 mod accounts;
 pub(crate) mod dialog;
 pub(crate) mod google_route;
+mod shared_mailbox;
 pub(crate) mod space;
 
 use std::cell::{Cell, RefCell};
@@ -186,6 +187,15 @@ fn reading_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.mark_read,
         Change::MarkRead,
     ));
+    reading.add(&switch(
+        app,
+        &gettext("Follow Navigation After Removing Mail"),
+        Some(&gettext(
+            "After deleting, archiving, or moving mail, select the neighbor in the direction you last moved",
+        )),
+        settings.follow_selection_direction,
+        Change::FollowSelectionDirection,
+    ));
     page.add(&reading);
     let images = adw::PreferencesGroup::builder()
         .title(gettext("Images and Receipts"))
@@ -272,6 +282,19 @@ fn appearance_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         )),
         settings.show_avatars,
         Change::ShowAvatars,
+    ));
+    // WebKitGTK takes the GPU by way of DMA-BUF buffers, which some
+    // drivers, hybrid laptops and virtual machines leave blank. macOS's
+    // engine has no such switch.
+    #[cfg(target_os = "linux")]
+    appearance.add(&switch(
+        app,
+        &gettext("Draw Messages Without the GPU"),
+        Some(&gettext(
+            "Turn on when messages show blank or garbled. Takes effect after a restart",
+        )),
+        settings.software_rendering,
+        Change::SoftwareRendering,
     ));
     appearance.add(&language_row(app, settings));
     page.add(&appearance);
@@ -360,6 +383,7 @@ fn calendar_rows(app: &Rc<App>, settings: &Settings) -> Vec<gtk::Widget> {
         )
         .upcast(),
         week_start_row(app, settings.week_start).upcast(),
+        calendar_clock_row(app, settings.calendar_clock).upcast(),
         working_hours_row(app, settings.working_hours).upcast(),
     ]
 }
@@ -453,7 +477,29 @@ fn accounts_page(
         row.add_row(&space_row);
         space_rows.push((account.id, update));
         google_route::rows(app, account, *offers, &row, &connect, contacts);
-        if let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email) {
+        if let Some(owner) = app.microsoft_owner(account.id) {
+            row.add_row(
+                &adw::ActionRow::builder()
+                    .title(gettext("Shared Mailbox"))
+                    .subtitle(format!(
+                        "{}\n{}",
+                        fill(
+                            &gettext("Signed in through {account}"),
+                            &[("account", &owner.email)]
+                        ),
+                        gettext("Shared mailboxes support mail only.")
+                    ))
+                    .use_markup(false)
+                    .build(),
+            );
+        } else if account.provider == mailrs_domain::Provider::Microsoft
+            && account.provider_name() == "Microsoft 365"
+        {
+            row.add_row(&shared_mailbox::row(app, account));
+        }
+        if app.microsoft_owner(account.id).is_none()
+            && let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email)
+        {
             let unavailable = adw::ActionRow::builder()
                 .use_markup(false)
                 .title(gettext("Not Available"))
@@ -1334,6 +1380,19 @@ fn ending_at(mut hours: WorkingHours, hour: u32) -> WorkingHours {
         hours.start_minutes = end - 60;
     }
     hours
+}
+
+fn calendar_clock_row(app: &Rc<App>, clock: crate::settings::CalendarClock) -> adw::ComboRow {
+    let title = gettext("Time Format");
+    let row = combo(
+        app,
+        &title,
+        Some(&gettext("Automatic follows the system clock format")),
+        clock,
+        Change::CalendarClock,
+    );
+    crate::ui::name(&row, &title);
+    row
 }
 
 /// The "Week Starts On" row: Automatic follows the locale's own first

@@ -52,19 +52,25 @@ pub enum Wanted {
     Suggested(String),
     /// Only this address: a sign-in that comes back as another is refused.
     Only(String),
+    /// This existing Microsoft account, with consent for shared mail.
+    SharedMail(String),
 }
 
 impl Wanted {
     fn address(&self) -> Option<&str> {
         match self {
             Wanted::Anyone => None,
-            Wanted::Suggested(address) | Wanted::Only(address) => Some(address),
+            Wanted::Suggested(address) | Wanted::Only(address) | Wanted::SharedMail(address) => {
+                Some(address)
+            }
         }
     }
 
     fn check(&self, signed_in: &str) -> Result<(), BrowserSignInError> {
         match self {
-            Wanted::Only(wanted) if !wanted.eq_ignore_ascii_case(signed_in) => {
+            Wanted::Only(wanted) | Wanted::SharedMail(wanted)
+                if !wanted.eq_ignore_ascii_case(signed_in) =>
+            {
                 Err(BrowserSignInError::OtherAddress {
                     signed_in: signed_in.to_string(),
                     wanted: wanted.clone(),
@@ -527,10 +533,16 @@ async fn with_microsoft(
         secrets,
         ..
     } = connector;
+    let wanted = microsoft_wanted(db, wanted).await?;
     let client = clients
         .microsoft
         .clone()
         .ok_or(BrowserSignInError::NoClient(Browser::Microsoft))?;
+    let client = if matches!(wanted, Wanted::SharedMail(_)) {
+        client.with_shared_mail()
+    } else {
+        client
+    };
     let authorized =
         mailrs_graph::authorize(&client, mailrs_graph::GRAPH_BASE, wanted.address(), open)
             .await
@@ -546,14 +558,8 @@ async fn with_microsoft(
             .map(mailrs_graph::Granted::to_scope),
     };
     let tokens = Arc::clone(&secrets.microsoft);
-    let account = microsoft_signed_in(
-        db,
-        Arc::clone(&tokens),
-        new,
-        now_millis(),
-        &mailrs_graph::SCOPES.join(" "),
-    )
-    .await?;
+    let account =
+        microsoft_signed_in(db, Arc::clone(&tokens), new, now_millis(), &client.scopes()).await?;
     let window_days = config.engine_config().window_days;
     let services = connect_microsoft(db, tokens, client, &account, window_days).await?;
     Ok(SignedIn {
@@ -561,4 +567,67 @@ async fn with_microsoft(
         name: authorized.name,
         services: Connected::Ready(services),
     })
+}
+
+// A shared mailbox signs in as its owner, never as the shared address.
+async fn microsoft_wanted(
+    db: &mailrs_store::Db,
+    wanted: Wanted,
+) -> Result<Wanted, BrowserSignInError> {
+    let wanted = match wanted {
+        Wanted::Only(ref address) | Wanted::Suggested(ref address) => {
+            let address = address.clone();
+            let owner = db
+                .read(move |c| {
+                    let Some(account) = accounts::account_by_microsoft_address(c, &address)? else {
+                        return Ok(None);
+                    };
+                    if let Some(owner) = accounts::microsoft_owner(c, account.id)? {
+                        return Ok(accounts::account(c, owner)?.map(|a| a.email));
+                    }
+                    Ok(
+                        (!accounts::shared_microsoft_mailboxes(c, account.id)?.is_empty())
+                            .then_some(address),
+                    )
+                })
+                .await
+                .map_err(SyncError::from)?;
+            owner.map_or(wanted, Wanted::SharedMail)
+        }
+        wanted => wanted,
+    };
+    Ok(wanted)
+}
+
+#[cfg(test)]
+mod shared_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn reauth_of_either_address_keeps_the_owner_and_shared_consent() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = mailrs_store::Db::open(&dir.path().join("mail.db")).unwrap();
+        db.write(|c| {
+            let owner =
+                accounts::insert_microsoft_account(c, "owner@contoso.com", "Microsoft 365", 0)?
+                    .unwrap();
+            accounts::insert_shared_microsoft(c, owner, "sales@contoso.com", 0)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        for wanted in [
+            Wanted::Suggested("SALES@contoso.com".into()),
+            Wanted::Only("owner@contoso.com".into()),
+        ] {
+            let resolved = microsoft_wanted(&db, wanted).await.unwrap();
+            assert_eq!(resolved, Wanted::SharedMail("owner@contoso.com".into()));
+            assert!(resolved.check("other@contoso.com").is_err());
+        }
+        let suggested = Wanted::Suggested("new@contoso.com".into());
+        assert_eq!(
+            microsoft_wanted(&db, suggested.clone()).await.unwrap(),
+            suggested
+        );
+    }
 }

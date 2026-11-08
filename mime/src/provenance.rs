@@ -16,6 +16,7 @@ use mailrs_domain::Provenance;
 pub fn provenance(header: impl Fn(&str) -> Option<String>) -> Provenance {
     let authentication = header("Authentication-Results").unwrap_or_default();
     Provenance {
+        delivered_to: None,
         mailed_by: mailed_by(header("Return-Path").as_deref(), &authentication),
         signed_by: signed_by(header("DKIM-Signature").as_deref(), &authentication),
         encrypted: encrypted(header("Received").as_deref()),

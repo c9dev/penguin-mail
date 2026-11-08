@@ -118,6 +118,7 @@ impl NextEvent {
         let bar = gtk::Box::builder().css_classes(["bar"]).build();
         let when = gtk::Label::builder()
             .xalign(0.0)
+            .ellipsize(pango::EllipsizeMode::End)
             .css_classes(["when"])
             .build();
         let what = gtk::Label::builder()
@@ -315,10 +316,7 @@ pub struct Sidebar {
     unread: Cell<i64>,
     /// Invitations waiting for an answer, for the Calendar toggle's.
     waiting: Cell<i64>,
-    /// "Mailboxes" or "Calendars" while the switch hides. A label that
-    /// never shortens, unlike `adw::WindowTitle`: the header gives its
-    /// start what that asks for, and on macOS the window buttons share
-    /// the row, which left a shortening title at "Mail…".
+    /// "Mailboxes" or "Calendars" while the switch hides.
     title: gtk::Label,
     /// The mailbox list, or the calendar's own sidebar.
     content: gtk::Stack,
@@ -361,6 +359,57 @@ pub struct LabelDrop {
     pub zone: tree::Zone,
 }
 
+fn align_header_title(header: &adw::HeaderBar, titles: &gtk::Box) {
+    fn start_controls(widget: &gtk::Widget) -> Option<gtk::WindowControls> {
+        if let Some(controls) = widget.downcast_ref::<gtk::WindowControls>()
+            && controls.side() == gtk::PackType::Start
+        {
+            return Some(controls.clone());
+        }
+        let mut child = widget.first_child();
+        while let Some(widget) = child {
+            if let Some(controls) = start_controls(&widget) {
+                return Some(controls);
+            }
+            child = widget.next_sibling();
+        }
+        None
+    }
+
+    let titles = titles.downgrade();
+    // Header bars create their window controls when they join a window.
+    header.connect_root_notify(move |header| {
+        if header.root().is_none() {
+            return;
+        }
+        let Some(controls) = start_controls(header.upcast_ref()) else {
+            return;
+        };
+        let header = header.downgrade();
+        let titles = titles.clone();
+        let update = Rc::new(move |controls: &gtk::WindowControls| {
+            let (Some(header), Some(titles)) = (header.upgrade(), titles.upgrade()) else {
+                return;
+            };
+            let center = controls.is_empty() || !controls.get_visible();
+            titles.set_halign(if center {
+                gtk::Align::Center
+            } else {
+                gtk::Align::Fill
+            });
+            header.set_centering_policy(if center {
+                adw::CenteringPolicy::Strict
+            } else {
+                adw::CenteringPolicy::Loose
+            });
+        });
+        update(&controls);
+        let changed = update.clone();
+        controls.connect_empty_notify(move |controls| changed(controls));
+        controls.connect_visible_notify(move |controls| update(controls));
+    });
+}
+
 impl Sidebar {
     pub fn new(
         on_select: impl Fn(Mailbox) + 'static,
@@ -378,13 +427,16 @@ impl Sidebar {
             .build();
         let title = gtk::Label::builder()
             .label(gettext("Mailboxes"))
+            .ellipsize(pango::EllipsizeMode::End)
             .css_classes(["title"])
             .build();
         let switch = adw::ToggleGroup::builder()
             .css_classes(["round", "space-switch"])
+            .homogeneous(false)
             .valign(gtk::Align::Center)
             .visible(false)
             .build();
+        let mut labels = Vec::new();
         let badges = [
             (Space::Mail, "mail", gettext("Mail"), "mail-unread-symbolic"),
             (
@@ -409,6 +461,7 @@ impl Sidebar {
             let child = gtk::Box::builder().spacing(6).build();
             child.append(&content);
             child.append(&badge);
+            labels.push(content);
             let toggle = adw::Toggle::builder()
                 .name(name)
                 .label(&label)
@@ -418,20 +471,95 @@ impl Sidebar {
             (space, badge)
         });
         switch.set_active_name(Some("mail"));
-        // 8 px past the header's own padding puts the switch 14 px into
-        // the card, as mockups.py's `sidebar_shell` draws it.
-        let titles = gtk::Box::builder().margin_start(8).build();
+        let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         titles.append(&title);
         titles.append(&switch);
-        // At the start rather than as the title: a title widget is centred
-        // in the room beside the menu button, 8 px right of where the
-        // mockup puts the switch.
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
-            .show_title(false)
+            .show_title(true)
             .build();
-        header.pack_start(&titles);
+        // Measure both layouts in this locale, including the largest off-screen badge.
+        switch.set_visible(true);
+        title.set_visible(false);
+        badges[1].1.set_label(&gettext("99+"));
+        badges[1].1.set_visible(true);
+        let wide = titles.measure(gtk::Orientation::Horizontal, -1).1;
+        let height = titles.measure(gtk::Orientation::Vertical, -1).1;
+        for label in &labels {
+            label.set_label("");
+        }
+        badges[1].1.set_visible(false);
+        switch.add_css_class("compact");
+        let compact = titles.measure(gtk::Orientation::Horizontal, -1).0;
+        switch.remove_css_class("compact");
+        labels[0].set_label(&gettext("Mail"));
+        labels[1].set_label(&gettext("Calendar"));
+        switch.set_visible(false);
+        title.set_visible(true);
+        let adaptive = adw::BreakpointBin::builder()
+            .child(&titles)
+            .width_request(compact)
+            .height_request(height)
+            .hexpand(true)
+            .build();
+        let narrow = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+            adw::BreakpointConditionLengthType::MaxWidth,
+            f64::from(wide - 1),
+            adw::LengthUnit::Px,
+        ));
+        for label in &labels {
+            narrow.add_setter(label, "label", Some(&"".to_value()));
+        }
+        narrow.add_setter(
+            &switch,
+            "css-classes",
+            Some(&["round", "space-switch", "compact"].to_value()),
+        );
+        // The compact width follows the rooted widgets and the badges actually shown.
+        let resize: Rc<dyn Fn()> = {
+            let adaptive = adaptive.downgrade();
+            let switch = switch.downgrade();
+            let badges = badges.each_ref().map(|(_, badge)| badge.downgrade());
+            let icons = Cell::new(compact);
+            Rc::new(move || {
+                let (Some(adaptive), Some(switch)) = (adaptive.upgrade(), switch.upgrade()) else {
+                    return;
+                };
+                let extra: i32 = badges
+                    .iter()
+                    .filter_map(glib::WeakRef::upgrade)
+                    .filter(|badge| badge.is_visible())
+                    .map(|badge| badge.measure(gtk::Orientation::Horizontal, -1).0 + 6)
+                    .sum();
+                if switch.root().is_some() && switch.is_visible() && switch.has_css_class("compact")
+                {
+                    icons.set(switch.measure(gtk::Orientation::Horizontal, -1).0 - extra);
+                }
+                adaptive.set_width_request(icons.get() + extra);
+            })
+        };
+        for (_, badge) in &badges {
+            let resize = resize.clone();
+            badge.connect_notify_local(None, move |_, property| {
+                if matches!(property.name(), "label" | "visible") {
+                    resize();
+                }
+            });
+        }
+        let resized = resize.clone();
+        narrow.connect_apply(move |_| {
+            let resize = resized.clone();
+            glib::idle_add_local_once(move || resize());
+        });
+        switch.connect_map(move |_| {
+            let resize = resize.clone();
+            glib::idle_add_local_once(move || resize());
+        });
+        adaptive.add_breakpoint(narrow);
+        header.set_title_widget(Some(&adaptive));
+        align_header_title(&header, &titles);
         let content = gtk::Stack::builder()
+            .hhomogeneous(false)
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
             .build();
@@ -767,7 +895,9 @@ impl Sidebar {
             badge.set_label(text.as_deref().unwrap_or_default());
             badge.set_visible(text.is_some());
             button.reset_relation(gtk::AccessibleRelation::LabelledBy);
-            super::name(&button, &toggle_name(*space, count));
+            let name = toggle_name(*space, count);
+            super::name(&button, &name);
+            button.set_tooltip_text(Some(&name));
         }
     }
 
@@ -1763,12 +1893,19 @@ fn row_menu(row: &gtk::ListBoxRow, menu: &gio::Menu, filing: Filing, name: &str)
     };
     let options = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
-        .menu_model(menu)
         .css_classes(["flat", "circular", "label-options"])
         .valign(gtk::Align::Center)
         .halign(gtk::Align::End)
         .tooltip_text(filing.options_tooltip())
         .build();
+    // The button gets its menu when it first opens, for the reason
+    // `context_menu` gives.
+    let model = menu.clone();
+    options.set_create_popup_func(move |options| {
+        if options.menu_model().is_none() {
+            options.set_menu_model(Some(&model));
+        }
+    });
     super::name(&options, &filing.options_name(name));
     super::name_menu_items_of(&options);
     // `.options-open` keeps the count hidden while the menu is open and
@@ -1797,17 +1934,21 @@ fn row_menu(row: &gtk::ListBoxRow, menu: &gio::Menu, filing: Filing, name: &str)
 }
 
 /// Opens `menu` at the pointer on a right click or long press of `row`.
+///
+/// The popover is built the first time it opens. GTK builds every item of a
+/// menu as soon as it has its model, and an account with 807 folders spent
+/// 285 MB of memory on menus nobody had opened.
 fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
-    let popover = gtk::PopoverMenu::from_model(Some(menu));
-    super::name_menu_items(&popover);
-    popover.set_has_arrow(false);
-    popover.set_halign(gtk::Align::Start);
-    popover.set_parent(row);
+    let popover: Rc<std::cell::OnceCell<gtk::PopoverMenu>> = Rc::default();
     let show = {
-        let popover = popover.clone();
+        let (popover, menu, row) = (Rc::clone(&popover), menu.clone(), row.downgrade());
         move |x: f64, y: f64| {
+            let Some(row) = row.upgrade() else {
+                return;
+            };
+            let popover = popover.get_or_init(|| context_popover(&row, &menu));
             let rect = gdk::Rectangle::new(x as i32, y as i32, 1, 1);
-            let _ = safe_popup_at(&popover, &rect);
+            let _ = safe_popup_at(popover, &rect);
         }
     };
     let click = gtk::GestureClick::builder()
@@ -1839,7 +1980,21 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
         glib::Propagation::Stop
     });
     row.add_controller(keys);
-    row.connect_destroy(move |_| popover.unparent());
+    row.connect_destroy(move |_| {
+        if let Some(popover) = popover.get() {
+            popover.unparent();
+        }
+    });
+}
+
+/// The right-click menu of `row`, built when it first opens.
+fn context_popover(row: &gtk::ListBoxRow, menu: &gio::Menu) -> gtk::PopoverMenu {
+    let popover = gtk::PopoverMenu::from_model(Some(menu));
+    super::name_menu_items(&popover);
+    popover.set_has_arrow(false);
+    popover.set_halign(gtk::Align::Start);
+    popover.set_parent(row);
+    popover
 }
 
 /// The class on a group row, a server folder that holds only folders.
@@ -2407,5 +2562,142 @@ mod badge_tests {
             "Calendar, 1 waiting for your answer"
         );
         assert_eq!(toggle_name(Space::Mail, 0), "Mail");
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+
+    pub fn run() {
+        let sidebar = Sidebar::new(|_| {}, |_| false, |_| {});
+        sidebar.set_switch_visible(true);
+        let bin = sidebar
+            .switch
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .downcast::<adw::BreakpointBin>()
+            .unwrap();
+        let without_badge = bin.width_request();
+        sidebar.set_waiting(100);
+        let least = bin.width_request();
+        assert!(least > without_badge);
+        sidebar.set_waiting(0);
+        assert_eq!(bin.width_request(), without_badge);
+        sidebar.set_waiting(100);
+        let height = bin.height_request();
+        for width in [least, 800, least, 800] {
+            bin.allocate(width, height, -1, None);
+            assert_eq!(sidebar.switch.has_css_class("compact"), width == least);
+            assert_eq!(sidebar.switch.active_name().as_deref(), Some("mail"));
+            assert_eq!(sidebar.badges[1].1.label(), gettext("99+"));
+            assert!(sidebar.badges[1].1.is_visible());
+            assert_eq!(bin.measure(gtk::Orientation::Horizontal, -1).0, least);
+            if width == least {
+                assert!(sidebar.switch.measure(gtk::Orientation::Horizontal, -1).0 <= least);
+            }
+        }
+        let mail_min = sidebar.content.measure(gtk::Orientation::Horizontal, -1).0;
+        let calendar = gtk::Box::builder().width_request(600).build();
+        sidebar.show_calendar(calendar.upcast_ref());
+        assert!(sidebar.content.measure(gtk::Orientation::Horizontal, -1).0 >= 600);
+        sidebar.show_mail();
+        assert_eq!(
+            sidebar.content.measure(gtk::Orientation::Horizontal, -1).0,
+            mail_min
+        );
+        sidebar.next.when.set_label("Next");
+        let event_min = sidebar
+            .next
+            .button
+            .measure(gtk::Orientation::Horizontal, -1)
+            .0;
+        sidebar.next.when.set_label(&"A long countdown ".repeat(20));
+        assert_eq!(
+            sidebar
+                .next
+                .button
+                .measure(gtk::Orientation::Horizontal, -1)
+                .0,
+            event_min
+        );
+        sidebar.set_waiting(0);
+        let window = adw::Window::new();
+        window.set_content(Some(&sidebar.page));
+        let menu = gtk::MenuButton::builder()
+            .icon_name("open-menu-symbolic")
+            .build();
+        sidebar.header.pack_end(&menu);
+        let titles = sidebar.switch.parent().unwrap();
+        for layout in [":close", "close:", ":", ":minimize,maximize,close"] {
+            sidebar.header.set_decoration_layout(Some(layout));
+            let centered = layout.starts_with(':');
+            for width in [240, 360] {
+                sidebar.header.allocate(width, 48, -1, None);
+                if centered {
+                    assert_eq!(titles.halign(), gtk::Align::Center);
+                    let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
+                    // GTK keeps the menu reachable when the full title cannot fit.
+                    if bounds.width() + 2.0 * (menu.width() + 12) as f32
+                        <= sidebar.header.width() as f32
+                    {
+                        assert!(
+                            (bounds.x() + bounds.width() / 2.0
+                                - sidebar.header.width() as f32 / 2.0)
+                                .abs()
+                                <= 1.0,
+                            "{layout} at {width}: {bounds:?}"
+                        );
+                    }
+                } else {
+                    assert_eq!(titles.halign(), gtk::Align::Fill);
+                }
+            }
+        }
+        window.set_content(gtk::Widget::NONE);
+        a_folder_menu_is_built_when_it_opens();
+    }
+
+    /// A folder row holds no popover until its menu opens. Hundreds of
+    /// folders would otherwise each carry two finished menus.
+    fn a_folder_menu_is_built_when_it_opens() {
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        content.append(&gtk::Label::new(Some("Projects")));
+        content.append(&gtk::Label::new(None));
+        let row = gtk::ListBoxRow::builder().child(&content).build();
+        let menu = gio::Menu::new();
+        menu.append(Some("Rename…"), Some("win.label-rename"));
+        row_menu(&row, &menu, Filing::Folders, "Projects");
+        let list = gtk::ListBox::new();
+        list.append(&row);
+        let window = adw::Window::new();
+        window.set_content(Some(&list));
+        let options = {
+            let mut stack: Vec<gtk::Widget> = row.first_child().into_iter().collect();
+            let mut found = None;
+            while let Some(widget) = stack.pop() {
+                if let Ok(button) = widget.clone().downcast::<gtk::MenuButton>() {
+                    found = Some(button);
+                    break;
+                }
+                stack.extend(widget.next_sibling());
+                stack.extend(widget.first_child());
+            }
+            found.expect("the row has an options button")
+        };
+        assert!(options.popover().is_none());
+        assert!(options.menu_model().is_none());
+        assert!(
+            !std::iter::successors(row.first_child(), |w| w.next_sibling())
+                .any(|w| w.is::<gtk::Popover>()),
+            "the right-click menu waits for a right click"
+        );
+        options.popup();
+        assert_eq!(options.menu_model().as_ref(), Some(menu.upcast_ref()));
+        assert!(options.popover().is_some());
+        options.popdown();
+        window.set_content(gtk::Widget::NONE);
     }
 }

@@ -130,7 +130,9 @@ struct Editor {
     /// The calendar whose own reminders show while `draft.reminders` is
     /// `None`. Follows the calendar row on a new event.
     reminders_calendar: RefCell<Calendar>,
-    reminder_rows: RefCell<Vec<adw::ComboRow>>,
+    /// The rows the reminders group holds, the Add Reminder row last,
+    /// so a rebuild takes every one of them out first.
+    reminder_rows: RefCell<Vec<gtk::Widget>>,
     /// The Custom Repeat page's content, rebuilt each time the Repeats
     /// row asks for it rather than kept live, so a start moved after the
     /// page was last open still seeds the right default weekday.
@@ -705,7 +707,7 @@ impl Editor {
         });
 
         let end_date_calendar = gtk::Calendar::new();
-        end_date_calendar.set_date(&day_to_glib(end_day));
+        crate::ui::set_calendar_date(&end_date_calendar, &day_to_glib(end_day));
         let end_date_button = gtk::MenuButton::builder()
             .label(format_date(end_day))
             .popover(&gtk::Popover::builder().child(&end_date_calendar).build())
@@ -840,7 +842,7 @@ impl Editor {
         let day = local_day(start, zone);
         if let Some((button, calendar)) = self.start_date.borrow().as_ref() {
             button.set_label(&format_date(day));
-            calendar.set_date(&day_to_glib(day));
+            crate::ui::set_calendar_date(calendar, &day_to_glib(day));
         }
         if let Some(drop) = self.start_time.borrow().as_ref() {
             select_time(drop, local_time(start, zone));
@@ -881,7 +883,7 @@ impl Editor {
         let time = local_time(end, zone);
         if let Some((button, calendar)) = self.end_date.borrow().as_ref() {
             button.set_label(&format_date(day));
-            calendar.set_date(&day_to_glib(day));
+            crate::ui::set_calendar_date(calendar, &day_to_glib(day));
         }
         if let Some(drop) = self.end_time.borrow().as_ref() {
             select_time(drop, time);
@@ -1502,11 +1504,11 @@ impl Editor {
             .reminders
             .clone()
             .unwrap_or_else(|| self.reminders_default());
-        let mut rows = Vec::new();
+        let mut rows: Vec<gtk::Widget> = Vec::new();
         for (i, reminder) in list.iter().enumerate() {
             let row = self.reminder_row(i, *reminder);
             group.add(&row);
-            rows.push(row);
+            rows.push(row.upcast());
         }
         let add = adw::ButtonRow::builder()
             .title(gettext("Add Reminder"))
@@ -1529,6 +1531,7 @@ impl Editor {
             this.rebuild_reminders();
         });
         group.add(&add);
+        rows.push(add.upcast());
         *self.reminder_rows.borrow_mut() = rows;
     }
 
@@ -2223,7 +2226,7 @@ fn date_button(
     on_pick: impl Fn(NaiveDate) + 'static,
 ) -> gtk::MenuButton {
     let calendar = gtk::Calendar::new();
-    calendar.set_date(&day_to_glib(day));
+    crate::ui::set_calendar_date(&calendar, &day_to_glib(day));
     let button = gtk::MenuButton::builder()
         .label(format_date(day))
         .popover(&gtk::Popover::builder().child(&calendar).build())

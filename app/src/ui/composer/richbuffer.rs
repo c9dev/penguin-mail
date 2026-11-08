@@ -910,10 +910,13 @@ mod tests {
         }
         #[cfg(any(target_os = "linux", target_os = "windows"))]
         crate::web::check_scheme_after_last_view_closes();
+        crate::ui::conversation::check_custom_theme_accent();
         let context = gtk::glib::MainContext::default();
         context.block_on(async {
             let other = context.spawn_local(async {});
             crate::web::frame::check().await;
+            crate::ui::calendar::time_grid::check_clock().await;
+            crate::ui::conversation::checks::metadata_preserves_disclosures().await;
             other
                 .await
                 .expect("another GTK task finishes during the frame check");
@@ -933,6 +936,7 @@ mod tests {
         crate::ui::calendar::attachments::checks::run();
         crate::ui::checks::run();
         crate::ui::thread_list::checks::run();
+        crate::ui::sidebar::checks::run();
         crate::ui::disclosure::checks::run();
         crate::ui::preferences::space::checks::run();
         crate::ui::preferences::dialog::checks::run();

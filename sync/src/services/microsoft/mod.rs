@@ -46,6 +46,7 @@ use crate::{BackendError, MailOp};
 
 /// What a Microsoft account's mail service can do.
 const MICROSOFT: MailCapabilities = MailCapabilities {
+    fetches_raw_together: false,
     labels: false,
     server_threads: true,
     files_sent_mail: true,
@@ -66,6 +67,8 @@ const MICROSOFT: MailCapabilities = MailCapabilities {
 /// What the adapter needs to know about its account.
 #[derive(Debug, Clone)]
 pub struct MicrosoftSettings {
+    /// Mail only, through another account's delegated shared-mail grant.
+    pub shared: bool,
     pub address: String,
     /// "Outlook" or "Microsoft 365".
     pub provider_name: String,
@@ -225,7 +228,14 @@ impl<G: GraphApi> Microsoft<G> {
 
     /// What the account's consent leaves out.
     pub fn withheld(&self) -> Withheld {
-        withheld(self.graph.granted().as_ref())
+        let mut withheld = withheld(self.graph.granted().as_ref());
+        if self.settings.shared {
+            withheld.delete = self
+                .graph
+                .granted()
+                .is_some_and(|g| !g.has("Mail.ReadWrite.Shared"));
+        }
+        withheld
     }
 
     pub fn refused(&self) -> Refused {
@@ -302,7 +312,11 @@ pub fn withheld(granted: Option<&Granted>) -> Withheld {
 
 impl<G: GraphApi> MailBackend for Microsoft<G> {
     fn capabilities(&self) -> MailCapabilities {
-        MICROSOFT
+        MailCapabilities {
+            tags: !self.settings.shared,
+            focus: !self.settings.shared,
+            ..MICROSOFT
+        }
     }
 
     fn provider_name(&self) -> &str {

@@ -830,6 +830,14 @@ impl MainWindow {
                         }
                     }
                 },
+                {
+                    let weak = weak.clone();
+                    move |action| {
+                        if let Some(win) = weak.upgrade() {
+                            win.analyze(&win.conversation, action);
+                        }
+                    }
+                },
             );
             let toolbar_heights = gtk::SizeGroup::new(gtk::SizeGroupMode::Vertical);
             let assistant_top_bar = super::top_bar(&assistant.header);
@@ -1124,6 +1132,7 @@ impl MainWindow {
         let photos = app.photos();
         window.list.set_photos(Rc::clone(&photos));
         let settings = window.settings();
+        window.conversation.set_toolbar(settings.toolbar.as_deref());
         window.list.set_appearance(
             settings.preview_lines,
             settings.bold_unread,
@@ -1314,8 +1323,16 @@ impl MainWindow {
                 account_id,
                 thread_ids,
             } => {
-                let changed = thread_ids.iter().map(|id| (*account_id, id.clone()));
-                self.listing.changed(changed.collect());
+                let changed: Vec<_> = thread_ids
+                    .iter()
+                    .map(|id| (*account_id, id.clone()))
+                    .collect();
+                self.listing.changed(changed.clone());
+                // Open conversations need the same metadata update as the list.
+                let named: HashSet<_> = changed.into_iter().collect();
+                self.refresh_open_threads(move |account_id, thread_id| {
+                    named.contains(&(account_id, thread_id.to_string()))
+                });
             }
             ChangeEvent::NewMail { .. } => self.listing.everything(),
             ChangeEvent::WriteFailed { message, .. } => self.toast(message),
@@ -1854,7 +1871,8 @@ impl MainWindow {
     pub(super) fn act(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
             Action::Invitation(action) => self.invitation_action(view, action),
-            Action::Summarize => self.summarize(view),
+            Action::Summarize => self.analyze(view, crate::assistant::Analysis::Summarize),
+            Action::Explain => self.analyze(view, crate::assistant::Analysis::Explain),
             Action::Receipt { message_id, send } => self.answer_receipt(view, message_id, send),
             Action::Reply(kind) => self.reply(view, kind),
             Action::EditDraft => self.edit_draft_from(view),
@@ -2710,6 +2728,7 @@ impl MainWindow {
         let crate::open_thread::Answering {
             account_id,
             target,
+            delivered_to,
             text,
             html,
             thread,
@@ -2719,7 +2738,7 @@ impl MainWindow {
         let forwarded_html = html.clone();
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
-        let mine = app.my_addresses(account_id, &target);
+        let mine = app.my_addresses(account_id, &target, &delivered_to);
         let mut draft = compose::respond(
             kind,
             account_id,
@@ -2739,7 +2758,7 @@ impl MainWindow {
         {
             draft.use_account(outgoing, app.blank_draft(outgoing).from);
             if kind != ReplyKind::Forward {
-                let mine = app.my_addresses(outgoing, &target);
+                let mine = app.my_addresses(outgoing, &target, &delivered_to);
                 draft.to.retain(|to| {
                     !mine
                         .iter()
@@ -3648,6 +3667,10 @@ impl MainWindow {
             menu.append_section(None, &self.update_menu);
         }
         let second = gio::Menu::new();
+        second.append(
+            Some(&gettext("Customize Toolbar…")),
+            Some("win.customize-toolbar"),
+        );
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
         second.append(Some(&gettext("About Penguin Mail")), Some("win.about"));
@@ -3789,7 +3812,7 @@ impl MainWindow {
     /// Opens the assistant beside the mail if it is closed, and asks it to
     /// summarize the conversation on screen, as the suggestion in an empty
     /// chat does.
-    fn summarize(self: &Rc<Self>, view: &Rc<ConversationView>) {
+    fn analyze(self: &Rc<Self>, view: &Rc<ConversationView>, action: crate::assistant::Analysis) {
         if view.detached() {
             return;
         }
@@ -3799,7 +3822,11 @@ impl MainWindow {
         } else {
             self.assistant_split.set_show_sidebar(true);
         }
-        self.assistant.ask(gettext("Summarize this conversation"));
+        match view.read(crate::assistant::analysis_context) {
+            Some(Ok(context)) => self.assistant.analyze(action, context),
+            Some(Err(problem)) => self.toast(&problem),
+            None => self.toast(&gettext("Open a conversation first.")),
+        }
     }
 
     /// Offers Summarize above the conversation while the assistant has a
@@ -4288,6 +4315,11 @@ impl MainWindow {
                 self.offer_summary();
                 self.sync_assistant_toggle();
             }
+            Effect::Toolbar => {
+                for view in self.views() {
+                    view.set_toolbar(settings.toolbar.as_deref());
+                }
+            }
             Effect::TextSize => {
                 for view in self.views() {
                     view.set_zoom(settings.text_size.zoom());
@@ -4300,7 +4332,10 @@ impl MainWindow {
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
-            Effect::Calendar => self.calendar.week_start_changed(),
+            Effect::Calendar => {
+                self.calendar.preferences_changed();
+                self.refresh_next_event();
+            }
             Effect::Translation => {
                 for view in self.views() {
                     self.thread_run(&view).offer_translation_again();
@@ -4337,7 +4372,7 @@ impl MainWindow {
             .iter()
             .map(|a| self.offers(a.id))
             .collect();
-        shortcuts::dialog(Filing::of(offers)).present(Some(&self.window));
+        shortcuts::show(Filing::of(offers), &self.window);
     }
 
     /// Opens Switch to JMAP for `account`, when a look found its session.
@@ -4588,13 +4623,8 @@ pub(super) fn read_cached_body(
 ) -> mailrs_store::Result<Option<MessageBody>> {
     // Readers cannot write, so this leaves the access time alone; the body
     // fetch that follows records the access.
-    let body = mailrs_store::bodies::peek_body(c, account_id, message_id)?;
-    // A body cached before this app read provenance has none, and nothing
-    // would ever put it there: the cache would answer for that message
-    // forever. Treating it as a miss costs one fetch, once, and fills the
-    // gap for good. A message with a body that truly says nothing about
-    // its origins is rare, and pays that fetch once as well.
-    Ok(body.filter(|body| !body.provenance.is_empty()))
+    // Keep old cached text visible while the thread run fills delivery headers.
+    mailrs_store::bodies::peek_body(c, account_id, message_id)
 }
 
 /// Whether the newest sender in `view` who is not the user is a VIP.

@@ -51,6 +51,7 @@ async fn the_capabilities_are_jmap_s() {
     assert_eq!(
         h.mail().capabilities(),
         MailCapabilities {
+            fetches_raw_together: false,
             labels: true,
             server_threads: true,
             files_sent_mail: true,

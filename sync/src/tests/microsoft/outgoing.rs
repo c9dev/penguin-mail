@@ -127,6 +127,40 @@ fn large(protected: bool) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn shared_mail_refuses_large_messages_before_creating_a_remote_draft() {
+    let fake = std::sync::Arc::new(crate::fake::FakeGraph::new());
+    let mail = crate::services::Microsoft::new(
+        fake.clone(),
+        crate::MicrosoftSettings {
+            shared: true,
+            address: "shared@example.com".into(),
+            provider_name: "Microsoft 365".into(),
+            window_days: 30,
+        },
+    );
+    let saved = mail.save_draft(None, RAW, None).await.unwrap();
+    let raw = large(false);
+    for result in [
+        mail.send(&raw, None).await.map(|_| ()),
+        mail.save_draft(Some(&saved.draft_id), &raw, None)
+            .await
+            .map(|_| ()),
+    ] {
+        assert!(
+            matches!(result, Err(crate::BackendError::Refused(reason)) if reason.contains("3 MB")),
+            "shared mail must explain its size limit before a remote write"
+        );
+    }
+    fake.with(|state| {
+        assert!(state.sent.is_empty());
+        assert_eq!(state.messages.len(), 1);
+        assert!(state.messages.contains_key(&saved.draft_id));
+    });
+    mail.send(RAW, None).await.unwrap();
+    assert_eq!(fake.with(|state| state.sent.len()), 1);
+}
+
+#[tokio::test]
 async fn a_large_message_goes_as_a_draft_with_its_file_uploaded() {
     let h = outlook().await;
     h.bootstrap_all().await;

@@ -1,7 +1,7 @@
 //! The values the IMAP client hands back: what the server offers, its
 //! mailboxes, a mailbox's state, and what a fetch reads.
 
-use mail_parser::{MessageParser, MimeHeaders};
+use mail_parser::MessageParser;
 use mailrs_domain::{Address, EpochMillis};
 
 use crate::{ImapError, UidSet};
@@ -341,9 +341,9 @@ impl Fetched {
         let Some(message) = MessageParser::default().parse_headers(header) else {
             return fetched;
         };
-        let addresses = |value: Option<&mail_parser::Address>| -> Vec<Address> {
+        let addresses = |value: Option<mail_parser::AddressList<'_>>| -> Vec<Address> {
             value
-                .map(|list| list.iter().filter_map(address).collect())
+                .map(|list| list.mailboxes().filter_map(address).collect())
                 .unwrap_or_default()
         };
         fetched.from = addresses(message.from()).into_iter().next();
@@ -352,8 +352,9 @@ impl Fetched {
         fetched.subject = message.subject().unwrap_or_default().to_string();
         let raw = |name: &str| {
             message
-                .header_raw(name)
-                .map(unfold)
+                .headers()
+                .get(name)
+                .map(|header| unfold(&String::from_utf8_lossy(header.raw_value())))
                 .filter(|value| !value.is_empty())
         };
         fetched.message_id = raw("Message-ID");
@@ -379,7 +380,7 @@ impl Fetched {
     }
 }
 
-fn address(addr: &mail_parser::Addr) -> Option<Address> {
+fn address(addr: mail_parser::Mailbox<'_>) -> Option<Address> {
     let email = addr.address()?.trim().to_string();
     if email.is_empty() {
         return None;

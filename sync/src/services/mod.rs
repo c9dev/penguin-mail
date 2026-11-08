@@ -127,6 +127,12 @@ pub struct MailCapabilities {
     pub tags: bool,
     /// The server sorts the inbox into Focused and Other.
     pub focus: bool,
+    /// One `fetch_raw` call for several messages costs about one round
+    /// trip, as one IMAP command per mailbox does, so reading a thread's
+    /// bodies asks once instead of once per message. Where it is false,
+    /// as for an API that answers one message a request, the bodies are
+    /// asked for one by one, several at a time.
+    pub fetches_raw_together: bool,
     /// The account's mailboxes live only in the store, as a POP3 account's
     /// do. A move, a flag or a mailbox change is complete once the store
     /// has it, so the engine sends nothing, and nothing prunes or relists
@@ -607,13 +613,14 @@ impl AccountServices {
 
     /// A Microsoft account: every service over the one Graph client.
     pub fn microsoft(graph: impl Into<AnyGraph>, settings: MicrosoftSettings) -> Self {
+        let shared = settings.shared;
         let adapter = Microsoft::new(Arc::new(graph.into()), settings);
         AccountServices {
             mail: AnyMail::Microsoft(adapter.clone()),
-            calendar: Some(AnyCalendar::Microsoft(adapter.clone())),
-            contacts: Some(AnyContacts::Microsoft(adapter.clone())),
-            rules: Some(AnyRules::Microsoft(adapter.clone())),
-            auto_reply: Some(AnyAutoReply::Microsoft(adapter.clone())),
+            calendar: (!shared).then(|| AnyCalendar::Microsoft(adapter.clone())),
+            contacts: (!shared).then(|| AnyContacts::Microsoft(adapter.clone())),
+            rules: (!shared).then(|| AnyRules::Microsoft(adapter.clone())),
+            auto_reply: (!shared).then(|| AnyAutoReply::Microsoft(adapter.clone())),
             identities: AnyIdentities::Microsoft(adapter),
         }
     }
@@ -622,6 +629,7 @@ impl AccountServices {
     #[cfg(any(test, feature = "fake"))]
     pub fn fake_microsoft(fake: Arc<FakeGraph>) -> Self {
         let settings = MicrosoftSettings {
+            shared: false,
             address: "me@outlook.com".into(),
             provider_name: "Outlook".into(),
             window_days: crate::DEFAULT_WINDOW_DAYS,
@@ -1826,6 +1834,7 @@ mod tests {
         assert_eq!(
             services.capabilities(),
             MailCapabilities {
+                fetches_raw_together: false,
                 labels: true,
                 server_threads: true,
                 files_sent_mail: true,

@@ -3,6 +3,14 @@
 What a screen reader gets from Penguin Mail, how to check it, and what is
 still out of a keyboard's reach.
 
+## Mail navigation
+
+Moving between single rows with the keyboard or pointer sets the direction
+used after deleting, archiving, or moving mail. At the list edge, selection
+falls back to the other side. A new mailbox starts by choosing the next row.
+Turn off **Follow Navigation After Removing Mail** in Reading preferences
+to always prefer the next row.
+
 ## Names
 
 Every control a person acts on carries a name in the accessible tree. A
@@ -37,11 +45,21 @@ widget the list view wraps for itself cannot be named from outside
 without crashing GTK. The thread row takes the `ListItem` role instead,
 and then the name it builds is the one a reader hears.
 
+## Toolbar customization
+
+Customize Toolbar is in the main menu and the conversation’s More Actions menu.
+Checkboxes choose buttons; Move Up and Move Down reorder them without dragging.
+Restore Defaults restores the original set. Changes apply to open conversation
+windows and persist across starts. Narrow windows keep secondary actions in More.
+
 ## Column widths
 
 The mailbox sidebar and message list have named, focusable dividers.
 Drag either divider, or Tab to it and use Left and Right to resize in
 12-pixel steps. Home and End select its minimum and maximum width.
+The Mail and Calendar buttons switch to icons when the sidebar is narrow.
+Their tooltips and accessible names keep the space name and unread or
+invitation count. Expanding the sidebar restores the labels.
 The widths are remembered between starts. In a narrow window, the
 existing sidebar overlay and one-page mail navigation take over, and
 hidden dividers leave the keyboard focus order.
@@ -57,6 +75,9 @@ both read and unread messages. Avatars can be hidden to leave more room for
 message text; sender names remain visible and announced.
 
 ## The message
+
+Message Details includes a selectable delivered-to row for delivery addresses
+absent from To/Cc. These are transport header values, not verified identities.
 
 Hovering over a web or email link, or focusing it with Tab, shows its destination at the bottom-right of the reading pane. The preview is a status region for screen readers. It names the destination site before the full address and explains any signs of deception. A message with such links also has a warning above its body, outside the sender's styles. These local checks compare displayed addresses with destinations and look for disguised hosts and hidden characters. They make no network requests and do not certify that a site is safe.
 
@@ -192,6 +213,10 @@ card above it that says when it goes or why it has not gone, with
 buttons that act on it.
 
 ## The calendar from the keyboard
+
+The Time Format row in Calendar preferences offers Automatic, 12-hour and
+24-hour clocks. It has an accessible name and uses the standard combo row
+keyboard controls. Changing it redraws the calendar without a restart.
 
 In Day and Week, Tab passes the day headings first, each of which opens
 its day, then the all-day row, then the events, day by day and earliest

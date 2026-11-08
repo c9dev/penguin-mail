@@ -91,6 +91,7 @@ pub struct ThreadList {
     /// Draws one row for the item it holds.
     bind: Rc<dyn Fn(&gtk::ListItem)>,
     muted: Cell<bool>,
+    navigation: RefCell<Navigation>,
     /// The menu a right click on a row opens. It has no model until the
     /// window hands over the conversation's own through `set_row_menu`.
     row_popover: gtk::PopoverMenu,
@@ -326,7 +327,12 @@ impl ThreadList {
         let filters = filters::Filters::new();
         header.pack_end(&filters.button);
 
-        let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        // Named, so a GTK theme can reach the slot without counting the
+        // top bars.
+        let categories_slot = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .css_classes(["categories-slot"])
+            .build();
         let banner = adw::Banner::builder()
             .use_markup(false)
             .revealed(false)
@@ -399,6 +405,7 @@ impl ThreadList {
             made,
             bind,
             muted: Cell::new(false),
+            navigation: RefCell::new(Navigation::default()),
             row_popover,
         });
         // A search's subtitle is its query, which the open entry already
@@ -420,6 +427,9 @@ impl ThreadList {
         list.selection.connect_selection_changed(move |_, _, _| {
             let Some(list) = weak.upgrade() else { return };
             if !list.muted.get() {
+                list.navigation
+                    .borrow_mut()
+                    .selected(list.single_position());
                 on_select(list.picked());
             }
         });
@@ -707,6 +717,7 @@ impl ThreadList {
             }
         }
         self.reselect(&keys);
+        self.navigation.borrow_mut().position = self.single_position();
         self.muted.set(false);
         self.empty.set_title(empty_title);
         self.empty.set_icon_name(Some(empty_icon));
@@ -800,6 +811,11 @@ impl ThreadList {
         }
     }
 
+    fn single_position(&self) -> Option<usize> {
+        let selected = self.selection.selection();
+        (selected.size() == 1).then(|| selected.minimum() as usize)
+    }
+
     /// How many rows are selected.
     pub fn selected_count(&self) -> usize {
         self.selection.selection().size() as usize
@@ -830,6 +846,8 @@ impl ThreadList {
                 && message_id.is_none_or(|m| t.message_id.as_deref() == Some(m))
         });
         if let Some(position) = position {
+            // Restoring or advancing the selection is not a navigation gesture.
+            self.navigation.borrow_mut().position = Some(position);
             self.selection.select_item(position as u32, true);
             self.view
                 .scroll_to(position as u32, gtk::ListScrollFlags::FOCUS, None);
@@ -839,6 +857,7 @@ impl ThreadList {
     pub fn unselect(&self) {
         self.muted.set(true);
         self.selection.unselect_all();
+        *self.navigation.borrow_mut() = Navigation::default();
         self.muted.set(false);
     }
 
@@ -861,9 +880,9 @@ impl ThreadList {
             .scroll_to(next as u32, gtk::ListScrollFlags::FOCUS, None);
     }
 
-    /// The row to open once the selected rows leave the list: the first
-    /// unselected row after them, else the last one before them.
-    pub fn neighbour_of_selected(&self) -> Option<ThreadSummary> {
+    /// The row to open once the selected rows leave, following navigation
+    /// when requested and falling back to the other side at the list edge.
+    pub fn neighbour_of_selected(&self, follow_direction: bool) -> Option<ThreadSummary> {
         let selected = self.selection.selection();
         if selected.is_empty() {
             return None;
@@ -873,6 +892,7 @@ impl ThreadList {
             rows.len(),
             selected.minimum() as usize,
             selected.maximum() as usize,
+            follow_direction && self.navigation.borrow().backwards,
         )?;
         rows.get(at).map(|row| (**row).clone())
     }
@@ -1069,13 +1089,33 @@ fn positions_of(rows: &[Row], keys: &HashSet<Key>) -> Vec<u32> {
         .collect()
 }
 
-/// The row to open once the rows from `first` to `last` leave a list of
-/// `len`: the one after the last, else the one before the first.
-fn neighbour(len: usize, first: usize, last: usize) -> Option<usize> {
-    if last + 1 < len {
-        Some(last + 1)
+/// Only movement between single rows establishes a direction. Extending a
+/// selection or refreshing the list must not reverse the person's last move.
+#[derive(Default)]
+struct Navigation {
+    position: Option<usize>,
+    backwards: bool,
+}
+
+impl Navigation {
+    fn selected(&mut self, position: Option<usize>) {
+        if let (Some(before), Some(after)) = (self.position, position)
+            && before != after
+        {
+            self.backwards = after < before;
+        }
+        self.position = position;
+    }
+}
+
+/// Chooses a row outside the removed range, preferring the navigation direction.
+fn neighbour(len: usize, first: usize, last: usize, backwards: bool) -> Option<usize> {
+    let before = first.checked_sub(1);
+    let after = (last + 1 < len).then_some(last + 1);
+    if backwards {
+        before.or(after)
     } else {
-        first.checked_sub(1)
+        after.or(before)
     }
 }
 
@@ -1152,6 +1192,48 @@ pub(crate) mod checks {
         if let Some(directory) = std::env::var_os("PENGUIN_MAIL_TEST_LIST_SHOTS") {
             save_shots(&list, std::path::Path::new(&directory));
         }
+        list.unselect();
+        list.set_rows(
+            (0..5)
+                .map(|n| {
+                    Rc::new(ThreadSummary {
+                        account_id: 1,
+                        id: n.to_string(),
+                        ..Default::default()
+                    })
+                })
+                .collect(),
+            "No Mail",
+            "mail-unread-symbolic",
+        );
+        assert!(list.neighbour_of_selected(true).is_none());
+        list.select(1, "4", None);
+        list.step(-1);
+        assert_eq!(list.neighbour_of_selected(true).unwrap().id, "2");
+        assert_eq!(list.neighbour_of_selected(false).unwrap().id, "4");
+        // Advancing after a deletion and refreshing the list preserve the gesture.
+        list.select(1, "2", None);
+        list.retain(|row| row.id != "3");
+        assert_eq!(list.neighbour_of_selected(true).unwrap().id, "1");
+        list.select(1, "1", None);
+        list.retain(|row| row.id != "2");
+        assert_eq!(list.neighbour_of_selected(true).unwrap().id, "0");
+        // A refresh moves the selected row without inventing a navigation gesture.
+        list.retain(|row| row.id != "0");
+        assert!(list.navigation.borrow().backwards);
+        assert_eq!(list.navigation.borrow().position, Some(0));
+        assert_eq!(list.neighbour_of_selected(true).unwrap().id, "4");
+        list.select(1, "4", None);
+        assert!(
+            list.navigation.borrow().backwards,
+            "edge fallback keeps direction"
+        );
+        list.unselect();
+        list.select(1, "1", None);
+        assert!(
+            !list.navigation.borrow().backwards,
+            "a new mailbox starts down"
+        );
         list.show_loading();
         assert!(!list.more.is_visible());
     }
@@ -1232,10 +1314,34 @@ mod tests {
 
     #[test]
     fn the_next_row_opens_after_the_selection_or_else_the_one_before() {
-        assert_eq!(neighbour(5, 1, 2), Some(3));
-        assert_eq!(neighbour(5, 3, 4), Some(2));
-        assert_eq!(neighbour(5, 0, 4), None);
-        assert_eq!(neighbour(1, 0, 0), None);
+        assert_eq!(neighbour(5, 1, 2, false), Some(3));
+        assert_eq!(neighbour(5, 3, 4, false), Some(2));
+        assert_eq!(neighbour(5, 0, 4, false), None);
+        assert_eq!(neighbour(1, 0, 0, false), None);
+    }
+
+    #[test]
+    fn moving_up_prefers_the_row_before_and_falls_back_at_the_top() {
+        assert_eq!(neighbour(5, 2, 3, true), Some(1));
+        assert_eq!(neighbour(5, 0, 1, true), Some(2));
+        assert_eq!(neighbour(5, 0, 4, true), None);
+        assert_eq!(neighbour(1, 0, 0, true), None);
+    }
+
+    #[test]
+    fn navigation_tracks_moves_but_not_reselection_or_multiple_rows() {
+        let mut navigation = Navigation::default();
+        navigation.selected(Some(4));
+        assert!(!navigation.backwards);
+        navigation.selected(Some(3));
+        assert!(navigation.backwards);
+        navigation.selected(Some(3));
+        assert!(navigation.backwards);
+        navigation.selected(None);
+        navigation.selected(Some(4));
+        assert!(navigation.backwards);
+        navigation.selected(Some(5));
+        assert!(!navigation.backwards);
     }
 
     #[test]

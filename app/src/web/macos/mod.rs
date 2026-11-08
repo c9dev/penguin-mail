@@ -168,6 +168,8 @@ impl WebView {
         clip.setWantsLayer(true);
         if let Some(layer) = clip.layer() {
             layer.setMasksToBounds(true);
+            // GTK appends replacement tiles after this layer when the window resizes.
+            layer.setZPosition(1.0);
         }
         clip.addSubview(&view);
         clip.setHidden(true);

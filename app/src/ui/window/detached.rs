@@ -62,6 +62,7 @@ impl MainWindow {
             view.set_filter(filter);
         }
         view.set_zoom(self.settings_with(|s| s.text_size.zoom()));
+        view.set_toolbar(self.settings_with(|s| s.toolbar.clone()).as_deref());
         let toasts = adw::ToastOverlay::new();
         toasts.set_child(Some(&view.page));
         let window = adw::Window::builder()

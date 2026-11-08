@@ -100,6 +100,10 @@ jobs:
               "Build and test the AppImage / Test on Debian 13",
               "Build and test the AppImage / Ubuntu 24.04's sandbox rules",
           }
+          # Releases before the Debian package was added have no such job.
+          # A newer build must finish it successfully before recovery publishes.
+          if any(job["name"] == "Build the Debian 13 .deb" for job in jobs):
+              required.add("Build the Debian 13 .deb")
           passed = {job["name"] for job in jobs if job["conclusion"] == "success"}
           if missing := required - passed:
               raise SystemExit(f"Package jobs have not passed: {sorted(missing)}")
@@ -126,6 +130,16 @@ jobs:
       # repository's key, which it has compiled in; it refuses a release
       # without one. The private key lives in a keyring of its own for this
       # step only, as in the rpm job.
+      - name: Normalize release asset filenames
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # GitHub replaces the tilde on upload. Sign the downloadable name.
+          for file in dist/*~deb13_*.deb; do
+              target=${file/~deb13_/.deb13_}
+              test ! -e "$target"
+              mv -- "$file" "$target"
+          done
       - name: Write and sign the checksums
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}

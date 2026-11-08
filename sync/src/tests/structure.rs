@@ -598,6 +598,7 @@ async fn the_limit_decides_the_path() {
 async fn a_seeded_provenance_reads_back_on_the_raw_message() {
     let h = harness().await;
     let provenance = mailrs_domain::Provenance {
+        delivered_to: Some(vec![]),
         mailed_by: Some("fernwood.example".into()),
         signed_by: Some("fernwood.example".into()),
         encrypted: Some(false),
@@ -738,4 +739,48 @@ async fn prefetch_retries_when_a_required_text_part_did_not_arrive() {
             .unwrap()
             .unwrap();
     assert_eq!(cached.calendar.as_deref(), Some(ics.as_str()));
+}
+
+#[tokio::test]
+async fn an_old_cached_body_gains_delivery_headers_once_and_survives_offline() {
+    let h = harness().await;
+    h.fake.seed(meta(
+        "delivery",
+        "delivery-thread",
+        crate::now_millis(),
+        &["INBOX"],
+    ));
+    h.fake.with(|s| {
+        s.raws.insert("delivery".into(), b"From: news@example.net\r\nTo: list@example.net\r\nReceived: from sender.example by mx.example for <alias@example.com>; Tue, 3 Nov 2026 14:20:28 +0000\r\n\r\nNews".to_vec());
+    });
+    h.bootstrap_all().await;
+    let account = h.account_id;
+    h.db.write(move |c| {
+        mailrs_store::bodies::put_body(
+            c,
+            account,
+            "delivery",
+            &MessageBody {
+                text: Some("Cached text".into()),
+                ..Default::default()
+            },
+            1,
+        )
+    })
+    .await
+    .unwrap();
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    let offline = h.sync.body_with_delivery("delivery").await.unwrap();
+    assert_eq!(offline.text.as_deref(), Some("Cached text"));
+    assert!(offline.provenance.delivered_to.is_none());
+    let filled = h.sync.body_with_delivery("delivery").await.unwrap();
+    assert_eq!(filled.text.as_deref(), Some("Cached text"));
+    assert_eq!(
+        filled.provenance.delivery_addresses(),
+        ["alias@example.com"]
+    );
+    let calls = h.fake.with(|s| (s.structure_fetches, s.raw_fetches));
+    let again = h.sync.body_with_delivery("delivery").await.unwrap();
+    assert_eq!(again, filled);
+    assert_eq!(h.fake.with(|s| (s.structure_fetches, s.raw_fetches)), calls);
 }

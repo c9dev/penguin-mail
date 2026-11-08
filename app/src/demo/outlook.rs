@@ -23,6 +23,7 @@ const DAY: i64 = 24 * HOUR;
 
 pub fn settings() -> MicrosoftSettings {
     MicrosoftSettings {
+        shared: false,
         address: OUTLOOK.into(),
         provider_name: "Outlook".into(),
         window_days: mailrs_sync::DEFAULT_WINDOW_DAYS,

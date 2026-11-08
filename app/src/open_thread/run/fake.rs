@@ -104,8 +104,13 @@ pub struct Screen {
     pub stored: HashMap<String, Stored>,
     /// Holds the store's answer for a thread until the test lets go.
     pub holds: HashMap<String, oneshot::Receiver<()>>,
+    /// Holds the server's answer about the whole thread until the test
+    /// lets go.
+    pub ensure_hold: Option<oneshot::Receiver<()>>,
     /// What the store lists for the thread after Gmail answered.
     pub messages: Vec<MessageMeta>,
+    /// The message ids each fetch of bodies asked for, oldest first.
+    pub asked: Vec<Vec<String>>,
     /// What Gmail hands back, by message id.
     pub gmail: HashMap<String, MessageBody>,
     /// The pictures Gmail has for each message's `cid:` names.
@@ -188,6 +193,8 @@ pub struct Screen {
     pub cleaners: Vec<std::thread::ThreadId>,
     /// Cleaning fails, as it does when the worker panics.
     pub clean_fails: bool,
+    pub image_senders: Vec<String>,
+    pub images_always_allowed: bool,
 }
 
 pub struct FakeWindow(pub RefCell<Screen>);
@@ -224,6 +231,10 @@ pub fn meta(id: &str, unread: bool) -> MessageMeta {
 pub fn body(text: &str) -> MessageBody {
     MessageBody {
         text: Some(text.to_string()),
+        provenance: mailrs_domain::Provenance {
+            delivered_to: Some(vec![]),
+            ..Default::default()
+        },
         ..MessageBody::default()
     }
 }
@@ -232,6 +243,10 @@ pub fn body(text: &str) -> MessageBody {
 pub fn html_body(html: &str) -> MessageBody {
     MessageBody {
         html: Some(html.to_string()),
+        provenance: mailrs_domain::Provenance {
+            delivered_to: Some(vec![]),
+            ..Default::default()
+        },
         ..MessageBody::default()
     }
 }
@@ -433,7 +448,9 @@ impl FakeWindow {
             ticket: 0,
             stored: HashMap::from([(THREAD.to_string(), stored)]),
             holds: HashMap::new(),
+            ensure_hold: None,
             messages: vec![meta("m1", true)],
+            asked: Vec::new(),
             gmail: HashMap::from([("m1".to_string(), body("Hello"))]),
             pictures: HashMap::from([(
                 "m1".to_string(),
@@ -489,6 +506,8 @@ impl FakeWindow {
             sent: Vec::new(),
             cleaners: Vec::new(),
             clean_fails: false,
+            image_senders: Vec::new(),
+            images_always_allowed: false,
         })))
     }
 
@@ -558,6 +577,7 @@ impl FakeWindow {
             accent: "#3584e4".to_string(),
             accent_text: "#1a5fb4".to_string(),
             summarize: false,
+            colors: None,
             font: String::new(),
         };
         self.with(
@@ -619,8 +639,18 @@ impl Desk for FakeWindow {
         vec!["me@example.com".to_string()]
     }
 
-    fn images_allowed(&self, _senders: &[String]) -> bool {
-        false
+    fn images_allowed(&self, senders: &[String]) -> bool {
+        self.with(|screen| {
+            screen.images_always_allowed
+                || (!senders.is_empty()
+                    && senders
+                        .iter()
+                        .all(|sender| screen.image_senders.contains(sender)))
+        })
+    }
+
+    fn images_always_allowed(&self) -> bool {
+        self.with(|screen| screen.images_always_allowed)
     }
 
     fn photos(&self, _senders: &[String]) -> crate::render::Photos {
@@ -677,7 +707,13 @@ impl Effects for FakeWindow {
         _thread_id: String,
     ) -> Answer<'_, Result<(), String>> {
         self.reached(Step::Ensure);
-        Box::pin(async { Ok(()) })
+        let held = self.with(|screen| screen.ensure_hold.take());
+        Box::pin(async move {
+            if let Some(held) = held {
+                let _ = held.await;
+            }
+            Ok(())
+        })
     }
 
     fn thread_messages(
@@ -696,6 +732,7 @@ impl Effects for FakeWindow {
         message_ids: Vec<String>,
     ) -> Answer<'_, Vec<(String, Result<MessageBody, String>)>> {
         self.reached(Step::Bodies);
+        self.with(|screen| screen.asked.push(message_ids.clone()));
         let bodies: Vec<(String, Result<MessageBody, String>)> = self.with(|screen| {
             message_ids
                 .into_iter()
@@ -929,7 +966,11 @@ impl Effects for FakeWindow {
     }
 
     fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
-        self.change(Step::Replace, |open| open.replace_messages(fresh))
+        let changed = self.change(Step::Replace, |open| open.replace_messages(fresh));
+        if !changed {
+            self.draw();
+        }
+        changed
     }
 
     fn bodies_arrived(&self, fetched: Fetched) {

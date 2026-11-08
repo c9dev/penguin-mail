@@ -68,6 +68,12 @@ impl ToolHost for NoTools {
     }
 }
 
+/// Model requests one turn may make before the loop gives up, for anyone
+/// who does not choose a number of their own in Preferences. Each tool call
+/// costs a request of its own, so a wide job can need far more than a short
+/// answer.
+pub const DEFAULT_ROUNDS: usize = 25;
+
 /// Where the model runs. Chosen in Preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
@@ -130,6 +136,7 @@ pub struct Conversation {
     thinking: bool,
     format: Option<serde_json::Value>,
     web: bool,
+    rounds: usize,
 }
 
 impl Conversation {
@@ -139,6 +146,7 @@ impl Conversation {
             thinking: false,
             format: None,
             web: false,
+            rounds: DEFAULT_ROUNDS,
         }
     }
 
@@ -150,6 +158,7 @@ impl Conversation {
             self.inner.set_format(schema.clone());
         }
         self.inner.set_web(self.web);
+        self.inner.set_rounds(self.rounds);
     }
 
     /// Changes the instructions for the next turn without discarding chat history.
@@ -178,6 +187,14 @@ impl Conversation {
         self.format = Some(schema.clone());
         self.inner.set_format(schema);
         self
+    }
+
+    /// How many model requests a turn may make before it gives up, as the
+    /// person set it in Preferences. Claude Code runs its own turns and takes
+    /// no notice.
+    pub fn set_rounds(&mut self, rounds: usize) {
+        self.rounds = rounds;
+        self.inner.set_rounds(rounds);
     }
 
     /// Lets Claude search the web and read pages with Anthropic's own tools,

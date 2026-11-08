@@ -63,6 +63,7 @@ pub(super) const KEYWORDS: &[&str] = &[SEEN, FLAGGED, ANSWERED, DRAFT, MUTED, MD
 /// session's `maxMailboxesPerEmail`, read at sign-in.
 pub(super) fn capabilities_of(labels: bool) -> MailCapabilities {
     MailCapabilities {
+        fetches_raw_together: false,
         labels,
         server_threads: true,
         files_sent_mail: true,

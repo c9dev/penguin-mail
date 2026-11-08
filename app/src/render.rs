@@ -24,6 +24,9 @@ pub const FOLD_MS: u32 = 240;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
     pub dark: bool,
+    /// The page's own colours when a GTK theme is in force over
+    /// libadwaita; None keeps the page's palette.
+    pub colors: Option<PageColors>,
     /// CSS colour of the desktop accent, for fills, dots and outlines.
     pub accent: String,
     /// The accent as libadwaita limits it for text, dark enough on a
@@ -190,8 +193,9 @@ pub fn head(conversation: &Head, theme: &Theme) -> String {
     );
     let offer = if theme.summarize {
         format!(
-            "<a class=\"summarize\" href=\"mailrs:summarize\">{}</a>",
-            escape(&gettext("Summarize"))
+            "<a class=\"summarize\" href=\"mailrs:summarize\">{}</a> <a class=\"summarize\" href=\"mailrs:explain\">{}</a>",
+            escape(&gettext("Summarize")),
+            escape(&gettext("Explain"))
         )
     } else {
         String::new()
@@ -529,6 +533,21 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
         },
     );
     row(gettext("to"), escape(&addresses(&meta.to)));
+    let delivered: Vec<&str> = provenance
+        .delivery_addresses()
+        .iter()
+        .filter(|email| {
+            !meta
+                .to
+                .iter()
+                .chain(&meta.cc)
+                .any(|a| a.email.eq_ignore_ascii_case(email))
+        })
+        .map(String::as_str)
+        .collect();
+    if !delivered.is_empty() {
+        row(gettext("delivered-to"), escape(&delivered.join(", ")));
+    }
     if !meta.cc.is_empty() {
         row(gettext("cc"), escape(&addresses(&meta.cc)));
     }
@@ -884,45 +903,114 @@ pub(crate) const PAGE_SIDE: i32 = 36;
 pub(crate) const PAGE_NARROW: i32 = 560;
 pub(crate) const PAGE_NARROW_SIDE: i32 = 14;
 
+/// The two colours a GTK theme hands the page: its view background and
+/// its window text, as CSS colours. The rest of the palette is mixed
+/// from them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PageColors {
+    pub bg: String,
+    pub fg: String,
+}
+
 /// The conversation page's colours in one theme.
 pub(crate) struct PagePalette {
-    pub bg: &'static str,
-    pub fg: &'static str,
+    pub bg: String,
+    pub fg: String,
     /// Secondary text: counts, addresses, dates, recipients, quotes.
-    pub dim: &'static str,
-    pub card: &'static str,
-    pub line: &'static str,
-    pub hover: &'static str,
+    pub dim: String,
+    pub card: String,
+    pub line: String,
+    pub hover: String,
     /// What a message sits on.
-    pub surface: &'static str,
+    pub surface: String,
+}
+
+/// The page's palette under a GTK theme: `colors` as it gives them, and
+/// cards, lines and surface mixed from its text colour. Secondary text
+/// keeps enough opacity to read against both the page and the message.
+pub(crate) fn themed_palette(dark: bool, colors: &PageColors) -> PagePalette {
+    let over = |strength: u8| format!("color-mix(in srgb,{} {strength}%,transparent)", colors.fg);
+    let (dim, card, line, hover, surface) = match dark {
+        true => (58, 8, 9, 4, 7),
+        false => (60, 5, 8, 3, 4),
+    };
+    PagePalette {
+        bg: colors.bg.clone(),
+        fg: colors.fg.clone(),
+        dim: themed_dim(colors, dim, surface),
+        card: over(card),
+        line: over(line),
+        hover: over(hover),
+        surface: format!("color-mix(in srgb,{} {surface}%,{})", colors.fg, colors.bg),
+    }
+}
+
+/// Secondary text raises its opacity toward AA on the page and message.
+/// A theme may already make its foreground translucent, so its alpha
+/// cannot be multiplied by the page's dimming share again.
+fn themed_dim(colors: &PageColors, strength: u8, surface: u8) -> String {
+    use gtk::gdk::RGBA;
+    let (Ok(mut fg), Ok(bg)) = (RGBA::parse(&colors.fg), RGBA::parse(&colors.bg)) else {
+        return colors.fg.clone();
+    };
+    let ink = [fg.red(), fg.green(), fg.blue()];
+    let page = [bg.red(), bg.green(), bg.blue()];
+    let blend = |under: [f32; 3], alpha: f32| {
+        std::array::from_fn::<_, 3, _>(|i| ink[i] * alpha + under[i] * (1.0 - alpha))
+    };
+    let message = blend(page, fg.alpha() * f32::from(surface) / 100.0);
+    let luminance = |rgb: [f32; 3]| {
+        let [r, g, b] = rgb.map(|c| {
+            let c = f64::from(c);
+            if c <= 0.04045 {
+                c / 12.92
+            } else {
+                ((c + 0.055) / 1.055).powf(2.4)
+            }
+        });
+        0.2126 * r + 0.7152 * g + 0.0722 * b
+    };
+    for opacity in strength..=100 {
+        let alpha = f32::from(opacity) / 100.0;
+        fg.set_alpha(alpha);
+        if [page, message].into_iter().all(|under| {
+            let paper = luminance(under);
+            let text = luminance(blend(under, alpha));
+            (paper.max(text) + 0.05) / (paper.min(text) + 0.05) >= 4.55
+        }) {
+            break;
+        }
+    }
+    fg.to_str().to_string()
 }
 
 /// A message sits on a surface a step away from the page: lighter in a
 /// dark window, darker in a light one, so an open message reads as a
 /// sheet rather than as more page.
 pub(crate) fn page_palette(dark: bool) -> PagePalette {
+    let own = |s: &str| s.to_string();
     if dark {
         PagePalette {
-            bg: "#1e1e21",
-            fg: "#ffffff",
-            dim: "rgba(255,255,255,0.58)",
-            card: "rgba(255,255,255,0.08)",
-            line: "rgba(255,255,255,0.09)",
-            hover: "rgba(255,255,255,0.04)",
-            surface: "#2b2b30",
+            bg: own("#1e1e21"),
+            fg: own("#ffffff"),
+            dim: own("rgba(255,255,255,0.58)"),
+            card: own("rgba(255,255,255,0.08)"),
+            line: own("rgba(255,255,255,0.09)"),
+            hover: own("rgba(255,255,255,0.04)"),
+            surface: own("#2b2b30"),
         }
     } else {
         PagePalette {
-            bg: "#ffffff",
-            fg: "rgba(0,0,6,0.84)",
+            bg: own("#ffffff"),
+            fg: own("rgba(0,0,6,0.84)"),
             // At 52 % the dim text read 4.3:1 on the page, under the
             // 4.5:1 WCAG asks of 12.5 px text; 60 % reads 5.7:1 there and
             // 5.2:1 on a message's surface, and stays well under the body.
-            dim: "rgba(0,0,6,0.6)",
-            card: "rgba(0,0,6,0.05)",
-            line: "rgba(0,0,6,0.08)",
-            hover: "rgba(0,0,6,0.03)",
-            surface: "#f4f4f6",
+            dim: own("rgba(0,0,6,0.6)"),
+            card: own("rgba(0,0,6,0.05)"),
+            line: own("rgba(0,0,6,0.08)"),
+            hover: own("rgba(0,0,6,0.03)"),
+            surface: own("#f4f4f6"),
         }
     }
 }
@@ -936,7 +1024,10 @@ fn page_css(theme: &Theme) -> String {
         line,
         hover,
         surface,
-    } = page_palette(theme.dark);
+    } = match &theme.colors {
+        Some(colors) => themed_palette(theme.dark, colors),
+        None => page_palette(theme.dark),
+    };
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text};--caution:{caution}{font}}}\
 html{{background:var(--bg)}}\
@@ -1083,6 +1174,37 @@ d='M8 2 9.3 6.7 14 8 9.3 9.3 8 14 6.7 9.3 2 8 6.7 6.7Z'/></svg>";
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn translucent_theme_text_keeps_contrast_on_page_and_message() {
+        use gtk::gdk::RGBA;
+        for (dark, bg, fg, surface) in [
+            (false, "#f6f5f4", "rgba(0,0,0,0.8)", "#eeedec"),
+            (true, "#303030", "rgba(255,255,255,0.8)", "#3c3c3c"),
+        ] {
+            let palette = super::themed_palette(
+                dark,
+                &super::PageColors {
+                    bg: bg.into(),
+                    fg: fg.into(),
+                },
+            );
+            let dim = RGBA::parse(&palette.dim).unwrap();
+            for under in [bg, surface] {
+                let under_color = RGBA::parse(under).unwrap();
+                let rgb = [dim.red(), dim.green(), dim.blue()];
+                let back = [under_color.red(), under_color.green(), under_color.blue()];
+                let mut hex = String::from("#");
+                for (ink, paper) in rgb.into_iter().zip(back) {
+                    hex.push_str(&format!(
+                        "{:02x}",
+                        ((ink * dim.alpha() + paper * (1.0 - dim.alpha())) * 255.0).round() as u8
+                    ));
+                }
+                let ratio = crate::accent_contrast::contrast(&hex, under);
+                assert!(ratio >= 4.5, "{fg} on {under}: {ratio}");
+            }
+        }
+    }
     /// Mail keeps its own layout: no column squeezed to a letter a line,
     /// and a newsletter's own width limit is not overridden.
     #[test]
@@ -1171,6 +1293,7 @@ mod tests {
             accent: "#3584e4".into(),
             accent_text: "#1a5fb4".into(),
             summarize: false,
+            colors: None,
             font: String::new(),
         }
     }
@@ -1819,10 +1942,15 @@ mod tests {
 
     #[test]
     fn the_details_panel_says_who_really_sent_it() {
-        let m = meta("m1", "Ann", &["bo@example.com"]);
+        let m = meta("m1", "Ann", &[]);
         let body = MessageBody {
             text: Some("Hello".into()),
             provenance: mailrs_domain::Provenance {
+                delivered_to: Some(vec![
+                    "BOB@EXAMPLE.COM".into(),
+                    "list+news@example.com".into(),
+                    "<unsafe>@example.com".into(),
+                ]),
                 mailed_by: Some("bounce.example.net".into()),
                 signed_by: Some("example.net".into()),
                 encrypted: Some(true),
@@ -1848,6 +1976,9 @@ mod tests {
         assert!(html.contains("<th>signed-by</th><td>example.net</td>"));
         assert!(html.contains("Standard encryption (TLS)"));
         assert!(html.contains("<th>subject</th>"));
+        assert!(html.contains(
+            "<th>delivered-to</th><td>list+news@example.com, &lt;unsafe&gt;@example.com</td>"
+        ));
         // The page carries no JavaScript, so the panel must open on its own.
         assert!(!html.contains("mailrs:details"));
     }
@@ -2174,6 +2305,7 @@ mod tests {
             accent: "#fff".into(),
             accent_text: "#fff".into(),
             summarize: false,
+            colors: None,
             font: String::new(),
         });
         assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));
@@ -2197,6 +2329,8 @@ mod tests {
         assert!(
             head(true).contains("<a class=\"summarize\" href=\"mailrs:summarize\">Summarize</a>")
         );
+        assert!(head(true).contains("mailrs:explain"));
+        assert!(!head(false).contains("mailrs:explain"));
         assert!(!head(false).contains("mailrs:summarize"));
         assert!(
             head(true).contains("<h1>Rent</h1>"),

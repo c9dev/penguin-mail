@@ -338,6 +338,11 @@ impl Graph {
     }
 
     pub async fn categories(&self) -> Result<Vec<MasterCategory>, GraphError> {
+        // Graph's category list requires mailbox settings permissions, which
+        // the delegated shared-mail grant does not include.
+        if self.is_shared_mailbox() {
+            return Ok(Vec::new());
+        }
         let page: Page<MasterCategory> = self.get("me/outlook/masterCategories", &[]).await?;
         Ok(page.value)
     }

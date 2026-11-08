@@ -26,12 +26,19 @@ pub struct Settings {
     /// Group replies into conversations instead of listing each message.
     pub threading: bool,
     pub mark_read: MarkRead,
+    pub follow_selection_direction: bool,
     pub remote_images: RemoteImages,
     pub text_size: TextSize,
     pub preview_lines: PreviewLines,
     pub bold_unread: bool,
     pub bold_senders: bool,
     pub show_avatars: bool,
+    /// None keeps the default toolbar; an empty list hides all optional buttons.
+    pub toolbar: Option<Vec<crate::ui::toolbar::Slot>>,
+    /// Draw messages on the CPU rather than through the GPU, for a
+    /// computer whose graphics driver leaves them blank. Read once at
+    /// startup, before the web engine starts.
+    pub software_rendering: bool,
     pub color_scheme: ColorScheme,
     /// The locale the interface speaks, such as `pt_PT`. Empty follows the
     /// desktop. Read once at startup, since GTK reads its own locale then
@@ -156,6 +163,8 @@ pub struct Settings {
     /// on: the locale's own first weekday, or a fixed weekday. Defaults
     /// to Automatic.
     pub week_start: WeekStart,
+    /// How calendar times are displayed; Automatic follows the system clock.
+    pub calendar_clock: CalendarClock,
     /// The address of the account the last new event went on. A new
     /// event goes on that account's primary calendar.
     pub last_calendar_account: Option<String>,
@@ -339,6 +348,12 @@ pub struct AiSettings {
     pub claude_command: String,
     /// Ask before the assistant sends mail or changes Gmail settings.
     pub confirm_actions: bool,
+    /// Model requests one assistant turn may make before it gives up. Each
+    /// tool call costs a request of its own, so a wide job wants room and a
+    /// model that wanders wants cutting short.
+    pub max_rounds: usize,
+    /// Allow tools in chats started by Summarize or Explain.
+    pub analysis_tools: bool,
     /// Features other than the assistant that do not follow it. A feature
     /// missing here uses the assistant's model.
     pub uses: BTreeMap<Feature, Use>,
@@ -347,6 +362,15 @@ pub struct AiSettings {
     /// The SearXNG server web search asks, such as `http://localhost:8080`.
     pub searxng_url: String,
 }
+
+/// The fewest model requests one assistant turn may be allowed. Zero would
+/// answer nothing at all, so the assistant always asks the model once.
+pub const MIN_ROUNDS: usize = 1;
+
+/// The most a turn may be allowed, which covers a job that works through a
+/// hundred messages one at a time. Beyond this a model is looping rather
+/// than working, and Stop is the answer.
+pub const MAX_ROUNDS: usize = 100;
 
 impl Default for AiSettings {
     fn default() -> Self {
@@ -362,6 +386,8 @@ impl Default for AiSettings {
             claude_model: String::new(),
             claude_command: String::new(),
             confirm_actions: true,
+            max_rounds: mailrs_ai::DEFAULT_ROUNDS,
+            analysis_tools: false,
             uses: BTreeMap::new(),
             web_search: WebSearch::Claude,
             searxng_url: String::new(),
@@ -475,12 +501,15 @@ impl Default for Settings {
         Settings {
             threading: true,
             mark_read: MarkRead::Immediately,
+            follow_selection_direction: true,
             remote_images: RemoteImages::Ask,
             text_size: TextSize::Normal,
             preview_lines: PreviewLines::Two,
             bold_unread: true,
             bold_senders: false,
             show_avatars: true,
+            toolbar: None,
+            software_rendering: false,
             color_scheme: ColorScheme::System,
             language: String::new(),
             notifications: true,
@@ -532,6 +561,7 @@ impl Default for Settings {
             show_declined_events: false,
             working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
             week_start: WeekStart::default(),
+            calendar_clock: CalendarClock::default(),
             last_calendar_account: None,
             folded_calendar_accounts: Vec::new(),
         }
@@ -548,7 +578,7 @@ pub enum MailColumn {
 impl MailColumn {
     pub fn limits(self) -> (i32, i32) {
         match self {
-            Self::Mailboxes => (220, 480),
+            Self::Mailboxes => (180, 480),
             Self::Messages => (300, 720),
         }
     }
@@ -596,6 +626,28 @@ impl Choice for WeekStart {
             WeekStart::Automatic => gettext("Automatic"),
             WeekStart::Monday => gettext("Monday"),
             WeekStart::Sunday => gettext("Sunday"),
+        }
+    }
+}
+
+/// The calendar's clock preference, independent of the interface language.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CalendarClock {
+    #[default]
+    Automatic,
+    Hour12,
+    Hour24,
+}
+
+impl Choice for CalendarClock {
+    const ALL: &'static [Self] = &[Self::Automatic, Self::Hour12, Self::Hour24];
+
+    fn label(self) -> String {
+        match self {
+            Self::Automatic => gettext("Automatic"),
+            Self::Hour12 => gettext("12-hour (AM/PM)"),
+            Self::Hour24 => gettext("24-hour"),
         }
     }
 }
@@ -1317,6 +1369,8 @@ mod tests {
         let mut settings = Settings {
             threading: false,
             text_size: TextSize::Large,
+            follow_selection_direction: false,
+            calendar_clock: CalendarClock::Hour12,
             ..Settings::default()
         };
         settings.set_signature("Me@Example.com", "Dana\n\n");
@@ -1328,7 +1382,19 @@ mod tests {
         let partial = Settings::load(&path);
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
+        assert!(partial.follow_selection_direction);
         assert!(partial.notifications, "missing keys take their defaults");
+        assert_eq!(partial.calendar_clock, CalendarClock::Automatic);
+    }
+
+    #[test]
+    fn analysis_tools_require_an_explicit_preference() {
+        let mut settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(!settings.ai.analysis_tools);
+        Change::Ai(AiChange::AnalysisTools(true)).apply(&mut settings);
+        let saved = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&saved).unwrap();
+        assert!(restored.ai.analysis_tools);
     }
 
     #[test]
@@ -1627,6 +1693,27 @@ mod tests {
         assert_eq!(settings.vips["ann@example.com"], "Ann Lee");
         assert!(!settings.toggle_vip("ANN@example.com", ""));
         assert!(settings.vips.is_empty());
+    }
+
+    #[test]
+    fn toolbar_choices_survive_restart_and_old_settings_keep_the_defaults() {
+        use crate::ui::toolbar::Slot;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        for toolbar in [
+            None,
+            Some(vec![]),
+            Some(vec![Slot::Print, Slot::Read, Slot::Source]),
+        ] {
+            let settings = Settings {
+                toolbar: toolbar.clone(),
+                ..Settings::default()
+            };
+            settings.save(&path).unwrap();
+            assert_eq!(Settings::load(&path).toolbar, toolbar);
+        }
+        std::fs::write(&path, "threading = true\n").unwrap();
+        assert_eq!(Settings::load(&path).toolbar, None);
     }
 
     #[test]

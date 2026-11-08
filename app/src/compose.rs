@@ -1819,7 +1819,7 @@ fn file_part(attachment: &OutgoingAttachment) -> MimePart<'_> {
 
 #[cfg(test)]
 mod tests {
-    use mail_parser::{MessageParser, MimeHeaders};
+    use mail_parser::MessageParser;
 
     use super::*;
 
@@ -2200,7 +2200,7 @@ mod tests {
             vec![addr(None, "cy@example.com")],
         );
         let masked = |email: &str| email.eq_ignore_ascii_case("tern.quill@fastmail.example");
-        let mine = reply_addresses(&senders, &original, masked);
+        let mine = reply_addresses(&senders, &original, &[], masked);
         let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "", None, &[]);
         assert_eq!(
             draft.from,
@@ -2256,6 +2256,65 @@ mod tests {
         assert_eq!(draft.from, sales());
         // Neither of the account's own addresses belongs in the answer.
         assert_eq!(draft.to, vec![addr(Some("Ann"), "ann@example.com")]);
+    }
+
+    #[test]
+    fn delivery_headers_choose_only_an_allowed_sender_and_to_cc_still_win() {
+        let senders = vec![
+            SendAsAddress {
+                email: me().email,
+                default: true,
+                ..Default::default()
+            },
+            SendAsAddress {
+                email: sales().email,
+                suffixes: Suffixes {
+                    plus: true,
+                    dot: false,
+                },
+                ..Default::default()
+            },
+        ];
+        let mut original = message(
+            "m1",
+            addr(None, "news@example.net"),
+            vec![addr(None, "list@example.net")],
+            vec![],
+        );
+        for (delivery, expected) in [
+            (vec!["stranger@example.com".into()], me().email),
+            (vec![sales().email], sales().email),
+            (
+                vec!["sales+news@example.com".into()],
+                "sales+news@example.com".into(),
+            ),
+            (
+                vec!["stranger@example.com".into(), sales().email],
+                sales().email,
+            ),
+        ] {
+            let mine = reply_addresses(&senders, &original, &delivery, |_| false);
+            for kind in [ReplyKind::Reply, ReplyKind::ReplyAll] {
+                let draft = respond(kind, 1, &mine, &original, "text", None, &[]);
+                assert_eq!(draft.from.email, expected);
+                assert!(
+                    !draft
+                        .to
+                        .iter()
+                        .chain(&draft.cc)
+                        .any(|a| a.email == expected)
+                );
+                assert_eq!(draft.to[0].email, "news@example.net");
+            }
+        }
+        original.cc = vec![me()];
+        let mine = reply_addresses(&senders, &original, &[sales().email], |_| false);
+        assert_eq!(
+            respond(ReplyKind::Reply, 1, &mine, &original, "", None, &[])
+                .from
+                .email,
+            me().email
+        );
     }
 
     #[test]
@@ -2315,7 +2374,7 @@ mod tests {
                     addr(None, "cy@example.com"),
                 ],
             );
-            let mine = reply_addresses(&senders, &original, |_| false);
+            let mine = reply_addresses(&senders, &original, &[], |_| false);
             let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "hello", None, &[]);
             assert_eq!(draft.from, addr(Some("Our Name"), &email));
             assert_eq!(draft.to, vec![addr(None, "ann@example.com")]);
@@ -2363,7 +2422,7 @@ mod tests {
                 addr(None, "user.shop@example.com"),
             ],
         );
-        let mine = reply_addresses(&senders, &original, |_| false);
+        let mine = reply_addresses(&senders, &original, &[], |_| false);
         let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "", None, &[]);
         assert_eq!(draft.from.email, "user+shop@example.com");
         assert!(
@@ -2826,7 +2885,7 @@ mod tests {
         let raw = build_request(&draft, 0, "id@example.com").expect("built");
         let parsed = MessageParser::default().parse(&raw).expect("parsed");
 
-        assert_eq!(parsed.parts.len(), 1, "{}", String::from_utf8_lossy(&raw));
+        assert_eq!(parsed.parts().len(), 1, "{}", String::from_utf8_lossy(&raw));
         let kind = parsed.content_type().expect("a content type");
         assert_eq!((kind.ctype(), kind.subtype()), ("text", Some("plain")));
         let sent = parsed
@@ -2835,7 +2894,11 @@ mod tests {
             .replace("\r\n", "\n");
         assert_eq!(sent, body);
         assert_eq!(parsed.subject(), Some("Remove me"));
-        let to = parsed.to().and_then(|to| to.as_list()).expect("a To list");
+        let to = parsed
+            .to()
+            .expect("a To list")
+            .mailboxes()
+            .collect::<Vec<_>>();
         assert_eq!(to.len(), 1);
         assert_eq!(to[0].address(), Some("leave@news.example"));
         assert!(!String::from_utf8_lossy(&raw).contains("text/html"));
@@ -2972,9 +3035,12 @@ mod tests {
         );
         assert_eq!(parsed.subject(), Some("Plans"));
         assert_eq!(parsed.message_id(), Some("new@example.com"));
-        assert_eq!(parsed.in_reply_to().as_text(), Some("m2@mail.example.com"));
         assert_eq!(
-            parsed.references().as_text_list().unwrap(),
+            parsed.in_reply_to().and_then(|ids| ids.get(0)),
+            Some("m2@mail.example.com")
+        );
+        assert_eq!(
+            parsed.references().unwrap().iter().collect::<Vec<_>>(),
             ["m1@mail.example.com", "m2@mail.example.com"]
         );
         assert_eq!(
@@ -2991,7 +3057,7 @@ mod tests {
                 .unwrap()
                 .contains("<strong>Ann</strong>")
         );
-        assert_eq!(parsed.attachment_count(), 1);
+        assert_eq!(parsed.attachments().len(), 1);
         assert_eq!(
             parsed.attachments().next().unwrap().attachment_name(),
             Some("menu.pdf")
@@ -3260,7 +3326,7 @@ mod tests {
             "mixed holds related holds alternative"
         );
         let parsed = MessageParser::default().parse(&raw).unwrap();
-        assert_eq!(parsed.attachment_count(), 2);
+        assert_eq!(parsed.attachments().len(), 2);
     }
 
     #[test]

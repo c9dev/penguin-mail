@@ -4,6 +4,7 @@
 
 pub mod address;
 pub mod charset;
+pub mod delivery;
 pub mod head;
 pub mod html;
 pub mod notes;

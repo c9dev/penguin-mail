@@ -31,6 +31,7 @@ pub use queued::Unsent;
 pub struct Answering {
     pub account_id: AccountId,
     pub target: MessageMeta,
+    pub delivered_to: Vec<String>,
     /// The words to quote.
     pub text: String,
     pub html: Option<String>,
@@ -54,6 +55,8 @@ pub struct OpenThread {
     pub bodies: HashMap<String, Result<Arc<MessageBody>, String>>,
     pub expanded: HashSet<String>,
     pub images_allowed: bool,
+    /// The global Always setting also covers senders who join later.
+    pub images_always_allowed: bool,
     /// Set when the view shows one message of the thread, not all of it.
     pub only_message: Option<String>,
     pub me: Vec<String>,
@@ -150,6 +153,7 @@ impl OpenThread {
                 .collect(),
             expanded,
             images_allowed: false,
+            images_always_allowed: false,
             only_message: target.message_id.clone(),
             me,
             inline_images: HashMap::new(),
@@ -227,6 +231,9 @@ impl OpenThread {
             .and_then(|body| body.as_ref().ok());
         Some(Answering {
             account_id: self.account_id,
+            delivered_to: body
+                .map(|b| b.provenance.delivery_addresses().to_vec())
+                .unwrap_or_default(),
             text: match body {
                 Some(body) => crate::compose::body_text(body),
                 None => target.snippet.clone(),
@@ -352,6 +359,34 @@ impl OpenThread {
             .collect()
     }
 
+    /// Distinct sender addresses covered by a thread-wide image permission.
+    /// An empty entry keeps messages without a sender in the decision.
+    pub fn image_senders(&self) -> Vec<String> {
+        let mut senders: Vec<String> = self
+            .senders()
+            .into_iter()
+            .map(|sender| sender.trim().to_lowercase())
+            .collect();
+        senders.sort();
+        senders.dedup();
+        senders
+    }
+
+    fn restrict_images(&mut self, fresh: &[MessageMeta]) {
+        if self.images_allowed && !self.images_always_allowed {
+            let allowed = self.image_senders();
+            self.images_allowed = fresh.iter().all(|message| {
+                let sender = message
+                    .from
+                    .as_ref()
+                    .map(|from| from.email.trim().to_lowercase())
+                    .unwrap_or_default();
+                allowed.contains(&sender)
+                    && (!sender.is_empty() || self.messages.iter().any(|old| old.id == message.id))
+            });
+        }
+    }
+
     /// Whether a reply can quote the message it answers: that message's
     /// body has arrived, or failed for good.
     pub fn quotable(&self) -> bool {
@@ -392,25 +427,39 @@ impl OpenThread {
             }
         }
         if !fresh.is_empty() {
+            self.restrict_images(&fresh);
             self.messages = fresh;
         }
+        self.missing_bodies()
+    }
+
+    /// The messages whose bodies are still to fetch: none stored, or one
+    /// stored before delivery headers were kept. A body that failed to
+    /// come is not asked for again.
+    pub fn missing_bodies(&self) -> Vec<String> {
         self.messages
             .iter()
-            .filter(|m| !self.bodies.contains_key(&m.id))
+            .filter(|m| match self.bodies.get(&m.id) {
+                None => true,
+                Some(Ok(body)) => body.provenance.delivered_to.is_none(),
+                Some(Err(_)) => false,
+            })
             .map(|m| m.id.clone())
             .collect()
     }
 
-    /// Replaces the messages and answers whether their ids differ from the
-    /// ones that were here, in that order.
+    /// Replaces the messages and answers whether their ids or image
+    /// permission changed, requiring a redraw.
     pub fn replace_messages(&mut self, fresh: Vec<MessageMeta>) -> bool {
         let same = self
             .messages
             .iter()
             .map(|m| &m.id)
             .eq(fresh.iter().map(|m| &m.id));
+        let was_allowed = self.images_allowed;
+        self.restrict_images(&fresh);
         self.messages = fresh;
-        !same
+        !same || was_allowed != self.images_allowed
     }
 
     /// Bodies as Gmail sent them, with the HTML already cleaned away from
@@ -421,6 +470,18 @@ impl OpenThread {
         cleaned: HashMap<String, Cleaned>,
     ) {
         for (id, body) in bodies {
+            // A delivery refresh must not replace content the engine already checked.
+            if self.marks.contains_key(&id)
+                && let Some(Ok(current)) = self.bodies.get_mut(&id)
+            {
+                if let Ok(fresh) = body
+                    && let Some(delivered_to) = &fresh.provenance.delivered_to
+                    && current.provenance.delivered_to.as_ref() != Some(delivered_to)
+                {
+                    Arc::make_mut(current).provenance.delivered_to = Some(delivered_to.clone());
+                }
+                continue;
+            }
             self.cleaned.remove(&id);
             self.bodies.insert(id, body);
         }
@@ -441,9 +502,13 @@ impl OpenThread {
     /// its own files.
     pub fn take_engine_answer(&mut self, message_id: String, read: protection::Read) -> bool {
         self.marks.insert(message_id.clone(), read.mark);
-        let Some(body) = read.body else {
+        let Some(mut body) = read.body else {
             return false;
         };
+        // Delivery belongs to the outer transport headers, not the signed part.
+        if let Some(Ok(original)) = self.bodies.get(&message_id) {
+            body.provenance.delivered_to = original.provenance.delivered_to.clone();
+        }
         if read.sealed {
             self.sealed.insert(message_id.clone());
         }
@@ -588,6 +653,7 @@ mod tests {
             bodies: HashMap::new(),
             expanded: HashSet::new(),
             images_allowed: false,
+            images_always_allowed: false,
             only_message: None,
             me: Vec::new(),
             inline_images: HashMap::new(),
@@ -698,6 +764,16 @@ mod tests {
     #[test]
     fn a_reply_to_a_message_that_arrived_encrypted_starts_encrypted() {
         let mut open = thread(vec![message("m1", false)]);
+        open.bodies.insert(
+            "m1".into(),
+            Ok(std::sync::Arc::new(mailrs_domain::MessageBody {
+                provenance: mailrs_domain::Provenance {
+                    delivered_to: Some(vec!["alias@example.com".into()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })),
+        );
         open.take_engine_answer(
             "m1".to_string(),
             engine_read("The key is under the mat.", true),
@@ -705,11 +781,87 @@ mod tests {
 
         let answering = open.answering(None, false).expect("something to answer");
         assert!(answering.secret);
+        assert_eq!(answering.delivered_to, ["alias@example.com"]);
         assert_eq!(answering.text, "The key is under the mat.");
         assert!(
             open.answering(Some("m1"), true)
                 .is_some_and(|forward| forward.secret)
         );
+    }
+
+    #[test]
+    fn a_delayed_delivery_refresh_keeps_the_body_the_engine_opened() {
+        use mailrs_domain::{Attachment, MessageBody};
+        use std::sync::Arc;
+
+        for sealed in [false, true] {
+            for engine_first in [false, true] {
+                for refresh_fails in [false, true] {
+                    let mut open = thread(vec![message("m1", false)]);
+                    let original = MessageBody {
+                        text: Some("Original protected body".into()),
+                        html: Some("<p>Original protected body</p>".into()),
+                        ..Default::default()
+                    };
+                    open.bodies
+                        .insert("m1".into(), Ok(Arc::new(original.clone())));
+                    if !engine_first {
+                        assert_eq!(open.take_messages(&[]), ["m1"]);
+                    }
+                    let mut read = engine_read("Opened content", sealed);
+                    read.mark.title = "Signature checked".into();
+                    read.mark.tone = crate::protection::Tone::Good;
+                    let mark = read.mark.clone();
+                    let inside = read.body.as_mut().unwrap();
+                    inside.html = Some("<p>Opened content</p>".into());
+                    inside.attachments.push(Attachment {
+                        part_id: "0".into(),
+                        filename: "inside.txt".into(),
+                        mime_type: "text/plain".into(),
+                        size: 6,
+                        attachment_id: None,
+                        content_id: None,
+                    });
+                    read.files = vec![b"inside".to_vec()];
+                    open.asked.insert("m1".into());
+                    open.take_engine_answer("m1".into(), read);
+                    open.take_cleaned(open.to_clean().clean());
+                    if engine_first {
+                        assert_eq!(open.take_messages(&[]), ["m1"]);
+                    }
+
+                    let id = "m1".to_string();
+                    let mut fresh = original;
+                    fresh.provenance.delivered_to = Some(vec!["alias@example.com".into()]);
+                    let fresh = Arc::new(fresh);
+                    let cleaned = super::ToClean::of(1, [(&id, &fresh)]).clean();
+                    let result = if refresh_fails {
+                        Err("offline".into())
+                    } else {
+                        Ok(fresh)
+                    };
+                    open.take_bodies(vec![(id, result)], cleaned);
+                    open.take_cleaned(open.to_clean().clean());
+
+                    let body = open.bodies["m1"].as_ref().unwrap();
+                    assert_eq!(body.text.as_deref(), Some("Opened content"));
+                    assert_eq!(body.html.as_deref(), Some("<p>Opened content</p>"));
+                    assert_eq!(body.attachments[0].filename, "inside.txt");
+                    assert_eq!(open.opened_files["m1"], [b"inside".to_vec()]);
+                    assert_eq!(open.marks["m1"], mark);
+                    assert!(open.asked.contains("m1"));
+                    assert_eq!(open.sealed.contains("m1"), sealed);
+                    assert_eq!(
+                        body.provenance.delivered_to,
+                        (!refresh_fails).then(|| vec!["alias@example.com".into()])
+                    );
+                    assert!(open.to_clean().is_empty());
+                    let reply = open.answering(None, false).unwrap();
+                    assert_eq!(reply.text, "Opened content");
+                    assert_eq!(reply.secret, sealed);
+                }
+            }
+        }
     }
 
     #[test]
@@ -719,6 +871,67 @@ mod tests {
 
         let answering = open.answering(None, false).expect("something to answer");
         assert!(!answering.secret);
+    }
+
+    fn sent_by(id: &str, sender: &str) -> MessageMeta {
+        let mut meta = message(id, false);
+        meta.from = Some(mailrs_domain::Address {
+            name: None,
+            email: sender.to_string(),
+        });
+        meta
+    }
+
+    #[test]
+    fn new_senders_cannot_inherit_a_threads_image_permission() {
+        let first = sent_by("m1", "ann@example.com");
+        let stranger = sent_by("m2", "bob@example.com");
+        let mut open = thread(vec![first.clone()]);
+        open.images_allowed = true;
+        open.take_messages(&[first.clone(), stranger.clone()]);
+        assert!(!open.images_allowed);
+
+        let mut open = thread(vec![first.clone()]);
+        open.images_allowed = true;
+        assert!(open.replace_messages(vec![first, stranger]));
+        assert!(!open.images_allowed);
+    }
+
+    #[test]
+    fn a_changed_sender_revokes_images_even_when_message_ids_stay() {
+        let mut open = thread(vec![sent_by("m1", "ann@example.com")]);
+        open.images_allowed = true;
+        assert!(open.replace_messages(vec![sent_by("m1", "bob@example.com")]));
+        assert!(!open.images_allowed);
+    }
+
+    #[test]
+    fn another_message_from_the_same_sender_keeps_the_permission() {
+        let first = sent_by("m1", "Ann@example.com");
+        let mut open = thread(vec![first.clone()]);
+        open.images_allowed = true;
+        open.take_messages(&[first, sent_by("m2", "ann@example.com")]);
+        assert!(open.images_allowed);
+        assert_eq!(open.image_senders(), ["ann@example.com"]);
+    }
+
+    #[test]
+    fn new_messages_without_a_sender_do_not_inherit_permission() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.images_allowed = true;
+        open.take_messages(&[message("m1", false), message("m2", false)]);
+        assert!(!open.images_allowed);
+    }
+
+    #[test]
+    fn the_global_always_setting_covers_new_senders() {
+        let mut open = thread(vec![sent_by("m1", "ann@example.com")]);
+        open.images_allowed = true;
+        open.images_always_allowed = true;
+        open.take_messages(&[sent_by("m2", "bob@example.com")]);
+        assert!(open.images_allowed);
+        open.replace_messages(vec![sent_by("m3", "eve@example.com")]);
+        assert!(open.images_allowed);
     }
 
     #[test]
@@ -758,6 +971,23 @@ mod tests {
             .insert("m1".to_string(), Err("gone".to_string()));
         let missing = open.take_messages(&[message("m1", false), message("m2", false)]);
         assert_eq!(missing, ["m2"]);
+    }
+
+    #[test]
+    fn old_cached_text_stays_visible_while_delivery_headers_are_requested() {
+        let mut open = thread(vec![message("m1", false)]);
+        let mut cached = mailrs_domain::MessageBody {
+            text: Some("Cached text".into()),
+            ..Default::default()
+        };
+        open.bodies
+            .insert("m1".into(), Ok(std::sync::Arc::new(cached.clone())));
+        assert_eq!(open.take_messages(&[]), ["m1"]);
+        assert_eq!(open.answering(None, false).unwrap().text, "Cached text");
+        cached.provenance.delivered_to = Some(vec![]);
+        open.bodies
+            .insert("m1".into(), Ok(std::sync::Arc::new(cached)));
+        assert!(open.take_messages(&[]).is_empty());
     }
 
     #[test]

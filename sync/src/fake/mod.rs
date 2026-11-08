@@ -2186,9 +2186,12 @@ fn built_raw(state: &FakeState, id: &str) -> Result<Vec<u8>, GmailError> {
             Raw::new("List-Unsubscribe=One-Click"),
         );
     }
-    // The headers the details panel reads its three lines from, so a
+    // The headers the details panel reads provenance from, so a
     // fixture's provenance survives the trip through the raw message.
     let provenance = &body.provenance;
+    for address in provenance.delivery_addresses() {
+        message = message.header("Delivered-To", Raw::new(address.as_str()));
+    }
     if let Some(domain) = &provenance.mailed_by {
         message = message.header("Return-Path", Raw::new(format!("<bounces@{domain}>")));
     }

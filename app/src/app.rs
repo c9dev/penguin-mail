@@ -86,6 +86,7 @@ pub struct App {
     /// The JMAP accounts that signed in through the browser, as
     /// `reload_accounts` last read them, so signing in again says where.
     through_browser: RefCell<HashSet<AccountId>>,
+    microsoft_owners: RefCell<HashMap<AccountId, AccountId>>,
     names: RefCell<HashMap<AccountId, String>>,
     tray: Arc<Mutex<Option<crate::tray::Handle>>>,
     /// The newest count for the tray, All Inboxes and each account's
@@ -101,6 +102,10 @@ pub struct App {
     filter_requested: Cell<bool>,
     /// Main window plus open composers.
     open_windows: Cell<usize>,
+    /// The composers on screen. Each holds its own window, so it has to
+    /// be let go of when that window closes, or the window and the
+    /// engine behind its Preview live on, hidden, as long as the app.
+    composers: RefCell<Vec<Rc<crate::ui::composer::Composer>>>,
     shed_generation: Cell<u64>,
     /// A message requested on the command line, opened on first activation.
     pending_compose: RefCell<Option<String>>,
@@ -196,6 +201,7 @@ impl App {
             consent: RefCell::new(HashMap::new()),
             google_sign_ins: RefCell::default(),
             through_browser: RefCell::default(),
+            microsoft_owners: RefCell::default(),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
             tray_unread: tokio::sync::watch::Sender::new((0, Vec::new())),
@@ -205,6 +211,7 @@ impl App {
             skip_first_window: Cell::new(background),
             filter_requested: Cell::new(false),
             open_windows: Cell::new(0),
+            composers: RefCell::new(Vec::new()),
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             pending_file: RefCell::new(file),
@@ -236,6 +243,7 @@ impl App {
             _hold: gio_app.hold(),
         });
         crate::locale_time::set_week_start_setting(app.settings.borrow().week_start);
+        crate::clock_format::set_preference(app.settings.borrow().calendar_clock);
         app.install_actions();
         app.listen();
         app.count_unread();
@@ -381,6 +389,7 @@ impl App {
         }
         if effects.has(Effect::Calendar) {
             crate::locale_time::set_week_start_setting(self.settings.borrow().week_start);
+            crate::clock_format::set_preference(self.settings.borrow().calendar_clock);
         }
         if !effects.is_empty() {
             self.tell_window(Notice::SettingsChanged(effects));
@@ -729,6 +738,7 @@ impl App {
         &self,
         account_id: AccountId,
         original: &mailrs_domain::MessageMeta,
+        delivered_to: &[String],
     ) -> Vec<Address> {
         let account = self.account_email(account_id);
         let mut senders = self.settings.borrow().senders(&account);
@@ -745,7 +755,7 @@ impl App {
             mail.as_ref()
                 .is_some_and(|mail| mail.is_masked(email) == Some(true))
         };
-        crate::compose::reply_addresses(&senders, original, masked)
+        crate::compose::reply_addresses(&senders, original, delivered_to, masked)
     }
 
     /// The dictionaries a composer for `account_id` should check against.
@@ -918,13 +928,17 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (mut loaded, order, consent, google_sign_ins, through_browser) = self
+        let (mut loaded, order, consent, google_sign_ins, through_browser, microsoft_owners) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
                 let mut order = HashMap::new();
                 let mut through_browser = HashSet::new();
+                let mut microsoft_owners = HashMap::new();
                 for account in accounts::list_accounts(c)? {
+                    if let Some(owner) = accounts::microsoft_owner(c, account.id)? {
+                        microsoft_owners.insert(account.id, owner);
+                    }
                     let account_labels = labels::list_labels(c, account.id)?;
                     order.insert(account.id, labels::positions(c, account.id)?);
                     if account.provider == Provider::Jmap
@@ -937,12 +951,20 @@ impl App {
                 }
                 let consent = accounts::all_consent(c)?;
                 let google_sign_ins = accounts::google_sign_ins(c)?;
-                Ok((out, order, consent, google_sign_ins, through_browser))
+                Ok((
+                    out,
+                    order,
+                    consent,
+                    google_sign_ins,
+                    through_browser,
+                    microsoft_owners,
+                ))
             })
             .await?;
         loaded.sort_by_key(|(account, _)| self.settings.borrow().account_rank(&account.email));
         *self.label_order.borrow_mut() = order;
         *self.through_browser.borrow_mut() = through_browser;
+        *self.microsoft_owners.borrow_mut() = microsoft_owners;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
         // A calendar account has no inbox for the tray and the Dock to count.
@@ -974,6 +996,13 @@ impl App {
     /// browser, as `reload_accounts` last read it.
     pub fn signs_in_through_browser(&self, account_id: AccountId) -> bool {
         self.through_browser.borrow().contains(&account_id)
+    }
+
+    pub fn microsoft_owner(&self, account_id: AccountId) -> Option<Account> {
+        self.microsoft_owners
+            .borrow()
+            .get(&account_id)
+            .and_then(|id| self.account(*id))
     }
 
     /// Every account's consent, as `reload_accounts` last read it: whether

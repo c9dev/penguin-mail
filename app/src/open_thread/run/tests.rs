@@ -37,6 +37,51 @@ fn opened(inside: mailrs_domain::MessageBody) -> Read {
 }
 
 #[tokio::test]
+async fn trusting_the_summary_sender_does_not_trust_the_whole_thread() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.image_senders.push("ann@example.com".to_string());
+        let mut stranger = meta("m2", false);
+        stranger.from.as_mut().unwrap().email = "bob@example.com".to_string();
+        screen.messages.push(stranger.clone());
+        screen
+            .stored
+            .get_mut(THREAD)
+            .unwrap()
+            .messages
+            .push(stranger);
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.images_allowed), Some(false));
+}
+
+#[tokio::test]
+async fn a_new_sender_during_fetch_does_not_inherit_image_trust() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.image_senders.push("ann@example.com".to_string());
+        let mut stranger = meta("m2", false);
+        stranger.from.as_mut().unwrap().email = "bob@example.com".to_string();
+        screen.messages.push(stranger);
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.images_allowed), Some(false));
+}
+
+#[tokio::test]
+async fn always_loading_images_still_covers_a_new_sender_during_fetch() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.images_always_allowed = true;
+        let mut stranger = meta("m2", false);
+        stranger.from.as_mut().unwrap().email = "bob@example.com".to_string();
+        screen.messages.push(stranger);
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.images_allowed), Some(true));
+}
+
+#[tokio::test]
 async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
     let window = FakeWindow::new();
     window.run().open(row(THREAD)).await;
@@ -44,12 +89,89 @@ async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
     let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
     assert!(at(Step::Stored) < at(Step::Show));
     assert!(at(Step::Show) < at(Step::Ensure));
-    assert!(at(Step::Ensure) < at(Step::Bodies));
+    assert!(at(Step::Show) < at(Step::Bodies));
     assert!(at(Step::Bodies) < at(Step::BodiesArrived));
     let text = window
         .open(|open| open.bodies["m1"].clone().ok()?.text.clone())
         .flatten();
     assert_eq!(text.as_deref(), Some("Hello"));
+}
+
+/// Lets the run go on until it takes `step`, for a second at most.
+async fn until(window: &FakeWindow, step: Step) {
+    for _ in 0..1000 {
+        if window.took(step) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+}
+
+/// The bodies the store lacked are asked for while the server is still
+/// answering about the thread, and go on the page before it has. What
+/// follows the bodies waits for the whole thread, and comes once.
+#[tokio::test]
+async fn the_missing_bodies_come_while_the_server_is_asked_about_the_thread() {
+    let window = FakeWindow::new();
+    let (release, held) = futures::channel::oneshot::channel();
+    window.with(|screen| screen.ensure_hold = Some(held));
+    let run = window.run();
+    futures::join!(run.open(row(THREAD)), async {
+        until(&window, Step::BodiesArrived).await;
+        assert!(window.took(Step::BodiesArrived), "{:?}", window.steps());
+        assert!(!window.took(Step::Messages), "the server has not answered");
+        assert!(!window.took(Step::Sleep), "the read mark waits for it");
+        let _ = release.send(());
+    });
+    assert_eq!(window.with(|s| s.asked.clone()), [vec!["m1".to_string()]]);
+    let steps = window.steps();
+    let count = |step| steps.iter().filter(|s| **s == step).count();
+    assert_eq!(count(Step::BodiesArrived), 1);
+    assert_eq!(count(Step::Sleep), 1);
+    assert_eq!(window.0.borrow().marked, [target(None)]);
+}
+
+/// A message the server's answer adds was unknown when the bodies were
+/// first asked for, so its body is asked for once the answer is in, and
+/// the one already fetched is not asked for again.
+#[tokio::test]
+async fn a_message_the_server_adds_gets_its_body_afterwards() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.messages.push(meta("m2", true));
+        screen.gmail.insert("m2".to_string(), body("Later"));
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(
+        window.with(|s| s.asked.clone()),
+        [vec!["m1".to_string()], vec!["m2".to_string()]]
+    );
+    for (id, text) in [("m1", "Hello"), ("m2", "Later")] {
+        let got = window
+            .open(|open| open.bodies[id].clone().ok()?.text.clone())
+            .flatten();
+        assert_eq!(got.as_deref(), Some(text), "{id}");
+    }
+    assert_eq!(window.0.borrow().marked, [target(None)]);
+}
+
+/// The reader leaves while the server is still answering. The bodies
+/// fetched meanwhile stay off the thread that took their place.
+#[tokio::test]
+async fn bodies_fetched_while_the_server_answers_stay_off_the_next_thread() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.moves_on = Some(Step::Bodies));
+    let (release, held) = futures::channel::oneshot::channel();
+    window.with(|screen| screen.ensure_hold = Some(held));
+    let run = window.run();
+    futures::join!(run.open(row(THREAD)), async {
+        until(&window, Step::Bodies).await;
+        let _ = release.send(());
+    });
+    assert!(window.took(Step::Bodies));
+    assert!(!window.took(Step::BodiesArrived));
+    assert!(!window.took(Step::MessagesArrived));
+    assert!(!window.took(Step::MarkRead));
 }
 
 /// The person left this sender's list before, so the thread opens with no
@@ -509,7 +631,7 @@ async fn an_engine_answer_for_a_thread_the_reader_left_goes_nowhere() {
 }
 
 #[tokio::test]
-async fn a_refresh_with_the_same_messages_redraws_only_the_buttons() {
+async fn a_refresh_with_the_same_messages_fetches_nothing() {
     let window = FakeWindow::new();
     window.run().open(row(THREAD)).await;
     window.with(|screen| screen.steps.clear());
@@ -517,6 +639,24 @@ async fn a_refresh_with_the_same_messages_redraws_only_the_buttons() {
     assert_eq!(
         window.steps(),
         [Step::Messages, Step::Replace, Step::Buttons]
+    );
+}
+
+/// The store marking the thread read while it is on screen, as the
+/// server does once the reader has it, reaches the page too: the read
+/// mark goes off the message as the listing takes it off the row.
+#[tokio::test]
+async fn a_refresh_clears_a_read_mark_the_store_set() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert!(page(&window).contains("message expanded unread"));
+    window.with(|screen| screen.messages = vec![meta("m1", false)]);
+    window.run().refresh().await;
+    assert_eq!(window.open(|open| open.unread()), Some(false));
+    assert!(
+        !page(&window).contains("message expanded unread"),
+        "{}",
+        page(&window)
     );
 }
 
@@ -543,6 +683,25 @@ async fn a_refresh_that_finds_the_thread_gone_clears_the_view() {
     window.with(|screen| screen.messages.clear());
     window.run().refresh().await;
     assert!(window.open(|_| ()).is_none());
+}
+
+/// A live account may still be fetching a thread's messages while it sits
+/// on screen, and a change report that races that read says nothing from
+/// the store. Clearing then would leave the conversation blank once the
+/// fetch lands, so a thread that has no messages yet keeps its place.
+#[tokio::test]
+async fn a_refresh_leaves_a_thread_that_never_had_messages_alone() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| {
+        screen.messages.clear();
+        if let Some(open) = screen.open.as_mut() {
+            open.messages.clear();
+        }
+    });
+    window.run().refresh().await;
+    assert!(!window.took(Step::Clear));
+    assert!(window.open(|_| ()).is_some());
 }
 
 #[tokio::test]

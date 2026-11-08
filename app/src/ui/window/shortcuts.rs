@@ -743,6 +743,7 @@ const MAIL_ONLY: &[&str] = &[
 pub(super) fn route(space: Space, name: &str) -> Route {
     match space {
         Space::Mail => Route::Run,
+        Space::Calendar if name == "customize-toolbar" => Route::Run,
         Space::Calendar if matches!(name, "find" | "search") => Route::Calendar,
         Space::Calendar
             if MAIL_ONLY.contains(&name) || VIEW_ACTIONS.iter().any(|(n, _)| *n == name) =>
@@ -781,9 +782,11 @@ pub(super) fn conversation_chords() -> gtk::ShortcutController {
     chords(Place::Conversation)
 }
 
-/// The Keyboard Shortcuts dialog, one section per heading, with the label
-/// key's line worded for how the accounts file mail.
-pub(super) fn dialog(filing: Filing) -> adw::ShortcutsDialog {
+/// Shows the Keyboard Shortcuts dialog over `parent`, one section per
+/// heading, with the label key's line worded for how the accounts file
+/// mail.
+#[cfg(feature = "adwaita-1-8")]
+pub(super) fn show(filing: Filing, parent: &impl IsA<gtk::Widget>) {
     let dialog = adw::ShortcutsDialog::new();
     for section in Section::ALL {
         let group = adw::ShortcutsSection::new(Some(&section.title()));
@@ -795,7 +798,39 @@ pub(super) fn dialog(filing: Filing) -> adw::ShortcutsDialog {
         }
         dialog.add(group);
     }
-    dialog
+    dialog.present(Some(parent));
+}
+
+/// The same dialog on libadwaita 1.7, which has no shortcuts dialog of
+/// its own: GTK's shortcuts window, deprecated in GTK 4.18 in favor of
+/// the libadwaita one but still shipped.
+#[cfg(not(feature = "adwaita-1-8"))]
+#[allow(deprecated)]
+pub(super) fn show(filing: Filing, parent: &impl IsA<gtk::Window>) {
+    let window = gtk::ShortcutsWindow::builder()
+        .transient_for(parent)
+        .modal(true)
+        .title(gettext("Keyboard Shortcuts"))
+        .build();
+    let page = gtk::ShortcutsSection::builder()
+        .section_name("shortcuts")
+        .build();
+    for section in Section::ALL {
+        let group = gtk::ShortcutsGroup::builder()
+            .title(section.title())
+            .build();
+        for shortcut in SHORTCUTS.iter().filter(|s| s.section == section) {
+            group.add_shortcut(
+                &gtk::ShortcutsShortcut::builder()
+                    .title(shortcut.line(filing))
+                    .accelerator(crate::ui::primary_accelerator(&shortcut.accelerators()))
+                    .build(),
+            );
+        }
+        page.add_group(&group);
+    }
+    window.add_section(&page);
+    window.present();
 }
 
 /// An action that runs on the main window alone.
@@ -866,6 +901,11 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
 /// What a conversation's keys and menus reach, in the main window and in a
 /// window of its own alike.
 pub(super) static VIEW_ACTIONS: &[(&str, ViewRun)] = &[
+    ("customize-toolbar", |win, view| {
+        if let Some(app) = win.app.upgrade() {
+            crate::ui::toolbar::customize::present(&app, &view.page);
+        }
+    }),
     ("reply", |win, view| win.reply(view, ReplyKind::Reply)),
     ("reply-all", |win, view| {
         win.reply(view, ReplyKind::ReplyAll)
@@ -1367,10 +1407,11 @@ mod tests {
     }
 
     #[test]
-    fn every_view_action_but_find_stops_in_the_calendar() {
+    fn only_reading_and_mail_actions_stop_in_the_calendar() {
         for (name, _) in VIEW_ACTIONS {
             let expected = match *name {
                 "find" => Route::Calendar,
+                "customize-toolbar" => Route::Run,
                 _ => Route::Skip,
             };
             assert_eq!(route(Space::Calendar, name), expected, "{name}");

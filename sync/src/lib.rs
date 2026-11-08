@@ -30,6 +30,7 @@ pub mod read_inbox;
 pub mod rules;
 pub mod services;
 mod settings;
+pub mod shared_mailbox;
 pub mod sign_in;
 pub mod switch;
 mod triage;

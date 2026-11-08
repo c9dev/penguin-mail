@@ -214,9 +214,9 @@ dependencies = [
 
 [[package]]
 name = "async-executor"
-version = "1.14.0"
+version = "1.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c96bf972d85afc50bf5ab8fe2d54d1586b4e0b46c97c50a0c9e71e2f7bcd812a"
+checksum = "f426a31126c735126297bc5ea7a521263c9faff4f63ca415267ee625651c4f37"
 dependencies = [
  "async-task",
  "concurrent-queue",
@@ -557,9 +557,9 @@ dependencies = [
  "ahash",
  "chrono",
  "chrono-tz",
- "hashify",
- "mail-builder",
- "mail-parser",
+ "hashify 0.2.9",
+ "mail-builder 1.0.0",
+ "mail-parser 0.11.9",
 ]
 
 [[package]]
@@ -1062,6 +1062,16 @@ dependencies = [
  "toml 1.1.8+spec-1.1.0",
  "vswhom",
  "winreg",
+]
+
+[[package]]
+name = "encodify"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e95d6e27686e1d6991a3077f4dbec9d33d18903466d234165ad86cd08c3ebc79"
+dependencies = [
+ "memchr",
+ "simdutf8",
 ]
 
 [[package]]
@@ -1939,6 +1949,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashify"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04a037b1848eada162d6534c206770180e6bfc0eaa97292250c3e7179d8b1f73"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.8",
+]
+
+[[package]]
 name = "hashlink"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2675,9 +2696,9 @@ dependencies = [
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.38.2"
+version = "0.39.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8"
+checksum = "14a5f01b87b92705d07b433c06f96cbc764637d81a0bffb5734ce17cf0f9a2b3"
 dependencies = [
  "cc",
  "pkg-config",
@@ -2749,8 +2770,16 @@ name = "mail-builder"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ccbc27cb02a58a311a404769a22f5abf63fe3173b290d80be7c534f9c7023151"
+
+[[package]]
+name = "mail-builder"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aca3ad941e4c466402151719d6b4cea4bdfcb212b11e5970afa75e7d28c6502a"
 dependencies = [
+ "encodify",
  "gethostname",
+ "web-time",
 ]
 
 [[package]]
@@ -2759,13 +2788,25 @@ version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ec00bda90c6e645a54506c630c2820cd6b1890cfd2b0a169b50f74b2b8c7c86"
 dependencies = [
+ "hashify 0.2.9",
+]
+
+[[package]]
+name = "mail-parser"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d4ea9311ef3ca6189aa85c5f984bd47b2f12079bcabae28917d900ab26c9ecc"
+dependencies = [
+ "encodify",
  "encoding_rs",
- "hashify",
+ "hashify 0.3.2",
+ "memchr",
+ "simdutf8",
 ]
 
 [[package]]
 name = "mailrs"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "ammonia",
  "anyhow",
@@ -2782,8 +2823,8 @@ dependencies = [
  "ksni",
  "libadwaita",
  "libc",
- "mail-builder",
- "mail-parser",
+ "mail-builder 2.0.1",
+ "mail-parser 1.0.1",
  "mailrs-ai",
  "mailrs-discover",
  "mailrs-domain",
@@ -2827,12 +2868,12 @@ dependencies = [
  "webview2-com-sys",
  "windows",
  "wiremock",
- "zbus 6.0.0",
+ "zbus 6.1.0",
 ]
 
 [[package]]
 name = "mailrs-ai"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "async-channel 2.5.0",
  "base64 0.23.1",
@@ -2849,7 +2890,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-cli"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-channel 2.5.0",
@@ -2867,7 +2908,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-dav"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
  "calcard",
@@ -2890,7 +2931,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-discover"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "futures",
  "hickory-resolver",
@@ -2910,7 +2951,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-domain"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -2925,7 +2966,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-gmail"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -2948,7 +2989,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-graph"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -2967,14 +3008,14 @@ dependencies = [
 
 [[package]]
 name = "mailrs-imap"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "async-imap",
  "base64 0.23.1",
  "chrono",
  "dirs",
  "lettre",
- "mail-parser",
+ "mail-parser 1.0.1",
  "mailrs-discover",
  "mailrs-domain",
  "mailrs-mime",
@@ -2990,7 +3031,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-jmap"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -3012,21 +3053,22 @@ dependencies = [
 
 [[package]]
 name = "mailrs-mime"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
+ "encodify",
  "encoding_rs",
  "html5ever",
- "mail-parser",
+ "mail-parser 1.0.1",
  "mailrs-domain",
 ]
 
 [[package]]
 name = "mailrs-pgp"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
+ "encodify",
  "libc",
- "mail-builder",
  "rand 0.10.3",
  "tempfile",
  "thiserror 2.0.21",
@@ -3035,7 +3077,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-pop3"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
  "mailrs-discover",
@@ -3050,7 +3092,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-sieve"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -3068,9 +3110,9 @@ dependencies = [
 
 [[package]]
 name = "mailrs-smime"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
- "mail-builder",
+ "encodify",
  "mailrs-pgp",
  "rand 0.10.3",
  "tempfile",
@@ -3079,7 +3121,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-store"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "chrono",
  "mailrs-domain",
@@ -3096,7 +3138,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-sync"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "async-channel 2.5.0",
  "base64 0.23.1",
@@ -3105,8 +3147,8 @@ dependencies = [
  "dirs",
  "futures",
  "keyring",
- "mail-builder",
- "mail-parser",
+ "mail-builder 2.0.1",
+ "mail-parser 1.0.1",
  "mailrs-dav",
  "mailrs-discover",
  "mailrs-domain",
@@ -3130,12 +3172,12 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wiremock",
- "zbus 6.0.0",
+ "zbus 6.1.0",
 ]
 
 [[package]]
 name = "mailrs-testmail"
-version = "1.0.11"
+version = "1.0.12"
 dependencies = [
  "rand 0.10.3",
  "reqwest",
@@ -4119,9 +4161,9 @@ checksum = "33cb294fe86a74cbcf50d4445b37da762029549ebeea341421c7c70370f86cac"
 
 [[package]]
 name = "pulldown-cmark"
-version = "0.13.5"
+version = "0.13.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "278e9268c93b9e498a2da46c34d90ba93a3255eb99009646398f34bc73ab36eb"
+checksum = "3db2be46835f013dd3f4fa7f5f7402c537787b54ebb6fe2b94bbdd7e2669bb7b"
 dependencies = [
  "bitflags",
  "getopts",
@@ -4389,9 +4431,9 @@ dependencies = [
 
 [[package]]
 name = "roxmltree"
-version = "0.21.1"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1964b10c76125c36f8afe190065a4bf9a87bf324842c05701330bba9f1cacbb"
+checksum = "9da7f59328b09405b181fee1018925fad50f157afb43c0c0f5c522c256dd5907"
 dependencies = [
  "memchr",
 ]
@@ -4421,9 +4463,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.40.2"
+version = "0.41.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3"
+checksum = "da9bba6f3506135e120a6586df05be18b48d18896600646a4bec8f993d91a594"
 dependencies = [
  "bitflags",
  "fallible-iterator",
@@ -5176,9 +5218,9 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tokio"
-version = "1.53.3"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",
@@ -6173,9 +6215,9 @@ dependencies = [
 
 [[package]]
 name = "zbus"
-version = "6.0.0"
+version = "6.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "266223222c9d81e5966455a9da0783e35d56a7ccab79a03c2366b2d98f8fc8a9"
+checksum = "fcff5faa63a63d5b81051740f7382017f10b3440b3f401d97f0cf0b3b39c62d9"
 dependencies = [
  "async-trait",
  "bitflags",

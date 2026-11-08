@@ -14,8 +14,8 @@ use serde_json::{Value, json};
 use super::mcp::McpServer;
 
 use super::{
-    Choice, ColorScheme, ComposeFormat, Feature, MarkRead, PreviewLines, ReadReceipts,
-    RemoteImages, Settings, TextSize, UndoSend, Use, WebSearch,
+    Choice, ColorScheme, ComposeFormat, Feature, MAX_ROUNDS, MIN_ROUNDS, MarkRead, PreviewLines,
+    ReadReceipts, RemoteImages, Settings, TextSize, UndoSend, Use, WebSearch,
 };
 
 /// One named change to the preferences.
@@ -23,12 +23,15 @@ use super::{
 pub enum Change {
     Threading(bool),
     MarkRead(MarkRead),
+    FollowSelectionDirection(bool),
     RemoteImages(RemoteImages),
     TextSize(TextSize),
     PreviewLines(PreviewLines),
     BoldUnread(bool),
     BoldSenders(bool),
     ShowAvatars(bool),
+    Toolbar(Option<Vec<crate::ui::toolbar::Slot>>),
+    SoftwareRendering(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
     ColorScheme(ColorScheme),
@@ -90,6 +93,7 @@ pub enum Change {
     WorkingHours(mailrs_domain::calendar::hours::WorkingHours),
     /// Which day the calendar's grids start the week on.
     WeekStart(mailrs_domain::calendar::week::WeekStart),
+    CalendarClock(super::CalendarClock),
     /// The account a new event went on.
     LastCalendarAccount(String),
     /// Folds an account's calendars under its heading in the calendar
@@ -251,6 +255,9 @@ pub enum AiChange {
     BaseUrl(String),
     ClaudeCommand(String),
     ConfirmActions(bool),
+    /// How many model requests one assistant turn may make.
+    MaxRounds(usize),
+    AnalysisTools(bool),
     /// A server the app found on this machine: its address and first model.
     LocalServer {
         base_url: String,
@@ -282,12 +289,17 @@ impl Change {
             }
             Change::Threading(on) => settings.threading = on,
             Change::MarkRead(when) => settings.mark_read = when,
+            Change::FollowSelectionDirection(on) => settings.follow_selection_direction = on,
             Change::RemoteImages(when) => settings.remote_images = when,
             Change::TextSize(size) => settings.text_size = size,
             Change::PreviewLines(lines) => settings.preview_lines = lines,
             Change::BoldUnread(on) => settings.bold_unread = on,
             Change::BoldSenders(on) => settings.bold_senders = on,
             Change::ShowAvatars(on) => settings.show_avatars = on,
+            Change::Toolbar(slots) => {
+                settings.toolbar = slots.map(|s| crate::ui::toolbar::layout(Some(&s)))
+            }
+            Change::SoftwareRendering(on) => settings.software_rendering = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
                     TextSize::Normal
@@ -346,6 +358,7 @@ impl Change {
             Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
             Change::WorkingHours(hours) => settings.working_hours = hours,
             Change::WeekStart(week_start) => settings.week_start = week_start,
+            Change::CalendarClock(clock) => settings.calendar_clock = clock,
             Change::LastCalendarAccount(email) => settings.last_calendar_account = Some(email),
             Change::CalendarAccountFolded { email, folded } => {
                 let email = email.to_lowercase();
@@ -543,6 +556,8 @@ impl AiChange {
             AiChange::BaseUrl(url) => ai.base_url = url,
             AiChange::ClaudeCommand(command) => ai.claude_command = command,
             AiChange::ConfirmActions(on) => ai.confirm_actions = on,
+            AiChange::MaxRounds(rounds) => ai.max_rounds = rounds.clamp(MIN_ROUNDS, MAX_ROUNDS),
+            AiChange::AnalysisTools(on) => ai.analysis_tools = on,
             AiChange::LocalServer { base_url, model } => {
                 ai.base_url = base_url;
                 ai.local_model = model;
@@ -627,12 +642,14 @@ settable! {
     may_set {
         Threading => threading,
         MarkRead => mark_read,
+        FollowSelectionDirection => follow_selection_direction,
         RemoteImages => remote_images,
         TextSize => text_size,
         PreviewLines => preview_lines,
         BoldUnread => bold_unread,
         BoldSenders => bold_senders,
         ShowAvatars => show_avatars,
+        SoftwareRendering => software_rendering,
         ColorScheme => color_scheme,
         Notifications => notifications,
         NotificationPreviews => notification_previews,
@@ -657,6 +674,7 @@ settable! {
         calendar_view,
         last_calendar_account,
         folded_calendar_accounts,
+        toolbar,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -726,6 +744,7 @@ settable! {
         // Where the week starts is the person's own view of the grid,
         // like working hours.
         week_start,
+        calendar_clock,
     }
 }
 
@@ -769,17 +788,18 @@ pub enum Effect {
     /// gettext both read the locale as the process starts. The window says
     /// so and offers a restart rather than translating half of itself.
     Language,
-    /// Where the week starts, which an open calendar redraws for at once.
+    /// The week start or time format, which an open calendar redraws for at once.
     Calendar,
     /// Which languages get no translation card, which the open
     /// conversation's card reads.
     Translation,
+    Toolbar,
 }
 
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 15] = [
+    pub const ALL: [Effect; 16] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -795,6 +815,7 @@ impl Effect {
         Effect::Language,
         Effect::Calendar,
         Effect::Translation,
+        Effect::Toolbar,
     ];
 }
 
@@ -868,12 +889,15 @@ impl Effects {
         let Settings {
             threading,
             mark_read,
+            follow_selection_direction,
             remote_images,
             text_size,
             preview_lines,
             bold_unread,
             bold_senders,
             show_avatars,
+            toolbar,
+            software_rendering,
             color_scheme,
             language,
             notifications,
@@ -925,6 +949,7 @@ impl Effects {
             show_declined_events,
             working_hours,
             week_start,
+            calendar_clock,
             last_calendar_account,
             folded_calendar_accounts,
         } = after;
@@ -933,7 +958,11 @@ impl Effects {
         // changing one saves the file and stops there.
         let _quiet = (
             mark_read,
+            follow_selection_direction,
             remote_images,
+            // Read once, before the web engine starts: a change here
+            // takes effect at the next start.
+            software_rendering,
             notifications,
             notification_previews,
             default_account,
@@ -1031,13 +1060,16 @@ impl Effects {
                     (ai.provider, ai.model_on(ai.provider))
                         != (before.ai.provider, before.ai.model_on(before.ai.provider))
                 }
+                Effect::Toolbar => *toolbar != before.toolbar,
                 Effect::TextSize => *text_size != before.text_size,
                 Effect::Contacts => {
                     *contacts != before.contacts || *contact_accounts != before.contact_accounts
                 }
                 Effect::Theme => *color_scheme != before.color_scheme,
                 Effect::Language => *language != before.language,
-                Effect::Calendar => *week_start != before.week_start,
+                Effect::Calendar => {
+                    *week_start != before.week_start || *calendar_clock != before.calendar_clock
+                }
                 Effect::Translation => {
                     *never_translate != before.never_translate || ai.language != before.ai.language
                 }
@@ -1137,6 +1169,30 @@ mod tests {
         assert!(effects.is_empty());
         assert!(!settings.ai.assistant_reasoning);
         assert!(settings.ai.translation_reasoning);
+    }
+
+    #[test]
+    fn the_round_limit_stays_where_the_ai_page_can_put_it() {
+        use super::{AiChange, Change, MAX_ROUNDS, MIN_ROUNDS};
+        use crate::settings::Settings;
+        let mut settings = Settings::default();
+        assert_eq!(settings.ai.max_rounds, mailrs_ai::DEFAULT_ROUNDS);
+        // The next question simply reads the new number, so nothing on
+        // screen has to be redone.
+        let effects = Change::Ai(AiChange::MaxRounds(60)).apply(&mut settings);
+        assert!(effects.is_empty());
+        assert_eq!(settings.ai.max_rounds, 60);
+        Change::Ai(AiChange::MaxRounds(0)).apply(&mut settings);
+        assert_eq!(settings.ai.max_rounds, MIN_ROUNDS);
+        Change::Ai(AiChange::MaxRounds(9000)).apply(&mut settings);
+        assert_eq!(settings.ai.max_rounds, MAX_ROUNDS);
+        let saved = toml::to_string(&settings).unwrap();
+        let loaded: Settings = toml::from_str(&saved).unwrap();
+        assert_eq!(loaded.ai.max_rounds, MAX_ROUNDS);
+        // A settings file written before the row existed keeps the number the
+        // loop always had, rather than the range's floor.
+        let older: Settings = toml::from_str("[ai]\n").unwrap();
+        assert_eq!(older.ai.max_rounds, mailrs_ai::DEFAULT_ROUNDS);
     }
 
     #[test]
@@ -1255,6 +1311,33 @@ mod tests {
         }
         .apply(&mut settings);
         assert!(settings.storage_dismissed.is_empty());
+    }
+
+    #[test]
+    fn changing_the_calendar_clock_redraws_once_and_saves_the_choice() {
+        let mut settings = Settings::default();
+        for clock in [
+            super::super::CalendarClock::Hour12,
+            super::super::CalendarClock::Hour24,
+            super::super::CalendarClock::Automatic,
+        ] {
+            let change = Change::CalendarClock(clock);
+            assert_eq!(
+                change
+                    .clone()
+                    .apply(&mut settings)
+                    .iter()
+                    .collect::<Vec<_>>(),
+                vec![Effect::Calendar]
+            );
+            assert_eq!(settings.calendar_clock, clock);
+            assert!(change.apply(&mut settings).is_empty());
+            let saved = toml::to_string(&settings).unwrap();
+            assert_eq!(
+                toml::from_str::<Settings>(&saved).unwrap().calendar_clock,
+                clock
+            );
+        }
     }
 
     #[test]
@@ -1396,6 +1479,7 @@ mod tests {
         // The list the module's comment calls quiet, checked one by one.
         let quiet = [
             Change::MarkRead(MarkRead::Manually),
+            Change::FollowSelectionDirection(false),
             Change::RemoteImages(RemoteImages::Always),
             Change::Notifications(false),
             Change::NotificationPreviews(false),
@@ -1608,6 +1692,7 @@ mod tests {
         after.language = "pt_PT".into();
         after.week_start = mailrs_domain::calendar::week::WeekStart::Monday;
         after.never_translate = vec!["pt".into()];
+        after.toolbar = Some(vec![]);
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
     }
@@ -1747,6 +1832,7 @@ mod tests {
     fn every_effect_has_a_change_that_causes_it() {
         // A window arm nothing can reach is dead code; this catches it.
         let changes = [
+            Change::Toolbar(Some(vec![])),
             Change::Threading(false),
             Change::BoldUnread(false),
             Change::AccountName {

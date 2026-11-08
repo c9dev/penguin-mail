@@ -183,6 +183,12 @@ impl Desk for Ports {
             .is_some_and(|window| window.images_allowed_for(senders))
     }
 
+    fn images_always_allowed(&self) -> bool {
+        self.window().is_some_and(|window| {
+            window.settings_with(|s| s.remote_images == crate::settings::RemoteImages::Always)
+        })
+    }
+
     fn photos(&self, senders: &[String]) -> crate::render::Photos {
         self.window()
             .and_then(|window| window.app.upgrade())
@@ -305,24 +311,31 @@ impl Effects for Ports {
             let Ok(sync) = self.sync(account_id) else {
                 return Vec::new();
             };
-            let fetches = message_ids.into_iter().map(|id| {
-                let (core, sync) = (Rc::clone(&self.core), sync.clone());
-                async move {
-                    let key = id.clone();
-                    let result = core
-                        .call_for(account_id, async move { sync.body(&key).await })
-                        .await;
-                    (id, result.map_err(|err| err.to_string()))
-                }
-            });
             // A long thread would otherwise fire one Gmail call per message
             // at once, and 30 of them at 5 units each is most of a second's
-            // budget.
-            use futures::StreamExt;
-            futures::stream::iter(fetches)
-                .buffered(BODY_FETCHES)
-                .collect()
-                .await
+            // budget. An IMAP account fetches the small bodies together.
+            let asked = message_ids.clone();
+            let fetched = self
+                .core
+                .call_for(account_id, async move {
+                    Ok::<_, mailrs_sync::SyncError>(
+                        sync.bodies_with_delivery(&asked, BODY_FETCHES).await,
+                    )
+                })
+                .await;
+            match fetched {
+                Ok(bodies) => bodies
+                    .into_iter()
+                    .map(|(id, body)| (id, body.map_err(|err| err.to_string())))
+                    .collect(),
+                Err(err) => {
+                    let reason = err.to_string();
+                    message_ids
+                        .into_iter()
+                        .map(|id| (id, Err(reason.clone())))
+                        .collect()
+                }
+            }
         })
     }
 

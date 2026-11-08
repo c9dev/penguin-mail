@@ -1111,6 +1111,18 @@ END;
     // desktop reads its mail with. It is kept to find the account again;
     // the address finds it when Online Accounts gives it a new id.
     "ALTER TABLE accounts ADD COLUMN goa_id TEXT;",
+    // A shared mailbox has its own mail but uses its owner's sign-in.
+    // Remove attached mailboxes before their owner, so none lose credentials.
+    r#"
+CREATE TABLE microsoft_shared (
+    account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    owner_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    CHECK (account_id != owner_id)
+);
+"#,
+    // Retire refresh callbacks after a sign-in or removal, even if an
+    // account id is reused for the same address.
+    "ALTER TABLE accounts ADD COLUMN microsoft_session TEXT;",
 ];
 
 /// How long the copy taken before a migration stays once the store has

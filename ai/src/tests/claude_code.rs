@@ -295,6 +295,7 @@ async fn changing_the_system_prompt_resumes_the_same_session() {
         thinking: false,
         format: None,
         web: false,
+        rounds: crate::DEFAULT_ROUNDS,
     };
     let (events, _) = async_channel::unbounded();
     chat.send(
@@ -340,6 +341,7 @@ async fn changing_the_model_resumes_the_session_and_can_hand_it_to_another_provi
         thinking: false,
         format: None,
         web: false,
+        rounds: crate::DEFAULT_ROUNDS,
     };
     let (events, _) = async_channel::unbounded();
     chat.send(

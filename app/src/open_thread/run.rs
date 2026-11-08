@@ -110,6 +110,7 @@ pub trait Desk: Screen {
     fn me(&self, account_id: AccountId) -> Vec<String>;
     /// Whether mail from all of these senders may load remote images.
     fn images_allowed(&self, senders: &[String]) -> bool;
+    fn images_always_allowed(&self) -> bool;
     /// Contact photos for these senders, as `data:` URIs.
     fn photos(&self, senders: &[String]) -> crate::render::Photos;
     fn is_vip(&self, email: &str) -> bool;
@@ -502,10 +503,8 @@ impl ThreadRun {
         thread.unsubscribed = left;
         let senders = thread.senders();
         let named: Vec<String> = senders.iter().filter(|s| !s.is_empty()).cloned().collect();
-        thread.images_allowed = self
-            .desk
-            .images_allowed(std::slice::from_ref(&summary.from_email))
-            || self.desk.images_allowed(&senders);
+        thread.images_always_allowed = self.desk.images_always_allowed();
+        thread.images_allowed = self.desk.images_allowed(&senders);
         thread.photos = self.desk.photos(&named);
         thread.flag_color = summary.flag_color;
         let vip = thread
@@ -520,8 +519,9 @@ impl ThreadRun {
     }
 
     /// Picks up label changes and new messages in the thread on screen.
-    /// Only a change in the set of messages fetches and redraws, so the
-    /// reading position survives a label change.
+    /// Only a change in the set of messages fetches; a change the store
+    /// makes to the messages themselves, a read mark among them, is drawn
+    /// in place by the view, so the reading position survives both.
     pub async fn refresh(&self) {
         let Some(wanted) = self.on_screen() else {
             return;
@@ -548,7 +548,11 @@ impl ThreadRun {
             .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
             .collect();
         if fresh.is_empty() {
-            wanted.on_screen(|effects| effects.clear());
+            // The initial fetch may still be running. Clear only when a
+            // thread that already showed messages has lost them from the store.
+            if self.thread(|open| !open.messages.is_empty()) == Some(true) {
+                wanted.on_screen(|effects| effects.clear());
+            }
             return;
         }
         match wanted.on_screen(|effects| effects.replace_messages(fresh)) {
@@ -701,40 +705,79 @@ impl ThreadRun {
 
     /// Fetches the whole thread and the bodies it lacks, then brings the
     /// rest up to date.
+    ///
+    /// The bodies the store lacked when the thread went on screen are
+    /// asked for while the server is asked about the thread, not after it
+    /// answers: fetching them needs nothing from that answer, and over
+    /// IMAP the answer alone took a round trip or more. They go on the
+    /// page as soon as they come. A message the answer adds has its body
+    /// asked for afterwards. What follows the bodies, from the cards to
+    /// the read mark, waits for the whole thread as before.
     async fn complete(&self, wanted: &Want<'_>) {
         let target = wanted.target().clone();
         let (account_id, thread_id) = (target.account_id, target.thread_id.clone());
-        let ensured = wanted
-            .wait(|effects| effects.ensure_thread(account_id, thread_id.clone()))
-            .await;
-        match ensured {
-            None => return,
-            Some(Err(err)) => tracing::info!(error = %err, "showing the stored copy of the thread"),
-            Some(Ok(())) => {}
-        }
-        let Some(fresh) = wanted
-            .wait(|effects| effects.thread_messages(account_id, thread_id))
-            .await
-        else {
+        let known = wanted
+            .on_screen(|_| self.thread(OpenThread::missing_bodies))
+            .flatten()
+            .unwrap_or_default();
+        let (fresh, early) = futures::join!(
+            self.whole_thread(wanted, account_id, thread_id),
+            self.fetch_bodies(wanted, account_id, known),
+        );
+        let (Some(fresh), Some(early)) = (fresh, early) else {
             return;
         };
-        let fresh = fresh.unwrap_or_default();
         let Some(missing) = wanted.on_screen(|effects| effects.messages_arrived(fresh)) else {
+            return;
+        };
+        let Some(late) = self.fetch_bodies(wanted, account_id, missing).await else {
             return;
         };
         // A thread read before has every body in the store. Asking Gmail
         // for none of them and drawing the page again would cost a whole
         // reload and put the reader back at the top.
-        if missing.is_empty() {
-            self.follow(wanted, Event::NothingMissing).await;
-            return;
-        }
-        let Some(bodies) = wanted
-            .wait(|effects| effects.bodies(account_id, missing))
-            .await
-        else {
-            return;
+        let event = match early || late {
+            true => Event::BodiesArrived,
+            false => Event::NothingMissing,
         };
+        self.follow(wanted, event).await;
+    }
+
+    /// Asks the server for the whole thread and reads back the messages
+    /// the store then holds. `None` once the reader has left the thread.
+    async fn whole_thread(
+        &self,
+        wanted: &Want<'_>,
+        account_id: AccountId,
+        thread_id: String,
+    ) -> Option<Vec<MessageMeta>> {
+        let ensured = wanted
+            .wait(|effects| effects.ensure_thread(account_id, thread_id.clone()))
+            .await?;
+        if let Err(err) = ensured {
+            tracing::info!(error = %err, "showing the stored copy of the thread");
+        }
+        let fresh = wanted
+            .wait(|effects| effects.thread_messages(account_id, thread_id))
+            .await?;
+        Some(fresh.unwrap_or_default())
+    }
+
+    /// Fetches the bodies of `message_ids`, cleans their HTML and puts
+    /// them on the page. Answers whether any were asked for; `None` once
+    /// the reader has left the thread.
+    async fn fetch_bodies(
+        &self,
+        wanted: &Want<'_>,
+        account_id: AccountId,
+        message_ids: Vec<String>,
+    ) -> Option<bool> {
+        if message_ids.is_empty() {
+            return Some(false);
+        }
+        let bodies = wanted
+            .wait(|effects| effects.bodies(account_id, message_ids))
+            .await?;
         let bodies: Vec<(String, Result<Arc<MessageBody>, String>)> = bodies
             .into_iter()
             .map(|(id, body)| (id, body.map(Arc::new)))
@@ -749,18 +792,10 @@ impl ThreadRun {
         );
         let cleaned = match html.is_empty() {
             true => HashMap::new(),
-            false => match wanted.wait(|effects| effects.clean(html)).await {
-                Some(cleaned) => cleaned,
-                None => return,
-            },
+            false => wanted.wait(|effects| effects.clean(html)).await?,
         };
-        let fetched = Fetched { bodies, cleaned };
-        if wanted
-            .on_screen(|effects| effects.bodies_arrived(fetched))
-            .is_some()
-        {
-            self.follow(wanted, Event::BodiesArrived).await;
-        }
+        wanted.on_screen(|effects| effects.bodies_arrived(Fetched { bodies, cleaned }))?;
+        Some(true)
     }
 
     /// Brings up to date whatever `event` left stale.

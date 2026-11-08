@@ -4,8 +4,10 @@
 //! file at a time by the same part path the raw reader gives. `PEEK`
 //! leaves the message unread on the server.
 
+use std::collections::HashMap;
+
 use mailrs_domain::Location;
-use mailrs_imap::ImapError;
+use mailrs_imap::{ImapError, UidSet};
 use mailrs_mime::{Part, Parts};
 
 use super::{Imap, ImapApi, Submit};
@@ -28,24 +30,73 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// change the same UID can name another message, so the old location
     /// answers `NotFound` until the feed relists the mailbox.
     pub(super) async fn checked(&self, at: Location) -> Result<Location, BackendError> {
-        let selected = self.select(&at.mailbox, None).await?;
-        match selected.uidvalidity == at.uidvalidity {
+        let (uidvalidity, selected) = self.api.uidvalidity(&at.mailbox).await?;
+        if let Some(selected) = &selected {
+            self.note_keywords(&at.mailbox, selected);
+        }
+        match uidvalidity == at.uidvalidity {
             true => Ok(at),
             false => Err(BackendError::NotFound),
         }
     }
 
-    /// The messages as they arrived, in order.
+    /// The messages as they arrived, in order. Several messages in one
+    /// mailbox come in one command, as opening a thread asks for them:
+    /// one round trip in place of one per message. A message the answer
+    /// lacks fails the whole call with `NotFound`, and the caller asks for
+    /// each message alone to learn which.
     pub(super) async fn raw_messages(
         &self,
         names: &[String],
     ) -> Result<Vec<RawMessage>, BackendError> {
-        let mut raws = Vec::with_capacity(names.len());
-        for name in names {
+        if let [name] = names {
             let at = self.current(name).await?;
-            raws.push(self.raw_at(name, &at).await?);
+            return Ok(vec![self.raw_at(name, &at).await?]);
         }
-        Ok(raws)
+        let places = names
+            .iter()
+            .map(|name| Location::parse(name).ok_or(BackendError::NotFound))
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut mailboxes: Vec<&str> = Vec::new();
+        for at in &places {
+            if !mailboxes.contains(&at.mailbox.as_str()) {
+                mailboxes.push(&at.mailbox);
+            }
+        }
+        let mut found: HashMap<&str, Vec<u8>> = HashMap::with_capacity(names.len());
+        for mailbox in mailboxes {
+            let here: Vec<(&String, &Location)> = names
+                .iter()
+                .zip(&places)
+                .filter(|(_, at)| at.mailbox == mailbox)
+                .collect();
+            // A UID names the same message only while the mailbox keeps the
+            // UIDVALIDITY the location was read under.
+            let (uidvalidity, selected) = self.api.uidvalidity(mailbox).await?;
+            if let Some(selected) = &selected {
+                self.note_keywords(mailbox, selected);
+            }
+            if here.iter().any(|(_, at)| at.uidvalidity != uidvalidity) {
+                return Err(BackendError::NotFound);
+            }
+            let uids = UidSet::from_uids(here.iter().map(|(_, at)| at.uid));
+            let mut bodies: HashMap<u32, Vec<u8>> =
+                self.api.bodies(mailbox, &uids).await?.into_iter().collect();
+            for (name, at) in here {
+                let bytes = bodies.remove(&at.uid).ok_or(BackendError::NotFound)?;
+                found.insert(name, bytes);
+            }
+        }
+        names
+            .iter()
+            .map(|name| {
+                let bytes = found.remove(name.as_str()).ok_or(BackendError::NotFound)?;
+                Ok(RawMessage {
+                    id: name.clone(),
+                    bytes,
+                })
+            })
+            .collect()
     }
 
     /// The message `name` names, as it arrived, from `at`, a place

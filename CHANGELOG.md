@@ -11,7 +11,50 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - On Windows, a per-user installer sets up the app, its Start Menu entry and its mail and calendar file associations, and removes all of it on uninstall.
 - On Windows, assistant skills run their scripts inside a sandbox that opens only the skill's folder and a scratch folder to them, not your files.
 
+### Improved
+
+- On IMAP accounts, the messages of a conversation opened for the first time load faster.
+- An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.
+
 ### Fixed
+
+- On a dark KDE panel, the tray icon is light instead of nearly black.
+- The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
+
+## 1.0.12 (2026-11-05)
+
+### New
+
+- Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.
+- Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
+- Add a shared Microsoft 365 mailbox by address in Accounts preferences, using an existing account's sign-in.
+- Choose how many model requests the assistant can make per answer in Preferences → AI.
+- Explain the open conversation beside Summarize, with tools disabled by default for both and their follow-up questions.
+- Choose automatic, 12-hour or 24-hour times for the calendar in Preferences.
+- Choose Draw Messages Without the GPU in Preferences → Appearance when messages show blank or garbled on a computer whose graphics driver fails WebKit.
+- Penguin Mail builds and installs on Debian 13 from `scripts/package-debian.sh`, as a .deb against its GTK 4.18 and libadwaita 1.7.
+
+### Improved
+
+- The mailbox sidebar can be narrower, with Mail and Calendar switching to icons when their labels do not fit.
+- Deleting, archiving, or moving mail selects a neighbor in your last navigation direction, with an option in Reading preferences to always select the next row.
+
+### Fixed
+
+- Refreshing delivery headers keeps decrypted or verified message content and attachments intact.
+- The calendar time indicator catches up when shown and advances each minute while the calendar stays open.
+- On macOS, messages stay visible after shrinking and expanding the window.
+- Hidden calendar content and absent switch counts no longer keep the mailbox sidebar wide.
+- Summarize and Explain limit the mail sent to the model and say when some text was left out.
+- Unsubscribe asks before loading a sender's page, and image loading asks before enabling several senders in a conversation.
+- A skill command's saved approval covers its standard input as well as its command line.
+- Closing or sending a message lets its window go, instead of keeping every composer ever opened alive in the background.
+- A shared calendar the server refuses to show is left alone until the calendar list is read again, instead of being asked for and logged every minute.
+- A crash is written to the log with where it happened, so it can be reported.
+- The message pane takes its colors from a GTK theme loaded over libadwaita, instead of staying near black under a theme of its own.
+- Adding a reminder to an event no longer stacks another Add Reminder row each time.
+- The week and day views keep their day headings over their columns on desktops without overlay scrollbars.
+- The message view scrolls at once with the wheel instead of animating each tick, which stuttered on some graphics drivers.
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
 - Menus and popovers no longer crash the app in a disconnected remote-desktop session, where GTK reports no monitors.
@@ -24,6 +67,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - On Windows, opening the app from the Start Menu or a mailto link no longer brings a console window with it.
 - The About window names the system the copy was built for — Windows, macOS or Linux.
 - The Bcc field's placeholder is no longer cut short in a new message.
+- Marking mail read clears the unread mark in the list and open conversation while keeping expanded message details and quoted text open.
+- Mail belonging to one account no longer turns up as a row in the mailbox you are looking at in another account, whether it arrived or was read, starred or moved elsewhere.
 
 ## 1.0.11 (2026-10-28)
 
