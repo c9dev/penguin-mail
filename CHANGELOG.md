@@ -20,6 +20,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Pull past the top of the message list to check for mail, with an indicator before syncing starts.
+
 - Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.
 - Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
 - Add a shared Microsoft 365 mailbox by address in Accounts preferences, using an existing account's sign-in.

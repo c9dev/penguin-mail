@@ -4,6 +4,7 @@
 
 mod entry;
 mod filters;
+mod pull;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -74,6 +75,7 @@ pub struct ThreadList {
     selection: gtk::MultiSelection,
     view: gtk::ListView,
     scroller: gtk::ScrolledWindow,
+    pull: Rc<pull::Pull>,
     more: gtk::Button,
     rows: Rc<RefCell<Vec<Row>>>,
     /// The rows of the drag in progress.
@@ -355,7 +357,8 @@ impl ThreadList {
         super::name(&more, &gettext("More"));
         stack.set_vexpand(true);
         let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        content.append(&stack);
+        let pull = pull::Pull::new(&stack, &scroller);
+        content.append(&pull.widget);
         content.append(&more);
         toolbar.set_content(Some(&content));
         let bottom_slot = adw::Bin::builder()
@@ -394,6 +397,7 @@ impl ThreadList {
             selection,
             view,
             scroller,
+            pull,
             more,
             rows,
             dragged,
@@ -442,6 +446,7 @@ impl ThreadList {
     }
 
     pub fn set_title(&self, title: &str, subtitle: &str) {
+        self.pull.reset();
         self.title.set_label(title);
         self.subtitle.set_label(subtitle);
         self.show_subtitle();
@@ -682,6 +687,7 @@ impl ThreadList {
     }
 
     pub fn show_loading(&self) {
+        self.pull.reset();
         self.more.set_visible(false);
         self.stack.set_visible_child_name("loading");
     }
@@ -1130,6 +1136,7 @@ pub(crate) mod checks {
     use super::*;
 
     pub(crate) fn run() {
+        super::pull::checks::run();
         crate::ui::thread_row::check_appearance();
         filters::check();
         let list = ThreadList::new(|_| {}, |_| {});

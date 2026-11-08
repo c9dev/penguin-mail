@@ -305,3 +305,5 @@ unchecks them. The button announces when filters are active. More remains
 reachable when filters leave a server page empty; No Matching Mail explains
 that another page may still contain matches. Conditions stay selected when
 switching mailboxes and reset when the window closes.
+
+A touchpad pull past the top of the message list shows progress before running Check for Mail. The menu item and its keyboard shortcut remain available without the gesture.

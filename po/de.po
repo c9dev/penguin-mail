@@ -5101,7 +5101,7 @@ msgstr "Penguin Mail öffnen"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
 #: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:485
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:490
 msgid "New Message"
 msgstr "Neue Nachricht"
 
@@ -6763,8 +6763,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "{file} konnte nicht angehängt werden: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:413
-#: app/src/ui/thread_list.rs:349 app/src/ui/thread_list.rs:355
-#: app/src/ui/thread_list.rs:1142
+#: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
+#: app/src/ui/thread_list.rs:1149
 msgid "More"
 msgstr "Mehr"
 
@@ -10236,7 +10236,7 @@ msgstr "Zuletzt verwendetes Kalenderkonto"
 msgid "Same as New Messages"
 msgstr "Wie bei neuen Nachrichten"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:273
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:275
 msgid "All Inboxes"
 msgstr "Alle Posteingänge"
 
@@ -10704,7 +10704,7 @@ msgid "Mailboxes"
 msgstr "Postfächer"
 
 #: app/src/ui/sidebar.rs:440 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:1645 app/src/ui/thread_list.rs:369
+#: app/src/ui/sidebar.rs:1645 app/src/ui/thread_list.rs:372
 msgid "Mail"
 msgstr "E-Mail"
 
@@ -10974,30 +10974,30 @@ msgstr "Text"
 msgid "New Template"
 msgstr "Neue Vorlage"
 
-#: app/src/ui/thread_list.rs:236
+#: app/src/ui/thread_list.rs:238
 msgid "No Mail"
 msgstr "Keine E-Mails"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:254
+#: app/src/ui/thread_list.rs:256
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "E-Mails durchsuchen, z. B. from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:293 app/src/ui/thread_list.rs:313
+#: app/src/ui/thread_list.rs:295 app/src/ui/thread_list.rs:315
 msgid "Show Mailboxes"
 msgstr "Postfächer anzeigen"
 
-#: app/src/ui/thread_list.rs:298
+#: app/src/ui/thread_list.rs:300
 msgid "New Message (C)"
 msgstr "Neue Nachricht (C)"
 
-#: app/src/ui/thread_list.rs:303
+#: app/src/ui/thread_list.rs:305
 msgid "Search (/)"
 msgstr "Suchen (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:312
+#: app/src/ui/thread_list.rs:314
 msgid "Search mail"
 msgstr "E-Mails durchsuchen"
 
@@ -11029,6 +11029,16 @@ msgstr "Nachrichten filtern"
 #: app/src/ui/thread_list/filters.rs:99
 msgid "Filter Messages (Active)"
 msgstr "Nachrichten filtern (aktiv)"
+
+#: app/src/ui/thread_list/pull.rs:70 app/src/ui/thread_list/pull.rs:119
+#, fuzzy
+#| msgid "Check for mail"
+msgid "Pull to check for mail"
+msgstr "Nach E-Mails sehen"
+
+#: app/src/ui/thread_list/pull.rs:117 app/src/ui/window/shortcuts.rs:852
+msgid "Checking for mail"
+msgstr "Nach E-Mails wird gesehen"
 
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
@@ -12475,10 +12485,6 @@ msgstr "Assistenten ein- oder ausblenden"
 #: app/src/ui/window/shortcuts.rs:636
 msgid "Close window"
 msgstr "Fenster schließen"
-
-#: app/src/ui/window/shortcuts.rs:852
-msgid "Checking for mail"
-msgstr "Nach E-Mails wird gesehen"
 
 #: app/src/ui/window/spaces.rs:24
 msgid ""
