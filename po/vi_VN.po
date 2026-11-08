@@ -4011,8 +4011,8 @@ msgstr ""
 "Chưa lưu thư nháp. Thư mã hóa được lưu trong Thư nháp với mã hóa bằng khóa "
 "của bạn nhưng máy tính này không có khóa hay chứng chỉ cho {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2094
-#: app/src/ui/composer/mod.rs:2097
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2096
+#: app/src/ui/composer/mod.rs:2099
 msgid "That account is not connected."
 msgstr "Tài khoản đó chưa kết nối."
 
@@ -4140,7 +4140,7 @@ msgstr "Mã hóa tiêu chuẩn (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Không mã hóa khi truyền"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2194
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2196
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} tệp đính kèm"
@@ -4185,8 +4185,8 @@ msgstr[0] "{named} và {count} người khác"
 msgid "me"
 msgstr "tôi"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:616
-#: app/src/ui/composer/mod.rs:620
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
+#: app/src/ui/composer/mod.rs:622
 msgid "Show trimmed content"
 msgstr "Hiện nội dung đã thu gọn"
 
@@ -4841,8 +4841,8 @@ msgstr "Đánh dấu tất cả đã đọc"
 msgid "Open Penguin Mail"
 msgstr "Mở Penguin Mail"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
-#: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:371
+#: app/src/ui/composer/mod.rs:674 app/src/ui/composer/mod.rs:1563
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:485
 msgid "New Message"
 msgstr "Thư mới"
@@ -5040,8 +5040,8 @@ msgstr "Sao chép liên kết"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1989 app/src/ui/composer/mod.rs:2111
-#: app/src/ui/composer/mod.rs:2455 app/src/ui/composer/mod.rs:2909
+#: app/src/ui/composer/mod.rs:1991 app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2474 app/src/ui/composer/mod.rs:2893
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5445,7 +5445,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1924
+#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1926
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Gửi"
@@ -5607,7 +5607,7 @@ msgid "No models found."
 msgstr "Không tìm thấy mô hình."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2234
+#: app/src/ui/composer/mod.rs:2253
 msgid "Remove {file}"
 msgstr "Xóa {file}"
 
@@ -5647,7 +5647,7 @@ msgid "Edit {server}"
 msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2249 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3425
 msgid "Remove"
 msgstr "Xóa"
@@ -5688,7 +5688,7 @@ msgstr ""
 "thiết lập môi trường. URL kết nối tới máy chủ qua HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2904 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2888 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Tên"
@@ -5724,7 +5724,7 @@ msgstr "Thử"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2909
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2893
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -6298,7 +6298,7 @@ msgstr "Chỉ mới"
 msgid "New and existing"
 msgstr "Mới và hiện có"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:589
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:591
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -6470,7 +6470,7 @@ msgstr "Đang tải lên {file}"
 msgid "Could not attach {file}: {reason}"
 msgstr "Không thể đính kèm {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:413
+#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:415
 #: app/src/ui/thread_list.rs:349 app/src/ui/thread_list.rs:355
 #: app/src/ui/thread_list.rs:1142
 msgid "More"
@@ -7008,7 +7008,7 @@ msgstr "Đã xóa “{title}”"
 msgid "Could not delete the event: {reason}"
 msgstr "Không thể xóa sự kiện: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1398
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1400
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7567,6 +7567,10 @@ msgstr "Chưa có câu trả lời"
 msgid "{time} {city}"
 msgstr "{time} {city}"
 
+#: app/src/ui/composer/clipboard.rs:50
+msgid "Could not paste the image"
+msgstr "Không thể dán hình ảnh"
+
 #: app/src/ui/composer/editor.rs:301
 msgid "Describe Picture…"
 msgstr "Mô tả hình ảnh…"
@@ -7587,404 +7591,419 @@ msgstr ""
 msgid "Description"
 msgstr "Mô tả"
 
+#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:461
+msgid "{file}, preview"
+msgstr "{file}, xem trước"
+
+#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:398
+msgid "Could not open {file}"
+msgstr "Không thể mở {file}"
+
+#: app/src/ui/composer/files.rs:81 app/src/ui/window/attachments.rs:79
+#: app/src/ui/window/attachments.rs:355
+msgid "Could not open {file}: {reason}"
+msgstr "Không thể mở {file}: {reason}"
+
 #. Attach Files moves here on a narrow window, where its button goes
 #. so Send keeps its word; the action is off, and the item hidden,
 #. while the button shows.
-#: app/src/ui/composer/mod.rs:147
+#: app/src/ui/composer/mod.rs:149
 msgid "Attach Files…"
 msgstr "Đính kèm tệp…"
 
-#: app/src/ui/composer/mod.rs:150 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:152 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "Mẫu thư"
 
-#: app/src/ui/composer/mod.rs:151 app/src/ui/composer/mod.rs:1030
+#: app/src/ui/composer/mod.rs:153 app/src/ui/composer/mod.rs:1032
 msgid "Preview"
 msgstr "Xem trước"
 
-#: app/src/ui/composer/mod.rs:155
+#: app/src/ui/composer/mod.rs:157
 msgid "Sign"
 msgstr "Ký"
 
-#: app/src/ui/composer/mod.rs:156
+#: app/src/ui/composer/mod.rs:158
 msgid "Encrypt"
 msgstr "Mã hóa"
 
-#: app/src/ui/composer/mod.rs:164
+#: app/src/ui/composer/mod.rs:166
 msgid "Request Read Receipt"
 msgstr "Yêu cầu xác nhận đã đọc"
 
-#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1804
+#: app/src/ui/composer/mod.rs:380 app/src/ui/conversation.rs:1804
 msgid "Choose a Time…"
 msgstr "Chọn thời gian…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2004
+#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2006
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "Gửi sau"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:1605
+#: app/src/ui/composer/mod.rs:393 app/src/ui/composer/mod.rs:1607
 msgid "Send (Ctrl+Enter)"
 msgstr "Gửi (Ctrl+Enter)"
 
-#: app/src/ui/composer/mod.rs:395
+#: app/src/ui/composer/mod.rs:397
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "Đính kèm tệp (Ctrl+Shift+A)"
 
-#: app/src/ui/composer/mod.rs:402
+#: app/src/ui/composer/mod.rs:404
 msgid "Save as Template…"
 msgstr "Lưu làm mẫu thư…"
 
-#: app/src/ui/composer/mod.rs:419
+#: app/src/ui/composer/mod.rs:421
 msgid "Add a recipient this computer can encrypt to."
 msgstr "Thêm người nhận mà máy tính này có thể mã hóa thư cho họ."
 
-#: app/src/ui/composer/mod.rs:464
+#: app/src/ui/composer/mod.rs:466
 msgid "Recipients"
 msgstr "Người nhận"
 
-#: app/src/ui/composer/mod.rs:465
+#: app/src/ui/composer/mod.rs:467
 msgid "Carbon copy"
 msgstr "Bản sao"
 
-#: app/src/ui/composer/mod.rs:466
+#: app/src/ui/composer/mod.rs:468
 msgid "Blind carbon copy"
 msgstr "Bản sao ẩn"
 
-#: app/src/ui/composer/mod.rs:478
+#: app/src/ui/composer/mod.rs:480
 msgid "Cc/Bcc"
 msgstr "Cc/Bcc"
 
-#: app/src/ui/composer/mod.rs:479 app/src/ui/composer/mod.rs:1199
+#: app/src/ui/composer/mod.rs:481 app/src/ui/composer/mod.rs:1201
 msgid "Show Cc and Bcc"
 msgstr "Hiện Cc và Bcc"
 
-#: app/src/ui/composer/mod.rs:490
+#: app/src/ui/composer/mod.rs:492
 msgid "+suffix or .suffix"
 msgstr "+hậu_tố hoặc .hậu_tố"
 
-#: app/src/ui/composer/mod.rs:493
+#: app/src/ui/composer/mod.rs:495
 msgid "Address Suffix"
 msgstr "Hậu tố địa chỉ"
 
-#: app/src/ui/composer/mod.rs:505 app/src/ui/composer/mod.rs:510
+#: app/src/ui/composer/mod.rs:507 app/src/ui/composer/mod.rs:512
 msgid "New Masked Address"
 msgstr "Địa chỉ ẩn mới"
 
-#: app/src/ui/composer/mod.rs:527
+#: app/src/ui/composer/mod.rs:529
 msgid "Masked"
 msgstr "Đã ẩn"
 
-#: app/src/ui/composer/mod.rs:555 app/src/ui/composer/mod.rs:556
+#: app/src/ui/composer/mod.rs:557 app/src/ui/composer/mod.rs:558
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "Từ"
 
-#: app/src/ui/composer/mod.rs:561 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:563 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "Đến"
 
-#: app/src/ui/composer/mod.rs:565
+#: app/src/ui/composer/mod.rs:567
 msgid "Cc"
 msgstr "Cc"
 
-#: app/src/ui/composer/mod.rs:567
+#: app/src/ui/composer/mod.rs:569
 msgid "Bcc"
 msgstr "Bcc"
 
-#: app/src/ui/composer/mod.rs:577 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:579 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "Tiêu đề"
 
-#: app/src/ui/composer/mod.rs:641
+#: app/src/ui/composer/mod.rs:643
 msgid "Formatting"
 msgstr "Định dạng"
 
-#: app/src/ui/composer/mod.rs:660 app/src/ui/composer/mod.rs:1364
+#: app/src/ui/composer/mod.rs:662 app/src/ui/composer/mod.rs:1366
 msgid "Forwarded Message"
 msgstr "Thư được chuyển tiếp"
 
-#: app/src/ui/composer/mod.rs:1197
+#: app/src/ui/composer/mod.rs:1199
 msgid "Hide Cc and Bcc"
 msgstr "Ẩn Cc và Bcc"
 
-#: app/src/ui/composer/mod.rs:1282
+#: app/src/ui/composer/mod.rs:1284
 msgid "Remove Quoted Text"
 msgstr "Xóa văn bản trích dẫn"
 
-#: app/src/ui/composer/mod.rs:1283
+#: app/src/ui/composer/mod.rs:1285
 msgid "Do Not Forward the Original"
 msgstr "Không chuyển tiếp thư gốc"
 
-#: app/src/ui/composer/mod.rs:1393
+#: app/src/ui/composer/mod.rs:1395
 msgid "Quoted text removed"
 msgstr "Đã xóa văn bản trích dẫn"
 
-#: app/src/ui/composer/mod.rs:1394
+#: app/src/ui/composer/mod.rs:1396
 msgid "Forwarded message removed"
 msgstr "Đã xóa thư được chuyển tiếp"
 
-#: app/src/ui/composer/mod.rs:1499
+#: app/src/ui/composer/mod.rs:1501
 msgid "Sending from {address}"
 msgstr "Đang gửi từ {address}"
 
-#: app/src/ui/composer/mod.rs:1505
+#: app/src/ui/composer/mod.rs:1507
 msgid "Could not make a masked address: {reason}"
 msgstr "Không thể tạo địa chỉ ẩn: {reason}"
 
-#: app/src/ui/composer/mod.rs:1569
+#: app/src/ui/composer/mod.rs:1571
 msgid "Scheduled to send {when}"
 msgstr "Đã lên lịch gửi {when}"
 
-#: app/src/ui/composer/mod.rs:1593 app/src/ui/composer/mod.rs:2026
+#: app/src/ui/composer/mod.rs:1595 app/src/ui/composer/mod.rs:2028
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Chọn người gửi và nhập hậu tố địa chỉ được phép."
 
-#: app/src/ui/composer/mod.rs:1763 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1765 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Hủy gửi"
 
-#: app/src/ui/composer/mod.rs:1916 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1918 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Đang gửi…"
 
-#: app/src/ui/composer/mod.rs:1956
+#: app/src/ui/composer/mod.rs:1958
 msgid "Attachment Missing?"
 msgstr "Thiếu tệp đính kèm?"
 
-#: app/src/ui/composer/mod.rs:1958
+#: app/src/ui/composer/mod.rs:1960
 msgid "The message says “{sentence}” and carries no file."
 msgstr "Thư ghi “{sentence}” nhưng không kèm tệp."
 
-#: app/src/ui/composer/mod.rs:1963
+#: app/src/ui/composer/mod.rs:1965
 msgid "Add Attachment"
 msgstr "Thêm tệp đính kèm"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "Send Anyway"
 msgstr "Vẫn gửi"
 
-#: app/src/ui/composer/mod.rs:1982
+#: app/src/ui/composer/mod.rs:1984
 msgid "Send Without Encryption?"
 msgstr "Gửi không mã hóa?"
 
-#: app/src/ui/composer/mod.rs:1984
+#: app/src/ui/composer/mod.rs:1986
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "Thư này được dự định gửi có mã hóa nhưng không thể mã hóa. {reason}"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:1992
 msgid "Send Readable"
 msgstr "Gửi dạng đọc được"
 
-#: app/src/ui/composer/mod.rs:2005
+#: app/src/ui/composer/mod.rs:2007
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail gửi vào thời gian này khi ứng dụng chạy, kể cả trong khay hệ "
 "thống."
 
-#: app/src/ui/composer/mod.rs:2006
+#: app/src/ui/composer/mod.rs:2008
 msgid "Schedule"
 msgstr "Lên lịch"
 
-#: app/src/ui/composer/mod.rs:2068
+#: app/src/ui/composer/mod.rs:2070
 msgid "Draft saved, encrypted to your own key"
 msgstr "Đã lưu thư nháp, mã hóa bằng khóa của bạn"
 
-#: app/src/ui/composer/mod.rs:2070
+#: app/src/ui/composer/mod.rs:2072
 msgid "Draft saved"
 msgstr "Đã lưu thư nháp"
 
-#: app/src/ui/composer/mod.rs:2106
+#: app/src/ui/composer/mod.rs:2108
 msgid "Save as Draft?"
 msgstr "Lưu làm thư nháp?"
 
-#: app/src/ui/composer/mod.rs:2110
+#: app/src/ui/composer/mod.rs:2112
 msgid "Discard"
 msgstr "Bỏ"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2114
 msgid "Save Draft"
 msgstr "Lưu thư nháp"
 
-#: app/src/ui/composer/mod.rs:2153
+#: app/src/ui/composer/mod.rs:2155
 msgid "Attach Files"
 msgstr "Đính kèm tệp"
 
-#: app/src/ui/composer/mod.rs:2189
+#: app/src/ui/composer/mod.rs:2191
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2271
+#: app/src/ui/composer/mod.rs:2237
+#, fuzzy
+#| msgid "Open {file}, {size}"
+msgid "Open {file}"
+msgstr "Mở {file}, {size}"
+
+#: app/src/ui/composer/mod.rs:2290
 msgid "Bold (Ctrl+B)"
 msgstr "Đậm (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2272
+#: app/src/ui/composer/mod.rs:2291
 msgid "Italic (Ctrl+I)"
 msgstr "Nghiêng (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2275
+#: app/src/ui/composer/mod.rs:2294
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Gạch ngang (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2278
+#: app/src/ui/composer/mod.rs:2297
 msgid "Code (Ctrl+E)"
 msgstr "Mã (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2315
+#: app/src/ui/composer/mod.rs:2334
 msgid "Link (Ctrl+K)"
 msgstr "Liên kết (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2325
+#: app/src/ui/composer/mod.rs:2344
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Danh sách dấu đầu dòng (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2330
+#: app/src/ui/composer/mod.rs:2349
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Danh sách đánh số (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2335
+#: app/src/ui/composer/mod.rs:2354
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Trích dẫn (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2352
+#: app/src/ui/composer/mod.rs:2371
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Chèn hình ảnh (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2362
+#: app/src/ui/composer/mod.rs:2381
 msgid "Paragraph"
 msgstr "Đoạn văn"
 
-#: app/src/ui/composer/mod.rs:2363
+#: app/src/ui/composer/mod.rs:2382
 msgid "Heading 1"
 msgstr "Tiêu đề 1"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2383
 msgid "Heading 2"
 msgstr "Tiêu đề 2"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2384
 msgid "Heading 3"
 msgstr "Tiêu đề 3"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2385
 msgid "Code Block"
 msgstr "Khối mã"
 
-#: app/src/ui/composer/mod.rs:2380
+#: app/src/ui/composer/mod.rs:2399
 msgid "Turn Markdown into Formatting"
 msgstr "Chuyển Markdown thành văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2403
 msgid "Clear Formatting"
 msgstr "Xóa định dạng"
 
-#: app/src/ui/composer/mod.rs:2390
+#: app/src/ui/composer/mod.rs:2409
 msgid "Write in Markdown"
 msgstr "Viết bằng Markdown"
 
-#: app/src/ui/composer/mod.rs:2397 app/src/ui/composer/mod.rs:2401
+#: app/src/ui/composer/mod.rs:2416 app/src/ui/composer/mod.rs:2420
 msgid "More Formatting"
 msgstr "Thêm định dạng"
 
-#: app/src/ui/composer/mod.rs:2438
+#: app/src/ui/composer/mod.rs:2457
 msgid "Add a Link"
 msgstr "Thêm liên kết"
 
-#: app/src/ui/composer/mod.rs:2444
+#: app/src/ui/composer/mod.rs:2463
 msgid "Text"
 msgstr "Văn bản"
 
-#: app/src/ui/composer/mod.rs:2456
+#: app/src/ui/composer/mod.rs:2475
 msgid "Add Link"
 msgstr "Thêm liên kết"
 
-#: app/src/ui/composer/mod.rs:2492
+#: app/src/ui/composer/mod.rs:2511
 msgid "Markdown formatted"
 msgstr "Đã định dạng Markdown"
 
-#: app/src/ui/composer/mod.rs:2608
+#: app/src/ui/composer/mod.rs:2630
 msgid "Pasted as rich text"
 msgstr "Đã dán dưới dạng văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2631
 msgid "Paste as Plain Text"
 msgstr "Dán dưới dạng văn bản thuần"
 
-#: app/src/ui/composer/mod.rs:2643
+#: app/src/ui/composer/mod.rs:2665
 msgid "Editing as Markdown"
 msgstr "Đang sửa bằng Markdown"
 
-#: app/src/ui/composer/mod.rs:2679
+#: app/src/ui/composer/mod.rs:2701
 msgid "Images"
 msgstr "Hình ảnh"
 
-#: app/src/ui/composer/mod.rs:2684
+#: app/src/ui/composer/mod.rs:2706
 msgid "Insert Image"
 msgstr "Chèn hình ảnh"
 
-#: app/src/ui/composer/mod.rs:2728
+#: app/src/ui/composer/mod.rs:2750
 msgid "Could not read the file: {reason}"
 msgstr "Không thể đọc tệp: {reason}"
 
-#: app/src/ui/composer/mod.rs:2803
-msgid "Could not paste the image"
-msgstr "Không thể dán hình ảnh"
-
-#: app/src/ui/composer/mod.rs:2848
+#: app/src/ui/composer/mod.rs:2832
 msgid "No Templates Yet"
 msgstr "Chưa có mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2898
+#: app/src/ui/composer/mod.rs:2882
 msgid "Save as Template"
 msgstr "Lưu làm mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2900
+#: app/src/ui/composer/mod.rs:2884
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Các chỗ giữ chỗ như {{first_name}} được điền mỗi khi bạn dùng mẫu."
 
-#: app/src/ui/composer/mod.rs:2923 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2907 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Đặt tên cho mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2931
+#: app/src/ui/composer/mod.rs:2915
 msgid "Template saved"
 msgstr "Đã lưu mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2934
+#: app/src/ui/composer/mod.rs:2918
 msgid "Template not saved: {reason}"
 msgstr "Chưa lưu mẫu thư: {reason}"
 
-#: app/src/ui/composer/mod.rs:3006
+#: app/src/ui/composer/mod.rs:2990
 msgid "This looks like Markdown"
 msgstr "Nội dung này có vẻ là Markdown"
 
-#: app/src/ui/composer/mod.rs:3012
+#: app/src/ui/composer/mod.rs:2996
 msgid "Format"
 msgstr "Định dạng"
 
-#: app/src/ui/composer/mod.rs:3013
+#: app/src/ui/composer/mod.rs:2997
 msgid "Turn the Markdown into rich text"
 msgstr "Chuyển Markdown thành văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:3019 app/src/ui/composer/mod.rs:3023
+#: app/src/ui/composer/mod.rs:3003 app/src/ui/composer/mod.rs:3007
 msgid "Dismiss"
 msgstr "Bỏ qua"
 
-#: app/src/ui/composer/mod.rs:3106
+#: app/src/ui/composer/mod.rs:3090
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Thư nháp được giữ trên máy tính này để bạn có thể hoàn tất sau tại đây."
 
-#: app/src/ui/composer/mod.rs:3110
+#: app/src/ui/composer/mod.rs:3094
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Thư nháp được giữ trong {provider} để bạn có thể hoàn tất sau trên mọi thiết "
 "bị."
 
-#: app/src/ui/composer/mod.rs:3114
+#: app/src/ui/composer/mod.rs:3098
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -11207,10 +11226,6 @@ msgid ""
 "address."
 msgstr "Thanh bên hiển thị tên thay cho địa chỉ. Để trống để dùng địa chỉ."
 
-#: app/src/ui/window/attachments.rs:79 app/src/ui/window/attachments.rs:355
-msgid "Could not open {file}: {reason}"
-msgstr "Không thể mở {file}: {reason}"
-
 #: app/src/ui/window/attachments.rs:126
 msgid "Save Attachments"
 msgstr "Lưu tệp đính kèm"
@@ -11247,17 +11262,9 @@ msgstr "Đã lưu {file}"
 msgid "Open"
 msgstr "Mở"
 
-#: app/src/ui/window/attachments.rs:398
-msgid "Could not open {file}"
-msgstr "Không thể mở {file}"
-
 #: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
 msgid "Open in Another Program"
 msgstr "Mở bằng chương trình khác"
-
-#: app/src/ui/window/attachments.rs:461
-msgid "{file}, preview"
-msgstr "{file}, xem trước"
 
 #: app/src/ui/window/categories.rs:345
 msgid "Open a message from the sender first"

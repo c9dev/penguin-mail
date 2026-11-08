@@ -918,6 +918,7 @@ mod tests {
         a_picture_reads_back_where_it_sits();
         a_picture_gdk_cannot_read_itself_waits_in_a_placeholder();
         super::super::editor::checks::run();
+        super::super::clipboard::checks::run();
         super::super::spell::checks::run();
         crate::ui::assistant::checks::run();
         crate::ui::calendar::pager::checks::run();

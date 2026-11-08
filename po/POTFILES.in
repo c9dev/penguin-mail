@@ -85,6 +85,8 @@ app/src/ui/calendar/time_grid.rs
 app/src/ui/calendar/words.rs
 app/src/ui/composer/editor.rs
 app/src/ui/composer/mod.rs
+app/src/ui/composer/clipboard.rs
+app/src/ui/composer/files.rs
 app/src/ui/composer/recipients.rs
 app/src/ui/composer/richbuffer.rs
 app/src/ui/composer/spell.rs

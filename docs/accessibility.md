@@ -305,3 +305,5 @@ unchecks them. The button announces when filters are active. More remains
 reachable when filters leave a server page empty; No Matching Mail explains
 that another page may still contain matches. Conditions stay selected when
 switching mailboxes and reset when the window closes.
+
+Paste in the composer body accepts clipboard images through the text menu and Cmd+V on macOS or Ctrl+V on Linux. Attachment rows have an Open button named for the file, separate from Remove; Tab reaches both and Enter opens the attached copy. Images open in a dialog that closes with Escape; other files use the desktop viewer.
