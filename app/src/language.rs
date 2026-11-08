@@ -106,21 +106,28 @@ pub fn bind(chosen: &str) {
             Some(language) => std::env::set_var("LANGUAGE", language),
             None => std::env::remove_var("LANGUAGE"),
         }
-        gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
-        // glibc ignores LANGUAGE while the message locale is the bare C
-        // one, so a desktop that sets no locale at all needs telling.
-        if !chosen.is_empty() && messages_locale_is_bare() {
-            let named = gettextrs::setlocale(
-                gettextrs::LocaleCategory::LcMessages,
-                format!("{chosen}.UTF-8"),
-            );
-            // A translation ships as a catalogue; the matching locale is a
-            // separate thing the system may never have generated. pt_PT
-            // is missing from plenty of installs. Any locale but the bare
-            // C one is enough for LANGUAGE to be read, and C.UTF-8 is
-            // there when nothing else is.
-            if named.is_none() {
-                gettextrs::setlocale(gettextrs::LocaleCategory::LcMessages, "C.UTF-8");
+        // Windows has no LC_MESSAGES and its setlocale numbers differ
+        // from glibc's, so the calls below stay on Unix; libintl reads
+        // LANGUAGE there all the same.
+        #[cfg(not(windows))]
+        {
+            gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+            // glibc ignores LANGUAGE while the message locale is the bare
+            // C one, so a desktop that sets no locale at all needs
+            // telling.
+            if !chosen.is_empty() && messages_locale_is_bare() {
+                let named = gettextrs::setlocale(
+                    gettextrs::LocaleCategory::LcMessages,
+                    format!("{chosen}.UTF-8"),
+                );
+                // A translation ships as a catalogue; the matching locale
+                // is a separate thing the system may never have generated.
+                // pt_PT is missing from plenty of installs. Any locale
+                // but the bare C one is enough for LANGUAGE to be read,
+                // and C.UTF-8 is there when nothing else is.
+                if named.is_none() {
+                    gettextrs::setlocale(gettextrs::LocaleCategory::LcMessages, "C.UTF-8");
+                }
             }
         }
     }
@@ -132,6 +139,7 @@ pub fn bind(chosen: &str) {
 }
 
 /// Whether the message locale is `C` or `POSIX`, which translate nothing.
+#[cfg(not(windows))]
 fn messages_locale_is_bare() -> bool {
     let name = unsafe { gettextrs::setlocale(gettextrs::LocaleCategory::LcMessages, "") };
     name.is_none_or(|name| name == b"C" || name == b"POSIX")

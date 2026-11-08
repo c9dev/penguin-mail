@@ -4,6 +4,7 @@ app/src/add_account.rs
 app/src/add_account/lookup.rs
 app/src/add_account/post.rs
 app/src/app.rs
+app/src/app/dock_badge/windows.rs
 app/src/app/mail_file.rs
 app/src/app/sending.rs
 app/src/app/updates.rs
@@ -19,6 +20,8 @@ app/src/assistant/run/writing.rs
 app/src/assistant/sources/mcp/mod.rs
 app/src/assistant/sources/skills/mod.rs
 app/src/assistant/sources/skills/sandbox.rs
+app/src/assistant/sources/skills/sandbox/unix.rs
+app/src/assistant/sources/skills/sandbox/windows.rs
 app/src/assistant/sources/skills/shell.rs
 app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
@@ -54,6 +57,7 @@ app/src/smime.rs
 app/src/templates.rs
 app/src/translation.rs
 app/src/tray.rs
+app/src/tray/windows.rs
 app/src/ui/about.rs
 app/src/ui/add_account.rs
 app/src/ui/add_account/routes.rs

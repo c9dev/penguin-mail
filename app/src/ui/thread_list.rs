@@ -9,6 +9,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use crate::ui::safe_popover::safe_popup_at;
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, graphene};
 use mailrs_domain::{AccountId, ThreadSummary};
@@ -967,7 +968,7 @@ fn context_menu(
             };
             let point = gdk::Rectangle::new(point.x() as i32, point.y() as i32, 1, 1);
             popover.set_pointing_to(Some(&point));
-            popover.popup();
+            let _ = safe_popup_at(&popover, &point);
         })
     };
     let click = gtk::GestureClick::builder()

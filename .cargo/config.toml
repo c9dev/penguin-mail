@@ -1,0 +1,6 @@
+# pkg-config refuses to probe for a target that differs from the host
+# triple; on Windows the host toolchain is MSVC while the dev builds
+# target GNU (GTK comes from MSYS2 UCRT64). Harmless on native builds —
+# it is only consulted when host and target actually differ.
+[env]
+PKG_CONFIG_ALLOW_CROSS = "1"

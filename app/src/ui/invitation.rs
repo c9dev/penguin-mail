@@ -5,6 +5,9 @@
 //! user who declines the calendar permission still has Google's own Yes,
 //! No and Maybe links there.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![allow(clippy::missing_const_for_thread_local)]
+
 mod outline;
 pub mod strip;
 

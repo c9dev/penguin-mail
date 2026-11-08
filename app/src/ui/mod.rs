@@ -42,6 +42,7 @@ pub mod queued;
 pub mod route_page;
 pub mod roving;
 pub mod rules;
+pub mod safe_popover;
 #[cfg(feature = "packaging-appimage")]
 pub mod sandbox_setup;
 pub mod search_suggest;

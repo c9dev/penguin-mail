@@ -4,6 +4,9 @@
 //! runs on its own threads is left out. [`ProcessMark`] counts every
 //! thread, store threads included, for a measurement run alone.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![allow(clippy::missing_const_for_thread_local)]
+
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};

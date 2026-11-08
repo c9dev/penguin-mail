@@ -11,6 +11,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+use crate::ui::safe_popover::{PopoverResult, safe_popup_at};
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::gettext;
@@ -313,7 +314,9 @@ impl Editor {
             let popover = popover.clone();
             glib::idle_add_local_once(move || popover.unparent());
         });
-        popover.popup();
+        if safe_popup_at(&popover, &rect) == PopoverResult::NoMonitors {
+            return false;
+        }
         true
     }
 

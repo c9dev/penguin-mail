@@ -9,7 +9,7 @@ use mailrs_gmail::labels as gmail;
 use serde_json::json;
 
 use super::super::fake::{Harness, ME, NOW, labelled, meta};
-use super::super::writing::{local_file, off_limits};
+use super::super::writing::{local_file, off_limits, plain};
 use super::{harness, mail};
 use crate::compose::{self, Draft, OutgoingAttachment};
 use crate::protection::{self, Addressees, Standard};
@@ -271,12 +271,12 @@ async fn an_encrypted_message_is_never_sent_on() {
 
 // ---- Files on this computer ------------------------------------------------
 
-/// A folder under /tmp holding one text file, `plan.txt`.
+/// A folder in the temporary directory holding one text file, `plan.txt`.
 fn a_file() -> (tempfile::TempDir, PathBuf) {
     let dir = tempfile::Builder::new()
         .prefix("writing")
-        .tempdir_in("/tmp")
-        .expect("a folder in /tmp");
+        .tempdir()
+        .expect("a folder in the temporary directory");
     let path = dir.path().join("plan.txt");
     std::fs::write(&path, "Meet at the hill.").expect("the file");
     (dir, path)
@@ -286,7 +286,9 @@ fn a_file() -> (tempfile::TempDir, PathBuf) {
 async fn a_file_on_this_computer_is_named_before_it_is_read() {
     let h = harness().await;
     let (_dir, path) = a_file();
-    let shown = std::fs::canonicalize(&path).unwrap().display().to_string();
+    let shown = plain(&std::fs::canonicalize(&path).unwrap())
+        .display()
+        .to_string();
     let input = json!({
         "to": ["ann@example.com"],
         "subject": "Plan",
@@ -318,7 +320,9 @@ async fn a_file_on_this_computer_is_named_before_it_is_read() {
 async fn a_draft_with_a_file_on_this_computer_asks_first() {
     let h = harness().await;
     let (_dir, path) = a_file();
-    let shown = std::fs::canonicalize(&path).unwrap().display().to_string();
+    let shown = plain(&std::fs::canonicalize(&path).unwrap())
+        .display()
+        .to_string();
     h.ok(
         "draft_email",
         json!({"body": "Attached.", "attachments": [{"path": path.display().to_string()}]}),
@@ -353,6 +357,7 @@ async fn only_the_tools_that_ask_take_a_file_on_this_computer() {
     assert!(h.asked().scheduled.is_empty());
 }
 
+#[cfg(unix)]
 #[test]
 fn keys_and_settings_stay_on_this_computer() {
     let home = Path::new("/home/dana");
@@ -371,6 +376,25 @@ fn keys_and_settings_stay_on_this_computer() {
     assert!(refused("/srv/penguin/mail.db"), "the app's own data");
 }
 
+#[cfg(windows)]
+#[test]
+fn keys_and_settings_stay_on_this_computer() {
+    let home = Path::new(r"C:\Users\dana");
+    let private = [PathBuf::from(r"C:\Users\dana\AppData\Roaming\penguin-mail")];
+    let refused = |path: &Path| off_limits(path, home, &private);
+    assert!(!refused(Path::new(r"C:\Users\dana\Documents\plan.pdf")));
+    assert!(
+        !refused(&std::env::temp_dir().join("draft.pdf")),
+        "the temp dir stays open"
+    );
+    assert!(refused(Path::new(r"C:\Users\dana\.ssh\id_ed25519")));
+    assert!(refused(Path::new(r"C:\Users\dana\AppData\Roaming\app\key")));
+    assert!(refused(Path::new(r"C:\Users\dana\NTUSER.DAT")));
+    assert!(refused(Path::new(r"C:\Windows\System32\config\sam")));
+    assert!(refused(Path::new(r"C:\Users\other\Documents\plan.pdf")));
+    assert!(refused(&private[0].join("mail.db")), "the app's own data");
+}
+
 #[test]
 fn a_path_is_checked_where_it_leads() {
     let (dir, path) = a_file();
@@ -380,20 +404,28 @@ fn a_path_is_checked_where_it_leads() {
         local_file("plan.txt", home, &[], &[]).is_err_and(|e| e.contains("whole path")),
         "a relative path could mean anything"
     );
-    assert!(local_file("/tmp/no/such/file", home, &[], &[]).is_err_and(|e| e.contains("no file")));
+    let missing = if cfg!(windows) {
+        "C:/no/such/file"
+    } else {
+        "/tmp/no/such/file"
+    };
+    assert!(local_file(missing, home, &[], &[]).is_err_and(|e| e.contains("no file")));
     assert!(
         local_file(&dir.path().display().to_string(), home, &[], &[])
             .is_err_and(|e| e.contains("not a file"))
     );
     // A link in an open folder that leads somewhere closed is refused for
     // where it leads.
-    let link = dir.path().join("hosts");
-    std::os::unix::fs::symlink("/etc/hosts", &link).expect("a link");
-    assert!(
-        local_file(&link.display().to_string(), home, &[], &[])
-            .is_err_and(|e| e.contains("keys, passwords or settings"))
-    );
-    let private = [std::fs::canonicalize(dir.path()).unwrap()];
+    #[cfg(unix)]
+    {
+        let link = dir.path().join("hosts");
+        std::os::unix::fs::symlink("/etc/hosts", &link).expect("a link");
+        assert!(
+            local_file(&link.display().to_string(), home, &[], &[])
+                .is_err_and(|e| e.contains("keys, passwords or settings"))
+        );
+    }
+    let private = [plain(&std::fs::canonicalize(dir.path()).unwrap())];
     assert!(local_file(&path.display().to_string(), home, &private, &[]).is_err());
 }
 
@@ -407,7 +439,7 @@ fn picked_files_allow_only_the_selected_path_and_still_check_size_and_kind() {
     std::fs::write(&path, b"lease").unwrap();
     std::fs::write(&sibling, b"other").unwrap();
     let home = Path::new("/home/nobody-here");
-    let picked = [std::fs::canonicalize(&path).unwrap()];
+    let picked = [plain(&std::fs::canonicalize(&path).unwrap())];
     let check = |path: &Path| local_file(&path.to_string_lossy(), home, &[], &picked);
     assert!(
         check(&path).is_ok(),
@@ -418,9 +450,12 @@ fn picked_files_allow_only_the_selected_path_and_still_check_size_and_kind() {
         "selection grants no directory access"
     );
     assert!(local_file(&path.to_string_lossy(), home, &[], &[]).is_err());
-    let link = dir.path().join("picked-link");
-    std::os::unix::fs::symlink(&path, &link).unwrap();
-    assert_eq!(check(&link).unwrap().path, picked[0]);
+    #[cfg(unix)]
+    {
+        let link = dir.path().join("picked-link");
+        std::os::unix::fs::symlink(&path, &link).unwrap();
+        assert_eq!(check(&link).unwrap().path, picked[0]);
+    }
     assert!(
         local_file(
             &hidden.to_string_lossy(),
@@ -450,7 +485,7 @@ async fn a_picked_hidden_file_still_asks_before_sending_and_does_not_grant_later
     let input = json!({"to": ["ann@example.com"], "subject": "Lease", "body": "Attached.", "attachments": [{"path": path}]});
     h.tools = h
         .tools
-        .with_picked_files(vec![std::fs::canonicalize(&path).unwrap()].into());
+        .with_picked_files(vec![plain(&std::fs::canonicalize(&path).unwrap())].into());
     h.effects.asked.borrow_mut().approves = false;
     assert_eq!(
         h.run("send_email", input.clone()).await,
@@ -463,7 +498,8 @@ async fn a_picked_hidden_file_still_asks_before_sending_and_does_not_grant_later
         &h.asked().sent[0].attachments[0].data[..],
         b"the selected lease"
     );
-    assert!(h.asked().questions[0].contains(&path.to_string_lossy().to_string()));
+    let shown = plain(&std::fs::canonicalize(&path).unwrap());
+    assert!(h.asked().questions[0].contains(&shown.to_string_lossy().to_string()));
     h.tools = h.tools.with_picked_files(std::sync::Arc::default());
     assert!(
         h.run("send_email", input)

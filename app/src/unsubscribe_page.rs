@@ -32,6 +32,8 @@ mod rules;
 mod run;
 #[cfg(target_os = "linux")]
 mod webkit;
+#[cfg(target_os = "windows")]
+mod windows;
 #[cfg(target_os = "macos")]
 mod wkwebview;
 pub mod words;
@@ -47,6 +49,9 @@ pub type PageBrowser = hidden::Hidden<webkit::WebkitEngine>;
 /// The hidden page that loads a real unsubscribe page.
 #[cfg(target_os = "macos")]
 pub type PageBrowser = hidden::Hidden<wkwebview::WkEngine>;
+/// The hidden page that loads a real unsubscribe page.
+#[cfg(target_os = "windows")]
+pub type PageBrowser = hidden::Hidden<windows::WvEngine>;
 pub use adviser::model_adviser;
 pub use run::{Adviser, Answer, Browser, Prepared, Step, finish, prepare};
 // The run is what the window and the assistant use, and the rules under

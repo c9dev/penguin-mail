@@ -17,7 +17,39 @@ fn main() {
     println!("cargo:rerun-if-changed=data");
     write_language_names(&out);
     println!("cargo:rerun-if-changed=../po");
+    embed_windows_icon();
 }
+
+/// Embeds the app icon in the Windows binary, so Explorer, the taskbar
+/// and the notification area can draw it without a file beside the exe.
+/// Missing windres or rc.exe skips the icon rather than breaking a build.
+#[cfg(windows)]
+fn embed_windows_icon() {
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() != Ok("msvc") {
+        // GNU ld reads a COFF resource object straight from windres;
+        // embed-resource hands it an MSVC-format library instead.
+        let out = std::env::var("OUT_DIR").expect("cargo sets OUT_DIR");
+        let res = format!("{out}/penguin-mail.res");
+        let made = Command::new("windres")
+            .args(["resources/penguin-mail.rc", "-O", "coff", "-o", &res])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if made {
+            println!("cargo:rustc-link-arg={res}");
+        } else {
+            println!("cargo:warning=the Windows icon was not embedded: windres failed");
+        }
+        return;
+    }
+    let result = embed_resource::compile("resources/penguin-mail.rc", embed_resource::NONE);
+    if result != embed_resource::CompilationResult::Ok {
+        println!("cargo:warning=the Windows icon was not embedded: {result:?}");
+    }
+}
+
+#[cfg(not(windows))]
+fn embed_windows_icon() {}
 
 /// Writes the code and the name of every translation in `po/`, so the
 /// Language preference can name a language in its own language. Each `.po`

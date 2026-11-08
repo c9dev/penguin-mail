@@ -224,6 +224,7 @@ mod tests {
         assert!(verify(&file, good, "missing").is_err());
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn a_tarball_installs_into_the_prefix_through_its_own_script() {
         let dir = tempfile::tempdir().unwrap();
@@ -273,6 +274,7 @@ mod tests {
 
     /// Runs the real `scripts/install-files.sh` into `prefix` with `home` as
     /// HOME, from a tree holding the files it copies.
+    #[cfg(unix)]
     fn install_files(dir: &Path, prefix: &Path, home: &Path) {
         let tree = dir.join("tree");
         std::fs::create_dir_all(tree.join("bin")).unwrap();
@@ -309,6 +311,7 @@ mod tests {
     /// The program an Exec line starts, read the way GLib launches a
     /// desktop entry: the key file's string rule, `%%` as a field code,
     /// then the shell's quoting.
+    #[cfg(unix)]
     fn program(entry: &Path) -> String {
         let file = gtk::glib::KeyFile::new();
         file.load_from_file(entry, gtk::glib::KeyFileFlags::NONE)
@@ -318,6 +321,7 @@ mod tests {
         argv[0].to_str().unwrap().to_string()
     }
 
+    #[cfg(unix)]
     #[test]
     fn the_install_script_quotes_a_prefix_with_a_space() {
         let dir = tempfile::tempdir().unwrap();
@@ -345,6 +349,7 @@ mod tests {
         assert_eq!(program(&login), exe.to_str().unwrap());
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_login_item_carried_from_an_old_name_quotes_the_prefix_too() {
         let dir = tempfile::tempdir().unwrap();

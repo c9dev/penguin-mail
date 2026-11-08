@@ -7,7 +7,7 @@
 
 # Penguin Mail
 
-Mail and calendar for Linux and macOS, written in Rust.
+Mail and calendar for Linux, macOS and Windows, written in Rust.
 
 [![CI](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/c9dev/penguin-mail?sort=semver&label=release)](https://github.com/c9dev/penguin-mail/releases/latest)
@@ -22,23 +22,24 @@ Mail and calendar for Linux and macOS, written in Rust.
 
 </div>
 
-Penguin Mail is mail and calendar for Linux and macOS. It reads Gmail
-accounts, Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft 365)
-and any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds
-the server settings for you. It shows your accounts in one inbox or one at
-a time and keeps your mail on your own computer. On Linux, it can sync from
-the system tray.
+Penguin Mail is mail and calendar for Linux, macOS and Windows. It reads
+Gmail accounts, Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft
+365) and any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and
+finds the server settings for you. It shows your accounts in one inbox or
+one at a time and keeps your mail on your own computer. On Linux and
+Windows, it can sync from the system tray.
 Gmail and Google Calendar accounts talk to Google directly, and Microsoft
 accounts talk to Microsoft Graph, so no other server sees your mail.
 
 It is built with GTK and libadwaita and fits best on GNOME. It also runs on
-other Linux desktops and macOS. On macOS, Settings lives in the native app
-menu.
+other Linux desktops, on macOS and on Windows. On macOS, Settings lives in
+the native app menu; on Windows, mail pages draw with WebView2 and the tray
+icon, toasts and taskbar badge are the system's own.
 
 A new Gmail account signs in one of two ways, and you pick one for it:
 
-- **Set up your own Google project.** Every Gmail feature, on Linux and
-  macOS: Gmail filters, the automatic reply, send-as aliases and
+- **Set up your own Google project.** Every Gmail feature, on every
+  desktop: Gmail filters, the automatic reply, send-as aliases and
   signatures, and label colours. It takes about 10 minutes, once:
   Penguin Mail opens each Google page for you and says what to click.
 - **Use the Google account on this computer** (Linux), signed in through
@@ -185,8 +186,9 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ### On the desktop
 
-- **Tray and notifications on Linux.** An unread count in the tray, and new-mail
-  notifications with Archive, Mark Read, Delete and Reply buttons.
+- **Tray and notifications on Linux and Windows.** An unread count in the
+  tray — and on the Windows taskbar — and new-mail notifications with
+  Archive, Mark Read, Delete and Reply buttons.
 - **Light on memory on Linux.** In the tray Penguin Mail uses about 55 MB. A minute
   after you close the window, it restarts itself in the background to give
   back the memory the window used.
@@ -241,7 +243,8 @@ with a native app menu.
 
 ## Install
 
-Penguin Mail runs on Linux x86_64 and macOS Apple Silicon and Intel. On
+Penguin Mail runs on Linux x86_64, macOS Apple Silicon and Intel, and
+Windows 10 or later on x86_64. On
 Linux, the .deb, the rpm and the Arch package need GTK 4.20, libadwaita
 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04, Fedora 43
 and Arch's own repositories
@@ -251,13 +254,13 @@ older GTK and libadwaita; install the snap there. The Flatpak comes from
 Penguin Mail's own repository, not Flathub. On Linux, the tray icon needs a
 StatusNotifier host, which Ubuntu's AppIndicator extension provides.
 
-| | .deb | rpm | Arch | Flatpak | Snap |
-|---|---|---|---|---|---|
-| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | `flatpak update` | Snap Store |
-| GnuPG | the system's | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
-| Assistant skills | yes | yes | yes | no | no |
-| Claude Code, and MCP servers you run as a command | yes | yes | yes | no | no |
-| Tray icon | yes | yes | yes | yes | yes |
+| | .deb | rpm | Arch | Flatpak | Snap | Windows |
+|---|---|---|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | `flatpak update` | Snap Store | Download the new installer |
+| GnuPG | the system's | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` | Gpg4win's |
+| Assistant skills | yes | yes | yes | no | no | yes |
+| Claude Code, and MCP servers you run as a command | yes | yes | yes | no | no | yes |
+| Tray icon | yes | yes | yes | yes | yes | yes |
 
 Skills are off in the Flatpak and snap because a skill's scripts run in a
 sandbox of their own, which cannot start inside either package's sandbox.
@@ -281,6 +284,22 @@ normally. Notarized builds will come with the first release after the Apple
 certificates are in place. To update, download the next macOS zip and replace the app in Applications.
 Your mail and settings stay in your user folder. The macOS app has no tray
 icon. GnuPG and command-line assistants are not bundled.
+
+### On Windows
+
+Download `penguin-mail-X.Y.Z-setup.exe` from the
+[latest release](https://github.com/c9dev/penguin-mail/releases/latest) and
+run it. The installer sets up Penguin Mail for your user account — no
+administrator rights needed — with a Start Menu entry, and mailto links
+plus .eml and .ics files that open with the app. When Microsoft's WebView2
+runtime is missing, the installer downloads it for you, so stay online for
+the first install.
+
+The build is unsigned, so SmartScreen shows "Windows protected your PC" the
+first time: choose **More info**, then **Run anyway**. PGP and S/MIME work
+once Gpg4win is installed — the app finds it on its own. To update,
+download the next installer; it replaces the old copy and your mail and
+settings stay in your user folder.
 
 ### With apt (recommended on Ubuntu)
 
@@ -416,6 +435,9 @@ notification, a banner across the window, and the tray menu, and
   would rather update that way.
 - **From the tarball or from source**, it downloads the new tarball and
   installs it into the same folder as before, with no password.
+- **On Windows** there is no in-app update yet, since the unsigned build
+  has no signature to check a download against; the next installer from
+  the releases page installs over the old copy.
 
 Before it installs anything, Penguin Mail checks that the release's
 `SHA256SUMS` carries a good signature from the apt repository's key,
@@ -481,7 +503,7 @@ to see the keys for that build.
 ### Command line
 
 ```sh
-penguin-mail --background             # on Linux, start in the tray
+penguin-mail --background             # on Linux and Windows, start in the tray
 penguin-mail --compose                # new message
 penguin-mail mailto:ann@example.com   # new message to Ann
 penguin-mail --version
@@ -492,6 +514,9 @@ On Linux, to make Penguin Mail open `mailto:` links:
 ```sh
 xdg-mime default io.github.c9dev.PenguinMail.desktop x-scheme-handler/mailto
 ```
+
+On Windows the installer registers the same associations; pick Penguin
+Mail under Default Apps if Windows asks which app to use.
 
 On Linux, the running app answers D-Bus actions, for custom shortcuts:
 
@@ -512,8 +537,9 @@ a window: `account add`, `sync`, `threads`, `show`, `triage` and `export`.
 - Refresh tokens live in Keychain on macOS or the desktop keyring on Linux.
   The config file holds sync settings and, for accounts added through the
   old setup page, their Google client ID and secret, readable by you alone.
-- Mail is cached in `~/.local/share/penguin-mail` on Linux or
-  `~/Library/Application Support/penguin-mail` on macOS: the last 30 days
+- Mail is cached in `~/.local/share/penguin-mail` on Linux,
+  `~/Library/Application Support/penguin-mail` on macOS or
+  `%APPDATA%\penguin-mail` on Windows: the last 30 days
   plus everything in your inbox. Opening an older thread fetches it on demand.
 - The assistant is off until you pick a model. A local model keeps mail on
   your computer; the Anthropic API and Claude Code send what the assistant

@@ -206,6 +206,7 @@ mod tests {
 
     fn due(title: &str, start: EpochMillis, end: EpochMillis) -> Due {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = Event {
             calendar: "work".into(),
             id: "review".into(),

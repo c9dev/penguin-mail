@@ -13,6 +13,16 @@ use crate::update::State;
 pub(crate) const REPOSITORY: &str = "https://github.com/c9dev/penguin-mail";
 pub(crate) const DONATE_URL: &str = "https://github.com/sponsors/g0shed";
 
+/// The OS this build runs on, named in the About window's one-line
+/// description. A proper noun: translators keep it as it is.
+const OS_NAME: &str = if cfg!(target_os = "windows") {
+    "Windows"
+} else if cfg!(target_os = "macos") {
+    "macOS"
+} else {
+    "Linux"
+};
+
 pub struct About {
     pub dialog: adw::Dialog,
     /// Holds the update button and the line under it. Hidden when this copy
@@ -74,8 +84,9 @@ impl About {
         }
 
         let comments = gtk::Label::builder()
-            .label(gettext(
-                "Mail and calendar for Linux. Your mail stays on your computer.",
+            .label(fill(
+                &gettext("Mail and calendar for {os}. Your mail stays on your computer."),
+                &[("os", OS_NAME)],
             ))
             .wrap(true)
             .justify(gtk::Justification::Center)

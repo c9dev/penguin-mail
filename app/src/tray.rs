@@ -4,6 +4,7 @@ use crate::APP_ID;
 use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum TrayCommand {
     ReadAll,
     Toggle,
@@ -128,6 +129,31 @@ fn label(unread: i64) -> String {
     }
 }
 
+/// One row of the tray menu, drawn from the same state on every shell.
+#[derive(Clone, Debug, PartialEq)]
+pub enum MenuRow {
+    /// A row that sends `command` when chosen.
+    Item {
+        label: String,
+        enabled: bool,
+        command: TrayCommand,
+    },
+    /// A greyed row that sends nothing, like "No unread mail".
+    Disabled {
+        label: String,
+    },
+    Separator,
+}
+
+/// The handle `App::tray` holds: on Linux the StatusNotifierItem's, on
+/// Windows the notification-area icon's. Both take `update` closures.
+#[cfg(not(windows))]
+pub type Handle = ksni::Handle<MailTray>;
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub(crate) use windows::{Handle, spawn};
+
 impl MailTray {
     fn send(&self, command: TrayCommand) {
         let _ = self.commands.try_send(command);
@@ -135,6 +161,60 @@ impl MailTray {
 
     fn summary(&self) -> String {
         summary(self.unread)
+    }
+
+    /// The full menu as platform-neutral rows, so the AppIndicator menu
+    /// and the Windows context menu stay the same menu.
+    pub fn menu_model(&self) -> Vec<MenuRow> {
+        let mut rows: Vec<MenuRow> = account_lines(&self.accounts)
+            .into_iter()
+            .map(|line| match line {
+                AccountLine::Unread { id, label } => MenuRow::Item {
+                    label,
+                    enabled: true,
+                    command: TrayCommand::OpenInbox(id),
+                },
+                AccountLine::NoUnread(label) => MenuRow::Disabled { label },
+            })
+            .collect();
+        if !rows.is_empty() {
+            rows.push(MenuRow::Separator);
+        }
+        let item = |label: String, command: TrayCommand| MenuRow::Item {
+            label,
+            enabled: true,
+            command,
+        };
+        rows.push(MenuRow::Item {
+            label: gettext("Mark All as Read"),
+            enabled: self.unread > 0,
+            command: TrayCommand::ReadAll,
+        });
+        rows.push(item(gettext("Open Penguin Mail"), TrayCommand::Open));
+        rows.push(item(gettext("New Message"), TrayCommand::Compose));
+        rows.push(item(gettext("Check for Mail"), TrayCommand::Check));
+        if let Some(version) = &self.update {
+            rows.push(MenuRow::Separator);
+            rows.push(item(
+                fill(
+                    &gettext("Install Update {version}"),
+                    &[("version", version)],
+                ),
+                TrayCommand::InstallUpdate,
+            ));
+            rows.push(item(
+                fill(&gettext("What's New in {version}"), &[("version", version)]),
+                TrayCommand::WhatsNew,
+            ));
+        } else if self.can_update {
+            rows.push(item(
+                gettext("Check for Updates"),
+                TrayCommand::CheckForUpdates,
+            ));
+        }
+        rows.push(MenuRow::Separator);
+        rows.push(item(gettext("Quit"), TrayCommand::Quit));
+        rows
     }
 }
 
@@ -204,67 +284,29 @@ impl ksni::Tray for MailTray {
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
         use ksni::menu::{MenuItem, StandardItem};
-        let mut items: Vec<MenuItem<Self>> = account_lines(&self.accounts)
+        self.menu_model()
             .into_iter()
-            .map(|line| match line {
-                AccountLine::Unread { id, label } => StandardItem {
+            .map(|row| match row {
+                MenuRow::Item {
                     label,
-                    activate: Box::new(move |tray: &mut Self| {
-                        tray.send(TrayCommand::OpenInbox(id));
-                    }),
+                    enabled,
+                    command,
+                } => StandardItem {
+                    label,
+                    enabled,
+                    activate: Box::new(move |tray: &mut Self| tray.send(command.clone())),
                     ..Default::default()
                 }
                 .into(),
-                AccountLine::NoUnread(label) => StandardItem {
+                MenuRow::Disabled { label } => StandardItem {
                     label,
                     enabled: false,
                     ..Default::default()
                 }
                 .into(),
+                MenuRow::Separator => MenuItem::Separator,
             })
-            .collect();
-        if !items.is_empty() {
-            items.push(MenuItem::Separator);
-        }
-        let item = |label: &str, command: fn() -> TrayCommand| -> MenuItem<Self> {
-            StandardItem {
-                label: label.into(),
-                activate: Box::new(move |tray: &mut Self| tray.send(command())),
-                ..Default::default()
-            }
-            .into()
-        };
-        items.push(
-            StandardItem {
-                label: gettext("Mark All as Read"),
-                enabled: self.unread > 0,
-                activate: Box::new(|tray: &mut Self| {
-                    tray.send(TrayCommand::ReadAll);
-                }),
-                ..Default::default()
-            }
-            .into(),
-        );
-        items.push(item(&gettext("Open Penguin Mail"), || TrayCommand::Open));
-        items.push(item(&gettext("New Message"), || TrayCommand::Compose));
-        items.push(item(&gettext("Check for Mail"), || TrayCommand::Check));
-        if let Some(version) = &self.update {
-            items.push(MenuItem::Separator);
-            let install = fill(
-                &gettext("Install Update {version}"),
-                &[("version", version)],
-            );
-            let notes = fill(&gettext("What's New in {version}"), &[("version", version)]);
-            items.push(item(&install, || TrayCommand::InstallUpdate));
-            items.push(item(&notes, || TrayCommand::WhatsNew));
-        } else if self.can_update {
-            items.push(item(&gettext("Check for Updates"), || {
-                TrayCommand::CheckForUpdates
-            }));
-        }
-        items.push(MenuItem::Separator);
-        items.push(item(&gettext("Quit"), || TrayCommand::Quit));
-        items
+            .collect()
     }
 }
 

@@ -74,13 +74,25 @@ impl Drop for Home {
     fn drop(&mut self) {
         // The agent gpgsm started holds sockets open under the temp
         // directory.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf(self.smime.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "gpg-agent"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
+    }
+}
+
+/// gpgconf beside the program these tests found, or the bare name for
+/// PATH to resolve: Gpg4win keeps itself off PATH but puts the whole
+/// family in one directory.
+fn gpgconf(program: &Path) -> std::path::PathBuf {
+    let beside = program.with_file_name("gpgconf");
+    if beside.exists() || beside.with_extension("exe").exists() {
+        beside
+    } else {
+        "gpgconf".into()
     }
 }
 
@@ -149,16 +161,18 @@ fn make() -> Option<Files> {
         .expect("gpgsm runs");
     assert!(imported.success(), "gpgsm could not import it");
     // The export asks the pinentry for a passphrase to put on the file,
-    // and the script types it.
+    // and the script types it. The script is a shell script, which only
+    // Unix runs, so the tests that need the file skip here rather than
+    // fail.
     let p12 = maker
         .gpgsm()
         .args(["--export-secret-key-p12", "ada@example.test"])
         .output()
         .expect("gpgsm runs");
-    assert!(
-        p12.status.success() && !p12.stdout.is_empty(),
-        "gpgsm could not export a PKCS#12 file"
-    );
+    if !(p12.status.success() && !p12.stdout.is_empty()) {
+        eprintln!("skipping: the pinentry script cannot answer, so no PKCS#12 file");
+        return None;
+    }
     Some(Files {
         pem: std::fs::read(&pem).expect("read"),
         p12: p12.stdout,

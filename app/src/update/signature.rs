@@ -103,10 +103,13 @@ async fn check_in(
     let home = dir.join("home");
     tokio::fs::create_dir_all(&home).await.map_err(could_not)?;
     // GnuPG warns about a home other people can read.
-    use std::os::unix::fs::PermissionsExt;
-    tokio::fs::set_permissions(&home, std::fs::Permissions::from_mode(0o700))
-        .await
-        .map_err(could_not)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        tokio::fs::set_permissions(&home, std::fs::Permissions::from_mode(0o700))
+            .await
+            .map_err(could_not)?;
+    }
     let keyring = dir.join("release-key.gpg");
     let sums_file = dir.join("SHA256SUMS");
     let signature_file = dir.join("SHA256SUMS.asc");
@@ -173,8 +176,12 @@ mod tests {
                 return None;
             }
             let home = tempfile::tempdir().unwrap();
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700))
+                    .unwrap();
+            }
             // A pinentry that cannot run cannot put a dialog on anyone's
             // screen; the agent gets an error instead.
             std::fs::write(
@@ -183,21 +190,23 @@ mod tests {
             )
             .unwrap();
             let signer = Signer { home };
-            assert!(
-                signer
-                    .gpg(&[
-                        "--passphrase",
-                        "",
-                        "--quick-generate-key",
-                        "Test Release <release@example.test>",
-                        "ed25519",
-                        "sign",
-                        "never",
-                    ])
-                    .status
-                    .success(),
-                "gpg could not generate a test key"
-            );
+            if !signer
+                .gpg(&[
+                    "--passphrase",
+                    "",
+                    "--quick-generate-key",
+                    "Test Release <release@example.test>",
+                    "ed25519",
+                    "sign",
+                    "never",
+                ])
+                .status
+                .success()
+            {
+                eprintln!("skipping: gpg cannot make a test key on this system");
+                require_crypto();
+                return None;
+            }
             Some(signer)
         }
 
@@ -349,6 +358,11 @@ mod tests {
             .arg(&keyring)
             .output()
             .unwrap();
+        if !out.status.success() {
+            eprintln!("skipping: gpg cannot read a keyring on this system");
+            require_crypto();
+            return;
+        }
         let listing = String::from_utf8_lossy(&out.stdout);
         let fingerprints: Vec<&str> = listing
             .lines()

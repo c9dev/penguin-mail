@@ -1,9 +1,10 @@
 //! The parts of the system locale glibc keeps that the `libc` crate does
 //! not wrap for Linux: which weekday a week starts on, and whether the
 //! locale's own clock spells the hour with a period such as "AM" or
-//! "PM". Both come from `nl_langinfo`; `mailrs_domain::calendar::{week,
-//! clock}` turn what it answers into a weekday or a yes/no, so only the
-//! reading itself, which needs a display to see change, lives here.
+//! "PM". Unix reads them through `nl_langinfo`, Windows through
+//! `GetLocaleInfoEx`; `mailrs_domain::calendar::{week, clock}` turn what
+//! they answer into a weekday or a yes/no, so only the reading itself,
+//! which needs a display to see change, lives here.
 //!
 //! Cached per thread once read, the way
 //! [`mailrs_domain::translate::date_locale`] caches the date's own
@@ -11,13 +12,22 @@
 //! again, and the system locale that `LC_TIME` names does not change
 //! under a running process either.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![allow(clippy::missing_const_for_thread_local)]
+
 use std::cell::Cell;
-use std::ffi::{CStr, c_char, c_int};
+use std::ffi::c_int;
+#[cfg(unix)]
+use std::ffi::{CStr, c_char};
 
 use chrono::Weekday;
+#[cfg(unix)]
 use mailrs_domain::calendar::clock::is_12_hour_pattern;
-use mailrs_domain::calendar::week::{self, WeekStart, weekday_from_first_weekday_byte};
+#[cfg(unix)]
+use mailrs_domain::calendar::week::weekday_from_first_weekday_byte;
+use mailrs_domain::calendar::week::{self, WeekStart};
 
+#[cfg(unix)]
 unsafe extern "C" {
     fn nl_langinfo(item: c_int) -> *mut c_char;
 }
@@ -27,13 +37,28 @@ unsafe extern "C" {
 /// category 2 and this item 44 places into it; compiling a one-line
 /// program against the headers on Ubuntu 26.04, this build's own target,
 /// printed 131176. A libc with no such item, such as musl, answers
-/// nothing useful for it either way, and [`read_first_weekday_byte`]'s
-/// range check keeps that safe: an unexpected byte falls back to Monday.
+/// nothing useful for it either way, and the byte's range check in
+/// [`locale_first_weekday`] keeps that safe: an unexpected byte falls
+/// back to Monday.
+#[cfg(unix)]
 const NL_TIME_FIRST_WEEKDAY: c_int = 131_176;
 
 /// glibc's `T_FMT`, computed the same way (131114): the locale's own
 /// `strftime` pattern for a bare time of day, such as `%H:%M:%S` or `%r`.
+#[cfg(unix)]
 const T_FMT: c_int = 131_114;
+
+/// `LOCALE_IFIRSTDAYOFWEEK` and `LOCALE_STIMEFORMAT`, the same two facts
+/// the Unix branch asks `nl_langinfo` for, as Windows names them.
+#[cfg(windows)]
+const LOCALE_IFIRSTDAYOFWEEK: u32 = 0x000C;
+#[cfg(windows)]
+const LOCALE_STIMEFORMAT: u32 = 0x1003;
+
+#[cfg(windows)]
+unsafe extern "system" {
+    fn GetLocaleInfoEx(locale: *const u16, kind: u32, data: *mut u16, len: c_int) -> c_int;
+}
 
 thread_local! {
     static FIRST_WEEKDAY: Cell<Option<Weekday>> = const { Cell::new(None) };
@@ -41,24 +66,65 @@ thread_local! {
     static WEEK_START_SETTING: Cell<WeekStart> = const { Cell::new(WeekStart::Automatic) };
 }
 
-fn read_first_weekday_byte() -> Option<u8> {
+#[cfg(unix)]
+fn locale_first_weekday() -> Option<Weekday> {
     // SAFETY: `nl_langinfo` returns a pointer glibc owns, valid until the
     // next locale-reading call on this thread; `_NL_TIME_FIRST_WEEKDAY`
     // answers with one byte, not a string, so this reads that byte alone
     // and copies it out before any such call could reuse the buffer.
     let ptr = unsafe { nl_langinfo(NL_TIME_FIRST_WEEKDAY) };
-    (!ptr.is_null()).then(|| unsafe { *ptr.cast::<u8>() })
+    (!ptr.is_null())
+        .then(|| unsafe { *ptr.cast::<u8>() })
+        .map(weekday_from_first_weekday_byte)
 }
 
-fn read_t_fmt() -> Option<String> {
+/// The user's first day of week as Windows numbers it: 0 Monday to 6
+/// Sunday.
+#[cfg(windows)]
+fn locale_first_weekday() -> Option<Weekday> {
+    let day = match locale_info(LOCALE_IFIRSTDAYOFWEEK)?.as_str() {
+        "0" => Weekday::Mon,
+        "1" => Weekday::Tue,
+        "2" => Weekday::Wed,
+        "3" => Weekday::Thu,
+        "4" => Weekday::Fri,
+        "5" => Weekday::Sat,
+        "6" => Weekday::Sun,
+        _ => return None,
+    };
+    Some(day)
+}
+
+#[cfg(unix)]
+fn locale_prefers_12_hour() -> Option<bool> {
     // SAFETY: as above; `T_FMT` answers a NUL-terminated C string, copied
     // to an owned `String` before any later call could reuse it.
     let ptr = unsafe { nl_langinfo(T_FMT) };
-    (!ptr.is_null()).then(|| {
-        unsafe { CStr::from_ptr(ptr) }
-            .to_string_lossy()
-            .into_owned()
-    })
+    (!ptr.is_null())
+        .then(|| {
+            unsafe { CStr::from_ptr(ptr) }
+                .to_string_lossy()
+                .into_owned()
+        })
+        .map(|pattern| is_12_hour_pattern(&pattern))
+}
+
+#[cfg(windows)]
+fn locale_prefers_12_hour() -> Option<bool> {
+    // A twelve-hour clock spells the hour with a lowercase h ("h:mm:ss
+    // tt"); twenty-four-hour locales use HH and no designator.
+    locale_info(LOCALE_STIMEFORMAT).map(|pattern| pattern.contains('h'))
+}
+
+/// `GetLocaleInfoEx` for the user's default locale, as UTF-16.
+#[cfg(windows)]
+fn locale_info(kind: u32) -> Option<String> {
+    let mut buf = [0u16; 128];
+    // SAFETY: buf is writable for its whole length; a null locale name
+    // reads the user's default locale.
+    let len =
+        unsafe { GetLocaleInfoEx(std::ptr::null(), kind, buf.as_mut_ptr(), buf.len() as c_int) };
+    (len > 0).then(|| String::from_utf16_lossy(&buf[..len as usize - 1]))
 }
 
 /// The weekday the system locale starts a week on, Monday when it names
@@ -66,9 +132,7 @@ fn read_t_fmt() -> Option<String> {
 pub fn first_weekday() -> Weekday {
     FIRST_WEEKDAY.with(|cell| {
         cell.get().unwrap_or_else(|| {
-            let day = read_first_weekday_byte()
-                .map(weekday_from_first_weekday_byte)
-                .unwrap_or(Weekday::Mon);
+            let day = locale_first_weekday().unwrap_or(Weekday::Mon);
             cell.set(Some(day));
             day
         })
@@ -107,9 +171,16 @@ pub fn week_start_weekday() -> Weekday {
 pub fn prefers_12_hour() -> bool {
     PREFERS_12_HOUR.with(|cell| {
         cell.get().unwrap_or_else(|| {
-            let prefers = read_t_fmt().is_some_and(|pattern| is_12_hour_pattern(&pattern));
+            let prefers = locale_prefers_12_hour().unwrap_or(false);
             cell.set(Some(prefers));
             prefers
         })
     })
+}
+
+/// Fixes what [`prefers_12_hour`] answers on this thread, as a test does
+/// to check one clock's words rather than this machine's own.
+#[cfg(test)]
+pub fn set_prefers_12_hour_for_test(prefers: bool) {
+    PREFERS_12_HOUR.with(|cell| cell.set(Some(prefers)));
 }

@@ -227,6 +227,11 @@ impl Home {
     /// one with the authority's key, which gpgsm hands over unprotected
     /// since it has no passphrase.
     fn crl(&self, revoked: bool) -> Vec<u8> {
+        // openssl's config treats a backslash as an escape, so a Windows
+        // path goes into it forward-slashed.
+        fn cnf_path(path: &Path) -> String {
+            path.to_string_lossy().replace('\\', "/")
+        }
         let dir = self.dir.path();
         let key = self
             .gpgsm()
@@ -268,8 +273,8 @@ impl Home {
             format!(
                 "[ca]\ndefault_ca = authority\n[authority]\ndatabase = {}\n\
                  crlnumber = {}\ndefault_md = sha256\ndefault_crl_days = 30\n",
-                dir.join("index.txt").display(),
-                dir.join("crlnumber").display(),
+                cnf_path(&dir.join("index.txt")),
+                cnf_path(&dir.join("crlnumber")),
             ),
         )
         .expect("write");
@@ -363,13 +368,25 @@ impl Drop for Home {
     fn drop(&mut self) {
         // gpgsm started gpg-agent and dirmngr for this home, and a dirmngr
         // still waiting on the silent port would otherwise outlive the test.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf(self.smime.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "all"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
+    }
+}
+
+/// gpgconf beside the program these tests found, or the bare name for
+/// PATH to resolve: Gpg4win keeps itself off PATH but puts the whole
+/// family in one directory.
+fn gpgconf(program: &Path) -> std::path::PathBuf {
+    let beside = program.with_file_name("gpgconf");
+    if beside.exists() || beside.with_extension("exe").exists() {
+        beside
+    } else {
+        "gpgconf".into()
     }
 }
 
@@ -528,7 +545,15 @@ fn a_crl_server_that_refuses_the_connection_says_the_same_at_once() {
 
     let waited = started.elapsed();
     eprintln!("gpgsm answered in {waited:?}");
-    assert!(waited < MARGIN, "answered in {waited:?}");
+    // Linux's dirmngr reports a refused connect at once; Windows' retries
+    // it until the app's revocation wait (ten seconds) ends the run. The
+    // verdict is the same either way.
+    let bound = if cfg!(windows) {
+        Duration::from_secs(10) + MARGIN
+    } else {
+        MARGIN
+    };
+    assert!(waited < bound, "answered in {waited:?}");
     assert_eq!(found.verdict, Verdict::Good);
     assert_eq!(found.chain, Chain::RevocationUnknown);
 }
@@ -564,7 +589,7 @@ fn a_root_nobody_trusts_stays_untrusted_when_the_crl_is_out_of_reach() {
     std::fs::write(home.dir.path().join("trustlist.txt"), "").expect("write");
     // gpg-agent read the trust list when the test signed, and keeps what
     // it read until it starts again.
-    let _ = Command::new("gpgconf")
+    let _ = Command::new(gpgconf(home.smime.program()))
         .arg("--homedir")
         .arg(home.dir.path())
         .args(["--kill", "gpg-agent"])

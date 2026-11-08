@@ -2,6 +2,7 @@
 //! it; the app writes it when the sync settings change.
 
 use std::io::Write;
+#[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -112,13 +113,11 @@ impl Config {
         }
         let text =
             toml::to_string(self).map_err(|e| write_error(std::io::Error::other(e.to_string())))?;
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(path)
-            .map_err(write_error)?;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let mut file = options.open(path).map_err(write_error)?;
         file.write_all(text.as_bytes()).map_err(write_error)
     }
 
@@ -171,11 +170,16 @@ pub fn data_dir() -> Result<PathBuf, ConfigError> {
 
 /// Creates `dir` if it is missing and makes it readable by its owner alone.
 /// A folder is enough: whatever mode the files inside it get, nobody else
-/// can reach them through it.
+/// can reach them through it. Windows keeps each user's profile private by
+/// ACL, so there is no mode to set there.
 pub fn private_dir(dir: &Path) -> std::io::Result<()> {
-    use std::os::unix::fs::PermissionsExt;
     std::fs::create_dir_all(dir)?;
-    std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
 }
 
 /// Closes the folders Penguin Mail keeps anything in to other people on the
@@ -222,6 +226,7 @@ fn move_old_dir(old: &Path, new: &Path) -> std::io::Result<bool> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use std::time::Duration;
 
@@ -251,6 +256,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_private_folder_is_the_owners_alone_whether_new_or_old() {
         let base = tempfile::tempdir().unwrap();
         let fresh = base.path().join("fresh/penguin-mail");
@@ -321,8 +327,11 @@ mod tests {
         };
         config.save(&path).unwrap();
         assert_eq!(Config::load(&path).unwrap(), config);
-        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
+        #[cfg(unix)]
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
     }
 
     #[test]

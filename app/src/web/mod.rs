@@ -23,6 +23,10 @@ pub use macos::*;
 mod webkitgtk;
 #[cfg(target_os = "linux")]
 pub use webkitgtk::*;
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+pub use windows::*;
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod frame;

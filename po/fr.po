@@ -1081,17 +1081,24 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr ""
 "Continuer ouvre la page de connexion de {provider} dans votre navigateur."
 
-#: app/src/app.rs:415
+#: app/src/app.rs:427
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Impossible de marquer tout le courrier comme lu : {reason}"
 
-#: app/src/app.rs:462
+#: app/src/app.rs:474
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
 msgstr ""
 "Vos préférences n’ont pas pu être lues, Penguin Mail a donc démarré avec les "
 "valeurs par défaut. L’ancien fichier est conservé sous le nom {file}."
+
+#. The description is the overlay's alt text, read aloud.
+#: app/src/app/dock_badge/windows.rs:54
+msgid "{count} unread message"
+msgid_plural "{count} unread messages"
+msgstr[0] "{count} message non lu"
+msgstr[1] "{count} messages non lus"
 
 #: app/src/app/mail_file.rs:77
 msgid "This file could not be read."
@@ -1809,7 +1816,7 @@ msgstr "Un fichier portant ce nom existe déjà, et l’exportation le remplacer
 msgid "the message “{subject}”"
 msgstr "le message « {subject} »"
 
-#: app/src/assistant/run/queue.rs:61 app/src/assistant/run/writing.rs:226
+#: app/src/assistant/run/queue.rs:61 app/src/assistant/run/writing.rs:283
 msgid "(no subject)"
 msgstr "(sans objet)"
 
@@ -1892,93 +1899,93 @@ msgstr "Annuler « {action} » ?"
 msgid "this list"
 msgstr "cette liste"
 
-#: app/src/assistant/run/writing.rs:239
+#: app/src/assistant/run/writing.rs:296
 msgid "Signed with {standard}"
 msgstr "Signé avec {standard}"
 
-#: app/src/assistant/run/writing.rs:240
+#: app/src/assistant/run/writing.rs:297
 msgid "Encrypted with {standard}"
 msgstr "Chiffré avec {standard}"
 
-#: app/src/assistant/run/writing.rs:241
+#: app/src/assistant/run/writing.rs:298
 msgid "Signed and encrypted with {standard}"
 msgstr "Signé et chiffré avec {standard}"
 
-#: app/src/assistant/run/writing.rs:253
+#: app/src/assistant/run/writing.rs:310
 msgid "Blind copy to {recipients}"
 msgstr "Copie cachée à {recipients}"
 
-#: app/src/assistant/run/writing.rs:259
+#: app/src/assistant/run/writing.rs:316
 msgid "Forwards “{subject}” from {sender}"
 msgstr "Transfère « {subject} » de {sender}"
 
-#: app/src/assistant/run/writing.rs:269 app/src/assistant/run/writing.rs:998
+#: app/src/assistant/run/writing.rs:326 app/src/assistant/run/writing.rs:1055
 msgid "Attached: {files}"
 msgstr "En pièce jointe : {files}"
 
-#: app/src/assistant/run/writing.rs:285
+#: app/src/assistant/run/writing.rs:342
 msgid "From this computer: {files}"
 msgstr "Depuis cet ordinateur : {files}"
 
-#: app/src/assistant/run/writing.rs:317
+#: app/src/assistant/run/writing.rs:374
 msgid "Put a file from this computer in a draft?"
 msgid_plural "Put {count} files from this computer in a draft?"
 msgstr[0] "Joindre un fichier de cet ordinateur à un brouillon ?"
 msgstr[1] "Joindre {count} fichiers de cet ordinateur à un brouillon ?"
 
-#: app/src/assistant/run/writing.rs:349
+#: app/src/assistant/run/writing.rs:406
 msgid "Send “{subject}” to {recipients}?"
 msgstr "Envoyer « {subject} » à {recipients} ?"
 
-#: app/src/assistant/run/writing.rs:811
+#: app/src/assistant/run/writing.rs:868
 msgid "Change the draft “{subject}”?"
 msgstr "Modifier le brouillon « {subject} » ?"
 
-#: app/src/assistant/run/writing.rs:966
+#: app/src/assistant/run/writing.rs:1023
 msgid "nobody"
 msgstr "personne"
 
-#: app/src/assistant/run/writing.rs:972
+#: app/src/assistant/run/writing.rs:1029
 msgid "To: {recipients}"
 msgstr "À : {recipients}"
 
-#: app/src/assistant/run/writing.rs:975
+#: app/src/assistant/run/writing.rs:1032
 msgid "Cc: {recipients}"
 msgstr "Cc : {recipients}"
 
-#: app/src/assistant/run/writing.rs:978
+#: app/src/assistant/run/writing.rs:1035
 msgid "Bcc: {recipients}"
 msgstr "Cci : {recipients}"
 
-#: app/src/assistant/run/writing.rs:982
+#: app/src/assistant/run/writing.rs:1039
 msgid "Subject: {subject}"
 msgstr "Objet : {subject}"
 
-#: app/src/assistant/run/writing.rs:987
+#: app/src/assistant/run/writing.rs:1044
 msgid "New text in place of the old"
 msgstr "Nouveau texte à la place de l’ancien"
 
-#: app/src/assistant/run/writing.rs:991
+#: app/src/assistant/run/writing.rs:1048
 msgid "Takes out: {files}"
 msgstr "Retire : {files}"
 
-#: app/src/assistant/run/writing.rs:1006
+#: app/src/assistant/run/writing.rs:1063
 msgid "Goes out encrypted"
 msgstr "Part chiffré"
 
-#: app/src/assistant/run/writing.rs:1007
+#: app/src/assistant/run/writing.rs:1064
 msgid "Goes out unencrypted"
 msgstr "Part non chiffré"
 
-#: app/src/assistant/run/writing.rs:1011
+#: app/src/assistant/run/writing.rs:1068
 msgid "Goes out signed"
 msgstr "Part signé"
 
-#: app/src/assistant/run/writing.rs:1012
+#: app/src/assistant/run/writing.rs:1069
 msgid "Goes out unsigned"
 msgstr "Part non signé"
 
-#: app/src/assistant/run/writing.rs:1022
+#: app/src/assistant/run/writing.rs:1079
 msgid "Delete the draft “{subject}”? {provider} cannot bring it back."
 msgstr ""
 "Supprimer le brouillon « {subject} » ? {provider} ne pourra pas le récupérer."
@@ -1995,7 +2002,7 @@ msgstr "Penguin Mail"
 msgid "Claude Code"
 msgstr "Claude Code"
 
-#: app/src/assistant/sources/skills/sandbox.rs:250
+#: app/src/assistant/sources/skills/sandbox/unix.rs:185
 msgid ""
 "Skill scripts need bubblewrap, which is not installed. Install the "
 "bubblewrap package to run them."
@@ -2003,23 +2010,46 @@ msgstr ""
 "Les scripts des compétences ont besoin de bubblewrap, qui n’est pas "
 "installé. Installez le paquet bubblewrap pour les exécuter."
 
-#: app/src/assistant/sources/skills/sandbox.rs:269
-#: app/src/assistant/sources/skills/sandbox.rs:275
+#: app/src/assistant/sources/skills/sandbox/unix.rs:204
+#: app/src/assistant/sources/skills/sandbox/unix.rs:210
 msgid ""
 "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr ""
 "Les scripts des compétences ne peuvent pas s’exécuter : bubblewrap n’a pas "
 "pu démarrer de bac à sable ({reason})."
 
-#: app/src/assistant/sources/skills/shell.rs:181
+#: app/src/assistant/sources/skills/sandbox/windows.rs:500
+#, fuzzy
+#| msgid ""
+#| "Skill scripts need bubblewrap, which is not installed. Install the "
+#| "bubblewrap package to run them."
+msgid ""
+"Skill scripts need busybox for Windows, which is not installed. Install it "
+"next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
+msgstr ""
+"Les scripts des compétences ont besoin de bubblewrap, qui n’est pas "
+"installé. Installez le paquet bubblewrap pour les exécuter."
+
+#: app/src/assistant/sources/skills/sandbox/windows.rs:510
+#: app/src/assistant/sources/skills/sandbox/windows.rs:525
+#: app/src/assistant/sources/skills/sandbox/windows.rs:529
+#, fuzzy
+#| msgid ""
+#| "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
+msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
+msgstr ""
+"Les scripts des compétences ne peuvent pas s’exécuter : bubblewrap n’a pas "
+"pu démarrer de bac à sable ({reason})."
+
+#: app/src/assistant/sources/skills/shell.rs:185
 msgid "It can reach the internet."
 msgstr "Elle peut accéder à Internet."
 
-#: app/src/assistant/sources/skills/shell.rs:183
+#: app/src/assistant/sources/skills/shell.rs:187
 msgid "It cannot reach the internet."
 msgstr "Elle ne peut pas accéder à Internet."
 
-#: app/src/assistant/sources/skills/shell.rs:187
+#: app/src/assistant/sources/skills/shell.rs:191
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -2165,7 +2195,7 @@ msgstr "Principale"
 msgid "Focused"
 msgstr "Prioritaire"
 
-#: app/src/autostart.rs:52
+#: app/src/autostart.rs:80
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail continue la synchronisation sans fenêtre ouverte"
 
@@ -2615,7 +2645,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language} ({country})"
 
-#: app/src/main.rs:104
+#: app/src/main.rs:109
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2641,42 +2671,42 @@ msgstr ""
 "  FICHIER.ics    ouvrir un fichier d’agenda pour ajouter ses événements à un "
 "agenda"
 
-#: app/src/main.rs:190
+#: app/src/main.rs:277
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail : option inconnue {option}"
 
-#: app/src/main.rs:449
+#: app/src/main.rs:538
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail n’a pas pu démarrer"
 
-#: app/src/main.rs:454 app/src/ui/about.rs:181
+#: app/src/main.rs:543 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Signaler un problème"
 
-#: app/src/notify.rs:61 app/src/ui/conversation.rs:436
-#: app/src/ui/conversation.rs:592 app/src/ui/conversation.rs:1123
+#: app/src/notify.rs:61 app/src/ui/conversation.rs:437
+#: app/src/ui/conversation.rs:593 app/src/ui/conversation.rs:1127
 #: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Archiver"
 
-#: app/src/notify.rs:62 app/src/ui/conversation.rs:437
-#: app/src/ui/conversation.rs:1167 app/src/ui/preferences.rs:184
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:438
+#: app/src/ui/conversation.rs:1171 app/src/ui/preferences.rs:184
 #: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "Marquer comme lu"
 
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
-#: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
-#: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/conversation.rs:578 app/src/ui/hide_my_email.rs:574
+#: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
+#: app/src/ui/calendar/popover.rs:757 app/src/ui/calendar/scope.rs:151
+#: app/src/ui/conversation.rs:579 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:108
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "Supprimer"
 
-#: app/src/notify.rs:64 app/src/ui/conversation.rs:242
-#: app/src/ui/conversation.rs:586 app/src/ui/window/message_menu.rs:129
+#: app/src/notify.rs:64 app/src/ui/conversation.rs:243
+#: app/src/ui/conversation.rs:587 app/src/ui/window/message_menu.rs:129
 #: app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Répondre"
@@ -4158,8 +4188,8 @@ msgstr ""
 "chiffré avec votre propre clé, et cet ordinateur ne possède aucune clé ni "
 "aucun certificat pour {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2094
-#: app/src/ui/composer/mod.rs:2097
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2096
+#: app/src/ui/composer/mod.rs:2099
 msgid "That account is not connected."
 msgstr "Ce compte n’est pas connecté."
 
@@ -4218,8 +4248,8 @@ msgstr "Ce message n’a pas pu être chargé : {reason}"
 msgid "This message could not be displayed"
 msgstr "Ce message n’a pas pu être affiché"
 
-#: app/src/render.rs:429 app/src/ui/conversation.rs:248
-#: app/src/ui/conversation.rs:619
+#: app/src/render.rs:429 app/src/ui/conversation.rs:249
+#: app/src/ui/conversation.rs:620
 msgid "View Source"
 msgstr "Afficher la source"
 
@@ -4279,7 +4309,7 @@ msgstr "Chiffrement standard (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Non chiffré pendant le transfert"
 
-#: app/src/render.rs:592 app/src/ui/composer/mod.rs:2194
+#: app/src/render.rs:592 app/src/ui/composer/mod.rs:2196
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} pièce jointe"
@@ -4568,7 +4598,7 @@ msgstr "{host} a refusé la connexion : {reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1516
+#: app/src/ui/sidebar.rs:393 app/src/ui/sidebar.rs:1519
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Agenda"
@@ -4973,133 +5003,129 @@ msgstr ""
 "Le message est envoyé à Anthropic, pour que Claude le lise via votre "
 "abonnement."
 
-#: app/src/tray.rs:25
+#: app/src/tray.rs:26
 msgid "No unread mail"
 msgstr "Aucun message non lu"
 
-#: app/src/tray.rs:27
-msgid "{count} unread message"
-msgid_plural "{count} unread messages"
-msgstr[0] "{count} message non lu"
-msgstr[1] "{count} messages non lus"
-
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1540
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1543
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} message non lu"
 msgstr[1] "{account}, {count} messages non lus"
 
-#: app/src/tray.rs:148 app/src/tray.rs:186
-msgid "Penguin Mail: {summary}"
-msgstr "Penguin Mail : {summary}"
-
-#: app/src/tray.rs:239
+#: app/src/tray.rs:189
 msgid "Mark All as Read"
 msgstr "Tout marquer comme lu"
 
-#: app/src/tray.rs:248
+#: app/src/tray.rs:193
 msgid "Open Penguin Mail"
 msgstr "Ouvrir Penguin Mail"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
-#: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1561
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:475
+#: app/src/tray.rs:194 app/src/ui/composer/mod.rs:369
+#: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1563
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:476
 msgid "New Message"
 msgstr "Nouveau message"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:1970 app/src/ui/window.rs:3642
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:1973 app/src/ui/window.rs:3642
 msgid "Check for Mail"
 msgstr "Relever le courrier"
 
-#: app/src/tray.rs:254 app/src/update/mod.rs:98
+#: app/src/tray.rs:200 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr "Installer la mise à jour {version}"
 
-#: app/src/tray.rs:257
+#: app/src/tray.rs:206
 msgid "What's New in {version}"
 msgstr "Nouveautés de la version {version}"
 
-#: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
-#: app/src/ui/about.rs:235 app/src/ui/about.rs:242
+#: app/src/tray.rs:211 app/src/ui/about.rs:130 app/src/ui/about.rs:238
+#: app/src/ui/about.rs:246 app/src/ui/about.rs:253
 #: app/src/ui/preferences.rs:1091 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Rechercher des mises à jour"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3655
+#: app/src/tray.rs:216 app/src/ui/window.rs:3655
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Quitter"
 
-#: app/src/ui/about.rs:61
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:144
+msgid "Penguin Mail: {summary}"
+msgstr "Penguin Mail : {summary}"
+
+#: app/src/ui/about.rs:71
 msgid "Version {version}"
 msgstr "Version {version}"
 
-#: app/src/ui/about.rs:78
-msgid "Mail and calendar for Linux. Your mail stays on your computer."
+#: app/src/ui/about.rs:88
+#, fuzzy
+#| msgid "Mail and calendar for Linux. Your mail stays on your computer."
+msgid "Mail and calendar for {os}. Your mail stays on your computer."
 msgstr ""
 "Courrier et agenda pour Linux. Votre courrier reste sur votre ordinateur."
 
-#: app/src/ui/about.rs:174
+#: app/src/ui/about.rs:185
 msgid "What's New"
 msgstr "Nouveautés"
 
-#: app/src/ui/about.rs:178 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/about.rs:189 app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Site web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3654
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3654
 msgid "Donate"
 msgstr "Faire un don"
 
-#: app/src/ui/about.rs:186
+#: app/src/ui/about.rs:197
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3653
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3653
 msgid "About Penguin Mail"
 msgstr "À propos de Penguin Mail"
 
-#: app/src/ui/about.rs:233
+#: app/src/ui/about.rs:244
 msgid "Checking…"
 msgstr "Vérification…"
 
-#: app/src/ui/about.rs:239
+#: app/src/ui/about.rs:250
 msgid "Penguin Mail is up to date"
 msgstr "Penguin Mail est à jour"
 
-#: app/src/ui/about.rs:247
+#: app/src/ui/about.rs:258
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr "Impossible de joindre GitHub. Vérifiez votre connexion et réessayez."
 
-#: app/src/ui/about.rs:252
+#: app/src/ui/about.rs:263
 msgid "Install {version}"
 msgstr "Installer {version}"
 
-#: app/src/ui/about.rs:259
+#: app/src/ui/about.rs:270
 msgid "Version {version} is available"
 msgstr "La version {version} est disponible"
 
-#: app/src/ui/about.rs:264
+#: app/src/ui/about.rs:275
 msgid "Installing…"
 msgstr "Installation…"
 
-#: app/src/ui/about.rs:269
+#: app/src/ui/about.rs:280
 msgid "Installing version {version}"
 msgstr "Installation de la version {version}"
 
-#: app/src/ui/about.rs:274 app/src/update/mod.rs:104
+#: app/src/ui/about.rs:285 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr "Redémarrer pour mettre à jour"
 
-#: app/src/ui/about.rs:279
+#: app/src/ui/about.rs:290
 msgid "Version {version} is installed"
 msgstr "La version {version} est installée"
 
-#: app/src/ui/about.rs:284 app/src/update/mod.rs:137
+#: app/src/ui/about.rs:295 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr "Afficher le journal"
 
-#: app/src/ui/about.rs:289 app/src/update/mod.rs:134
+#: app/src/ui/about.rs:300 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr "La mise à jour vers {version} a échoué"
 
@@ -5200,9 +5226,9 @@ msgstr "Copier le lien"
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
-#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1989 app/src/ui/composer/mod.rs:2111
-#: app/src/ui/composer/mod.rs:2455 app/src/ui/composer/mod.rs:2909
+#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:349
+#: app/src/ui/composer/mod.rs:1991 app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2457 app/src/ui/composer/mod.rs:2911
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5341,7 +5367,7 @@ msgstr "Pas maintenant"
 
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:487
-#: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
+#: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1617
 msgid "Grant Access"
 msgstr "Accorder l’accès"
@@ -5445,8 +5471,8 @@ msgstr ""
 "Un serveur CalDAV, comme Nextcloud. S’il utilise la validation en deux "
 "étapes, créez un mot de passe d’application pour Penguin Mail."
 
-#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1460
-#: app/src/ui/calendar/sidebar.rs:1471
+#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1468
+#: app/src/ui/calendar/sidebar.rs:1479
 msgid "Add Calendar"
 msgstr "Ajouter un agenda"
 
@@ -5488,7 +5514,7 @@ msgstr "Votre mot de passe n’a pas été envoyé."
 msgid "Looking Up…"
 msgstr "Recherche…"
 
-#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1287
 msgid "Sign In Again"
 msgstr "Se reconnecter"
 
@@ -5596,7 +5622,7 @@ msgid "Detach"
 msgstr "Détacher"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4430
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4435
 msgid "Close"
 msgstr "Fermer"
 
@@ -5614,7 +5640,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:179 app/src/ui/assistant.rs:184
 #: app/src/ui/assistant.rs:552 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1924
+#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1926
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Envoyer"
@@ -5654,7 +5680,7 @@ msgid "What it did"
 msgstr "Actions effectuées"
 
 #: app/src/ui/assistant.rs:645 app/src/ui/calendar/words.rs:634
-#: app/src/ui/invitation.rs:1323
+#: app/src/ui/invitation.rs:1326
 msgid "You"
 msgstr "Vous"
 
@@ -5765,7 +5791,7 @@ msgid "No models found."
 msgstr "Aucun modèle trouvé."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1731
-#: app/src/ui/composer/mod.rs:2234
+#: app/src/ui/composer/mod.rs:2236
 msgid "Remove {file}"
 msgstr "Retirer {file}"
 
@@ -5797,8 +5823,8 @@ msgstr[1] "{count} serveurs"
 msgid "Use {server}"
 msgstr "Utiliser {server}"
 
-#: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:209
-#: app/src/ui/calendar/popover.rs:211
+#: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
+#: app/src/ui/calendar/popover.rs:212
 msgid "Edit"
 msgstr "Modifier"
 
@@ -5807,7 +5833,7 @@ msgid "Edit {server}"
 msgstr "Modifier {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
-#: app/src/ui/composer/mod.rs:2230 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2232 app/src/ui/composer/recipients.rs:319
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3406
 msgid "Remove"
 msgstr "Supprimer"
@@ -5850,7 +5876,7 @@ msgstr ""
 "HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2904 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2906 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Nom"
@@ -5885,8 +5911,8 @@ msgid "Test"
 msgstr "Tester"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:182
-#: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2909
+#: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
+#: app/src/ui/composer/editor.rs:349 app/src/ui/composer/mod.rs:2911
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -6027,7 +6053,7 @@ msgstr "Conversations avec l’assistant"
 msgid "Email Translations"
 msgstr "Traductions des messages"
 
-#: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:724
+#: app/src/ui/assistant_prefs.rs:208 app/src/ui/conversation.rs:729
 #: app/src/ui/window/detached.rs:69
 msgid "Conversation"
 msgstr "Conversation"
@@ -6347,7 +6373,7 @@ msgstr "Non partagé avec les invités"
 msgid "Open {file} in the browser"
 msgstr "Ouvrir {file} dans le navigateur"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
 msgid "Open in Browser"
 msgstr "Ouvrir dans le navigateur"
 
@@ -6355,7 +6381,7 @@ msgstr "Ouvrir dans le navigateur"
 msgid "Waiting to be sent"
 msgstr "En attente d’envoi"
 
-#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:819
+#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:820
 msgid "Not answered yet"
 msgstr "Pas encore de réponse"
 
@@ -6414,11 +6440,11 @@ msgstr ""
 "{organizer} organise cet événement, son horaire, son lieu et ses invités "
 "restent donc tels qu’il les a définis."
 
-#: app/src/ui/calendar/editor.rs:427 app/src/ui/calendar/quick.rs:190
+#: app/src/ui/calendar/editor.rs:427 app/src/ui/calendar/quick.rs:191
 msgid "Title"
 msgstr "Titre"
 
-#: app/src/ui/calendar/editor.rs:462 app/src/ui/calendar/quick.rs:196
+#: app/src/ui/calendar/editor.rs:462 app/src/ui/calendar/quick.rs:197
 msgid "Type"
 msgstr "Type"
 
@@ -6543,7 +6569,7 @@ msgid "Place"
 msgstr "Lieu"
 
 #. Named for the moment Show all hands it the focus.
-#: app/src/ui/calendar/editor.rs:1322 app/src/ui/calendar/popover.rs:291
+#: app/src/ui/calendar/editor.rs:1322 app/src/ui/calendar/popover.rs:292
 msgid "Guests"
 msgstr "Invités"
 
@@ -6576,7 +6602,7 @@ msgid "Remove reminder"
 msgstr "Supprimer le rappel"
 
 #: app/src/ui/calendar/editor.rs:1598 app/src/ui/calendar/editor.rs:1609
-#: app/src/ui/calendar/popover.rs:272
+#: app/src/ui/calendar/popover.rs:273
 msgid "Notes"
 msgstr "Notes"
 
@@ -6626,8 +6652,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Impossible de joindre {file} : {reason}"
 
 #: app/src/ui/calendar/editor.rs:1947 app/src/ui/composer/mod.rs:413
-#: app/src/ui/thread_list.rs:343 app/src/ui/thread_list.rs:349
-#: app/src/ui/thread_list.rs:1102
+#: app/src/ui/thread_list.rs:344 app/src/ui/thread_list.rs:350
+#: app/src/ui/thread_list.rs:1103
 msgid "More"
 msgstr "Plus"
 
@@ -6648,8 +6674,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Seules les personnes pouvant modifier cet agenda voient les détails"
 
 #: app/src/ui/calendar/editor.rs:2025 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1712
-#: app/src/ui/sidebar.rs:1987
+#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/sidebar.rs:1715
+#: app/src/ui/sidebar.rs:1990
 msgid "Color"
 msgstr "Couleur"
 
@@ -6661,8 +6687,8 @@ msgstr "Couleur de l’agenda"
 msgid "Add Google Meet"
 msgstr "Ajouter Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2124 app/src/ui/calendar/mod.rs:2415
-#: app/src/ui/calendar/quick.rs:54
+#: app/src/ui/calendar/editor.rs:2124 app/src/ui/calendar/mod.rs:2419
+#: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "Événement"
 
@@ -7029,7 +7055,7 @@ msgstr ""
 "Il quitte votre liste d’agendas dans Google Agenda sur tous les appareils. "
 "Vous pourrez vous y réabonner plus tard."
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:425
+#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:426
 #: app/src/ui/unsubscribe.rs:120
 msgid "Unsubscribe"
 msgstr "Se désabonner"
@@ -7105,106 +7131,106 @@ msgstr "Ajouter les jours fériés : {region}"
 msgid "Could not add the holidays: {reason}"
 msgstr "Impossible d’ajouter les jours fériés : {reason}"
 
-#: app/src/ui/calendar/mod.rs:337 app/src/ui/calendar/mod.rs:357
+#: app/src/ui/calendar/mod.rs:341 app/src/ui/calendar/mod.rs:361
 msgid "View"
 msgstr "Vue"
 
-#: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2400
+#: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
+#: app/src/ui/calendar/mod.rs:2404
 msgid "New Event (N)"
 msgstr "Nouvel événement (N)"
 
-#: app/src/ui/calendar/mod.rs:377
+#: app/src/ui/calendar/mod.rs:381
 msgid "New Focus Time or Out of Office"
 msgstr "Nouveau temps de concentration ou absence du bureau"
 
-#: app/src/ui/calendar/mod.rs:386 app/src/ui/calendar/mod.rs:388
+#: app/src/ui/calendar/mod.rs:390 app/src/ui/calendar/mod.rs:392
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Rechercher dans l’agenda (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:391 app/src/ui/calendar/mod.rs:394
+#: app/src/ui/calendar/mod.rs:395 app/src/ui/calendar/mod.rs:398
 msgid "Show Calendars"
 msgstr "Afficher les agendas"
 
-#: app/src/ui/calendar/mod.rs:400 app/src/ui/calendar/mod.rs:404
-#: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:570
+#: app/src/ui/calendar/mod.rs:404 app/src/ui/calendar/mod.rs:408
+#: app/src/ui/conversation.rs:567 app/src/ui/conversation.rs:571
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistant (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:437 app/src/ui/calendar/mod.rs:439
+#: app/src/ui/calendar/mod.rs:441 app/src/ui/calendar/mod.rs:443
 msgid "Search the Calendar"
 msgstr "Rechercher dans l’agenda"
 
-#: app/src/ui/calendar/mod.rs:506 app/src/ui/calendar/ports.rs:470
+#: app/src/ui/calendar/mod.rs:510 app/src/ui/calendar/ports.rs:470
 msgid "Loading older events"
 msgstr "Chargement des événements plus anciens"
 
-#: app/src/ui/calendar/mod.rs:935 app/src/ui/window/shortcuts.rs:575
+#: app/src/ui/calendar/mod.rs:939 app/src/ui/window/shortcuts.rs:575
 msgid "Go to date"
 msgstr "Aller à la date"
 
-#: app/src/ui/calendar/mod.rs:1377
+#: app/src/ui/calendar/mod.rs:1381
 msgid "Moved “{title}”"
 msgstr "« {title} » déplacé"
 
-#: app/src/ui/calendar/mod.rs:1378
+#: app/src/ui/calendar/mod.rs:1382
 msgid "Could not move the event: {reason}"
 msgstr "Impossible de déplacer l’événement : {reason}"
 
-#: app/src/ui/calendar/mod.rs:1509
+#: app/src/ui/calendar/mod.rs:1513
 msgid "All-day events"
 msgstr "Événements sur toute la journée"
 
-#: app/src/ui/calendar/mod.rs:1511
+#: app/src/ui/calendar/mod.rs:1515
 msgid "All-day"
 msgstr "Journée"
 
-#: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
+#: app/src/ui/calendar/mod.rs:1799 app/src/ui/calendar/mod.rs:3051
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1272 app/src/ui/preferences.rs:1447
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2118
+#: app/src/ui/calendar/mod.rs:2122
 msgid "Removed “{title}” from your calendar"
 msgstr "« {title} » retiré de votre agenda"
 
-#: app/src/ui/calendar/mod.rs:2119
+#: app/src/ui/calendar/mod.rs:2123
 msgid "Deleted “{title}”"
 msgstr "« {title} » supprimé"
 
-#: app/src/ui/calendar/mod.rs:2132
+#: app/src/ui/calendar/mod.rs:2136
 msgid "Could not delete the event: {reason}"
 msgstr "Impossible de supprimer l’événement : {reason}"
 
-#: app/src/ui/calendar/mod.rs:2185 app/src/ui/composer/mod.rs:1398
+#: app/src/ui/calendar/mod.rs:2189 app/src/ui/composer/mod.rs:1400
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Annuler"
 
-#: app/src/ui/calendar/mod.rs:2341
+#: app/src/ui/calendar/mod.rs:2345
 msgid "Could not send your answer: {reason}"
 msgstr "Impossible d’envoyer votre réponse : {reason}"
 
-#: app/src/ui/calendar/mod.rs:2404
+#: app/src/ui/calendar/mod.rs:2408
 msgid "None of your calendars take new events"
 msgstr "Aucun de vos agendas n’accepte de nouveaux événements"
 
-#: app/src/ui/calendar/mod.rs:2416 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2420 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "Temps de concentration"
 
-#: app/src/ui/calendar/mod.rs:2417 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2421 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "Absent du bureau"
 
-#: app/src/ui/calendar/mod.rs:2786
+#: app/src/ui/calendar/mod.rs:2790
 msgid "Could not save the event: {reason}"
 msgstr "Impossible d’enregistrer l’événement : {reason}"
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:850
-#: app/src/ui/invitation.rs:995 app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:853
+#: app/src/ui/invitation.rs:998 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr "Événement sans titre"
 
@@ -7232,32 +7258,32 @@ msgstr "Ensuite · dans {hours} h {minutes} min"
 msgid "{when}: {what}"
 msgstr "{when} : {what}"
 
-#: app/src/ui/calendar/popover.rs:246
+#: app/src/ui/calendar/popover.rs:247
 msgid "Open in Maps"
 msgstr "Ouvrir dans Cartes"
 
-#: app/src/ui/calendar/popover.rs:274
+#: app/src/ui/calendar/popover.rs:275
 msgid "Show more"
 msgstr "Afficher plus"
 
-#: app/src/ui/calendar/popover.rs:280
+#: app/src/ui/calendar/popover.rs:281
 msgid "Show more of the notes"
 msgstr "Afficher la suite des notes"
 
-#: app/src/ui/calendar/popover.rs:293
+#: app/src/ui/calendar/popover.rs:294
 msgid "Show all"
 msgstr "Tout afficher"
 
-#: app/src/ui/calendar/popover.rs:299 app/src/ui/calendar/popover.rs:899
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:905
 msgid "Show all guests"
 msgstr "Afficher tous les invités"
 
-#: app/src/ui/calendar/popover.rs:318 app/src/ui/calendar/popover.rs:821
-#: app/src/ui/invitation.rs:323
+#: app/src/ui/calendar/popover.rs:319 app/src/ui/calendar/popover.rs:822
+#: app/src/ui/invitation.rs:326
 msgid "Answer"
 msgstr "Répondre"
 
-#: app/src/ui/calendar/popover.rs:333
+#: app/src/ui/calendar/popover.rs:334
 msgid ""
 "This calendar's server sends no replies, so the organizer will not hear your "
 "answer."
@@ -7265,36 +7291,36 @@ msgstr ""
 "Le serveur de cet agenda n’envoie aucune réponse, l’organisateur ne saura "
 "donc rien de votre réponse."
 
-#: app/src/ui/calendar/popover.rs:342 app/src/ui/invitation.rs:334
+#: app/src/ui/calendar/popover.rs:343 app/src/ui/invitation.rs:337
 msgid "Add a note"
 msgstr "Ajouter une note"
 
-#: app/src/ui/calendar/popover.rs:348 app/src/ui/invitation.rs:341
+#: app/src/ui/calendar/popover.rs:349 app/src/ui/invitation.rs:344
 msgid "Note with your answer"
 msgstr "Note jointe à votre réponse"
 
-#: app/src/ui/calendar/popover.rs:349 app/src/ui/invitation.rs:342
+#: app/src/ui/calendar/popover.rs:350 app/src/ui/invitation.rs:345
 msgid "The organizer reads it with your answer"
 msgstr "L’organisateur la lit avec votre réponse"
 
-#: app/src/ui/calendar/popover.rs:356 app/src/ui/calendar/popover.rs:367
-#: app/src/ui/invitation.rs:376
+#: app/src/ui/calendar/popover.rs:357 app/src/ui/calendar/popover.rs:368
+#: app/src/ui/invitation.rs:379
 msgid "Propose New Time"
 msgstr "Proposer un nouvel horaire"
 
-#: app/src/ui/calendar/popover.rs:376 app/src/ui/calendar/popover.rs:383
+#: app/src/ui/calendar/popover.rs:377 app/src/ui/calendar/popover.rs:384
 msgid "Open the invitation in Mail"
 msgstr "Ouvrir l’invitation dans le courrier"
 
-#: app/src/ui/calendar/popover.rs:735
+#: app/src/ui/calendar/popover.rs:736
 msgid "{when}, {zone}"
 msgstr "{when}, {zone}"
 
-#: app/src/ui/calendar/popover.rs:757
+#: app/src/ui/calendar/popover.rs:758
 msgid "Remove from My Calendar"
 msgstr "Retirer de mon agenda"
 
-#: app/src/ui/calendar/popover.rs:835
+#: app/src/ui/calendar/popover.rs:836
 msgid "Your answer"
 msgstr "Votre réponse"
 
@@ -7302,19 +7328,19 @@ msgstr "Votre réponse"
 msgid "Older events can't load while offline"
 msgstr "Les événements plus anciens ne peuvent pas se charger hors ligne"
 
-#: app/src/ui/calendar/quick.rs:85
+#: app/src/ui/calendar/quick.rs:86
 msgid "{name}, {account}"
 msgstr "{name}, {account}"
 
-#: app/src/ui/calendar/quick.rs:186
+#: app/src/ui/calendar/quick.rs:187
 msgid "Add title"
 msgstr "Ajouter un titre"
 
-#: app/src/ui/calendar/quick.rs:221
+#: app/src/ui/calendar/quick.rs:222
 msgid "More Details"
 msgstr "Plus de détails"
 
-#: app/src/ui/calendar/quick.rs:441
+#: app/src/ui/calendar/quick.rs:443
 msgid "Calendar: {name}"
 msgstr "Agenda : {name}"
 
@@ -7497,87 +7523,87 @@ msgstr "Options de l’agenda"
 msgid "Options for {calendar}"
 msgstr "Options de {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
+#: app/src/ui/calendar/sidebar.rs:1238 app/src/ui/contacts_prefs.rs:378
 #: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "Connecter"
 
-#: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
+#: app/src/ui/calendar/sidebar.rs:1245 app/src/ui/contacts_prefs.rs:384
 #: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "Connecter l’agenda de {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:494
+#: app/src/ui/calendar/sidebar.rs:1267 app/src/ui/contacts_prefs.rs:494
 msgid "Grant Access for {account}"
 msgstr "Accorder l’accès pour {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1288
+#: app/src/ui/calendar/sidebar.rs:1296
 msgid "Sign in again to {account}"
 msgstr "Se reconnecter à {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:1992
+#: app/src/ui/calendar/sidebar.rs:1309 app/src/ui/sidebar.rs:1995
 msgid "Sign In Again…"
 msgstr "Se reconnecter…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2000
+#: app/src/ui/calendar/sidebar.rs:1310 app/src/ui/sidebar.rs:2003
 msgid "Remove Account…"
 msgstr "Supprimer le compte…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2007
+#: app/src/ui/calendar/sidebar.rs:1324 app/src/ui/sidebar.rs:2010
 msgid "Account options"
 msgstr "Options du compte"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2012
+#: app/src/ui/calendar/sidebar.rs:1329 app/src/ui/sidebar.rs:2015
 msgid "Options for {account}"
 msgstr "Options de {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1416
+#: app/src/ui/calendar/sidebar.rs:1424
 msgid "{address}. You can only read this calendar"
 msgstr "{address}. Vous ne pouvez que lire cet agenda"
 
-#: app/src/ui/calendar/sidebar.rs:1440
+#: app/src/ui/calendar/sidebar.rs:1448
 msgid "New Calendar…"
 msgstr "Nouvel agenda…"
 
-#: app/src/ui/calendar/sidebar.rs:1441
+#: app/src/ui/calendar/sidebar.rs:1449
 msgid "Subscribe to Calendar…"
 msgstr "S’abonner à un agenda…"
 
-#: app/src/ui/calendar/sidebar.rs:1442
+#: app/src/ui/calendar/sidebar.rs:1450
 msgid "Holiday Calendars…"
 msgstr "Agendas des jours fériés…"
 
-#: app/src/ui/calendar/sidebar.rs:1490
+#: app/src/ui/calendar/sidebar.rs:1498
 msgid "Hide from the List"
 msgstr "Masquer de la liste"
 
-#: app/src/ui/calendar/sidebar.rs:1503
+#: app/src/ui/calendar/sidebar.rs:1511
 msgid "Original Color"
 msgstr "Couleur d’origine"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1700
-#: app/src/ui/sidebar.rs:1977
+#: app/src/ui/calendar/sidebar.rs:1523 app/src/ui/sidebar.rs:1703
+#: app/src/ui/sidebar.rs:1980
 msgid "Rename…"
 msgstr "Renommer…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1601
-#: app/src/ui/sidebar.rs:1728
+#: app/src/ui/calendar/sidebar.rs:1524 app/src/ui/sidebar.rs:1604
+#: app/src/ui/sidebar.rs:1731
 msgid "Delete…"
 msgstr "Supprimer…"
 
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:624
+#: app/src/ui/calendar/sidebar.rs:1527 app/src/ui/conversation.rs:625
 msgid "Unsubscribe…"
 msgstr "Se désabonner…"
 
-#: app/src/ui/calendar/sidebar.rs:1546
+#: app/src/ui/calendar/sidebar.rs:1554
 msgid "Show {calendar}"
 msgstr "Afficher {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1564
+#: app/src/ui/calendar/sidebar.rs:1572
 msgid "Hidden Calendars"
 msgstr "Agendas masqués"
 
-#: app/src/ui/calendar/sidebar.rs:1584
+#: app/src/ui/calendar/sidebar.rs:1592
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] "{count} agenda masqué"
@@ -7616,7 +7642,7 @@ msgstr[1] "{yes} sur {count} ont dit oui"
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:263 app/src/ui/calendar/words.rs:638
-#: app/src/ui/invitation.rs:1245
+#: app/src/ui/invitation.rs:1248
 msgid "{name}, organizer"
 msgstr "{name}, organisateur"
 
@@ -7682,7 +7708,7 @@ msgstr "{date}, a des événements"
 msgid "Offline, last updated {time}"
 msgstr "Hors ligne, dernière mise à jour {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2070
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2073
 msgid "Offline"
 msgstr "Hors ligne"
 
@@ -7746,15 +7772,15 @@ msgstr "Pas encore de réponse"
 msgid "{time} {city}"
 msgstr "{time} {city}"
 
-#: app/src/ui/composer/editor.rs:301
+#: app/src/ui/composer/editor.rs:302
 msgid "Describe Picture…"
 msgstr "Décrire l’image…"
 
-#: app/src/ui/composer/editor.rs:334
+#: app/src/ui/composer/editor.rs:337
 msgid "Describe Picture"
 msgstr "Décrire l’image"
 
-#: app/src/ui/composer/editor.rs:336
+#: app/src/ui/composer/editor.rs:339
 msgid ""
 "Screen readers read these words in place of the picture, and they show where "
 "the picture does not load."
@@ -7762,7 +7788,7 @@ msgstr ""
 "Les lecteurs d’écran lisent ces mots à la place de l’image, et ils "
 "s’affichent là où l’image ne se charge pas."
 
-#: app/src/ui/composer/editor.rs:340 app/src/ui/composer/editor.rs:344
+#: app/src/ui/composer/editor.rs:343 app/src/ui/composer/editor.rs:347
 msgid "Description"
 msgstr "Description"
 
@@ -7793,16 +7819,16 @@ msgstr "Chiffrer"
 msgid "Request Read Receipt"
 msgstr "Demander un accusé de lecture"
 
-#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1792
+#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1796
 msgid "Choose a Time…"
 msgstr "Choisir une heure…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2004
-#: app/src/ui/sidebar.rs:1126
+#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2006
+#: app/src/ui/sidebar.rs:1129
 msgid "Send Later"
 msgstr "Envoyer plus tard"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:1605
+#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:1607
 msgid "Send (Ctrl+Enter)"
 msgstr "Envoyer (Ctrl+Entrée)"
 
@@ -7834,7 +7860,7 @@ msgstr "Copie carbone invisible"
 msgid "Cc/Bcc"
 msgstr "Cc/Cci"
 
-#: app/src/ui/composer/mod.rs:479 app/src/ui/composer/mod.rs:1199
+#: app/src/ui/composer/mod.rs:479 app/src/ui/composer/mod.rs:1201
 msgid "Show Cc and Bcc"
 msgstr "Afficher Cc et Cci"
 
@@ -7880,291 +7906,291 @@ msgstr "Objet"
 msgid "Formatting"
 msgstr "Mise en forme"
 
-#: app/src/ui/composer/mod.rs:660 app/src/ui/composer/mod.rs:1364
+#: app/src/ui/composer/mod.rs:660 app/src/ui/composer/mod.rs:1366
 msgid "Forwarded Message"
 msgstr "Message transféré"
 
-#: app/src/ui/composer/mod.rs:1197
+#: app/src/ui/composer/mod.rs:1199
 msgid "Hide Cc and Bcc"
 msgstr "Masquer Cc et Cci"
 
-#: app/src/ui/composer/mod.rs:1282
+#: app/src/ui/composer/mod.rs:1284
 msgid "Remove Quoted Text"
 msgstr "Retirer le texte cité"
 
-#: app/src/ui/composer/mod.rs:1283
+#: app/src/ui/composer/mod.rs:1285
 msgid "Do Not Forward the Original"
 msgstr "Ne pas transférer l’original"
 
-#: app/src/ui/composer/mod.rs:1393
+#: app/src/ui/composer/mod.rs:1395
 msgid "Quoted text removed"
 msgstr "Texte cité retiré"
 
-#: app/src/ui/composer/mod.rs:1394
+#: app/src/ui/composer/mod.rs:1396
 msgid "Forwarded message removed"
 msgstr "Message transféré retiré"
 
-#: app/src/ui/composer/mod.rs:1499
+#: app/src/ui/composer/mod.rs:1501
 msgid "Sending from {address}"
 msgstr "Envoi depuis {address}"
 
-#: app/src/ui/composer/mod.rs:1505
+#: app/src/ui/composer/mod.rs:1507
 msgid "Could not make a masked address: {reason}"
 msgstr "Impossible de créer une adresse masquée : {reason}"
 
-#: app/src/ui/composer/mod.rs:1569
+#: app/src/ui/composer/mod.rs:1571
 msgid "Scheduled to send {when}"
 msgstr "Envoi programmé {when}"
 
-#: app/src/ui/composer/mod.rs:1593 app/src/ui/composer/mod.rs:2026
+#: app/src/ui/composer/mod.rs:1595 app/src/ui/composer/mod.rs:2028
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Choisissez un expéditeur et saisissez un suffixe d’adresse autorisé."
 
-#: app/src/ui/composer/mod.rs:1763 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1765 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Annuler l’envoi"
 
-#: app/src/ui/composer/mod.rs:1916 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1918 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Envoi…"
 
-#: app/src/ui/composer/mod.rs:1956
+#: app/src/ui/composer/mod.rs:1958
 msgid "Attachment Missing?"
 msgstr "Pièce jointe manquante ?"
 
-#: app/src/ui/composer/mod.rs:1958
+#: app/src/ui/composer/mod.rs:1960
 msgid "The message says “{sentence}” and carries no file."
 msgstr "Le message dit « {sentence} » et ne contient aucun fichier."
 
-#: app/src/ui/composer/mod.rs:1963
+#: app/src/ui/composer/mod.rs:1965
 msgid "Add Attachment"
 msgstr "Ajouter une pièce jointe"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "Send Anyway"
 msgstr "Envoyer quand même"
 
-#: app/src/ui/composer/mod.rs:1982
+#: app/src/ui/composer/mod.rs:1984
 msgid "Send Without Encryption?"
 msgstr "Envoyer sans chiffrement ?"
 
-#: app/src/ui/composer/mod.rs:1984
+#: app/src/ui/composer/mod.rs:1986
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "Ce message devait partir chiffré, et ce n’est pas possible. {reason}"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:1992
 msgid "Send Readable"
 msgstr "Envoyer en clair"
 
-#: app/src/ui/composer/mod.rs:2005
+#: app/src/ui/composer/mod.rs:2007
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail l’envoie à cette heure tant qu’il tourne, même dans la zone de "
 "notification."
 
-#: app/src/ui/composer/mod.rs:2006
+#: app/src/ui/composer/mod.rs:2008
 msgid "Schedule"
 msgstr "Programmer"
 
-#: app/src/ui/composer/mod.rs:2068
+#: app/src/ui/composer/mod.rs:2070
 msgid "Draft saved, encrypted to your own key"
 msgstr "Brouillon enregistré, chiffré avec votre propre clé"
 
-#: app/src/ui/composer/mod.rs:2070
+#: app/src/ui/composer/mod.rs:2072
 msgid "Draft saved"
 msgstr "Brouillon enregistré"
 
-#: app/src/ui/composer/mod.rs:2106
+#: app/src/ui/composer/mod.rs:2108
 msgid "Save as Draft?"
 msgstr "Enregistrer comme brouillon ?"
 
-#: app/src/ui/composer/mod.rs:2110
+#: app/src/ui/composer/mod.rs:2112
 msgid "Discard"
 msgstr "Abandonner"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2114
 msgid "Save Draft"
 msgstr "Enregistrer le brouillon"
 
-#: app/src/ui/composer/mod.rs:2153
+#: app/src/ui/composer/mod.rs:2155
 msgid "Attach Files"
 msgstr "Joindre des fichiers"
 
-#: app/src/ui/composer/mod.rs:2189
+#: app/src/ui/composer/mod.rs:2191
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2271
+#: app/src/ui/composer/mod.rs:2273
 msgid "Bold (Ctrl+B)"
 msgstr "Gras (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2272
+#: app/src/ui/composer/mod.rs:2274
 msgid "Italic (Ctrl+I)"
 msgstr "Italique (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2275
+#: app/src/ui/composer/mod.rs:2277
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Barré (Ctrl+Maj+X)"
 
-#: app/src/ui/composer/mod.rs:2278
+#: app/src/ui/composer/mod.rs:2280
 msgid "Code (Ctrl+E)"
 msgstr "Code (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2315
+#: app/src/ui/composer/mod.rs:2317
 msgid "Link (Ctrl+K)"
 msgstr "Lien (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2325
+#: app/src/ui/composer/mod.rs:2327
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Liste à puces (Ctrl+Maj+8)"
 
-#: app/src/ui/composer/mod.rs:2330
+#: app/src/ui/composer/mod.rs:2332
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Liste numérotée (Ctrl+Maj+7)"
 
-#: app/src/ui/composer/mod.rs:2335
+#: app/src/ui/composer/mod.rs:2337
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Citation (Ctrl+Maj+9)"
 
-#: app/src/ui/composer/mod.rs:2352
+#: app/src/ui/composer/mod.rs:2354
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Insérer une image (Ctrl+Maj+P)"
 
-#: app/src/ui/composer/mod.rs:2362
+#: app/src/ui/composer/mod.rs:2364
 msgid "Paragraph"
 msgstr "Paragraphe"
 
-#: app/src/ui/composer/mod.rs:2363
+#: app/src/ui/composer/mod.rs:2365
 msgid "Heading 1"
 msgstr "Titre 1"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2366
 msgid "Heading 2"
 msgstr "Titre 2"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2367
 msgid "Heading 3"
 msgstr "Titre 3"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2368
 msgid "Code Block"
 msgstr "Bloc de code"
 
-#: app/src/ui/composer/mod.rs:2380
+#: app/src/ui/composer/mod.rs:2382
 msgid "Turn Markdown into Formatting"
 msgstr "Convertir le Markdown en mise en forme"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2386
 msgid "Clear Formatting"
 msgstr "Effacer la mise en forme"
 
-#: app/src/ui/composer/mod.rs:2390
+#: app/src/ui/composer/mod.rs:2392
 msgid "Write in Markdown"
 msgstr "Écrire en Markdown"
 
-#: app/src/ui/composer/mod.rs:2397 app/src/ui/composer/mod.rs:2401
+#: app/src/ui/composer/mod.rs:2399 app/src/ui/composer/mod.rs:2403
 msgid "More Formatting"
 msgstr "Plus de mise en forme"
 
-#: app/src/ui/composer/mod.rs:2438
+#: app/src/ui/composer/mod.rs:2440
 msgid "Add a Link"
 msgstr "Ajouter un lien"
 
-#: app/src/ui/composer/mod.rs:2444
+#: app/src/ui/composer/mod.rs:2446
 msgid "Text"
 msgstr "Texte"
 
-#: app/src/ui/composer/mod.rs:2456
+#: app/src/ui/composer/mod.rs:2458
 msgid "Add Link"
 msgstr "Ajouter le lien"
 
-#: app/src/ui/composer/mod.rs:2492
+#: app/src/ui/composer/mod.rs:2494
 msgid "Markdown formatted"
 msgstr "Markdown mis en forme"
 
-#: app/src/ui/composer/mod.rs:2608
+#: app/src/ui/composer/mod.rs:2610
 msgid "Pasted as rich text"
 msgstr "Collé en texte enrichi"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2611
 msgid "Paste as Plain Text"
 msgstr "Coller en texte brut"
 
-#: app/src/ui/composer/mod.rs:2643
+#: app/src/ui/composer/mod.rs:2645
 msgid "Editing as Markdown"
 msgstr "Édition en Markdown"
 
-#: app/src/ui/composer/mod.rs:2679
+#: app/src/ui/composer/mod.rs:2681
 msgid "Images"
 msgstr "Images"
 
-#: app/src/ui/composer/mod.rs:2684
+#: app/src/ui/composer/mod.rs:2686
 msgid "Insert Image"
 msgstr "Insérer une image"
 
-#: app/src/ui/composer/mod.rs:2728
+#: app/src/ui/composer/mod.rs:2730
 msgid "Could not read the file: {reason}"
 msgstr "Impossible de lire le fichier : {reason}"
 
-#: app/src/ui/composer/mod.rs:2803
+#: app/src/ui/composer/mod.rs:2805
 msgid "Could not paste the image"
 msgstr "Impossible de coller l’image"
 
-#: app/src/ui/composer/mod.rs:2848
+#: app/src/ui/composer/mod.rs:2850
 msgid "No Templates Yet"
 msgstr "Aucun modèle pour l’instant"
 
-#: app/src/ui/composer/mod.rs:2898
+#: app/src/ui/composer/mod.rs:2900
 msgid "Save as Template"
 msgstr "Enregistrer comme modèle"
 
-#: app/src/ui/composer/mod.rs:2900
+#: app/src/ui/composer/mod.rs:2902
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Les champs comme {{first_name}} se remplissent à chaque utilisation."
 
-#: app/src/ui/composer/mod.rs:2923 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2925 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Donnez un nom au modèle"
 
-#: app/src/ui/composer/mod.rs:2931
+#: app/src/ui/composer/mod.rs:2933
 msgid "Template saved"
 msgstr "Modèle enregistré"
 
-#: app/src/ui/composer/mod.rs:2934
+#: app/src/ui/composer/mod.rs:2936
 msgid "Template not saved: {reason}"
 msgstr "Modèle non enregistré : {reason}"
 
-#: app/src/ui/composer/mod.rs:3006
+#: app/src/ui/composer/mod.rs:3008
 msgid "This looks like Markdown"
 msgstr "Ceci ressemble à du Markdown"
 
-#: app/src/ui/composer/mod.rs:3012
+#: app/src/ui/composer/mod.rs:3014
 msgid "Format"
 msgstr "Mettre en forme"
 
-#: app/src/ui/composer/mod.rs:3013
+#: app/src/ui/composer/mod.rs:3015
 msgid "Turn the Markdown into rich text"
 msgstr "Convertir le Markdown en texte enrichi"
 
-#: app/src/ui/composer/mod.rs:3019 app/src/ui/composer/mod.rs:3023
+#: app/src/ui/composer/mod.rs:3021 app/src/ui/composer/mod.rs:3025
 msgid "Dismiss"
 msgstr "Ignorer"
 
-#: app/src/ui/composer/mod.rs:3106
+#: app/src/ui/composer/mod.rs:3108
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Le brouillon est conservé sur cet ordinateur, vous pourrez donc le terminer "
 "plus tard ici."
 
-#: app/src/ui/composer/mod.rs:3110
+#: app/src/ui/composer/mod.rs:3112
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Le brouillon est conservé dans {provider}, vous pourrez donc le terminer "
 "plus tard sur n’importe quel appareil."
 
-#: app/src/ui/composer/mod.rs:3114
+#: app/src/ui/composer/mod.rs:3116
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -8175,11 +8201,11 @@ msgstr ""
 msgid "{recipient}, not an address"
 msgstr "{recipient}, pas une adresse"
 
-#: app/src/ui/composer/recipients.rs:323
+#: app/src/ui/composer/recipients.rs:324
 msgid "Remove {recipient}"
 msgstr "Retirer {recipient}"
 
-#: app/src/ui/composer/recipients.rs:337
+#: app/src/ui/composer/recipients.rs:338
 msgid "Press Delete to remove"
 msgstr "Appuyez sur Suppr pour retirer"
 
@@ -8211,7 +8237,7 @@ msgstr "Autre courriel"
 msgid "Phone"
 msgstr "Téléphone"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1089
+#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1092
 msgid "Remove from VIPs"
 msgstr "Retirer des VIP"
 
@@ -8248,8 +8274,8 @@ msgstr "Utiliser {host} pour {account}"
 msgid "Find Again"
 msgstr "Rechercher à nouveau"
 
-#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:576
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1595
+#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:577
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1598
 msgid "Edit…"
 msgstr "Modifier…"
 
@@ -8308,224 +8334,224 @@ msgstr "Ajouter {account} aux Comptes en ligne GNOME"
 msgid "Not allowed when you signed in"
 msgstr "Non autorisé lors de votre connexion"
 
-#: app/src/ui/conversation.rs:243 app/src/ui/conversation.rs:587
+#: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
 #: app/src/ui/window/message_menu.rs:130
 msgid "Reply All"
 msgstr "Répondre à tous"
 
-#: app/src/ui/conversation.rs:244 app/src/ui/conversation.rs:588
+#: app/src/ui/conversation.rs:245 app/src/ui/conversation.rs:589
 #: app/src/ui/window/message_menu.rs:131 app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "Transférer"
 
-#: app/src/ui/conversation.rs:247 app/src/ui/conversation.rs:618
+#: app/src/ui/conversation.rs:248 app/src/ui/conversation.rs:619
 msgid "Print…"
 msgstr "Imprimer…"
 
-#: app/src/ui/conversation.rs:249 app/src/ui/conversation.rs:620
+#: app/src/ui/conversation.rs:250 app/src/ui/conversation.rs:621
 #: app/src/ui/window/message_menu.rs:143
 msgid "Export…"
 msgstr "Exporter…"
 
-#: app/src/ui/conversation.rs:253 app/src/ui/conversation.rs:626
+#: app/src/ui/conversation.rs:254 app/src/ui/conversation.rs:627
 msgid "Always Load Images…"
 msgstr "Toujours charger les images…"
 
-#: app/src/ui/conversation.rs:413
+#: app/src/ui/conversation.rs:414
 msgid "No Conversation Selected"
 msgstr "Aucune conversation sélectionnée"
 
-#: app/src/ui/conversation.rs:419
+#: app/src/ui/conversation.rs:420
 msgid "Remote images are hidden to protect your privacy"
 msgstr "Les images distantes sont masquées pour protéger votre vie privée"
 
-#: app/src/ui/conversation.rs:420
+#: app/src/ui/conversation.rs:421
 msgid "Load Images"
 msgstr "Charger les images"
 
-#: app/src/ui/conversation.rs:424
+#: app/src/ui/conversation.rs:425
 msgid "This message is from a mailing list"
 msgstr "Ce message provient d’une liste de diffusion"
 
-#: app/src/ui/conversation.rs:438 app/src/ui/conversation.rs:1174
+#: app/src/ui/conversation.rs:439 app/src/ui/conversation.rs:1178
 #: app/src/ui/window/message_menu.rs:137
 msgid "Flag"
 msgstr "Drapeau"
 
-#: app/src/ui/conversation.rs:439 app/src/ui/conversation.rs:602
-#: app/src/ui/conversation.rs:940 app/src/ui/conversation.rs:1179
+#: app/src/ui/conversation.rs:440 app/src/ui/conversation.rs:603
+#: app/src/ui/conversation.rs:945 app/src/ui/conversation.rs:1183
 msgid "Mute"
 msgstr "Sourdine"
 
-#: app/src/ui/conversation.rs:441 app/src/ui/conversation.rs:593
-#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:133
+#: app/src/ui/conversation.rs:442 app/src/ui/conversation.rs:594
+#: app/src/ui/conversation.rs:1115 app/src/ui/window/message_menu.rs:133
 msgid "Move to Trash"
 msgstr "Mettre à la corbeille"
 
-#: app/src/ui/conversation.rs:468
+#: app/src/ui/conversation.rs:469
 msgid "Several Conversations Selected"
 msgstr "Plusieurs conversations sélectionnées"
 
-#: app/src/ui/conversation.rs:470
+#: app/src/ui/conversation.rs:471
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr ""
 "Les actions et les raccourcis s’appliquent à toutes. Échap efface la "
 "sélection."
 
-#: app/src/ui/conversation.rs:516
+#: app/src/ui/conversation.rs:517
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr "Archiver (E ou Ctrl+Alt+A)"
 
-#: app/src/ui/conversation.rs:518 app/src/ui/conversation.rs:1094
+#: app/src/ui/conversation.rs:519 app/src/ui/conversation.rs:1098
 msgid "Move to Trash (Delete)"
 msgstr "Mettre à la corbeille (Suppr)"
 
-#: app/src/ui/conversation.rs:519 app/src/ui/conversation.rs:1104
+#: app/src/ui/conversation.rs:520 app/src/ui/conversation.rs:1108
 msgid "Junk (Ctrl+Shift+J)"
 msgstr "Indésirable (Ctrl+Maj+J)"
 
-#: app/src/ui/conversation.rs:522
+#: app/src/ui/conversation.rs:523
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "Marquer comme non lu (Ctrl+Maj+U)"
 
-#: app/src/ui/conversation.rs:527 app/src/ui/conversation.rs:531
-#: app/src/ui/conversation.rs:1833
+#: app/src/ui/conversation.rs:528 app/src/ui/conversation.rs:532
+#: app/src/ui/conversation.rs:1837
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "Drapeau (Ctrl+Maj+L)"
 
-#: app/src/ui/conversation.rs:528 app/src/ui/conversation.rs:534
+#: app/src/ui/conversation.rs:529 app/src/ui/conversation.rs:535
 msgid "Choose Flag Color"
 msgstr "Choisir la couleur du drapeau"
 
-#: app/src/ui/conversation.rs:535
+#: app/src/ui/conversation.rs:536
 msgid "Flags it in the color you chose last, or takes the flag off"
 msgstr "Ajoute un drapeau de la dernière couleur choisie, ou retire le drapeau"
 
-#: app/src/ui/conversation.rs:539
+#: app/src/ui/conversation.rs:540
 msgid "Reply (Ctrl+R)"
 msgstr "Répondre (Ctrl+R)"
 
-#: app/src/ui/conversation.rs:542
+#: app/src/ui/conversation.rs:543
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr "Répondre à tous (Ctrl+Maj+R)"
 
-#: app/src/ui/conversation.rs:544
+#: app/src/ui/conversation.rs:545
 msgid "Forward (Ctrl+Shift+F)"
 msgstr "Transférer (Ctrl+Maj+F)"
 
-#: app/src/ui/conversation.rs:546
+#: app/src/ui/conversation.rs:547
 msgid "Edit Draft"
 msgstr "Modifier le brouillon"
 
-#: app/src/ui/conversation.rs:553 app/src/ui/conversation.rs:556
+#: app/src/ui/conversation.rs:554 app/src/ui/conversation.rs:557
 msgid "More Actions"
 msgstr "Plus d’actions"
 
-#: app/src/ui/conversation.rs:577 app/src/ui/queued.rs:56
+#: app/src/ui/conversation.rs:578 app/src/ui/queued.rs:56
 msgid "Send Now"
 msgstr "Envoyer maintenant"
 
-#: app/src/ui/conversation.rs:597
+#: app/src/ui/conversation.rs:598
 msgid "Flag or Unflag"
 msgstr "Ajouter ou retirer le drapeau"
 
-#: app/src/ui/conversation.rs:599
+#: app/src/ui/conversation.rs:600
 msgid "Mark Read or Unread"
 msgstr "Marquer comme lu ou non lu"
 
-#: app/src/ui/conversation.rs:607 app/src/ui/window/message_menu.rs:142
+#: app/src/ui/conversation.rs:608 app/src/ui/window/message_menu.rs:142
 msgid "Tags…"
 msgstr "Mots-clés…"
 
-#: app/src/ui/conversation.rs:611 app/src/ui/sidebar.rs:1134
+#: app/src/ui/conversation.rs:612 app/src/ui/sidebar.rs:1137
 #: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Me le rappeler"
 
-#: app/src/ui/conversation.rs:615
+#: app/src/ui/conversation.rs:616
 msgid "Open in New Window"
 msgstr "Ouvrir dans une nouvelle fenêtre"
 
-#: app/src/ui/conversation.rs:623 app/src/ui/conversation.rs:907
+#: app/src/ui/conversation.rs:624 app/src/ui/conversation.rs:912
 msgid "Add Sender to VIPs"
 msgstr "Ajouter l’expéditeur aux VIP"
 
 #. Both sender items leave a rule on the server, so an account
 #. without rules turns them off, and the menu leaves them out.
-#: app/src/ui/conversation.rs:631
+#: app/src/ui/conversation.rs:632
 msgid "Block Sender…"
 msgstr "Bloquer l’expéditeur…"
 
-#: app/src/ui/conversation.rs:639 app/src/ui/conversation.rs:927
+#: app/src/ui/conversation.rs:640 app/src/ui/conversation.rs:932
 msgid "Categorize Sender"
 msgstr "Classer l’expéditeur"
 
-#: app/src/ui/conversation.rs:667 app/src/ui/conversation.rs:669
+#: app/src/ui/conversation.rs:672 app/src/ui/conversation.rs:674
 msgid "Tags"
 msgstr "Mots-clés"
 
-#: app/src/ui/conversation.rs:905
+#: app/src/ui/conversation.rs:910
 msgid "Remove Sender from VIPs"
 msgstr "Retirer l’expéditeur des VIP"
 
-#: app/src/ui/conversation.rs:938 app/src/ui/conversation.rs:1177
+#: app/src/ui/conversation.rs:943 app/src/ui/conversation.rs:1181
 msgid "Unmute"
 msgstr "Retirer la sourdine"
 
-#: app/src/ui/conversation.rs:1093
+#: app/src/ui/conversation.rs:1097
 msgid "Delete Forever (Delete)"
 msgstr "Supprimer définitivement (Suppr)"
 
-#: app/src/ui/conversation.rs:1102
+#: app/src/ui/conversation.rs:1106
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Non indésirable (Ctrl+Maj+J)"
 
-#: app/src/ui/conversation.rs:1110 app/src/ui/window/message_menu.rs:134
+#: app/src/ui/conversation.rs:1114 app/src/ui/window/message_menu.rs:134
 #: app/src/ui/window/press.rs:447
 msgid "Delete Forever"
 msgstr "Supprimer définitivement"
 
-#: app/src/ui/conversation.rs:1115
+#: app/src/ui/conversation.rs:1119
 msgid "Not Junk"
 msgstr "Non indésirable"
 
-#: app/src/ui/conversation.rs:1169 app/src/ui/window/message_menu.rs:136
+#: app/src/ui/conversation.rs:1173 app/src/ui/window/message_menu.rs:136
 msgid "Mark as Unread"
 msgstr "Marquer comme non lu"
 
-#: app/src/ui/conversation.rs:1172 app/src/ui/window/message_menu.rs:138
+#: app/src/ui/conversation.rs:1176 app/src/ui/window/message_menu.rs:138
 msgid "Unflag"
 msgstr "Retirer le drapeau"
 
-#: app/src/ui/conversation.rs:1188
+#: app/src/ui/conversation.rs:1192
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "{count} conversation sélectionnée"
 msgstr[1] "{count} conversations sélectionnées"
 
-#: app/src/ui/conversation.rs:1194
+#: app/src/ui/conversation.rs:1198
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "{count} message sélectionné"
 msgstr[1] "{count} messages sélectionnés"
 
-#: app/src/ui/conversation.rs:1832
+#: app/src/ui/conversation.rs:1836
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Retirer le drapeau (Ctrl+Maj+L)"
 
-#: app/src/ui/conversation.rs:1845
+#: app/src/ui/conversation.rs:1849
 msgid "Mark as Read (U)"
 msgstr "Marquer comme lu (U)"
 
-#: app/src/ui/conversation.rs:1846
+#: app/src/ui/conversation.rs:1850
 msgid "Mark as Unread (U)"
 msgstr "Marquer comme non lu (U)"
 
-#: app/src/ui/conversation.rs:2118
+#: app/src/ui/conversation.rs:2122
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2135 app/src/ui/window/message_menu.rs:269
+#: app/src/ui/conversation.rs:2139 app/src/ui/window/message_menu.rs:269
 msgid "Clear Flag"
 msgstr "Retirer le drapeau"
 
@@ -9006,72 +9032,72 @@ msgstr ""
 msgid "Could not add to your calendar: {reason}"
 msgstr "Impossible d’ajouter à votre agenda : {reason}"
 
-#: app/src/ui/invitation.rs:76
+#: app/src/ui/invitation.rs:79
 msgid "{calendar} ({account})"
 msgstr "{calendar} ({account})"
 
-#: app/src/ui/invitation.rs:350
+#: app/src/ui/invitation.rs:353
 msgid "What the answer covers"
 msgstr "Ce que couvre la réponse"
 
-#: app/src/ui/invitation.rs:352
+#: app/src/ui/invitation.rs:355
 msgid "This Event"
 msgstr "Cet événement"
 
-#: app/src/ui/invitation.rs:357
+#: app/src/ui/invitation.rs:360
 msgid "All Events"
 msgstr "Tous les événements"
 
-#: app/src/ui/invitation.rs:368
+#: app/src/ui/invitation.rs:371
 msgid "Add a Note"
 msgstr "Ajouter une note"
 
-#: app/src/ui/invitation.rs:391 app/src/ui/invitation.rs:396
+#: app/src/ui/invitation.rs:394 app/src/ui/invitation.rs:399
 msgid "More Answers"
 msgstr "Autres réponses"
 
-#: app/src/ui/invitation.rs:402 app/src/ui/invitation.rs:407
+#: app/src/ui/invitation.rs:405 app/src/ui/invitation.rs:410
 msgid "Add to Calendar"
 msgstr "Ajouter à l’agenda"
 
-#: app/src/ui/invitation.rs:415
+#: app/src/ui/invitation.rs:418
 msgid "Calendar to add to"
 msgstr "Agenda de destination"
 
-#: app/src/ui/invitation.rs:416
+#: app/src/ui/invitation.rs:419
 msgid "The calendar the events go on"
 msgstr "L’agenda où vont les événements"
 
-#: app/src/ui/invitation.rs:425
+#: app/src/ui/invitation.rs:428
 msgid "Events to add"
 msgstr "Événements à ajouter"
 
-#: app/src/ui/invitation.rs:430 app/src/ui/invitation.rs:436
-#: app/src/ui/sidebar.rs:140
+#: app/src/ui/invitation.rs:433 app/src/ui/invitation.rs:439
+#: app/src/ui/sidebar.rs:141
 msgid "Show in Calendar"
 msgstr "Afficher dans l’agenda"
 
-#: app/src/ui/invitation.rs:486
+#: app/src/ui/invitation.rs:489
 msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr ""
 "Penguin Mail a besoin d’une autorisation pour afficher cet événement dans "
 "l’agenda."
 
-#: app/src/ui/invitation.rs:906
+#: app/src/ui/invitation.rs:909
 msgid "Added to your calendar"
 msgstr "Ajouté à votre agenda"
 
-#: app/src/ui/invitation.rs:908
+#: app/src/ui/invitation.rs:911
 msgid "Added {count} events to your calendar"
 msgid_plural "Added {count} events to your calendar"
 msgstr[0] "{count} événement ajouté à votre agenda"
 msgstr[1] "{count} événements ajoutés à votre agenda"
 
-#: app/src/ui/invitation.rs:913
+#: app/src/ui/invitation.rs:916
 msgid "Added to {calendar}"
 msgstr "Ajouté à {calendar}"
 
-#: app/src/ui/invitation.rs:915
+#: app/src/ui/invitation.rs:918
 msgid "Added {count} events to {calendar}"
 msgid_plural "Added {count} events to {calendar}"
 msgstr[0] "{count} événement ajouté à {calendar}"
@@ -9079,101 +9105,101 @@ msgstr[1] "{count} événements ajoutés à {calendar}"
 
 #. A file with several events names none of them on the card's
 #. head: the list below does, one row each.
-#: app/src/ui/invitation.rs:1005
+#: app/src/ui/invitation.rs:1008
 msgid "{count} events"
 msgid_plural "{count} events"
 msgstr[0] "{count} événement"
 msgstr[1] "{count} événements"
 
-#: app/src/ui/invitation.rs:1085
+#: app/src/ui/invitation.rs:1088
 msgid "Pick a Time…"
 msgstr "Choisir un horaire…"
 
-#: app/src/ui/invitation.rs:1128
+#: app/src/ui/invitation.rs:1131
 msgid "No reply yet"
 msgstr "Pas encore de réponse"
 
-#: app/src/ui/invitation.rs:1198
+#: app/src/ui/invitation.rs:1201
 msgid "Half an Hour Later"
 msgstr "Une demi-heure plus tard"
 
-#: app/src/ui/invitation.rs:1201
+#: app/src/ui/invitation.rs:1204
 msgid "An Hour Later"
 msgstr "Une heure plus tard"
 
-#: app/src/ui/invitation.rs:1203
+#: app/src/ui/invitation.rs:1206
 msgid "Same Time Tomorrow"
 msgstr "Même heure demain"
 
-#: app/src/ui/invitation.rs:1207
+#: app/src/ui/invitation.rs:1210
 msgid "Same Time Next Week"
 msgstr "Même heure la semaine prochaine"
 
-#: app/src/ui/invitation.rs:1222
+#: app/src/ui/invitation.rs:1225
 msgid "You have {event} then"
 msgstr "Vous avez {event} à ce moment-là"
 
-#: app/src/ui/invitation.rs:1224
+#: app/src/ui/invitation.rs:1227
 msgid "You have {event} and {other} then"
 msgstr "Vous avez {event} et {other} à ce moment-là"
 
-#: app/src/ui/invitation.rs:1228
+#: app/src/ui/invitation.rs:1231
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] "Vous avez {event} et {count} autre à ce moment-là"
 msgstr[1] "Vous avez {event} et {count} autres à ce moment-là"
 
-#: app/src/ui/invitation.rs:1241
+#: app/src/ui/invitation.rs:1244
 msgid "Reply to the invitation from {organizer}"
 msgstr "Répondre à l’invitation de {organizer}"
 
-#: app/src/ui/invitation.rs:1349
+#: app/src/ui/invitation.rs:1352
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] "{count} oui"
 msgstr[1] "{count} oui"
 
-#: app/src/ui/invitation.rs:1357
+#: app/src/ui/invitation.rs:1360
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] "{count} non"
 msgstr[1] "{count} non"
 
-#: app/src/ui/invitation.rs:1365
+#: app/src/ui/invitation.rs:1368
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] "{count} peut-être"
 msgstr[1] "{count} peut-être"
 
-#: app/src/ui/invitation.rs:1373
+#: app/src/ui/invitation.rs:1376
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] "{count} en attente"
 msgstr[1] "{count} en attente"
 
-#: app/src/ui/invitation.rs:1381
+#: app/src/ui/invitation.rs:1384
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] "{count} invité"
 msgstr[1] "{count} invités"
 
-#: app/src/ui/invitation.rs:1387
+#: app/src/ui/invitation.rs:1390
 msgid "{guests} · {answers}"
 msgstr "{guests} · {answers}"
 
-#: app/src/ui/invitation.rs:1397
+#: app/src/ui/invitation.rs:1400
 msgid "This meeting moved from {when}"
 msgstr "Cette réunion a été déplacée depuis {when}"
 
-#: app/src/ui/invitation.rs:1400
+#: app/src/ui/invitation.rs:1403
 msgid "The organizer changed this meeting"
 msgstr "L’organisateur a modifié cette réunion"
 
-#: app/src/ui/invitation.rs:1401
+#: app/src/ui/invitation.rs:1404
 msgid "The organizer canceled this meeting"
 msgstr "L’organisateur a annulé cette réunion"
 
-#: app/src/ui/invitation.rs:1402
+#: app/src/ui/invitation.rs:1405
 msgid "This meeting is canceled"
 msgstr "Cette réunion est annulée"
 
@@ -9335,7 +9361,7 @@ msgid "This link contains hidden or direction-changing characters."
 msgstr ""
 "Ce lien contient des caractères invisibles ou qui changent le sens du texte."
 
-#: app/src/ui/mod.rs:515
+#: app/src/ui/mod.rs:516
 msgid "Gray"
 msgstr "Gris"
 
@@ -9678,8 +9704,8 @@ msgstr ""
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:660 app/src/ui/sidebar.rs:64
-#: app/src/ui/sidebar.rs:77
+#: app/src/ui/preferences.rs:660 app/src/ui/sidebar.rs:65
+#: app/src/ui/sidebar.rs:78
 msgid "Undo Send"
 msgstr "Annuler l’envoi"
 
@@ -10043,7 +10069,7 @@ msgstr "Dernier compte d’agenda utilisé"
 msgid "Same as New Messages"
 msgstr "Comme pour les nouveaux messages"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:272
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:273
 msgid "All Inboxes"
 msgstr "Toutes les boîtes de réception"
 
@@ -10417,7 +10443,7 @@ msgstr "Ajouter une adresse"
 msgid "Default sender"
 msgstr "Expéditeur par défaut"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:1879
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:1882
 msgid "Signature…"
 msgstr "Signature…"
 
@@ -10473,128 +10499,128 @@ msgstr ""
 "Markdown est pris en charge. <email> devient l’adresse d’envoi, suffixe "
 "compris ; <domain> devient son domaine."
 
-#: app/src/ui/sidebar.rs:73
+#: app/src/ui/sidebar.rs:74
 msgid "Stop the message from going out"
 msgstr "Empêcher le message de partir"
 
-#: app/src/ui/sidebar.rs:379 app/src/ui/sidebar.rs:725
+#: app/src/ui/sidebar.rs:380 app/src/ui/sidebar.rs:728
 #: app/src/ui/sidebar/sections.rs:26
 msgid "Mailboxes"
 msgstr "Boîtes aux lettres"
 
-#: app/src/ui/sidebar.rs:388 app/src/ui/sidebar.rs:1515
-#: app/src/ui/thread_list.rs:363
+#: app/src/ui/sidebar.rs:389 app/src/ui/sidebar.rs:1518
+#: app/src/ui/thread_list.rs:364
 msgid "Mail"
 msgstr "Courrier"
 
-#: app/src/ui/sidebar.rs:716
+#: app/src/ui/sidebar.rs:719
 msgid "Calendars"
 msgstr "Agendas"
 
-#: app/src/ui/sidebar.rs:1076 app/src/ui/sidebar.rs:1078
+#: app/src/ui/sidebar.rs:1079 app/src/ui/sidebar.rs:1081
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/sidebar.rs:1118
+#: app/src/ui/sidebar.rs:1121
 msgid "Outbox"
 msgstr "Boîte d’envoi"
 
-#: app/src/ui/sidebar.rs:1181
+#: app/src/ui/sidebar.rs:1184
 msgid "Holds folders, not mail"
 msgstr "Contient des dossiers, pas du courrier"
 
-#: app/src/ui/sidebar.rs:1465
+#: app/src/ui/sidebar.rs:1468
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} message non lu"
 msgstr[1] "{mailbox}, {count} messages non lus"
 
-#: app/src/ui/sidebar.rs:1471
+#: app/src/ui/sidebar.rs:1474
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} message"
 msgstr[1] "{mailbox}, {count} messages"
 
-#: app/src/ui/sidebar.rs:1506
+#: app/src/ui/sidebar.rs:1509
 msgid "99+"
 msgstr "99+"
 
-#: app/src/ui/sidebar.rs:1518
+#: app/src/ui/sidebar.rs:1521
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Courrier, {count} non lu"
 msgstr[1] "Courrier, {count} non lus"
 
-#: app/src/ui/sidebar.rs:1524
+#: app/src/ui/sidebar.rs:1527
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Agenda, {count} en attente de votre réponse"
 msgstr[1] "Agenda, {count} en attente de votre réponse"
 
-#: app/src/ui/sidebar.rs:1597 app/src/ui/sidebar.rs:1719
-#: app/src/ui/sidebar.rs:1988
+#: app/src/ui/sidebar.rs:1600 app/src/ui/sidebar.rs:1722
+#: app/src/ui/sidebar.rs:1991
 msgid "Move Up"
 msgstr "Monter"
 
-#: app/src/ui/sidebar.rs:1598 app/src/ui/sidebar.rs:1722
-#: app/src/ui/sidebar.rs:1989
+#: app/src/ui/sidebar.rs:1601 app/src/ui/sidebar.rs:1725
+#: app/src/ui/sidebar.rs:1992
 msgid "Move Down"
 msgstr "Descendre"
 
-#: app/src/ui/sidebar.rs:1750
+#: app/src/ui/sidebar.rs:1753
 msgid "Empty Trash…"
 msgstr "Vider la corbeille…"
 
-#: app/src/ui/sidebar.rs:1878
+#: app/src/ui/sidebar.rs:1881
 msgid "Automatic Reply…"
 msgstr "Réponse automatique…"
 
-#: app/src/ui/sidebar.rs:1880
+#: app/src/ui/sidebar.rs:1883
 msgid "Rules…"
 msgstr "Règles…"
 
-#: app/src/ui/sidebar.rs:1881 app/src/ui/window.rs:3645
+#: app/src/ui/sidebar.rs:1884 app/src/ui/window.rs:3645
 msgid "Hide My Email…"
 msgstr "Masquer mon adresse…"
 
-#: app/src/ui/sidebar.rs:1890
+#: app/src/ui/sidebar.rs:1893
 msgid "On this computer"
 msgstr "Sur cet ordinateur"
 
-#: app/src/ui/sidebar.rs:1898
+#: app/src/ui/sidebar.rs:1901
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "Sur cet ordinateur. Afficher ou masquer les boîtes aux lettres de ce compte"
 
-#: app/src/ui/sidebar.rs:1899
+#: app/src/ui/sidebar.rs:1902
 msgid "Show or hide this account's mailboxes"
 msgstr "Afficher ou masquer les boîtes aux lettres de ce compte"
 
-#: app/src/ui/sidebar.rs:1993
+#: app/src/ui/sidebar.rs:1996
 msgid "Switch to JMAP…"
 msgstr "Passer à JMAP…"
 
-#: app/src/ui/sidebar.rs:1995
+#: app/src/ui/sidebar.rs:1998
 msgid "Messages That Will Not Download…"
 msgstr "Messages qui ne se téléchargent pas…"
 
-#: app/src/ui/sidebar.rs:2068
+#: app/src/ui/sidebar.rs:2071
 msgid "Sign in again to keep syncing"
 msgstr "Reconnectez-vous pour continuer la synchronisation"
 
-#: app/src/ui/sidebar.rs:2074
+#: app/src/ui/sidebar.rs:2077
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} ne répond pas ; nouvelle tentative"
 
-#: app/src/ui/sidebar.rs:2085
+#: app/src/ui/sidebar.rs:2088
 msgid "The keyring is not responding; retrying"
 msgstr "Le trousseau ne répond pas ; nouvelle tentative"
 
-#: app/src/ui/sidebar.rs:2088
+#: app/src/ui/sidebar.rs:2091
 msgid "Downloading mail"
 msgstr "Téléchargement du courrier"
 
-#: app/src/ui/sidebar.rs:2092
+#: app/src/ui/sidebar.rs:2095
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "La synchronisation s’est arrêtée après une erreur ; redémarrez Penguin Mail "
@@ -10602,7 +10628,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2099
+#: app/src/ui/sidebar.rs:2102
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -10752,30 +10778,30 @@ msgstr "Corps"
 msgid "New Template"
 msgstr "Nouveau modèle"
 
-#: app/src/ui/thread_list.rs:235
+#: app/src/ui/thread_list.rs:236
 msgid "No Mail"
 msgstr "Aucun courrier"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:253
+#: app/src/ui/thread_list.rs:254
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Rechercher dans le courrier, p. ex. from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:292 app/src/ui/thread_list.rs:312
+#: app/src/ui/thread_list.rs:293 app/src/ui/thread_list.rs:313
 msgid "Show Mailboxes"
 msgstr "Afficher les boîtes aux lettres"
 
-#: app/src/ui/thread_list.rs:297
+#: app/src/ui/thread_list.rs:298
 msgid "New Message (C)"
 msgstr "Nouveau message (C)"
 
-#: app/src/ui/thread_list.rs:302
+#: app/src/ui/thread_list.rs:303
 msgid "Search (/)"
 msgstr "Rechercher (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:311
+#: app/src/ui/thread_list.rs:312
 msgid "Search mail"
 msgstr "Rechercher dans le courrier"
 
@@ -11320,31 +11346,31 @@ msgid "Add a mail account first"
 msgstr "Ajoutez d’abord un compte de courrier"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4105
+#: app/src/ui/window.rs:4110
 msgid "The calendar and contacts of {account} are connected."
 msgstr "L’agenda et les contacts de {account} sont connectés."
 
-#: app/src/ui/window.rs:4221
+#: app/src/ui/window.rs:4226
 msgid "Open a message from the person first"
 msgstr "Ouvrez d’abord un message de cette personne"
 
-#: app/src/ui/window.rs:4313
+#: app/src/ui/window.rs:4318
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail affiche la nouvelle langue après un redémarrage"
 
-#: app/src/ui/window.rs:4315 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4320 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Redémarrer"
 
-#: app/src/ui/window.rs:4379
+#: app/src/ui/window.rs:4384
 msgid "Show Rules"
 msgstr "Afficher les règles"
 
-#: app/src/ui/window.rs:4405
+#: app/src/ui/window.rs:4410
 msgid "Messages That Will Not Download"
 msgstr "Messages qui ne se téléchargent pas"
 
-#: app/src/ui/window.rs:4407
+#: app/src/ui/window.rs:4412
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12277,19 +12303,19 @@ msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "{count} message supprimé de la corbeille de {account}"
 msgstr[1] "{count} messages supprimés de la corbeille de {account}"
 
-#: app/src/unsubscribe_page.rs:181
+#: app/src/unsubscribe_page.rs:186
 msgid "the page took longer than 20 seconds"
 msgstr "la page a mis plus de 20 secondes"
 
-#: app/src/unsubscribe_page.rs:183
+#: app/src/unsubscribe_page.rs:188
 msgid "the page did not load: {reason}"
 msgstr "la page ne s’est pas chargée : {reason}"
 
-#: app/src/unsubscribe_page.rs:187
+#: app/src/unsubscribe_page.rs:192
 msgid "the page could not be read: {reason}"
 msgstr "la page n’a pas pu être lue : {reason}"
 
-#: app/src/unsubscribe_page.rs:190
+#: app/src/unsubscribe_page.rs:195
 msgid "the page changed while it was waiting to be asked"
 msgstr "la page a changé pendant qu’elle attendait la demande"
 
@@ -12342,7 +12368,7 @@ msgstr ""
 msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr "Penguin Mail n’a pas pu vérifier la signature de la version : {reason}"
 
-#: app/src/update/signature.rs:147
+#: app/src/update/signature.rs:150
 msgid ""
 "This release is not signed with Penguin Mail's key, so Penguin Mail will not "
 "install it."
@@ -12350,7 +12376,7 @@ msgstr ""
 "Cette version n’est pas signée avec la clé de Penguin Mail, Penguin Mail ne "
 "l’installera donc pas."
 
-#: app/src/update/signature.rs:151
+#: app/src/update/signature.rs:154
 msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr ""

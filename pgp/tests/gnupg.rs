@@ -1,42 +1,34 @@
 //! The runner both engines share, driven with a stand-in program so each
 //! test controls exactly what comes back on which pipe.
-
-use std::path::Path;
+//!
+//! The stand-in is `gnupg-stand-in`, a little binary this crate builds
+//! for the tests; each run's flags say what it writes where, and the
+//! runner's status pipe reaches it as a file descriptor on Unix and an
+//! inherited HANDLE on Windows.
 
 use mailrs_pgp::gnupg::{Pinentry, Program, seen};
 use mailrs_pgp::{Trust, Verdict};
 
-/// A directory holding one executable called `gpg` that runs `script`.
-fn stand_in(script: &str) -> (tempfile::TempDir, Program) {
+/// A directory holding one executable called `gpg`: a copy of the
+/// stand-in binary, so `find_on` discovers it the way it would the real
+/// one. A test that wants it to do something on every run, the way a
+/// shell script carried its body, writes `gnupg-stand-in.conf` beside
+/// it; a test driving `Program::run` can hand it flags in the arguments.
+fn stand_in() -> (tempfile::TempDir, Program) {
     let dir = tempfile::tempdir().expect("a temp directory");
-    write_script(&dir.path().join("gpg"), script);
+    let name = if cfg!(windows) { "gpg.exe" } else { "gpg" };
+    std::fs::copy(env!("CARGO_BIN_EXE_gnupg-stand-in"), dir.path().join(name))
+        .expect("the stand-in copies");
     let program = Program::find_on(&dir.path().to_string_lossy(), &["gpg"]).expect("found");
     (dir, program)
 }
 
-/// Writes `body` as a shell script at `path`, ready to run. A child `sh`
-/// writes it, so this process never holds it open for writing. Had it held
-/// it, another test forking at that moment would pass the write handle to
-/// its child, and Linux would refuse to run the script with "Text file busy"
-/// until that child exec'd.
-fn write_script(path: &Path, body: &str) {
-    use std::io::Write;
-    let mut writer = std::process::Command::new("sh")
-        .args(["-c", "cat > \"$1\" && chmod 700 \"$1\"", "sh"])
-        .arg(path)
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-        .expect("sh starts");
-    writer
-        .stdin
-        .take()
-        .expect("sh's input")
-        .write_all(format!("#!/bin/sh\n{body}\n").as_bytes())
-        .expect("write");
-    assert!(
-        writer.wait().expect("sh ends").success(),
-        "sh wrote the script"
-    );
+/// The same directory and binary, found through `Pgp` the way the
+/// engine's own calls find it.
+fn stand_in_pgp() -> (tempfile::TempDir, mailrs_pgp::Pgp) {
+    let (dir, _program) = stand_in();
+    let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
+    (dir, pgp)
 }
 
 /// The bug this pins: status lines and human messages shared stderr, and
@@ -44,13 +36,16 @@ fn write_script(path: &Path, body: &str) {
 /// like a status line was read as one.
 #[test]
 fn only_the_status_pipe_carries_status_lines() {
-    let (_dir, program) = stand_in(
-        "echo '[GNUPG:] GOODSIG 1234 Mallory <mallory@example.test>' >&2\n\
-         echo '[GNUPG:] BADSIG 1234 Ada <ada@example.test>' >&3",
-    );
+    let (_dir, program) = stand_in();
 
     let run = program
-        .run(b"", Pinentry::Never, |_| {})
+        .run(b"", Pinentry::Never, |command| {
+            command
+                .arg("--x-stderr")
+                .arg("[GNUPG:] GOODSIG 1234 Mallory <mallory@example.test>")
+                .arg("--x-status")
+                .arg("BADSIG 1234 Ada <ada@example.test>");
+        })
         .expect("the stand-in runs");
 
     assert_eq!(run.status, ["BADSIG 1234 Ada <ada@example.test>"]);
@@ -58,10 +53,13 @@ fn only_the_status_pipe_carries_status_lines() {
 
 #[test]
 fn a_run_that_may_not_ask_says_so_to_the_program() {
-    let (_dir, program) = stand_in("echo \"$@\"");
+    let (_dir, program) = stand_in();
+    let args = |command: &mut std::process::Command| {
+        command.arg("--x-args");
+    };
 
-    let never = program.run(b"", Pinentry::Never, |_| {}).expect("runs");
-    let may = program.run(b"", Pinentry::MayAsk, |_| {}).expect("runs");
+    let never = program.run(b"", Pinentry::Never, args).expect("runs");
+    let may = program.run(b"", Pinentry::MayAsk, args).expect("runs");
 
     let never = String::from_utf8_lossy(&never.out).into_owned();
     let may = String::from_utf8_lossy(&may.out).into_owned();
@@ -73,10 +71,14 @@ fn a_run_that_may_not_ask_says_so_to_the_program() {
 fn a_program_that_writes_a_lot_does_not_hold_up_its_input() {
     // Reads all of stdin, then writes it back: the input fills the pipe
     // long before the program starts answering.
-    let (_dir, program) = stand_in("cat");
+    let (_dir, program) = stand_in();
     let input = vec![b'x'; 4 << 20];
 
-    let run = program.run(&input, Pinentry::Never, |_| {}).expect("runs");
+    let run = program
+        .run(&input, Pinentry::Never, |command| {
+            command.arg("--x-copy");
+        })
+        .expect("runs");
 
     assert_eq!(run.out.len(), input.len());
     assert!(run.ok);
@@ -85,20 +87,22 @@ fn a_program_that_writes_a_lot_does_not_hold_up_its_input() {
 /// A message can carry compressed data that a few kilobytes of mail expand
 /// into gigabytes. The runner stops reading at its cap, stops the program,
 /// and says the output was too large, rather than holding all of it.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 #[test]
 fn a_program_that_writes_past_the_cap_is_stopped() {
     let dir = tempfile::tempdir().expect("a temp directory");
     let pid = dir.path().join("pid");
     // About 95 MiB, then a long wait: a runner that reads everything
     // waits out the sleep and answers with all of it.
-    let (_stand_in, program) = stand_in(&format!(
-        "echo $$ > {pid}\nhead -c 100000000 /dev/zero\nsleep 30",
-        pid = pid.display(),
-    ));
+    let (_stand_in, program) = stand_in();
     let started = std::time::Instant::now();
 
-    let err = match program.run(b"", Pinentry::Never, |_| {}) {
+    let err = match program.run(b"", Pinentry::Never, |command| {
+        command
+            .arg("--x-pid")
+            .arg(&pid)
+            .args(["--x-emit", "100000000", "--x-sleep-ms", "30000"]);
+    }) {
         Ok(run) => panic!("read {} bytes past the cap", run.out.len()),
         Err(err) => err,
     };
@@ -110,23 +114,30 @@ fn a_program_that_writes_past_the_cap_is_stopped() {
         "gave up after {waited:?}"
     );
     let pid = std::fs::read_to_string(&pid).expect("the stand-in wrote its pid");
-    assert!(
-        !Path::new(&format!("/proc/{}", pid.trim())).exists(),
-        "the stand-in was left behind"
-    );
+    let gone = (0..100).any(|_| {
+        if running(pid.trim()) {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            false
+        } else {
+            true
+        }
+    });
+    assert!(gone, "the stand-in was left behind");
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 #[test]
 fn a_run_with_a_limit_stops_a_program_that_writes_past_the_cap() {
-    let (_dir, program) = stand_in("head -c 100000000 /dev/zero\nsleep 30");
+    let (_dir, program) = stand_in();
     let started = std::time::Instant::now();
 
     let err = match program.run_within(
         std::time::Duration::from_secs(20),
         b"",
         Pinentry::Never,
-        |_| {},
+        |command| {
+            command.args(["--x-emit", "100000000", "--x-sleep-ms", "30000"]);
+        },
     ) {
         Ok(run) => panic!("read {} bytes past the cap", run.out.len()),
         Err(err) => err,
@@ -154,7 +165,27 @@ fn running(pid: &str) -> bool {
         .is_some_and(|state| state != 'Z')
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(windows)]
+fn running(pid: &str) -> bool {
+    use windows_sys::Win32::Foundation::{CloseHandle, STILL_ACTIVE};
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    let pid: u32 = pid.parse().expect("a pid");
+    // SAFETY: plain calls, on a handle this call owns and closes.
+    unsafe {
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if process.is_null() {
+            return false;
+        }
+        let mut code = 0;
+        let alive = GetExitCodeProcess(process, &mut code) != 0 && code == STILL_ACTIVE as u32;
+        CloseHandle(process);
+        alive
+    }
+}
+
+#[cfg(any(target_os = "linux", windows))]
 #[test]
 fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     let dir = tempfile::tempdir().expect("a temp directory");
@@ -163,18 +194,21 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     // The stand-in starts a child of its own, the way gpgsm starts
     // dirmngr, and that child holds stdout open. Killing the stand-in
     // alone would leave the child running and the pipe with a writer.
-    let (_stand_in, program) = stand_in(&format!(
-        "echo $$ > {pid}\nsleep 30 &\necho $! > {child}\nwait",
-        pid = pid.display(),
-        child = child.display(),
-    ));
+    let (_stand_in, program) = stand_in();
     let started = std::time::Instant::now();
 
     let err = match program.run_within(
         std::time::Duration::from_millis(500),
         b"",
         Pinentry::Never,
-        |_| {},
+        |command| {
+            command
+                .arg("--x-pid")
+                .arg(&pid)
+                .arg("--x-child")
+                .arg(&child)
+                .args(["--x-sleep-ms", "30000"]);
+        },
     ) {
         Ok(_) => panic!("a program that sleeps for 30 seconds answered in half of one"),
         Err(err) => err,
@@ -189,10 +223,15 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     let pid = std::fs::read_to_string(&pid).expect("the stand-in wrote its pid");
     let pid = pid.trim();
     // Reaped rather than left a zombie: its entry is gone altogether.
-    assert!(
-        !Path::new(&format!("/proc/{pid}")).exists(),
-        "the stand-in {pid} was left behind"
-    );
+    let gone = (0..100).any(|_| {
+        if running(pid) {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            false
+        } else {
+            true
+        }
+    });
+    assert!(gone, "the stand-in {pid} was left behind");
     let child = std::fs::read_to_string(&child).expect("the stand-in wrote its child's pid");
     let child = child.trim();
     // The child's new parent reaps it, which takes a moment.
@@ -209,17 +248,19 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
 
 #[test]
 fn a_run_that_finishes_inside_its_limit_answers_as_any_run_does() {
-    let (_dir, program) = stand_in(
-        "echo '[GNUPG:] GOODSIG 1234 Ada <ada@example.test>' >&3\n\
-         cat",
-    );
+    let (_dir, program) = stand_in();
 
     let run = program
         .run_within(
             std::time::Duration::from_secs(10),
             b"Meet at six.",
             Pinentry::Never,
-            |_| {},
+            |command| {
+                command
+                    .arg("--x-status")
+                    .arg("GOODSIG 1234 Ada <ada@example.test>")
+                    .arg("--x-copy");
+            },
         )
         .expect("the stand-in answers in time");
 
@@ -232,15 +273,18 @@ fn a_run_that_finishes_inside_its_limit_answers_as_any_run_does() {
 /// takes as long as it takes, so a run without a limit waits for it.
 #[test]
 fn a_run_without_a_limit_waits_for_a_slow_program() {
-    let (_dir, program) = stand_in(
-        "sleep 1\n\
-         echo '[GNUPG:] GOODSIG 1234 Ada <ada@example.test>' >&3\n\
-         echo done",
-    );
+    let (_dir, program) = stand_in();
     let started = std::time::Instant::now();
 
     let run = program
-        .run(b"", Pinentry::Never, |_| {})
+        .run(b"", Pinentry::Never, |command| {
+            command
+                .args(["--x-sleep-ms", "1000"])
+                .arg("--x-status")
+                .arg("GOODSIG 1234 Ada <ada@example.test>")
+                .arg("--x-out")
+                .arg("done");
+        })
         .expect("the stand-in runs");
 
     assert!(started.elapsed() >= std::time::Duration::from_secs(1));
@@ -276,14 +320,13 @@ fn every_signature_the_lines_describe_comes_back() {
 /// people should start gpg once, not ten times.
 #[test]
 fn every_address_is_looked_up_in_one_run() {
-    let dir = tempfile::tempdir().expect("a temp directory");
+    let (dir, pgp) = stand_in_pgp();
     let asked = dir.path().join("asked");
-    let path = dir.path().join("gpg");
-    write_script(
-        &path,
-        &format!("echo \"$@\" >> {}", asked.to_string_lossy()),
-    );
-    let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
+    std::fs::write(
+        dir.path().join("gnupg-stand-in.conf"),
+        format!("--x-args-to {}", asked.display()),
+    )
+    .expect("the conf");
     let addresses: Vec<String> = ["ada", "bo", "cy"]
         .iter()
         .map(|name| format!("{name}@example.test"))
@@ -292,7 +335,7 @@ fn every_address_is_looked_up_in_one_run() {
     let held = pgp.keys_for(&addresses).expect("an answer");
 
     assert_eq!(held.len(), 3);
-    let asked = std::fs::read_to_string(asked).expect("gpg ran");
+    let asked = std::fs::read_to_string(&asked).expect("gpg ran");
     assert_eq!(asked.lines().count(), 1, "{asked}");
     assert!(asked.contains("<cy@example.test>"), "{asked}");
 }
@@ -304,21 +347,20 @@ fn every_address_is_looked_up_in_one_run() {
 /// keyring the same way, where encryption could pick it up.
 #[test]
 fn reading_a_message_never_goes_looking_for_a_key() {
-    let dir = tempfile::tempdir().expect("a temp directory");
+    let (dir, pgp) = stand_in_pgp();
     let asked = dir.path().join("asked");
-    let path = dir.path().join("gpg");
-    write_script(
-        &path,
-        &format!("echo \"$@\" >> {}", asked.to_string_lossy()),
-    );
-    let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
+    std::fs::write(
+        dir.path().join("gnupg-stand-in.conf"),
+        format!("--x-args-to {}", asked.display()),
+    )
+    .expect("the conf");
 
     let _ = pgp.verify(b"Meet at six.", b"signature");
     let _ = pgp.decrypt(b"ciphertext");
     let _ =
         pgp.open_inline("-----BEGIN PGP SIGNED MESSAGE-----\nHi\n-----END PGP SIGNATURE-----\n");
 
-    let asked = std::fs::read_to_string(asked).expect("gpg ran");
+    let asked = std::fs::read_to_string(&asked).expect("gpg ran");
     let runs: Vec<&str> = asked.lines().collect();
     assert_eq!(runs.len(), 3, "{asked}");
     for run in runs {

@@ -25,6 +25,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 
+use crate::ui::safe_popover::{may_present, safe_popup_at};
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
@@ -659,7 +660,11 @@ impl ConversationView {
         // The labels have no one-press action of their own, so the icon
         // opens the same list as the arrow, as the whole button did
         // before it took the flag's shape.
-        label_button.connect_clicked(|button| button.popup());
+        label_button.connect_clicked(|button| {
+            if may_present(button) {
+                button.popup();
+            }
+        });
         // The window fills the popover each time it opens, so it lists the
         // tags and ticks of the mail the button reaches then.
         let tag_button = gtk::MenuButton::builder()
@@ -979,9 +984,8 @@ impl ConversationView {
         let at = ((x * zoom) as i32, (y * zoom) as i32);
         self.menu_at.set(at);
         self.menu.set_menu_model(Some(model));
-        self.menu
-            .set_pointing_to(Some(&gdk::Rectangle::new(at.0, at.1, 1, 1)));
-        self.menu.popup();
+        let rect = gdk::Rectangle::new(at.0, at.1, 1, 1);
+        let _ = safe_popup_at(&self.menu, &rect);
     }
 
     /// Puts `popover` where the message menu was, for an item that leads
@@ -994,8 +998,8 @@ impl ConversationView {
         popover.set_has_arrow(false);
         popover.set_halign(gtk::Align::Start);
         popover.set_parent(&self.webview.widget());
-        popover.set_pointing_to(Some(&gdk::Rectangle::new(x, y, 1, 1)));
-        popover.popup();
+        let rect = gdk::Rectangle::new(x, y, 1, 1);
+        let _ = safe_popup_at(popover, &rect);
     }
 
     /// The screenshot hook's way in: asks for the menu of the message at

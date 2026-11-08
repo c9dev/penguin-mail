@@ -1,0 +1,109 @@
+--- a/gdk/win32/gdkmonitor-win32.c
++++ b/gdk/win32/gdkmonitor-win32.c
+@@ -760,6 +760,53 @@
+       prune_monitors (&data);
+     }
+ 
++  if (data.monitors->len == 0)
++    {
++      /* Both passes produced nothing, e.g. a remote session whose display
++       * adapter is not attached to the desktop: fabricate a monitor that
++       * covers the Win32 virtual screen. Otherwise the display reports
++       * zero monitors, which code paths such as popup layout dereference.
++       */
++      GdkWin32Monitor *w32mon;
++      GdkMonitor *mon;
++      GdkRectangle rect;
++      int scale;
++      int x, y, width, height;
++
++      x = GetSystemMetrics (SM_XVIRTUALSCREEN);
++      y = GetSystemMetrics (SM_YVIRTUALSCREEN);
++      width = GetSystemMetrics (SM_CXVIRTUALSCREEN);
++      height = GetSystemMetrics (SM_CYVIRTUALSCREEN);
++      if (width <= 0 || height <= 0)
++        {
++          x = 0;
++          y = 0;
++          width = GetSystemMetrics (SM_CXSCREEN);
++          height = GetSystemMetrics (SM_CYSCREEN);
++        }
++
++      scale = gdk_win32_display_get_monitor_scale_factor (win32_display,
++                                                          NULL, NULL);
++
++      w32mon = g_object_new (GDK_TYPE_WIN32_MONITOR,
++                             "display", win32_display, NULL);
++      w32mon->madeup = TRUE;
++      w32mon->remove = FALSE;
++      w32mon->work_rect.x = x / scale;
++      w32mon->work_rect.y = y / scale;
++      w32mon->work_rect.width = width / scale;
++      w32mon->work_rect.height = height / scale;
++      g_ptr_array_add (data.monitors, w32mon);
++
++      mon = GDK_MONITOR (w32mon);
++      gdk_monitor_set_scale_factor (mon, scale);
++      rect.x = x / scale;
++      rect.y = y / scale;
++      rect.width = width / scale;
++      rect.height = height / scale;
++      gdk_monitor_set_geometry (mon, &rect);
++    }
++
+   return data.monitors;
+ }
+ 
+--- a/gdk/win32/gdkdisplay-win32.c
++++ b/gdk/win32/gdkdisplay-win32.c
+@@ -1241,7 +1241,8 @@
+ 
+   /* We arrange for the first monitor in the array to also be the primary monitor */
+   result = g_list_model_get_item (self->monitors, 0);
+-  g_object_unref (result);
++  if (result != NULL)
++    g_object_unref (result);
+ 
+   return result;
+ }
+--- a/gdk/win32/gdksurface-win32.c
++++ b/gdk/win32/gdksurface-win32.c
+@@ -1009,7 +1009,25 @@
+       GdkDisplay *display = gdk_surface_get_display (surface);
+       monitor = gdk_win32_display_get_primary_monitor (display);
+     }
+-  gdk_win32_monitor_get_workarea (monitor, &bounds);
++  if (monitor)
++    gdk_win32_monitor_get_workarea (monitor, &bounds);
++  else
++    {
++      /* No monitors at all (a display re-enumerating, or a remote session
++       * whose adapter went away): lay the popup out against the virtual
++       * screen so it still ends up somewhere sane.
++       */
++      bounds.x = GetSystemMetrics (SM_XVIRTUALSCREEN);
++      bounds.y = GetSystemMetrics (SM_YVIRTUALSCREEN);
++      bounds.width = GetSystemMetrics (SM_CXVIRTUALSCREEN);
++      bounds.height = GetSystemMetrics (SM_CYVIRTUALSCREEN);
++      if (bounds.width <= 0 || bounds.height <= 0)
++        {
++          bounds.x = bounds.y = 0;
++          bounds.width = GetSystemMetrics (SM_CXSCREEN);
++          bounds.height = GetSystemMetrics (SM_CYSCREEN);
++        }
++    }
+ 
+   gdk_popup_layout_get_shadow_width (layout,
+                                      &shadow_left,
+--- a/gdk/win32/gdkevents-win32.c
++++ b/gdk/win32/gdkevents-win32.c
+@@ -1321,7 +1321,8 @@
+       GdkMonitor *monitor;
+ 
+       monitor = gdk_display_get_monitor_at_surface (display, surface);
+-      gdk_monitor_set_scale_factor (monitor, impl->surface_scale);
++      if (monitor)
++        gdk_monitor_set_scale_factor (monitor, impl->surface_scale);
+     }
+ 
+   _gdk_win32_adjust_client_rect (surface, rect);

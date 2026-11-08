@@ -27,16 +27,16 @@ pub struct Runnable {
 }
 
 pub struct Shell {
-    bwrap: PathBuf,
+    program: PathBuf,
     skills: Vec<Runnable>,
     scratch: Scratch,
     limits: Limits,
 }
 
 impl Shell {
-    pub fn new(bwrap: PathBuf, skills: Vec<Runnable>) -> Shell {
+    pub fn new(program: PathBuf, skills: Vec<Runnable>) -> Shell {
         Shell {
-            bwrap,
+            program,
             skills,
             scratch: Scratch::new(scratch_root()),
             limits: Limits::DEFAULT,
@@ -46,9 +46,9 @@ impl Shell {
     /// A shell with its scratch folders under `root` and its own limits,
     /// for tests.
     #[cfg(test)]
-    pub fn with(bwrap: PathBuf, skills: Vec<Runnable>, root: PathBuf, limits: Limits) -> Shell {
+    pub fn with(program: PathBuf, skills: Vec<Runnable>, root: PathBuf, limits: Limits) -> Shell {
         Shell {
-            bwrap,
+            program,
             skills,
             scratch: Scratch::new(root),
             limits,
@@ -128,12 +128,16 @@ impl Drop for Scratch {
 }
 
 /// Makes `dir` and any missing parents readable by this user alone.
+/// Windows profiles are private by ACL, so there is no mode to set there.
 fn private_dir(dir: &Path) -> std::io::Result<()> {
-    use std::os::unix::fs::DirBuilderExt;
-    std::fs::DirBuilder::new()
-        .recursive(true)
-        .mode(0o700)
-        .create(dir)
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(dir)
 }
 
 impl Source for Shell {
@@ -152,8 +156,8 @@ impl Source for Shell {
     fn specs(&self) -> Vec<ToolSpec> {
         vec![ToolSpec {
             name: "run_command".into(),
-            description: "Runs a bash command for one skill, such as one of its scripts, in a \
-                sandbox. The skill's folder is at /skill, read-only, and /work is a scratch \
+            description: "Runs a shell command for one skill, such as one of its scripts, in a \
+                sandbox. The skill's folder is at $SKILL, read-only, and $WORK is a scratch \
                 folder that lasts for this conversation and is the working directory. The \
                 sandbox cannot reach the user's mail, files or keys, and reaches the network \
                 only if the user allowed it for that skill. The user approves every command, \
@@ -164,7 +168,7 @@ impl Source for Shell {
                 "type": "object",
                 "properties": {
                     "skill": {"type": "string", "description": "The skill's name."},
-                    "command": {"type": "string", "description": "The bash command line, run in /work. The skill's files are under /skill."},
+                    "command": {"type": "string", "description": "The shell command line, run in $WORK. The skill's files are under $SKILL."},
                     "stdin": {"type": "string", "description": "Text to feed the command on standard input."}
                 },
                 "required": ["skill", "command"]
@@ -216,7 +220,7 @@ impl Source for Shell {
             .map(str::to_string);
         let runnable = self.runnable(&skill_name).cloned();
         let work = self.scratch.get();
-        let bwrap = self.bwrap.clone();
+        let program = self.program.clone();
         let limits = self.limits;
         Box::pin(async move {
             let Some(runnable) = runnable else {
@@ -230,7 +234,7 @@ impl Source for Shell {
                 Err(err) => return ToolOutcome::Err(format!("No scratch folder: {err}")),
             };
             let jail = Jail {
-                bwrap: &bwrap,
+                program: &program,
                 skill: &runnable.skill.folder,
                 work: &work,
                 network: runnable.network,

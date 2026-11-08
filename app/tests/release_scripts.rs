@@ -2,16 +2,22 @@
 //! release notes, and `stage.sh` with `install-files.sh`, which lay out the
 //! tarball and install it.
 
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(unix)]
+use std::path::PathBuf;
+#[cfg(unix)]
 use std::process::{Command, Output};
 
 const ID: &str = "io.github.c9dev.PenguinMail";
 
+#[cfg(unix)]
 fn scripts() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts")
 }
 
+#[cfg(unix)]
 fn succeeded(output: &Output) -> String {
     assert!(
         output.status.success(),
@@ -36,16 +42,19 @@ fn mime_types(entry: &str) -> Vec<&str> {
 /// app's command line reads.
 #[test]
 fn the_launcher_opens_calendar_files_and_mail_links() {
+    // A checkout may carry CRLF endings; the words are the same.
     let entry = std::fs::read_to_string(
         Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("data/{ID}.desktop")),
     )
-    .unwrap();
+    .unwrap()
+    .replace("\r\n", "\n");
     let types = mime_types(&entry);
     assert!(types.contains(&"text/calendar"), "{entry}");
     assert!(types.contains(&"x-scheme-handler/mailto"), "{entry}");
     assert!(entry.contains("\nExec=penguin-mail %u\n"), "{entry}");
 }
 
+#[cfg(unix)]
 const CHANGELOG: &str = "# Changelog
 
 Each release, newest first.
@@ -74,6 +83,7 @@ Each release, newest first.
 /// the repository's layout, since the script reads the file beside its own
 /// folder. The copies run through bash: executing a file just written can
 /// fail with "text file busy" while another test forks.
+#[cfg(unix)]
 fn section(version: &str) -> Output {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join("scripts")).unwrap();
@@ -87,6 +97,7 @@ fn section(version: &str) -> Output {
         .unwrap()
 }
 
+#[cfg(unix)]
 #[test]
 fn a_changelog_section_is_its_body_without_the_blank_lines_around_it() {
     assert_eq!(
@@ -100,6 +111,7 @@ fn a_changelog_section_is_its_body_without_the_blank_lines_around_it() {
 /// The release workflow writes the notes with this command, so a version
 /// with no section must fail the run rather than publish empty notes. A
 /// prefix of a version is not that version.
+#[cfg(unix)]
 #[test]
 fn a_version_with_no_changelog_section_fails() {
     for version in ["9.9.9", "1.1"] {
@@ -112,6 +124,7 @@ fn a_version_with_no_changelog_section_fails() {
 /// Stages a build the way the release workflow does, packs it the way
 /// `package.sh` packs the tarball, and installs it with the tarball's own
 /// `./install-files.sh .`, as its README says.
+#[cfg(unix)]
 #[test]
 fn a_staged_tree_installs_from_the_tarball_folder() {
     let dir = tempfile::tempdir().unwrap();
@@ -208,6 +221,7 @@ fn a_staged_tree_installs_from_the_tarball_folder() {
 /// takes that name, and nothing inside them still names the ID the other
 /// packages use, since a launcher whose icon or window class named the old
 /// one would show a blank icon in the dock.
+#[cfg(unix)]
 #[test]
 fn a_flatpak_tree_installs_under_flathubs_id() {
     const FLATHUB_ID: &str = "io.github.c9dev.penguin-mail";

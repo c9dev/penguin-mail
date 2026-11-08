@@ -11,6 +11,7 @@
 use std::cell::RefCell;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
+#[cfg(unix)]
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -24,19 +25,27 @@ pub(super) fn folder() -> PathBuf {
 /// Writes `data` under `dir` as `name`, or `name (2)` and so on when that
 /// is taken, readable by the person alone. Runs on any thread.
 pub(super) fn write(dir: &Path, name: &str, data: &[u8]) -> io::Result<PathBuf> {
-    fs::DirBuilder::new()
-        .recursive(true)
-        .mode(0o700)
-        .create(dir)?;
-    // A folder an older version made carries the umask's permissions.
-    fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    #[cfg(unix)]
+    {
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir)?;
+        // A folder an older version made carries the umask's permissions.
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    }
+    #[cfg(windows)]
+    fs::create_dir_all(dir)?;
     loop {
         let path = super::unique_path(dir, name);
-        let opened = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(&path);
+        let options = {
+            let mut options = OpenOptions::new();
+            options.write(true).create_new(true);
+            #[cfg(unix)]
+            options.mode(0o600);
+            options
+        };
+        let opened = options.open(&path);
         match opened {
             Ok(mut file) => {
                 file.write_all(data)?;
@@ -109,10 +118,12 @@ fn remove(path: &Path) {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     fn mode(path: &Path) -> u32 {
         fs::metadata(path).unwrap().permissions().mode() & 0o777
     }
 
+    #[cfg(unix)]
     #[test]
     fn only_the_person_can_read_a_preview() {
         let home = tempfile::tempdir().unwrap();

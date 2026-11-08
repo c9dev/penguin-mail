@@ -522,6 +522,8 @@ async fn a_submission_that_times_out_fails() {
 #[test]
 fn every_reason_a_page_gives_is_translated() {
     const PT: &str = include_str!("../../../po/pt_PT.po");
+    // A checkout with CRLF endings has the same words on longer lines.
+    let text = PT.replace("\r\n", "\n");
     for english in [
         "the page took longer than 20 seconds",
         "the page did not load: {reason}",
@@ -531,11 +533,11 @@ fn every_reason_a_page_gives_is_translated() {
         "the plan would type something other than the address",
     ] {
         let entry = format!("msgid \"{english}\"\nmsgstr \"");
-        let at = PT
+        let at = text
             .find(&entry)
             .unwrap_or_else(|| panic!("pt_PT.po lacks {english:?}"));
         assert!(
-            !PT[at + entry.len()..].starts_with('"'),
+            !text[at + entry.len()..].starts_with('"'),
             "pt_PT.po leaves {english:?} untranslated"
         );
     }

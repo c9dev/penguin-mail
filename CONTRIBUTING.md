@@ -79,6 +79,25 @@ covers signing and notarization. Without the OAuth variables described in
 [setup](docs/setup.md#building-your-own-copy), the app builds but cannot
 add a Google or Microsoft account; use `--demo` to explore it.
 
+### Windows
+
+On Windows, install Rust with the `x86_64-pc-windows-msvc` target, Visual
+Studio 2022's C++ workload, MSYS2 or Git Bash, and Inno Setup 6, then
+point the build at a GTK prefix — the `GTK4_Gvsbuild_*_x64.zip` from the
+gvsbuild releases unzipped anywhere works:
+
+```sh
+scripts/build-windows.sh --prefix D:/gtk-msvc/prefix
+```
+
+The script finds the compiler, builds the release exe, and produces the
+installer under `dist/`. Development builds can use the
+`x86_64-pc-windows-gnu` target with MSYS2 UCRT64's GTK instead;
+[docs/windows.md](docs/windows.md#building) covers both paths and the
+dependencies in detail. Without the OAuth variables described in
+[setup](docs/setup.md#building-your-own-copy), `--demo` explores the
+app on sample data.
+
 ### The Flatpak
 
 Penguin Mail is not on Flathub. To build and install the Flatpak from

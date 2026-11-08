@@ -7,7 +7,7 @@ fn finds_gpgsm_on_the_path() {
         require_crypto();
         return;
     };
-    let name = smime.program().file_name().unwrap().to_string_lossy();
+    let name = smime.program().file_stem().unwrap().to_string_lossy();
     assert_eq!(name, "gpgsm");
 }
 

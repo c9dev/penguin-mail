@@ -11,9 +11,12 @@
 //! directly, with no `APPIMAGE` at all.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(unix)]
+use std::path::PathBuf;
 
 /// The flag that makes the runtime unpack the image instead of mounting it.
+#[cfg(unix)]
 const EXTRACT_AND_RUN: &str = "--appimage-extract-and-run";
 
 /// How the runtime names the folders it unpacks into.
@@ -45,6 +48,7 @@ impl Start<'_> {
     /// What the login item runs. By the next login a mount or an extracted
     /// folder is gone, so the item names the image, and asks it to unpack
     /// again when this copy had to.
+    #[cfg(unix)]
     fn login(&self) -> (PathBuf, &'static [&'static str]) {
         match self {
             Start::Mounted { image } => (image.to_path_buf(), &[]),
@@ -244,6 +248,7 @@ pub fn leave() {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn a_mounted_image_starts_at_login_by_its_name_including_spaces() {
         let image = Path::new("/home/ann/My Apps/Mail.AppImage");
@@ -252,6 +257,7 @@ mod tests {
         assert_eq!(start.login(), (image.to_path_buf(), &[][..]));
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_folder_unpacked_by_hand_starts_at_login_through_its_launcher() {
         let start = start(Path::new("/home/ann/Extracted Mail"), None).unwrap();
@@ -261,6 +267,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn an_image_run_without_fuse_unpacks_again_at_login() {
         let root = Path::new("/tmp/appimage_extracted_926583bf6315cbaa");

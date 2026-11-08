@@ -3,6 +3,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
+#[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -10,6 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use adw::prelude::*;
 use gtk::{gio, glib};
+#[cfg(not(windows))]
 use ksni::TrayMethods;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, Provider, Role};
@@ -85,7 +87,7 @@ pub struct App {
     /// `reload_accounts` last read them, so signing in again says where.
     through_browser: RefCell<HashSet<AccountId>>,
     names: RefCell<HashMap<AccountId, String>>,
-    tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
+    tray: Arc<Mutex<Option<crate::tray::Handle>>>,
     /// The newest count for the tray, All Inboxes and each account's
     /// inbox, which the tray takes in order once it is up.
     tray_unread: tokio::sync::watch::Sender<(i64, Vec<AccountUnread>)>,
@@ -105,6 +107,9 @@ pub struct App {
     /// A calendar file requested on the command line, opened on first
     /// activation.
     pending_file: RefCell<Option<crate::NamedFile>>,
+    /// Set once the Linux tray host appeared and the icon registered;
+    /// Windows starts the icon unconditionally instead.
+    #[cfg(not(windows))]
     tray_started: Cell<bool>,
     /// The unread counts the sidebar, the tray and the Dock badge share.
     unread: Rc<Unread<CoreCounts>>,
@@ -203,6 +208,7 @@ impl App {
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             pending_file: RefCell::new(file),
+            #[cfg(not(windows))]
             tray_started: Cell::new(false),
             unread: Unread::new(CoreCounts(counted_by)),
             dock_badge: dock_badge::Badge::new(&app_id),
@@ -251,9 +257,15 @@ impl App {
         });
         // The tray is a D-Bus service of Linux desktops. macOS has no
         // session bus, and GIO answers a watch on it with a vanished
-        // callback that holds no connection.
-        if !app.core.demo && cfg!(target_os = "linux") {
+        // callback that holds no connection. Windows always has a
+        // notification area, so the icon goes up at once there.
+        #[cfg(target_os = "linux")]
+        if !app.core.demo {
             app.watch_for_tray_host();
+        }
+        #[cfg(windows)]
+        if !app.core.demo {
+            app.start_tray();
         }
         let weak = Rc::downgrade(&app);
         let monitor = gio::NetworkMonitor::default();
@@ -479,7 +491,47 @@ impl App {
     /// update do, and says why when that fails.
     pub(crate) fn exec_into(&self, mut command: std::process::Command) -> std::io::Error {
         self.before_leaving();
-        command.exec()
+        #[cfg(unix)]
+        return command.exec();
+        // Windows has no exec(): start the copy, hand the bus name over,
+        // and end this one. The daemon takes a while to notice a dead
+        // client, so a child that registered while the name still looked
+        // taken would hand its activation to the corpse and give up on a
+        // timeout — "Failed to register: Timeout was reached" on restart.
+        #[cfg(windows)]
+        match command.spawn() {
+            Ok(_) => {
+                self.release_bus_name();
+                std::process::exit(0)
+            }
+            Err(err) => err,
+        }
+    }
+
+    /// Hands over the D-Bus name before a spawned copy replaces us. The
+    /// bus daemon takes a moment to notice a dead client, and a child
+    /// that asked to register while this name still looked owned would
+    /// forward its activation to the corpse and give up on a timeout —
+    /// "Failed to register: Timeout was reached" on an idle restart.
+    #[cfg(windows)]
+    fn release_bus_name(&self) {
+        let (Ok(bus), Some(name)) = (
+            gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE),
+            self.gio.application_id(),
+        ) else {
+            return;
+        };
+        let _ = bus.call_sync(
+            Some("org.freedesktop.DBus"),
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "ReleaseName",
+            Some(&(name.as_str(),).to_variant()),
+            None,
+            gio::DBusCallFlags::NONE,
+            5000,
+            gio::Cancellable::NONE,
+        );
     }
 
     pub fn forget_window(self: &Rc<Self>, window: &Rc<MainWindow>) {
@@ -1802,6 +1854,7 @@ impl App {
     /// Registers the tray icon whenever a tray host appears on the session
     /// bus. On Ubuntu that host is the AppIndicators extension, so enabling
     /// it later shows the icon without restarting Penguin Mail.
+    #[cfg(not(windows))]
     fn watch_for_tray_host(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
         // The watch lasts for the life of the process; the id is not needed.
@@ -1834,32 +1887,7 @@ impl App {
         // The icon comes up on the runtime, then takes the newest count and
         // each one after it, in order.
         let counts = self.tray_unread.subscribe();
-        // The restart that returns memory execs in place and keeps the pid,
-        // so the default name, StatusNotifierItem-<pid>-1, comes back while
-        // the AppIndicators extension is still timing out the old owner. When
-        // the new process registers inside that 500 ms window, the extension
-        // sometimes destroys the indicator after accepting the registration,
-        // and the icon stays gone. A unique connection name never repeats.
-        self.core.spawn(async move {
-            match tray.disable_dbus_name(true).spawn().await {
-                Ok(handle) => {
-                    *slot.lock().expect("tray slot poisoned") = Some(handle.clone());
-                    tray_feed::follow(counts, move |(total, accounts)| {
-                        let handle = handle.clone();
-                        async move {
-                            handle
-                                .update(move |tray: &mut MailTray| {
-                                    tray.unread = total;
-                                    tray.accounts = accounts;
-                                })
-                                .await;
-                        }
-                    })
-                    .await;
-                }
-                Err(err) => tracing::warn!(error = %err, "could not add the tray icon"),
-            }
-        });
+        self.start_tray_icon(tray, slot, counts);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             while let Ok(command) = received.recv().await {
@@ -1884,6 +1912,70 @@ impl App {
                 }
             }
         });
+    }
+
+    /// Registers the StatusNotifierItem on the runtime, then feeds it the
+    /// unread counts in order. The restart that returns memory execs in
+    /// place and keeps the pid, so the default name,
+    /// StatusNotifierItem-<pid>-1, comes back while the AppIndicators
+    /// extension is still timing out the old owner. When the new process
+    /// registers inside that 500 ms window, the extension sometimes
+    /// destroys the indicator after accepting the registration, and the
+    /// icon stays gone. A unique connection name never repeats.
+    #[cfg(not(windows))]
+    fn start_tray_icon(
+        &self,
+        tray: MailTray,
+        slot: Arc<Mutex<Option<crate::tray::Handle>>>,
+        counts: tokio::sync::watch::Receiver<(i64, Vec<AccountUnread>)>,
+    ) {
+        self.core.spawn(async move {
+            match tray.disable_dbus_name(true).spawn().await {
+                Ok(handle) => {
+                    *slot.lock().expect("tray slot poisoned") = Some(handle.clone());
+                    tray_feed::follow(counts, move |(total, accounts)| {
+                        let handle = handle.clone();
+                        async move {
+                            handle
+                                .update(move |tray: &mut MailTray| {
+                                    tray.unread = total;
+                                    tray.accounts = accounts;
+                                })
+                                .await;
+                        }
+                    })
+                    .await;
+                }
+                Err(err) => tracing::warn!(error = %err, "could not add the tray icon"),
+            }
+        });
+    }
+
+    /// Puts the icon in the notification area on the GTK thread, then
+    /// feeds it the unread counts through the same `update` shape.
+    #[cfg(windows)]
+    fn start_tray_icon(
+        &self,
+        tray: MailTray,
+        slot: Arc<Mutex<Option<crate::tray::Handle>>>,
+        counts: tokio::sync::watch::Receiver<(i64, Vec<AccountUnread>)>,
+    ) {
+        let Some(handle) = crate::tray::spawn(tray) else {
+            return;
+        };
+        *slot.lock().expect("tray slot poisoned") = Some(handle.clone());
+        self.core
+            .spawn(tray_feed::follow(counts, move |(total, accounts)| {
+                let handle = handle.clone();
+                async move {
+                    handle
+                        .update(move |tray: &mut MailTray| {
+                            tray.unread = total;
+                            tray.accounts = accounts;
+                        })
+                        .await;
+                }
+            }));
     }
 
     /// Starts the unread counts, wakes them on each server answer and on

@@ -177,13 +177,15 @@ fn skill_row(app: &Rc<App>, skill: &Skill) -> gtk::Widget {
 /// Creates Penguin Mail's skills folder when it is missing, readable by
 /// this user alone like the rest of its folders, and shows it in Files.
 fn open_folder(button: &gtk::Button) {
-    use std::os::unix::fs::DirBuilderExt;
     let folder = skills::own_folder();
-    if let Err(err) = std::fs::DirBuilder::new()
-        .recursive(true)
-        .mode(0o700)
-        .create(&folder)
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
     {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    if let Err(err) = builder.create(&folder) {
         tracing::warn!(folder = %folder.display(), error = %err, "could not make the skills folder");
         return;
     }

@@ -30,6 +30,7 @@ use super::kinds;
 use super::shown::{self, Refocus};
 use super::tint;
 use super::words;
+use crate::ui::safe_popover::{PopoverResult, safe_popup_at};
 
 /// Guests past this many collapse behind "Show all", so a meeting of
 /// forty does not fill the popover.
@@ -856,9 +857,14 @@ impl EventPopover {
                 bounds.width().round().max(1.0) as i32,
                 bounds.height().round().max(1.0) as i32,
             );
-            self.popover.set_pointing_to(Some(&rect));
+            if safe_popup_at(&self.popover, &rect) == PopoverResult::NoMonitors {
+                self.give_tooltip_back();
+                return;
+            }
+        } else {
+            self.give_tooltip_back();
+            return;
         }
-        self.popover.popup();
         // A guest opens the popover to answer, so the focus starts on the
         // current answer; anyone else starts on the first row they can
         // press.
@@ -1212,6 +1218,9 @@ pub(crate) mod checks {
         let anchor = gtk::Button::new();
         parent.append(&anchor);
         window.set_child(Some(&parent));
+        // GDK win32 faults on a popup in a window never realized, and
+        // the popover only ever opens from a click in a shown one.
+        window.present();
         let popover = EventPopover::new(&parent, &parent);
         let event = Event {
             title: "Client workshop".to_string(),
@@ -1257,6 +1266,8 @@ pub(crate) mod checks {
         let anchor = gtk::Button::new();
         parent.append(&anchor);
         window.set_child(Some(&parent));
+        // See show_more_keeps_the_popover_short_enough_to_place.
+        window.present();
         let popover = EventPopover::new(&parent, &parent);
         let event = Event {
             title: "Client workshop".to_string(),
@@ -1313,6 +1324,8 @@ pub(crate) mod checks {
         let anchor = gtk::Button::new();
         parent.append(&anchor);
         window.set_child(Some(&parent));
+        // See show_more_keeps_the_popover_short_enough_to_place.
+        window.present();
         let popover = EventPopover::new(&parent, &parent);
         let guests = (0..7)
             .map(|n| super::tests::guest(&format!("{n}@example.com")))

@@ -37,7 +37,11 @@ listed=$(grep -v '^#' po/POTFILES.in | grep -v '^$' | grep '\.rs$' | LC_ALL=C so
 number=0
 while read -r file; do
     number=$((number + 1))
-    xtr "${keywords[@]}" -o "$(printf '%s/1-%03d.pot' "$work" "$number")" "$file"
+    out=$(printf '%s/1-%03d.pot' "$work" "$number")
+    xtr "${keywords[@]}" -o "$out" "$file"
+    # xtr joins a file's directory and name with a backslash on Windows;
+    # the refs a person reads use a slash.
+    sed -i '/^#:/s|\\|/|g' "$out"
 done <<< "$listed"
 # The desktop entry and the AppStream metainfo are not Rust at all. xgettext
 # reads the metainfo through the ITS rules AppStream installs, which leave

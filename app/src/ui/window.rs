@@ -3889,7 +3889,9 @@ impl MainWindow {
     /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search,
     /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread,
     /// `MAILRS_DEMO_MESSAGE_MENU` right-clicks the message at that
-    /// position in the open thread, `MAILRS_DEMO_OFFLINE` shows the
+    /// position in the open thread, `MAILRS_DEMO_LOAD_IMAGES` presses the
+    /// remote-image banner's button for the open thread,
+    /// `MAILRS_DEMO_OFFLINE` shows the
     /// calendar's offline line as if a sync just failed,
     /// `MAILRS_DEMO_ADD_ACCOUNT` opens Add Account on one of its stages
     /// (see `ui::add_account::preview`), `MAILRS_DEMO_FIRST_RUN` shows the
@@ -3940,6 +3942,9 @@ impl MainWindow {
                                     && let Ok(position) = position.parse()
                                 {
                                     replier.conversation.ask_message_menu(position);
+                                }
+                                if std::env::var_os("MAILRS_DEMO_LOAD_IMAGES").is_some() {
+                                    replier.load_images_once(&replier.conversation);
                                 }
                                 if let Ok(index) = std::env::var("MAILRS_DEMO_OPEN_ATTACHMENT")
                                     && let Ok(index) = index.parse::<usize>()

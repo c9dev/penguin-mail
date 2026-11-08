@@ -7,7 +7,7 @@ fn finds_gpg_on_the_path() {
         require_crypto();
         return;
     };
-    let name = pgp.program().file_name().unwrap().to_string_lossy();
+    let name = pgp.program().file_stem().unwrap().to_string_lossy();
     assert!(name == "gpg" || name == "gpg2", "found {name}");
 }
 

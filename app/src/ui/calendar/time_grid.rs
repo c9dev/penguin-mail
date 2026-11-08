@@ -2833,6 +2833,7 @@ mod tests {
     #[test]
     fn an_hour_label_reads_the_clock() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(hour_text(9), "09:00");
     }
 

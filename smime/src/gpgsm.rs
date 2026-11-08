@@ -27,11 +27,12 @@ pub struct Smime {
 pub const REVOCATION_WAIT: Duration = Duration::from_secs(10);
 
 impl Smime {
-    /// Looks for `gpgsm` on PATH. It ships with GnuPG, so a computer with
-    /// gpg on it usually has this too, but the two are packaged apart often
-    /// enough to be worth asking separately.
+    /// Looks for `gpgsm` on [`mailrs_pgp::gnupg::search_path`]. It ships
+    /// with GnuPG, so a computer with gpg on it usually has this too, but
+    /// the two are packaged apart often enough to be worth asking
+    /// separately.
     pub fn find() -> Result<Smime, SmimeError> {
-        Smime::find_on(&std::env::var("PATH").unwrap_or_default())
+        Smime::find_on(&mailrs_pgp::gnupg::search_path())
     }
 
     /// Like [`Smime::find`], but searches `path` instead of the

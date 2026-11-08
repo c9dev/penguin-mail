@@ -11,9 +11,13 @@ use crate::notify;
 mod macos;
 #[cfg(target_os = "macos")]
 use macos::Desktop;
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+use windows::Desktop;
+#[cfg(not(any(target_os = "macos", windows)))]
 mod linux;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 use linux::Desktop;
 
 pub(super) struct Notifications(Desktop);

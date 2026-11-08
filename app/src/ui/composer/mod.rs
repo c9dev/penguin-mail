@@ -1056,7 +1056,9 @@ impl Composer {
         // opens the menu that holds the two choices.
         let more = self.more_menu.downgrade();
         self.protection.connect_clicked(move |_| {
-            if let Some(more) = more.upgrade() {
+            if let Some(more) = more.upgrade()
+                && crate::ui::safe_popover::may_present(&more)
+            {
                 more.popup();
             }
         });

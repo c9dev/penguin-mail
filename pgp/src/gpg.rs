@@ -14,10 +14,10 @@ pub struct Pgp {
 }
 
 impl Pgp {
-    /// Looks for `gpg` on PATH, then `gpg2` for the distributions that still
-    /// name it that way.
+    /// Looks for `gpg` on [`crate::gnupg::search_path`], then `gpg2` for
+    /// the distributions that still name it that way.
     pub fn find() -> Result<Pgp, PgpError> {
-        Pgp::find_on(&std::env::var("PATH").unwrap_or_default())
+        Pgp::find_on(&crate::gnupg::search_path())
     }
 
     /// Like [`Pgp::find`], but searches `path` instead of the environment's.

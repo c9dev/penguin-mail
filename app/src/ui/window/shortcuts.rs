@@ -822,8 +822,16 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
     ("add-account", |win| win.add_account()),
     ("shortcuts", |win| win.show_shortcuts()),
     ("mute", |win| win.toggle_mute()),
-    ("label", |win| win.conversation.label_button.popup()),
-    ("tag", |win| win.conversation.tag_button.popup()),
+    ("label", |win| {
+        if crate::ui::safe_popover::may_present(&win.conversation.label_button) {
+            win.conversation.label_button.popup();
+        }
+    }),
+    ("tag", |win| {
+        if crate::ui::safe_popover::may_present(&win.conversation.tag_button) {
+            win.conversation.tag_button.popup();
+        }
+    }),
     ("undo", |win| win.undo()),
     ("assistant", |win| win.toggle_assistant()),
     ("remind-custom", |win| win.remind_custom()),

@@ -39,9 +39,14 @@ impl Pgp {
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
+        // The path goes to gpg, so the file has to be closed first: an
+        // open NamedTempFile shares nothing on Windows, and the open
+        // would fail with access denied. `into_temp_path` still deletes
+        // it on drop.
+        let signature = file.into_temp_path();
         let run = self.run(signed_part, Pinentry::Never, |command| {
             reading(command);
-            command.arg("--verify").arg(file.path()).arg("-");
+            command.arg("--verify").arg(&*signature).arg("-");
         })?;
         let found = status::signatures(&run.status);
         if found.is_empty() {

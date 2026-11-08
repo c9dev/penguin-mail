@@ -111,6 +111,7 @@ impl Program {
         // The child holds its own copy now. Keeping this one open would
         // leave the status pipe without an end, and the read below would
         // wait for ever.
+        uninherit(&status_writer);
         drop(status_writer);
         drop(command);
         let mut child = spawned?;
@@ -166,13 +167,14 @@ impl Program {
     /// authority's server for as long as that server keeps the connection
     /// open, which can be for ever.
     ///
-    /// When the limit passes, the program and everything it started in its
-    /// process group are killed, the program is reaped so no zombie stays
-    /// behind, and the answer is an error of kind
-    /// [`std::io::ErrorKind::TimedOut`]. The agent and dirmngr leave the
-    /// group as they start, so they keep running for the next call. Output
-    /// past [`MOST_OUTPUT`] ends the run the same way, with an error of
-    /// kind [`std::io::ErrorKind::FileTooLarge`].
+    /// When the limit passes, the program and everything it started are
+    /// killed — its process group on Unix, the Job it runs in on Windows —
+    /// the program is reaped so no zombie stays behind, and the answer is
+    /// an error of kind [`std::io::ErrorKind::TimedOut`]. The agent and
+    /// dirmngr leave a Unix group as they start, so they keep running for
+    /// the next call; they stay in a Windows Job, so a killed run starts
+    /// them again next time. Output past [`MOST_OUTPUT`] ends the run the
+    /// same way, with an error of kind [`std::io::ErrorKind::FileTooLarge`].
     pub fn run_within(
         &self,
         limit: Duration,
@@ -184,10 +186,11 @@ impl Program {
         let (mut command, status_reader, status_writer) = self.command(pinentry, args)?;
         own_group(&mut command);
         let spawned = command.spawn();
+        uninherit(&status_writer);
         drop(status_writer);
         drop(command);
         let mut child = spawned?;
-        let group = child.id();
+        let group = group_of(&child);
         let (Some(mut stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
             kill_group(group, &mut child);
             let _ = child.wait();
@@ -350,8 +353,32 @@ fn own_group(command: &mut Command) {
     command.process_group(0);
 }
 
+/// Windows gives the child a Job after it spawns instead; see `Job`.
 #[cfg(not(unix))]
 fn own_group(_command: &mut Command) {}
+
+/// What `kill_group` stops: the process group the program leads on Unix,
+/// the Job holding it on Windows.
+#[cfg(not(windows))]
+type Group = u32;
+#[cfg(windows)]
+type Group = Option<Job>;
+
+/// Names what `kill_group` stops: the pid of the child, whose process
+/// group [`own_group`] made its own.
+#[cfg(not(windows))]
+fn group_of(child: &std::process::Child) -> Group {
+    child.id()
+}
+
+/// Puts the child into a Job of its own, so stopping the Job stops the
+/// processes the program started too, the way killing its process group
+/// does on Unix. `None` when the Job could not be made or joined; the
+/// kill then falls back to stopping the program alone.
+#[cfg(windows)]
+fn group_of(child: &std::process::Child) -> Group {
+    Job::assign(child)
+}
 
 /// Kills every process in the group the program leads. `group` is the
 /// program's own pid, which [`own_group`] made the group's id.
@@ -366,9 +393,72 @@ fn kill_group(group: u32, _child: &mut std::process::Child) {
     }
 }
 
-#[cfg(not(unix))]
-fn kill_group(_group: u32, child: &mut std::process::Child) {
+/// Stops the Job, which stops the program and every process it started
+/// that stayed in it. The agent and dirmngr do not break away, so they go
+/// down with it and start again on the next call.
+#[cfg(windows)]
+fn kill_group(group: Group, child: &mut std::process::Child) {
+    match group {
+        Some(job) => job.end(),
+        None => {
+            let _ = child.kill();
+        }
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+fn kill_group(_group: Group, child: &mut std::process::Child) {
     let _ = child.kill();
+}
+
+/// A Windows Job Object: the boundary around the program and everything
+/// it starts, so a run over its limit stops the tree the way a
+/// process-group kill does on Unix.
+#[cfg(windows)]
+struct Job(windows_sys::Win32::Foundation::HANDLE);
+
+#[cfg(windows)]
+impl Job {
+    /// Makes a Job and puts `child` in it. `None` when either step fails.
+    fn assign(child: &std::process::Child) -> Option<Job> {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::JobObjects::{AssignProcessToJobObject, CreateJobObjectW};
+        // SAFETY: the process handle is the child's own, and the Job is
+        // closed on the one path where it stays empty.
+        unsafe {
+            let job = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+            if job.is_null() {
+                return None;
+            }
+            if AssignProcessToJobObject(job, child.as_raw_handle() as _) == 0 {
+                CloseHandle(job);
+                return None;
+            }
+            Some(Job(job))
+        }
+    }
+
+    /// Stops every process the Job holds at once.
+    fn end(&self) {
+        // SAFETY: the handle is a live Job this struct owns; 1 is the
+        // exit status Windows reports for the processes it stopped.
+        unsafe {
+            windows_sys::Win32::System::JobObjects::TerminateJobObject(self.0, 1);
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for Job {
+    fn drop(&mut self) {
+        // SAFETY: closing a handle this struct owns. Dropping the Job
+        // kills nothing on its own: no `KILL_ON_JOB_CLOSE` limit went on
+        // it, so a run that ended in time leaves its tree alone.
+        unsafe {
+            windows_sys::Win32::Foundation::CloseHandle(self.0);
+        }
+    }
 }
 
 /// Hands the write end of the status pipe to the child as its fd 3 and
@@ -402,12 +492,53 @@ fn status_fd(command: &mut Command, writer: &std::io::PipeWriter) -> std::io::Re
     Ok(())
 }
 
-#[cfg(not(unix))]
+/// Hands the write end of the status pipe to the child as an inherited
+/// handle and tells the program to write there. A native GnuPG build for
+/// Windows, such as Gpg4win's, reads the number after `--status-fd` as a
+/// HANDLE rather than a file descriptor; a build for MSYS or Cygwin
+/// cannot, which is part of why [`search_path`] prefers the native
+/// installs.
+#[cfg(windows)]
+fn status_fd(command: &mut Command, writer: &std::io::PipeWriter) -> std::io::Result<()> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
+    let handle = writer.as_raw_handle();
+    // SAFETY: the flag goes on a pipe handle this call owns; `uninherit`
+    // takes it back off once the child holds its own copy, so no process
+    // the program starts can inherit it and hold the pipe open.
+    if unsafe { SetHandleInformation(handle as _, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT) } == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    command
+        .arg("--status-fd")
+        .arg((handle as usize).to_string());
+    Ok(())
+}
+
+#[cfg(not(any(unix, windows)))]
 fn status_fd(_command: &mut Command, _writer: &std::io::PipeWriter) -> std::io::Result<()> {
     Err(std::io::Error::other(
         "GnuPG status lines need a pipe of their own, which this system cannot give",
     ))
 }
+
+/// Takes the inherit flag back off the status pipe's write end after the
+/// spawn copied it into the child: a process the program starts later
+/// must not inherit this one and hold the pipe open past the program's
+/// end. A no-op where no flag ever went on.
+#[cfg(windows)]
+fn uninherit(writer: &std::io::PipeWriter) {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
+    // SAFETY: the same handle `status_fd` flagged; a failure only leaves
+    // the flag on until the writer drops, which is the same span.
+    unsafe {
+        SetHandleInformation(writer.as_raw_handle() as _, HANDLE_FLAG_INHERIT, 0);
+    }
+}
+
+#[cfg(not(windows))]
+fn uninherit(_writer: &std::io::PipeWriter) {}
 
 /// One run of gpg or gpgsm.
 pub struct Run {
@@ -717,8 +848,51 @@ pub fn user_id(address: &str) -> String {
 /// The first entry of `path` holding an executable file called `name`.
 fn lookup(path: &str, name: &str) -> Option<PathBuf> {
     std::env::split_paths(path)
-        .map(|dir| dir.join(name))
+        .flat_map(|dir| candidates(dir.join(name)))
         .find(|candidate| is_program(candidate))
+}
+
+/// The files `name` can resolve to. Windows names its executables with an
+/// extension, the way `CreateProcess` finds `gpg.exe` for `gpg`.
+#[cfg(windows)]
+fn candidates(program: PathBuf) -> [PathBuf; 2] {
+    [program.with_extension("exe"), program]
+}
+
+#[cfg(not(windows))]
+fn candidates(program: PathBuf) -> [PathBuf; 1] {
+    [program]
+}
+
+/// Where the engines look for their program: PATH, and on Windows the
+/// directories Gpg4win and the GnuPG VS-Desktop package install into
+/// first. A gpg built for MSYS or Cygwin can sit on PATH — Git for
+/// Windows ships one — and it reads `--status-fd` as a Unix file
+/// descriptor a handle cannot be, so the native installs win the search.
+#[cfg(windows)]
+pub fn search_path() -> String {
+    let install = [
+        r"C:\Program Files\Gpg4win\bin",
+        r"C:\Program Files (x86)\Gpg4win\bin",
+        r"C:\Program Files\GnuPG\bin",
+        r"C:\Program Files (x86)\GnuPG\bin",
+        r"C:\Program Files\GnuPG VS-Desktop\bin",
+        r"C:\Program Files (x86)\GnuPG VS-Desktop\bin",
+    ];
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    let dirs = install
+        .iter()
+        .map(PathBuf::from)
+        .filter(|dir| dir.is_dir())
+        .chain(std::env::split_paths(&path));
+    std::env::join_paths(dirs)
+        .map(|joined| joined.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_string_lossy().into_owned())
+}
+
+#[cfg(not(windows))]
+pub fn search_path() -> String {
+    std::env::var("PATH").unwrap_or_default()
 }
 
 #[cfg(unix)]
@@ -728,7 +902,21 @@ fn is_program(path: &Path) -> bool {
         .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
 }
 
-#[cfg(not(unix))]
+/// Whether `path` can answer status lines on a pipe of its own. A gpg or
+/// gpgsm built for MSYS or Cygwin reads `--status-fd` as a Unix file
+/// descriptor a handle cannot be, so one found beside its POSIX runtime —
+/// Git for Windows ships one that way — is skipped rather than found.
+#[cfg(windows)]
+fn is_program(path: &Path) -> bool {
+    let posix = path.parent().is_some_and(|dir| {
+        ["msys-2.0.dll", "cygwin1.dll"]
+            .iter()
+            .any(|runtime| dir.join(runtime).is_file())
+    });
+    path.is_file() && !posix
+}
+
+#[cfg(not(any(unix, windows)))]
 fn is_program(path: &Path) -> bool {
     path.is_file()
 }

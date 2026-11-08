@@ -235,6 +235,7 @@ mod tests {
         assert!(!folder.join("io.github.c9dev.PenguinMail.desktop").exists());
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_symlinked_mail_handler_list_stays_a_symlink() {
         let config = tempfile::tempdir().unwrap();

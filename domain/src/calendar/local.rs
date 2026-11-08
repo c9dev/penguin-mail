@@ -2,6 +2,9 @@
 //! no zone repeats in it, and so does one whose zone name nothing here
 //! reads, since the readers place its first occurrence there.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![allow(clippy::missing_const_for_thread_local)]
+
 use std::cell::Cell;
 use std::path::Path;
 use std::sync::OnceLock;
@@ -37,16 +40,32 @@ pub fn pinned<T>(zone: Tz, f: impl FnOnce() -> T) -> T {
 fn system() -> Tz {
     static ZONE: OnceLock<Tz> = OnceLock::new();
     *ZONE.get_or_init(|| {
-        let link = std::fs::read_link("/etc/localtime").ok();
-        let file = std::fs::read_to_string("/etc/timezone").ok();
-        let zone = from_system(
-            std::env::var("TZ").ok().as_deref(),
-            link.as_deref(),
-            file.as_deref(),
-        );
+        let zone = system_zone();
         tracing::debug!(zone = zone.name(), "the computer's time zone");
         zone
     })
+}
+
+#[cfg(not(windows))]
+fn system_zone() -> Tz {
+    let link = std::fs::read_link("/etc/localtime").ok();
+    let file = std::fs::read_to_string("/etc/timezone").ok();
+    from_system(
+        std::env::var("TZ").ok().as_deref(),
+        link.as_deref(),
+        file.as_deref(),
+    )
+}
+
+/// Windows has no zoneinfo files; `TZ` still wins, then the IANA name
+/// `iana-time-zone` resolves from the computer's zone setting.
+#[cfg(windows)]
+fn system_zone() -> Tz {
+    from_system(
+        std::env::var("TZ").ok().as_deref(),
+        None,
+        iana_time_zone::get_timezone().ok().as_deref(),
+    )
 }
 
 /// The instant clock time `naive` names in `zone`. A time the clocks

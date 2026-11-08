@@ -1,3 +1,4 @@
+#[cfg(unix)]
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -8,7 +9,9 @@ use serde_json::json;
 use super::front_matter;
 use super::sandbox::{self, Jail, Limits};
 use super::shell::{Runnable, Shell};
-use super::{Origin, Skill, Skills, discover, read_file};
+use super::{Origin, Skill, Skills};
+#[cfg(unix)]
+use super::{discover, read_file};
 use crate::assistant::sources::{Source, system_prompt};
 
 fn write(path: &Path, text: &str) {
@@ -57,6 +60,7 @@ fn front_matter_reads_the_forms_people_write() {
     assert!(front_matter::parse("---\nname: \"x\n---\n").is_err());
 }
 
+#[cfg(unix)]
 #[test]
 fn discovery_keeps_good_skills_and_skips_broken_ones() {
     let home = tempfile::tempdir().expect("tempdir");
@@ -137,6 +141,7 @@ fn skill_at(folder: &Path, name: &str, has_scripts: bool) -> Skill {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn a_skill_file_read_stays_inside_the_folder() {
     let home = tempfile::tempdir().expect("tempdir");
@@ -222,9 +227,10 @@ async fn the_skills_source_lists_itself_and_hands_out_its_text() {
     assert!(Skills::new(Vec::new()).prompt().is_none());
 }
 
-/// Bubblewrap, or `None` with a note when this computer has none that
-/// works, in which case the sandbox tests prove nothing and say so.
-fn bwrap() -> Option<PathBuf> {
+/// The sandbox program — bubblewrap on Unix, busybox on Windows — or
+/// `None` with a note when this computer has none that works, in which
+/// case the sandbox tests prove nothing and say so.
+fn program() -> Option<PathBuf> {
     match sandbox::check() {
         Ok(path) => Some(path),
         Err(reason) => {
@@ -257,21 +263,22 @@ fn sandbox_dirs() -> Dirs {
     }
 }
 
-async fn run_in(dirs: &Dirs, bwrap: &Path, command: &str, limits: Limits) -> sandbox::Run {
+async fn run_in(dirs: &Dirs, program: &Path, command: &str, limits: Limits) -> sandbox::Run {
     let jail = Jail {
-        bwrap,
+        program,
         skill: &dirs.skill,
         work: &dirs.work,
         network: false,
     };
     sandbox::run(&jail, command, None, limits)
         .await
-        .expect("bwrap starts")
+        .expect("the sandbox starts")
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn the_sandbox_sees_the_system_and_the_skill_but_not_the_home_folder() {
-    let Some(bwrap) = bwrap() else { return };
+    let Some(bwrap) = program() else { return };
     let dirs = sandbox_dirs();
     let limits = Limits::DEFAULT;
 
@@ -314,6 +321,7 @@ async fn the_sandbox_sees_the_system_and_the_skill_but_not_the_home_folder() {
     assert!(!dirs.skill.join("x").exists());
 }
 
+#[cfg(unix)]
 #[test]
 fn a_nix_sandbox_runs_its_packaged_shell_and_python() {
     let Some(_) = option_env!("PENGUIN_MAIL_SKILL_RUNTIME") else {
@@ -359,7 +367,7 @@ print('python ran')
             .unwrap(),
     );
     let mut jail = Jail {
-        bwrap: &bwrap,
+        program: &bwrap,
         skill: &dirs.skill,
         work: &dirs.work,
         network: false,
@@ -403,9 +411,10 @@ print('python ran')
     }
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn the_work_folder_lasts_across_calls_in_one_chat() {
-    let Some(bwrap) = bwrap() else { return };
+    let Some(bwrap) = program() else { return };
     let dirs = sandbox_dirs();
     let skill = skill_at(&dirs.skill, "s", true);
     let shell = Shell::with(
@@ -469,9 +478,10 @@ async fn the_work_folder_lasts_across_calls_in_one_chat() {
     assert!(!made[0].exists());
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn the_network_is_off_unless_the_skill_allows_it() {
-    let Some(bwrap) = bwrap() else { return };
+    let Some(bwrap) = program() else { return };
     let dirs = sandbox_dirs();
     let connect = "exec 3<>/dev/tcp/1.1.1.1/53 && echo connected";
     let cut_off = run_in(&dirs, &bwrap, connect, Limits::DEFAULT).await;
@@ -489,9 +499,10 @@ async fn the_network_is_off_unless_the_skill_allows_it() {
     );
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn the_time_limit_kills_everything_the_command_started() {
-    let Some(bwrap) = bwrap() else { return };
+    let Some(bwrap) = program() else { return };
     let dirs = sandbox_dirs();
     let limits = Limits {
         time: Duration::from_secs(2),
@@ -526,6 +537,7 @@ async fn the_time_limit_kills_everything_the_command_started() {
     assert!(!alive, "a sleep {marker} outlived the sandbox");
 }
 
+#[cfg(unix)]
 fn still_running(marker: &str) -> bool {
     std::fs::read_dir("/proc")
         .into_iter()
@@ -540,7 +552,7 @@ fn still_running(marker: &str) -> bool {
 
 #[tokio::test]
 async fn output_past_the_limit_is_cut_and_says_so() {
-    let Some(bwrap) = bwrap() else { return };
+    let Some(program) = program() else { return };
     let dirs = sandbox_dirs();
     let limits = Limits {
         time: Duration::from_secs(30),
@@ -548,7 +560,7 @@ async fn output_past_the_limit_is_cut_and_says_so() {
     };
     let run = run_in(
         &dirs,
-        &bwrap,
+        &program,
         "yes 0123456789 | head -c 500000; echo err >&2",
         limits,
     )
@@ -556,18 +568,19 @@ async fn output_past_the_limit_is_cut_and_says_so() {
     assert!(run.truncated);
     assert_eq!(run.output.len(), 1000);
     assert_eq!(run.exit_code, Some(0));
-    let small = run_in(&dirs, &bwrap, "echo out; echo err >&2", limits).await;
+    let small = run_in(&dirs, &program, "echo out; echo err >&2", limits).await;
     assert!(!small.truncated);
     assert_eq!(small.output, "out\nerr\n");
-    let failed = run_in(&dirs, &bwrap, "exit 3", limits).await;
+    let failed = run_in(&dirs, &program, "exit 3", limits).await;
     assert_eq!(failed.exit_code, Some(3));
 }
 
+#[cfg(unix)]
 #[test]
 fn network_only_brings_the_files_a_lookup_needs() {
     let path = PathBuf::from("/x");
     let jail = |network| Jail {
-        bwrap: &path,
+        program: &path,
         skill: &path,
         work: &path,
         network,
@@ -673,4 +686,74 @@ async fn an_always_answer_from_before_the_fix_allows_no_command() {
         .await;
     assert_eq!(outcome, ToolOutcome::Err("The user declined.".into()));
     assert_eq!(keys.lock().expect("lock").len(), 1);
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn the_windows_sandbox_opens_only_the_skill_and_work_folders() {
+    let Some(program) = program() else { return };
+    let dirs = sandbox_dirs();
+    let limits = Limits::DEFAULT;
+    let unix = |path: &Path| path.to_string_lossy().replace('\\', "/");
+
+    let script = run_in(&dirs, &program, "sh \"$SKILL/hello.sh\"", limits).await;
+    assert_eq!(script.output, "hello from the skill\n", "{}", script.output);
+    assert_eq!(script.exit_code, Some(0));
+
+    let write = run_in(
+        &dirs,
+        &program,
+        "echo kept > \"$WORK/note\"; cat \"$WORK/note\"",
+        limits,
+    )
+    .await;
+    assert_eq!(write.output, "kept\n", "{}", write.output);
+    assert!(dirs.work.join("note").exists());
+
+    let read_only = run_in(
+        &dirs,
+        &program,
+        "echo x > \"$SKILL/x\" 2>&1; echo status=$?",
+        limits,
+    )
+    .await;
+    assert!(
+        read_only.output.contains("status=1"),
+        "{}",
+        read_only.output
+    );
+    assert!(!dirs.skill.join("x").exists());
+
+    // The person's real profile is out of reach, and the sandbox's home
+    // is the work folder.
+    let profile = unix(&PathBuf::from(
+        std::env::var("USERPROFILE").expect("USERPROFILE"),
+    ));
+    let peek = run_in(
+        &dirs,
+        &program,
+        &format!("ls \"{profile}\" 2>&1; echo status=$?; echo HOME=$HOME"),
+        limits,
+    )
+    .await;
+    assert!(peek.output.contains("status=1"), "{}", peek.output);
+    let home = format!("HOME={}", unix(&dirs.work));
+    assert!(peek.output.contains(&home), "{}", peek.output);
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn the_windows_time_limit_stops_the_command() {
+    let Some(program) = program() else { return };
+    let dirs = sandbox_dirs();
+    let limits = Limits {
+        time: Duration::from_secs(2),
+        output: 1024,
+    };
+    let started = std::time::Instant::now();
+    let run = run_in(&dirs, &program, "sleep 300 & sleep 300; echo after", limits).await;
+    assert!(run.timed_out);
+    assert_eq!(run.exit_code, None);
+    assert!(!run.output.contains("after"));
+    assert!(started.elapsed() < Duration::from_secs(20));
 }

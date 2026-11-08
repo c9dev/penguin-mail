@@ -15,6 +15,7 @@ use mailrs_store::contacts::Suggestion;
 use crate::compose::{format_recipients, parse_recipients};
 use crate::contacts::{cue, current_token, suggest};
 use crate::format::{account_color_index, account_label};
+use crate::ui::safe_popover::safe_popup_at;
 
 /// Shared, replaceable list of people to suggest.
 pub type Contacts = Rc<RefCell<Rc<Vec<Suggestion>>>>;
@@ -182,9 +183,8 @@ impl Completion {
         *self.shown.borrow_mut() = found;
         self.list
             .set_size_request(self.entry.width().clamp(360, 460), -1);
-        self.popover
-            .set_pointing_to(Some(&gdk::Rectangle::new(0, 0, 1, self.entry.height())));
-        self.popover.popup();
+        let rect = gdk::Rectangle::new(0, 0, 1, self.entry.height());
+        let _ = safe_popup_at(&self.popover, &rect);
     }
 
     fn step(&self, delta: i32) {

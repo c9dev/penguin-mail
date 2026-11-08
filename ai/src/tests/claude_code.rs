@@ -1,15 +1,22 @@
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
 use std::path::Path;
+#[cfg(unix)]
 use std::sync::Arc;
 
 use serde_json::{Value, json};
 
+#[cfg(unix)]
 use super::{FakeHost, drain};
+#[cfg(unix)]
 use crate::providers::ClaudeCodeChat;
+#[cfg(unix)]
 use crate::{AgentEvent, AiError};
 
 /// A stand-in `claude` that records its argv (NUL-separated) and stdin for
 /// run N, then prints the canned stream-json in `out-N`.
+#[cfg(unix)]
 const FAKE_CLAUDE: &str = r#"#!/bin/sh
 dir="$(dirname "$0")"
 n=$(ls "$dir" | grep -c '^argv-')
@@ -18,6 +25,7 @@ cat > "$dir/stdin-$n"
 cat "$dir/out-$n"
 "#;
 
+#[cfg(unix)]
 fn write_script(dir: &Path) -> std::path::PathBuf {
     let path = dir.join("claude");
     std::fs::write(&path, FAKE_CLAUDE).unwrap();
@@ -25,22 +33,26 @@ fn write_script(dir: &Path) -> std::path::PathBuf {
     path
 }
 
+#[cfg(unix)]
 fn lines(messages: &[Value]) -> String {
     messages.iter().map(|m| format!("{m}\n")).collect()
 }
 
+#[cfg(unix)]
 fn argv(dir: &Path, n: usize) -> Vec<String> {
     let raw = std::fs::read_to_string(dir.join(format!("argv-{n}"))).unwrap();
     raw.split('\0').map(str::to_string).collect::<Vec<_>>()[..raw.matches('\0').count()].to_vec()
 }
 
 /// The value after `flag`.
+#[cfg(unix)]
 fn flag<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
     let at = args.iter().position(|a| a == flag)?;
     args.get(at + 1).map(String::as_str)
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn runs_claude_headless_and_maps_its_stream() {
     let dir = tempfile::tempdir().unwrap();
     let bin = dir.path().join("bin");
@@ -150,6 +162,7 @@ async fn runs_claude_headless_and_maps_its_stream() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn web_search_turns_on_claude_codes_own_search_and_never_its_fetch() {
     let dir = tempfile::tempdir().unwrap();
     let bin = dir.path().join("bin");
@@ -180,6 +193,7 @@ async fn web_search_turns_on_claude_codes_own_search_and_never_its_fetch() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn reports_a_crash_with_its_stderr() {
     let dir = tempfile::tempdir().unwrap();
     let script = dir.path().join("claude");
@@ -260,6 +274,7 @@ fn a_catalog_with_no_models_lists_nothing() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn changing_the_system_prompt_resumes_the_same_session() {
     let dir = tempfile::tempdir().unwrap();
     let script = write_script(dir.path());
@@ -305,6 +320,7 @@ async fn changing_the_system_prompt_resumes_the_same_session() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn changing_the_model_resumes_the_session_and_can_hand_it_to_another_provider() {
     let dir = tempfile::tempdir().unwrap();
     let script = write_script(dir.path());
@@ -368,6 +384,7 @@ async fn changing_the_model_resumes_the_session_and_can_hand_it_to_another_provi
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn moving_to_claude_code_passes_the_previous_conversation_once() {
     let server = wiremock::MockServer::start().await;
     wiremock::Mock::given(wiremock::matchers::method("POST"))

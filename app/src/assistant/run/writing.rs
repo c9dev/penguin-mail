@@ -59,6 +59,20 @@ struct Edits {
 /// most 25 MB that [`off_limits`] allows, or the user picked for this request.
 /// `home` is the user's home folder, and `private` the folders Penguin Mail
 /// keeps its own data in.
+/// `canonicalize` on Windows answers the `\\?\` verbatim form, which no
+/// person, home folder or comparison path ever spells. Give the plain
+/// path back, and a verbatim `UNC` path its `\\server\share` form.
+pub(super) fn plain(path: &Path) -> PathBuf {
+    let text = path.as_os_str().to_string_lossy();
+    if let Some(rest) = text.strip_prefix(r"\\?\") {
+        if let Some(unc) = rest.strip_prefix(r"UNC\") {
+            return PathBuf::from(format!(r"\\{unc}"));
+        }
+        return PathBuf::from(rest);
+    }
+    path.to_path_buf()
+}
+
 pub(super) fn local_file(
     given: &str,
     home: &Path,
@@ -76,9 +90,10 @@ pub(super) fn local_file(
     }
     // Every link resolves first, so a link that leads into ~/.ssh counts
     // as ~/.ssh.
-    let path =
-        std::fs::canonicalize(&expanded).map_err(|_| format!("There is no file at {given}."))?;
-    if !picked.contains(&path) && off_limits(&path, home, private) {
+    let path = plain(
+        &std::fs::canonicalize(&expanded).map_err(|_| format!("There is no file at {given}."))?,
+    );
+    if !picked.iter().any(|p| plain(p) == path) && off_limits(&path, home, private) {
         return Err(format!(
             "{given} is in a folder that holds keys, passwords or settings, so the assistant will not attach it. The user can attach it in the composer."
         ));
@@ -105,19 +120,61 @@ pub(super) fn off_limits(path: &Path, home: &Path, private: &[PathBuf]) -> bool 
     if private.iter().any(|dir| path.starts_with(dir)) {
         return true;
     }
-    let hidden = |inside: &Path| {
-        inside
-            .components()
-            .any(|part| part.as_os_str().to_string_lossy().starts_with('.'))
-    };
-    if let Ok(inside) = path.strip_prefix(home) {
+    // The temporary and removable-media folders stay open even where one
+    // sits inside a place the rules below refuse, as Windows's temp dir
+    // does inside the user's own profile.
+    #[cfg(unix)]
+    let roots = [
+        PathBuf::from("/tmp"),
+        PathBuf::from("/media"),
+        PathBuf::from("/mnt"),
+        PathBuf::from("/run/media"),
+    ];
+    #[cfg(windows)]
+    let roots = [std::env::temp_dir()];
+    let open: Vec<PathBuf> = roots.iter().flat_map(|root| resolved_forms(root)).collect();
+    if let Some(inside) = open.iter().find_map(|root| path.strip_prefix(root).ok()) {
         return hidden(inside);
     }
-    let open = ["/tmp", "/media", "/mnt", "/run/media"];
-    match open.iter().find_map(|root| path.strip_prefix(root).ok()) {
-        Some(inside) => hidden(inside),
-        None => true,
+    for home in resolved_forms(home) {
+        if let Ok(inside) = path.strip_prefix(home) {
+            return hidden(inside);
+        }
     }
+    true
+}
+
+/// `root` and the path the system resolves it to, where they differ: the
+/// environment may spell a folder by its short 8.3 name while the checked
+/// path comes back from `canonicalize` in the long form.
+fn resolved_forms(root: &Path) -> Vec<PathBuf> {
+    let mut forms = vec![root.to_path_buf()];
+    if let Ok(resolved) = std::fs::canonicalize(root) {
+        let resolved = plain(&resolved);
+        if resolved != *root {
+            forms.push(resolved);
+        }
+    }
+    forms
+}
+
+/// Whether the components under an open folder hide what they hold: a
+/// dot name on any system, plus `AppData` and the `NTUSER` registry
+/// files on Windows, which hide by attribute rather than by name.
+fn hidden(inside: &Path) -> bool {
+    inside.components().any(|part| {
+        let name = part.as_os_str().to_string_lossy();
+        if name.starts_with('.') {
+            return true;
+        }
+        #[cfg(windows)]
+        {
+            let name = name.to_lowercase();
+            name == "appdata" || name.starts_with("ntuser")
+        }
+        #[cfg(not(windows))]
+        false
+    })
 }
 
 /// The folders Penguin Mail keeps its own data in: the mail store, the
@@ -137,7 +194,7 @@ fn private_dirs() -> Vec<PathBuf> {
     );
     let resolved: Vec<PathBuf> = dirs
         .iter()
-        .filter_map(|dir| std::fs::canonicalize(dir).ok())
+        .filter_map(|dir| std::fs::canonicalize(dir).ok().map(|p| plain(&p)))
         .collect();
     dirs.extend(resolved);
     dirs

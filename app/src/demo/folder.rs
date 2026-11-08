@@ -63,7 +63,7 @@ fn sweep(base: &Path) {
         let Some(pid) = name.to_str().and_then(owner) else {
             continue;
         };
-        if Path::new("/proc").join(pid.to_string()).exists() {
+        if alive(pid) {
             continue;
         }
         let path = entry.path();
@@ -73,6 +73,31 @@ fn sweep(base: &Path) {
             std::fs::remove_file(&path)
         };
     }
+}
+
+/// Whether a process with `pid` is running now.
+#[cfg(unix)]
+fn alive(pid: u32) -> bool {
+    Path::new("/proc").join(pid.to_string()).exists()
+}
+
+/// Whether a process with `pid` is running now: `OpenProcess` fails for
+/// one that is gone.
+#[cfg(windows)]
+fn alive(pid: u32) -> bool {
+    unsafe extern "system" {
+        fn OpenProcess(access: u32, inherit: i32, pid: u32) -> *mut std::ffi::c_void;
+        fn CloseHandle(handle: *mut std::ffi::c_void) -> i32;
+    }
+    const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+    // SAFETY: both calls take valid arguments; a null handle asks for no
+    // close.
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    if handle.is_null() {
+        return false;
+    }
+    unsafe { CloseHandle(handle) };
+    true
 }
 
 /// The process id a demo file or folder name starts with.

@@ -897,7 +897,18 @@ mod tests {
         if gtk::init().is_err() {
             return;
         }
-        #[cfg(target_os = "linux")]
+        // GTK's win32 backend can end up with no monitors, as under a
+        // disconnected remote session, and gdk_popup_present dereferences
+        // the empty list's missing primary monitor. Any popover crash is
+        // the app's, not the check's, so the checks stop here.
+        let has_monitors = gtk::gdk::Display::default()
+            .map(|display| display.monitors().n_items() > 0)
+            .unwrap_or(false);
+        if !has_monitors {
+            eprintln!("skipping: the display reports no monitors, so GTK checks cannot run");
+            return;
+        }
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
         crate::web::check_scheme_after_last_view_closes();
         let context = gtk::glib::MainContext::default();
         context.block_on(async {
@@ -948,10 +959,20 @@ mod tests {
             Browser, Outcome, PageBrowser, PageForm, Pick, finish, pick, prepare, says_done,
         };
 
-        const DIR: &str = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/unsubscribe_page/fixtures/"
-        );
+        // A file address on Windows is file:///D:/..., on Unix file:///.
+        fn page_url(name: &str) -> String {
+            let dir = concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/src/unsubscribe_page/fixtures/"
+            )
+            .replace('\\', "/");
+            let slashes = if dir.starts_with('/') {
+                "file://"
+            } else {
+                "file:///"
+            };
+            format!("{slashes}{dir}{name}.html")
+        }
         let pages = [
             (
                 "one_button",
@@ -980,7 +1001,7 @@ mod tests {
         ];
         let browser = PageBrowser::new();
         for (name, written) in pages {
-            let url = format!("file://{DIR}{name}.html");
+            let url = page_url(name);
             let read = glib::MainContext::default()
                 .block_on(browser.load(&url))
                 .unwrap_or_else(|err| panic!("{name}: {err}"));
@@ -1003,7 +1024,7 @@ mod tests {
         // saying "all: no".
         const ME: &str = "david@example.com";
         let read = glib::MainContext::default()
-            .block_on(browser.load(&format!("file://{DIR}in_place.html")))
+            .block_on(browser.load(&page_url("in_place")))
             .expect("in_place loads");
         let Pick::Submit(plan) = pick(&read, ME) else {
             panic!("the rules gave up on in_place: {read:?}");
@@ -1019,7 +1040,7 @@ mod tests {
         // yes in the app's own dialog, so the run answers the page's
         // question with OK, and the page's answer reads as done.
         let read = glib::MainContext::default()
-            .block_on(browser.load(&format!("file://{DIR}asks_first.html")))
+            .block_on(browser.load(&page_url("asks_first")))
             .expect("asks_first loads");
         let Pick::Submit(plan) = pick(&read, ME) else {
             panic!("the rules gave up on asks_first: {read:?}");
@@ -1032,7 +1053,7 @@ mod tests {
         // A page with no form, only a link that reads as leaving. The
         // link is pressed once and the page it leads to is read.
         let read = glib::MainContext::default()
-            .block_on(browser.load(&format!("file://{DIR}link_only.html")))
+            .block_on(browser.load(&page_url("link_only")))
             .expect("link_only loads");
         let Pick::Submit(plan) = pick(&read, ME) else {
             panic!("the rules gave up on link_only: {read:?}");
@@ -1046,7 +1067,7 @@ mod tests {
         // A page whose answer arrives a second after the press, in the
         // same page. The run reads it again rather than calling it
         // unclear.
-        let url = format!("file://{DIR}late_answer.html");
+        let url = page_url("late_answer");
         let ended = glib::MainContext::default().block_on(async {
             let prepared = prepare(&browser, None, &url, ME).await;
             finish(&browser, &prepared).await

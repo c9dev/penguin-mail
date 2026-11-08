@@ -155,6 +155,7 @@ async fn a_file_given_up_part_way_leaves_the_old_one() {
 /// A link to the file is written through: the file it names takes the new
 /// bytes, and the link stays a link.
 #[tokio::test]
+#[cfg(unix)]
 async fn a_link_to_the_file_is_written_through() {
     use tokio::io::AsyncWriteExt;
     let dir = tempfile::tempdir().unwrap();
@@ -176,6 +177,7 @@ async fn a_link_to_the_file_is_written_through() {
 
 /// A device or a pipe, such as /dev/stdout, takes the bytes as they come.
 #[tokio::test]
+#[cfg(unix)]
 async fn a_special_file_is_written_straight_to() {
     use tokio::io::AsyncWriteExt;
     let mut file = Replacing::create(std::path::Path::new("/dev/null"))
@@ -187,6 +189,7 @@ async fn a_special_file_is_written_straight_to() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn the_new_file_keeps_the_old_one_s_mode() {
     use std::os::unix::fs::PermissionsExt;
     use tokio::io::AsyncWriteExt;
@@ -206,6 +209,7 @@ async fn the_new_file_keeps_the_old_one_s_mode() {
 /// A part file already there, even a link someone planted, is no file to
 /// write into: it goes, and a new one is made.
 #[tokio::test]
+#[cfg(unix)]
 async fn a_part_file_already_there_is_never_written_through() {
     use tokio::io::AsyncWriteExt;
     let dir = tempfile::tempdir().unwrap();

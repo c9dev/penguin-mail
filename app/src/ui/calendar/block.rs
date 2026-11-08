@@ -786,6 +786,7 @@ mod tests {
     #[test]
     fn the_accessible_name_reads_the_time_and_the_calendar() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = std::sync::Arc::new(event(false, None));
         let o = Occurrence {
             account_id: 1,
@@ -802,6 +803,7 @@ mod tests {
     #[test]
     fn a_block_in_a_week_names_its_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = std::sync::Arc::new(event(false, None));
         let o = Occurrence {
             account_id: 1,
@@ -819,6 +821,7 @@ mod tests {
     #[test]
     fn an_all_day_block_in_a_week_names_its_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = std::sync::Arc::new(event(true, None));
         let o = Occurrence {
             account_id: 1,
@@ -837,6 +840,7 @@ mod tests {
     fn an_out_of_office_block_says_what_it_is() {
         use mailrs_domain::calendar::{Decline, Kind};
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = Event {
             kind: Kind::OutOfOffice(Decline::default()),
             ..event(false, None)
@@ -857,6 +861,7 @@ mod tests {
     fn a_block_titled_with_its_type_says_it_once() {
         use mailrs_domain::calendar::{Decline, Kind};
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = Event {
             kind: Kind::Focus(Decline::default()),
             title: "Focus time".into(),
@@ -878,6 +883,7 @@ mod tests {
     fn a_birthday_chip_says_it_is_a_birthday() {
         use mailrs_domain::calendar::Kind;
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = Event {
             kind: Kind::Birthday,
             title: "Ana".into(),
@@ -918,6 +924,7 @@ mod tests {
     #[test]
     fn an_all_day_event_reads_all_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let event = std::sync::Arc::new(event(true, None));
         let o = Occurrence {
             account_id: 1,

@@ -43,6 +43,11 @@ impl Smime {
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
+        // The path goes to gpgsm, so the file has to be closed first: an
+        // open NamedTempFile shares nothing on Windows, and the open
+        // would fail with access denied. `into_temp_path` still deletes
+        // it on drop.
+        let signature = file.into_temp_path();
         // gpgsm fetches no certificate over the network unless the
         // person's gpgsm.conf says `auto-issuer-key-retrieve`, and it has no
         // option to say otherwise here. gpg's equivalent is switched off on
@@ -51,7 +56,7 @@ impl Smime {
             command
                 .arg("--assume-base64")
                 .arg("--verify")
-                .arg(file.path())
+                .arg(&*signature)
                 .arg("-");
         })?;
         Ok(self.named(found))

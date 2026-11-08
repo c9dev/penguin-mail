@@ -16,6 +16,7 @@
 //! The crate is a dev-dependency and never reaches the app. It panics
 //! where a test would: a doveadm call that fails is a broken test.
 
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -203,6 +204,7 @@ impl Certs {
         }
         // The servers run as their own users inside the containers and must
         // read the key. The directory around it stays private to this user.
+        #[cfg(unix)]
         std::fs::set_permissions(at.join("tls.key"), std::fs::Permissions::from_mode(0o644))
             .expect("let the servers read the key");
         Some(Certs { dir })
@@ -875,6 +877,7 @@ impl Mailpit {
         }
         std::fs::write(dir.join("auth"), format!("{user}:{password}\n"))
             .expect("write the sink's password file");
+        #[cfg(unix)]
         for name in ["tls.key", "auth"] {
             std::fs::set_permissions(dir.join(name), std::fs::Permissions::from_mode(0o644))
                 .expect("let the sink read its files");
@@ -1018,10 +1021,12 @@ impl Radicale {
         std::fs::write(dir.join("users"), format!("{user}:{password}\n")).expect("write the users");
         // docker cp keeps the host's owner and mode, and Radicale runs as
         // another uid, so everything it reads must be world-readable.
+        #[cfg(unix)]
         for name in ["tls.crt", "tls.key", "users", "config"] {
             std::fs::set_permissions(dir.join(name), std::fs::Permissions::from_mode(0o644))
                 .expect("let Radicale read its files");
         }
+        #[cfg(unix)]
         std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755))
             .expect("let Radicale read its folder");
         let container = Container::start(

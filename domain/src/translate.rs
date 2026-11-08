@@ -10,6 +10,9 @@
 //! to wherever the sentence wants it. A date's weekday and month names
 //! come from [`date_locale`], so they match the words around them.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![allow(clippy::missing_const_for_thread_local)]
+
 use std::cell::Cell;
 
 use chrono::Locale;

@@ -154,13 +154,25 @@ impl Home {
 impl Drop for Home {
     fn drop(&mut self) {
         // The agent gpg started holds sockets open under the temp directory.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf(self.pgp.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "gpg-agent"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
+    }
+}
+
+/// gpgconf beside the program these tests found, or the bare name for
+/// PATH to resolve: Gpg4win keeps itself off PATH but puts the whole
+/// family in one directory.
+fn gpgconf(program: &Path) -> std::path::PathBuf {
+    let beside = program.with_file_name("gpgconf");
+    if beside.exists() || beside.with_extension("exe").exists() {
+        beside
+    } else {
+        "gpgconf".into()
     }
 }
 
