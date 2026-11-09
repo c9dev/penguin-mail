@@ -1630,7 +1630,9 @@ impl Core {
 
     /// Saves whether the IMAP account lists every folder, then starts the
     /// account again: the adapter reads the setting when it connects, and
-    /// lists its folders afresh as it starts.
+    /// lists its folders afresh as it starts. When the account cannot
+    /// start again, the old setting goes back too, so the switch, the
+    /// store and the running account agree.
     pub async fn set_all_folders(&self, account: Account, all: bool) -> Result<()> {
         let (db, engine) = (self.db.clone(), self.engine.current());
         let connector = self.connector();
@@ -1638,7 +1640,12 @@ impl Core {
         self.call(async move {
             db.write(move |c| mailrs_store::accounts::set_all_folders(c, id, all))
                 .await?;
-            restart_services(&connector, engine, &account).await
+            if let Err(err) = restart_services(&connector, engine, &account).await {
+                db.write(move |c| mailrs_store::accounts::set_all_folders(c, id, !all))
+                    .await?;
+                return Err(err);
+            }
+            Ok(())
         })
         .await
     }
