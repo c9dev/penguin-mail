@@ -54,6 +54,8 @@ mod attachments;
 mod categories;
 mod column_width;
 mod customize_mailboxes;
+#[cfg(test)]
+pub(crate) use customize_mailboxes::check_released;
 mod detached;
 mod export;
 mod flags;
@@ -1320,6 +1322,7 @@ impl MainWindow {
                 }
             }
             ChangeEvent::LabelsChanged { .. } => self.refresh_accounts(Reload::Yes),
+            ChangeEvent::LabelsPlaced { .. } => {}
             ChangeEvent::ThreadsChanged {
                 account_id,
                 thread_ids,

@@ -2360,7 +2360,7 @@ msgstr "Mark as Read"
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
-#: app/src/ui/window/organize.rs:232
+#: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "Delete"
 
@@ -3608,8 +3608,8 @@ msgstr "That account is not connected."
 msgid "Could not save: {reason}"
 msgstr "Could not save: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2930
-#: app/src/ui/window.rs:2953
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2933
+#: app/src/ui/window.rs:2956
 msgid "Could not open the draft: {reason}"
 msgstr "Could not open the draft: {reason}"
 
@@ -3862,7 +3862,7 @@ msgid "Set up a different project"
 msgstr "Set up a different project"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3283
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3286
 msgid "Set up your own Google project"
 msgstr "Set up your own Google project"
 
@@ -3919,7 +3919,7 @@ msgstr "Smaller than {size}"
 msgid "Larger than {size}"
 msgstr "Larger than {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:921
+#: app/src/rules.rs:251 app/src/settings/mod.rs:922
 msgid "All mail"
 msgstr "All mail"
 
@@ -4017,235 +4017,235 @@ msgstr "On this computer, while Penguin Mail is open"
 msgid "On the server"
 msgstr "On the server"
 
-#: app/src/settings/mod.rs:223 app/src/settings/mod.rs:432
-#: app/src/settings/mod.rs:833 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:224 app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:834 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1077
 msgid "Off"
 msgstr "Off"
 
-#: app/src/settings/mod.rs:224
+#: app/src/settings/mod.rs:225
 msgid "Local Server"
 msgstr "Local Server"
 
-#: app/src/settings/mod.rs:225
+#: app/src/settings/mod.rs:226
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:226
+#: app/src/settings/mod.rs:227
 msgid "Claude Subscription"
 msgstr "Claude Subscription"
 
-#: app/src/settings/mod.rs:251 app/src/ui/window.rs:3669
-#: app/src/ui/window.rs:3757
+#: app/src/settings/mod.rs:252 app/src/ui/window.rs:3672
+#: app/src/ui/window.rs:3760
 msgid "Assistant"
 msgstr "Assistant"
 
-#: app/src/settings/mod.rs:252 app/src/ui/preferences.rs:224
+#: app/src/settings/mod.rs:253 app/src/ui/preferences.rs:224
 msgid "Translation"
 msgstr "Translation"
 
 #. The assistant's running label says "Unsubscribing" too, an"
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:256
+#: app/src/settings/mod.rs:257
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Unsubscribing"
 
-#: app/src/settings/mod.rs:262
+#: app/src/settings/mod.rs:263
 msgid "Answers questions and acts on your mail"
 msgstr "Answers questions and acts on your mail"
 
-#: app/src/settings/mod.rs:263
+#: app/src/settings/mod.rs:264
 msgid "Translates a message when you ask"
 msgstr "Translates a message when you ask"
 
-#: app/src/settings/mod.rs:265
+#: app/src/settings/mod.rs:266
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Reads a newsletter's unsubscribe page when the rules cannot"
 
-#: app/src/settings/mod.rs:303
+#: app/src/settings/mod.rs:304
 msgid "Same as the Assistant"
 msgstr "Same as the Assistant"
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:434
 msgid "Claude's own only"
 msgstr "Claude's own only"
 
-#: app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:435
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:436
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:436
+#: app/src/settings/mod.rs:437
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:611
+#: app/src/settings/mod.rs:612
 msgid "Rich text"
 msgstr "Rich text"
 
-#: app/src/settings/mod.rs:612
+#: app/src/settings/mod.rs:613
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:631 app/src/settings/mod.rs:653
+#: app/src/settings/mod.rs:632 app/src/settings/mod.rs:654
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Automatic"
 
-#: app/src/settings/mod.rs:632 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:633 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "Monday"
 
-#: app/src/settings/mod.rs:633 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:634 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "Sunday"
 
-#: app/src/settings/mod.rs:654
+#: app/src/settings/mod.rs:655
 msgid "12-hour (AM/PM)"
 msgstr "12-hour (AM/PM)"
 
-#: app/src/settings/mod.rs:655
+#: app/src/settings/mod.rs:656
 msgid "24-hour"
 msgstr "24-hour"
 
-#: app/src/settings/mod.rs:693
+#: app/src/settings/mod.rs:694
 msgid "When opened"
 msgstr "When opened"
 
-#: app/src/settings/mod.rs:694
+#: app/src/settings/mod.rs:695
 msgid "After 2 seconds"
 msgstr "After 2 seconds"
 
-#: app/src/settings/mod.rs:695
+#: app/src/settings/mod.rs:696
 msgid "Only when I choose"
 msgstr "Only when I choose"
 
-#: app/src/settings/mod.rs:711 app/src/settings/mod.rs:729
+#: app/src/settings/mod.rs:712 app/src/settings/mod.rs:730
 msgid "Ask each time"
 msgstr "Ask each time"
 
-#: app/src/settings/mod.rs:712
+#: app/src/settings/mod.rs:713
 msgid "Always load"
 msgstr "Always load"
 
-#: app/src/settings/mod.rs:730
+#: app/src/settings/mod.rs:731
 msgid "Never ask"
 msgstr "Never ask"
 
-#: app/src/settings/mod.rs:757
+#: app/src/settings/mod.rs:758
 msgid "No Preview"
 msgstr "No Preview"
 
-#: app/src/settings/mod.rs:758
+#: app/src/settings/mod.rs:759
 msgid "1 Line"
 msgstr "1 Line"
 
-#: app/src/settings/mod.rs:759
+#: app/src/settings/mod.rs:760
 msgid "2 Lines"
 msgstr "2 Lines"
 
-#: app/src/settings/mod.rs:793
+#: app/src/settings/mod.rs:794
 msgid "Small"
 msgstr "Small"
 
-#: app/src/settings/mod.rs:794
+#: app/src/settings/mod.rs:795
 msgid "Default"
 msgstr "Default"
 
-#: app/src/settings/mod.rs:795
+#: app/src/settings/mod.rs:796
 msgid "Large"
 msgstr "Large"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:797
 msgid "Larger"
 msgstr "Larger"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:835
 msgid "5 seconds"
 msgstr "5 seconds"
 
-#: app/src/settings/mod.rs:835
+#: app/src/settings/mod.rs:836
 msgid "10 seconds"
 msgstr "10 seconds"
 
-#: app/src/settings/mod.rs:836
+#: app/src/settings/mod.rs:837
 msgid "20 seconds"
 msgstr "20 seconds"
 
-#: app/src/settings/mod.rs:837
+#: app/src/settings/mod.rs:838
 msgid "30 seconds"
 msgstr "30 seconds"
 
-#: app/src/settings/mod.rs:854
+#: app/src/settings/mod.rs:855
 msgid "Follow system"
 msgstr "Follow system"
 
-#: app/src/settings/mod.rs:855
+#: app/src/settings/mod.rs:856
 msgid "Light"
 msgstr "Light"
 
-#: app/src/settings/mod.rs:856
+#: app/src/settings/mod.rs:857
 msgid "Dark"
 msgstr "Dark"
 
-#: app/src/settings/mod.rs:890
+#: app/src/settings/mod.rs:891
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Every second"
 msgstr[1] "Every {count} seconds"
 
-#: app/src/settings/mod.rs:898
+#: app/src/settings/mod.rs:899
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Every minute"
 msgstr[1] "Every {count} minutes"
 
-#: app/src/settings/mod.rs:915
+#: app/src/settings/mod.rs:916
 msgid "2 weeks"
 msgstr "2 weeks"
 
-#: app/src/settings/mod.rs:916
+#: app/src/settings/mod.rs:917
 msgid "30 days"
 msgstr "30 days"
 
-#: app/src/settings/mod.rs:917
+#: app/src/settings/mod.rs:918
 msgid "90 days"
 msgstr "90 days"
 
-#: app/src/settings/mod.rs:918
+#: app/src/settings/mod.rs:919
 msgid "1 year"
 msgstr "1 year"
 
-#: app/src/settings/mod.rs:919
+#: app/src/settings/mod.rs:920
 msgid "2 years"
 msgstr "2 years"
 
-#: app/src/settings/mod.rs:920
+#: app/src/settings/mod.rs:921
 msgid "5 years"
 msgstr "5 years"
 
-#: app/src/settings/mod.rs:942
+#: app/src/settings/mod.rs:943
 msgid "Every message stays on this computer. A large account takes a lot of disk space and memory, and its older mail downloads in the background."
 msgstr "Every message stays on this computer. A large account takes a lot of disk space and memory, and its older mail downloads in the background."
 
-#: app/src/settings/mod.rs:944
+#: app/src/settings/mod.rs:945
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "Everything in your inbox stays too, and older mail remains searchable"
 
-#: app/src/settings/mod.rs:951
+#: app/src/settings/mod.rs:952
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:952
+#: app/src/settings/mod.rs:953
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:953
+#: app/src/settings/mod.rs:954
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4415,7 +4415,7 @@ msgstr "Open Penguin Mail"
 msgid "New Message"
 msgstr "New Message"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2406 app/src/ui/window.rs:3675
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2406 app/src/ui/window.rs:3678
 msgid "Check for Mail"
 msgstr "Check for Mail"
 
@@ -4433,7 +4433,7 @@ msgstr "What's New in {version}"
 msgid "Check for Updates"
 msgstr "Check for Updates"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3696
+#: app/src/tray.rs:266 app/src/ui/window.rs:3699
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Quit"
@@ -4454,7 +4454,7 @@ msgstr "What's New"
 msgid "Website"
 msgstr "Website"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3695
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3698
 msgid "Donate"
 msgstr "Donate"
 
@@ -4462,7 +4462,7 @@ msgstr "Donate"
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3694
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3697
 msgid "About Penguin Mail"
 msgstr "About Penguin Mail"
 
@@ -4511,12 +4511,12 @@ msgid "The update to {version} failed"
 msgstr "The update to {version} failed"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1558
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1561
 msgid "Copy Command"
 msgstr "Copy Command"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1563
+#: app/src/ui/window.rs:1566
 msgid "Command copied"
 msgstr "Command copied"
 
@@ -4626,7 +4626,7 @@ msgstr "Cancel"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1502
+#: app/src/ui/window.rs:1505
 msgid "Sign In"
 msgstr "Sign In"
 
@@ -4738,7 +4738,7 @@ msgstr "Not Now"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1635
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1638
 msgid "Grant Access"
 msgstr "Grant Access"
 
@@ -4879,7 +4879,7 @@ msgid "Sign In Again"
 msgstr "Sign In Again"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2237
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2240
 msgid "Open Google Cloud"
 msgstr "Open Google Cloud"
 
@@ -4953,13 +4953,13 @@ msgstr "Draft a reply to the open conversation"
 msgid "Choose a Model"
 msgstr "Choose a Model"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3804
-#: app/src/ui/window.rs:3805
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3807
+#: app/src/ui/window.rs:3808
 msgid "Detach"
 msgstr "Detach"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4483
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4486
 msgid "Close"
 msgstr "Close"
 
@@ -5161,7 +5161,7 @@ msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2231 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3439
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3442
 msgid "Remove"
 msgstr "Remove"
 
@@ -6259,7 +6259,7 @@ msgstr "A calendar of your own on {account}, on every device."
 msgid "Could not change the calendar list: {reason}"
 msgstr "Could not change the calendar list: {reason}"
 
-#: app/src/ui/calendar/manage.rs:163 app/src/ui/window/organize.rs:285
+#: app/src/ui/calendar/manage.rs:163 app/src/ui/window/organize.rs:270
 msgid "Could not change the color: {reason}"
 msgstr "Could not change the colour: {reason}"
 
@@ -6315,7 +6315,7 @@ msgstr "New Calendar"
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
 #: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:313
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
-#: app/src/ui/window/organize.rs:378
+#: app/src/ui/window/organize.rs:363
 msgid "Create"
 msgstr "Create"
 
@@ -7551,7 +7551,7 @@ msgid "Export…"
 msgstr "Export…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3685
+#: app/src/ui/window.rs:3688
 msgid "Customize Toolbar…"
 msgstr "Customise Toolbar…"
 
@@ -8069,7 +8069,7 @@ msgstr "Mail sent to {address} arrives in your inbox again, without the Hide My 
 msgid "Allow Hide My Email"
 msgstr "Allow Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3898
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3901
 msgid "Add an account first"
 msgstr "Add an account first"
 
@@ -8726,7 +8726,7 @@ msgstr "A notification before each event, at the times the event or its calendar
 
 #: app/src/ui/preferences.rs:402 app/src/ui/preferences.rs:409
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:46
-#: app/src/ui/window/customize_mailboxes.rs:636
+#: app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
 msgstr "Accounts"
 
@@ -9171,7 +9171,7 @@ msgstr "Move {account} Down"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3692 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3695 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferences"
 
@@ -9554,7 +9554,7 @@ msgstr "Stop the message from going out"
 
 #: app/src/ui/sidebar.rs:429 app/src/ui/sidebar.rs:854
 #: app/src/ui/sidebar/sections.rs:26
-#: app/src/ui/window/customize_mailboxes.rs:522
+#: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "Mailboxes"
 
@@ -9647,7 +9647,7 @@ msgstr "Automatic Reply…"
 msgid "Rules…"
 msgstr "Rules…"
 
-#: app/src/ui/sidebar.rs:2317 app/src/ui/window.rs:3678
+#: app/src/ui/sidebar.rs:2317 app/src/ui/window.rs:3681
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
@@ -9698,13 +9698,13 @@ msgid "Gmail limits how much mail an app can download each day. Penguin Mail tri
 msgstr "Gmail limits how much mail an app can download each day. Penguin Mail tries again later."
 
 #: app/src/ui/sidebar/sections.rs:25
-#: app/src/ui/window/customize_mailboxes.rs:294
-#: app/src/ui/window/customize_mailboxes.rs:304
+#: app/src/ui/window/customize_mailboxes.rs:288
+#: app/src/ui/window/customize_mailboxes.rs:298
 msgid "Favorites"
 msgstr "Favourites"
 
 #: app/src/ui/sidebar/sections.rs:27
-#: app/src/ui/window/customize_mailboxes.rs:599
+#: app/src/ui/window/customize_mailboxes.rs:597
 msgid "Smart Mailboxes"
 msgstr "Smart Mailboxes"
 
@@ -9928,7 +9928,7 @@ msgstr "Filter Messages (Active)"
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:411
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:413
 msgid "Muted"
 msgstr "Muted"
 
@@ -9957,14 +9957,14 @@ msgid "Labels or Move to Folder"
 msgstr "Labels or Move to Folder"
 
 #: app/src/ui/toolbar/customize.rs:116
-#: app/src/ui/window/customize_mailboxes.rs:123
-#: app/src/ui/window/customize_mailboxes.rs:340
+#: app/src/ui/window/customize_mailboxes.rs:111
+#: app/src/ui/window/customize_mailboxes.rs:334
 msgid "Move {button} Up"
 msgstr "Move {button} Up"
 
 #: app/src/ui/toolbar/customize.rs:120
-#: app/src/ui/window/customize_mailboxes.rs:127
-#: app/src/ui/window/customize_mailboxes.rs:344
+#: app/src/ui/window/customize_mailboxes.rs:115
+#: app/src/ui/window/customize_mailboxes.rs:338
 msgid "Move {button} Down"
 msgstr "Move {button} Down"
 
@@ -9977,7 +9977,7 @@ msgid "Choose buttons, then drag them or use the arrows to change their order."
 msgstr "Choose buttons, then drag them or use the arrows to change their order."
 
 #: app/src/ui/toolbar/customize.rs:238
-#: app/src/ui/window/customize_mailboxes.rs:822
+#: app/src/ui/window/customize_mailboxes.rs:847
 msgid "Restore Defaults"
 msgstr "Restore Defaults"
 
@@ -10180,322 +10180,322 @@ msgstr "Add your first account"
 msgid "Choose where your mail lives. You can add more later from the main menu."
 msgstr "Choose where your mail lives. You can add more later from the main menu."
 
-#: app/src/ui/window.rs:292
+#: app/src/ui/window.rs:294
 msgid "Deleted forever"
 msgstr "Deleted forever"
 
-#: app/src/ui/window.rs:294
+#: app/src/ui/window.rs:296
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "Deleted {count} conversation forever"
 msgstr[1] "Deleted {count} conversations forever"
 
-#: app/src/ui/window.rs:300
+#: app/src/ui/window.rs:302
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "Deleted {count} message forever"
 msgstr[1] "Deleted {count} messages forever"
 
-#: app/src/ui/window.rs:313
+#: app/src/ui/window.rs:315
 msgid "{label}, on this mail"
 msgstr "{label}, on this mail"
 
-#: app/src/ui/window.rs:342
+#: app/src/ui/window.rs:344
 msgid "Added {person} to VIPs"
 msgstr "Added {person} to VIPs"
 
-#: app/src/ui/window.rs:343
+#: app/src/ui/window.rs:345
 msgid "Removed {person} from VIPs"
 msgstr "Removed {person} from VIPs"
 
-#: app/src/ui/window.rs:349
+#: app/src/ui/window.rs:351
 msgid "Could not load mail: {reason}"
 msgstr "Could not load mail: {reason}"
 
-#: app/src/ui/window.rs:359
+#: app/src/ui/window.rs:361
 msgid "Added {account}. Downloading mail…"
 msgstr "Added {account}. Downloading mail…"
 
-#: app/src/ui/window.rs:363 app/src/ui/window.rs:3045
+#: app/src/ui/window.rs:365 app/src/ui/window.rs:3048
 msgid "{account} is signed in again."
 msgstr "{account} is signed in again."
 
-#: app/src/ui/window.rs:382
+#: app/src/ui/window.rs:384
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "Made a folder called “{name}” on {provider} for archived mail"
 
-#: app/src/ui/window.rs:391
+#: app/src/ui/window.rs:393
 msgid "Flagged red"
 msgstr "Flagged red"
 
-#: app/src/ui/window.rs:392
+#: app/src/ui/window.rs:394
 msgid "Flagged orange"
 msgstr "Flagged orange"
 
-#: app/src/ui/window.rs:393
+#: app/src/ui/window.rs:395
 msgid "Flagged yellow"
 msgstr "Flagged yellow"
 
-#: app/src/ui/window.rs:394
+#: app/src/ui/window.rs:396
 msgid "Flagged green"
 msgstr "Flagged green"
 
-#: app/src/ui/window.rs:395
+#: app/src/ui/window.rs:397
 msgid "Flagged blue"
 msgstr "Flagged blue"
 
-#: app/src/ui/window.rs:396
+#: app/src/ui/window.rs:398
 msgid "Flagged purple"
 msgstr "Flagged purple"
 
-#: app/src/ui/window.rs:397
+#: app/src/ui/window.rs:399
 msgid "Flagged gray"
 msgstr "Flagged grey"
 
-#: app/src/ui/window.rs:408 app/src/ui/window.rs:506
+#: app/src/ui/window.rs:410 app/src/ui/window.rs:508
 msgid "Labels changed"
 msgstr "Labels changed"
 
-#: app/src/ui/window.rs:412
+#: app/src/ui/window.rs:414
 msgid "Unmuted"
 msgstr "Unmuted"
 
-#: app/src/ui/window.rs:414
+#: app/src/ui/window.rs:416
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "Muted {count} conversation"
 msgstr[1] "Muted {count} conversations"
 
-#: app/src/ui/window.rs:420
+#: app/src/ui/window.rs:422
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "Muted {count} message"
 msgstr[1] "Muted {count} messages"
 
-#: app/src/ui/window.rs:426
+#: app/src/ui/window.rs:428
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "Unmuted {count} conversation"
 msgstr[1] "Unmuted {count} conversations"
 
-#: app/src/ui/window.rs:432
+#: app/src/ui/window.rs:434
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "Unmuted {count} message"
 msgstr[1] "Unmuted {count} messages"
 
-#: app/src/ui/window.rs:442
+#: app/src/ui/window.rs:444
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "Dismissed {count} follow-up"
 msgstr[1] "Dismissed {count} follow-ups"
 
-#: app/src/ui/window.rs:451
+#: app/src/ui/window.rs:453
 msgid "Archived"
 msgstr "Archived"
 
-#: app/src/ui/window.rs:453
+#: app/src/ui/window.rs:455
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "Archived {count} conversation"
 msgstr[1] "Archived {count} conversations"
 
-#: app/src/ui/window.rs:459
+#: app/src/ui/window.rs:461
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "Archived {count} message"
 msgstr[1] "Archived {count} messages"
 
-#: app/src/ui/window.rs:464
+#: app/src/ui/window.rs:466
 msgid "Moved to Trash"
 msgstr "Moved to Trash"
 
-#: app/src/ui/window.rs:466
+#: app/src/ui/window.rs:468
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "Moved {count} conversation to Trash"
 msgstr[1] "Moved {count} conversations to Trash"
 
-#: app/src/ui/window.rs:472
+#: app/src/ui/window.rs:474
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "Moved {count} message to Trash"
 msgstr[1] "Moved {count} messages to Trash"
 
-#: app/src/ui/window.rs:477
+#: app/src/ui/window.rs:479
 msgid "Marked as junk"
 msgstr "Marked as junk"
 
-#: app/src/ui/window.rs:479
+#: app/src/ui/window.rs:481
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "Marked {count} conversation as junk"
 msgstr[1] "Marked {count} conversations as junk"
 
-#: app/src/ui/window.rs:485
+#: app/src/ui/window.rs:487
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "Marked {count} message as junk"
 msgstr[1] "Marked {count} messages as junk"
 
-#: app/src/ui/window.rs:490
+#: app/src/ui/window.rs:492
 msgid "Moved to the Inbox"
 msgstr "Moved to the Inbox"
 
-#: app/src/ui/window.rs:492
+#: app/src/ui/window.rs:494
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "Moved {count} conversation to the Inbox"
 msgstr[1] "Moved {count} conversations to the Inbox"
 
-#: app/src/ui/window.rs:498
+#: app/src/ui/window.rs:500
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Moved {count} message to the Inbox"
 msgstr[1] "Moved {count} messages to the Inbox"
 
-#: app/src/ui/window.rs:946
+#: app/src/ui/window.rs:948
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:1388
+#: app/src/ui/window.rs:1391
 msgid "Could not read accounts: {reason}"
 msgstr "Could not read accounts: {reason}"
 
-#: app/src/ui/window.rs:2128
+#: app/src/ui/window.rs:2131
 msgid "Could not delete the mail: {reason}"
 msgstr "Could not delete the mail: {reason}"
 
-#: app/src/ui/window.rs:2235
+#: app/src/ui/window.rs:2238
 msgid "Turn On the {service}"
 msgstr "Turn On the {service}"
 
-#: app/src/ui/window.rs:2420 app/src/ui/window.rs:2423
+#: app/src/ui/window.rs:2423 app/src/ui/window.rs:2426
 msgid "Move to Inbox"
 msgstr "Move to Inbox"
 
-#: app/src/ui/window.rs:2618
+#: app/src/ui/window.rs:2621
 msgid "Select mail from one account to tag it."
 msgstr "Select mail from one account to tag it."
 
-#: app/src/ui/window.rs:2630
+#: app/src/ui/window.rs:2633
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "This account has no tags yet. Make one in Outlook."
 
-#: app/src/ui/window.rs:2723
+#: app/src/ui/window.rs:2726
 msgid "Add an account to reply or forward"
 msgstr "Add an account to reply or forward"
 
-#: app/src/ui/window.rs:2828
+#: app/src/ui/window.rs:2831
 msgid "Could not include {file}: {reason}"
 msgstr "Could not include {file}: {reason}"
 
-#: app/src/ui/window.rs:2909
+#: app/src/ui/window.rs:2912
 msgid "The server had already sent this message."
 msgstr "The server had already sent this message."
 
-#: app/src/ui/window.rs:2914
+#: app/src/ui/window.rs:2917
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "This message was cancelled in another app and is no longer in Drafts."
 
-#: app/src/ui/window.rs:3230
+#: app/src/ui/window.rs:3233
 msgid "Continue in your browser"
 msgstr "Continue in your browser"
 
-#: app/src/ui/window.rs:3280
+#: app/src/ui/window.rs:3283
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "This copy of Penguin Mail was built without Google sign-in."
 
-#: app/src/ui/window.rs:3302
+#: app/src/ui/window.rs:3305
 msgid "Get a Release"
 msgstr "Get a Release"
 
-#: app/src/ui/window.rs:3425
+#: app/src/ui/window.rs:3428
 msgid "Could not check for messages the server holds to send later, so {account} stays: {reason}"
 msgstr "Could not check for messages the server holds to send later, so {account} stays: {reason}"
 
-#: app/src/ui/window.rs:3436
+#: app/src/ui/window.rs:3439
 msgid "Remove {account}?"
 msgstr "Remove {account}?"
 
-#: app/src/ui/window.rs:3455
+#: app/src/ui/window.rs:3458
 msgid "Remove Anyway"
 msgstr "Remove Anyway"
 
-#: app/src/ui/window.rs:3468
+#: app/src/ui/window.rs:3471
 msgid "Removed {account}"
 msgstr "Removed {account}"
 
-#: app/src/ui/window.rs:3470
+#: app/src/ui/window.rs:3473
 msgid "Could not remove {account}: {reason}"
 msgstr "Could not remove {account}: {reason}"
 
-#: app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3659
 msgid "Refresh"
 msgstr "Refresh"
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3663
 msgid "Show Declined Events"
 msgstr "Show Declined Events"
 
-#: app/src/ui/window.rs:3676
+#: app/src/ui/window.rs:3679
 msgid "Add Account…"
 msgstr "Add Account…"
 
-#: app/src/ui/window.rs:3677
+#: app/src/ui/window.rs:3680
 msgid "New Smart Mailbox…"
 msgstr "New Smart Mailbox…"
 
-#: app/src/ui/window.rs:3689
+#: app/src/ui/window.rs:3692
 msgid "Customize Mailboxes…"
 msgstr "Customise Mailboxes…"
 
-#: app/src/ui/window.rs:3693 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3696 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Keyboard Shortcuts"
 
-#: app/src/ui/window.rs:3702 app/src/ui/window.rs:3704
+#: app/src/ui/window.rs:3705 app/src/ui/window.rs:3707
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: app/src/ui/window.rs:3769 app/src/ui/window.rs:3770
+#: app/src/ui/window.rs:3772 app/src/ui/window.rs:3773
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:3899
+#: app/src/ui/window.rs:3902
 msgid "Add a mail account first"
 msgstr "Add a mail account first"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4150
+#: app/src/ui/window.rs:4153
 msgid "The calendar and contacts of {account} are connected."
 msgstr "The calendar and contacts of {account} are connected."
 
-#: app/src/ui/window.rs:4266
+#: app/src/ui/window.rs:4269
 msgid "Open a message from the person first"
 msgstr "Open a message from the person first"
 
-#: app/src/ui/window.rs:4366
+#: app/src/ui/window.rs:4369
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail shows the new language after a restart"
 
-#: app/src/ui/window.rs:4368 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4371 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Restart"
 
-#: app/src/ui/window.rs:4432
+#: app/src/ui/window.rs:4435
 msgid "Show Rules"
 msgstr "Show Rules"
 
-#: app/src/ui/window.rs:4458
+#: app/src/ui/window.rs:4461
 msgid "Messages That Will Not Download"
 msgstr "Messages That Will Not Download"
 
-#: app/src/ui/window.rs:4460
+#: app/src/ui/window.rs:4463
 msgid "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
 msgstr "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
 
-#: app/src/ui/window/arrange.rs:127 app/src/ui/window/organize.rs:230
+#: app/src/ui/window/arrange.rs:127 app/src/ui/window/organize.rs:215
 msgid "Delete “{name}”?"
 msgstr "Delete “{name}”?"
 
@@ -10599,31 +10599,31 @@ msgstr "Message list width"
 msgid "Drag to resize, or use Left and Right. Home and End choose the smallest and largest widths."
 msgstr "Drag to resize, or use Left and Right. Home and End choose the smallest and largest widths."
 
-#: app/src/ui/window/customize_mailboxes.rs:118
+#: app/src/ui/window/customize_mailboxes.rs:106
 msgid "Show {mailbox}"
 msgstr "Show {mailbox}"
 
-#: app/src/ui/window/customize_mailboxes.rs:303
+#: app/src/ui/window/customize_mailboxes.rs:297
 msgid "Available Mailboxes"
 msgstr "Available Mailboxes"
 
-#: app/src/ui/window/customize_mailboxes.rs:333
+#: app/src/ui/window/customize_mailboxes.rs:327
 msgid "Add to Favorites"
 msgstr "Add to Favourites"
 
-#: app/src/ui/window/customize_mailboxes.rs:336
+#: app/src/ui/window/customize_mailboxes.rs:330
 msgid "Remove from Favorites"
 msgstr "Remove from Favourites"
 
-#: app/src/ui/window/customize_mailboxes.rs:357
+#: app/src/ui/window/customize_mailboxes.rs:351
 msgid "Favorite name"
 msgstr "Favourite name"
 
-#: app/src/ui/window/customize_mailboxes.rs:365
+#: app/src/ui/window/customize_mailboxes.rs:359
 msgid "Name for {mailbox} in Favorites"
 msgstr "Name for {mailbox} in Favourites"
 
-#: app/src/ui/window/customize_mailboxes.rs:837
+#: app/src/ui/window/customize_mailboxes.rs:862
 msgid "Customize Mailboxes"
 msgstr "Customise Mailboxes"
 
@@ -10635,7 +10635,7 @@ msgstr "Open a conversation first"
 #: app/src/ui/window/detached.rs:258 app/src/ui/window/export.rs:82
 #: app/src/ui/window/export.rs:192 app/src/ui/window/organize.rs:94
 #: app/src/ui/window/organize.rs:143 app/src/ui/window/organize.rs:187
-#: app/src/ui/window/organize.rs:241 app/src/ui/window/organize.rs:270
+#: app/src/ui/window/organize.rs:226 app/src/ui/window/organize.rs:255
 #: app/src/ui/window/senders.rs:296
 msgid "That account is not connected"
 msgstr "That account is not connected"
@@ -10868,11 +10868,11 @@ msgstr "Name, or Parent/Name to nest it"
 msgid "Created “{name}”"
 msgstr "Created “{name}”"
 
-#: app/src/ui/window/organize.rs:252
+#: app/src/ui/window/organize.rs:237
 msgid "Deleted “{name}”"
 msgstr "Deleted “{name}”"
 
-#: app/src/ui/window/organize.rs:380
+#: app/src/ui/window/organize.rs:365
 msgid "Only Where It Exists"
 msgstr "Only Where It Exists"
 

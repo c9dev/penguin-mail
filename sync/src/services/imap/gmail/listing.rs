@@ -277,18 +277,32 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             SearchQuery::Tree(tree) => mailrs_gmail::query::print(tree),
         };
         let boxes = self.gm_synced().await?;
-        let mailbox = if names_term(text, "in:trash") {
-            &boxes.trash
-        } else if names_term(text, "in:spam") {
-            &boxes.spam
-        } else {
-            &boxes.all
+        let includes = |role, term| match query {
+            SearchQuery::Tree(tree) => tree.asks_for(&mailrs_domain::MailSet::Role(role)),
+            SearchQuery::Native(_) => names_term(text, term) || names_term(text, "in:anywhere"),
         };
+        let mut mailboxes = vec![&boxes.all];
+        if includes(mailrs_domain::Role::Junk, "in:spam") {
+            mailboxes.push(&boxes.spam);
+        }
+        if includes(mailrs_domain::Role::Trash, "in:trash") {
+            mailboxes.push(&boxes.trash);
+        }
         let keys = format!("{} UNDELETED", gm_raw(text)?);
-        let selected = self.select(mailbox, None).await?;
-        let top = self.top_uid(mailbox, &selected).await?;
-        let uids = self.newest_matching(mailbox, &keys, top, limit).await?;
-        self.gm_refs(mailbox, selected.uidvalidity, &uids).await
+        let mut found = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for mailbox in mailboxes {
+            let selected = self.select(mailbox, None).await?;
+            let top = self.top_uid(mailbox, &selected).await?;
+            let uids = self.newest_matching(mailbox, &keys, top, limit).await?;
+            for hit in self.gm_refs(mailbox, selected.uidvalidity, &uids).await? {
+                if seen.insert(hit.id.clone()) {
+                    found.push(hit);
+                }
+            }
+        }
+        found.truncate(limit);
+        Ok(found)
     }
 
     /// The message of Sent with Message-ID `message_id`, by hex id.
@@ -535,8 +549,8 @@ fn names_term(text: &str, term: &str) -> bool {
     }
     words.push(word);
     words.iter().any(|w| {
-        w.trim_start_matches('(')
-            .trim_end_matches(')')
+        w.trim_start_matches(['(', '{'])
+            .trim_end_matches([')', '}'])
             .eq_ignore_ascii_case(term)
     })
 }
@@ -549,6 +563,8 @@ mod tests {
     fn a_search_names_trash_only_as_a_word_of_its_own() {
         assert!(names_term("from:ann in:trash", "in:trash"));
         assert!(names_term("(IN:TRASH)", "in:trash"));
+        assert!(names_term("{in:inbox in:trash}", "in:trash"));
+        assert!(names_term("{in:spam in:inbox}", "in:spam"));
         assert!(!names_term("from:ann -in:trash", "in:trash"));
         assert!(!names_term("subject:\"in:trash please\"", "in:trash"));
     }

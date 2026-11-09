@@ -190,7 +190,6 @@ impl MainWindow {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let Placement { name, order } = placement;
-            let moved_order = order.clone();
             if let Err(err) = this
                 .core
                 .call_for(account_id, async move {
@@ -199,20 +198,6 @@ impl MainWindow {
                 .await
             {
                 this.failed(&filing.rename_failed(), &err);
-                return;
-            }
-            if let Some(account) = this.account(account_id)
-                && let Some(app) = this.app.upgrade()
-            {
-                let root = format!("account:{}", account.email.to_ascii_lowercase());
-                let mut layout = this.settings().sidebar;
-                if let Some(ids) = layout.label_order.get_mut(&root) {
-                    *ids = super::customize_mailboxes::reorder_siblings(
-                        std::mem::take(ids),
-                        &moved_order,
-                    );
-                    app.change_settings(crate::settings::Change::Sidebar(layout));
-                }
             }
         });
     }

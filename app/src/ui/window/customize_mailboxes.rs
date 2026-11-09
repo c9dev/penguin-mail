@@ -9,6 +9,7 @@ use gtk::{gdk, glib};
 use mailrs_domain::translate::{fill, gettext};
 
 use super::MainWindow;
+use crate::settings::reorder_siblings;
 use crate::settings::{Change, FavoriteMailbox, SidebarLayout};
 use crate::ui::Standard;
 use crate::ui::sidebar::sections::{LAYOUT, Place};
@@ -34,23 +35,6 @@ fn set_visible(win: &MainWindow, key: &str, shown: bool) {
     save(win, layout);
 }
 
-pub(super) fn reorder_siblings(mut ids: Vec<String>, siblings: &[String]) -> Vec<String> {
-    for id in siblings {
-        if !ids.contains(id) {
-            ids.push(id.clone());
-        }
-    }
-    let slots: Vec<usize> = ids
-        .iter()
-        .enumerate()
-        .filter_map(|(i, id)| siblings.contains(id).then_some(i))
-        .collect();
-    for (slot, id) in slots.into_iter().zip(siblings) {
-        ids[slot] = id.clone();
-    }
-    ids
-}
-
 fn move_folder(
     win: &MainWindow,
     account: mailrs_domain::AccountId,
@@ -58,7 +42,7 @@ fn move_folder(
     label_id: &str,
     step: i32,
     list: &gtk::ListBox,
-    widgets: &HashMap<String, adw::ActionRow>,
+    widgets: &HashMap<String, glib::WeakRef<adw::ActionRow>>,
 ) {
     let root = format!("account:{}", email.to_ascii_lowercase());
     let labels = win.labels_of(account);
@@ -89,6 +73,10 @@ fn move_folder(
         .map(|(i, id)| (id.clone(), i as i64))
         .collect();
     let ordered = label_rows(&labels, &positions);
+    let widgets: HashMap<_, _> = widgets
+        .iter()
+        .filter_map(|(id, row)| row.upgrade().map(|row| (id, row)))
+        .collect();
     let start = widgets.values().map(|row| row.index()).min().unwrap_or(0);
     for (offset, entry) in ordered.iter().enumerate() {
         if let Some(row) = widgets.get(&entry.label.id) {
@@ -150,7 +138,9 @@ struct Editor {
     dragging: RefCell<Option<String>>,
 }
 
-type AccountBlocks = Rc<RefCell<Vec<(String, Vec<adw::ActionRow>)>>>;
+type RootRows = Rc<RefCell<Vec<(String, glib::WeakRef<adw::ActionRow>)>>>;
+
+type AccountBlocks = Rc<RefCell<Vec<(String, Vec<glib::WeakRef<adw::ActionRow>>)>>>;
 
 fn favorite_neighbor(
     favorites: &[FavoriteMailbox],
@@ -246,6 +236,10 @@ impl Editor {
 
 impl MainWindow {
     pub(super) fn customize_mailboxes(self: &Rc<Self>) {
+        self.mailbox_customization().present(Some(&self.window));
+    }
+
+    fn mailbox_customization(self: &Rc<Self>) -> adw::Dialog {
         let accounts = self.mail_accounts();
         let data: Vec<_> = accounts
             .iter()
@@ -564,11 +558,15 @@ impl MainWindow {
             });
             for (button, step) in [(&up, -1isize), (&down, 1)] {
                 let weak = Rc::downgrade(self);
-                let list = mailbox_list.clone();
-                let row = row.clone();
+                let list = mailbox_list.downgrade();
+                let row = row.downgrade();
                 let defaults: Vec<String> = places.iter().map(|place| place.key()).collect();
                 button.connect_clicked(move |_| {
-                    let Some(win) = weak.upgrade() else { return };
+                    let (Some(win), Some(list), Some(row)) =
+                        (weak.upgrade(), list.upgrade(), row.upgrade())
+                    else {
+                        return;
+                    };
                     let Some(next) = (row.index() as usize).checked_add_signed(step) else {
                         return;
                     };
@@ -610,12 +608,16 @@ impl MainWindow {
                 });
                 for (button, step) in [(&up, -1), (&down, 1)] {
                     let weak = Rc::downgrade(self);
-                    let list = smart_list.clone();
-                    let item = item.clone();
+                    let list = smart_list.downgrade();
+                    let item = item.downgrade();
                     let id = smart.id.clone();
                     let count = settings.smart_mailboxes.len();
                     button.connect_clicked(move |_| {
-                        let Some(win) = weak.upgrade() else { return };
+                        let (Some(win), Some(list), Some(item)) =
+                            (weak.upgrade(), list.upgrade(), item.upgrade())
+                        else {
+                            return;
+                        };
                         let Some(next) = (item.index() as usize).checked_add_signed(step) else {
                             return;
                         };
@@ -645,7 +647,7 @@ impl MainWindow {
             let (account_row, check, up, down) = row(&title);
             check.set_active(settings.sidebar.visible(&root, true));
             accounts_list.append(&account_row);
-            let mut block = vec![account_row.clone()];
+            let mut block = vec![account_row.downgrade()];
             let weak = Rc::downgrade(self);
             let key = root.clone();
             check.connect_toggled(move |check| {
@@ -656,11 +658,13 @@ impl MainWindow {
             for (button, step) in [(&up, -1isize), (&down, 1)] {
                 let weak = Rc::downgrade(self);
                 let account = account.clone();
-                let list = accounts_list.clone();
+                let list = accounts_list.downgrade();
                 let blocks = Rc::clone(&blocks);
                 let root = root.clone();
                 button.connect_clicked(move |_| {
-                    let Some(win) = weak.upgrade() else { return };
+                    let (Some(win), Some(list)) = (weak.upgrade(), list.upgrade()) else {
+                        return;
+                    };
                     let mut blocks = blocks.borrow_mut();
                     let Some(index) = blocks.iter().position(|(key, _)| key == &root) else {
                         return;
@@ -671,12 +675,22 @@ impl MainWindow {
                     if next >= blocks.len() {
                         return;
                     }
-                    let mut moving = blocks[index].1.clone();
+                    let mut moving: Vec<_> = blocks[index]
+                        .1
+                        .iter()
+                        .filter_map(glib::WeakRef::upgrade)
+                        .collect();
+                    if moving.is_empty() {
+                        return;
+                    }
                     moving.sort_by_key(|row| row.index());
                     let at = if step > 0 {
                         moving[0].index() + blocks[next].1.len() as i32
                     } else {
-                        blocks[next].1[0].index()
+                        match blocks[next].1.first().and_then(glib::WeakRef::upgrade) {
+                            Some(row) => row.index(),
+                            None => return,
+                        }
                     };
                     for row in &moving {
                         list.remove(row);
@@ -700,8 +714,7 @@ impl MainWindow {
             if let Some(order) = settings.sidebar.account_roots.get(&root) {
                 roots.sort_by_key(|key| order.iter().position(|item| item == key));
             }
-            let root_rows: Rc<RefCell<Vec<(String, adw::ActionRow)>>> =
-                Rc::new(RefCell::new(Vec::new()));
+            let root_rows: RootRows = Rc::new(RefCell::new(Vec::new()));
             for key in roots {
                 let Some(choice) = choices.iter().find(|choice| choice.key == key) else {
                     continue;
@@ -710,8 +723,8 @@ impl MainWindow {
                 item.set_margin_start(20);
                 check.set_active(settings.sidebar.visible(&key, true));
                 accounts_list.append(&item);
-                block.push(item.clone());
-                root_rows.borrow_mut().push((key.clone(), item.clone()));
+                block.push(item.downgrade());
+                root_rows.borrow_mut().push((key.clone(), item.downgrade()));
                 let weak = Rc::downgrade(self);
                 let visible_key = key.clone();
                 check.connect_toggled(move |check| {
@@ -721,14 +734,21 @@ impl MainWindow {
                 });
                 for (button, step) in [(&up, -1isize), (&down, 1)] {
                     let weak = Rc::downgrade(self);
-                    let list = accounts_list.clone();
-                    let item = item.clone();
+                    let list = accounts_list.downgrade();
+                    let item = item.downgrade();
                     let root_rows = Rc::clone(&root_rows);
                     let root = root.clone();
                     button.connect_clicked(move |_| {
-                        let Some(win) = weak.upgrade() else { return };
+                        let (Some(win), Some(list), Some(item)) =
+                            (weak.upgrade(), list.upgrade(), item.upgrade())
+                        else {
+                            return;
+                        };
                         let mut rows = root_rows.borrow_mut();
-                        let Some(index) = rows.iter().position(|(_, row)| row == &item) else {
+                        let Some(index) = rows
+                            .iter()
+                            .position(|(_, row)| row.upgrade().as_ref() == Some(&item))
+                        else {
                             return;
                         };
                         let Some(next) = index.checked_add_signed(step) else {
@@ -737,7 +757,10 @@ impl MainWindow {
                         if next >= rows.len() {
                             return;
                         }
-                        let at = rows[next].1.index();
+                        let Some(next_row) = rows[next].1.upgrade() else {
+                            return;
+                        };
+                        let at = next_row.index();
                         list.remove(&item);
                         list.insert(&item, at);
                         rows.swap(index, next);
@@ -762,7 +785,7 @@ impl MainWindow {
                         .collect()
                 })
                 .unwrap_or_else(|| self.label_order(account.id));
-            let label_widgets: Rc<RefCell<HashMap<String, adw::ActionRow>>> =
+            let label_widgets: Rc<RefCell<HashMap<String, glib::WeakRef<adw::ActionRow>>>> =
                 Rc::new(RefCell::new(HashMap::new()));
             for entry in label_rows(&labels, &positions) {
                 let label = entry.label;
@@ -771,8 +794,10 @@ impl MainWindow {
                 item.set_margin_start(20 + 20 * entry.depth as i32);
                 check.set_active(settings.sidebar.visible(&key, true));
                 accounts_list.append(&item);
-                block.push(item.clone());
-                label_widgets.borrow_mut().insert(label.id.clone(), item);
+                block.push(item.downgrade());
+                label_widgets
+                    .borrow_mut()
+                    .insert(label.id.clone(), item.downgrade());
                 let weak = Rc::downgrade(self);
                 check.connect_toggled(move |check| {
                     if let Some(win) = weak.upgrade() {
@@ -781,13 +806,13 @@ impl MainWindow {
                 });
                 for (button, step) in [(&up, -1i32), (&down, 1)] {
                     let weak = Rc::downgrade(self);
-                    let list = accounts_list.clone();
+                    let list = accounts_list.downgrade();
                     let widgets = Rc::clone(&label_widgets);
                     let id = label.id.clone();
                     let email = account.email.clone();
                     let account_id = account.id;
                     button.connect_clicked(move |_| {
-                        if let Some(win) = weak.upgrade() {
+                        if let (Some(win), Some(list)) = (weak.upgrade(), list.upgrade()) {
                             move_folder(
                                 &win,
                                 account_id,
@@ -809,7 +834,7 @@ impl MainWindow {
                 down.set_visible(false);
                 check.set_active(settings.sidebar.visible(&key, true));
                 accounts_list.append(&item);
-                block.push(item);
+                block.push(item.downgrade());
                 let weak = Rc::downgrade(self);
                 check.connect_toggled(move |check| {
                     if let Some(win) = weak.upgrade() {
@@ -840,18 +865,70 @@ impl MainWindow {
             .child(&toolbar)
             .build();
         let weak = Rc::downgrade(self);
-        let closing = dialog.clone();
+        let closing = dialog.downgrade();
         reset.connect_clicked(move |_| {
             if let Some(win) = weak.upgrade() {
                 save(&win, SidebarLayout::default());
-                closing.close();
+                if let Some(dialog) = closing.upgrade() {
+                    dialog.close();
+                }
             }
         });
         dialog.connect_closed(move |_| {
             let _ = &editor;
         });
-        dialog.present(Some(&self.window));
+        dialog
     }
+}
+
+#[cfg(test)]
+pub(crate) async fn check_released() {
+    let core = crate::core::Core::open(true).expect("isolated demo core");
+    let gio = gtk::gio::Application::builder()
+        .application_id("io.github.c9dev.PenguinMail.CustomizationTest")
+        .flags(gtk::gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    gio.register(gtk::gio::Cancellable::NONE).unwrap();
+    let app = crate::app::App::new(&gio, core, true, None, None);
+    app.reload_accounts().await.unwrap();
+    app.change_settings(Change::SaveSmartMailbox(Box::new(
+        mailrs_domain::SmartMailbox {
+            id: "lifetime".into(),
+            name: "Unread".into(),
+            account: None,
+            match_all: true,
+            conditions: Vec::new(),
+            unread_count: Default::default(),
+        },
+    )));
+    let win = MainWindow::new(&app);
+    fn lists(widget: &gtk::Widget, held: &mut Vec<glib::WeakRef<gtk::ListBox>>) {
+        if let Some(list) = widget.downcast_ref::<gtk::ListBox>() {
+            held.push(list.downgrade());
+        }
+        let mut child = widget.first_child();
+        while let Some(widget) = child {
+            lists(&widget, held);
+            child = widget.next_sibling();
+        }
+    }
+    for _ in 0..2 {
+        let dialog = win.mailbox_customization();
+        let mut held = Vec::new();
+        lists(&dialog.child().unwrap(), &mut held);
+        assert!(
+            held.len() >= 5,
+            "favorites, available, unified, smart and account lists"
+        );
+        let weak = dialog.downgrade();
+        drop(dialog);
+        assert!(weak.upgrade().is_none(), "Reset must not retain the dialog");
+        assert!(
+            held.iter().all(|list| list.upgrade().is_none()),
+            "row callbacks must not retain lists"
+        );
+    }
+    win.window.destroy();
 }
 
 #[cfg(test)]

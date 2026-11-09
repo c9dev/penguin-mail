@@ -19,6 +19,7 @@ mod signatures;
 pub use accounts::{AccountChoice, AccountDefaults, AccountUse, accounts_for, preferred_calendar};
 pub use change::{AiChange, Change, Effect, Effects, Setting};
 pub use file::{Opened, Saver};
+pub(crate) use sidebar::reorder_siblings;
 pub use sidebar::{FavoriteMailbox, SidebarLayout};
 pub use signatures::SignatureMode;
 

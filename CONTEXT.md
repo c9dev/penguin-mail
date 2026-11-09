@@ -499,3 +499,5 @@ The sidebar places nested folders under the server mailbox whose role it knows, 
 **List filter**: temporary conditions that narrow the current message list to unread rows, flagged rows, or rows with attachments. Selected conditions all apply, and follow the reader between mailboxes until cleared or the window closes. Grouped rows match the conversation; ungrouped rows match one message. Stored lists filter before paging; server pages keep their unfiltered cursor so More remains usable even when a page has no matches. `mailrs_domain::ListFilter`.
 
 **Analysis chat**: a fresh assistant conversation started by Summarize or Explain with only the displayed mail's loaded text. Tools and web search are disabled by default, including for follow-up questions, until New Chat. The Safety preference can allow tools when a new analysis chat starts. `mailrs::assistant::chat::Chat::analyze`. _Avoid_: read-only agent, safe mode.
+
+Mailbox placements report their committed old-to-new IDs and sibling order through `ChangeEvent::LabelsPlaced`. The app applies them to saved sidebar keys before refreshing folders, including placements made by the assistant.

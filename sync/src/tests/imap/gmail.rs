@@ -519,3 +519,58 @@ async fn exact_count_includes_each_requested_gmail_location_once() {
         2
     );
 }
+
+#[tokio::test]
+async fn folder_unions_search_all_selected_gmail_locations_once() {
+    use mailrs_domain::{MailSet, Role, query::Query};
+    let imap = FakeImap::gmail();
+    let inbox = imap.deliver_gmail(
+        &["\\Inbox"],
+        message("union-inbox", "Invoice", ""),
+        days_ago(1),
+    );
+    let trash = imap.deliver_gmail(&[], message("union-trash", "Invoice", ""), days_ago(1));
+    imap.remote_trash(trash);
+    let (imap, adapter) = adapter_on(imap);
+    // A second location for one ID must not duplicate the search result.
+    imap.with(|state| {
+        let copy = state.mailboxes[ALL_MAIL]
+            .messages
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        let target = state.mailboxes.get_mut(TRASH).unwrap();
+        target.messages.insert(target.uidnext, copy);
+        target.uidnext += 1;
+    });
+    let query = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Trash)),
+    ]);
+    for search in [
+        SearchQuery::Tree(query.clone()),
+        SearchQuery::Native("{in:inbox in:trash}".into()),
+    ] {
+        let refs = adapter.search(&search, 10).await.unwrap();
+        let ids: std::collections::BTreeSet<_> = refs.iter().map(|r| r.id.clone()).collect();
+        assert_eq!(ids, [hex(inbox), hex(trash)].into());
+        assert_eq!(refs.len(), 2);
+        assert_eq!(adapter.search(&search, 1).await.unwrap().len(), 1);
+        assert!(adapter.search(&search, 0).await.unwrap().is_empty());
+    }
+    assert_eq!(adapter.count_query(&query).await.unwrap(), 2);
+    imap.with(|state| {
+        let messages = std::mem::take(&mut state.mailboxes.get_mut(TRASH).unwrap().messages);
+        let spam = state.mailboxes.get_mut("[Gmail]/Spam").unwrap();
+        spam.uidnext = messages.keys().max().copied().unwrap() + 1;
+        spam.messages = messages;
+    });
+    let query = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Junk)),
+    ]);
+    let found = adapter.search(&SearchQuery::Tree(query), 10).await.unwrap();
+    assert_eq!(found.len(), 2);
+    assert!(found.iter().any(|r| r.id == hex(trash)));
+}
