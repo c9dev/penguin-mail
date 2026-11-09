@@ -2260,39 +2260,39 @@ msgstr ""
 "Penguin Mail non ha potuto aggiornare l'archivio della posta e ha conservato "
 "quello precedente."
 
-#: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
-#: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1639
+#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
+#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
+#: app/src/core.rs:1445 app/src/core.rs:1667
 msgid "Demo mode cannot add real accounts."
 msgstr "La modalità demo non può aggiungere account reali."
 
-#: app/src/core.rs:982 app/src/core.rs:1663 app/src/core.rs:1704
-#: app/src/core.rs:1960
+#: app/src/core.rs:1010 app/src/core.rs:1691 app/src/core.rs:1732
+#: app/src/core.rs:1988
 msgid "Canceled."
 msgstr "Annullato."
 
-#: app/src/core.rs:1589 app/src/core.rs:1614
+#: app/src/core.rs:1617 app/src/core.rs:1642
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Questo account non conserva una password accettata da un server di calendari "
 "o contatti."
 
-#: app/src/core.rs:1708
+#: app/src/core.rs:1736
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Rimuovi le caselle condivise di questo account prima di rimuovere l'account "
 "usato per accedere."
 
-#: app/src/core.rs:1886 app/src/core.rs:1986
+#: app/src/core.rs:1914 app/src/core.rs:2014
 msgid "The demo cannot switch accounts."
 msgstr "La demo non può cambiare account."
 
-#: app/src/core.rs:1940
+#: app/src/core.rs:1968
 msgid "The demo cannot connect a calendar."
 msgstr "La demo non può collegare un calendario."
 
-#: app/src/core.rs:2006
+#: app/src/core.rs:2034
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Attesa del browser interrotta dopo cinque minuti."
 

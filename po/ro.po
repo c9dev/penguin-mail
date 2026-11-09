@@ -2299,39 +2299,39 @@ msgstr ""
 "Penguin Mail nu a putut actualiza depozitul de corespondență și l-a păstrat "
 "pe cel vechi."
 
-#: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
-#: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1639
+#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
+#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
+#: app/src/core.rs:1445 app/src/core.rs:1667
 msgid "Demo mode cannot add real accounts."
 msgstr "Modul demonstrativ nu poate adăuga conturi reale."
 
-#: app/src/core.rs:982 app/src/core.rs:1663 app/src/core.rs:1704
-#: app/src/core.rs:1960
+#: app/src/core.rs:1010 app/src/core.rs:1691 app/src/core.rs:1732
+#: app/src/core.rs:1988
 msgid "Canceled."
 msgstr "Anulat."
 
-#: app/src/core.rs:1589 app/src/core.rs:1614
+#: app/src/core.rs:1617 app/src/core.rs:1642
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Acest cont nu păstrează nicio parolă acceptată de un server de calendar sau "
 "de contacte."
 
-#: app/src/core.rs:1708
+#: app/src/core.rs:1736
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Elimină cutiile poștale partajate ale acestui cont înainte de a elimina "
 "contul folosit pentru autentificare."
 
-#: app/src/core.rs:1886 app/src/core.rs:1986
+#: app/src/core.rs:1914 app/src/core.rs:2014
 msgid "The demo cannot switch accounts."
 msgstr "Demonstrația nu poate schimba conturile."
 
-#: app/src/core.rs:1940
+#: app/src/core.rs:1968
 msgid "The demo cannot connect a calendar."
 msgstr "Demonstrația nu poate conecta un calendar."
 
-#: app/src/core.rs:2006
+#: app/src/core.rs:2034
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "S-a renunțat la așteptarea navigatorului după cinci minute."
 

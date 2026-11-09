@@ -2294,39 +2294,39 @@ msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "Penguin Mail nie mógł zaktualizować magazynu poczty i zachował poprzedni."
 
-#: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
-#: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1639
+#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
+#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
+#: app/src/core.rs:1445 app/src/core.rs:1667
 msgid "Demo mode cannot add real accounts."
 msgstr "W trybie demonstracyjnym nie można dodawać prawdziwych kont."
 
-#: app/src/core.rs:982 app/src/core.rs:1663 app/src/core.rs:1704
-#: app/src/core.rs:1960
+#: app/src/core.rs:1010 app/src/core.rs:1691 app/src/core.rs:1732
+#: app/src/core.rs:1988
 msgid "Canceled."
 msgstr "Anulowano."
 
-#: app/src/core.rs:1589 app/src/core.rs:1614
+#: app/src/core.rs:1617 app/src/core.rs:1642
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "To konto nie przechowuje hasła akceptowanego przez serwer kalendarza lub "
 "kontaktów."
 
-#: app/src/core.rs:1708
+#: app/src/core.rs:1736
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Usuń udostępnione skrzynki tego konta przed usunięciem konta używanego do "
 "logowania."
 
-#: app/src/core.rs:1886 app/src/core.rs:1986
+#: app/src/core.rs:1914 app/src/core.rs:2014
 msgid "The demo cannot switch accounts."
 msgstr "W trybie demonstracyjnym nie można przełączać kont."
 
-#: app/src/core.rs:1940
+#: app/src/core.rs:1968
 msgid "The demo cannot connect a calendar."
 msgstr "W trybie demonstracyjnym nie można połączyć kalendarza."
 
-#: app/src/core.rs:2006
+#: app/src/core.rs:2034
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Przerwano oczekiwanie na przeglądarkę po pięciu minutach."
 

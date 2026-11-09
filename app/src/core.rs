@@ -589,33 +589,61 @@ impl Core {
     }
 
     /// Runs `future` on the tokio runtime and waits for it from the GTK loop.
-    pub async fn call<T, E, F>(&self, future: F) -> Result<T>
+    ///
+    /// `future` is boxed at once, its error made an `anyhow::Error`, and
+    /// the rest happens in `call_boxed`, generic over the answer alone: the
+    /// app calls this from a few hundred places, and each would otherwise
+    /// build its own copy of the whole call.
+    pub fn call<T, E, F>(&self, future: F) -> impl Future<Output = Result<T>> + use<'_, T, E, F>
     where
         F: Future<Output = std::result::Result<T, E>> + Send + 'static,
         T: Send + 'static,
         E: Into<anyhow::Error> + Send + 'static,
     {
+        self.call_boxed(boxed(future))
+    }
+
+    async fn call_boxed<T: Send + 'static>(&self, future: BoxedCall<T>) -> Result<T> {
         let guard = InFlight::new(&self.in_flight);
-        let task = async move {
+        let (done, answer) = tokio::sync::oneshot::channel();
+        let task = erased(async move {
             let _guard = guard;
-            future.await
-        };
-        match self.runtime.spawn(task).await {
-            Ok(result) => result.map_err(Into::into),
-            Err(err) => Err(anyhow!("background task failed: {err}")),
+            let _ = done.send(future.await);
+        });
+        let running = self.runtime.spawn(task);
+        match answer.await {
+            Ok(result) => result,
+            // The task ended without answering: it panicked, or the runtime
+            // is shutting down. Its handle says which.
+            Err(_) => match running.await {
+                Err(err) => Err(anyhow!("background task failed: {err}")),
+                Ok(()) => Err(anyhow!("background task failed")),
+            },
         }
     }
 
     /// Runs an account's call without losing its provider when a server
     /// asks us to wait. Keep the original error as the source for callers
     /// that still need to inspect it.
-    pub async fn call_for<T, E, F>(&self, account_id: AccountId, future: F) -> Result<T>
+    pub fn call_for<T, E, F>(
+        &self,
+        account_id: AccountId,
+        future: F,
+    ) -> impl Future<Output = Result<T>> + use<'_, T, E, F>
     where
         F: Future<Output = std::result::Result<T, E>> + Send + 'static,
         T: Send + 'static,
         E: Into<anyhow::Error> + Send + 'static,
     {
-        let result = self.call(future).await;
+        self.call_for_boxed(account_id, boxed(future))
+    }
+
+    async fn call_for_boxed<T: Send + 'static>(
+        &self,
+        account_id: AccountId,
+        future: BoxedCall<T>,
+    ) -> Result<T> {
+        let result = self.call_boxed(future).await;
         let Err(err) = result else {
             return result;
         };
@@ -733,7 +761,7 @@ impl Core {
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        self.runtime.spawn(future);
+        self.runtime.spawn(erased(future));
     }
 
     pub fn account(&self, account_id: AccountId) -> Option<Arc<Sync>> {
@@ -2138,6 +2166,31 @@ async fn restart_services(
         }
     }
     Ok(())
+}
+
+/// `future` as the one task type the app spawns. tokio builds its task
+/// code (polling, waking, catching a panic, dropping) for each future type
+/// it is given, and the app spawns from several hundred call sites, each
+/// an `async` block of its own type. Boxed, each site costs one
+/// allocation and the task code exists once: with `Db::read` boxed the
+/// same way, the app crate's LLVM IR went from 6.09 to 5.01 million lines.
+/// A caller's future for `Core::call`, boxed and with its error turned
+/// into an `anyhow::Error`, so the code that runs it is built once per
+/// answer type rather than once per caller.
+type BoxedCall<T> = std::pin::Pin<Box<dyn Future<Output = Result<T>> + Send>>;
+
+fn boxed<T, E, F>(future: F) -> BoxedCall<T>
+where
+    F: Future<Output = std::result::Result<T, E>> + Send + 'static,
+    E: Into<anyhow::Error>,
+{
+    Box::pin(async move { future.await.map_err(Into::into) })
+}
+
+fn erased(
+    future: impl Future<Output = ()> + Send + 'static,
+) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
+    Box::pin(future)
 }
 
 /// The assistant's tools run on the GTK thread and hand their store and
