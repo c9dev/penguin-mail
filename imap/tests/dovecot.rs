@@ -7,7 +7,7 @@
 //! its own binary, `dovecot_untrusted.rs`, for the same reason.
 
 use mailrs_discover::{Security, Server, UserName};
-use mailrs_imap::{CheckError, ImapError, check};
+use mailrs_imap::{CheckError, ImapClient, ImapError, Login, check};
 use mailrs_testmail::{Certs, Dovecot, Mailpit, Profile, Submission};
 
 const ADDRESS: &str = "me@example.test";
@@ -87,5 +87,45 @@ fn check_signs_in_to_real_servers_and_refuses_a_certificate_for_another_name() {
             matches!(mismatch, CheckError::Imap(ImapError::Tls { .. })),
             "a name mismatch reads as a certificate error: {mismatch:?}"
         );
+
+        // Two connections, as the app's pool runs: one keeps the Inbox
+        // selected while a message arrives, another's SELECT counts it.
+        // Dovecot shows the first connection the message only after its
+        // next command, so a bare SEARCH there would miss it, and a
+        // STATUS of the mailbox it keeps would count without it.
+        let kept = ImapClient::new(imaps.clone(), Login::new(ADDRESS, &password));
+        let fresh = ImapClient::new(imaps.clone(), Login::new(ADDRESS, &password));
+        kept.select("INBOX", None).await.expect("keep the Inbox selected");
+        let arrive = |id: &str| {
+            format!(
+                "From: a@example.test\r\nTo: {ADDRESS}\r\nSubject: {id}\r\n\
+                 Message-ID: <{id}@example.test>\r\n\r\nhello\r\n"
+            )
+        };
+        dovecot
+            .save(ADDRESS, "INBOX", arrive("first").as_bytes(), None)
+            .await;
+        let first = dovecot
+            .find(ADDRESS, "INBOX", "first@example.test")
+            .await
+            .expect("the first message is in the Inbox")
+            .uid;
+        let counted = fresh.select("INBOX", None).await.expect("select the Inbox");
+        assert_eq!(counted.uidnext, Some(first + 1), "the fresh SELECT counts it");
+        let found = kept
+            .search("INBOX", &format!("UID {first}"))
+            .await
+            .expect("search the kept Inbox");
+        assert_eq!(
+            found,
+            vec![first],
+            "a connection that kept the Inbox selected finds the message another connection's SELECT counted"
+        );
+        dovecot
+            .save(ADDRESS, "INBOX", arrive("second").as_bytes(), None)
+            .await;
+        fresh.select("INBOX", None).await.expect("select the Inbox again");
+        let unread = kept.unread("INBOX").await.expect("STATUS of the kept Inbox");
+        assert_eq!(unread, 2, "the STATUS of the kept Inbox counts both arrivals");
     });
 }

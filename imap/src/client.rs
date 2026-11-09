@@ -473,15 +473,20 @@ impl<D: Dial> ImapClient<D> {
     /// Puts the connection back for the next call, or drops it when the
     /// failure leaves it unusable.
     fn checkin<T>(&self, lease: Lease<D::Stream>, result: &Result<T, ImapError>) {
-        let Lease { worker, _permit } = lease;
+        let Lease {
+            mut worker,
+            _permit,
+        } = lease;
         match result {
             Err(err) if err.drops_connection() => drop(worker),
-            _ => self
-                .inner
-                .free
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .push(worker),
+            _ => {
+                worker.conn.handed_back();
+                self.inner
+                    .free
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push(worker);
+            }
         }
     }
 
@@ -585,9 +590,34 @@ mod tests {
                 lines
             }
             c if c.starts_with("SELECT") => selected(),
+            c if c.starts_with("STATUS ") => {
+                let name = c["STATUS ".len()..].split(' ').next().unwrap_or("");
+                vec![format!("* STATUS {name} (UNSEEN 0)"), "{tag} OK".into()]
+            }
             "IDLE" => vec!["* 5 EXISTS".into()],
             _ => vec!["{tag} OK".into()],
         }))
+    }
+
+    /// The commands `log` saw after signing in, with each SELECT, SEARCH,
+    /// STATUS, STORE and NOOP named and nothing left out.
+    fn steps(log: &Arc<Mutex<Vec<String>>>) -> Vec<String> {
+        seen(log)
+            .into_iter()
+            .skip_while(|c| !c.starts_with("SELECT"))
+            .map(|c| match c.as_str() {
+                c if c.starts_with("SELECT ") => {
+                    format!("select {}", c.split(' ').nth(1).unwrap_or(""))
+                }
+                c if c.starts_with("STATUS ") => {
+                    format!("status {}", c.split(' ').nth(1).unwrap_or(""))
+                }
+                c if c.starts_with("UID SEARCH") => "search".into(),
+                c if c.starts_with("UID STORE") => "store".into(),
+                "NOOP" => "noop".into(),
+                other => other.to_string(),
+            })
+            .collect()
     }
 
     fn client(servers: Vec<(&'static str, Answer)>) -> (ImapClient<Arc<Scripts>>, Arc<Scripts>) {
@@ -649,6 +679,90 @@ mod tests {
             client.list().await,
             Err(ImapError::TooManyConnections { .. })
         ));
+    }
+
+    /// IMAP lets a server tell a connection about new mail only when it
+    /// chooses (RFC 3501 section 5.2), and Dovecot brings a connection's
+    /// view of a mailbox up to date only at the end of a command. A
+    /// connection handed back with the mailbox still selected has a view
+    /// older than another connection's later SELECT, so its next command
+    /// on that mailbox would miss the mail that SELECT counted. A NOOP
+    /// first catches the view up; a lease that selects for itself needs
+    /// none.
+    #[tokio::test]
+    async fn a_connection_leased_again_catches_up_before_reading_the_mailbox_it_kept() {
+        let log = log();
+        let (client, scripts) = client(vec![(GREETING, lister(log.clone(), false))]);
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        client.search("Sent", "UID 1:*").await.unwrap();
+        assert_eq!(dials(&scripts), 1);
+        assert_eq!(
+            steps(&log),
+            [
+                "select \"INBOX\"",
+                "search",
+                "noop",
+                "search",
+                "select \"Sent\"",
+                "search",
+            ]
+        );
+    }
+
+    /// Writes go through the same gate: a STORE on a view that lacks the
+    /// message answers OK and sets nothing.
+    #[tokio::test]
+    async fn a_connection_leased_again_catches_up_before_writing_to_the_mailbox_it_kept() {
+        let log = log();
+        let (client, _) = client(vec![(GREETING, lister(log.clone(), false))]);
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        client
+            .store("INBOX", &UidSet::from_uids([9]), true, &["\\Seen".into()])
+            .await
+            .unwrap();
+        assert_eq!(steps(&log), ["select \"INBOX\"", "search", "noop", "store"]);
+    }
+
+    /// Dovecot answers a STATUS of the selected mailbox from the
+    /// connection's view, and a STATUS catches no view up, so neither
+    /// counts as having caught up.
+    #[tokio::test]
+    async fn a_status_neither_catches_up_nor_counts_as_having_done_so() {
+        let log = log();
+        let (client, _) = client(vec![(GREETING, lister(log.clone(), false))]);
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        client.unread("Sent").await.unwrap();
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        client.unread("INBOX").await.unwrap();
+        assert_eq!(
+            steps(&log),
+            [
+                "select \"INBOX\"",
+                "search",
+                "status \"Sent\"",
+                "noop",
+                "search",
+                "noop",
+                "status \"INBOX\"",
+            ]
+        );
+    }
+
+    /// The NOOP that checks a connection unused for minutes is the same
+    /// NOOP that catches its view up, so a stale connection whose mailbox
+    /// is still selected sends one, not two.
+    #[tokio::test(start_paused = true)]
+    async fn a_stale_connection_with_its_mailbox_kept_sends_one_noop() {
+        let log = log();
+        let (client, _) = client(vec![(GREETING, lister(log.clone(), false))]);
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        tokio::time::advance(Duration::from_secs(6 * 60)).await;
+        client.search("INBOX", "UID 1:*").await.unwrap();
+        assert_eq!(
+            steps(&log),
+            ["select \"INBOX\"", "search", "noop", "search"]
+        );
     }
 
     #[tokio::test(start_paused = true)]
