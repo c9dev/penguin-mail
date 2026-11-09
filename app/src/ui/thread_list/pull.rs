@@ -79,7 +79,7 @@ impl Pull {
             label,
             gesture: RefCell::new(Gesture::default()),
         });
-        let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+        let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::BOTH_AXES);
         scroll.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(&this);
         scroll.connect_scroll_begin(move |_| {
@@ -206,6 +206,19 @@ pub(super) mod checks {
             .unwrap()
             .downcast::<gtk::EventControllerScroll>()
             .unwrap();
+        assert!(
+            controller
+                .flags()
+                .contains(gtk::EventControllerScrollFlags::BOTH_AXES),
+            "GTK must preserve both deltas for the direction check"
+        );
+        controller.emit_by_name::<()>("scroll-begin", &[]);
+        for _ in 0..4 {
+            controller.emit_by_name::<bool>("scroll", &[&100.0f64, &-20.0f64]);
+        }
+        assert!(!pull.indicator.is_visible());
+        assert_eq!(calls.get(), 0);
+        controller.emit_by_name::<()>("scroll-end", &[]);
         controller.emit_by_name::<()>("scroll-begin", &[]);
         controller.emit_by_name::<bool>("scroll", &[&0.0f64, &-0.25f64]);
         assert!(pull.indicator.is_visible());
