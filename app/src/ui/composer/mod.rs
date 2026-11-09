@@ -791,6 +791,7 @@ impl Composer {
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach);
+        release_content_on_close(&composer.window);
         composer.wire_history();
         composer.wire_markdown();
         composer.refresh_history();
@@ -2918,6 +2919,57 @@ impl Composer {
                 Err(err) => this.failed(&gettext("Template not saved: {reason}"), &err),
             }
         });
+    }
+}
+
+fn release_content_on_close(window: &adw::Window) {
+    // Connect after the composer's save prompt, which stops a cancelled close.
+    // IBus can update the cursor after the native surface has closed, so its
+    // widgets must have no root even while a composer task still holds them.
+    window.connect_close_request(|window| {
+        window.set_content(None::<&gtk::Widget>);
+        glib::Propagation::Proceed
+    });
+}
+
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+
+    pub async fn closing_releases_the_body() {
+        let body = gtk::TextView::new();
+        let content = adw::ToastOverlay::new();
+        content.set_child(Some(&body));
+        let window = adw::Window::builder().content(&content).build();
+        let cancel = Rc::new(Cell::new(true));
+        let cancelling = Rc::clone(&cancel);
+        window.connect_close_request(move |_| match cancelling.get() {
+            true => glib::Propagation::Stop,
+            false => glib::Propagation::Proceed,
+        });
+        release_content_on_close(&window);
+        window.present();
+        for _ in 0..100 {
+            if window.is_mapped() {
+                break;
+            }
+            glib::timeout_future(std::time::Duration::from_millis(10)).await;
+        }
+        assert!(window.is_mapped(), "the composer window mapped");
+        body.grab_focus();
+        body.buffer().set_text("A draft ready to close");
+        window.close();
+        assert!(window.is_realized(), "Cancel keeps the native surface");
+        assert!(body.root().is_some(), "Cancel keeps the draft attached");
+        cancel.set(false);
+        window.close();
+        assert!(!window.is_realized(), "closing released the native surface");
+        assert!(
+            body.root().is_none(),
+            "a retained body cannot point input methods at the closed window"
+        );
+        assert!(window.content().is_none());
+        glib::timeout_future(std::time::Duration::from_millis(30)).await;
     }
 }
 

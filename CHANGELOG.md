@@ -15,6 +15,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
 
