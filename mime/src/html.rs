@@ -39,6 +39,13 @@ impl Tag<'_> {
     pub fn values(&self) -> impl Iterator<Item = &str> {
         self.attributes.iter().map(|a| &*a.value)
     }
+
+    /// Every attribute on the tag as its name in lower case and its decoded
+    /// value, in the order written. A name written twice comes once, as a
+    /// browser reads it.
+    pub fn attributes(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.attributes.iter().map(|a| (&*a.name.local, &*a.value))
+    }
 }
 
 /// A piece of an HTML document, in the order it comes.

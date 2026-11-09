@@ -14,6 +14,8 @@
 use std::collections::HashMap;
 
 use base64::Engine as _;
+use mailrs_domain::translate::gettext;
+use mailrs_mime::html::Piece;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -55,31 +57,40 @@ pub fn is_html(template: &str) -> bool {
 /// private picture out with all mail, and the HTML it shows for approval
 /// does not make that plain.
 pub fn names_local_file(template: &str) -> bool {
-    is_html(template) && sources(template).any(|source| local_path(source).is_some())
+    is_html(template)
+        && sources(template)
+            .iter()
+            .any(|source| local_path(source).is_some())
 }
 
-/// The quoted values of the `src` attributes in `html`.
-fn sources(html: &str) -> impl Iterator<Item = &str> {
-    let lower = html.to_ascii_lowercase();
+/// The `src` of every start tag in `html`, as the HTML tokenizer reads it:
+/// quoted or not, with space around the `=`, references decoded. A browser
+/// takes the space around an address off, and so does this.
+fn sources(html: &str) -> Vec<String> {
     let mut found = Vec::new();
-    let mut at = 0;
-    while let Some(offset) = lower[at..].find("src=") {
-        let start = at + offset + "src=".len();
-        at = start;
-        let Some(quote) = html[start..]
-            .chars()
-            .next()
-            .filter(|c| *c == '"' || *c == '\'')
-        else {
-            continue;
-        };
-        let Some(len) = html[start + 1..].find(quote) else {
-            break;
-        };
-        found.push(&html[start + 1..start + 1 + len]);
-        at = start + 1 + len;
-    }
-    found.into_iter()
+    mailrs_mime::html::walk(html, |piece| {
+        if let Piece::Tag(tag) = piece
+            && !tag.closing
+            && let Some(source) = tag.attribute("src")
+        {
+            found.push(source.trim().to_string());
+        }
+    });
+    found
+}
+
+/// The `alt` text of every picture in `html`.
+fn picture_words(html: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    mailrs_mime::html::walk(html, |piece| {
+        if let Piece::Tag(tag) = piece
+            && tag.name == "img"
+            && !tag.closing
+        {
+            found.push(tag.attribute("alt").unwrap_or("").trim().to_string());
+        }
+    });
+    found
 }
 
 /// The file `source` names, when it is a `file:` URL or an absolute path.
@@ -106,10 +117,28 @@ pub fn expand(template: &str, email: &str) -> Option<HtmlSignature> {
         .replace("<email>", &richtext::escape(email))
         .replace("<domain>", &richtext::escape(domain));
     let html = body_of(&filled).trim().to_string();
-    let shown = plain_as_markdown(text_of(&html).trim())
+    let shown = plain_as_markdown(shown_text(&html).trim())
         .trim_end()
         .to_string();
     Some(HtmlSignature { shown, html })
+}
+
+/// What the composer shows for the signature `html`: its text, else the
+/// words its pictures stand for. The composer finds an untouched signature
+/// again by these words, so a signature that is only a logo needs some, or
+/// it would never reach the message.
+fn shown_text(html: &str) -> String {
+    let text = text_of(html);
+    if !text.trim().is_empty() {
+        return text;
+    }
+    let pictures = picture_words(html);
+    let words: Vec<String> = pictures.iter().filter(|w| !w.is_empty()).cloned().collect();
+    match (words.is_empty(), pictures.is_empty()) {
+        (false, _) => words.join("\n"),
+        (true, false) => gettext("[Signature picture]"),
+        (true, true) => String::new(),
+    }
 }
 
 /// The text of a signature, each table cell on a line of its own. Laid out
@@ -210,48 +239,57 @@ pub(super) fn put(html: &str, signature: &str) -> String {
 /// for a `cid:` reference, and the pictures as parts to send with it. A
 /// picture that cannot be read keeps its address, so the rest still goes.
 pub(super) fn with_inline_pictures(html: &str) -> (String, Vec<OutgoingAttachment>) {
-    let lower = html.to_ascii_lowercase();
     let mut out = String::with_capacity(html.len());
     let mut pictures: Vec<OutgoingAttachment> = Vec::new();
     let mut known: HashMap<String, String> = HashMap::new();
     let mut at = 0;
-    while let Some(found) = lower[at..].find("src=") {
-        let value_at = at + found + "src=".len();
-        let Some(quote) = html[value_at..]
-            .chars()
-            .next()
-            .filter(|c| *c == '"' || *c == '\'')
-        else {
-            out.push_str(&html[at..value_at]);
-            at = value_at;
+    for range in super::start_tags(html) {
+        let tag = &html[range.clone()];
+        let Some(source) = sources(tag).into_iter().next() else {
             continue;
         };
-        let start = value_at + 1;
-        let Some(len) = html[start..].find(quote) else {
-            break;
-        };
-        let source = &html[start..start + len];
-        out.push_str(&html[at..start]);
-        let cid = match known.get(source) {
-            Some(cid) => Some(cid.clone()),
-            None => picture(source, pictures.len() + 1).map(|picture| {
+        let cid = match known.get(&source) {
+            Some(cid) => cid.clone(),
+            None => {
+                let Some(picture) = picture(&source, pictures.len() + 1) else {
+                    continue;
+                };
                 let cid = picture
                     .content_id
                     .clone()
                     .expect("a signature picture has a content id");
                 pictures.push(picture);
-                known.insert(source.to_string(), cid.clone());
+                known.insert(source, cid.clone());
                 cid
-            }),
+            }
         };
-        match cid {
-            Some(cid) => out.push_str(&format!("cid:{cid}")),
-            None => out.push_str(source),
-        }
-        at = start + len;
+        out.push_str(&html[at..range.start]);
+        out.push_str(&with_source(tag, &format!("cid:{cid}")));
+        at = range.end;
     }
     out.push_str(&html[at..]);
     (out, pictures)
+}
+
+/// The one start tag in `tag` written again with `source` as its `src`.
+/// The tokenizer reads the attributes, so each comes back quoted however
+/// it was written.
+fn with_source(tag: &str, source: &str) -> String {
+    let mut out = String::new();
+    mailrs_mime::html::walk(tag, |piece| {
+        if let Piece::Tag(read) = piece
+            && out.is_empty()
+        {
+            out.push('<');
+            out.push_str(read.name);
+            for (name, value) in read.attributes() {
+                let value = if name == "src" { source } else { value };
+                out.push_str(&format!(" {name}=\"{}\"", richtext::escape(value)));
+            }
+            out.push('>');
+        }
+    });
+    out
 }
 
 /// The picture at `source`, when it is one the message has to carry.
@@ -363,17 +401,76 @@ mod tests {
         assert_eq!(pictures[0].mime_type, "image/png");
     }
 
+    #[test]
+    fn pictures_are_found_however_their_address_is_written() {
+        let one = base64::engine::general_purpose::STANDARD.encode(b"one");
+        let two = base64::engine::general_purpose::STANDARD.encode(b"two");
+        let html = format!(
+            "<div>Dana<img src = \"data:image/png;base64,{one}\"></div>\
+             <IMG width=40 alt='Dana &amp; \"Co\"' SRC=data:image/png;base64,{two}>"
+        );
+        let (out, pictures) = with_inline_pictures(&html);
+        assert_eq!(pictures.len(), 2, "{out}");
+        assert!(!out.contains("data:"), "{out}");
+        for picture in &pictures {
+            let cid = picture.content_id.clone().unwrap();
+            assert!(out.contains(&format!("src=\"cid:{cid}\"")), "{out}");
+        }
+        // The other attributes stay, quoted.
+        assert!(out.contains("width=\"40\""), "{out}");
+        assert!(out.contains("alt=\"Dana &amp; &quot;Co&quot;\""), "{out}");
+        assert!(out.starts_with("<div>Dana<img "), "{out}");
+    }
+
+    #[test]
+    fn a_signature_that_is_only_a_logo_shows_its_words() {
+        let logo = "<div><img src=\"data:image/png;base64,bG9nbw==\"></div>";
+        assert_eq!(
+            expand(logo, "dana@example.com")
+                .unwrap()
+                .shown
+                .replace('\\', ""),
+            "[Signature picture]"
+        );
+        let named = "<div><img alt=\"Example Inc.\" src=\"data:image/png;base64,bG9nbw==\"></div>";
+        assert_eq!(
+            expand(named, "dana@example.com")
+                .unwrap()
+                .shown
+                .replace('\\', ""),
+            "Example Inc."
+        );
+    }
+
+    #[test]
+    fn a_signature_that_is_only_a_logo_goes_out() {
+        let template = format!(
+            "<div><img src=\"data:image/png;base64,{}\"></div>",
+            base64::engine::general_purpose::STANDARD.encode(b"logo")
+        );
+        for rich in [true, false] {
+            let mime = sent(&draft_from(&template, "Hello Ann", rich));
+            assert!(!mime.contains(MARK), "{mime}");
+            assert!(mime.contains("multipart/related"), "{mime}");
+            assert!(mime.contains("Content-ID: <signature1."), "{mime}");
+        }
+    }
+
     fn draft_with(body: &str, rich: bool) -> super::super::Draft {
+        let template = format!(
+            "{CARD}<img src=\"data:image/png;base64,{}\">",
+            base64::engine::general_purpose::STANDARD.encode(b"logo")
+        );
+        draft_from(&template, body, rich)
+    }
+
+    fn draft_from(template: &str, body: &str, rich: bool) -> super::super::Draft {
         let from = mailrs_domain::Address {
             name: None,
             email: "dana@example.com".into(),
         };
         let mut draft = super::super::Draft::new(1, from);
-        let template = format!(
-            "{CARD}<img src=\"data:image/png;base64,{}\">",
-            base64::engine::general_purpose::STANDARD.encode(b"logo")
-        );
-        let signature = expand(&template, "dana@example.com").unwrap();
+        let signature = expand(template, "dana@example.com").unwrap();
         draft.markdown = super::super::with_signature(body, &signature.shown);
         if rich {
             draft.rich = Some(RichBody::from_markdown(&draft.markdown));
@@ -452,6 +549,12 @@ mod tests {
         ));
         assert!(names_local_file(
             "<div><IMG SRC='file:///home/dana/logo.png'></div>"
+        ));
+        assert!(names_local_file(
+            "<div>Dana<img src = \"/home/dana/logo.png\"></div>"
+        ));
+        assert!(names_local_file(
+            "<div>Dana<img src=/home/dana/logo.png></div>"
         ));
         assert!(!names_local_file(
             "<div><img src=\"https://example.com/logo.png\"><img src=\"data:image/png;base64,bG9nbw==\"></div>"

@@ -2165,33 +2165,37 @@ msgstr "Destaques"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:680 app/src/compose.rs:3548
+#: app/src/compose.rs:696 app/src/compose.rs:3564
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
-#: app/src/compose.rs:689
+#: app/src/compose.rs:705
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:915 app/src/compose.rs:3554
+#: app/src/compose.rs:931 app/src/compose.rs:3570
 msgid "Choose a time in the future"
 msgstr "Escolha uma hora no futuro"
 
-#: app/src/compose.rs:1244
+#: app/src/compose.rs:1260
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/compose.rs:1250
+#: app/src/compose.rs:1266
 msgid "{sender} wrote:"
 msgstr "{sender} escreveu:"
 
-#: app/src/compose.rs:1529
+#: app/src/compose.rs:1545
 msgid "Penguin Mail could not put the message together."
 msgstr "O Penguin Mail não conseguiu montar a mensagem."
 
-#: app/src/compose.rs:1553
+#: app/src/compose.rs:1569
 msgid "The list did not give one address to write to."
 msgstr "A lista não indicou um único endereço para onde escrever."
+
+#: app/src/compose/html_signature.rs:139
+msgid "[Signature picture]"
+msgstr "[Imagem da assinatura]"
 
 #: app/src/contacts.rs:96
 msgid "from mail"

@@ -400,15 +400,49 @@ fn split_forwarded_html(html: &str) -> (String, Option<String>) {
 }
 
 /// Where the tag that opens the forwarded block starts: the first start
-/// tag whose class names [`FORWARD_MARK`].
-///
-/// The forwarded block has to come back byte for byte, so this needs the
-/// offset in `html`, which the tokenizer does not give. It reads the tags
-/// itself, stepping over quoted attribute values, comments and the text
-/// of scripts and styles, so a `<` or `>` inside any of them cannot move
-/// the cut, and the marker's name in the text is not taken for the tag.
+/// tag whose class names [`FORWARD_MARK`]. The forwarded block has to come
+/// back byte for byte, so this goes by [`start_tags`].
 fn forward_starts_at(html: &str) -> Option<usize> {
+    start_tags(html)
+        .find(|tag| {
+            let tag = &html[tag.clone()];
+            tag.contains(FORWARD_MARK) && has_class(tag, FORWARD_MARK)
+        })
+        .map(|tag| tag.start)
+}
+
+/// Where each start tag in `html` sits, in order.
+///
+/// The tokenizer gives no offsets in `html`, so this reads the tags itself,
+/// stepping over quoted attribute values, comments and the text of scripts
+/// and styles. A `<` or `>` inside any of them cannot move a tag, and a
+/// tag's name in the text is not taken for the tag. Read what a tag says
+/// with the tokenizer, from the slice this gives.
+fn start_tags(html: &str) -> impl Iterator<Item = std::ops::Range<usize>> + '_ {
     let mut at = 0;
+    std::iter::from_fn(move || {
+        let start = next_start_tag(html, at)?;
+        let end = start + tag_length(&html[start..]);
+        at = end;
+        let name = html[start + 1..end]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+        // A script's or a style's text is not markup.
+        if matches!(name.as_str(), "script" | "style") {
+            let close = format!("</{name}");
+            at = html[at..]
+                .to_ascii_lowercase()
+                .find(&close)
+                .map_or(html.len(), |found| at + found);
+        }
+        Some(start..end)
+    })
+}
+
+/// Where the next start tag from `at` on begins, past any comment.
+fn next_start_tag(html: &str, mut at: usize) -> Option<usize> {
     while let Some(offset) = html[at..].find('<') {
         let start = at + offset;
         let rest = &html[start..];
@@ -420,25 +454,7 @@ fn forward_starts_at(html: &str) -> Option<usize> {
             at = start + 1;
             continue;
         }
-        let end = start + tag_length(rest);
-        let tag = &html[start..end];
-        let name: String = tag[1..]
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric())
-            .collect::<String>()
-            .to_ascii_lowercase();
-        if tag.contains(FORWARD_MARK) && has_class(tag, FORWARD_MARK) {
-            return Some(start);
-        }
-        at = end;
-        // A script's or a style's text is not markup.
-        if matches!(name.as_str(), "script" | "style") {
-            let close = format!("</{name}");
-            at = html[at..]
-                .to_ascii_lowercase()
-                .find(&close)
-                .map_or(html.len(), |found| at + found);
-        }
+        return Some(start);
     }
     None
 }

@@ -2161,33 +2161,39 @@ msgstr "Odaklanmış"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail, açık pencere olmasa da eşitlemeyi sürdürür"
 
-#: app/src/compose.rs:680 app/src/compose.rs:3548
+#: app/src/compose.rs:696 app/src/compose.rs:3564
 msgid "Add at least one recipient."
 msgstr "En az bir alıcı ekleyin."
 
-#: app/src/compose.rs:689
+#: app/src/compose.rs:705
 msgid "“{address}” is not an email address."
 msgstr "“{address}” bir e-posta adresi değil."
 
-#: app/src/compose.rs:915 app/src/compose.rs:3554
+#: app/src/compose.rs:931 app/src/compose.rs:3570
 msgid "Choose a time in the future"
 msgstr "Gelecekte bir zaman seçin"
 
-#: app/src/compose.rs:1244
+#: app/src/compose.rs:1260
 msgid "On {date}, {sender} wrote:"
 msgstr "{date} tarihinde {sender} yazdı:"
 
-#: app/src/compose.rs:1250
+#: app/src/compose.rs:1266
 msgid "{sender} wrote:"
 msgstr "{sender} yazdı:"
 
-#: app/src/compose.rs:1529
+#: app/src/compose.rs:1545
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail iletiyi oluşturamadı."
 
-#: app/src/compose.rs:1553
+#: app/src/compose.rs:1569
 msgid "The list did not give one address to write to."
 msgstr "Liste, yazılabilecek tek bir adres vermedi."
+
+#: app/src/compose/html_signature.rs:139
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "İmza"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
