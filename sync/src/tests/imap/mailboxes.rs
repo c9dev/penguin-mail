@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use mailrs_domain::{ChangeEvent, MailSet, Role};
-use mailrs_imap::SpecialUse;
+use mailrs_imap::{ImapError, SpecialUse};
 use mailrs_store::mailboxes;
 
 use crate::fake::{FakeImap, FakeSmtp};
@@ -373,4 +373,50 @@ async fn a_start_within_the_hour_lists_the_folders_once() {
     .await
     .unwrap();
     assert_eq!(lists(&h), before, "once a run");
+}
+
+/// The server holds the new name once RENAME succeeds, so the store must
+/// follow it even when subscribing to the new name fails.
+#[tokio::test]
+async fn a_refused_subscribe_after_a_rename_still_renames_the_stored_folder() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Work", None);
+    h.sync.refresh_labels().await.unwrap();
+    h.imap
+        .fail_on("subscribe Job", ImapError::Refused("no".into()));
+
+    h.sync.rename_label("Work", "Job").await.unwrap();
+
+    let ids: Vec<String> = hidden(&h).await.into_iter().map(|(id, _)| id).collect();
+    assert!(ids.contains(&"Job".to_string()), "{ids:?}");
+    assert!(!ids.contains(&"Work".to_string()), "{ids:?}");
+}
+
+#[tokio::test]
+async fn a_refused_subscribe_after_a_create_still_makes_the_folder() {
+    let h = imap_harness().await;
+    h.sync.refresh_labels().await.unwrap();
+    h.imap
+        .fail_on("subscribe Receipts", ImapError::Refused("no".into()));
+
+    h.sync.create_label("Receipts").await.unwrap();
+
+    assert!(hidden(&h).await.contains(&("Receipts".into(), true)));
+}
+
+/// Once the server took the subscription, a listing that fails after it
+/// is no reason to tell Manage Folders the change failed.
+#[tokio::test]
+async fn an_accepted_subscription_holds_when_the_listing_after_it_fails() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Old", None);
+    h.imap.with(|s| {
+        s.unsubscribed.insert("Old".into());
+    });
+    h.sync.refresh_labels().await.unwrap();
+    h.imap.fail_on("list", ImapError::Network("reset".into()));
+
+    h.sync.set_folder_subscribed("Old", true).await.unwrap();
+
+    assert!(!h.imap.with(|s| s.unsubscribed.contains("Old")));
 }

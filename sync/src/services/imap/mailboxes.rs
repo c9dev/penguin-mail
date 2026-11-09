@@ -322,11 +322,15 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
 
     /// Makes the mailbox a person named. Slashes nest it under another.
     /// CREATE does not subscribe, so the app does, or the folder the
-    /// person just made would stay out of the sidebar.
+    /// person just made would stay out of the sidebar. The folder exists
+    /// once CREATE succeeds, so a refused SUBSCRIBE does not undo that:
+    /// the folder lists as hidden, and Manage Folders can subscribe it.
     pub(super) async fn make_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
         let id = server_name(name, self.known().delimiter);
         self.api.create(&id).await?;
-        self.api.subscribe(&id).await?;
+        if let Err(err) = self.api.subscribe(&id).await {
+            tracing::warn!(%err, "a new folder stays unsubscribed");
+        }
         self.listed_as(&id).await
     }
 
@@ -334,6 +338,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// rename, and many leave it behind. Each subscribed folder renamed,
     /// children included, is subscribed again under its new name and its
     /// old name let go.
+    ///
+    /// The server holds the new name once RENAME succeeds, and the caller
+    /// still has to move the stored mailbox and its mail to it, so nothing
+    /// after RENAME but the listing may fail the rename. A refused
+    /// SUBSCRIBE leaves that folder hidden, for Manage Folders to mend.
     pub(super) async fn rename_mailbox_to(
         &self,
         id: &str,
@@ -355,7 +364,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         self.api.rename(id, &renamed).await?;
         self.known().rename(id, &renamed);
         for (old, new) in moved {
-            self.api.subscribe(&new).await?;
+            if let Err(err) = self.api.subscribe(&new).await {
+                tracing::warn!(%err, "a renamed folder stays unsubscribed");
+                continue;
+            }
             // A server that moved the subscription itself may refuse to
             // drop a name it no longer holds; the folder is right either way.
             if let Err(err) = self.api.unsubscribe(&old).await {

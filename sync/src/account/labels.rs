@@ -45,10 +45,15 @@ impl AccountSync {
     }
 
     /// Subscribes to an IMAP folder or lets it go, then lists the folders
-    /// again so the sidebar follows.
+    /// again so the sidebar follows. The answer is the server's to the
+    /// subscription alone: once it took the change, a listing that fails
+    /// after leaves the sidebar a listing behind, not the change undone,
+    /// and the next listing catches it up.
     pub async fn set_folder_subscribed(&self, id: &str, on: bool) -> Result<(), SyncError> {
         self.services().mail.set_folder_subscribed(id, on).await?;
-        self.refresh_labels().await?;
+        if let Err(err) = self.refresh_labels().await {
+            tracing::warn!(%err, "the sidebar waits for the next listing");
+        }
         Ok(())
     }
 
