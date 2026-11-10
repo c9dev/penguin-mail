@@ -527,15 +527,21 @@ impl Builder {
         });
     }
 
-    /// A blank line between blocks, unless one is already there.
+    /// A blank line between blocks, unless one is already there. A blank
+    /// line is never quoted itself: the editor cannot mark an empty line,
+    /// and the writers put it inside the quote when quoted lines sit on
+    /// both sides of it.
     fn gap(&mut self) {
-        if self.body.blocks.last().is_some_and(|b| {
-            b.kind == BlockKind::Paragraph && b.is_blank() && b.quote == self.depth()
-        }) {
+        if self
+            .body
+            .blocks
+            .last()
+            .is_some_and(|b| b.kind == BlockKind::Paragraph && b.is_blank())
+        {
             return;
         }
         if !self.body.blocks.is_empty() {
-            self.body.blocks.push(Block::default().quoted(self.depth()));
+            self.body.blocks.push(Block::default());
         }
     }
 
@@ -583,13 +589,6 @@ impl Builder {
             }
             Event::Start(Tag::BlockQuote(_)) => self.quote = self.quote.saturating_add(1),
             Event::End(TagEnd::BlockQuote(_)) => {
-                // The blank line after the quote's last paragraph is the
-                // one that follows the quote, not part of it.
-                while self.body.blocks.last().is_some_and(|b| {
-                    b.kind == BlockKind::Paragraph && b.is_blank() && b.quote == self.depth()
-                }) {
-                    self.body.blocks.pop();
-                }
                 self.quote = self.quote.saturating_sub(1);
                 self.gap();
             }
@@ -827,12 +826,15 @@ impl HtmlBuilder {
         if !self.open.is_empty() || self.body.blocks.is_empty() {
             return;
         }
-        if self.body.blocks.last().is_some_and(|b| {
-            b.kind == BlockKind::Paragraph && b.spans.is_empty() && b.quote == self.depth()
-        }) {
+        if self
+            .body
+            .blocks
+            .last()
+            .is_some_and(|b| b.kind == BlockKind::Paragraph && b.spans.is_empty())
+        {
             return;
         }
-        self.body.blocks.push(Block::default().quoted(self.depth()));
+        self.body.blocks.push(Block::default());
     }
 
     /// Takes a run of text, its references already decoded.
@@ -941,15 +943,6 @@ impl HtmlBuilder {
         if name == "blockquote" {
             match closing {
                 true => {
-                    // The blank line after the quote's last paragraph is
-                    // the one that follows the quote.
-                    while self.body.blocks.last().is_some_and(|b| {
-                        b.kind == BlockKind::Paragraph
-                            && b.spans.is_empty()
-                            && b.quote == self.depth()
-                    }) {
-                        self.body.blocks.pop();
-                    }
                     self.quote = self.quote.saturating_sub(1);
                     self.gap();
                 }
@@ -1107,13 +1100,13 @@ mod tests {
                 line(BlockKind::Paragraph, 0, "On Monday, Ann wrote:"),
                 line(BlockKind::Paragraph, 0, ""),
                 line(BlockKind::Paragraph, 1, "Hi"),
-                line(BlockKind::Paragraph, 1, ""),
+                line(BlockKind::Paragraph, 0, ""),
                 line(BlockKind::Bullet, 1, "one"),
                 line(BlockKind::Bullet, 1, "two"),
-                line(BlockKind::Paragraph, 1, ""),
+                line(BlockKind::Paragraph, 0, ""),
                 line(BlockKind::Paragraph, 2, "Bob wrote:"),
                 line(BlockKind::Paragraph, 2, "older"),
-                line(BlockKind::Paragraph, 1, ""),
+                line(BlockKind::Paragraph, 0, ""),
                 line(BlockKind::Paragraph, 1, "bye"),
             ],
             "{doc:#?}"
@@ -1352,7 +1345,9 @@ mod tests {
             words.iter().any(|line| line == "the reply"),
             "the reply merged into another line: {joined}"
         );
-        for block in &doc.blocks {
+        // A blank line is never quoted itself; the text forms quote it
+        // when quoted lines sit on both sides.
+        for block in doc.blocks.iter().filter(|block| !block.is_blank()) {
             assert!(block.is_quote(), "a line lost the quote: {block:?}");
         }
     }
