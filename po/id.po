@@ -1107,11 +1107,11 @@ msgstr "Terkirim {message}"
 msgid "Still in the Outbox: {message}"
 msgstr "Masih di Kotak Keluar: {message}"
 
-#: app/src/app/sending.rs:514
+#: app/src/app/sending.rs:509
 msgid "your message"
 msgstr "pesan Anda"
 
-#: app/src/app/sending.rs:516
+#: app/src/app/sending.rs:511
 msgid "“{subject}”"
 msgstr "“{subject}”"
 
@@ -2670,17 +2670,17 @@ msgstr "Hapus"
 msgid "Reply"
 msgstr "Balas"
 
-#: app/src/notify.rs:163
+#: app/src/notify.rs:167
 msgid "{count} new message"
 msgid_plural "{count} new messages"
 msgstr[0] "{count} pesan baru"
 msgstr[1] "{count} pesan baru"
 
-#: app/src/notify.rs:181 app/src/ui/window/shortcuts.rs:467
+#: app/src/notify.rs:185 app/src/ui/window/shortcuts.rs:467
 msgid "New message"
 msgstr "Pesan baru"
 
-#: app/src/notify.rs:207
+#: app/src/notify.rs:216
 msgid "From {senders}"
 msgstr "Dari {senders}"
 
@@ -4479,7 +4479,7 @@ msgstr "Lebih kecil dari {size}"
 msgid "Larger than {size}"
 msgstr "Lebih besar dari {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:919
+#: app/src/rules.rs:251 app/src/settings/mod.rs:952
 msgid "All mail"
 msgstr "Semua email"
 
@@ -4577,221 +4577,233 @@ msgstr "Di komputer ini, selama Penguin Mail terbuka"
 msgid "On the server"
 msgstr "Di server"
 
-#: app/src/settings/mod.rs:221 app/src/settings/mod.rs:430
-#: app/src/settings/mod.rs:831 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1100
+#: app/src/settings/mod.rs:223 app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:864 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1142
 msgid "Off"
 msgstr "Nonaktif"
 
-#: app/src/settings/mod.rs:222
+#: app/src/settings/mod.rs:224
 msgid "Local Server"
 msgstr "Server Lokal"
 
-#: app/src/settings/mod.rs:223
+#: app/src/settings/mod.rs:225
 msgid "Anthropic API"
 msgstr "API Anthropic"
 
-#: app/src/settings/mod.rs:224
+#: app/src/settings/mod.rs:226
 msgid "Claude Subscription"
 msgstr "Langganan Claude"
 
-#: app/src/settings/mod.rs:249 app/src/ui/window.rs:3655
+#: app/src/settings/mod.rs:251 app/src/ui/window.rs:3655
 #: app/src/ui/window.rs:3739
 msgid "Assistant"
 msgstr "Asisten"
 
-#: app/src/settings/mod.rs:250 app/src/ui/preferences.rs:224
+#: app/src/settings/mod.rs:252 app/src/ui/preferences.rs:224
 msgid "Translation"
 msgstr "Penerjemahan"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:254
+#: app/src/settings/mod.rs:256
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Berhenti Berlangganan"
 
-#: app/src/settings/mod.rs:260
+#: app/src/settings/mod.rs:262
 msgid "Answers questions and acts on your mail"
 msgstr "Menjawab pertanyaan dan melakukan tindakan pada email Anda"
 
-#: app/src/settings/mod.rs:261
+#: app/src/settings/mod.rs:263
 msgid "Translates a message when you ask"
 msgstr "Menerjemahkan pesan saat Anda meminta"
 
-#: app/src/settings/mod.rs:263
+#: app/src/settings/mod.rs:265
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Membaca halaman berhenti berlangganan nawala jika aturan tidak dapat "
 "melakukannya"
 
-#: app/src/settings/mod.rs:301
+#: app/src/settings/mod.rs:303
 msgid "Same as the Assistant"
 msgstr "Sama dengan Asisten"
 
-#: app/src/settings/mod.rs:431
+#: app/src/settings/mod.rs:433
 msgid "Claude's own only"
 msgstr "Hanya milik Claude"
 
-#: app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:434
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:435
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:436
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:609
+#: app/src/settings/mod.rs:613
 msgid "Rich text"
 msgstr "Teks berformat"
 
-#: app/src/settings/mod.rs:610
+#: app/src/settings/mod.rs:614
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:629 app/src/settings/mod.rs:651
+#: app/src/settings/mod.rs:633 app/src/settings/mod.rs:655
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Otomatis"
 
-#: app/src/settings/mod.rs:630 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:634 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "Senin"
 
-#: app/src/settings/mod.rs:631 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:635 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "Minggu"
 
-#: app/src/settings/mod.rs:652
+#: app/src/settings/mod.rs:656
 msgid "12-hour (AM/PM)"
 msgstr "12 jam (AM/PM)"
 
-#: app/src/settings/mod.rs:653
+#: app/src/settings/mod.rs:657
 msgid "24-hour"
 msgstr "24 jam"
 
-#: app/src/settings/mod.rs:691
+#: app/src/settings/mod.rs:695
 msgid "When opened"
 msgstr "Saat dibuka"
 
-#: app/src/settings/mod.rs:692
+#: app/src/settings/mod.rs:696
 msgid "After 2 seconds"
 msgstr "Setelah 2 detik"
 
-#: app/src/settings/mod.rs:693
+#: app/src/settings/mod.rs:697
 msgid "Only when I choose"
 msgstr "Hanya saat saya memilih"
 
-#: app/src/settings/mod.rs:709 app/src/settings/mod.rs:727
+#: app/src/settings/mod.rs:713 app/src/settings/mod.rs:731
 msgid "Ask each time"
 msgstr "Tanyakan setiap kali"
 
-#: app/src/settings/mod.rs:710
+#: app/src/settings/mod.rs:714
 msgid "Always load"
 msgstr "Selalu muat"
 
-#: app/src/settings/mod.rs:728
+#: app/src/settings/mod.rs:732
 msgid "Never ask"
 msgstr "Jangan tanya"
 
-#: app/src/settings/mod.rs:755
+#: app/src/settings/mod.rs:759
 msgid "No Preview"
 msgstr "Tanpa Pratinjau"
 
-#: app/src/settings/mod.rs:756
+#: app/src/settings/mod.rs:760
 msgid "1 Line"
 msgstr "1 Baris"
 
-#: app/src/settings/mod.rs:757
+#: app/src/settings/mod.rs:761
 msgid "2 Lines"
 msgstr "2 Baris"
 
-#: app/src/settings/mod.rs:791
+#: app/src/settings/mod.rs:788
+msgid "Short (80 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:789
+msgid "Medium (140 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:790
+msgid "Long (280 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:824
 msgid "Small"
 msgstr "Kecil"
 
-#: app/src/settings/mod.rs:792
+#: app/src/settings/mod.rs:825
 msgid "Default"
 msgstr "Bawaan"
 
-#: app/src/settings/mod.rs:793
+#: app/src/settings/mod.rs:826
 msgid "Large"
 msgstr "Besar"
 
-#: app/src/settings/mod.rs:794
+#: app/src/settings/mod.rs:827
 msgid "Larger"
 msgstr "Lebih besar"
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:865
 msgid "5 seconds"
 msgstr "5 detik"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:866
 msgid "10 seconds"
 msgstr "10 detik"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:867
 msgid "20 seconds"
 msgstr "20 detik"
 
-#: app/src/settings/mod.rs:835
+#: app/src/settings/mod.rs:868
 msgid "30 seconds"
 msgstr "30 detik"
 
-#: app/src/settings/mod.rs:852
+#: app/src/settings/mod.rs:885
 msgid "Follow system"
 msgstr "Ikuti sistem"
 
-#: app/src/settings/mod.rs:853
+#: app/src/settings/mod.rs:886
 msgid "Light"
 msgstr "Terang"
 
-#: app/src/settings/mod.rs:854
+#: app/src/settings/mod.rs:887
 msgid "Dark"
 msgstr "Gelap"
 
-#: app/src/settings/mod.rs:888
+#: app/src/settings/mod.rs:921
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Setiap {count} detik"
 msgstr[1] "Setiap {count} detik"
 
-#: app/src/settings/mod.rs:896
+#: app/src/settings/mod.rs:929
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Setiap {count} menit"
 msgstr[1] "Setiap {count} menit"
 
-#: app/src/settings/mod.rs:913
+#: app/src/settings/mod.rs:946
 msgid "2 weeks"
 msgstr "2 minggu"
 
-#: app/src/settings/mod.rs:914
+#: app/src/settings/mod.rs:947
 msgid "30 days"
 msgstr "30 hari"
 
-#: app/src/settings/mod.rs:915
+#: app/src/settings/mod.rs:948
 msgid "90 days"
 msgstr "90 hari"
 
-#: app/src/settings/mod.rs:916
+#: app/src/settings/mod.rs:949
 msgid "1 year"
 msgstr "1 tahun"
 
-#: app/src/settings/mod.rs:917
+#: app/src/settings/mod.rs:950
 msgid "2 years"
 msgstr "2 tahun"
 
-#: app/src/settings/mod.rs:918
+#: app/src/settings/mod.rs:951
 msgid "5 years"
 msgstr "5 tahun"
 
-#: app/src/settings/mod.rs:940
+#: app/src/settings/mod.rs:973
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4799,20 +4811,20 @@ msgstr ""
 "Semua pesan tetap di komputer ini. Akun besar memerlukan banyak ruang disk "
 "dan memori, dan email lamanya diunduh di latar belakang."
 
-#: app/src/settings/mod.rs:942
+#: app/src/settings/mod.rs:975
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Semua isi kotak masuk juga tetap disimpan, dan email lama tetap dapat dicari"
 
-#: app/src/settings/mod.rs:949
+#: app/src/settings/mod.rs:982
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:950
+#: app/src/settings/mod.rs:983
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:951
+#: app/src/settings/mod.rs:984
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5014,7 +5026,7 @@ msgstr "Yang Baru di {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1160 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1202 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
@@ -5355,7 +5367,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail menyimpan semua pesan yang diunduh di komputer ini."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1521
+#: app/src/ui/preferences.rs:1563
 msgid "Days"
 msgstr "Hari"
 
@@ -6192,7 +6204,7 @@ msgstr ""
 "kotak pasir tanpa akses ke email, kunci, atau folder pribadi Anda, dan "
 "asisten meminta izin sebelum setiap perintah."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:528
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:570
 msgid "Not Available"
 msgstr "Tidak Tersedia"
 
@@ -6379,7 +6391,7 @@ msgid "Declined"
 msgstr "Ditolak"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1327
+#: app/src/ui/preferences.rs:1369
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6493,11 +6505,11 @@ msgstr "Tanggal selesai"
 msgid "End time"
 msgstr "Waktu selesai"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1473
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1515
 msgid "Starts"
 msgstr "Mulai"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1475
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1517
 msgid "Ends"
 msgstr "Selesai"
 
@@ -7176,7 +7188,7 @@ msgstr "Sepanjang Hari"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1341 app/src/ui/preferences.rs:1529
+#: app/src/ui/preferences.rs:1383 app/src/ui/preferences.rs:1571
 msgid "%a"
 msgstr "%a"
 
@@ -8270,7 +8282,7 @@ msgstr "Cari Lagi"
 msgid "Edit…"
 msgstr "Edit…"
 
-#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:513
+#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:555
 msgid "Shared mailboxes support mail only."
 msgstr "Kotak surat bersama hanya mendukung surel."
 
@@ -9604,39 +9616,55 @@ msgstr "Pratinjau Pesan"
 msgid "Include a short extract of the message below the subject"
 msgstr "Baris teks pesan di bawah subjek"
 
-#: app/src/ui/preferences.rs:355
+#: app/src/ui/preferences.rs:356
+#, fuzzy
+#| msgid "Subject"
+msgid "Bold Subject"
+msgstr "Subjek"
+
+#: app/src/ui/preferences.rs:373
+#, fuzzy
+#| msgid "Message Preview"
+msgid "Message Preview Length"
+msgstr "Pratinjau Pesan"
+
+#: app/src/ui/preferences.rs:375
+msgid "The desktop may show fewer characters to fit the notification"
+msgstr ""
+
+#: app/src/ui/preferences.rs:393
 msgid "Only for VIPs"
 msgstr "Hanya untuk VIP"
 
-#: app/src/ui/preferences.rs:356
+#: app/src/ui/preferences.rs:394
 msgid "Stay quiet about mail from everyone else"
 msgstr "Jangan beri tahu email dari pengirim lain"
 
-#: app/src/ui/preferences.rs:366
+#: app/src/ui/preferences.rs:404
 msgid "Buttons"
 msgstr "Tombol"
 
-#: app/src/ui/preferences.rs:368
+#: app/src/ui/preferences.rs:406
 msgid "What a notification offers besides opening the conversation"
 msgstr "Tindakan yang ditawarkan notifikasi selain membuka percakapan"
 
-#: app/src/ui/preferences.rs:400
+#: app/src/ui/preferences.rs:442
 msgid "Event Reminders"
 msgstr "Pengingat Acara"
 
-#: app/src/ui/preferences.rs:402
+#: app/src/ui/preferences.rs:444
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr ""
 "Notifikasi sebelum setiap acara, pada waktu yang ditentukan acara atau "
 "kalendernya"
 
-#: app/src/ui/preferences.rs:425 app/src/ui/preferences.rs:432
+#: app/src/ui/preferences.rs:467 app/src/ui/preferences.rs:474
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "Akun"
 
-#: app/src/ui/preferences.rs:433
+#: app/src/ui/preferences.rs:475
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
@@ -9644,39 +9672,39 @@ msgstr ""
 "Tanda tangan, alamat pengirim, server, kontak, dan ruang penyimpanan yang "
 "dilaporkan server."
 
-#: app/src/ui/preferences.rs:438 app/src/ui/preferences.rs:705
+#: app/src/ui/preferences.rs:480 app/src/ui/preferences.rs:747
 msgid "No Accounts Yet"
 msgstr "Belum Ada Akun"
 
-#: app/src/ui/preferences.rs:440 app/src/ui/preferences.rs:707
+#: app/src/ui/preferences.rs:482 app/src/ui/preferences.rs:749
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Tambahkan akun untuk memilih pengirim dan menulis tanda tangan."
 
-#: app/src/ui/preferences.rs:490
+#: app/src/ui/preferences.rs:532
 msgid "Mailbox storage is not available through this connection."
 msgstr "Informasi penyimpanan kotak surat tidak tersedia melalui koneksi ini."
 
-#: app/src/ui/preferences.rs:492
+#: app/src/ui/preferences.rs:534
 msgid "The server has not reported its storage usage."
 msgstr "Server belum melaporkan penggunaan penyimpanannya."
 
-#: app/src/ui/preferences.rs:495
+#: app/src/ui/preferences.rs:537
 msgid "Space on the Server"
 msgstr "Ruang di Server"
 
-#: app/src/ui/preferences.rs:506
+#: app/src/ui/preferences.rs:548
 msgid "Shared Mailbox"
 msgstr "Kotak Surat Bersama"
 
-#: app/src/ui/preferences.rs:510
+#: app/src/ui/preferences.rs:552
 msgid "Signed in through {account}"
 msgstr "Masuk melalui {account}"
 
-#: app/src/ui/preferences.rs:586 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:628 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "Tanda Tangan"
 
-#: app/src/ui/preferences.rs:600
+#: app/src/ui/preferences.rs:642
 msgid ""
 "Used by this account and addresses without their own signature. Markdown "
 "works. <email> becomes the sending address, including its suffix; <domain> "
@@ -9686,44 +9714,44 @@ msgstr ""
 "Markdown didukung. <email> menjadi alamat pengirim, termasuk akhirannya; "
 "<domain> menjadi domainnya."
 
-#: app/src/ui/preferences.rs:608 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:650 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "Tanda tangan untuk {account}"
 
-#: app/src/ui/preferences.rs:622
+#: app/src/ui/preferences.rs:664
 msgid "Import from Gmail"
 msgstr "Impor dari Gmail"
 
-#: app/src/ui/preferences.rs:642
+#: app/src/ui/preferences.rs:684
 msgid "This account is not syncing yet"
 msgstr "Akun ini belum menyinkronkan"
 
-#: app/src/ui/preferences.rs:658
+#: app/src/ui/preferences.rs:700
 msgid "Imported the signature from Gmail"
 msgstr "Tanda tangan diimpor dari Gmail"
 
-#: app/src/ui/preferences.rs:662
+#: app/src/ui/preferences.rs:704
 msgid "Gmail has no signature for this account"
 msgstr "Gmail tidak memiliki tanda tangan untuk akun ini"
 
-#: app/src/ui/preferences.rs:665
+#: app/src/ui/preferences.rs:707
 msgid "Could not import: {reason}"
 msgstr "Tidak dapat mengimpor: {reason}"
 
-#: app/src/ui/preferences.rs:700 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:742 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Menulis"
 
-#: app/src/ui/preferences.rs:716 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:758 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Pesan Baru"
 
-#: app/src/ui/preferences.rs:720
+#: app/src/ui/preferences.rs:762
 msgid "New Messages Start As"
 msgstr "Format Awal Pesan Baru"
 
-#: app/src/ui/preferences.rs:722
+#: app/src/ui/preferences.rs:764
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "Teks berformat menata kata secara langsung; Markdown menampilkan tanda "
@@ -9731,29 +9759,29 @@ msgstr ""
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:729 app/src/ui/sidebar.rs:64
+#: app/src/ui/preferences.rs:771 app/src/ui/sidebar.rs:64
 #: app/src/ui/sidebar.rs:77
 msgid "Undo Send"
 msgstr "Batalkan Pengiriman"
 
-#: app/src/ui/preferences.rs:731
+#: app/src/ui/preferences.rs:773
 msgid "How long you can take a message back after sending it"
 msgstr "Waktu untuk menarik kembali pesan setelah mengirimnya"
 
-#: app/src/ui/preferences.rs:738
+#: app/src/ui/preferences.rs:780
 msgid "Check for Missing Attachments"
 msgstr "Periksa Lampiran yang Terlupa"
 
-#: app/src/ui/preferences.rs:740
+#: app/src/ui/preferences.rs:782
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Tanya sebelum mengirim pesan yang menyebut berkas tetapi tidak melampirkannya"
 
-#: app/src/ui/preferences.rs:774
+#: app/src/ui/preferences.rs:816
 msgid "Signing and Encryption"
 msgstr "Penandatanganan dan Enkripsi"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:818
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9761,49 +9789,49 @@ msgstr ""
 "Penguin Mail menandatangani dan mengenkripsi melalui GnuPG, yang menyimpan "
 "kunci Anda dan meminta frasa sandinya sendiri."
 
-#: app/src/ui/preferences.rs:781
+#: app/src/ui/preferences.rs:823
 msgid "Your OpenPGP Keys"
 msgstr "Kunci OpenPGP Anda"
 
-#: app/src/ui/preferences.rs:782
+#: app/src/ui/preferences.rs:824
 msgid "Asking gpg…"
 msgstr "Meminta gpg…"
 
-#: app/src/ui/preferences.rs:786
+#: app/src/ui/preferences.rs:828
 msgid "Your S/MIME Certificates"
 msgstr "Sertifikat S/MIME Anda"
 
-#: app/src/ui/preferences.rs:787
+#: app/src/ui/preferences.rs:829
 msgid "Asking gpgsm…"
 msgstr "Meminta gpgsm…"
 
-#: app/src/ui/preferences.rs:794
+#: app/src/ui/preferences.rs:836
 msgid "Sign My Messages by Default"
 msgstr "Tandatangani Pesan Saya secara Bawaan"
 
-#: app/src/ui/preferences.rs:795
+#: app/src/ui/preferences.rs:837
 msgid "New messages open with Sign turned on"
 msgstr "Pesan baru dibuka dengan Tandatangani aktif"
 
-#: app/src/ui/preferences.rs:801
+#: app/src/ui/preferences.rs:843
 msgid "Encrypt When I Can"
 msgstr "Enkripsi Jika Memungkinkan"
 
-#: app/src/ui/preferences.rs:803
+#: app/src/ui/preferences.rs:845
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Aktifkan Enkripsi saat semua penerima memiliki kunci atau sertifikat"
 
-#: app/src/ui/preferences.rs:892
+#: app/src/ui/preferences.rs:934
 msgid "gpg could not be asked: {reason}"
 msgstr "Tidak dapat meminta gpg: {reason}"
 
-#: app/src/ui/preferences.rs:911
+#: app/src/ui/preferences.rs:953
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Tidak dapat meminta gpgsm: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:920
+#: app/src/ui/preferences.rs:962
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9817,11 +9845,11 @@ msgstr[1] ""
 "Penguin Mail menandatangani dan mengenkripsi melalui {programs}, yang "
 "menyimpan kunci Anda dan meminta frasa sandinya sendiri."
 
-#: app/src/ui/preferences.rs:952 app/src/ui/preferences.rs:965
+#: app/src/ui/preferences.rs:994 app/src/ui/preferences.rs:1007
 msgid "Spelling"
 msgstr "Ejaan"
 
-#: app/src/ui/preferences.rs:954
+#: app/src/ui/preferences.rs:996
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9831,65 +9859,65 @@ msgstr ""
 "Pasang kamus Hunspell, seperti hunspell-en-us atau hunspell-pt-pt, lalu buka "
 "kembali editor pesan."
 
-#: app/src/ui/preferences.rs:967
+#: app/src/ui/preferences.rs:1009
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "Bahasa pemeriksaan ejaan setiap akun. Kamus terpasang: {languages}."
 
-#: app/src/ui/preferences.rs:979
+#: app/src/ui/preferences.rs:1021
 msgid "System: {language}"
 msgstr "Sistem: {language}"
 
-#: app/src/ui/preferences.rs:994
+#: app/src/ui/preferences.rs:1036
 msgid "All Installed Languages"
 msgstr "Semua Bahasa Terpasang"
 
-#: app/src/ui/preferences.rs:1037
+#: app/src/ui/preferences.rs:1079
 msgid "Sync"
 msgstr "Sinkronisasi"
 
-#: app/src/ui/preferences.rs:1045
+#: app/src/ui/preferences.rs:1087
 msgid "Checking"
 msgstr "Pemeriksaan"
 
-#: app/src/ui/preferences.rs:1051
+#: app/src/ui/preferences.rs:1093
 msgid "Check for New Mail"
 msgstr "Periksa Email Baru"
 
-#: app/src/ui/preferences.rs:1060
+#: app/src/ui/preferences.rs:1102
 msgid "Storage"
 msgstr "Penyimpanan"
 
-#: app/src/ui/preferences.rs:1068
+#: app/src/ui/preferences.rs:1110
 msgid "Keep Mail on This Computer For"
 msgstr "Simpan Email di Komputer Ini Selama"
 
-#: app/src/ui/preferences.rs:1089
+#: app/src/ui/preferences.rs:1131
 msgid "Message text kept for opening offline"
 msgstr "Teks pesan yang disimpan agar bisa dibuka tanpa koneksi"
 
-#: app/src/ui/preferences.rs:1092
+#: app/src/ui/preferences.rs:1134
 msgid "Message Cache"
 msgstr "Singgahan Pesan"
 
-#: app/src/ui/preferences.rs:1101
+#: app/src/ui/preferences.rs:1143
 msgid "100 messages"
 msgstr "100 pesan"
 
-#: app/src/ui/preferences.rs:1102
+#: app/src/ui/preferences.rs:1144
 msgid "300 messages"
 msgstr "300 pesan"
 
-#: app/src/ui/preferences.rs:1103
+#: app/src/ui/preferences.rs:1145
 msgid "1,000 messages"
 msgstr "1.000 pesan"
 
-#: app/src/ui/preferences.rs:1107
+#: app/src/ui/preferences.rs:1149
 msgid "Download Recent Inbox Messages"
 msgstr "Unduh Pesan Kotak Masuk Terbaru"
 
-#: app/src/ui/preferences.rs:1108
+#: app/src/ui/preferences.rs:1150
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -9897,133 +9925,133 @@ msgstr ""
 "Unduh teks pesan di setiap akun agar lebih cepat dibuka dan bisa dibaca "
 "tanpa koneksi. Lampiran dan gambar jarak jauh tidak diunduh."
 
-#: app/src/ui/preferences.rs:1135
+#: app/src/ui/preferences.rs:1177
 msgid "Startup"
 msgstr "Saat Memulai"
 
-#: app/src/ui/preferences.rs:1138
+#: app/src/ui/preferences.rs:1180
 msgid "Start in the Tray at Login"
 msgstr "Mulai di Baki Saat Masuk"
 
-#: app/src/ui/preferences.rs:1153
+#: app/src/ui/preferences.rs:1195
 msgid "Not available in demo mode"
 msgstr "Tidak tersedia dalam mode demo"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1203
 msgid "Look for a new release once a day"
 msgstr "Cari rilis baru sekali sehari"
 
-#: app/src/ui/preferences.rs:1202
+#: app/src/ui/preferences.rs:1244
 msgid "{used} of {limit}"
 msgstr "{used} dari {limit}"
 
-#: app/src/ui/preferences.rs:1214
+#: app/src/ui/preferences.rs:1256
 msgid "{amount} · Full"
 msgstr "{amount} · Penuh"
 
-#: app/src/ui/preferences.rs:1216
+#: app/src/ui/preferences.rs:1258
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Hampir penuh"
 
-#: app/src/ui/preferences.rs:1228
+#: app/src/ui/preferences.rs:1270
 msgid "Senders Who May Load Images"
 msgstr "Pengirim yang Boleh Memuat Gambar"
 
-#: app/src/ui/preferences.rs:1229 app/src/ui/preferences.rs:1238
+#: app/src/ui/preferences.rs:1271 app/src/ui/preferences.rs:1280
 msgid "Nobody yet"
 msgstr "Belum ada"
 
-#: app/src/ui/preferences.rs:1240
+#: app/src/ui/preferences.rs:1282
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} pengirim"
 msgstr[1] "{count} pengirim"
 
-#: app/src/ui/preferences.rs:1250
+#: app/src/ui/preferences.rs:1292
 msgid "Anyone at this domain"
 msgstr "Siapa pun di domain ini"
 
-#: app/src/ui/preferences.rs:1252
+#: app/src/ui/preferences.rs:1294
 msgid "This address"
 msgstr "Alamat ini"
 
-#: app/src/ui/preferences.rs:1257
+#: app/src/ui/preferences.rs:1299
 msgid "Stop Loading Images from This Sender"
 msgstr "Berhenti Memuat Gambar dari Pengirim Ini"
 
-#: app/src/ui/preferences.rs:1264
+#: app/src/ui/preferences.rs:1306
 msgid "Stop loading images from {sender}"
 msgstr "Berhenti memuat gambar dari {sender}"
 
-#: app/src/ui/preferences.rs:1334
+#: app/src/ui/preferences.rs:1376
 msgid "Monday to Friday"
 msgstr "Senin sampai Jumat"
 
-#: app/src/ui/preferences.rs:1335
+#: app/src/ui/preferences.rs:1377
 msgid "Every day of the week"
 msgstr "Setiap hari dalam seminggu"
 
-#: app/src/ui/preferences.rs:1336
+#: app/src/ui/preferences.rs:1378
 msgid "No days"
 msgstr "Tidak ada hari"
 
-#: app/src/ui/preferences.rs:1343
+#: app/src/ui/preferences.rs:1385
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1346
+#: app/src/ui/preferences.rs:1388
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1409
+#: app/src/ui/preferences.rs:1451
 msgid "Time Format"
 msgstr "Format Waktu"
 
-#: app/src/ui/preferences.rs:1413
+#: app/src/ui/preferences.rs:1455
 msgid "Automatic follows the system clock format"
 msgstr "Otomatis mengikuti format waktu sistem"
 
-#: app/src/ui/preferences.rs:1427
+#: app/src/ui/preferences.rs:1469
 msgid "Week Starts On"
 msgstr "Awal Minggu"
 
-#: app/src/ui/preferences.rs:1432
+#: app/src/ui/preferences.rs:1474
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Otomatis mengikuti hari pertama dalam seminggu menurut lokal"
 
-#: app/src/ui/preferences.rs:1446
+#: app/src/ui/preferences.rs:1488
 msgid "Working Hours"
 msgstr "Jam Kerja"
 
-#: app/src/ui/preferences.rs:1465
+#: app/src/ui/preferences.rs:1507
 msgid "Hours"
 msgstr "Jam"
 
-#: app/src/ui/preferences.rs:1516
+#: app/src/ui/preferences.rs:1558
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1599
+#: app/src/ui/preferences.rs:1641
 msgid "Never Translate"
 msgstr "Jangan Terjemahkan"
 
-#: app/src/ui/preferences.rs:1601
+#: app/src/ui/preferences.rs:1643
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Pesan dalam bahasa ini tidak mendapat tawaran terjemahan"
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1672
 msgid "Follow System"
 msgstr "Ikuti Sistem"
 
-#: app/src/ui/preferences.rs:1634
+#: app/src/ui/preferences.rs:1676
 msgid "Language"
 msgstr "Bahasa"
 
-#: app/src/ui/preferences.rs:1635
+#: app/src/ui/preferences.rs:1677
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/preferences.rs:1712 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1754 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Tanpa tanda tangan"
 
@@ -12994,85 +13022,85 @@ msgstr "Semua Email"
 msgid "Change the filters or load more messages if available."
 msgstr "Ubah filter atau muat lebih banyak pesan jika ada."
 
-#: sync/src/mailbox.rs:1031
+#: sync/src/mailbox.rs:1054
 msgid "This smart mailbox has no conditions"
 msgstr "Kotak surat cerdas ini tidak memiliki kondisi"
 
-#: sync/src/mailbox.rs:1605
+#: sync/src/mailbox.rs:1628
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Hasil untuk {account} hanya berasal dari email di komputer ini"
 
-#: sync/src/mailbox.rs:1813
+#: sync/src/mailbox.rs:1836
 msgid "Returns {when}"
 msgstr "Kembali {when}"
 
-#: sync/src/mailbox.rs:1856 sync/src/mailbox.rs:1959
+#: sync/src/mailbox.rs:1879 sync/src/mailbox.rs:1982
 msgid "No recipients"
 msgstr "Tidak ada penerima"
 
-#: sync/src/mailbox.rs:1859 sync/src/mailbox.rs:1962
+#: sync/src/mailbox.rs:1882 sync/src/mailbox.rs:1985
 msgid "To {recipients}"
 msgstr "Kepada {recipients}"
 
-#: sync/src/mailbox.rs:1902
+#: sync/src/mailbox.rs:1925
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} belum dibaca · {category}"
 msgstr[1] "{count} belum dibaca · {category}"
 
-#: sync/src/mailbox.rs:1907
+#: sync/src/mailbox.rs:1930
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} belum dibaca"
 msgstr[1] "{count} belum dibaca"
 
-#: sync/src/mailbox.rs:1914
+#: sync/src/mailbox.rs:1937
 msgid "Sent yesterday, no reply yet"
 msgstr "Dikirim kemarin, belum ada balasan"
 
-#: sync/src/mailbox.rs:1916
+#: sync/src/mailbox.rs:1939
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Dikirim {days} hari lalu, belum ada balasan"
 msgstr[1] "Dikirim {days} hari lalu, belum ada balasan"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2023
 msgid "The server has not sent this message yet."
 msgstr "Server belum mengirim pesan ini."
 
-#: sync/src/mailbox.rs:2001
+#: sync/src/mailbox.rs:2024
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail belum memastikan bahwa server menerima pesan ini."
 
-#: sync/src/mailbox.rs:2011
+#: sync/src/mailbox.rs:2034
 msgid "Sends {when}."
 msgstr "Dikirim {when}."
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2035
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Server tetap mengirimnya meskipun Penguin Mail ditutup."
 
-#: sync/src/mailbox.rs:2014
+#: sync/src/mailbox.rs:2037
 msgid "Sends {when}"
 msgstr "Dikirim {when}"
 
-#: sync/src/mailbox.rs:2021
+#: sync/src/mailbox.rs:2044
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "Periksa Terkirim. Penguin Mail tidak dapat memastikan pesan terkirim."
 
-#: sync/src/mailbox.rs:2024
+#: sync/src/mailbox.rs:2047
 msgid "Canceled in another app."
 msgstr "Dibatalkan di aplikasi lain."
 
-#: sync/src/mailbox.rs:2026
+#: sync/src/mailbox.rs:2049
 msgid "Not sent"
 msgstr "Tidak dikirim"
 
-#: sync/src/mailbox.rs:2033
+#: sync/src/mailbox.rs:2056
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Mencoba lagi {when}"
 
-#: sync/src/mailbox.rs:2040
+#: sync/src/mailbox.rs:2063
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail berhenti mencoba"
 

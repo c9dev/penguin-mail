@@ -311,3 +311,9 @@ switching mailboxes and reset when the window closes.
 Show Message Preview is a named switch on the Notifications page. It is
 available when Notify About New Mail and Show Sender and Subject are on.
 Turning either off keeps the preview choice for later and disables the switch.
+
+Message Preview Length chooses 80, 140 or 280 characters and is available only
+when Show Message Preview is on. The desktop controls the displayed line count.
+On macOS, Bold Subject puts the subject on a separate native subtitle line. It
+requires Notify About New Mail and Show Sender and Subject. Disabling either
+keeps both choices for later. Linux notifications keep the subject in plain text.

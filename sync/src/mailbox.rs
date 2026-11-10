@@ -780,6 +780,15 @@ impl<A: Accounts> Mailboxes<A> {
     /// so only IMAP, with or without Gmail's extensions, reads a missing body, through its unread-safe
     /// cache. Callers queue visible rows rather than whole mailbox pages.
     pub async fn preview(&self, target: Target) -> Result<Option<String>, SyncError> {
+        self.preview_up_to(target, 140).await
+    }
+
+    /// A notification can request more text without lengthening stored list previews.
+    pub async fn preview_up_to(
+        &self,
+        target: Target,
+        characters: usize,
+    ) -> Result<Option<String>, SyncError> {
         let wanted = target.clone();
         let Some((id, snippet)) = self
             .db
@@ -788,19 +797,28 @@ impl<A: Accounts> Mailboxes<A> {
         else {
             return Ok(None);
         };
-        if !snippet.is_empty() {
-            return Ok(Some(snippet));
+        if !snippet.is_empty() && (characters <= 140 || snippet.chars().count() >= characters) {
+            return Ok(Some(mailrs_mime::preview_up_to(Some(&snippet), characters)));
         }
-        let Some(sync) = self.accounts.account(target.account_id) else {
-            return Ok(None);
+        let (account, message_id) = (target.account_id, id.clone());
+        let cached = self
+            .db
+            .read(move |c| mailrs_store::bodies::peek_body(c, account, &message_id))
+            .await?;
+        let body = if let Some(body) = cached {
+            body
+        } else {
+            let Some(sync) = self.accounts.account(target.account_id) else {
+                return Ok((!snippet.is_empty()).then_some(snippet));
+            };
+            if !matches!(
+                &sync.services().mail,
+                crate::AnyMail::Imap(_) | crate::AnyMail::GmailImap(_)
+            ) {
+                return Ok((!snippet.is_empty()).then_some(snippet));
+            }
+            sync.body(&id).await?
         };
-        if !matches!(
-            &sync.services().mail,
-            crate::AnyMail::Imap(_) | crate::AnyMail::GmailImap(_)
-        ) {
-            return Ok(None);
-        }
-        let body = sync.body(&id).await?;
         // Never turn encrypted mail's cached text into a persistent preview.
         if matches!(
             body.protection,
@@ -812,7 +830,12 @@ impl<A: Accounts> Mailboxes<A> {
             .text
             .filter(|text| !text.trim().is_empty())
             .or_else(|| body.html.map(|html| mailrs_mime::html::html_to_text(&html)));
-        let snippet = mailrs_mime::preview(text.as_deref());
+        let text = text
+            .as_deref()
+            .filter(|text| !text.trim().is_empty())
+            .unwrap_or(&snippet);
+        let preview = mailrs_mime::preview_up_to(Some(text), characters);
+        let snippet = mailrs_mime::preview(Some(text));
         let account = target.account_id;
         self.db
             .write(move |c| {
@@ -827,7 +850,7 @@ impl<A: Accounts> Mailboxes<A> {
                 // Sync may have changed the conversation while its body arrived.
                 Ok(messages::preview_source(c, &target)?
                     .filter(|(current, _)| current == &id)
-                    .map(|(_, snippet)| snippet))
+                    .map(|_| preview))
             })
             .await
             .map_err(Into::into)

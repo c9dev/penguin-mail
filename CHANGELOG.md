@@ -7,7 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
-- Notifications can show a short message preview below the subject when enabled in Preferences.
+- Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
 
 ### Improved
 

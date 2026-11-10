@@ -55,7 +55,11 @@ pub(super) fn preview_targets(
     }
     messages
         .iter()
-        .filter(|m| m.snippet.trim().is_empty())
+        .filter(|m| {
+            m.snippet.trim().is_empty()
+                || settings.notification_preview_length.characters() > 140
+                    && m.snippet.chars().count() < settings.notification_preview_length.characters()
+        })
         .map(|m| Target {
             account_id: m.account_id,
             thread_id: m.thread_id.clone(),
@@ -65,19 +69,31 @@ pub(super) fn preview_targets(
 }
 
 /// A slow server must not hold up the notification beyond this batch's deadline.
-pub(super) async fn fill_previews<F, Fut>(targets: Vec<Target>, mut fetch: F)
+pub(super) async fn fill_previews<F, Fut>(
+    targets: Vec<Target>,
+    mut fetch: F,
+) -> std::collections::HashMap<String, String>
 where
     F: FnMut(Target) -> Fut,
     Fut: std::future::Future<Output = Result<Option<String>, mailrs_sync::SyncError>>,
 {
+    let mut previews = std::collections::HashMap::new();
     let _ = tokio::time::timeout(std::time::Duration::from_secs(3), async {
         for target in targets {
-            if let Err(err) = fetch(target).await {
-                tracing::debug!(%err, "notification preview unavailable");
+            let id = target.message_id.clone();
+            match fetch(target).await {
+                Ok(Some(text)) => {
+                    if let Some(id) = id {
+                        previews.insert(id, text);
+                    }
+                }
+                Ok(None) => {}
+                Err(err) => tracing::debug!(%err, "notification preview unavailable"),
             }
         }
     })
     .await;
+    previews
 }
 
 #[cfg(test)]
@@ -99,6 +115,10 @@ mod tests {
         assert!(preview_targets(&messages, &settings).is_empty());
         settings.notification_previews = true;
         messages[0].snippet = "Cached text".into();
+        assert!(preview_targets(&messages, &settings).is_empty());
+        settings.notification_preview_length = crate::settings::NotificationPreviewLength::Long;
+        assert_eq!(preview_targets(&messages, &settings).len(), 1);
+        messages[0].snippet = "x".repeat(280);
         assert!(preview_targets(&messages, &settings).is_empty());
         messages[0].snippet.clear();
         messages = (0..4).map(|_| messages[0].clone()).collect();
@@ -126,6 +146,27 @@ mod tests {
         .await;
         assert_eq!(called, ["0", "1", "2"]);
         assert_eq!(start.elapsed(), Duration::from_secs(3));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn previews_ready_before_the_deadline_survive_a_later_timeout() {
+        let targets = ["first", "slow"]
+            .into_iter()
+            .map(|id| Target {
+                account_id: 1,
+                thread_id: id.into(),
+                message_id: Some(id.into()),
+            })
+            .collect();
+        let ready = fill_previews(targets, |target| async move {
+            if target.thread_id == "slow" {
+                tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+            }
+            Ok(Some("Ready text".into()))
+        })
+        .await;
+        assert_eq!(ready.len(), 1);
+        assert_eq!(ready["first"], "Ready text");
     }
 
     #[tokio::test]
@@ -232,7 +273,14 @@ mod tests {
             "the change event arrives before the notification registers"
         );
 
-        for notice in notify::notices(snapshot, true, false, vec![]) {
+        for notice in notify::notices(
+            snapshot,
+            true,
+            false,
+            false,
+            crate::settings::NotificationPreviewLength::Medium,
+            vec![],
+        ) {
             issued.issue("token".into(), notice.target.unwrap(), notice.buttons);
         }
         let asked = issued.in_threads(account_id, &["t".to_string()]);

@@ -1517,12 +1517,17 @@ impl App {
     pub(crate) fn announce_mail(
         &self,
         messages: Vec<mailrs_domain::MessageMeta>,
-        previews: bool,
-        message_preview: bool,
-        buttons: Vec<notify::Button>,
+        settings: &Settings,
     ) {
         use rand::distr::{Alphanumeric, SampleString};
-        for notice in notify::notices(messages, previews, message_preview, buttons) {
+        for notice in notify::notices(
+            messages,
+            settings.notification_previews,
+            settings.notification_message_preview,
+            settings.notification_bold_subject,
+            settings.notification_preview_length,
+            settings.notification_buttons.clone(),
+        ) {
             let token = Alphanumeric.sample_string(&mut rand::rng(), 24);
             let evicted = if let Some(target) = &notice.target {
                 self.issued.borrow_mut().issue(
@@ -1804,13 +1809,19 @@ impl App {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let lists = this.core.lists();
-            let _ = this
+            let length = settings.notification_preview_length.characters();
+            let mut previews = this
                 .core
                 .call(async move {
-                    announce::fill_previews(targets, |target| lists.preview(target)).await;
-                    Ok::<_, anyhow::Error>(())
+                    Ok::<_, anyhow::Error>(
+                        announce::fill_previews(targets, |target| {
+                            lists.preview_up_to(target, length)
+                        })
+                        .await,
+                    )
                 })
-                .await;
+                .await
+                .unwrap_or_default();
             // Re-read after fetching: mail may have been read, moved or deleted.
             let ids: Vec<_> = found.into_iter().map(|m| m.id).collect();
             match this
@@ -1818,7 +1829,14 @@ impl App {
                 .read(move |c| announced(c, account_id, &ids))
                 .await
             {
-                Ok(found) => this.announce_ready(account_id, found),
+                Ok(mut found) => {
+                    for message in &mut found {
+                        if let Some(preview) = previews.remove(&message.id) {
+                            message.snippet = preview;
+                        }
+                    }
+                    this.announce_ready(account_id, found);
+                }
                 Err(err) => {
                     tracing::warn!(account = account_id, %err, "could not refresh mail for notification")
                 }
@@ -1857,12 +1875,7 @@ impl App {
             .collect::<HashSet<_>>()
             .into_iter()
             .collect();
-        self.announce_mail(
-            found,
-            settings.notification_previews,
-            settings.notification_message_preview,
-            settings.notification_buttons.clone(),
-        );
+        self.announce_mail(found, &settings);
         self.settle_notifications(account_id, &threads);
     }
 

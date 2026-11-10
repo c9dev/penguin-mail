@@ -40,6 +40,8 @@ pub enum Change {
     Notifications(bool),
     NotificationPreviews(bool),
     NotificationMessagePreview(bool),
+    NotificationBoldSubject(bool),
+    NotificationPreviewLength(super::NotificationPreviewLength),
     NotifyVipsOnly(bool),
     /// Puts one button on new-mail notifications, or takes it off.
     NotificationButton {
@@ -315,6 +317,10 @@ impl Change {
             Change::Notifications(on) => settings.notifications = on,
             Change::NotificationPreviews(on) => settings.notification_previews = on,
             Change::NotificationMessagePreview(on) => settings.notification_message_preview = on,
+            Change::NotificationBoldSubject(on) => settings.notification_bold_subject = on,
+            Change::NotificationPreviewLength(length) => {
+                settings.notification_preview_length = length
+            }
             Change::NotifyVipsOnly(on) => settings.notify_vips_only = on,
             Change::NotificationButton { button, show } => {
                 settings.show_notification_button(button, show)
@@ -723,6 +729,8 @@ settable! {
         notification_buttons,
         // Exposing message text in desktop notifications is the person's choice.
         notification_message_preview,
+        notification_bold_subject,
+        notification_preview_length,
         // A list too, of the languages the person reads as they are.
         never_translate,
         send_as,
@@ -916,6 +924,8 @@ impl Effects {
             notify_vips_only,
             notification_buttons,
             notification_message_preview,
+            notification_bold_subject,
+            notification_preview_length,
             event_reminders,
             never_translate,
             smart_mailboxes,
@@ -979,6 +989,8 @@ impl Effects {
             notify_vips_only,
             notification_buttons,
             notification_message_preview,
+            notification_bold_subject,
+            notification_preview_length,
             // The reminder scheduler reads this on each check, at most a
             // minute away.
             event_reminders,
@@ -1490,6 +1502,8 @@ mod tests {
             Change::Notifications(false),
             Change::NotificationPreviews(false),
             Change::NotificationMessagePreview(true),
+            Change::NotificationBoldSubject(true),
+            Change::NotificationPreviewLength(super::super::NotificationPreviewLength::Long),
             Change::NotifyVipsOnly(true),
             Change::UndoSend(UndoSend::Thirty),
             Change::DefaultAccount(Some("ann@example.com".into())),
