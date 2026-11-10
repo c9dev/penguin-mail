@@ -2648,7 +2648,7 @@ msgid "Archive"
 msgstr "Arşivle"
 
 #: app/src/notify.rs:62 app/src/ui/conversation.rs:468
-#: app/src/ui/conversation.rs:1168 app/src/ui/preferences.rs:185
+#: app/src/ui/conversation.rs:1168 app/src/ui/preferences.rs:194
 #: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "Okundu İşaretle"
@@ -4121,8 +4121,8 @@ msgstr "Bu hesap bağlı değil."
 msgid "Could not save: {reason}"
 msgstr "Kaydedilemedi: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2929
-#: app/src/ui/window.rs:2952
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:2953
 msgid "Could not open the draft: {reason}"
 msgstr "Taslak açılamadı: {reason}"
 
@@ -4387,7 +4387,7 @@ msgid "Set up a different project"
 msgstr "Başka bir proje kurun"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3282
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3283
 msgid "Set up your own Google project"
 msgstr "Kendi Google projenizi kurun"
 
@@ -4453,7 +4453,7 @@ msgstr "{size} boyutundan küçük"
 msgid "Larger than {size}"
 msgstr "{size} boyutundan büyük"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:916
+#: app/src/rules.rs:251 app/src/settings/mod.rs:918
 msgid "All mail"
 msgstr "Tüm postalar"
 
@@ -4551,219 +4551,219 @@ msgstr "Bu bilgisayarda, Penguin Mail açıkken"
 msgid "On the server"
 msgstr "Sunucuda"
 
-#: app/src/settings/mod.rs:219 app/src/settings/mod.rs:428
-#: app/src/settings/mod.rs:828 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1077
+#: app/src/settings/mod.rs:220 app/src/settings/mod.rs:429
+#: app/src/settings/mod.rs:830 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1086
 msgid "Off"
 msgstr "Kapalı"
 
-#: app/src/settings/mod.rs:220
+#: app/src/settings/mod.rs:221
 msgid "Local Server"
 msgstr "Yerel Sunucu"
 
-#: app/src/settings/mod.rs:221
+#: app/src/settings/mod.rs:222
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:222
+#: app/src/settings/mod.rs:223
 msgid "Claude Subscription"
 msgstr "Claude Aboneliği"
 
-#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3655
-#: app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:248 app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3740
 msgid "Assistant"
 msgstr "Asistan"
 
-#: app/src/settings/mod.rs:248 app/src/ui/preferences.rs:224
+#: app/src/settings/mod.rs:249 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Çeviri"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:252
+#: app/src/settings/mod.rs:253
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Abonelikten Çıkma"
 
-#: app/src/settings/mod.rs:258
+#: app/src/settings/mod.rs:259
 msgid "Answers questions and acts on your mail"
 msgstr "Soruları yanıtlar ve postalarınızla ilgili işlemler yapar"
 
-#: app/src/settings/mod.rs:259
+#: app/src/settings/mod.rs:260
 msgid "Translates a message when you ask"
 msgstr "İstediğinizde iletiyi çevirir"
 
-#: app/src/settings/mod.rs:261
+#: app/src/settings/mod.rs:262
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Kurallar yetersiz kaldığında bültenin abonelikten çıkma sayfasını okur"
 
-#: app/src/settings/mod.rs:299
+#: app/src/settings/mod.rs:300
 msgid "Same as the Assistant"
 msgstr "Asistanla Aynı"
 
-#: app/src/settings/mod.rs:429
+#: app/src/settings/mod.rs:430
 msgid "Claude's own only"
 msgstr "Yalnızca Claude'un kendi araması"
 
-#: app/src/settings/mod.rs:430
+#: app/src/settings/mod.rs:431
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:431
+#: app/src/settings/mod.rs:432
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:433
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:606
+#: app/src/settings/mod.rs:608
 msgid "Rich text"
 msgstr "Zengin metin"
 
-#: app/src/settings/mod.rs:607
+#: app/src/settings/mod.rs:609
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:626 app/src/settings/mod.rs:648
+#: app/src/settings/mod.rs:628 app/src/settings/mod.rs:650
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Otomatik"
 
-#: app/src/settings/mod.rs:627 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:629 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "Pazartesi"
 
-#: app/src/settings/mod.rs:628 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:630 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "Pazar"
 
-#: app/src/settings/mod.rs:649
+#: app/src/settings/mod.rs:651
 msgid "12-hour (AM/PM)"
 msgstr "12 saat (AM/PM)"
 
-#: app/src/settings/mod.rs:650
+#: app/src/settings/mod.rs:652
 msgid "24-hour"
 msgstr "24 saat"
 
-#: app/src/settings/mod.rs:688
+#: app/src/settings/mod.rs:690
 msgid "When opened"
 msgstr "Açıldığında"
 
-#: app/src/settings/mod.rs:689
+#: app/src/settings/mod.rs:691
 msgid "After 2 seconds"
 msgstr "2 saniye sonra"
 
-#: app/src/settings/mod.rs:690
+#: app/src/settings/mod.rs:692
 msgid "Only when I choose"
 msgstr "Yalnızca ben seçtiğimde"
 
-#: app/src/settings/mod.rs:706 app/src/settings/mod.rs:724
+#: app/src/settings/mod.rs:708 app/src/settings/mod.rs:726
 msgid "Ask each time"
 msgstr "Her seferinde sor"
 
-#: app/src/settings/mod.rs:707
+#: app/src/settings/mod.rs:709
 msgid "Always load"
 msgstr "Her zaman yükle"
 
-#: app/src/settings/mod.rs:725
+#: app/src/settings/mod.rs:727
 msgid "Never ask"
 msgstr "Asla sorma"
 
-#: app/src/settings/mod.rs:752
+#: app/src/settings/mod.rs:754
 msgid "No Preview"
 msgstr "Önizleme Yok"
 
-#: app/src/settings/mod.rs:753
+#: app/src/settings/mod.rs:755
 msgid "1 Line"
 msgstr "1 Satır"
 
-#: app/src/settings/mod.rs:754
+#: app/src/settings/mod.rs:756
 msgid "2 Lines"
 msgstr "2 Satır"
 
-#: app/src/settings/mod.rs:788
+#: app/src/settings/mod.rs:790
 msgid "Small"
 msgstr "Küçük"
 
-#: app/src/settings/mod.rs:789
+#: app/src/settings/mod.rs:791
 msgid "Default"
 msgstr "Varsayılan"
 
-#: app/src/settings/mod.rs:790
+#: app/src/settings/mod.rs:792
 msgid "Large"
 msgstr "Büyük"
 
-#: app/src/settings/mod.rs:791
+#: app/src/settings/mod.rs:793
 msgid "Larger"
 msgstr "Daha büyük"
 
-#: app/src/settings/mod.rs:829
+#: app/src/settings/mod.rs:831
 msgid "5 seconds"
 msgstr "5 saniye"
 
-#: app/src/settings/mod.rs:830
+#: app/src/settings/mod.rs:832
 msgid "10 seconds"
 msgstr "10 saniye"
 
-#: app/src/settings/mod.rs:831
+#: app/src/settings/mod.rs:833
 msgid "20 seconds"
 msgstr "20 saniye"
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:834
 msgid "30 seconds"
 msgstr "30 saniye"
 
-#: app/src/settings/mod.rs:849
+#: app/src/settings/mod.rs:851
 msgid "Follow system"
 msgstr "Sistemi izle"
 
-#: app/src/settings/mod.rs:850
+#: app/src/settings/mod.rs:852
 msgid "Light"
 msgstr "Açık"
 
-#: app/src/settings/mod.rs:851
+#: app/src/settings/mod.rs:853
 msgid "Dark"
 msgstr "Koyu"
 
-#: app/src/settings/mod.rs:885
+#: app/src/settings/mod.rs:887
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Her saniye"
 msgstr[1] "Her {count} saniyede"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:895
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Her dakika"
 msgstr[1] "Her {count} dakikada"
 
-#: app/src/settings/mod.rs:910
+#: app/src/settings/mod.rs:912
 msgid "2 weeks"
 msgstr "2 hafta"
 
-#: app/src/settings/mod.rs:911
+#: app/src/settings/mod.rs:913
 msgid "30 days"
 msgstr "30 gün"
 
-#: app/src/settings/mod.rs:912
+#: app/src/settings/mod.rs:914
 msgid "90 days"
 msgstr "90 gün"
 
-#: app/src/settings/mod.rs:913
+#: app/src/settings/mod.rs:915
 msgid "1 year"
 msgstr "1 yıl"
 
-#: app/src/settings/mod.rs:914
+#: app/src/settings/mod.rs:916
 msgid "2 years"
 msgstr "2 yıl"
 
-#: app/src/settings/mod.rs:915
+#: app/src/settings/mod.rs:917
 msgid "5 years"
 msgstr "5 yıl"
 
-#: app/src/settings/mod.rs:937
+#: app/src/settings/mod.rs:939
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4771,19 +4771,19 @@ msgstr ""
 "Tüm iletiler bu bilgisayarda kalır. Büyük hesaplar çok disk alanı ve bellek "
 "kullanır. Eski postaları arka planda indirilir."
 
-#: app/src/settings/mod.rs:939
+#: app/src/settings/mod.rs:941
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "Gelen kutunuzdaki her şey de saklanır, eski postalar aranabilir kalır"
 
-#: app/src/settings/mod.rs:946
+#: app/src/settings/mod.rs:948
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:947
+#: app/src/settings/mod.rs:949
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:948
+#: app/src/settings/mod.rs:950
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4960,11 +4960,11 @@ msgstr "Penguin Mail'i Aç"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:369
 #: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1562
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:490
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "Yeni İleti"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3661
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3662
 msgid "Check for Mail"
 msgstr "Postaları Kontrol Et"
 
@@ -4978,11 +4978,11 @@ msgstr "{version} Sürümündeki Yenilikler"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1137 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1146 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Güncellemeleri Kontrol Et"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3678
+#: app/src/tray.rs:266 app/src/ui/window.rs:3679
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Çık"
@@ -5003,7 +5003,7 @@ msgstr "Yenilikler"
 msgid "Website"
 msgstr "Web Sitesi"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3677
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3678
 msgid "Donate"
 msgstr "Bağış Yap"
 
@@ -5011,7 +5011,7 @@ msgstr "Bağış Yap"
 msgid "License"
 msgstr "Lisans"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3676
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3677
 msgid "About Penguin Mail"
 msgstr "Penguin Mail Hakkında"
 
@@ -5060,12 +5060,12 @@ msgid "The update to {version} failed"
 msgstr "{version} güncellemesi başarısız oldu"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1557
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1558
 msgid "Copy Command"
 msgstr "Komutu Kopyala"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1562
+#: app/src/ui/window.rs:1563
 msgid "Command copied"
 msgstr "Komut kopyalandı"
 
@@ -5175,7 +5175,7 @@ msgstr "İptal"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1501
+#: app/src/ui/window.rs:1502
 msgid "Sign In"
 msgstr "Oturum Aç"
 
@@ -5299,7 +5299,7 @@ msgstr "Şimdi Değil"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1634
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1635
 msgid "Grant Access"
 msgstr "Erişim Ver"
 
@@ -5320,7 +5320,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail indirdiği tüm iletileri bu bilgisayarda tutar."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1498
+#: app/src/ui/preferences.rs:1507
 msgid "Days"
 msgstr "Gün"
 
@@ -5448,7 +5448,7 @@ msgid "Sign In Again"
 msgstr "Yeniden Oturum Aç"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2236
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2237
 msgid "Open Google Cloud"
 msgstr "Google Cloud'u Aç"
 
@@ -5538,13 +5538,13 @@ msgstr "Açık yazışmaya bir yanıt taslağı hazırla"
 msgid "Choose a Model"
 msgstr "Model Seç"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3786
-#: app/src/ui/window.rs:3787
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3787
+#: app/src/ui/window.rs:3788
 msgid "Detach"
 msgstr "Ayır"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4465
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4467
 msgid "Close"
 msgstr "Kapat"
 
@@ -5768,7 +5768,7 @@ msgstr "{server} düzenle"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2231 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3425
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
 msgid "Remove"
 msgstr "Kaldır"
 
@@ -6151,7 +6151,7 @@ msgstr ""
 "kapalıdır. Beceri betikleri, postanıza, anahtarlarınıza ve ev klasörünüze "
 "erişemeyen korumalı bir alanda çalışır. Asistan her komuttan önce sorar."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:505
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:514
 msgid "Not Available"
 msgstr "Kullanılamıyor"
 
@@ -6338,7 +6338,7 @@ msgid "Declined"
 msgstr "Reddedildi"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1313
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6452,11 +6452,11 @@ msgstr "Bitiş tarihi"
 msgid "End time"
 msgstr "Bitiş saati"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1450
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1459
 msgid "Starts"
 msgstr "Başlangıç"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1452
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1461
 msgid "Ends"
 msgstr "Bitiş"
 
@@ -6599,7 +6599,7 @@ msgstr "{file} eklenemedi: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:413
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
-#: app/src/ui/thread_list.rs:1149
+#: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "Diğer"
 
@@ -7131,7 +7131,7 @@ msgstr "Tüm gün"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1318 app/src/ui/preferences.rs:1506
+#: app/src/ui/preferences.rs:1327 app/src/ui/preferences.rs:1515
 msgid "%a"
 msgstr "%a"
 
@@ -8221,7 +8221,7 @@ msgstr "Tekrar Bul"
 msgid "Edit…"
 msgstr "Düzenle…"
 
-#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
+#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:499
 msgid "Shared mailboxes support mail only."
 msgstr "Paylaşılan posta kutuları yalnızca postayı destekler."
 
@@ -8302,7 +8302,7 @@ msgid "Export…"
 msgstr "Dışa Aktar…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3671
+#: app/src/ui/window.rs:3672
 msgid "Customize Toolbar…"
 msgstr "Araç Çubuğunu Özelleştir…"
 
@@ -8864,7 +8864,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "E-postamı Gizle'ye İzin Ver"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3880
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3881
 msgid "Add an account first"
 msgstr "Önce bir hesap ekleyin"
 
@@ -9421,26 +9421,36 @@ msgstr ""
 "olarak ayır"
 
 #: app/src/ui/preferences.rs:169
+#, fuzzy
+#| msgid "Check for mail"
+msgid "Pull to Check for Mail"
+msgstr "Postaları kontrol et"
+
+#: app/src/ui/preferences.rs:171
+msgid "Slowly pull past the top of the message list with a touchpad"
+msgstr ""
+
+#: app/src/ui/preferences.rs:178
 msgid "Open the Inbox On"
 msgstr "Gelen Kutusu'nun Açılış Kategorisi"
 
-#: app/src/ui/preferences.rs:170
+#: app/src/ui/preferences.rs:179
 msgid "Which category the window starts on"
 msgstr "Pencerenin hangi kategoride başlayacağı"
 
-#: app/src/ui/preferences.rs:176
+#: app/src/ui/preferences.rs:185
 msgid "Suggest Follow-Ups"
 msgstr "Takip Öner"
 
-#: app/src/ui/preferences.rs:178
+#: app/src/ui/preferences.rs:187
 msgid "List mail you sent that has had no reply for three days"
 msgstr "Üç gündür yanıt almayan gönderilmiş postaları listele"
 
-#: app/src/ui/preferences.rs:192
+#: app/src/ui/preferences.rs:201
 msgid "Follow Navigation After Removing Mail"
 msgstr "Posta Kaldırıldıktan Sonra Gezinme Yönünü İzle"
 
-#: app/src/ui/preferences.rs:194
+#: app/src/ui/preferences.rs:203
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
@@ -9448,169 +9458,169 @@ msgstr ""
 "Postayı sildikten, arşivledikten veya taşıdıktan sonra son hareket yönündeki "
 "komşuyu seç"
 
-#: app/src/ui/preferences.rs:201
+#: app/src/ui/preferences.rs:210
 msgid "Images and Receipts"
 msgstr "Resimler ve Bildirimler"
 
-#: app/src/ui/preferences.rs:205
+#: app/src/ui/preferences.rs:214
 msgid "Remote Images"
 msgstr "Uzak Resimler"
 
-#: app/src/ui/preferences.rs:207
+#: app/src/ui/preferences.rs:216
 msgid "Loading them can tell senders when you read their mail"
 msgstr "Yüklemek, gönderenlere postalarını ne zaman okuduğunuzu bildirebilir"
 
-#: app/src/ui/preferences.rs:215
+#: app/src/ui/preferences.rs:224
 msgid "Read Receipts"
 msgstr "Okundu Bildirimleri"
 
-#: app/src/ui/preferences.rs:217
+#: app/src/ui/preferences.rs:226
 msgid "When a sender asks to know you read their message"
 msgstr "Gönderen, iletisini okuduğunuzu öğrenmek istediğinde"
 
-#: app/src/ui/preferences.rs:233
+#: app/src/ui/preferences.rs:242
 msgid "Appearance"
 msgstr "Görünüm"
 
-#: app/src/ui/preferences.rs:240
+#: app/src/ui/preferences.rs:249
 msgid "Style"
 msgstr "Stil"
 
-#: app/src/ui/preferences.rs:247
+#: app/src/ui/preferences.rs:256
 msgid "Text Size"
 msgstr "Metin Boyutu"
 
-#: app/src/ui/preferences.rs:254
+#: app/src/ui/preferences.rs:263
 msgid "Message Preview"
 msgstr "İleti Önizlemesi"
 
-#: app/src/ui/preferences.rs:255
+#: app/src/ui/preferences.rs:264
 msgid "Lines of message text below the subject"
 msgstr "Konunun altındaki ileti metni satırları"
 
-#: app/src/ui/preferences.rs:261
+#: app/src/ui/preferences.rs:270
 msgid "Bold Unread Messages"
 msgstr "Okunmamış İletileri Kalın Yap"
 
-#: app/src/ui/preferences.rs:263
+#: app/src/ui/preferences.rs:272
 msgid "Use heavier text for unread senders, subjects, and dates"
 msgstr "Okunmamış gönderen, konu ve tarihler için daha kalın metin kullan"
 
-#: app/src/ui/preferences.rs:270
+#: app/src/ui/preferences.rs:279
 msgid "Always Bold Senders"
 msgstr "Gönderenleri Her Zaman Kalın Yap"
 
-#: app/src/ui/preferences.rs:272
+#: app/src/ui/preferences.rs:281
 msgid "Use heavier sender text for both read and unread messages"
 msgstr "Okunmuş ve okunmamış iletilerde gönderen için daha kalın metin kullan"
 
-#: app/src/ui/preferences.rs:279
+#: app/src/ui/preferences.rs:288
 msgid "Show Avatars"
 msgstr "Avatarları Göster"
 
-#: app/src/ui/preferences.rs:281
+#: app/src/ui/preferences.rs:290
 msgid "Show contact pictures or initials in the message list"
 msgstr "İleti listesinde kişi resimlerini veya baş harflerini göster"
 
-#: app/src/ui/preferences.rs:292
+#: app/src/ui/preferences.rs:301
 msgid "Draw Messages Without the GPU"
 msgstr "İletileri GPU Olmadan Çiz"
 
-#: app/src/ui/preferences.rs:294
+#: app/src/ui/preferences.rs:303
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr ""
 "İletiler boş veya bozuk görünüyorsa açın. Yeniden başlatıldıktan sonra "
 "uygulanır"
 
-#: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
+#: app/src/ui/preferences.rs:315 app/src/ui/preferences.rs:320
 msgid "Notifications"
 msgstr "Bildirimler"
 
-#: app/src/ui/preferences.rs:315
+#: app/src/ui/preferences.rs:324
 msgid "Notify About New Mail"
 msgstr "Yeni Postaları Bildir"
 
-#: app/src/ui/preferences.rs:322
+#: app/src/ui/preferences.rs:331
 msgid "Show Sender and Subject"
 msgstr "Göndereni ve Konuyu Göster"
 
-#: app/src/ui/preferences.rs:323
+#: app/src/ui/preferences.rs:332
 msgid "Turn off to see only how much mail arrived"
 msgstr "Yalnızca kaç posta geldiğini görmek için kapatın"
 
-#: app/src/ui/preferences.rs:333
+#: app/src/ui/preferences.rs:342
 msgid "Only for VIPs"
 msgstr "Yalnızca VIP'ler İçin"
 
-#: app/src/ui/preferences.rs:334
+#: app/src/ui/preferences.rs:343
 msgid "Stay quiet about mail from everyone else"
 msgstr "Diğer kişilerden gelen postaları bildirme"
 
-#: app/src/ui/preferences.rs:344
+#: app/src/ui/preferences.rs:353
 msgid "Buttons"
 msgstr "Düğmeler"
 
-#: app/src/ui/preferences.rs:346
+#: app/src/ui/preferences.rs:355
 msgid "What a notification offers besides opening the conversation"
 msgstr "Bildirimin yazışmayı açma dışında sunduğu seçenekler"
 
-#: app/src/ui/preferences.rs:377
+#: app/src/ui/preferences.rs:386
 msgid "Event Reminders"
 msgstr "Etkinlik Hatırlatıcıları"
 
-#: app/src/ui/preferences.rs:379
+#: app/src/ui/preferences.rs:388
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr ""
 "Her etkinlikten önce, etkinliğin veya takviminin belirlediği zamanlarda "
 "bildirim"
 
-#: app/src/ui/preferences.rs:402 app/src/ui/preferences.rs:409
+#: app/src/ui/preferences.rs:411 app/src/ui/preferences.rs:418
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "Hesaplar"
 
-#: app/src/ui/preferences.rs:410
+#: app/src/ui/preferences.rs:419
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
 msgstr ""
 "İmza, gönderim adresleri, sunucular, kişiler ve sunucunun bildirdiği alan."
 
-#: app/src/ui/preferences.rs:415 app/src/ui/preferences.rs:682
+#: app/src/ui/preferences.rs:424 app/src/ui/preferences.rs:691
 msgid "No Accounts Yet"
 msgstr "Henüz Hesap Yok"
 
-#: app/src/ui/preferences.rs:417 app/src/ui/preferences.rs:684
+#: app/src/ui/preferences.rs:426 app/src/ui/preferences.rs:693
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Gönderen seçmek ve imza yazmak için bir hesap ekleyin."
 
-#: app/src/ui/preferences.rs:467
+#: app/src/ui/preferences.rs:476
 msgid "Mailbox storage is not available through this connection."
 msgstr "Posta kutusu depolama bilgisine bu bağlantı üzerinden erişilemiyor."
 
-#: app/src/ui/preferences.rs:469
+#: app/src/ui/preferences.rs:478
 msgid "The server has not reported its storage usage."
 msgstr "Sunucu depolama kullanımını bildirmedi."
 
-#: app/src/ui/preferences.rs:472
+#: app/src/ui/preferences.rs:481
 msgid "Space on the Server"
 msgstr "Sunucudaki Alan"
 
-#: app/src/ui/preferences.rs:483
+#: app/src/ui/preferences.rs:492
 msgid "Shared Mailbox"
 msgstr "Paylaşılan Posta Kutusu"
 
-#: app/src/ui/preferences.rs:487
+#: app/src/ui/preferences.rs:496
 msgid "Signed in through {account}"
 msgstr "{account} üzerinden oturum açıldı"
 
-#: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:572 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "İmza"
 
-#: app/src/ui/preferences.rs:577
+#: app/src/ui/preferences.rs:586
 msgid ""
 "Used by this account and addresses without their own signature. Markdown "
 "works. <email> becomes the sending address, including its suffix; <domain> "
@@ -9619,73 +9629,73 @@ msgstr ""
 "Bu hesap ve kendi imzası olmayan adresler kullanır. Markdown desteklenir. "
 "<email> eki dahil gönderen adresine, <domain> ise onun alan adına dönüşür."
 
-#: app/src/ui/preferences.rs:585 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:594 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "{account} için imza"
 
-#: app/src/ui/preferences.rs:599
+#: app/src/ui/preferences.rs:608
 msgid "Import from Gmail"
 msgstr "Gmail'den İçe Aktar"
 
-#: app/src/ui/preferences.rs:619
+#: app/src/ui/preferences.rs:628
 msgid "This account is not syncing yet"
 msgstr "Bu hesap henüz eşitlenmiyor"
 
-#: app/src/ui/preferences.rs:635
+#: app/src/ui/preferences.rs:644
 msgid "Imported the signature from Gmail"
 msgstr "İmza Gmail'den içe aktarıldı"
 
-#: app/src/ui/preferences.rs:639
+#: app/src/ui/preferences.rs:648
 msgid "Gmail has no signature for this account"
 msgstr "Gmail'de bu hesap için imza yok"
 
-#: app/src/ui/preferences.rs:642
+#: app/src/ui/preferences.rs:651
 msgid "Could not import: {reason}"
 msgstr "İçe aktarılamadı: {reason}"
 
-#: app/src/ui/preferences.rs:677 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:686 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Yazma"
 
-#: app/src/ui/preferences.rs:693 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:702 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Yeni İletiler"
 
-#: app/src/ui/preferences.rs:697
+#: app/src/ui/preferences.rs:706
 msgid "New Messages Start As"
 msgstr "Yeni İletilerin Başlangıç Biçimi"
 
-#: app/src/ui/preferences.rs:699
+#: app/src/ui/preferences.rs:708
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "Zengin metin sözcükleri biçimlendirir, Markdown ise işaretlerini gösterir"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:706 app/src/ui/sidebar.rs:64
+#: app/src/ui/preferences.rs:715 app/src/ui/sidebar.rs:64
 #: app/src/ui/sidebar.rs:77
 msgid "Undo Send"
 msgstr "Göndermeyi Geri Al"
 
-#: app/src/ui/preferences.rs:708
+#: app/src/ui/preferences.rs:717
 msgid "How long you can take a message back after sending it"
 msgstr "İletiyi gönderdikten sonra geri almak için tanınan süre"
 
-#: app/src/ui/preferences.rs:715
+#: app/src/ui/preferences.rs:724
 msgid "Check for Missing Attachments"
 msgstr "Eksik Ekleri Kontrol Et"
 
-#: app/src/ui/preferences.rs:717
+#: app/src/ui/preferences.rs:726
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Dosya içerdiğini söyleyip dosya içermeyen iletileri göndermeden önce sor"
 
-#: app/src/ui/preferences.rs:751
+#: app/src/ui/preferences.rs:760
 msgid "Signing and Encryption"
 msgstr "İmzalama ve Şifreleme"
 
-#: app/src/ui/preferences.rs:753
+#: app/src/ui/preferences.rs:762
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9693,49 +9703,49 @@ msgstr ""
 "Penguin Mail, anahtarlarınızı tutan ve parolanızı kendisi soran GnuPG "
 "üzerinden imzalar ve şifreler."
 
-#: app/src/ui/preferences.rs:758
+#: app/src/ui/preferences.rs:767
 msgid "Your OpenPGP Keys"
 msgstr "OpenPGP Anahtarlarınız"
 
-#: app/src/ui/preferences.rs:759
+#: app/src/ui/preferences.rs:768
 msgid "Asking gpg…"
 msgstr "gpg'ye soruluyor…"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:772
 msgid "Your S/MIME Certificates"
 msgstr "S/MIME Sertifikalarınız"
 
-#: app/src/ui/preferences.rs:764
+#: app/src/ui/preferences.rs:773
 msgid "Asking gpgsm…"
 msgstr "gpgsm'ye soruluyor…"
 
-#: app/src/ui/preferences.rs:771
+#: app/src/ui/preferences.rs:780
 msgid "Sign My Messages by Default"
 msgstr "İletilerimi Varsayılan Olarak İmzala"
 
-#: app/src/ui/preferences.rs:772
+#: app/src/ui/preferences.rs:781
 msgid "New messages open with Sign turned on"
 msgstr "Yeni iletilerde İmzala açık olur"
 
-#: app/src/ui/preferences.rs:778
+#: app/src/ui/preferences.rs:787
 msgid "Encrypt When I Can"
 msgstr "Mümkün Olduğunda Şifrele"
 
-#: app/src/ui/preferences.rs:780
+#: app/src/ui/preferences.rs:789
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Tüm alıcıların anahtarı veya sertifikası olduğunda Şifrele'yi aç"
 
-#: app/src/ui/preferences.rs:869
+#: app/src/ui/preferences.rs:878
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg'ye sorulamadı: {reason}"
 
-#: app/src/ui/preferences.rs:888
+#: app/src/ui/preferences.rs:897
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm'ye sorulamadı: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:897
+#: app/src/ui/preferences.rs:906
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9749,11 +9759,11 @@ msgstr[1] ""
 "Penguin Mail, anahtarlarınızı tutan ve parolanızı kendisi soran {programs} "
 "üzerinden imzalar ve şifreler."
 
-#: app/src/ui/preferences.rs:929 app/src/ui/preferences.rs:942
+#: app/src/ui/preferences.rs:938 app/src/ui/preferences.rs:951
 msgid "Spelling"
 msgstr "Yazım Denetimi"
 
-#: app/src/ui/preferences.rs:931
+#: app/src/ui/preferences.rs:940
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9763,65 +9773,65 @@ msgstr ""
 "veya hunspell-pt-pt gibi bir Hunspell sözlüğü kurup ileti düzenleyicisini "
 "yeniden açın."
 
-#: app/src/ui/preferences.rs:944
+#: app/src/ui/preferences.rs:953
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "Her hesabın yazım denetimi dili. Kurulu sözlükler: {languages}."
 
-#: app/src/ui/preferences.rs:956
+#: app/src/ui/preferences.rs:965
 msgid "System: {language}"
 msgstr "Sistem: {language}"
 
-#: app/src/ui/preferences.rs:971
+#: app/src/ui/preferences.rs:980
 msgid "All Installed Languages"
 msgstr "Kurulu Tüm Diller"
 
-#: app/src/ui/preferences.rs:1014
+#: app/src/ui/preferences.rs:1023
 msgid "Sync"
 msgstr "Eşitleme"
 
-#: app/src/ui/preferences.rs:1022
+#: app/src/ui/preferences.rs:1031
 msgid "Checking"
 msgstr "Kontrol"
 
-#: app/src/ui/preferences.rs:1028
+#: app/src/ui/preferences.rs:1037
 msgid "Check for New Mail"
 msgstr "Yeni Postaları Kontrol Et"
 
-#: app/src/ui/preferences.rs:1037
+#: app/src/ui/preferences.rs:1046
 msgid "Storage"
 msgstr "Depolama"
 
-#: app/src/ui/preferences.rs:1045
+#: app/src/ui/preferences.rs:1054
 msgid "Keep Mail on This Computer For"
 msgstr "Bu Bilgisayarda Posta Saklama Süresi"
 
-#: app/src/ui/preferences.rs:1066
+#: app/src/ui/preferences.rs:1075
 msgid "Message text kept for opening offline"
 msgstr "Çevrimdışı açmak için saklanan ileti metni"
 
-#: app/src/ui/preferences.rs:1069
+#: app/src/ui/preferences.rs:1078
 msgid "Message Cache"
 msgstr "İleti Önbelleği"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1087
 msgid "100 messages"
 msgstr "100 ileti"
 
-#: app/src/ui/preferences.rs:1079
+#: app/src/ui/preferences.rs:1088
 msgid "300 messages"
 msgstr "300 ileti"
 
-#: app/src/ui/preferences.rs:1080
+#: app/src/ui/preferences.rs:1089
 msgid "1,000 messages"
 msgstr "1.000 ileti"
 
-#: app/src/ui/preferences.rs:1084
+#: app/src/ui/preferences.rs:1093
 msgid "Download Recent Inbox Messages"
 msgstr "Gelen Kutusundaki Son İletileri İndir"
 
-#: app/src/ui/preferences.rs:1085
+#: app/src/ui/preferences.rs:1094
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -9829,133 +9839,133 @@ msgstr ""
 "Daha hızlı açmak ve çevrimdışı okumak için her hesaptaki ileti metnini "
 "indirir. Ekler ve uzak görseller indirilmez."
 
-#: app/src/ui/preferences.rs:1112
+#: app/src/ui/preferences.rs:1121
 msgid "Startup"
 msgstr "Başlangıç"
 
-#: app/src/ui/preferences.rs:1115
+#: app/src/ui/preferences.rs:1124
 msgid "Start in the Tray at Login"
 msgstr "Oturum Açıldığında Sistem Tepsisinde Başlat"
 
-#: app/src/ui/preferences.rs:1130
+#: app/src/ui/preferences.rs:1139
 msgid "Not available in demo mode"
 msgstr "Demo kipinde kullanılamaz"
 
-#: app/src/ui/preferences.rs:1138
+#: app/src/ui/preferences.rs:1147
 msgid "Look for a new release once a day"
 msgstr "Günde bir kez yeni sürüm ara"
 
-#: app/src/ui/preferences.rs:1179
+#: app/src/ui/preferences.rs:1188
 msgid "{used} of {limit}"
 msgstr "{used} / {limit}"
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1200
 msgid "{amount} · Full"
 msgstr "{amount} · Dolu"
 
-#: app/src/ui/preferences.rs:1193
+#: app/src/ui/preferences.rs:1202
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Neredeyse dolu"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1214
 msgid "Senders Who May Load Images"
 msgstr "Resim Yükleyebilen Gönderenler"
 
-#: app/src/ui/preferences.rs:1206 app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1215 app/src/ui/preferences.rs:1224
 msgid "Nobody yet"
 msgstr "Henüz kimse yok"
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1226
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} gönderen"
 msgstr[1] "{count} gönderen"
 
-#: app/src/ui/preferences.rs:1227
+#: app/src/ui/preferences.rs:1236
 msgid "Anyone at this domain"
 msgstr "Bu alan adındaki herkes"
 
-#: app/src/ui/preferences.rs:1229
+#: app/src/ui/preferences.rs:1238
 msgid "This address"
 msgstr "Bu adres"
 
-#: app/src/ui/preferences.rs:1234
+#: app/src/ui/preferences.rs:1243
 msgid "Stop Loading Images from This Sender"
 msgstr "Bu Gönderenin Resimlerini Yüklemeyi Durdur"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1250
 msgid "Stop loading images from {sender}"
 msgstr "{sender} göndericisinden resim yüklemeyi durdur"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1320
 msgid "Monday to Friday"
 msgstr "Pazartesiden Cumaya"
 
-#: app/src/ui/preferences.rs:1312
+#: app/src/ui/preferences.rs:1321
 msgid "Every day of the week"
 msgstr "Haftanın her günü"
 
-#: app/src/ui/preferences.rs:1313
+#: app/src/ui/preferences.rs:1322
 msgid "No days"
 msgstr "Hiçbir gün"
 
-#: app/src/ui/preferences.rs:1320
+#: app/src/ui/preferences.rs:1329
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1332
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1386
+#: app/src/ui/preferences.rs:1395
 msgid "Time Format"
 msgstr "Saat Biçimi"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1399
 msgid "Automatic follows the system clock format"
 msgstr "Otomatik, sistemin saat biçimini izler"
 
-#: app/src/ui/preferences.rs:1404
+#: app/src/ui/preferences.rs:1413
 msgid "Week Starts On"
 msgstr "Haftanın İlk Günü"
 
-#: app/src/ui/preferences.rs:1409
+#: app/src/ui/preferences.rs:1418
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Otomatik, yerel ayarın haftanın ilk gününü izler"
 
-#: app/src/ui/preferences.rs:1423
+#: app/src/ui/preferences.rs:1432
 msgid "Working Hours"
 msgstr "Çalışma Saatleri"
 
-#: app/src/ui/preferences.rs:1442
+#: app/src/ui/preferences.rs:1451
 msgid "Hours"
 msgstr "Saatler"
 
-#: app/src/ui/preferences.rs:1493
+#: app/src/ui/preferences.rs:1502
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1576
+#: app/src/ui/preferences.rs:1585
 msgid "Never Translate"
 msgstr "Asla Çevirme"
 
-#: app/src/ui/preferences.rs:1578
+#: app/src/ui/preferences.rs:1587
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Bu dillerdeki iletiler için çeviri önerilmez"
 
-#: app/src/ui/preferences.rs:1607
+#: app/src/ui/preferences.rs:1616
 msgid "Follow System"
 msgstr "Sistemi İzle"
 
-#: app/src/ui/preferences.rs:1611
+#: app/src/ui/preferences.rs:1620
 msgid "Language"
 msgstr "Dil"
 
-#: app/src/ui/preferences.rs:1612
+#: app/src/ui/preferences.rs:1621
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail yeni dili yeniden başlatıldıktan sonra gösterir"
 
-#: app/src/ui/preferences.rs:1689 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1698 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "İmza yok"
 
@@ -10050,7 +10060,7 @@ msgstr "{account} Hesabını Aşağı Taşı"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3674 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3675 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Tercihler"
 
@@ -10564,7 +10574,7 @@ msgstr "Otomatik Yanıt…"
 msgid "Rules…"
 msgstr "Kurallar…"
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3665
 msgid "Hide My Email…"
 msgstr "E-postamı Gizle…"
 
@@ -10818,13 +10828,13 @@ msgstr "İletileri Filtrele"
 msgid "Filter Messages (Active)"
 msgstr "İletileri Filtrele (Etkin)"
 
-#: app/src/ui/thread_list/pull.rs:70 app/src/ui/thread_list/pull.rs:119
+#: app/src/ui/thread_list/pull.rs:76 app/src/ui/thread_list/pull.rs:128
 #, fuzzy
 #| msgid "Check for mail"
 msgid "Pull to check for mail"
 msgstr "Postaları kontrol et"
 
-#: app/src/ui/thread_list/pull.rs:117 app/src/ui/window/shortcuts.rs:852
+#: app/src/ui/thread_list/pull.rs:126 app/src/ui/window/shortcuts.rs:852
 msgid "Checking for mail"
 msgstr "Postalar kontrol ediliyor"
 
@@ -11132,7 +11142,7 @@ msgstr "Postalar yüklenemedi: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} eklendi. Postalar indiriliyor…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3044
+#: app/src/ui/window.rs:362 app/src/ui/window.rs:3045
 msgid "{account} is signed in again."
 msgstr "{account} hesabında yeniden oturum açıldı."
 
@@ -11275,60 +11285,60 @@ msgstr[1] "{count} ileti Gelen Kutusu'na taşındı"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:1387
+#: app/src/ui/window.rs:1388
 msgid "Could not read accounts: {reason}"
 msgstr "Hesaplar okunamadı: {reason}"
 
-#: app/src/ui/window.rs:2127
+#: app/src/ui/window.rs:2128
 msgid "Could not delete the mail: {reason}"
 msgstr "Postalar silinemedi: {reason}"
 
-#: app/src/ui/window.rs:2234
+#: app/src/ui/window.rs:2235
 msgid "Turn On the {service}"
 msgstr "{service} Hizmetini Aç"
 
-#: app/src/ui/window.rs:2419 app/src/ui/window.rs:2422
+#: app/src/ui/window.rs:2420 app/src/ui/window.rs:2423
 msgid "Move to Inbox"
 msgstr "Gelen Kutusu'na taşı"
 
-#: app/src/ui/window.rs:2617
+#: app/src/ui/window.rs:2618
 msgid "Select mail from one account to tag it."
 msgstr "İşaret etiketi eklemek için tek bir hesaptan posta seçin."
 
-#: app/src/ui/window.rs:2629
+#: app/src/ui/window.rs:2630
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Bu hesapta henüz işaret etiketi yok. Outlook'ta bir tane oluşturun."
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2723
 msgid "Add an account to reply or forward"
 msgstr "Yanıtlamak veya iletmek için bir hesap ekleyin"
 
-#: app/src/ui/window.rs:2827
+#: app/src/ui/window.rs:2828
 msgid "Could not include {file}: {reason}"
 msgstr "{file} eklenemedi: {reason}"
 
-#: app/src/ui/window.rs:2908
+#: app/src/ui/window.rs:2909
 msgid "The server had already sent this message."
 msgstr "Sunucu bu iletiyi zaten göndermişti."
 
-#: app/src/ui/window.rs:2913
+#: app/src/ui/window.rs:2914
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Bu ileti başka bir uygulamada iptal edildi ve artık Taslaklar'da değil."
 
-#: app/src/ui/window.rs:3229
+#: app/src/ui/window.rs:3230
 msgid "Continue in your browser"
 msgstr "Tarayıcınızda devam edin"
 
-#: app/src/ui/window.rs:3279
+#: app/src/ui/window.rs:3280
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Penguin Mail'in bu derlemesinde Google ile oturum açma yok."
 
-#: app/src/ui/window.rs:3301
+#: app/src/ui/window.rs:3302
 msgid "Get a Release"
 msgstr "Sürüm İndir"
 
-#: app/src/ui/window.rs:3411
+#: app/src/ui/window.rs:3412
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11336,80 +11346,80 @@ msgstr ""
 "Sunucunun daha sonra göndermek üzere tuttuğu iletiler kontrol edilemedi, bu "
 "yüzden {account} kaldırılmadı: {reason}"
 
-#: app/src/ui/window.rs:3422
+#: app/src/ui/window.rs:3423
 msgid "Remove {account}?"
 msgstr "{account} kaldırılsın mı?"
 
-#: app/src/ui/window.rs:3441
+#: app/src/ui/window.rs:3442
 msgid "Remove Anyway"
 msgstr "Yine de Kaldır"
 
-#: app/src/ui/window.rs:3454
+#: app/src/ui/window.rs:3455
 msgid "Removed {account}"
 msgstr "{account} kaldırıldı"
 
-#: app/src/ui/window.rs:3456
+#: app/src/ui/window.rs:3457
 msgid "Could not remove {account}: {reason}"
 msgstr "{account} kaldırılamadı: {reason}"
 
-#: app/src/ui/window.rs:3642
+#: app/src/ui/window.rs:3643
 msgid "Refresh"
 msgstr "Yenile"
 
-#: app/src/ui/window.rs:3646
+#: app/src/ui/window.rs:3647
 msgid "Show Declined Events"
 msgstr "Reddedilen Etkinlikleri Göster"
 
-#: app/src/ui/window.rs:3662
+#: app/src/ui/window.rs:3663
 msgid "Add Account…"
 msgstr "Hesap Ekle…"
 
-#: app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3664
 msgid "New Smart Mailbox…"
 msgstr "Yeni Akıllı Posta Kutusu…"
 
-#: app/src/ui/window.rs:3675 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3676 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Klavye Kısayolları"
 
-#: app/src/ui/window.rs:3684 app/src/ui/window.rs:3686
+#: app/src/ui/window.rs:3685 app/src/ui/window.rs:3687
 msgid "Main Menu"
 msgstr "Ana Menü"
 
-#: app/src/ui/window.rs:3751 app/src/ui/window.rs:3752
+#: app/src/ui/window.rs:3752 app/src/ui/window.rs:3753
 msgid "Dock"
 msgstr "Sabitle"
 
-#: app/src/ui/window.rs:3881
+#: app/src/ui/window.rs:3882
 msgid "Add a mail account first"
 msgstr "Önce bir posta hesabı ekleyin"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4132
+#: app/src/ui/window.rs:4133
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} hesabının takvimi ve kişileri bağlandı."
 
-#: app/src/ui/window.rs:4248
+#: app/src/ui/window.rs:4249
 msgid "Open a message from the person first"
 msgstr "Önce bu kişiden gelen bir iletiyi açın"
 
-#: app/src/ui/window.rs:4348
+#: app/src/ui/window.rs:4350
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail yeni dili yeniden başlatıldıktan sonra gösterir"
 
-#: app/src/ui/window.rs:4350 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4352 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Yeniden Başlat"
 
-#: app/src/ui/window.rs:4414
+#: app/src/ui/window.rs:4416
 msgid "Show Rules"
 msgstr "Kuralları Göster"
 
-#: app/src/ui/window.rs:4440
+#: app/src/ui/window.rs:4442
 msgid "Messages That Will Not Download"
 msgstr "İndirilemeyen İletiler"
 
-#: app/src/ui/window.rs:4442
+#: app/src/ui/window.rs:4444
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."

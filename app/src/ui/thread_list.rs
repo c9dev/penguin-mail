@@ -445,6 +445,10 @@ impl ThreadList {
         list
     }
 
+    pub fn set_pull_to_refresh(&self, enabled: bool) {
+        self.pull.set_enabled(enabled);
+    }
+
     pub fn set_title(&self, title: &str, subtitle: &str) {
         self.pull.reset();
         self.title.set_label(title);
