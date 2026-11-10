@@ -893,6 +893,7 @@ pub(crate) async fn check_released() {
     app.reload_accounts().await.unwrap();
     app.change_settings(Change::SaveSmartMailbox(Box::new(
         mailrs_domain::SmartMailbox {
+            trash_sent_without_asking: false,
             id: "lifetime".into(),
             name: "Unread".into(),
             account: None,

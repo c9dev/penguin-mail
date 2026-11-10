@@ -1268,6 +1268,7 @@ mod tests {
 
     fn smart(id: &str, name: &str) -> SmartMailbox {
         SmartMailbox {
+            trash_sent_without_asking: false,
             unread_count: Default::default(),
             id: id.into(),
             name: name.into(),

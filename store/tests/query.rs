@@ -34,6 +34,7 @@ fn found(conn: &Connection, account_id: i64, query: &Query) -> Vec<String> {
 
 fn smart(match_all: bool, conditions: &[(Field, &str)]) -> Query {
     SmartMailbox {
+        trash_sent_without_asking: false,
         unread_count: Default::default(),
         id: "s1".into(),
         name: "Test".into(),

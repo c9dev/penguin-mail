@@ -51,6 +51,28 @@ pub fn matching<Tz: TimeZone>(
         .collect::<rusqlite::Result<Vec<Matched>>>()?)
 }
 
+/// The messages in one conversation that match a query, without a listing limit.
+pub fn matching_thread<Tz: TimeZone>(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+    query: &Query,
+    now: &DateTime<Tz>,
+) -> Result<Vec<Matched>> {
+    let mut sql = text("SELECT m.id, m.thread_id FROM messages m WHERE ");
+    append(&mut sql, matching_where(conn, account_id, query, now)?);
+    sql.push(" AND m.thread_id = ").bind(thread_id.to_string());
+    let mut stmt = conn.prepare(&sql.text)?;
+    Ok(stmt
+        .query_map(params_from_iter(sql.params.iter()), |row| {
+            Ok(Matched {
+                message_id: row.get(0)?,
+                thread_id: row.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<Matched>>>()?)
+}
+
 /// Unread messages in the local copy, counted once even when folders overlap.
 pub fn unread_count<Tz: TimeZone>(
     conn: &Connection,

@@ -207,6 +207,7 @@ async fn delete_label_without_a_provider_name_names_the_account() {
 
 fn smart(id: &str, name: &str, from: &str) -> SmartMailbox {
     SmartMailbox {
+        trash_sent_without_asking: false,
         unread_count: Default::default(),
         id: id.into(),
         name: name.into(),

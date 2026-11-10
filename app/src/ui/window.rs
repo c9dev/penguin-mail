@@ -85,6 +85,7 @@ mod scheduled;
 mod searching;
 mod senders;
 mod shortcuts;
+mod smart_trash;
 mod spaces;
 mod storage;
 mod thread;
@@ -2015,6 +2016,7 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
+        let mailbox = reach.mailbox.clone();
         let accounts = press::reached(&reach.targets, |id| self.account(id), |id| self.offers(id));
         let plan = press::plan(Pressed {
             press,
@@ -2026,6 +2028,7 @@ impl MainWindow {
         });
         let taken = plan.taken();
         let pressing = Pressing {
+            mailbox,
             window: Rc::clone(self),
             view: Rc::clone(view),
         };
@@ -4516,11 +4519,20 @@ impl MainWindow {
 
 /// The main window and one conversation view, as a press changes them.
 struct Pressing {
+    mailbox: Mailbox,
     window: Rc<MainWindow>,
     view: Rc<ConversationView>,
 }
 
 impl PressEffects for Pressing {
+    fn prepare_trash(
+        &self,
+        targets: Vec<Target>,
+        from: MovedFrom,
+    ) -> crate::wanted::Answer<'_, Option<MovedFrom>> {
+        Box::pin(self.prepare_smart_trash(targets, from))
+    }
+
     fn move_on(&self) {
         self.window.move_on(&self.view);
     }
@@ -4796,6 +4808,7 @@ mod tests {
         };
         let unified = Mailbox::Unified(super::super::Standard::Inbox);
         let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            trash_sent_without_asking: false,
             unread_count: Default::default(),
             id: "smart-1".into(),
             name: "Big mail".into(),

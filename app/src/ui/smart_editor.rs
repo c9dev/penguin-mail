@@ -26,6 +26,7 @@ pub fn present(
 ) {
     let editing = existing.is_some();
     let mailbox = existing.unwrap_or_else(|| SmartMailbox {
+        trash_sent_without_asking: false,
         unread_count: Default::default(),
         id: format!("smart-{}", mailrs_gmail::random_token(6)),
         name: String::new(),
@@ -83,11 +84,19 @@ pub fn present(
     };
     explain(&unread);
     unread.connect_selected_notify(explain);
+    let trash_sent = adw::SwitchRow::builder()
+        .title(gettext("Delete Sent Messages Without Asking"))
+        .subtitle(gettext(
+            "When deleting a conversation here, also move matching sent messages to Trash",
+        ))
+        .active(mailbox.trash_sent_without_asking)
+        .build();
     let about = adw::PreferencesGroup::new();
     about.add(&name);
     about.add(&scope);
     about.add(&matching);
     about.add(&unread);
+    about.add(&trash_sent);
 
     let conditions = adw::PreferencesGroup::builder()
         .title(gettext("Conditions"))
@@ -341,6 +350,7 @@ pub fn present(
     let closer = dialog.clone();
     save.connect_clicked(move |_| {
         let result = SmartMailbox {
+            trash_sent_without_asking: trash_sent.is_active(),
             unread_count: match unread.selected() {
                 1 => UnreadCount::Local,
                 2 => UnreadCount::Server,

@@ -305,3 +305,5 @@ unchecks them. The button announces when filters are active. More remains
 reachable when filters leave a server page empty; No Matching Mail explains
 that another page may still contain matches. Conditions stay selected when
 switching mailboxes and reset when the window closes.
+
+Deleting a conversation from a smart mailbox asks before moving matching Sent messages to Trash. Cancel and closing the question leave the mail unchanged. The labeled Don't Ask Again for This Smart Mailbox checkbox saves consent only when Move to Trash is chosen. The smart mailbox editor has a Delete Sent Messages Without Asking switch to turn that choice off again.

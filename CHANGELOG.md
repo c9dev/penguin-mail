@@ -25,6 +25,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Deleting a conversation from a smart mailbox asks before also moving matching sent messages to Trash, with a separate remember choice for each smart mailbox.
+
 - Customize Mailboxes separates sections into tabs and places available mailboxes beside editable, draggable Favorites.
 
 - On IMAP accounts, the messages of a conversation opened for the first time load faster.

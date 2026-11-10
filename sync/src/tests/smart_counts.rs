@@ -11,6 +11,7 @@ use mailrs_domain::smart::{Condition, Field, UnreadCount};
 
 fn smart(mode: UnreadCount) -> Mailbox {
     Mailbox::Smart(SmartMailbox {
+        trash_sent_without_asking: false,
         id: "smart-unread".into(),
         name: "Inbox and sent".into(),
         account: None,

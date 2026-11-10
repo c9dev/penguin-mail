@@ -21,6 +21,9 @@ pub struct SmartMailbox {
     pub conditions: Vec<Condition>,
     #[serde(default)]
     pub unread_count: UnreadCount,
+    /// Allow matching Sent messages to be trashed here without another question.
+    #[serde(default)]
+    pub trash_sent_without_asking: bool,
 }
 
 /// How a smart mailbox obtains its unread message count.
@@ -256,6 +259,7 @@ mod tests {
 
     fn mailbox(match_all: bool, conditions: Vec<Condition>) -> SmartMailbox {
         SmartMailbox {
+            trash_sent_without_asking: false,
             unread_count: Default::default(),
             id: "s1".into(),
             name: "Test".into(),
@@ -263,6 +267,19 @@ mod tests {
             match_all,
             conditions,
         }
+    }
+
+    #[test]
+    fn consent_defaults_to_asking_and_is_saved_per_mailbox() {
+        let old = r#"{"id":"one","name":"One","conditions":[]}"#;
+        let mut one: SmartMailbox = serde_json::from_str(old).unwrap();
+        let two = one.clone();
+        assert!(!one.trash_sent_without_asking);
+        one.trash_sent_without_asking = true;
+        let restored: SmartMailbox =
+            serde_json::from_str(&serde_json::to_string(&one).unwrap()).unwrap();
+        assert!(restored.trash_sent_without_asking);
+        assert!(!two.trash_sent_without_asking);
     }
 
     #[test]
