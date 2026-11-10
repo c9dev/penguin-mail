@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
+
 ### Improved
 
 
@@ -22,7 +26,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
-- Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 
 - Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.
 - Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
