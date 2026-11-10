@@ -17,6 +17,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The pull-to-check indicator stays readable over message rows in light and dark themes.
 - Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.

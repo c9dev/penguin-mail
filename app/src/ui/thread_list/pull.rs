@@ -60,7 +60,7 @@ impl Pull {
             .valign(gtk::Align::Start)
             .margin_top(8)
             .can_target(false)
-            .css_classes(["card"])
+            .css_classes(["osd", "toolbar"])
             .visible(false)
             .build();
         let label = gtk::Label::builder()
