@@ -288,21 +288,57 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if includes(mailrs_domain::Role::Trash, "in:trash") {
             mailboxes.push(&boxes.trash);
         }
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
         let keys = format!("{} UNDELETED", gm_raw(text)?);
-        let mut found = Vec::new();
-        let mut seen = std::collections::HashSet::new();
-        for mailbox in mailboxes {
+        if mailboxes.len() == 1 {
+            let mailbox = mailboxes[0];
             let selected = self.select(mailbox, None).await?;
             let top = self.top_uid(mailbox, &selected).await?;
             let uids = self.newest_matching(mailbox, &keys, top, limit).await?;
-            for hit in self.gm_refs(mailbox, selected.uidvalidity, &uids).await? {
-                if seen.insert(hit.id.clone()) {
-                    found.push(hit);
+            return self.gm_refs(mailbox, selected.uidvalidity, &uids).await;
+        }
+        let mut found = Vec::new();
+        for mailbox in mailboxes {
+            // Moving old mail gives it a new UID, so compare dates before limiting either location.
+            let (uidvalidity, uids) = self.gm_matching(mailbox, &keys).await?;
+            for chunk in uids.chunks(BATCH_LIMIT) {
+                let set = UidSet::from_uids(chunk.iter().copied());
+                for fetched in self.api.gmail_headers(mailbox, &set).await? {
+                    if keywords::is_deleted(&fetched.flags) {
+                        continue;
+                    }
+                    let Some(gmail) = fetched.gmail else {
+                        continue;
+                    };
+                    found.push((
+                        fetched.internal_date.unwrap_or_default(),
+                        RemoteRef {
+                            id: gmail.id(),
+                            thread_id: gmail.thread_id(),
+                        },
+                        Location {
+                            mailbox: mailbox.clone(),
+                            uidvalidity,
+                            uid: fetched.uid,
+                        },
+                    ));
                 }
+                found.sort_unstable_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.id.cmp(&a.1.id)));
+                let mut seen = std::collections::HashSet::new();
+                found.retain(|(_, hit, _)| seen.insert(hit.id.clone()));
+                found.truncate(limit);
             }
         }
-        found.truncate(limit);
-        Ok(found)
+        let mut known = self.known();
+        Ok(found
+            .into_iter()
+            .map(|(_, hit, at)| {
+                known.places.put(hit.id.clone(), at);
+                hit
+            })
+            .collect())
     }
 
     /// The message of Sent with Message-ID `message_id`, by hex id.

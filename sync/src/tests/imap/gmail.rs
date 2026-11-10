@@ -527,7 +527,7 @@ async fn folder_unions_search_all_selected_gmail_locations_once() {
     let inbox = imap.deliver_gmail(
         &["\\Inbox"],
         message("union-inbox", "Invoice", ""),
-        days_ago(1),
+        days_ago(2),
     );
     let trash = imap.deliver_gmail(&[], message("union-trash", "Invoice", ""), days_ago(1));
     imap.remote_trash(trash);
@@ -556,7 +556,15 @@ async fn folder_unions_search_all_selected_gmail_locations_once() {
         let ids: std::collections::BTreeSet<_> = refs.iter().map(|r| r.id.clone()).collect();
         assert_eq!(ids, [hex(inbox), hex(trash)].into());
         assert_eq!(refs.len(), 2);
-        assert_eq!(adapter.search(&search, 1).await.unwrap().len(), 1);
+        let limited = adapter.search(&search, 1).await.unwrap();
+        assert_eq!(limited.len(), 1);
+        assert_eq!(limited[0].id, hex(trash));
+        let fetched = adapter
+            .fetch(vec![crate::services::Want::message(&limited[0].id)])
+            .await
+            .unwrap();
+        assert_eq!(fetched.metas.len(), 1);
+        assert_eq!(fetched.metas[0].id, hex(trash));
         assert!(adapter.search(&search, 0).await.unwrap().is_empty());
     }
     assert_eq!(adapter.count_query(&query).await.unwrap(), 2);
@@ -570,7 +578,15 @@ async fn folder_unions_search_all_selected_gmail_locations_once() {
         Query::is_in(MailSet::Role(Role::Inbox)),
         Query::is_in(MailSet::Role(Role::Junk)),
     ]);
-    let found = adapter.search(&SearchQuery::Tree(query), 10).await.unwrap();
-    assert_eq!(found.len(), 2);
-    assert!(found.iter().any(|r| r.id == hex(trash)));
+    for search in [
+        SearchQuery::Tree(query),
+        SearchQuery::Native("{in:inbox in:spam}".into()),
+        SearchQuery::Native("in:anywhere".into()),
+    ] {
+        let found = adapter.search(&search, 10).await.unwrap();
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().any(|r| r.id == hex(trash)));
+        assert_eq!(adapter.search(&search, 1).await.unwrap()[0].id, hex(trash));
+    }
+    assert_eq!(imap.calls_to("body"), 0);
 }
