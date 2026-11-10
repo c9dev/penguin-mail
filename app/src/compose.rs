@@ -1190,7 +1190,7 @@ pub fn rich_signature_change(
             candidate = Some(index);
         }
         let in_signature = candidate.is_some();
-        if block.kind == richtext::BlockKind::Quote && !in_signature {
+        if block.quote > 0 && !in_signature {
             end = attribution.unwrap_or(end);
             break;
         }
@@ -2043,6 +2043,34 @@ mod tests {
         let plain = forward.forwarded.as_ref().unwrap().to_plain();
         assert!(!plain.contains("Date:"), "{plain}");
         assert!(plain.contains("From: Ann <ann@example.com>"), "{plain}");
+    }
+
+    #[test]
+    fn a_reply_to_a_reply_opens_with_each_level_quoted() {
+        // The earlier reply already holds `>` lines, so quoting it again
+        // makes them `> >`; the editor must keep both levels.
+        let original = "Sounds good.\n\nOn Monday, Ann wrote:\n> Lunch?\n> - soup\n> - salad";
+        let quoted = format!("On Tuesday, Bob wrote:\n{}", quote(original));
+        let history = RichBody::from_markdown(&quoted);
+        let shape: Vec<(u8, String)> = history
+            .blocks
+            .iter()
+            .filter(|b| !b.is_blank())
+            .map(|b| (b.quote, b.text()))
+            .collect();
+        let line = |quote, text: &str| (quote, text.to_string());
+        assert_eq!(
+            shape,
+            [
+                line(0, "On Tuesday, Bob wrote:"),
+                line(1, "Sounds good."),
+                line(1, "On Monday, Ann wrote:"),
+                line(2, "Lunch?"),
+                line(2, "soup"),
+                line(2, "salad"),
+            ]
+        );
+        assert_eq!(RichBody::from_markdown(&history.to_markdown()), history);
     }
 
     #[test]

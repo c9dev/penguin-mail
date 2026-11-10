@@ -58,7 +58,7 @@ pub fn fill(body: &RichBody, filling: &Filling) -> RichBody {
         .iter()
         .map(|block| Block {
             kind: block.kind,
-            quoted: block.quoted,
+            quote: block.quote,
             spans: block
                 .spans
                 .iter()

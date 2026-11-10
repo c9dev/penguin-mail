@@ -215,7 +215,7 @@ pub fn styled(markdown: &str) -> RichBody {
 fn written_part(blocks: &[Block]) -> usize {
     let quote = blocks
         .iter()
-        .position(|b| b.kind == BlockKind::Quote)
+        .position(|b| b.quote > 0)
         .unwrap_or(blocks.len());
     blocks[..quote]
         .iter()
@@ -223,12 +223,14 @@ fn written_part(blocks: &[Block]) -> usize {
         .unwrap_or(quote)
 }
 
-/// Whether a line may hold marks nobody has formatted: a paragraph with
-/// no picture in it. A caller that can carry a picture through a rewrite,
+/// Whether a line may hold marks nobody has formatted: a paragraph of the
+/// writer's own, not a quoted one, with no picture in it. A caller that can carry a picture through a rewrite,
 /// as the composer can, puts a placeholder in its place before it asks,
 /// and the line then counts.
 fn is_loose(block: &Block) -> bool {
-    block.kind == BlockKind::Paragraph && block.spans.iter().all(|s| s.image.is_none())
+    block.kind == BlockKind::Paragraph
+        && block.quote == 0
+        && block.spans.iter().all(|s| s.image.is_none())
 }
 
 /// The runs of loose lines in the writer's part, without the blank lines
@@ -441,10 +443,13 @@ mod tests {
             "the signature is not the writer's to format"
         );
         body = lines(&["Thanks"]);
-        body.blocks.push(Block::new(
-            BlockKind::Quote,
-            vec![Span::plain("On Monday, Ann wrote:")],
-        ));
+        body.blocks.push(
+            Block::new(
+                BlockKind::Paragraph,
+                vec![Span::plain("On Monday, Ann wrote:")],
+            )
+            .quoted(1),
+        );
         body.blocks.push(paragraph("- quoted one"));
         body.blocks.push(paragraph("- quoted two"));
         assert!(!left_in(&body));
@@ -540,7 +545,7 @@ mod tests {
     fn format_markdown_reads_past_the_quote_and_keeps_the_signature_line() {
         let mut body = lines(&["Thanks."]);
         body.blocks
-            .push(Block::new(BlockKind::Quote, vec![Span::plain("hi")]));
+            .push(Block::new(BlockKind::Paragraph, vec![Span::plain("hi")]).quoted(1));
         body.blocks.extend(lines(&["# Reply", "--", "Dana"]).blocks);
         let found = every_conversion(&body);
         // "Thanks." reads the same, and the `--` would make the line above

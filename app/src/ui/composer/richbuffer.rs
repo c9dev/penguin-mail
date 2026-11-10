@@ -55,16 +55,22 @@ const LINK: &str = "link:";
 /// The style tags, in the order the formatting bar shows them.
 pub const STYLES: [&str; 4] = ["bold", "italic", "strike", "code"];
 /// The line kinds, as tag names.
-const BLOCKS: [&str; 8] = [
+const BLOCKS: [&str; 7] = [
     "paragraph",
     "heading1",
     "heading2",
     "heading3",
     "bullet",
     "numbered",
-    "quote",
     "code-block",
 ];
+/// The deepest quote the editor draws. A line quoted deeper than this is
+/// drawn at this depth and read back at it.
+pub const MAX_QUOTE: u8 = 6;
+/// The quote depths, as tag names. A line carries at most one of them
+/// beside its kind, so a quoted bullet is still a bullet.
+const QUOTES: [&str; MAX_QUOTE as usize] =
+    ["quote1", "quote2", "quote3", "quote4", "quote5", "quote6"];
 
 pub fn block_tag(kind: BlockKind) -> &'static str {
     match kind {
@@ -74,7 +80,6 @@ pub fn block_tag(kind: BlockKind) -> &'static str {
         BlockKind::Heading(_) => "heading3",
         BlockKind::Bullet => "bullet",
         BlockKind::Numbered => "numbered",
-        BlockKind::Quote => "quote",
         BlockKind::Code => "code-block",
     }
 }
@@ -87,7 +92,6 @@ fn block_kind(tag: &str) -> Option<BlockKind> {
         "heading3" => BlockKind::Heading(3),
         "bullet" => BlockKind::Bullet,
         "numbered" => BlockKind::Numbered,
-        "quote" => BlockKind::Quote,
         "code-block" => BlockKind::Code,
         _ => return None,
     })
@@ -134,17 +138,20 @@ pub fn install(buffer: &gtk::TextBuffer) {
             .build());
     }
     add(gtk::TextTag::builder()
-        .name("quote")
-        .left_margin(26)
-        .foreground("#777777")
-        .style(pango::Style::Italic)
-        .build());
-    add(gtk::TextTag::builder()
         .name("code-block")
         .family("monospace")
         .scale(0.94)
         .left_margin(26)
         .build());
+    // After the kinds, so a quoted bullet keeps the quote's margin.
+    for (index, name) in QUOTES.iter().enumerate() {
+        add(gtk::TextTag::builder()
+            .name(*name)
+            .left_margin(26 * (index as i32 + 1))
+            .foreground("#777777")
+            .style(pango::Style::Italic)
+            .build());
+    }
     add(gtk::TextTag::builder().name(MARKER).editable(false).build());
 }
 
@@ -169,6 +176,7 @@ fn is_body_tag(tag: &gtk::TextTag) -> bool {
     tag.name().is_some_and(|name| {
         STYLES.contains(&name.as_str())
             || BLOCKS.contains(&name.as_str())
+            || QUOTES.contains(&name.as_str())
             || name == MARKER
             || name.starts_with(LINK)
     })
@@ -256,6 +264,41 @@ pub fn kind_at(buffer: &gtk::TextBuffer, line: i32) -> BlockKind {
         }
     }
     BlockKind::Paragraph
+}
+
+/// How many quotes deep `line` is, 0 for the writer's own words. A line
+/// with no words has no character to carry the tag and reads as 0.
+pub fn quote_at(buffer: &gtk::TextBuffer, line: i32) -> u8 {
+    let Some(start) = buffer.iter_at_line(line) else {
+        return 0;
+    };
+    let depth = start
+        .tags()
+        .iter()
+        .filter_map(|tag| {
+            let name = tag.name()?;
+            QUOTES.iter().position(|quote| *quote == name.as_str())
+        })
+        .max();
+    depth.map_or(0, |index| index as u8 + 1)
+}
+
+/// The tag for a line `depth` quotes deep, if it is quoted at all.
+pub fn quote_tag(depth: u8) -> Option<&'static str> {
+    (depth > 0).then(|| QUOTES[(depth.min(MAX_QUOTE) - 1) as usize])
+}
+
+/// Makes `line` `depth` quotes deep, replacing the depth it had.
+pub fn set_quote(buffer: &gtk::TextBuffer, line: i32, depth: u8) {
+    let Some((start, end)) = line_bounds(buffer, line) else {
+        return;
+    };
+    for tag in QUOTES {
+        buffer.remove_tag_by_name(tag, &start, &end);
+    }
+    if let Some(tag) = quote_tag(depth) {
+        buffer.apply_tag_by_name(tag, &start, &end);
+    }
 }
 
 /// The start and end of `line`, whole.
@@ -438,11 +481,9 @@ pub fn read_line(buffer: &gtk::TextBuffer, anchors: &Anchors, line: i32) -> Opti
         push_text(&mut spans, &text[from..], style, &link);
         iter = next;
     }
-    // The buffer holds a quoted paragraph as a quote and a quoted list
-    // as the list alone, which is what a line in the editor can say.
     Some(Block {
         kind,
-        quoted: kind == BlockKind::Quote,
+        quote: quote_at(buffer, line),
         spans,
     })
 }
@@ -552,6 +593,7 @@ pub fn write(
         {
             buffer.apply_tag_by_name(tag, &start, &end);
         }
+        set_quote(buffer, buffer.line_count() - 1, block.quote);
     }
     buffer.place_cursor(&buffer.start_iter());
 }
@@ -567,7 +609,7 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
     let mut at = buffer.iter_at_mark(&buffer.get_insert());
     let empty = is_empty_line(buffer, at.line());
     let here = kind_at(buffer, at.line());
-    let mut lines: Vec<(i32, BlockKind)> = Vec::new();
+    let mut lines: Vec<(i32, BlockKind, u8)> = Vec::new();
     for (index, block) in body.blocks.iter().enumerate() {
         if index > 0 {
             buffer.insert(&mut at, "\n");
@@ -577,7 +619,7 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
         } else {
             block.kind
         };
-        lines.push((at.line(), kind));
+        lines.push((at.line(), kind, block.quote));
         insert_spans(buffer, &mut at, &block.spans, kind);
     }
     // The mark holds the end while the markers go in and move it along.
@@ -587,8 +629,9 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
         lines.last().map_or(0, |l| l.0),
     );
     let skip = if empty { 0 } else { 1 };
-    for (line, kind) in lines.into_iter().skip(skip) {
+    for (line, kind, depth) in lines.into_iter().skip(skip) {
         set_kind(buffer, line, kind);
+        set_quote(buffer, line, depth);
     }
     renumber(buffer, first, last);
     buffer.place_cursor(&buffer.iter_at_mark(&end));
@@ -659,6 +702,7 @@ pub fn rewrite(
     let last = first + body.blocks.len().max(1) as i32 - 1;
     for (index, block) in body.blocks.iter().enumerate() {
         set_kind(buffer, first + index as i32, block.kind);
+        set_quote(buffer, first + index as i32, block.quote);
     }
     renumber(buffer, first, last);
     buffer.place_cursor(&buffer.iter_at_mark(&end));
@@ -1168,7 +1212,7 @@ mod tests {
         // Lines with text or pictures must retain their quote marks.
         for block in &mut expected.blocks {
             if block.kind == BlockKind::Paragraph && block.spans.is_empty() {
-                block.quoted = false;
+                block.quote = 0;
             }
         }
         assert_eq!(read_back, expected, "{}", read_back.to_markdown());
@@ -1203,13 +1247,15 @@ mod tests {
             read(&buffer, &anchors).to_plain(),
             "1. one\n2. two\n3. three"
         );
-        set_kind(&buffer, 0, BlockKind::Quote);
-        renumber(&buffer, 0, 0);
+        set_quote(&buffer, 0, 1);
         assert_eq!(
             read(&buffer, &anchors).to_plain(),
-            "> one\n1. two\n2. three"
+            "> 1. one\n2. two\n3. three"
         );
-        assert_eq!(kind_at(&buffer, 0), BlockKind::Quote);
+        assert_eq!(kind_at(&buffer, 0), BlockKind::Numbered);
+        assert_eq!(quote_at(&buffer, 0), 1);
+        set_quote(&buffer, 0, 2);
+        assert_eq!(read(&buffer, &anchors).blocks[0].quote, 2);
     }
 
     fn an_inserted_body_lands_at_the_cursor() {
