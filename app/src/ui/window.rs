@@ -1133,6 +1133,7 @@ impl MainWindow {
         window.list.set_photos(Rc::clone(&photos));
         let settings = window.settings();
         window.conversation.set_toolbar(settings.toolbar.as_deref());
+        window.list.set_pull_to_refresh(settings.pull_to_refresh);
         window.list.set_appearance(
             settings.preview_lines,
             settings.bold_unread,
@@ -4263,6 +4264,7 @@ impl MainWindow {
         let settings = self.settings();
         match effect {
             Effect::ListShape => self.listing.change(|screen| Some(screen.list_shape())),
+            Effect::PullToRefresh => self.list.set_pull_to_refresh(settings.pull_to_refresh),
             Effect::Accounts => self.refresh_accounts(Reload::Yes),
             Effect::RowAppearance => {
                 self.list.set_appearance(

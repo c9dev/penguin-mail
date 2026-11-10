@@ -25,6 +25,7 @@ pub use signatures::SignatureMode;
 pub struct Settings {
     /// Group replies into conversations instead of listing each message.
     pub threading: bool,
+    pub pull_to_refresh: bool,
     pub mark_read: MarkRead,
     pub follow_selection_direction: bool,
     pub remote_images: RemoteImages,
@@ -500,6 +501,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             threading: true,
+            pull_to_refresh: false,
             mark_read: MarkRead::Immediately,
             follow_selection_direction: true,
             remote_images: RemoteImages::Ask,
