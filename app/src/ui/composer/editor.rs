@@ -1244,10 +1244,13 @@ impl Editor {
                 .unwrap_or_else(|| self.buffer.end_iter());
             if first + removed < self.buffer.line_count() as usize && !replacement.blocks.is_empty()
             {
-                replacement.blocks.push(Block::new(
-                    richbuffer::kind_at(&self.buffer, (first + removed) as i32),
-                    Vec::new(),
-                ));
+                // The line after the signature continues on this one, so it
+                // keeps that line's kind and its quote.
+                let after = (first + removed) as i32;
+                replacement.blocks.push(
+                    Block::new(richbuffer::kind_at(&self.buffer, after), Vec::new())
+                        .quoted(richbuffer::quote_at(&self.buffer, after)),
+                );
             }
             drop(anchors);
             let cursor = self.buffer.create_mark(
