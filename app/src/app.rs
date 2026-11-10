@@ -12,11 +12,11 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, Provider, Role};
+use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, Provider};
 use mailrs_store::{accounts, labels, messages};
 use mailrs_sync::{History, MovedFrom};
 
-use crate::app::announce::{announced, in_view, still_news};
+use crate::app::announce::announced;
 use crate::compose::Identity;
 use crate::core::Core;
 use crate::notify;
@@ -1518,10 +1518,11 @@ impl App {
         &self,
         messages: Vec<mailrs_domain::MessageMeta>,
         previews: bool,
+        message_preview: bool,
         buttons: Vec<notify::Button>,
     ) {
         use rand::distr::{Alphanumeric, SampleString};
-        for notice in notify::notices(messages, previews, buttons) {
+        for notice in notify::notices(messages, previews, message_preview, buttons) {
             let token = Alphanumeric.sample_string(&mut rand::rng(), 24);
             let evicted = if let Some(target) = &notice.target {
                 self.issued.borrow_mut().issue(
@@ -1784,12 +1785,53 @@ impl App {
         });
     }
 
+    fn announce_found(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        mut found: Vec<mailrs_domain::MessageMeta>,
+    ) {
+        let settings = self.settings();
+        if self.core.demo || !settings.notifications {
+            return;
+        }
+        let viewed = self.window().and_then(|w| w.viewed());
+        found.retain(|m| announce::eligible(m, &settings, viewed.as_ref()));
+        let targets = announce::preview_targets(&found, &settings);
+        if targets.is_empty() {
+            self.announce_ready(account_id, found);
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let lists = this.core.lists();
+            let _ = this
+                .core
+                .call(async move {
+                    announce::fill_previews(targets, |target| lists.preview(target)).await;
+                    Ok::<_, anyhow::Error>(())
+                })
+                .await;
+            // Re-read after fetching: mail may have been read, moved or deleted.
+            let ids: Vec<_> = found.into_iter().map(|m| m.id).collect();
+            match this
+                .core
+                .read(move |c| announced(c, account_id, &ids))
+                .await
+            {
+                Ok(found) => this.announce_ready(account_id, found),
+                Err(err) => {
+                    tracing::warn!(account = account_id, %err, "could not refresh mail for notification")
+                }
+            }
+        });
+    }
+
     /// Announces the new mail among `found`, as the store held it when
     /// read, then asks the store again for the threads announced. Mail
     /// read elsewhere between that read and the notifications
     /// registering had its change event arrive with nothing to settle,
     /// and this second look is what withdraws its notification.
-    fn announce_found(
+    fn announce_ready(
         self: &Rc<Self>,
         account_id: AccountId,
         mut found: Vec<mailrs_domain::MessageMeta>,
@@ -1805,12 +1847,7 @@ impl App {
         // the mail that came while the app was closed arrives right after
         // it opens.
         let viewed = self.window().and_then(|w| w.viewed());
-        found.retain(|m| {
-            still_news(m.in_role(Role::Inbox), m.is_unread())
-                && (!settings.notify_vips_only
-                    || m.from.as_ref().is_some_and(|a| settings.is_vip(&a.email)))
-                && !in_view(m, viewed.as_ref())
-        });
+        found.retain(|m| announce::eligible(m, &settings, viewed.as_ref()));
         if found.is_empty() {
             return;
         }
@@ -1823,6 +1860,7 @@ impl App {
         self.announce_mail(
             found,
             settings.notification_previews,
+            settings.notification_message_preview,
             settings.notification_buttons.clone(),
         );
         self.settle_notifications(account_id, &threads);

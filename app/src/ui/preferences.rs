@@ -328,6 +328,28 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
         .bind_property("active", &previews, "sensitive")
         .sync_create()
         .build();
+    let message_preview = switch(
+        app,
+        &gettext("Show Message Preview"),
+        Some(&gettext(
+            "Include a short extract of the message below the subject",
+        )),
+        settings.notification_message_preview,
+        Change::NotificationMessagePreview,
+    );
+    message_preview.set_sensitive(enabled.is_active() && previews.is_active());
+    for source in [&enabled, &previews] {
+        let enabled = enabled.downgrade();
+        let previews = previews.downgrade();
+        let row = message_preview.downgrade();
+        source.connect_active_notify(move |_| {
+            if let (Some(enabled), Some(previews), Some(row)) =
+                (enabled.upgrade(), previews.upgrade(), row.upgrade())
+            {
+                row.set_sensitive(enabled.is_active() && previews.is_active());
+            }
+        });
+    }
     let vips_only = switch(
         app,
         &gettext("Only for VIPs"),
@@ -364,6 +386,7 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
     notifications.add(&enabled);
     notifications.add(&vips_only);
     notifications.add(&previews);
+    notifications.add(&message_preview);
     notifications.add(&actions);
     page.add(&notifications);
     page

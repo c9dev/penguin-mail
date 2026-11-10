@@ -137,7 +137,12 @@ pub struct Notice {
 
 /// The notifications for `messages`: one each for up to three, one summary
 /// beyond that. With `previews` off, they say only how much mail arrived.
-pub fn notices(messages: Vec<MessageMeta>, previews: bool, buttons: Vec<Button>) -> Vec<Notice> {
+pub fn notices(
+    messages: Vec<MessageMeta>,
+    previews: bool,
+    message_preview: bool,
+    buttons: Vec<Button>,
+) -> Vec<Notice> {
     let notice = |title, body, target: Option<Target>| Notice {
         title,
         body,
@@ -179,7 +184,16 @@ pub fn notices(messages: Vec<MessageMeta>, previews: bool, buttons: Vec<Button>)
                 } else {
                     message.subject.clone()
                 };
-                let body = format!("{subject}\n{}", message.snippet);
+                let snippet = if message_preview {
+                    mailrs_mime::preview(Some(&message.snippet))
+                } else {
+                    String::new()
+                };
+                let body = if snippet.is_empty() {
+                    subject
+                } else {
+                    format!("{subject}\n{snippet}")
+                };
                 notice(sender, body, Some(target_of(message)))
             })
             .collect();
@@ -384,6 +398,27 @@ fn choice_of(key: &str, buttons: &[Button]) -> Option<Choice> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_text_requires_both_switches_and_is_bounded_plain_text() {
+        let mut message = mailrs_sync::fake::meta("m", "t", 0, &["INBOX"]);
+        message.subject = "Kites".into();
+        message.snippet = "Hello\n\tthere".into();
+        let show = |message: MessageMeta, previews, text| {
+            notices(vec![message], previews, text, vec![]).remove(0)
+        };
+        assert_eq!(show(message.clone(), true, false).body, "Kites");
+        assert_eq!(show(message.clone(), false, true).body, "");
+        assert_eq!(show(message.clone(), true, true).body, "Kites\nHello there");
+        message.snippet = "  \n".into();
+        assert_eq!(show(message.clone(), true, true).body, "Kites");
+        message.subject.clear();
+        assert_eq!(show(message.clone(), true, true).body, "(no subject)");
+        message.snippet = "é".repeat(1000);
+        let body = show(message.clone(), true, true).body;
+        assert!(body.chars().count() < 1000);
+        assert!(body.ends_with('é'));
+    }
 
     #[test]
     fn every_button_routes_back_from_its_action_key() {
@@ -629,7 +664,7 @@ mod tests {
         let four: Vec<_> = (0..4)
             .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX", "UNREAD"]))
             .collect();
-        let shown = notices(four, true, Button::ALL.to_vec());
+        let shown = notices(four, true, true, Button::ALL.to_vec());
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].target, None);
         assert!(shown[0].buttons.is_empty());
@@ -647,7 +682,7 @@ mod tests {
         let two: Vec<_> = (0..2)
             .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX"]))
             .collect();
-        let shown = notices(two, true, vec![Button::Archive]);
+        let shown = notices(two, true, true, vec![Button::Archive]);
         assert_eq!(shown.len(), 2);
         assert!(
             shown
@@ -665,7 +700,7 @@ mod tests {
     fn without_previews_one_message_still_gets_its_buttons() {
         use mailrs_sync::fake::meta;
         let one = vec![meta("m1", "t1", 0, &["INBOX"])];
-        let shown = notices(one, false, vec![Button::Reply]);
+        let shown = notices(one, false, true, vec![Button::Reply]);
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].body, "");
         assert_eq!(shown[0].buttons, [Button::Reply]);
@@ -681,7 +716,7 @@ mod tests {
         let two: Vec<_> = (0..2)
             .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX", "UNREAD"]))
             .collect();
-        let shown = notices(two, false, Button::ALL.to_vec());
+        let shown = notices(two, false, true, Button::ALL.to_vec());
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].target, None);
         assert!(shown[0].buttons.is_empty());

@@ -457,6 +457,7 @@ impl App {
                 self.announce_mail(
                     vec![message],
                     settings.notification_previews,
+                    settings.notification_message_preview,
                     settings.notification_buttons.clone(),
                 );
             }

@@ -47,6 +47,8 @@ pub struct Settings {
     pub notifications: bool,
     /// Show sender and subject in notifications, not just a count.
     pub notification_previews: bool,
+    /// Include a short extract below the subject in mail notifications.
+    pub notification_message_preview: bool,
     /// The general default account; each task can follow it or keep its context.
     pub default_account: Option<String>,
     /// Per-task choices, preserving context unless the person overrides it.
@@ -514,6 +516,7 @@ impl Default for Settings {
             language: String::new(),
             notifications: true,
             notification_previews: true,
+            notification_message_preview: false,
             never_translate: Vec::new(),
             default_account: None,
             account_defaults: AccountDefaults::default(),
@@ -1385,6 +1388,16 @@ mod tests {
         assert!(partial.follow_selection_direction);
         assert!(partial.notifications, "missing keys take their defaults");
         assert_eq!(partial.calendar_clock, CalendarClock::Automatic);
+    }
+
+    #[test]
+    fn notification_message_preview_is_opt_in_and_survives_restart() {
+        let mut settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(!settings.notification_message_preview);
+        Change::NotificationMessagePreview(true).apply(&mut settings);
+        let saved = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&saved).unwrap();
+        assert!(restored.notification_message_preview);
     }
 
     #[test]

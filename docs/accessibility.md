@@ -305,3 +305,9 @@ unchecks them. The button announces when filters are active. More remains
 reachable when filters leave a server page empty; No Matching Mail explains
 that another page may still contain matches. Conditions stay selected when
 switching mailboxes and reset when the window closes.
+
+## Mail notification previews
+
+Show Message Preview is a named switch on the Notifications page. It is
+available when Notify About New Mail and Show Sender and Subject are on.
+Turning either off keeps the preview choice for later and disables the switch.

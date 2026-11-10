@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Notifications can show a short message preview below the subject when enabled in Preferences.
+
 ### Improved
 
 
