@@ -1170,11 +1170,11 @@ msgstr "加载远程图片会让发件人知道何时打开邮件。"
 msgid "Change the setting {name} to {value}?"
 msgstr "是否将设置 {name} 改为 {value}？"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "是否移除 {account} 的签名？"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1184,22 +1184,22 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
 msgstr ""
 "隐藏电子邮件地址需要隐藏地址或标签，而 {provider} 在这个账号上两者皆未提供。"
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "是否停用 {address}？寄至该地址的邮件会移至 [回收站]。"
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "是否重新启用 {address}？寄至该地址的邮件会再次送达。"
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1207,7 +1207,7 @@ msgstr ""
 "是否将 {sender} 的邮件移至 {category}（账号：{account}），并将该发件人日后寄"
 "来的邮件也移至此处？"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2046,33 +2046,39 @@ msgstr "重点"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "即使未打开窗口，Penguin Mail 也会持续同步"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "请至少添加一位收件人。"
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "「{address}」不是电子邮件地址。"
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "请选择未来的时间"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}，{sender} 写道："
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} 写道："
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail 无法组成这封邮件。"
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "此邮件列表未提供唯一的收件地址。"
+
+#: app/src/compose/html_signature.rs:168
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "签名"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -3903,8 +3909,8 @@ msgstr ""
 "未保存草稿。加密邮件会以自己的密钥加密后存放在 [草稿] 中，但此电脑没有 "
 "{address} 的密钥或证书。"
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2097
-#: app/src/ui/composer/mod.rs:2100
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2099
+#: app/src/ui/composer/mod.rs:2102
 msgid "That account is not connected."
 msgstr "此账号尚未连接。"
 
@@ -4030,7 +4036,7 @@ msgstr "标准加密（TLS）"
 msgid "Not encrypted in transit"
 msgstr "传输过程未加密"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2197
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 个附件"
@@ -4921,8 +4927,8 @@ msgstr "复制链接"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1992 app/src/ui/composer/mod.rs:2114
-#: app/src/ui/composer/mod.rs:2475 app/src/ui/composer/mod.rs:2894
+#: app/src/ui/composer/mod.rs:1994 app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5317,7 +5323,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1927
+#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1929
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "发送"
@@ -5475,7 +5481,7 @@ msgid "No models found."
 msgstr "找不到模型。"
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2254
+#: app/src/ui/composer/mod.rs:2256
 msgid "Remove {file}"
 msgstr "移除 {file}"
 
@@ -5515,7 +5521,7 @@ msgid "Edit {server}"
 msgstr "编辑 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2250 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
 msgid "Remove"
 msgstr "移除"
@@ -5556,7 +5562,7 @@ msgstr ""
 "设置环境变量。URL 则通过 HTTP 连接至服务器。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2889 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "名称"
@@ -5592,7 +5598,7 @@ msgstr "测试"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2894
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -7475,7 +7481,7 @@ msgstr "要求已读回执"
 msgid "Choose a Time…"
 msgstr "选择时间…"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "定时发送"
@@ -7594,251 +7600,251 @@ msgstr "无法创建隐藏地址：{reason}"
 msgid "Scheduled to send {when}"
 msgstr "已定于 {when} 发送"
 
-#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2029
+#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2031
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "请选择发件人，并输入允许使用的地址后缀。"
 
-#: app/src/ui/composer/mod.rs:1766 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1768 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "取消发送"
 
-#: app/src/ui/composer/mod.rs:1919 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1921 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "正在发送…"
 
-#: app/src/ui/composer/mod.rs:1959
+#: app/src/ui/composer/mod.rs:1961
 msgid "Attachment Missing?"
 msgstr "忘记附件了吗？"
 
-#: app/src/ui/composer/mod.rs:1961
+#: app/src/ui/composer/mod.rs:1963
 msgid "The message says “{sentence}” and carries no file."
 msgstr "邮件提到「{sentence}」，但没有附上文件。"
 
-#: app/src/ui/composer/mod.rs:1966
+#: app/src/ui/composer/mod.rs:1968
 msgid "Add Attachment"
 msgstr "添加附件"
 
-#: app/src/ui/composer/mod.rs:1967
+#: app/src/ui/composer/mod.rs:1969
 msgid "Send Anyway"
 msgstr "仍要发送"
 
-#: app/src/ui/composer/mod.rs:1985
+#: app/src/ui/composer/mod.rs:1987
 msgid "Send Without Encryption?"
 msgstr "是否不加密发送？"
 
-#: app/src/ui/composer/mod.rs:1987
+#: app/src/ui/composer/mod.rs:1989
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "此邮件原定加密发送，但无法加密。{reason}"
 
-#: app/src/ui/composer/mod.rs:1993
+#: app/src/ui/composer/mod.rs:1995
 msgid "Send Readable"
 msgstr "以明文发送"
 
-#: app/src/ui/composer/mod.rs:2008
+#: app/src/ui/composer/mod.rs:2010
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "Penguin Mail 运行时会在此时间发送，即使只在系统托盘中运行也一样。"
 
-#: app/src/ui/composer/mod.rs:2009
+#: app/src/ui/composer/mod.rs:2011
 msgid "Schedule"
 msgstr "定时发送"
 
-#: app/src/ui/composer/mod.rs:2071
+#: app/src/ui/composer/mod.rs:2073
 msgid "Draft saved, encrypted to your own key"
 msgstr "已保存草稿，并以自己的密钥加密"
 
-#: app/src/ui/composer/mod.rs:2073
+#: app/src/ui/composer/mod.rs:2075
 msgid "Draft saved"
 msgstr "已保存草稿"
 
-#: app/src/ui/composer/mod.rs:2109
+#: app/src/ui/composer/mod.rs:2111
 msgid "Save as Draft?"
 msgstr "是否保存为草稿？"
 
-#: app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2115
 msgid "Discard"
 msgstr "舍弃"
 
-#: app/src/ui/composer/mod.rs:2115
+#: app/src/ui/composer/mod.rs:2117
 msgid "Save Draft"
 msgstr "保存草稿"
 
-#: app/src/ui/composer/mod.rs:2156
+#: app/src/ui/composer/mod.rs:2158
 msgid "Attach Files"
 msgstr "附加文件"
 
-#: app/src/ui/composer/mod.rs:2192
+#: app/src/ui/composer/mod.rs:2194
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2238
+#: app/src/ui/composer/mod.rs:2240
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "打开 {file}，{size}"
 
-#: app/src/ui/composer/mod.rs:2291
+#: app/src/ui/composer/mod.rs:2293
 msgid "Bold (Ctrl+B)"
 msgstr "粗体（Ctrl+B）"
 
-#: app/src/ui/composer/mod.rs:2292
+#: app/src/ui/composer/mod.rs:2294
 msgid "Italic (Ctrl+I)"
 msgstr "斜体（Ctrl+I）"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2297
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "删除线（Ctrl+Shift+X）"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2300
 msgid "Code (Ctrl+E)"
 msgstr "代码（Ctrl+E）"
 
-#: app/src/ui/composer/mod.rs:2335
+#: app/src/ui/composer/mod.rs:2337
 msgid "Link (Ctrl+K)"
 msgstr "链接（Ctrl+K）"
 
-#: app/src/ui/composer/mod.rs:2345
+#: app/src/ui/composer/mod.rs:2347
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "无序列表（Ctrl+Shift+8）"
 
-#: app/src/ui/composer/mod.rs:2350
+#: app/src/ui/composer/mod.rs:2352
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "有序列表（Ctrl+Shift+7）"
 
-#: app/src/ui/composer/mod.rs:2355
+#: app/src/ui/composer/mod.rs:2357
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "引用（Ctrl+Shift+9）"
 
-#: app/src/ui/composer/mod.rs:2372
+#: app/src/ui/composer/mod.rs:2374
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "插入图片（Ctrl+Shift+P）"
 
-#: app/src/ui/composer/mod.rs:2382
+#: app/src/ui/composer/mod.rs:2384
 msgid "Paragraph"
 msgstr "段落"
 
-#: app/src/ui/composer/mod.rs:2383
+#: app/src/ui/composer/mod.rs:2385
 msgid "Heading 1"
 msgstr "标题 1"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2386
 msgid "Heading 2"
 msgstr "标题 2"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Heading 3"
 msgstr "标题 3"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2388
 msgid "Code Block"
 msgstr "代码块"
 
-#: app/src/ui/composer/mod.rs:2400
+#: app/src/ui/composer/mod.rs:2402
 msgid "Turn Markdown into Formatting"
 msgstr "将 Markdown 转为格式"
 
-#: app/src/ui/composer/mod.rs:2404
+#: app/src/ui/composer/mod.rs:2406
 msgid "Clear Formatting"
 msgstr "清除格式"
 
-#: app/src/ui/composer/mod.rs:2410
+#: app/src/ui/composer/mod.rs:2412
 msgid "Write in Markdown"
 msgstr "以 Markdown 撰写"
 
-#: app/src/ui/composer/mod.rs:2417 app/src/ui/composer/mod.rs:2421
+#: app/src/ui/composer/mod.rs:2419 app/src/ui/composer/mod.rs:2423
 msgid "More Formatting"
 msgstr "更多格式"
 
-#: app/src/ui/composer/mod.rs:2458
+#: app/src/ui/composer/mod.rs:2460
 msgid "Add a Link"
 msgstr "添加链接"
 
-#: app/src/ui/composer/mod.rs:2464
+#: app/src/ui/composer/mod.rs:2466
 msgid "Text"
 msgstr "文本"
 
-#: app/src/ui/composer/mod.rs:2476
+#: app/src/ui/composer/mod.rs:2478
 msgid "Add Link"
 msgstr "添加链接"
 
-#: app/src/ui/composer/mod.rs:2512
+#: app/src/ui/composer/mod.rs:2514
 msgid "Markdown formatted"
 msgstr "已应用 Markdown 格式"
 
-#: app/src/ui/composer/mod.rs:2631
+#: app/src/ui/composer/mod.rs:2633
 msgid "Pasted as rich text"
 msgstr "已粘贴为富文本"
 
-#: app/src/ui/composer/mod.rs:2632
+#: app/src/ui/composer/mod.rs:2634
 msgid "Paste as Plain Text"
 msgstr "粘贴为纯文本"
 
-#: app/src/ui/composer/mod.rs:2666
+#: app/src/ui/composer/mod.rs:2668
 msgid "Editing as Markdown"
 msgstr "以 Markdown 编辑"
 
-#: app/src/ui/composer/mod.rs:2702
+#: app/src/ui/composer/mod.rs:2704
 msgid "Images"
 msgstr "图片"
 
-#: app/src/ui/composer/mod.rs:2707
+#: app/src/ui/composer/mod.rs:2709
 msgid "Insert Image"
 msgstr "插入图片"
 
-#: app/src/ui/composer/mod.rs:2751
+#: app/src/ui/composer/mod.rs:2753
 msgid "Could not read the file: {reason}"
 msgstr "无法读取文件：{reason}"
 
-#: app/src/ui/composer/mod.rs:2833
+#: app/src/ui/composer/mod.rs:2835
 msgid "No Templates Yet"
 msgstr "尚无模板"
 
-#: app/src/ui/composer/mod.rs:2883
+#: app/src/ui/composer/mod.rs:2885
 msgid "Save as Template"
 msgstr "保存为模板"
 
-#: app/src/ui/composer/mod.rs:2885
+#: app/src/ui/composer/mod.rs:2887
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "每次使用时，会填入 {{first_name}} 等占位符。"
 
-#: app/src/ui/composer/mod.rs:2908 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2910 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "请为模板命名"
 
-#: app/src/ui/composer/mod.rs:2916
+#: app/src/ui/composer/mod.rs:2918
 msgid "Template saved"
 msgstr "已保存模板"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2921
 msgid "Template not saved: {reason}"
 msgstr "未保存模板：{reason}"
 
-#: app/src/ui/composer/mod.rs:3042
+#: app/src/ui/composer/mod.rs:3044
 msgid "This looks like Markdown"
 msgstr "内容看起来像 Markdown"
 
-#: app/src/ui/composer/mod.rs:3048
+#: app/src/ui/composer/mod.rs:3050
 msgid "Format"
 msgstr "应用格式"
 
-#: app/src/ui/composer/mod.rs:3049
+#: app/src/ui/composer/mod.rs:3051
 msgid "Turn the Markdown into rich text"
 msgstr "将 Markdown 转为富文本"
 
-#: app/src/ui/composer/mod.rs:3055 app/src/ui/composer/mod.rs:3059
+#: app/src/ui/composer/mod.rs:3057 app/src/ui/composer/mod.rs:3061
 msgid "Dismiss"
 msgstr "关闭"
 
-#: app/src/ui/composer/mod.rs:3142
+#: app/src/ui/composer/mod.rs:3144
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "草稿会留在此电脑上，稍后可在这里继续撰写。"
 
-#: app/src/ui/composer/mod.rs:3146
+#: app/src/ui/composer/mod.rs:3148
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr "草稿会保留在 {provider} 中，稍后可在任何设备上继续撰写。"
 
-#: app/src/ui/composer/mod.rs:3150
+#: app/src/ui/composer/mod.rs:3152
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr "草稿会保存在您的账号中，方便您稍后在任何设备上完成。"
@@ -9266,10 +9272,15 @@ msgid "Signature"
 msgstr "签名"
 
 #: app/src/ui/preferences.rs:586
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "用于此账号以及没有自己签名的地址。支持 Markdown。<email> 会替换为发件地址（含"
 "后缀），<domain> 会替换为其域名。"
@@ -9601,7 +9612,7 @@ msgstr "语言"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "重新启动后，Penguin Mail 会显示新的语言"
 
-#: app/src/ui/preferences.rs:1698 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1702 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "无签名"
 
@@ -10108,9 +10119,13 @@ msgid "Custom Signature"
 msgstr "自定义签名"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "支持 Markdown。<email> 会替换为发件地址（含后缀），<domain> 会替换为其域名。"
 
@@ -13035,6 +13050,82 @@ msgid "Move to {folder}"
 msgstr "移至 {folder}"
 
 #~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "用于此账号以及没有自己签名的地址。支持 Markdown。<email> 会替换为发件地址"
+#~ "（含后缀），<domain> 会替换为其域名。"
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "支持 Markdown。<email> 会替换为发件地址（含后缀），<domain> 会替换为其域"
+#~ "名。"
+
+#~ msgid ""
+#~ "Added below new messages and above quoted text in replies. Markdown works."
+#~ msgstr "添加至新邮件底部及回复的引用文本上方。支持 Markdown。"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr "保留已阅读邮件的正文，供离线打开"
+
+#~ msgid "Choose Now"
+#~ msgstr "立即选择"
+
+#~ msgid "Choose how this account signs in to get new mail"
+#~ msgstr "请选择此账号的登录方式，以获取新邮件"
+
+#~ msgid "Choose how {address} signs in to keep your mail arriving."
+#~ msgstr "请选择 {address} 的登录方式，以便继续收到邮件。"
+
+#~ msgid "Choose…"
+#~ msgstr "选择…"
+
+#~ msgid ""
+#~ "Every control named for screen readers and reachable from the keyboard, "
+#~ "in American English, British English, French, German, Indonesian, "
+#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
+#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr ""
+#~ "所有控件都有屏幕阅读器可读取的名称，也能通过键盘操作；界面提供美式英语、英"
+#~ "式英语、法语、德语、印度尼西亚语、意大利语、日语、韩语、波兰语、俄语、西班"
+#~ "牙语、欧洲葡萄牙语、简体中文、繁体中文（台湾）、土耳其语和越南语。"
+
+#~ msgid "Get Every Feature"
+#~ msgstr "获取全部功能"
+
+#~ msgid "Later"
+#~ msgstr "稍后"
+
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "请先将邮件从回收站移至收件箱"
+
+#~ msgid ""
+#~ "Moving the account is taking too long. It goes on after you close this "
+#~ "window."
+#~ msgstr "移动账户耗时过长。关闭此窗口后，移动仍会继续。"
+
+#~ msgid "Moving your account. This takes a moment."
+#~ msgstr "正在迁移您的账号。这需要片刻。"
+
+#~ msgid ""
+#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
+#~ "get your mail back. Nothing on this computer was lost."
+#~ msgstr ""
+#~ "Penguin Mail 无法获取 {address} 的新邮件。请选择登录方式以找回邮件。此计算"
+#~ "机上的内容没有丢失。"
+
+#~ msgid ""
+#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+#~ "account below to keep your mail arriving. Your mail and settings stay as "
+#~ "they are."
+#~ msgstr ""
+#~ "Penguin Mail 提供了登录 Google 的新方式。请为下方每个 Gmail 账号选择一种，"
+#~ "以便继续收到邮件。您的邮件和设置保持不变。"
+
+#~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
 #~ "\n"
 #~ "{command}\n"
@@ -13049,9 +13140,6 @@ msgstr "移至 {folder}"
 #~ "命令会在沙箱中运行，无法访问邮件或主目录。{network} [始终允许] 仅适用于此"
 #~ "命令。"
 
-#~ msgid "Move it from the Trash to the Inbox first"
-#~ msgstr "请先将邮件从回收站移至收件箱"
-
 #~ msgid "Save to Downloads"
 #~ msgstr "保存至下载文件夹"
 
@@ -13061,23 +13149,22 @@ msgstr "移至 {folder}"
 #~ msgid "Saved {file} to Downloads"
 #~ msgstr "已将 {file} 保存至下载文件夹"
 
-#~ msgid "Bodies of mail you have read, kept for opening offline"
-#~ msgstr "保留已阅读邮件的正文，供离线打开"
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "已通过这台计算机的登录方式登录。"
+
+#~ msgid "Stop using your own Google project"
+#~ msgstr "停止使用您自己的 Google 项目"
+
+#~ msgid "Switch {address} to this computer's sign-in?"
+#~ msgstr "要将 {address} 切换到这台计算机的登录吗？"
+
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "此账号已在迁移到新的登录方式。"
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
 #~ "another way."
 #~ msgstr "你的组织可能不允许这样做。请询问管理员，或用其他方式登录。"
-
-#~ msgid ""
-#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
-#~ "get your mail back. Nothing on this computer was lost."
-#~ msgstr ""
-#~ "Penguin Mail 无法获取 {address} 的新邮件。请选择登录方式以找回邮件。此计算"
-#~ "机上的内容没有丢失。"
-
-#~ msgid "Choose how {address} signs in to keep your mail arriving."
-#~ msgstr "请选择 {address} 的登录方式，以便继续收到邮件。"
 
 #~ msgid ""
 #~ "{count} Gmail account can't get new mail. Choose how each signs in to get "
@@ -13092,60 +13179,3 @@ msgstr "移至 {folder}"
 #~ msgid "{count} Gmail account needs a new way to sign in"
 #~ msgid_plural "{count} Gmail accounts need a new way to sign in"
 #~ msgstr[0] "有 {count} 个 Gmail 账号需要新的登录方式"
-
-#~ msgid "Choose…"
-#~ msgstr "选择…"
-
-#~ msgid "Moving your account. This takes a moment."
-#~ msgstr "正在迁移您的账号。这需要片刻。"
-
-#~ msgid ""
-#~ "Moving the account is taking too long. It goes on after you close this "
-#~ "window."
-#~ msgstr "移动账户耗时过长。关闭此窗口后，移动仍会继续。"
-
-#~ msgid ""
-#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-#~ "account below to keep your mail arriving. Your mail and settings stay as "
-#~ "they are."
-#~ msgstr ""
-#~ "Penguin Mail 提供了登录 Google 的新方式。请为下方每个 Gmail 账号选择一种，"
-#~ "以便继续收到邮件。您的邮件和设置保持不变。"
-
-#~ msgid "Later"
-#~ msgstr "稍后"
-
-#~ msgid "Choose Now"
-#~ msgstr "立即选择"
-
-#~ msgid ""
-#~ "Added below new messages and above quoted text in replies. Markdown works."
-#~ msgstr "添加至新邮件底部及回复的引用文本上方。支持 Markdown。"
-
-#~ msgid "Switch {address} to this computer's sign-in?"
-#~ msgstr "要将 {address} 切换到这台计算机的登录吗？"
-
-#~ msgid "Stop using your own Google project"
-#~ msgstr "停止使用您自己的 Google 项目"
-
-#~ msgid "Get Every Feature"
-#~ msgstr "获取全部功能"
-
-#~ msgid "Choose how this account signs in to get new mail"
-#~ msgstr "请选择此账号的登录方式，以获取新邮件"
-
-#~ msgid ""
-#~ "Every control named for screen readers and reachable from the keyboard, "
-#~ "in American English, British English, French, German, Indonesian, "
-#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
-#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
-#~ msgstr ""
-#~ "所有控件都有屏幕阅读器可读取的名称，也能通过键盘操作；界面提供美式英语、英"
-#~ "式英语、法语、德语、印度尼西亚语、意大利语、日语、韩语、波兰语、俄语、西班"
-#~ "牙语、欧洲葡萄牙语、简体中文、繁体中文（台湾）、土耳其语和越南语。"
-
-#~ msgid "This account is already moving to its new sign-in."
-#~ msgstr "此账号已在迁移到新的登录方式。"
-
-#~ msgid "Signed in with this computer's sign-in."
-#~ msgstr "已通过这台计算机的登录方式登录。"

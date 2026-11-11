@@ -1271,11 +1271,11 @@ msgstr ""
 msgid "Change the setting {name} to {value}?"
 msgstr "Змінити параметр {name} на {value}?"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "Прибрати ваш підпис для {account}?"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1285,7 +1285,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
@@ -1293,18 +1293,18 @@ msgstr ""
 "«Сховати e-mail» потребує замаскованих адрес або міток, а {provider} не "
 "пропонує жодного з них для цього облікового запису."
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr ""
 "Вимкнути {address}? Пошта, надіслана на цю адресу, потраплятиме до "
 "«Смітника»."
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr ""
 "Знову ввімкнути {address}? Пошта, надіслана на цю адресу, знову надходитиме."
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1312,7 +1312,7 @@ msgstr ""
 "Перемістити пошту від {sender} до {category} в {account} і надсилати туди "
 "їхню майбутню пошту також?"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2203,33 +2203,39 @@ msgstr "Зосереджені"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail продовжує синхронізацію без відкритого вікна"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "Додайте принаймні одного отримувача."
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "«{address}» не є адресою електронної пошти."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "Виберіть час у майбутньому"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}, {sender} пише:"
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} пише:"
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail не вдалося скласти повідомлення."
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "Список не надав жодної адреси для листування."
+
+#: app/src/compose/html_signature.rs:168
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "Підпис"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -4192,8 +4198,8 @@ msgstr ""
 "зашифрованим вашим власним ключем, а на цьому комп'ютері немає ключа чи "
 "сертифіката для {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2097
-#: app/src/ui/composer/mod.rs:2100
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2099
+#: app/src/ui/composer/mod.rs:2102
 msgid "That account is not connected."
 msgstr "Цей обліковий запис не під'єднано."
 
@@ -4323,7 +4329,7 @@ msgstr "Стандартне шифрування (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Не зашифровано під час передавання"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2197
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} вкладення"
@@ -5253,8 +5259,8 @@ msgstr "Копіювати посилання"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1992 app/src/ui/composer/mod.rs:2114
-#: app/src/ui/composer/mod.rs:2475 app/src/ui/composer/mod.rs:2894
+#: app/src/ui/composer/mod.rs:1994 app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5659,7 +5665,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1927
+#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1929
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Надіслати"
@@ -5822,7 +5828,7 @@ msgid "No models found."
 msgstr "Моделей не знайдено."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2254
+#: app/src/ui/composer/mod.rs:2256
 msgid "Remove {file}"
 msgstr "Прибрати {file}"
 
@@ -5865,7 +5871,7 @@ msgid "Edit {server}"
 msgstr "Змінити {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2250 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
 msgid "Remove"
 msgstr "Прибрати"
@@ -5909,7 +5915,7 @@ msgstr ""
 "з'єднується із сервером через HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2889 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Назва"
@@ -5945,7 +5951,7 @@ msgstr "Перевірити"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2894
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -7908,7 +7914,7 @@ msgstr "Запитати підтвердження прочитання"
 msgid "Choose a Time…"
 msgstr "Вибрати час…"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "Надіслати пізніше"
@@ -8027,260 +8033,260 @@ msgstr "Не вдалося створити замасковану адресу
 msgid "Scheduled to send {when}"
 msgstr "Заплановано надсилання {when}"
 
-#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2029
+#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2031
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Виберіть відправника і введіть дозволений суфікс адреси."
 
-#: app/src/ui/composer/mod.rs:1766 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1768 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Скасувати надсилання"
 
-#: app/src/ui/composer/mod.rs:1919 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1921 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Надсилання…"
 
-#: app/src/ui/composer/mod.rs:1959
+#: app/src/ui/composer/mod.rs:1961
 msgid "Attachment Missing?"
 msgstr "Забули вкладення?"
 
-#: app/src/ui/composer/mod.rs:1961
+#: app/src/ui/composer/mod.rs:1963
 msgid "The message says “{sentence}” and carries no file."
 msgstr "У повідомленні сказано «{sentence}», але файлу немає."
 
-#: app/src/ui/composer/mod.rs:1966
+#: app/src/ui/composer/mod.rs:1968
 msgid "Add Attachment"
 msgstr "Додати вкладення"
 
-#: app/src/ui/composer/mod.rs:1967
+#: app/src/ui/composer/mod.rs:1969
 msgid "Send Anyway"
 msgstr "Усе одно надіслати"
 
-#: app/src/ui/composer/mod.rs:1985
+#: app/src/ui/composer/mod.rs:1987
 msgid "Send Without Encryption?"
 msgstr "Надіслати без шифрування?"
 
-#: app/src/ui/composer/mod.rs:1987
+#: app/src/ui/composer/mod.rs:1989
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Це повідомлення мало бути надіслане зашифрованим, але це неможливо. {reason}"
 
-#: app/src/ui/composer/mod.rs:1993
+#: app/src/ui/composer/mod.rs:1995
 msgid "Send Readable"
 msgstr "Надіслати незашифрованим"
 
-#: app/src/ui/composer/mod.rs:2008
+#: app/src/ui/composer/mod.rs:2010
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail надішле його в цей час, якщо працюватиме, навіть у системному "
 "лотку."
 
-#: app/src/ui/composer/mod.rs:2009
+#: app/src/ui/composer/mod.rs:2011
 msgid "Schedule"
 msgstr "Запланувати"
 
-#: app/src/ui/composer/mod.rs:2071
+#: app/src/ui/composer/mod.rs:2073
 msgid "Draft saved, encrypted to your own key"
 msgstr "Чернетку збережено, зашифровано вашим власним ключем"
 
-#: app/src/ui/composer/mod.rs:2073
+#: app/src/ui/composer/mod.rs:2075
 msgid "Draft saved"
 msgstr "Чернетку збережено"
 
-#: app/src/ui/composer/mod.rs:2109
+#: app/src/ui/composer/mod.rs:2111
 msgid "Save as Draft?"
 msgstr "Зберегти як чернетку?"
 
-#: app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2115
 msgid "Discard"
 msgstr "Відкинути"
 
-#: app/src/ui/composer/mod.rs:2115
+#: app/src/ui/composer/mod.rs:2117
 msgid "Save Draft"
 msgstr "Зберегти чернетку"
 
-#: app/src/ui/composer/mod.rs:2156
+#: app/src/ui/composer/mod.rs:2158
 msgid "Attach Files"
 msgstr "Вкласти файли"
 
-#: app/src/ui/composer/mod.rs:2192
+#: app/src/ui/composer/mod.rs:2194
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2238
+#: app/src/ui/composer/mod.rs:2240
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "Відкрити {file}, {size}"
 
-#: app/src/ui/composer/mod.rs:2291
+#: app/src/ui/composer/mod.rs:2293
 msgid "Bold (Ctrl+B)"
 msgstr "Жирний (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2292
+#: app/src/ui/composer/mod.rs:2294
 msgid "Italic (Ctrl+I)"
 msgstr "Курсив (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2297
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Закреслений (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2300
 msgid "Code (Ctrl+E)"
 msgstr "Код (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2335
+#: app/src/ui/composer/mod.rs:2337
 msgid "Link (Ctrl+K)"
 msgstr "Посилання (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2345
+#: app/src/ui/composer/mod.rs:2347
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Маркований список (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2350
+#: app/src/ui/composer/mod.rs:2352
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Нумерований список (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2355
+#: app/src/ui/composer/mod.rs:2357
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Цитата (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2372
+#: app/src/ui/composer/mod.rs:2374
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Вставити зображення (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2382
+#: app/src/ui/composer/mod.rs:2384
 msgid "Paragraph"
 msgstr "Абзац"
 
-#: app/src/ui/composer/mod.rs:2383
+#: app/src/ui/composer/mod.rs:2385
 msgid "Heading 1"
 msgstr "Заголовок 1"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2386
 msgid "Heading 2"
 msgstr "Заголовок 2"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Heading 3"
 msgstr "Заголовок 3"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2388
 msgid "Code Block"
 msgstr "Блок коду"
 
-#: app/src/ui/composer/mod.rs:2400
+#: app/src/ui/composer/mod.rs:2402
 msgid "Turn Markdown into Formatting"
 msgstr "Перетворити Markdown на форматування"
 
-#: app/src/ui/composer/mod.rs:2404
+#: app/src/ui/composer/mod.rs:2406
 msgid "Clear Formatting"
 msgstr "Очистити форматування"
 
-#: app/src/ui/composer/mod.rs:2410
+#: app/src/ui/composer/mod.rs:2412
 msgid "Write in Markdown"
 msgstr "Писати в Markdown"
 
-#: app/src/ui/composer/mod.rs:2417 app/src/ui/composer/mod.rs:2421
+#: app/src/ui/composer/mod.rs:2419 app/src/ui/composer/mod.rs:2423
 msgid "More Formatting"
 msgstr "Інше форматування"
 
-#: app/src/ui/composer/mod.rs:2458
+#: app/src/ui/composer/mod.rs:2460
 msgid "Add a Link"
 msgstr "Додати посилання"
 
-#: app/src/ui/composer/mod.rs:2464
+#: app/src/ui/composer/mod.rs:2466
 msgid "Text"
 msgstr "Текст"
 
-#: app/src/ui/composer/mod.rs:2476
+#: app/src/ui/composer/mod.rs:2478
 msgid "Add Link"
 msgstr "Додати посилання"
 
-#: app/src/ui/composer/mod.rs:2512
+#: app/src/ui/composer/mod.rs:2514
 msgid "Markdown formatted"
 msgstr "Markdown відформатовано"
 
-#: app/src/ui/composer/mod.rs:2631
+#: app/src/ui/composer/mod.rs:2633
 msgid "Pasted as rich text"
 msgstr "Вставлено як форматований текст"
 
-#: app/src/ui/composer/mod.rs:2632
+#: app/src/ui/composer/mod.rs:2634
 msgid "Paste as Plain Text"
 msgstr "Вставити як звичайний текст"
 
-#: app/src/ui/composer/mod.rs:2666
+#: app/src/ui/composer/mod.rs:2668
 msgid "Editing as Markdown"
 msgstr "Редагування в Markdown"
 
-#: app/src/ui/composer/mod.rs:2702
+#: app/src/ui/composer/mod.rs:2704
 msgid "Images"
 msgstr "Зображення"
 
-#: app/src/ui/composer/mod.rs:2707
+#: app/src/ui/composer/mod.rs:2709
 msgid "Insert Image"
 msgstr "Вставити зображення"
 
-#: app/src/ui/composer/mod.rs:2751
+#: app/src/ui/composer/mod.rs:2753
 msgid "Could not read the file: {reason}"
 msgstr "Не вдалося прочитати файл: {reason}"
 
-#: app/src/ui/composer/mod.rs:2833
+#: app/src/ui/composer/mod.rs:2835
 msgid "No Templates Yet"
 msgstr "Шаблонів ще немає"
 
-#: app/src/ui/composer/mod.rs:2883
+#: app/src/ui/composer/mod.rs:2885
 msgid "Save as Template"
 msgstr "Зберегти як шаблон"
 
-#: app/src/ui/composer/mod.rs:2885
+#: app/src/ui/composer/mod.rs:2887
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 "Заповнювачі на зразок {{first_name}} заповнюються щоразу, коли ви його "
 "використовуєте."
 
-#: app/src/ui/composer/mod.rs:2908 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2910 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Дайте шаблону назву"
 
-#: app/src/ui/composer/mod.rs:2916
+#: app/src/ui/composer/mod.rs:2918
 msgid "Template saved"
 msgstr "Шаблон збережено"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2921
 msgid "Template not saved: {reason}"
 msgstr "Шаблон не збережено: {reason}"
 
-#: app/src/ui/composer/mod.rs:3042
+#: app/src/ui/composer/mod.rs:3044
 msgid "This looks like Markdown"
 msgstr "Схоже на Markdown"
 
-#: app/src/ui/composer/mod.rs:3048
+#: app/src/ui/composer/mod.rs:3050
 msgid "Format"
 msgstr "Форматувати"
 
-#: app/src/ui/composer/mod.rs:3049
+#: app/src/ui/composer/mod.rs:3051
 msgid "Turn the Markdown into rich text"
 msgstr "Перетворити Markdown на форматований текст"
 
-#: app/src/ui/composer/mod.rs:3055 app/src/ui/composer/mod.rs:3059
+#: app/src/ui/composer/mod.rs:3057 app/src/ui/composer/mod.rs:3061
 msgid "Dismiss"
 msgstr "Закрити"
 
-#: app/src/ui/composer/mod.rs:3142
+#: app/src/ui/composer/mod.rs:3144
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Чернетка зберігається на цьому комп'ютері, тож ви зможете завершити її тут "
 "пізніше."
 
-#: app/src/ui/composer/mod.rs:3146
+#: app/src/ui/composer/mod.rs:3148
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Чернетка зберігається в {provider}, тож ви зможете завершити її пізніше на "
 "будь-якому пристрої."
 
-#: app/src/ui/composer/mod.rs:3150
+#: app/src/ui/composer/mod.rs:3152
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9793,10 +9799,15 @@ msgid "Signature"
 msgstr "Підпис"
 
 #: app/src/ui/preferences.rs:586
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "Використовується цим обліковим записом і адресами без власного підпису. "
 "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
@@ -10145,7 +10156,7 @@ msgstr "Мова"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail покаже нову мову після перезапуску"
 
-#: app/src/ui/preferences.rs:1698 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1702 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Без підпису"
 
@@ -10665,9 +10676,13 @@ msgid "Custom Signature"
 msgstr "Власний підпис"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
 "суфіксом, <domain> — її доменом."
@@ -13832,6 +13847,79 @@ msgid "Move to {folder}"
 msgstr "Перемістити до {folder}"
 
 #~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "Використовується цим обліковим записом і адресами без власного підпису. "
+#~ "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
+#~ "суфіксом, <domain> — її доменом."
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
+#~ "суфіксом, <domain> — її доменом."
+
+#~ msgid ""
+#~ "Added below new messages and above quoted text in replies. Markdown works."
+#~ msgstr ""
+#~ "Додається під новими повідомленнями та над цитованим текстом у "
+#~ "відповідях. Підтримується Markdown."
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr "Тексти прочитаних листів, збережені для відкриття без мережі"
+
+#~ msgid "Choose Now"
+#~ msgstr "Обрати зараз"
+
+#~ msgid "Choose how this account signs in to get new mail"
+#~ msgstr "Оберіть, як цей обліковий запис входить, щоб отримувати нові листи"
+
+#~ msgid "Choose how {address} signs in to keep your mail arriving."
+#~ msgstr "Оберіть, як {address} входить, щоб листи й надалі надходили."
+
+#~ msgid "Choose…"
+#~ msgstr "Обрати…"
+
+#~ msgid "Get Every Feature"
+#~ msgstr "Отримати всі можливості"
+
+#~ msgid "Later"
+#~ msgstr "Пізніше"
+
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "Спершу перемістіть її зі «Смітника» до «Вхідних»"
+
+#~ msgid ""
+#~ "Moving the account is taking too long. It goes on after you close this "
+#~ "window."
+#~ msgstr ""
+#~ "Перенесення облікового запису триває надто довго. Воно триватиме й після "
+#~ "закриття цього вікна."
+
+#~ msgid "Moving your account. This takes a moment."
+#~ msgstr "Переносимо ваш обліковий запис. Це займе мить."
+
+#~ msgid ""
+#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
+#~ "get your mail back. Nothing on this computer was lost."
+#~ msgstr ""
+#~ "Penguin Mail не може отримати нові листи для {address}. Оберіть, як цей "
+#~ "запис входить, щоб знову отримувати пошту. На цьому комп’ютері нічого не "
+#~ "втрачено."
+
+#~ msgid ""
+#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+#~ "account below to keep your mail arriving. Your mail and settings stay as "
+#~ "they are."
+#~ msgstr ""
+#~ "У Penguin Mail з’явилися нові способи входу до Google. Оберіть один для "
+#~ "кожного облікового запису Gmail нижче, щоб листи й надалі надходили. Ваші "
+#~ "листи й налаштування залишаються без змін."
+
+#~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
 #~ "\n"
 #~ "{command}\n"
@@ -13846,9 +13934,6 @@ msgstr "Перемістити до {folder}"
 #~ "Вона виконується в пісочниці без доступу до вашої пошти й домашньої теки. "
 #~ "{network} «Завжди дозволяти» стосується лише саме цієї команди."
 
-#~ msgid "Move it from the Trash to the Inbox first"
-#~ msgstr "Спершу перемістіть її зі «Смітника» до «Вхідних»"
-
 #~ msgid "Save to Downloads"
 #~ msgstr "Зберегти до «Завантажень»"
 
@@ -13858,8 +13943,17 @@ msgstr "Перемістити до {folder}"
 #~ msgid "Saved {file} to Downloads"
 #~ msgstr "{file} збережено до «Завантажень»"
 
-#~ msgid "Bodies of mail you have read, kept for opening offline"
-#~ msgstr "Тексти прочитаних листів, збережені для відкриття без мережі"
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "Вхід через цей комп’ютер."
+
+#~ msgid "Stop using your own Google project"
+#~ msgstr "Більше не використовувати власний проєкт Google"
+
+#~ msgid "Switch {address} to this computer's sign-in?"
+#~ msgstr "Перевести {address} на вхід цього комп’ютера?"
+
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "Цей обліковий запис уже переходить на новий спосіб входу."
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
@@ -13867,17 +13961,6 @@ msgstr "Перемістити до {folder}"
 #~ msgstr ""
 #~ "Ваша організація, можливо, цього не дозволяє. Запитайте адміністратора "
 #~ "або увійдіть іншим способом."
-
-#~ msgid ""
-#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
-#~ "get your mail back. Nothing on this computer was lost."
-#~ msgstr ""
-#~ "Penguin Mail не може отримати нові листи для {address}. Оберіть, як цей "
-#~ "запис входить, щоб знову отримувати пошту. На цьому комп’ютері нічого не "
-#~ "втрачено."
-
-#~ msgid "Choose how {address} signs in to keep your mail arriving."
-#~ msgstr "Оберіть, як {address} входить, щоб листи й надалі надходили."
 
 #~ msgid ""
 #~ "{count} Gmail account can't get new mail. Choose how each signs in to get "
@@ -13903,55 +13986,3 @@ msgstr "Перемістити до {folder}"
 #~ msgstr[0] "{count} обліковому запису Gmail потрібен новий спосіб входу"
 #~ msgstr[1] "{count} обліковим записам Gmail потрібен новий спосіб входу"
 #~ msgstr[2] "{count} обліковим записам Gmail потрібен новий спосіб входу"
-
-#~ msgid "Choose…"
-#~ msgstr "Обрати…"
-
-#~ msgid "Moving your account. This takes a moment."
-#~ msgstr "Переносимо ваш обліковий запис. Це займе мить."
-
-#~ msgid ""
-#~ "Moving the account is taking too long. It goes on after you close this "
-#~ "window."
-#~ msgstr ""
-#~ "Перенесення облікового запису триває надто довго. Воно триватиме й після "
-#~ "закриття цього вікна."
-
-#~ msgid ""
-#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-#~ "account below to keep your mail arriving. Your mail and settings stay as "
-#~ "they are."
-#~ msgstr ""
-#~ "У Penguin Mail з’явилися нові способи входу до Google. Оберіть один для "
-#~ "кожного облікового запису Gmail нижче, щоб листи й надалі надходили. Ваші "
-#~ "листи й налаштування залишаються без змін."
-
-#~ msgid "Later"
-#~ msgstr "Пізніше"
-
-#~ msgid "Choose Now"
-#~ msgstr "Обрати зараз"
-
-#~ msgid ""
-#~ "Added below new messages and above quoted text in replies. Markdown works."
-#~ msgstr ""
-#~ "Додається під новими повідомленнями та над цитованим текстом у "
-#~ "відповідях. Підтримується Markdown."
-
-#~ msgid "Switch {address} to this computer's sign-in?"
-#~ msgstr "Перевести {address} на вхід цього комп’ютера?"
-
-#~ msgid "Stop using your own Google project"
-#~ msgstr "Більше не використовувати власний проєкт Google"
-
-#~ msgid "Get Every Feature"
-#~ msgstr "Отримати всі можливості"
-
-#~ msgid "Choose how this account signs in to get new mail"
-#~ msgstr "Оберіть, як цей обліковий запис входить, щоб отримувати нові листи"
-
-#~ msgid "This account is already moving to its new sign-in."
-#~ msgstr "Цей обліковий запис уже переходить на новий спосіб входу."
-
-#~ msgid "Signed in with this computer's sign-in."
-#~ msgstr "Вхід через цей комп’ютер."

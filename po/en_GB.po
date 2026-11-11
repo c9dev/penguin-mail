@@ -1048,11 +1048,11 @@ msgstr "Loading a remote image tells the sender when you opened their mail."
 msgid "Change the setting {name} to {value}?"
 msgstr "Change the setting {name} to {value}?"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "Remove your signature for {account}?"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1062,23 +1062,23 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid "Hide My Email needs masked addresses or labels, and {provider} offers neither on this account."
 msgstr "Hide My Email needs masked addresses or labels, and {provider} offers neither on this account."
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "Turn off {address}? Mail sent to it will go to the Trash."
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "Turn {address} back on? Mail sent to it will arrive again."
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid "Move mail from {sender} to {category} in {account}, and send their future mail there too?"
 msgstr "Move mail from {sender} to {category} in {account}, and send their future mail there too?"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 
@@ -1893,33 +1893,37 @@ msgstr "Focused"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail keeps syncing with no window open"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "Add at least one recipient."
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "“{address}” is not an email address."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "Choose a time in the future"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "On {date}, {sender} wrote:"
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} wrote:"
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail could not put the message together."
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "The list did not give one address to write to."
+
+#: app/src/compose/html_signature.rs:168
+msgid "[Signature picture]"
+msgstr "[Signature picture]"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -3599,8 +3603,8 @@ msgstr "Draft not saved: {reason}"
 msgid "Draft not saved. An encrypted message waits in Drafts encrypted to your own key, and this computer holds no key or certificate for {address}."
 msgstr "Draft not saved. An encrypted message waits in Drafts encrypted to your own key, and this computer holds no key or certificate for {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2097
-#: app/src/ui/composer/mod.rs:2100
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2099
+#: app/src/ui/composer/mod.rs:2102
 msgid "That account is not connected."
 msgstr "That account is not connected."
 
@@ -3725,7 +3729,7 @@ msgstr "Standard encryption (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Not encrypted in transit"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2197
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} attachment"
@@ -4608,8 +4612,8 @@ msgstr "Copy Link"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1992 app/src/ui/composer/mod.rs:2114
-#: app/src/ui/composer/mod.rs:2475 app/src/ui/composer/mod.rs:2894
+#: app/src/ui/composer/mod.rs:1994 app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -4973,7 +4977,7 @@ msgstr "Ask about your mail, or tell me what to tidy. I can search, summarise, s
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1927
+#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1929
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Send"
@@ -5123,7 +5127,7 @@ msgid "No models found."
 msgstr "No models found."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2254
+#: app/src/ui/composer/mod.rs:2256
 msgid "Remove {file}"
 msgstr "Remove {file}"
 
@@ -5160,7 +5164,7 @@ msgid "Edit {server}"
 msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2250 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
 msgid "Remove"
 msgstr "Remove"
@@ -5196,7 +5200,7 @@ msgid "A command runs on this computer and talks over its input and output, as i
 msgstr "A command runs on this computer and talks over its input and output, as in npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value in front for the environment. A URL reaches a server over HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2889 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Name"
@@ -5232,7 +5236,7 @@ msgstr "Test"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2894
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -7063,7 +7067,7 @@ msgstr "Request Read Receipt"
 msgid "Choose a Time…"
 msgstr "Choose a Time…"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "Send Later"
@@ -7182,248 +7186,248 @@ msgstr "Could not make a masked address: {reason}"
 msgid "Scheduled to send {when}"
 msgstr "Scheduled to send {when}"
 
-#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2029
+#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2031
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Choose a sender and enter a permitted address suffix."
 
-#: app/src/ui/composer/mod.rs:1766 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1768 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Cancel Send"
 
-#: app/src/ui/composer/mod.rs:1919 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1921 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Sending…"
 
-#: app/src/ui/composer/mod.rs:1959
+#: app/src/ui/composer/mod.rs:1961
 msgid "Attachment Missing?"
 msgstr "Attachment Missing?"
 
-#: app/src/ui/composer/mod.rs:1961
+#: app/src/ui/composer/mod.rs:1963
 msgid "The message says “{sentence}” and carries no file."
 msgstr "The message says “{sentence}” and carries no file."
 
-#: app/src/ui/composer/mod.rs:1966
+#: app/src/ui/composer/mod.rs:1968
 msgid "Add Attachment"
 msgstr "Add Attachment"
 
-#: app/src/ui/composer/mod.rs:1967
+#: app/src/ui/composer/mod.rs:1969
 msgid "Send Anyway"
 msgstr "Send Anyway"
 
-#: app/src/ui/composer/mod.rs:1985
+#: app/src/ui/composer/mod.rs:1987
 msgid "Send Without Encryption?"
 msgstr "Send Without Encryption?"
 
-#: app/src/ui/composer/mod.rs:1987
+#: app/src/ui/composer/mod.rs:1989
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "This message was to go out encrypted, and it cannot be. {reason}"
 
-#: app/src/ui/composer/mod.rs:1993
+#: app/src/ui/composer/mod.rs:1995
 msgid "Send Readable"
 msgstr "Send Readable"
 
-#: app/src/ui/composer/mod.rs:2008
+#: app/src/ui/composer/mod.rs:2010
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "Penguin Mail sends it at this time while it runs, even in the tray."
 
-#: app/src/ui/composer/mod.rs:2009
+#: app/src/ui/composer/mod.rs:2011
 msgid "Schedule"
 msgstr "Schedule"
 
-#: app/src/ui/composer/mod.rs:2071
+#: app/src/ui/composer/mod.rs:2073
 msgid "Draft saved, encrypted to your own key"
 msgstr "Draft saved, encrypted to your own key"
 
-#: app/src/ui/composer/mod.rs:2073
+#: app/src/ui/composer/mod.rs:2075
 msgid "Draft saved"
 msgstr "Draft saved"
 
-#: app/src/ui/composer/mod.rs:2109
+#: app/src/ui/composer/mod.rs:2111
 msgid "Save as Draft?"
 msgstr "Save as Draft?"
 
-#: app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2115
 msgid "Discard"
 msgstr "Discard"
 
-#: app/src/ui/composer/mod.rs:2115
+#: app/src/ui/composer/mod.rs:2117
 msgid "Save Draft"
 msgstr "Save Draft"
 
-#: app/src/ui/composer/mod.rs:2156
+#: app/src/ui/composer/mod.rs:2158
 msgid "Attach Files"
 msgstr "Attach Files"
 
-#: app/src/ui/composer/mod.rs:2192
+#: app/src/ui/composer/mod.rs:2194
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2238
+#: app/src/ui/composer/mod.rs:2240
 msgid "Open {file}"
 msgstr "Open {file}"
 
-#: app/src/ui/composer/mod.rs:2291
+#: app/src/ui/composer/mod.rs:2293
 msgid "Bold (Ctrl+B)"
 msgstr "Bold (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2292
+#: app/src/ui/composer/mod.rs:2294
 msgid "Italic (Ctrl+I)"
 msgstr "Italic (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2297
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Strikethrough (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2300
 msgid "Code (Ctrl+E)"
 msgstr "Code (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2335
+#: app/src/ui/composer/mod.rs:2337
 msgid "Link (Ctrl+K)"
 msgstr "Link (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2345
+#: app/src/ui/composer/mod.rs:2347
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Bulleted List (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2350
+#: app/src/ui/composer/mod.rs:2352
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Numbered List (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2355
+#: app/src/ui/composer/mod.rs:2357
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Quote (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2372
+#: app/src/ui/composer/mod.rs:2374
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Insert Image (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2382
+#: app/src/ui/composer/mod.rs:2384
 msgid "Paragraph"
 msgstr "Paragraph"
 
-#: app/src/ui/composer/mod.rs:2383
+#: app/src/ui/composer/mod.rs:2385
 msgid "Heading 1"
 msgstr "Heading 1"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2386
 msgid "Heading 2"
 msgstr "Heading 2"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Heading 3"
 msgstr "Heading 3"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2388
 msgid "Code Block"
 msgstr "Code Block"
 
-#: app/src/ui/composer/mod.rs:2400
+#: app/src/ui/composer/mod.rs:2402
 msgid "Turn Markdown into Formatting"
 msgstr "Turn Markdown into Formatting"
 
-#: app/src/ui/composer/mod.rs:2404
+#: app/src/ui/composer/mod.rs:2406
 msgid "Clear Formatting"
 msgstr "Clear Formatting"
 
-#: app/src/ui/composer/mod.rs:2410
+#: app/src/ui/composer/mod.rs:2412
 msgid "Write in Markdown"
 msgstr "Write in Markdown"
 
-#: app/src/ui/composer/mod.rs:2417 app/src/ui/composer/mod.rs:2421
+#: app/src/ui/composer/mod.rs:2419 app/src/ui/composer/mod.rs:2423
 msgid "More Formatting"
 msgstr "More Formatting"
 
-#: app/src/ui/composer/mod.rs:2458
+#: app/src/ui/composer/mod.rs:2460
 msgid "Add a Link"
 msgstr "Add a Link"
 
-#: app/src/ui/composer/mod.rs:2464
+#: app/src/ui/composer/mod.rs:2466
 msgid "Text"
 msgstr "Text"
 
-#: app/src/ui/composer/mod.rs:2476
+#: app/src/ui/composer/mod.rs:2478
 msgid "Add Link"
 msgstr "Add Link"
 
-#: app/src/ui/composer/mod.rs:2512
+#: app/src/ui/composer/mod.rs:2514
 msgid "Markdown formatted"
 msgstr "Markdown formatted"
 
-#: app/src/ui/composer/mod.rs:2631
+#: app/src/ui/composer/mod.rs:2633
 msgid "Pasted as rich text"
 msgstr "Pasted as rich text"
 
-#: app/src/ui/composer/mod.rs:2632
+#: app/src/ui/composer/mod.rs:2634
 msgid "Paste as Plain Text"
 msgstr "Paste as Plain Text"
 
-#: app/src/ui/composer/mod.rs:2666
+#: app/src/ui/composer/mod.rs:2668
 msgid "Editing as Markdown"
 msgstr "Editing as Markdown"
 
-#: app/src/ui/composer/mod.rs:2702
+#: app/src/ui/composer/mod.rs:2704
 msgid "Images"
 msgstr "Images"
 
-#: app/src/ui/composer/mod.rs:2707
+#: app/src/ui/composer/mod.rs:2709
 msgid "Insert Image"
 msgstr "Insert Image"
 
-#: app/src/ui/composer/mod.rs:2751
+#: app/src/ui/composer/mod.rs:2753
 msgid "Could not read the file: {reason}"
 msgstr "Could not read the file: {reason}"
 
-#: app/src/ui/composer/mod.rs:2833
+#: app/src/ui/composer/mod.rs:2835
 msgid "No Templates Yet"
 msgstr "No Templates Yet"
 
-#: app/src/ui/composer/mod.rs:2883
+#: app/src/ui/composer/mod.rs:2885
 msgid "Save as Template"
 msgstr "Save as Template"
 
-#: app/src/ui/composer/mod.rs:2885
+#: app/src/ui/composer/mod.rs:2887
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Placeholders such as {{first_name}} fill in each time you use it."
 
-#: app/src/ui/composer/mod.rs:2908 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2910 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Give the template a name"
 
-#: app/src/ui/composer/mod.rs:2916
+#: app/src/ui/composer/mod.rs:2918
 msgid "Template saved"
 msgstr "Template saved"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2921
 msgid "Template not saved: {reason}"
 msgstr "Template not saved: {reason}"
 
-#: app/src/ui/composer/mod.rs:3042
+#: app/src/ui/composer/mod.rs:3044
 msgid "This looks like Markdown"
 msgstr "This looks like Markdown"
 
-#: app/src/ui/composer/mod.rs:3048
+#: app/src/ui/composer/mod.rs:3050
 msgid "Format"
 msgstr "Format"
 
-#: app/src/ui/composer/mod.rs:3049
+#: app/src/ui/composer/mod.rs:3051
 msgid "Turn the Markdown into rich text"
 msgstr "Turn the Markdown into rich text"
 
-#: app/src/ui/composer/mod.rs:3055 app/src/ui/composer/mod.rs:3059
+#: app/src/ui/composer/mod.rs:3057 app/src/ui/composer/mod.rs:3061
 msgid "Dismiss"
 msgstr "Dismiss"
 
-#: app/src/ui/composer/mod.rs:3142
+#: app/src/ui/composer/mod.rs:3144
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "The draft is kept on this computer, so you can finish it later here."
 
-#: app/src/ui/composer/mod.rs:3146
+#: app/src/ui/composer/mod.rs:3148
 msgid "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr "The draft is kept in {provider}, so you can finish it later on any device."
 
-#: app/src/ui/composer/mod.rs:3150
+#: app/src/ui/composer/mod.rs:3152
 msgid "The draft is kept in your account, so you can finish it later on any device."
 msgstr "The draft is kept in your account, so you can finish it later on any device."
 
@@ -8790,8 +8794,8 @@ msgid "Signature"
 msgstr "Signature"
 
 #: app/src/ui/preferences.rs:586
-msgid "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
-msgstr "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgid "Used by this account and addresses without their own signature. Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgstr "Used by this account and addresses without their own signature. Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
 
 #: app/src/ui/preferences.rs:594 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
@@ -9103,7 +9107,7 @@ msgstr "Language"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail shows a new language after a restart"
 
-#: app/src/ui/preferences.rs:1698 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1702 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "No signature"
 
@@ -9568,8 +9572,8 @@ msgid "Custom Signature"
 msgstr "Custom Signature"
 
 #: app/src/ui/sender_prefs/signature.rs:49
-msgid "Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
-msgstr "Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgid "Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
+msgstr "Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain."
 
 #: app/src/ui/sidebar.rs:73
 msgid "Stop the message from going out"
