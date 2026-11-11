@@ -39,7 +39,8 @@ pub struct HtmlSignature {
 const MARK: &str = "PenguinMailHtmlSignatureGoesHere";
 
 /// Whether `template` is HTML rather than Markdown: it opens with a tag
-/// and closes one. A Markdown signature that starts with `<email>` is not.
+/// and closes one, or it is nothing but tags that have no end tag, such as
+/// a lone `<img>`. A Markdown signature that starts with `<email>` is not.
 pub fn is_html(template: &str) -> bool {
     let trimmed = template.trim_start();
     let Some(rest) = trimmed.strip_prefix('<') else {
@@ -48,7 +49,21 @@ pub fn is_html(template: &str) -> bool {
     if trimmed.starts_with("<email>") || trimmed.starts_with("<domain>") {
         return false;
     }
-    rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '!') && trimmed.contains("</")
+    rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '!')
+        && (trimmed.contains("</") || only_void_tags(trimmed))
+}
+
+/// Whether `html` holds at least one tag, and only start tags of elements
+/// with no end tag, with nothing but space between them.
+fn only_void_tags(html: &str) -> bool {
+    let mut tags = 0;
+    let mut other = false;
+    mailrs_mime::html::walk(html, |piece| match piece {
+        Piece::Tag(tag) if !tag.closing && mailrs_mime::html::is_void(tag.name) => tags += 1,
+        Piece::Text(text) if text.trim().is_empty() => {}
+        _ => other = true,
+    });
+    tags > 0 && !other
 }
 
 /// Whether the HTML signature `template` names a picture on this computer,
@@ -239,15 +254,31 @@ pub(super) fn put(html: &str, signature: &str) -> String {
 /// for a `cid:` reference, and the pictures as parts to send with it. A
 /// picture that cannot be read keeps its address, so the rest still goes.
 pub(super) fn with_inline_pictures(html: &str) -> (String, Vec<OutgoingAttachment>) {
+    let tags: Vec<(std::ops::Range<usize>, String)> = super::start_tags(html)
+        .filter_map(|range| {
+            let source = sources(&html[range.clone()]).into_iter().next()?;
+            Some((range, source))
+        })
+        .collect();
+    // The scanner gives the offsets and the tokenizer reading the whole
+    // document gives the meaning, the same reading the assistant's guard
+    // makes. Where the two disagree on which tags carry an address, as with
+    // a bogus comment or an end tag the scanner does not know, the HTML goes
+    // as written: the scanner's reading must never fetch a file the
+    // tokenizer saw only as text.
+    if !tags
+        .iter()
+        .map(|(_, source)| source)
+        .eq(sources(html).iter())
+    {
+        return (html.to_string(), Vec::new());
+    }
     let mut out = String::with_capacity(html.len());
     let mut pictures: Vec<OutgoingAttachment> = Vec::new();
     let mut known: HashMap<String, String> = HashMap::new();
     let mut at = 0;
-    for range in super::start_tags(html) {
+    for (range, source) in tags {
         let tag = &html[range.clone()];
-        let Some(source) = sources(tag).into_iter().next() else {
-            continue;
-        };
         let cid = match known.get(&source) {
             Some(cid) => cid.clone(),
             None => {
@@ -440,6 +471,64 @@ mod tests {
                 .replace('\\', ""),
             "Example Inc."
         );
+    }
+
+    #[test]
+    fn a_lone_picture_is_html() {
+        assert!(is_html("<img src=\"data:image/png;base64,bG9nbw==\">"));
+        assert!(is_html("<img src=\"https://example.com/logo.png\" />\n"));
+        assert!(!is_html(
+            "<img src=\"https://example.com/logo.png\"> **Dana**"
+        ));
+        assert!(!is_html("<email>"));
+    }
+
+    #[test]
+    fn a_lone_picture_goes_out() {
+        let png = base64::engine::general_purpose::STANDARD.encode(b"logo");
+        for template in [
+            format!("<img src=\"data:image/png;base64,{png}\">"),
+            format!("<img alt=\"Example Inc.\" src=\"data:image/png;base64,{png}\"/>"),
+        ] {
+            for rich in [true, false] {
+                let mime = sent(&draft_from(&template, "Hello Ann", rich));
+                assert!(!mime.contains(MARK), "{mime}");
+                assert!(mime.contains("multipart/related"), "{mime}");
+                assert!(mime.contains("Content-ID: <signature1."), "{mime}");
+            }
+        }
+    }
+
+    #[test]
+    fn markup_the_tokenizer_reads_as_text_fetches_no_file() {
+        let dir = std::env::temp_dir().join(format!("penguin-sig-{}", rand::random::<u64>()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let logo = dir.join("private.png");
+        std::fs::write(&logo, b"private").unwrap();
+        let logo = logo.display();
+        let cases = [
+            format!("<div>Dana<textarea><img src=\"{logo}\"></textarea></div>"),
+            format!("<div>Dana<title><img src=\"{logo}\"></title></div>"),
+            format!("<div>Dana<xmp><img src=\"{logo}\"></xmp></div>"),
+            format!("<div>Dana<!x <img src=\"{logo}\">></div>"),
+            format!("<div>Dana</div <img src=\"{logo}\">></div>"),
+        ];
+        let found: Vec<_> = cases
+            .iter()
+            .map(|html| (names_local_file(html), with_inline_pictures(html).1.len()))
+            .collect();
+        // A picture outside the text still goes.
+        let png = base64::engine::general_purpose::STANDARD.encode(b"logo");
+        let (_, beside) = with_inline_pictures(&format!(
+            "<title><img src=\"{logo}\"></title><img src=\"data:image/png;base64,{png}\">"
+        ));
+        std::fs::remove_dir_all(&dir).unwrap();
+        for ((guard, parts), html) in found.iter().zip(&cases) {
+            assert!(!guard, "{html}");
+            assert_eq!(*parts, 0, "{html}");
+        }
+        assert_eq!(beside.len(), 1);
+        assert_eq!(&*beside[0].data, b"logo");
     }
 
     #[test]

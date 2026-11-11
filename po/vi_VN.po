@@ -2096,35 +2096,35 @@ msgstr "Ưu tiên"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail tiếp tục đồng bộ khi không có cửa sổ nào mở"
 
-#: app/src/compose.rs:696 app/src/compose.rs:3564
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "Thêm ít nhất một người nhận."
 
-#: app/src/compose.rs:705
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "“{address}” không phải địa chỉ email."
 
-#: app/src/compose.rs:931 app/src/compose.rs:3570
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "Chọn thời gian trong tương lai"
 
-#: app/src/compose.rs:1260
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "Vào {date}, {sender} đã viết:"
 
-#: app/src/compose.rs:1266
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} đã viết:"
 
-#: app/src/compose.rs:1545
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail không thể tạo thư."
 
-#: app/src/compose.rs:1569
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "Danh sách không cung cấp một địa chỉ duy nhất để gửi thư."
 
-#: app/src/compose/html_signature.rs:139
+#: app/src/compose/html_signature.rs:154
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"

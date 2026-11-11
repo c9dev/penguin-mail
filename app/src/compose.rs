@@ -414,10 +414,12 @@ fn forward_starts_at(html: &str) -> Option<usize> {
 /// Where each start tag in `html` sits, in order.
 ///
 /// The tokenizer gives no offsets in `html`, so this reads the tags itself,
-/// stepping over quoted attribute values, comments and the text of scripts
-/// and styles. A `<` or `>` inside any of them cannot move a tag, and a
-/// tag's name in the text is not taken for the tag. Read what a tag says
-/// with the tokenizer, from the slice this gives.
+/// stepping over quoted attribute values, comments and the text inside
+/// scripts, styles, text areas and the other elements the tokenizer reads
+/// as text. A `<` or `>` inside any of them cannot move a tag, and a tag's
+/// name in the text is not taken for the tag. It follows the tokenizer in
+/// the common cases only, so read what a tag says with the tokenizer, from
+/// the slice this gives.
 fn start_tags(html: &str) -> impl Iterator<Item = std::ops::Range<usize>> + '_ {
     let mut at = 0;
     std::iter::from_fn(move || {
@@ -429,8 +431,7 @@ fn start_tags(html: &str) -> impl Iterator<Item = std::ops::Range<usize>> + '_ {
             .take_while(|c| c.is_ascii_alphanumeric())
             .collect::<String>()
             .to_ascii_lowercase();
-        // A script's or a style's text is not markup.
-        if matches!(name.as_str(), "script" | "style") {
+        if mailrs_mime::html::holds_text(&name) {
             let close = format!("</{name}");
             at = html[at..]
                 .to_ascii_lowercase()

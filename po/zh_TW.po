@@ -2047,35 +2047,35 @@ msgstr "焦點"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "即使未開啟視窗，Penguin Mail 也會持續同步"
 
-#: app/src/compose.rs:696 app/src/compose.rs:3564
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "請至少新增一位收件者。"
 
-#: app/src/compose.rs:705
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "「{address}」不是電子郵件地址。"
 
-#: app/src/compose.rs:931 app/src/compose.rs:3570
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "請選擇未來的時間"
 
-#: app/src/compose.rs:1260
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}，{sender} 寫道："
 
-#: app/src/compose.rs:1266
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} 寫道："
 
-#: app/src/compose.rs:1545
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail 無法組成這封郵件。"
 
-#: app/src/compose.rs:1569
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "此郵件群組未提供可寄信的單一地址。"
 
-#: app/src/compose/html_signature.rs:139
+#: app/src/compose/html_signature.rs:154
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"

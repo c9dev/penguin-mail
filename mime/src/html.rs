@@ -105,18 +105,8 @@ impl<F: FnMut(Piece<'_>)> TokenSink for Sink<F> {
                 }));
                 // Without a tree builder the tokenizer has nobody to tell it
                 // that a script's text is not markup, so the sink does.
-                if opening {
-                    let raw = match &*tag.name {
-                        "script" => Some(RawKind::ScriptData),
-                        "style" | "xmp" | "iframe" | "noembed" | "noframes" => {
-                            Some(RawKind::Rawtext)
-                        }
-                        "title" | "textarea" => Some(RawKind::Rcdata),
-                        _ => None,
-                    };
-                    if let Some(raw) = raw {
-                        return TokenSinkResult::RawData(raw);
-                    }
+                if opening && let Some(raw) = raw_kind(&tag.name) {
+                    return TokenSinkResult::RawData(raw);
                 }
             }
             Token::EOFToken => self.flush(),
@@ -124,6 +114,45 @@ impl<F: FnMut(Piece<'_>)> TokenSink for Sink<F> {
         }
         TokenSinkResult::Continue
     }
+}
+
+/// How the tokenizer reads what follows the start tag `name`, when that is
+/// text up to the matching end tag rather than markup.
+fn raw_kind(name: &str) -> Option<RawKind> {
+    match name {
+        "script" => Some(RawKind::ScriptData),
+        "style" | "xmp" | "iframe" | "noembed" | "noframes" => Some(RawKind::Rawtext),
+        "title" | "textarea" => Some(RawKind::Rcdata),
+        _ => None,
+    }
+}
+
+/// Whether [`walk`] reads what follows the start tag `name`, given in lower
+/// case, as text up to its end tag, so that a tag written inside it is not
+/// a tag. Code that finds tags by their offsets has to skip the same.
+pub fn holds_text(name: &str) -> bool {
+    raw_kind(name).is_some()
+}
+
+/// Whether `name`, given in lower case, is an element that has no content
+/// and no end tag, such as `img`.
+pub fn is_void(name: &str) -> bool {
+    matches!(
+        name,
+        "area"
+            | "base"
+            | "br"
+            | "col"
+            | "embed"
+            | "hr"
+            | "img"
+            | "input"
+            | "link"
+            | "meta"
+            | "source"
+            | "track"
+            | "wbr"
+    )
 }
 
 /// Tags whose content a reader never sees.
