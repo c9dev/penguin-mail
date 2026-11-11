@@ -148,7 +148,13 @@ jobs:
           path: dist
       - name: Install the desktop pieces
         run: |
-          sudo apt-get update
+          # This check uses the host, so Docker's resolver settings do not apply.
+          interface=$(ip -o route show default | awk '{print $5; exit}')
+          test -n "$interface"
+          sudo resolvectl dns "$interface" 1.1.1.1 8.8.8.8
+          sudo resolvectl domain "$interface" '~.'
+          sudo resolvectl flush-caches
+          sudo apt-get update -o APT::Update::Error-Mode=any
           sudo apt-get install -y --no-install-recommends xvfb xauth bubblewrap xdg-dbus-proxy \
               at-spi2-core python3-gi gir1.2-atspi-2.0 libglib2.0-bin
       - name: The app shows the command, and the command allows it
