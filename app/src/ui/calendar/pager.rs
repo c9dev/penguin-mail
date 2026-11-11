@@ -161,7 +161,7 @@ pub(crate) mod checks {
             .child(&stack)
             .build();
         window.present();
-        spin(Duration::from_millis(300));
+        spin_until(|| stack.width() > 0);
         let holders = show_views(&carousel, Vec::new(), labels("week"));
 
         stack.set_visible_child_name("calendar");
@@ -187,7 +187,9 @@ pub(crate) mod checks {
             0,
             "a carousel with no width was sent to a page it cannot hold"
         );
-        spin(Duration::from_millis(500));
+        spin_until(|| sent.get() > 0 && carousel.position() == 1.0);
+        // A frame more, for a second send that should not come.
+        spin_frames(&carousel, 1);
 
         assert!(carousel.width() > 0);
         assert_eq!(sent.get(), 1, "once it has a width, and once only");
@@ -209,7 +211,8 @@ pub(crate) mod checks {
         );
         send_to(&other, &other_holders[1]);
         laid_out.stop();
-        spin(Duration::from_millis(300));
+        spin_until(|| other.width() > 0);
+        spin_frames(&other, 1);
         assert_eq!(sent.get(), 2, "the wait ended with the unmap");
         window.destroy();
     }
@@ -236,9 +239,9 @@ pub(crate) mod checks {
         let block = gtk::Button::with_label("Design review");
         hours.put(&block, 10.0, 1000.0);
         window.present();
-        spin(Duration::from_millis(300));
+        spin_until(|| scroller.vadjustment().upper() >= 2000.0);
         scroller.vadjustment().set_value(900.0);
-        spin(Duration::from_millis(300));
+        spin_until(|| scroller.vadjustment().value() == 900.0);
         assert_eq!(
             scroller.vadjustment().value(),
             900.0,
@@ -257,7 +260,10 @@ pub(crate) mod checks {
             // block's bounds before layout, the top of the day.
             scroller.vadjustment().set_value(0.0);
         });
-        spin(Duration::from_millis(600));
+        // The new block is laid out, and a frame more for the viewport
+        // to follow the focus if it was going to.
+        spin_until(|| again.height() > 0);
+        spin_frames(&scroller, 2);
 
         assert_eq!(
             scroller.vadjustment().value(),
@@ -269,6 +275,31 @@ pub(crate) mod checks {
 
     /// Runs the main loop for `time`, so the carousel lays out, animates
     /// and reports what it does after the call that changed it returned.
+    /// Runs the main loop until `done` holds, for at most two seconds; the
+    /// assertion after it says what went wrong if it never did.
+    fn spin_until(done: impl Fn() -> bool) {
+        let context = gtk::glib::MainContext::default();
+        let end = Instant::now() + Duration::from_secs(2);
+        while !done() && Instant::now() < end {
+            while context.iteration(false) {}
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    /// Runs the main loop until `widget` has drawn `frames` more frames, so
+    /// whatever a change set off in the next layout has happened.
+    fn spin_frames(widget: &impl IsA<gtk::Widget>, frames: u32) {
+        let Some(clock) = widget.frame_clock() else {
+            return spin(Duration::from_millis(100));
+        };
+        let drawn = Rc::new(Cell::new(0));
+        let count = Rc::clone(&drawn);
+        let handler = clock.connect_after_paint(move |_| count.set(count.get() + 1));
+        widget.queue_draw();
+        spin_until(|| drawn.get() >= frames);
+        clock.disconnect(handler);
+    }
+
     fn spin(time: Duration) {
         let context = gtk::glib::MainContext::default();
         let end = Instant::now() + time;
@@ -303,9 +334,9 @@ pub(crate) mod checks {
             }
         });
         window.present();
-        spin(Duration::from_millis(500));
+        spin_until(|| carousel.width() > 0);
         carousel.scroll_to(&holders[1], false);
-        spin(Duration::from_millis(200));
+        spin_until(|| carousel.position() == 1.0);
         arranging.set(false);
         assert_eq!(
             carousel.position(),

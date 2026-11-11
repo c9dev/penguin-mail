@@ -12560,27 +12560,27 @@ msgstr[0] "Usunięto {count} wiadomość z kosza konta {account}"
 msgstr[1] "Usunięto {count} wiadomości z kosza konta {account}"
 msgstr[2] "Usunięto {count} wiadomości z kosza konta {account}"
 
-#: app/src/unsubscribe_page.rs:181
+#: app/src/unsubscribe_page.rs:183
 msgid "the page took longer than 20 seconds"
 msgstr "wczytywanie strony trwało dłużej niż 20 sekund"
 
-#: app/src/unsubscribe_page.rs:183
+#: app/src/unsubscribe_page.rs:185
 msgid "the page did not load: {reason}"
 msgstr "strona nie wczytała się: {reason}"
 
-#: app/src/unsubscribe_page.rs:187
+#: app/src/unsubscribe_page.rs:189
 msgid "the page could not be read: {reason}"
 msgstr "nie udało się odczytać strony: {reason}"
 
-#: app/src/unsubscribe_page.rs:190
+#: app/src/unsubscribe_page.rs:192
 msgid "the page changed while it was waiting to be asked"
 msgstr "strona zmieniła się podczas oczekiwania na pytanie"
 
-#: app/src/unsubscribe_page/hidden.rs:211
+#: app/src/unsubscribe_page/hidden.rs:237
 msgid "the view went away"
 msgstr "widok został zamknięty"
 
-#: app/src/unsubscribe_page/hidden.rs:303
+#: app/src/unsubscribe_page/hidden.rs:329
 msgid "the plan would type something other than the address"
 msgstr "plan wpisałby coś innego niż adres"
 

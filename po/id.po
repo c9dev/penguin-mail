@@ -12435,27 +12435,27 @@ msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "{count} pesan dihapus dari Sampah untuk {account}"
 msgstr[1] "{count} pesan dihapus dari Sampah untuk {account}"
 
-#: app/src/unsubscribe_page.rs:181
+#: app/src/unsubscribe_page.rs:183
 msgid "the page took longer than 20 seconds"
 msgstr "halaman memerlukan lebih dari 20 detik"
 
-#: app/src/unsubscribe_page.rs:183
+#: app/src/unsubscribe_page.rs:185
 msgid "the page did not load: {reason}"
 msgstr "halaman tidak dimuat: {reason}"
 
-#: app/src/unsubscribe_page.rs:187
+#: app/src/unsubscribe_page.rs:189
 msgid "the page could not be read: {reason}"
 msgstr "halaman tidak dapat dibaca: {reason}"
 
-#: app/src/unsubscribe_page.rs:190
+#: app/src/unsubscribe_page.rs:192
 msgid "the page changed while it was waiting to be asked"
 msgstr "halaman berubah saat menunggu permintaan izin"
 
-#: app/src/unsubscribe_page/hidden.rs:211
+#: app/src/unsubscribe_page/hidden.rs:237
 msgid "the view went away"
 msgstr "tampilan sudah ditutup"
 
-#: app/src/unsubscribe_page/hidden.rs:303
+#: app/src/unsubscribe_page/hidden.rs:329
 msgid "the plan would type something other than the address"
 msgstr "rencana akan mengetik sesuatu selain alamat"
 

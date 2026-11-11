@@ -34,7 +34,7 @@ pub use calendars::{
 pub use check::{Checked, Offered, check, same_server};
 pub use contacts::{AddressBook, CardChanges, CardWrite, CardsPage};
 pub use error::JmapError;
-pub use http::JmapClient;
+pub use http::{JmapClient, PushLimits};
 pub use identity::{EmailAddress, Identity};
 pub use mail::{
     BODY, BodyPart, ChangesResponse, Email, EmailQuery, Got, Header, Hit, Imported, Listed, META,
