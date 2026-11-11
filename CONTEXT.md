@@ -501,3 +501,5 @@ The sidebar places nested folders under the server mailbox whose role it knows, 
 **Analysis chat**: a fresh assistant conversation started by Summarize or Explain with only the displayed mail's loaded text. Tools and web search are disabled by default, including for follow-up questions, until New Chat. The Safety preference can allow tools when a new analysis chat starts. `mailrs::assistant::chat::Chat::analyze`. _Avoid_: read-only agent, safe mode.
 
 Mailbox placements report their committed old-to-new IDs and sibling order through `ChangeEvent::LabelsPlaced`. The app applies them to saved sidebar keys before refreshing folders, including placements made by the assistant.
+
+**Pull to check for mail**: an optional touchpad overscroll at the top of the message list. Reading preferences enable it, off by default. A pull must travel 140 logical pixels over at least 350 milliseconds at the top; reversing direction or leaving the top resets both. It runs the same Check for Mail action as the menu. `ui::thread_list::pull`.

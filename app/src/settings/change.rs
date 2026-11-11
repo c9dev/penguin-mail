@@ -22,6 +22,7 @@ use super::{
 #[derive(Debug, Clone, PartialEq)]
 pub enum Change {
     Threading(bool),
+    PullToRefresh(bool),
     MarkRead(MarkRead),
     FollowSelectionDirection(bool),
     RemoteImages(RemoteImages),
@@ -289,6 +290,7 @@ impl Change {
                 }
             }
             Change::Threading(on) => settings.threading = on,
+            Change::PullToRefresh(on) => settings.pull_to_refresh = on,
             Change::MarkRead(when) => settings.mark_read = when,
             Change::FollowSelectionDirection(on) => settings.follow_selection_direction = on,
             Change::RemoteImages(when) => settings.remote_images = when,
@@ -643,6 +645,7 @@ macro_rules! settable {
 settable! {
     may_set {
         Threading => threading,
+        PullToRefresh => pull_to_refresh,
         MarkRead => mark_read,
         FollowSelectionDirection => follow_selection_direction,
         RemoteImages => remote_images,
@@ -762,6 +765,8 @@ impl Setting {
 pub enum Effect {
     /// The list groups mail differently, so list the mailbox again.
     ListShape,
+    /// Whether a touchpad pull checks for mail.
+    PullToRefresh,
     /// The sidebar's accounts: their order, names, colours, smart
     /// mailboxes, and VIPs.
     Accounts,
@@ -802,8 +807,9 @@ pub enum Effect {
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 16] = [
+    pub const ALL: [Effect; 17] = [
         Effect::ListShape,
+        Effect::PullToRefresh,
         Effect::Accounts,
         Effect::RowColors,
         Effect::RowAppearance,
@@ -891,6 +897,7 @@ impl Effects {
     pub fn between(before: &Settings, after: &Settings) -> Effects {
         let Settings {
             threading,
+            pull_to_refresh,
             mark_read,
             follow_selection_direction,
             remote_images,
@@ -1035,6 +1042,7 @@ impl Effects {
             .into_iter()
             .filter(|effect| match effect {
                 Effect::ListShape => *threading != before.threading,
+                Effect::PullToRefresh => *pull_to_refresh != before.pull_to_refresh,
                 Effect::Accounts => {
                     smart_changed
                         || colors_changed
@@ -1482,6 +1490,20 @@ mod tests {
     }
 
     #[test]
+    fn pull_to_refresh_defaults_off_and_changes_without_reloading_mail() {
+        let mut settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(!settings.pull_to_refresh);
+        let effects = Change::PullToRefresh(true).apply(&mut settings);
+        assert_eq!(
+            effects.iter().collect::<Vec<_>>(),
+            vec![Effect::PullToRefresh]
+        );
+        let saved: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert!(saved.pull_to_refresh);
+    }
+
+    #[test]
     fn small_preferences_need_no_reload() {
         // The list the module's comment calls quiet, checked one by one.
         let quiet = [
@@ -1686,6 +1708,7 @@ mod tests {
         Change::SaveSmartMailbox(Box::new(smart("s1", "From Ann"))).apply(&mut before);
         let mut after = before.clone();
         after.threading = !before.threading;
+        after.pull_to_refresh = !before.pull_to_refresh;
         after.smart_mailboxes[0].name = "Renamed".into();
         after.account_colors.insert("ann@example.com".into(), 2);
         after.vips.insert("bo@example.com".into(), "Bo".into());
@@ -1841,6 +1864,7 @@ mod tests {
         let changes = [
             Change::Toolbar(Some(vec![])),
             Change::Threading(false),
+            Change::PullToRefresh(true),
             Change::BoldUnread(false),
             Change::AccountName {
                 email: "ann@example.com".into(),
