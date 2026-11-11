@@ -12678,27 +12678,27 @@ msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "Διαγράφηκε {count} μήνυμα από τον κάδο του {account}"
 msgstr[1] "Διαγράφηκαν {count} μηνύματα από τον κάδο του {account}"
 
-#: app/src/unsubscribe_page.rs:181
+#: app/src/unsubscribe_page.rs:183
 msgid "the page took longer than 20 seconds"
 msgstr "η σελίδα χρειάστηκε περισσότερα από 20 δευτερόλεπτα"
 
-#: app/src/unsubscribe_page.rs:183
+#: app/src/unsubscribe_page.rs:185
 msgid "the page did not load: {reason}"
 msgstr "η σελίδα δεν φορτώθηκε: {reason}"
 
-#: app/src/unsubscribe_page.rs:187
+#: app/src/unsubscribe_page.rs:189
 msgid "the page could not be read: {reason}"
 msgstr "δεν ήταν δυνατή η ανάγνωση της σελίδας: {reason}"
 
-#: app/src/unsubscribe_page.rs:190
+#: app/src/unsubscribe_page.rs:192
 msgid "the page changed while it was waiting to be asked"
 msgstr "η σελίδα άλλαξε ενώ περίμενε την ερώτηση"
 
-#: app/src/unsubscribe_page/hidden.rs:211
+#: app/src/unsubscribe_page/hidden.rs:237
 msgid "the view went away"
 msgstr "η προβολή έκλεισε"
 
-#: app/src/unsubscribe_page/hidden.rs:303
+#: app/src/unsubscribe_page/hidden.rs:329
 msgid "the plan would type something other than the address"
 msgstr "το σχέδιο θα πληκτρολογούσε κάτι διαφορετικό από τη διεύθυνση"
 

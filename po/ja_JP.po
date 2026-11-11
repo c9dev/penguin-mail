@@ -12174,27 +12174,27 @@ msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "{account} のゴミ箱から {count} 件のメッセージを削除しました"
 
-#: app/src/unsubscribe_page.rs:181
+#: app/src/unsubscribe_page.rs:183
 msgid "the page took longer than 20 seconds"
 msgstr "ページの読み込みに20秒以上かかりました"
 
-#: app/src/unsubscribe_page.rs:183
+#: app/src/unsubscribe_page.rs:185
 msgid "the page did not load: {reason}"
 msgstr "ページを読み込めませんでした: {reason}"
 
-#: app/src/unsubscribe_page.rs:187
+#: app/src/unsubscribe_page.rs:189
 msgid "the page could not be read: {reason}"
 msgstr "ページを読み取れませんでした: {reason}"
 
-#: app/src/unsubscribe_page.rs:190
+#: app/src/unsubscribe_page.rs:192
 msgid "the page changed while it was waiting to be asked"
 msgstr "操作の待機中にページが変わりました"
 
-#: app/src/unsubscribe_page/hidden.rs:211
+#: app/src/unsubscribe_page/hidden.rs:237
 msgid "the view went away"
 msgstr "表示画面を閉じました"
 
-#: app/src/unsubscribe_page/hidden.rs:303
+#: app/src/unsubscribe_page/hidden.rs:329
 msgid "the plan would type something other than the address"
 msgstr "操作計画にはアドレス以外の入力が含まれていました"
 

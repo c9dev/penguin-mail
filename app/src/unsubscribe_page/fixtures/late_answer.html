@@ -22,9 +22,11 @@
         event.preventDefault();
         const said = document.getElementById("said");
         said.textContent = "Sending your request…";
+        // After the run's first look and before its second: the check
+        // looks 100 ms after the press and again 400 ms later.
         setTimeout(() => {
           said.textContent = "You have been unsubscribed.";
-        }, 1000);
+        }, 250);
       });
     </script>
   </body>

@@ -950,8 +950,9 @@ mod tests {
     /// on somebody's newsletter.
     fn an_unsubscribe_page_reads_back_as_its_fixture() {
         use crate::unsubscribe_page::{
-            Browser, Outcome, PageBrowser, PageForm, Pick, finish, pick, prepare, says_done,
+            Browser, Outcome, PageBrowser, PageForm, Pick, Waits, finish, pick, prepare, says_done,
         };
+        use std::time::Duration;
 
         const DIR: &str = concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -983,7 +984,15 @@ mod tests {
                 include_str!("../../unsubscribe_page/fixtures/link_only.json"),
             ),
         ];
-        let browser = PageBrowser::new();
+        // The pages come off the disk, so the run's real pauses (half a
+        // second after each load and press, a second and a half before a
+        // second look) would only make the check slow. late_answer.html
+        // answers between the first look and the second, as with the
+        // real ones.
+        let browser = PageBrowser::with_waits(Waits {
+            settle: Duration::from_millis(100),
+            again: Duration::from_millis(400),
+        });
         for (name, written) in pages {
             let url = format!("file://{DIR}{name}.html");
             let read = glib::MainContext::default()
