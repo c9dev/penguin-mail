@@ -2319,13 +2319,13 @@ msgstr ""
 
 #: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
 #: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1662
+#: app/src/core.rs:1417 app/src/core.rs:1669
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 "Η λειτουργία επίδειξης δεν μπορεί να προσθέσει πραγματικούς λογαριασμούς."
 
-#: app/src/core.rs:982 app/src/core.rs:1686 app/src/core.rs:1727
-#: app/src/core.rs:1983
+#: app/src/core.rs:982 app/src/core.rs:1693 app/src/core.rs:1734
+#: app/src/core.rs:1990
 msgid "Canceled."
 msgstr "Ακυρώθηκε."
 
@@ -2335,22 +2335,22 @@ msgstr ""
 "Αυτός ο λογαριασμός δεν διατηρεί κωδικό πρόσβασης που να δέχεται ένας "
 "διακομιστής ημερολογίου ή επαφών."
 
-#: app/src/core.rs:1731
+#: app/src/core.rs:1738
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Αφαιρέστε τα κοινόχρηστα γραμματοκιβώτια αυτού του λογαριασμού πριν "
 "αφαιρέσετε τον λογαριασμό σύνδεσής του."
 
-#: app/src/core.rs:1909 app/src/core.rs:2009
+#: app/src/core.rs:1916 app/src/core.rs:2016
 msgid "The demo cannot switch accounts."
 msgstr "Η επίδειξη δεν μπορεί να αλλάξει λογαριασμούς."
 
-#: app/src/core.rs:1963
+#: app/src/core.rs:1970
 msgid "The demo cannot connect a calendar."
 msgstr "Η επίδειξη δεν μπορεί να συνδέσει ημερολόγιο."
 
-#: app/src/core.rs:2029
+#: app/src/core.rs:2036
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 "Η αναμονή για το πρόγραμμα περιήγησης εγκαταλείφθηκε μετά από πέντε λεπτά."
@@ -9557,55 +9557,56 @@ msgstr ""
 "Αυτός ο σύνδεσμος περιέχει κρυφούς χαρακτήρες ή χαρακτήρες αλλαγής "
 "κατεύθυνσης."
 
-#: app/src/ui/manage_folders.rs:144 app/src/ui/manage_folders.rs:147
+#: app/src/ui/manage_folders.rs:188 app/src/ui/manage_folders.rs:191
 #, fuzzy
 #| msgid "Search models"
 msgid "Search folders"
 msgstr "Αναζήτηση μοντέλων"
 
-#: app/src/ui/manage_folders.rs:163
+#: app/src/ui/manage_folders.rs:207
 #, fuzzy
 #| msgid "Could Not Load the Rules"
 msgid "Could Not List the Folders"
 msgstr "Δεν ήταν δυνατή η φόρτωση των κανόνων"
 
-#: app/src/ui/manage_folders.rs:167
+#: app/src/ui/manage_folders.rs:211
 #, fuzzy
 #| msgid "No Matching Mail"
 msgid "No Matching Folders"
 msgstr "Κανένα μήνυμα που να ταιριάζει"
 
-#: app/src/ui/manage_folders.rs:181
+#: app/src/ui/manage_folders.rs:225
 msgid ""
 "The sidebar shows the folders you subscribe to. Inbox and the folders mail "
 "is filed into always show."
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:198
+#: app/src/ui/manage_folders.rs:242
 #, fuzzy
 #| msgid "Rules for {account}"
 msgid "Folders of {account}"
 msgstr "Κανόνες για {account}"
 
-#: app/src/ui/manage_folders.rs:302
+#: app/src/ui/manage_folders.rs:347
 msgid "Hide the folders in {folder}"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:303
+#: app/src/ui/manage_folders.rs:348
 #, fuzzy
 #| msgid "Show the calendar"
 msgid "Show the folders in {folder}"
 msgstr "Εμφάνιση του ημερολογίου"
 
-#: app/src/ui/manage_folders.rs:321
+#: app/src/ui/manage_folders.rs:366
 msgid "{folder}, always shown"
 msgstr ""
 
-#: app/src/ui/manage_folders.rs:357 app/src/ui/preferences.rs:631
+#: app/src/ui/manage_folders.rs:402 app/src/ui/manage_folders.rs:508
+#: app/src/ui/preferences.rs:631
 msgid "This account is not syncing yet"
 msgstr "Αυτός ο λογαριασμός δεν συγχρονίζεται ακόμη"
 
-#: app/src/ui/manage_folders.rs:459
+#: app/src/ui/manage_folders.rs:514
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the subscription: {reason}"

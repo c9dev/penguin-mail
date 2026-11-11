@@ -7,7 +7,7 @@
 //! menu of their own: per-row menus were what made the sidebar heavy.
 
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -122,6 +122,49 @@ pub fn set(folders: &mut [FolderSubscription], id: &str, on: bool) {
     }
 }
 
+/// Subscription changes on their way to the server, one folder at a
+/// time. The client spreads requests over several connections, so two
+/// changes to one folder sent at once could arrive in either order: tick
+/// then untick could leave the server subscribed under an unticked box.
+/// Each folder has at most one request out; a change made meanwhile is
+/// kept, and goes once that request ends if it still differs from what
+/// the server has.
+#[derive(Default)]
+pub struct Sends {
+    /// Each folder with a request out, and the newest change made since.
+    out: HashMap<String, Option<bool>>,
+}
+
+impl Sends {
+    /// The person set `id` to `on`: the value to send now, or `None`
+    /// while a request for it is out, which then keeps `on` for later.
+    pub fn want(&mut self, id: &str, on: bool) -> Option<bool> {
+        match self.out.get_mut(id) {
+            Some(next) => {
+                *next = Some(on);
+                None
+            }
+            None => {
+                self.out.insert(id.to_string(), None);
+                Some(on)
+            }
+        }
+    }
+
+    /// The request for `id` ended and the server now has `server`: the
+    /// value to send next, or `None` when nothing differs and the folder
+    /// is settled.
+    pub fn done(&mut self, id: &str, server: bool) -> Option<bool> {
+        match self.out.get_mut(id).and_then(Option::take) {
+            Some(next) if next != server => Some(next),
+            _ => {
+                self.out.remove(id);
+                None
+            }
+        }
+    }
+}
+
 /// How far each level of the tree is indented, in pixels.
 const INDENT: i32 = 18;
 
@@ -135,6 +178,7 @@ struct Dialog {
     search: gtk::SearchEntry,
     stack: gtk::Stack,
     toasts: adw::ToastOverlay,
+    sends: RefCell<Sends>,
 }
 
 /// Opens Manage Folders for `account` over `parent`, and reads the
@@ -211,6 +255,7 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
         search: search.clone(),
         stack,
         toasts,
+        sends: Default::default(),
     });
 
     let weak = Rc::downgrade(&this);
@@ -437,29 +482,49 @@ impl Dialog {
     /// Sends the change to the server. The box shows it at once; a
     /// refusal puts it back and says why.
     fn toggle(self: &Rc<Self>, id: String, on: bool) {
-        let Some(sync) = self.core.account(self.account.id) else {
-            self.refresh_line(&id);
-            return;
-        };
         set(&mut self.folders.borrow_mut(), &id, on);
         self.refresh_line(&id);
+        let now = self.sends.borrow_mut().want(&id, on);
+        if let Some(on) = now {
+            self.send(id, on);
+        }
+    }
+
+    /// Sends one change, then the next one made meanwhile, if any; see
+    /// [`Sends`]. Once the folder settles, its box shows what the server
+    /// has, which after a refusal is the old value.
+    fn send(self: &Rc<Self>, id: String, on: bool) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let asked = id.clone();
-            let done = this
-                .core
-                .call_for(this.account.id, async move {
-                    sync.set_folder_subscribed(&asked, on).await
-                })
-                .await;
-            if let Err(err) = done {
-                set(&mut this.folders.borrow_mut(), &id, !on);
-                this.refresh_line(&id);
-                let said = fill(
-                    &gettext("Could not change the subscription: {reason}"),
-                    &[("reason", &err.to_string())],
-                );
-                this.toasts.add_toast(crate::ui::toast(&said));
+            let done = match this.core.account(this.account.id) {
+                Some(sync) => {
+                    let asked = id.clone();
+                    this.core
+                        .call_for(this.account.id, async move {
+                            sync.set_folder_subscribed(&asked, on).await
+                        })
+                        .await
+                }
+                None => Err(anyhow::anyhow!(gettext("This account is not syncing yet"))),
+            };
+            let server = match done {
+                Ok(()) => on,
+                Err(err) => {
+                    let said = fill(
+                        &gettext("Could not change the subscription: {reason}"),
+                        &[("reason", &err.to_string())],
+                    );
+                    this.toasts.add_toast(crate::ui::toast(&said));
+                    !on
+                }
+            };
+            let next = this.sends.borrow_mut().done(&id, server);
+            match next {
+                Some(next) => this.send(id, next),
+                None => {
+                    set(&mut this.folders.borrow_mut(), &id, server);
+                    this.refresh_line(&id);
+                }
             }
         });
     }
@@ -596,6 +661,51 @@ mod tests {
             opened_for(&folders),
             HashSet::from(["a".to_string(), "a/b".to_string()])
         );
+    }
+
+    /// Tick, then untick while the first request is still out: the
+    /// untick waits for it, then goes, so the server ends unsubscribed.
+    #[test]
+    fn a_change_made_while_one_is_out_goes_after_it() {
+        let mut sends = Sends::default();
+        assert_eq!(sends.want("Old", true), Some(true));
+        assert_eq!(sends.want("Old", false), None, "the first is still out");
+        assert_eq!(sends.done("Old", true), Some(false));
+        assert_eq!(sends.done("Old", false), None);
+        assert_eq!(sends.want("Old", true), Some(true), "settled, so it sends");
+    }
+
+    #[test]
+    fn changes_that_come_back_to_what_was_sent_send_nothing_more() {
+        let mut sends = Sends::default();
+        assert_eq!(sends.want("Old", true), Some(true));
+        assert_eq!(sends.want("Old", false), None);
+        assert_eq!(sends.want("Old", true), None);
+        assert_eq!(sends.done("Old", true), None);
+    }
+
+    /// A refused change leaves the server as it was. A change made
+    /// meanwhile that asks for that same value has nothing left to send.
+    #[test]
+    fn a_refused_change_settles_on_what_the_server_has() {
+        let mut sends = Sends::default();
+        assert_eq!(sends.want("Old", true), Some(true));
+        assert_eq!(sends.want("Old", false), None);
+        assert_eq!(sends.done("Old", false), None);
+        assert_eq!(sends.want("Old", true), Some(true));
+        assert_eq!(sends.want("Old", true), None);
+        assert_eq!(
+            sends.done("Old", false),
+            Some(true),
+            "the newest wish differs"
+        );
+    }
+
+    #[test]
+    fn folders_do_not_wait_for_each_other() {
+        let mut sends = Sends::default();
+        assert_eq!(sends.want("Old", true), Some(true));
+        assert_eq!(sends.want("New", true), Some(true));
     }
 
     #[test]
