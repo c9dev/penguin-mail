@@ -2124,7 +2124,7 @@ msgstr "Penguin Mail không thể tạo thư."
 msgid "The list did not give one address to write to."
 msgstr "Danh sách không cung cấp một địa chỉ duy nhất để gửi thư."
 
-#: app/src/compose/html_signature.rs:154
+#: app/src/compose/html_signature.rs:168
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"

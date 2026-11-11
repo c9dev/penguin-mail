@@ -1921,7 +1921,7 @@ msgstr "Penguin Mail could not put the message together."
 msgid "The list did not give one address to write to."
 msgstr "The list did not give one address to write to."
 
-#: app/src/compose/html_signature.rs:154
+#: app/src/compose/html_signature.rs:168
 msgid "[Signature picture]"
 msgstr "[Signature picture]"
 

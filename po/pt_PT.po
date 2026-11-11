@@ -2193,7 +2193,7 @@ msgstr "O Penguin Mail não conseguiu montar a mensagem."
 msgid "The list did not give one address to write to."
 msgstr "A lista não indicou um único endereço para onde escrever."
 
-#: app/src/compose/html_signature.rs:154
+#: app/src/compose/html_signature.rs:168
 msgid "[Signature picture]"
 msgstr "[Imagem da assinatura]"
 

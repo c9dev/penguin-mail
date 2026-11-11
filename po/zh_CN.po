@@ -2074,7 +2074,7 @@ msgstr "Penguin Mail 无法组成这封邮件。"
 msgid "The list did not give one address to write to."
 msgstr "此邮件列表未提供唯一的收件地址。"
 
-#: app/src/compose/html_signature.rs:154
+#: app/src/compose/html_signature.rs:168
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"

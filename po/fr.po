@@ -2233,7 +2233,7 @@ msgstr "Penguin Mail n’a pas pu assembler le message."
 msgid "The list did not give one address to write to."
 msgstr "La liste n’a pas fourni d’adresse à laquelle écrire."
 
-#: app/src/compose/html_signature.rs:154
+#: app/src/compose/html_signature.rs:168
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"

@@ -2008,7 +2008,7 @@ msgstr ""
 msgid "The list did not give one address to write to."
 msgstr ""
 
-#: app/src/compose/html_signature.rs:154
+#: app/src/compose/html_signature.rs:168
 msgid "[Signature picture]"
 msgstr ""
 

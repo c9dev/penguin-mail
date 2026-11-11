@@ -71,11 +71,18 @@ fn only_void_tags(html: &str) -> bool {
 /// save such a signature: a message it read could ask for one that sends a
 /// private picture out with all mail, and the HTML it shows for approval
 /// does not make that plain.
+///
+/// This reads what a message would carry, not the template: [`expand`]
+/// cuts the template at `<body`, and that cut can land inside text the
+/// tokenizer read as text, which the message then carries as markup. The
+/// address it fills in holds nothing a tokenizer or the cut would act on,
+/// so one address stands for them all.
 pub fn names_local_file(template: &str) -> bool {
-    is_html(template)
-        && sources(template)
+    expand(template, "guard@example.invalid").is_some_and(|signature| {
+        sources(&signature.html)
             .iter()
             .any(|source| local_path(source).is_some())
+    })
 }
 
 /// The `src` of every start tag in `html`, as the HTML tokenizer reads it:
@@ -108,6 +115,13 @@ fn picture_words(html: &str) -> Vec<String> {
     found
 }
 
+/// `text` as HTML that opens or closes nothing: no tag, no attribute value,
+/// in either kind of quote. [`names_local_file`] relies on the address it
+/// fills in changing nothing about how the rest reads.
+fn inert(text: &str) -> String {
+    richtext::escape(text).replace('\'', "&#39;")
+}
+
 /// The file `source` names, when it is a `file:` URL or an absolute path.
 fn local_path(source: &str) -> Option<std::path::PathBuf> {
     match url::Url::parse(source) {
@@ -129,8 +143,8 @@ pub fn expand(template: &str, email: &str) -> Option<HtmlSignature> {
     }
     let domain = email.rsplit_once('@').map_or("", |(_, domain)| domain);
     let filled = template
-        .replace("<email>", &richtext::escape(email))
-        .replace("<domain>", &richtext::escape(domain));
+        .replace("<email>", &inert(email))
+        .replace("<domain>", &inert(domain));
     let html = body_of(&filled).trim().to_string();
     let shown = plain_as_markdown(shown_text(&html).trim())
         .trim_end()
@@ -529,6 +543,55 @@ mod tests {
         }
         assert_eq!(beside.len(), 1);
         assert_eq!(&*beside[0].data, b"logo");
+    }
+
+    #[test]
+    fn the_guard_reads_the_signature_the_message_carries() {
+        let dir = std::env::temp_dir().join(format!("penguin-sig-{}", rand::random::<u64>()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let logo = dir.join("private.png");
+        std::fs::write(&logo, b"private").unwrap();
+        let logo = logo.display();
+        // The cut at `<body` lands inside text the tokenizer read as text,
+        // and the message carries the picture as a tag.
+        let cut_inside_text = [
+            format!("<title><body><img src=\"{logo}\"></title>"),
+            format!("<style><body><img src=\"{logo}\"></style>"),
+            format!("<textarea><BODY lang=de><img src = {logo}></textarea>"),
+            format!("<!-- <body> --><div>Dana<img src=\"{logo}\"></div>"),
+        ];
+        // An address with quotes and brackets in it changes nothing about
+        // how the rest reads.
+        let odd_email = "o'brien\"<x>@example.com";
+        let with_token = "<div><img src='<email>'><img src=\"/home/<domain>/logo.png\"></div>";
+        let results: Vec<_> = cut_inside_text
+            .iter()
+            .map(|template| {
+                let sent = expand(template, "dana@example.com").unwrap();
+                (
+                    names_local_file(template),
+                    with_inline_pictures(&sent.html).1.len(),
+                )
+            })
+            .collect();
+        let odd = expand(with_token, odd_email).unwrap();
+        let odd_sources = sources(&odd.html);
+        let odd_parts = with_inline_pictures(&odd.html).1.len();
+        std::fs::remove_dir_all(&dir).unwrap();
+        for ((guarded, parts), template) in results.iter().zip(&cut_inside_text) {
+            assert!(guarded, "{template}");
+            assert_eq!(*parts, 1, "{template}");
+        }
+        assert_eq!(
+            odd_sources,
+            [
+                odd_email.to_string(),
+                "/home/example.com/logo.png".to_string()
+            ]
+        );
+        assert_eq!(odd_parts, 0);
+        assert!(names_local_file(with_token));
+        assert!(!names_local_file("<div><img src='<email>'></div>"));
     }
 
     #[test]
