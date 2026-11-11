@@ -181,13 +181,12 @@ impl App {
     fn signed(&self, mut draft: Draft) -> Draft {
         let account = self.account_email(draft.account_id);
         let settings = self.settings.borrow();
+        let template = settings.signature_for(&account, &draft.from.email);
         draft.markdown = crate::compose::with_signature(
             &draft.markdown,
-            &crate::compose::expand_signature(
-                settings.signature_for(&account, &draft.from.email),
-                &draft.from.email,
-            ),
+            &crate::compose::expand_signature(template, &draft.from.email),
         );
+        draft.html_signature = crate::compose::expand_html_signature(template, &draft.from.email);
         draft
     }
 

@@ -24,6 +24,7 @@ app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
 app/src/autostart.rs
 app/src/compose.rs
+app/src/compose/html_signature.rs
 app/src/contacts.rs
 app/src/core.rs
 app/src/core/goa.rs
@@ -125,6 +126,7 @@ app/src/ui/smart_editor.rs
 app/src/ui/switch_jmap.rs
 app/src/ui/templates.rs
 app/src/ui/thread_list.rs
+app/src/ui/thread_list/pull.rs
 app/src/ui/thread_row.rs
 app/src/ui/translation.rs
 app/src/ui/unsubscribe.rs

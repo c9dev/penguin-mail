@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
+- Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
+
 ### Improved
 
 
@@ -14,6 +19,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - On IMAP accounts, a check for new mail no longer skips a message for good when the app was also reading or changing mail on that account at the time, which left the Inbox badge counting unread mail the list did not show.
+- The pull-to-check indicator stays readable over message rows in light and dark themes.
+- Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
@@ -21,6 +28,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ## 1.0.12 (2026-11-05)
 
 ### New
+
 
 - Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.
 - Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
