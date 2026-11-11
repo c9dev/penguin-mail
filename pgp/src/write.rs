@@ -63,6 +63,13 @@ impl Pgp {
             // cannot ask. The trust that gpg reports belongs in front of the
             // person through `keys_for`, not in a refusal to send.
             command.args(["--trust-model", "always"]);
+            // gpg's default looks a reader without a key up on the network
+            // (the Web Key Directory of their domain, then a keyserver):
+            // sending stalls for up to half a minute, the reader's address
+            // goes out, and a key the person never saw in `keys_for` could
+            // be fetched and used. Only keys already held count, as when a
+            // message is read (`gpg::reading`).
+            command.args(["--auto-key-locate", "local"]);
             for address in &readers.named {
                 command.arg("--recipient").arg(user_id(address));
             }

@@ -297,6 +297,30 @@ fn every_address_is_looked_up_in_one_run() {
     assert!(asked.contains("<cy@example.test>"), "{asked}");
 }
 
+/// gpg's default looks a reader without a key up on the network, which
+/// stalls sending, sends the reader's address out, and could encrypt to a
+/// key the person never saw. Encrypting uses only keys already held.
+#[test]
+fn encrypting_never_goes_looking_for_a_key() {
+    let dir = tempfile::tempdir().expect("a temp directory");
+    let asked = dir.path().join("asked");
+    let path = dir.path().join("gpg");
+    write_script(
+        &path,
+        &format!("echo \"$@\" >> {}", asked.to_string_lossy()),
+    );
+    let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
+
+    let _ = pgp.encrypt(
+        b"Content-Type: text/plain\r\n\r\nHello.\r\n",
+        &mailrs_pgp::Readers::named(["stranger@example.test"]),
+        None,
+    );
+
+    let asked = std::fs::read_to_string(asked).expect("gpg ran");
+    assert!(asked.contains("--auto-key-locate local"), "{asked}");
+}
+
 /// The person's gpg.conf can say `auto-key-retrieve`, and then checking a
 /// signature from a key gpg lacks asks a key server or the sender's own
 /// domain for it: a read receipt, sent the moment the message opens. A key
