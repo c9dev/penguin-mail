@@ -109,6 +109,20 @@ jobs:
           if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
+      - name: Configure DNS for test image builds and containers
+        run: |
+          sudo python3 - <<'PYTHON'
+          import json
+          from pathlib import Path
+
+          path = Path("/etc/docker/daemon.json")
+          config = json.loads(path.read_text()) if path.exists() else {}
+          config["dns"] = ["1.1.1.1", "8.8.8.8"]
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(config) + "\n")
+          PYTHON
+          sudo dockerd --validate --config-file /etc/docker/daemon.json
+          sudo systemctl restart docker
       - name: Test the artifact
         env:
           BASE_IMAGE: ${{ matrix.image }}
