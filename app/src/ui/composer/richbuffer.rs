@@ -903,6 +903,7 @@ mod tests {
         let context = gtk::glib::MainContext::default();
         context.block_on(async {
             let other = context.spawn_local(async {});
+            super::super::checks::closing_releases_the_body().await;
             crate::web::frame::check().await;
             crate::ui::calendar::time_grid::check_clock().await;
             crate::ui::conversation::checks::metadata_preserves_disclosures().await;

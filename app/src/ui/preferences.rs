@@ -164,6 +164,15 @@ fn reading_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.inbox_categories,
         Change::InboxCategories,
     ));
+    reading.add(&switch(
+        app,
+        &gettext("Pull to Check for Mail"),
+        Some(&gettext(
+            "Slowly pull past the top of the message list with a touchpad",
+        )),
+        settings.pull_to_refresh,
+        Change::PullToRefresh,
+    ));
     reading.add(&combo(
         app,
         &gettext("Open the Inbox On"),
