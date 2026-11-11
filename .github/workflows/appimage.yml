@@ -24,7 +24,11 @@ jobs:
   build:
     name: Build the AppImage
     runs-on: ubuntu-latest
-    container: ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+    container:
+      image: ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+      # Hosted runners have failed to resolve Ubuntu mirrors through their DNS.
+      # Keep package bootstrap independent of the runner's upstream resolver.
+      options: --dns 1.1.1.1 --dns 8.8.8.8
     timeout-minutes: 90
     outputs:
       version: ${{ steps.version.outputs.version }}
