@@ -4,12 +4,29 @@ mod common;
 
 use std::time::Duration;
 
-use mailrs_jmap::{JmapError, Pushed};
+use mailrs_jmap::{JmapError, PushLimits, Pushed};
 use serde_json::json;
 use wiremock::matchers::{header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use common::{client, session_on};
+use common::session_on;
+
+/// The waits push judges a server by. The real ones are 20 s and 10 s;
+/// the servers below hold calls on purpose, and these tests would wait
+/// the real ones out in full.
+const LIMITS: PushLimits = PushLimits {
+    stall: Duration::from_secs(3),
+    probe: Duration::from_secs(2),
+};
+
+fn client(server: &MockServer) -> mailrs_jmap::JmapClient {
+    mailrs_jmap::JmapClient::with_push_limits(
+        &format!("{}/jmap/session", server.uri()),
+        mailrs_jmap::Auth::Bearer("token-1".into()),
+        LIMITS,
+    )
+    .unwrap()
+}
 
 /// Answers the `Core/echo` the client sends beside a new stream.
 async fn answer_echo(server: &MockServer) {
@@ -322,9 +339,10 @@ fn echo() -> mailrs_jmap::Request {
 }
 
 fn raw_client(base: &str) -> mailrs_jmap::JmapClient {
-    mailrs_jmap::JmapClient::new(
+    mailrs_jmap::JmapClient::with_push_limits(
         &format!("{base}/jmap/session"),
         mailrs_jmap::Auth::Bearer("token-1".into()),
+        LIMITS,
     )
     .unwrap()
 }
@@ -487,7 +505,9 @@ async fn a_slow_download_beside_the_stream_leaves_push_on() {
     answer_echo(&server).await;
     let slow = ResponseTemplate::new(200)
         .set_body_bytes(b"blob".to_vec())
-        .set_delay(Duration::from_secs(21));
+        // Past the stall limit: only the head of an API call is timed,
+        // so a slow download is no stall.
+        .set_delay(LIMITS.stall + Duration::from_secs(1));
     Mock::given(method("GET"))
         .and(path("/download/A1/b1/x"))
         .respond_with(slow)
