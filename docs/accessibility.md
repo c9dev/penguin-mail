@@ -307,3 +307,5 @@ that another page may still contain matches. Conditions stay selected when
 switching mailboxes and reset when the window closes.
 
 Paste in the composer body accepts clipboard images through the text menu and Cmd+V on macOS or Ctrl+V on Linux. Attachment rows have an Open button named for the file, separate from Remove; Tab reaches both and Enter opens the attached copy. Images open in a dialog that closes with Escape; other files use the desktop viewer.
+
+Pull to Check for Mail is a named switch in Reading preferences, off by default. When enabled, a touchpad pull past the top of the message list shows progress and requires both distance and time before running Check for Mail. Turning the switch off cancels a pull in progress. The menu item and its keyboard shortcut remain available without the gesture.
