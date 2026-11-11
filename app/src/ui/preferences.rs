@@ -583,7 +583,7 @@ fn signature_row(
         .accepts_tab(false)
         .build();
     let help = gettext(
-        "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
+        "Used by this account and addresses without their own signature. Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
     );
     dialog::explain(&row, &help);
     dialog::explain(&view, &help);
@@ -1692,8 +1692,12 @@ fn sync_combo<T: Copy + 'static>(
 
 /// The first line of a signature, for the row's subtitle.
 fn preview(signature: &str) -> String {
-    signature
-        .lines()
+    // An HTML signature shows its first line of text, not its first tag.
+    let text = match crate::compose::is_html_signature(signature) {
+        true => crate::compose::html_to_text(signature),
+        false => signature.to_string(),
+    };
+    text.lines()
         .find(|l| !l.trim().is_empty())
         .map_or_else(|| gettext("No signature"), |l| l.trim().to_string())
 }

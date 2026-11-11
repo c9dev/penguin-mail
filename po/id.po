@@ -1245,11 +1245,11 @@ msgstr ""
 msgid "Change the setting {name} to {value}?"
 msgstr "Ubah pengaturan {name} menjadi {value}?"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "Hapus tanda tangan Anda untuk {account}?"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1259,7 +1259,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
@@ -1267,18 +1267,18 @@ msgstr ""
 "Sembunyikan Email Saya memerlukan alamat tersamar atau label, dan {provider} "
 "tidak menyediakannya untuk akun ini."
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr ""
 "Nonaktifkan {address}? Email yang dikirim ke alamat ini akan masuk ke Sampah."
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr ""
 "Aktifkan kembali {address}? Email yang dikirim ke alamat ini akan diterima "
 "lagi."
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1286,7 +1286,7 @@ msgstr ""
 "Pindahkan email dari {sender} ke {category} di {account}, dan arahkan email "
 "berikutnya ke sana juga?"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2158,33 +2158,39 @@ msgstr "Prioritas"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail terus menyinkronkan meskipun tidak ada jendela terbuka"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "Tambahkan setidaknya satu penerima."
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "“{address}” bukan alamat email."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "Pilih waktu di masa depan"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "Pada {date}, {sender} menulis:"
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} menulis:"
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail tidak dapat menyusun pesan."
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "Daftar tidak menyediakan satu alamat tujuan."
+
+#: app/src/compose/html_signature.rs:168
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "Tanda Tangan"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -4138,8 +4144,8 @@ msgstr ""
 "menggunakan kunci Anda sendiri, dan komputer ini tidak menyimpan kunci atau "
 "sertifikat untuk {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2095
-#: app/src/ui/composer/mod.rs:2098
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2097
+#: app/src/ui/composer/mod.rs:2100
 msgid "That account is not connected."
 msgstr "Akun tersebut tidak terhubung."
 
@@ -4268,7 +4274,7 @@ msgstr "Enkripsi standar (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Tidak dienkripsi saat transit"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2195
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2197
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} lampiran"
@@ -5193,8 +5199,8 @@ msgstr "Salin Tautan"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1990 app/src/ui/composer/mod.rs:2112
-#: app/src/ui/composer/mod.rs:2456 app/src/ui/composer/mod.rs:2910
+#: app/src/ui/composer/mod.rs:1992 app/src/ui/composer/mod.rs:2114
+#: app/src/ui/composer/mod.rs:2458 app/src/ui/composer/mod.rs:2912
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5598,7 +5604,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1925
+#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1927
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Kirim"
@@ -5763,7 +5769,7 @@ msgid "No models found."
 msgstr "Tidak ada model ditemukan."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2235
+#: app/src/ui/composer/mod.rs:2237
 msgid "Remove {file}"
 msgstr "Hapus {file}"
 
@@ -5805,7 +5811,7 @@ msgid "Edit {server}"
 msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2231 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2233 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
 msgid "Remove"
 msgstr "Hapus"
@@ -5848,7 +5854,7 @@ msgstr ""
 "mengakses server melalui HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2905 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2907 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Nama"
@@ -5884,7 +5890,7 @@ msgstr "Uji"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2910
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2912
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -7812,7 +7818,7 @@ msgstr "Minta Konfirmasi Baca"
 msgid "Choose a Time…"
 msgstr "Pilih Waktu…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2005
+#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2007
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "Kirim Nanti"
@@ -7931,258 +7937,258 @@ msgstr "Tidak dapat membuat alamat tersamar: {reason}"
 msgid "Scheduled to send {when}"
 msgstr "Dijadwalkan dikirim {when}"
 
-#: app/src/ui/composer/mod.rs:1594 app/src/ui/composer/mod.rs:2027
+#: app/src/ui/composer/mod.rs:1594 app/src/ui/composer/mod.rs:2029
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Pilih pengirim dan masukkan akhiran alamat yang diizinkan."
 
-#: app/src/ui/composer/mod.rs:1764 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1766 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Batalkan Pengiriman"
 
-#: app/src/ui/composer/mod.rs:1917 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1919 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Mengirim…"
 
-#: app/src/ui/composer/mod.rs:1957
+#: app/src/ui/composer/mod.rs:1959
 msgid "Attachment Missing?"
 msgstr "Lampiran Terlupa?"
 
-#: app/src/ui/composer/mod.rs:1959
+#: app/src/ui/composer/mod.rs:1961
 msgid "The message says “{sentence}” and carries no file."
 msgstr "Pesan menyatakan “{sentence}” tetapi tidak menyertakan berkas."
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "Add Attachment"
 msgstr "Tambahkan Lampiran"
 
-#: app/src/ui/composer/mod.rs:1965
+#: app/src/ui/composer/mod.rs:1967
 msgid "Send Anyway"
 msgstr "Tetap Kirim"
 
-#: app/src/ui/composer/mod.rs:1983
+#: app/src/ui/composer/mod.rs:1985
 msgid "Send Without Encryption?"
 msgstr "Kirim Tanpa Enkripsi?"
 
-#: app/src/ui/composer/mod.rs:1985
+#: app/src/ui/composer/mod.rs:1987
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Pesan ini seharusnya dikirim dengan enkripsi, tetapi tidak dapat dienkripsi. "
 "{reason}"
 
-#: app/src/ui/composer/mod.rs:1991
+#: app/src/ui/composer/mod.rs:1993
 msgid "Send Readable"
 msgstr "Kirim Tanpa Enkripsi"
 
-#: app/src/ui/composer/mod.rs:2006
+#: app/src/ui/composer/mod.rs:2008
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail mengirim pada waktu ini selama aplikasi berjalan, termasuk di "
 "baki."
 
-#: app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:2009
 msgid "Schedule"
 msgstr "Jadwalkan"
 
-#: app/src/ui/composer/mod.rs:2069
+#: app/src/ui/composer/mod.rs:2071
 msgid "Draft saved, encrypted to your own key"
 msgstr "Draf disimpan dengan enkripsi menggunakan kunci Anda sendiri"
 
-#: app/src/ui/composer/mod.rs:2071
+#: app/src/ui/composer/mod.rs:2073
 msgid "Draft saved"
 msgstr "Draf disimpan"
 
-#: app/src/ui/composer/mod.rs:2107
+#: app/src/ui/composer/mod.rs:2109
 msgid "Save as Draft?"
 msgstr "Simpan sebagai Draf?"
 
-#: app/src/ui/composer/mod.rs:2111
+#: app/src/ui/composer/mod.rs:2113
 msgid "Discard"
 msgstr "Buang"
 
-#: app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2115
 msgid "Save Draft"
 msgstr "Simpan Draf"
 
-#: app/src/ui/composer/mod.rs:2154
+#: app/src/ui/composer/mod.rs:2156
 msgid "Attach Files"
 msgstr "Lampirkan Berkas"
 
-#: app/src/ui/composer/mod.rs:2190
+#: app/src/ui/composer/mod.rs:2192
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2272
+#: app/src/ui/composer/mod.rs:2274
 msgid "Bold (Ctrl+B)"
 msgstr "Tebal (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2273
+#: app/src/ui/composer/mod.rs:2275
 msgid "Italic (Ctrl+I)"
 msgstr "Miring (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2276
+#: app/src/ui/composer/mod.rs:2278
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Coret (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2279
+#: app/src/ui/composer/mod.rs:2281
 msgid "Code (Ctrl+E)"
 msgstr "Kode (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2316
+#: app/src/ui/composer/mod.rs:2318
 msgid "Link (Ctrl+K)"
 msgstr "Tautan (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2326
+#: app/src/ui/composer/mod.rs:2328
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Daftar Berpoin (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2331
+#: app/src/ui/composer/mod.rs:2333
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Daftar Bernomor (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2336
+#: app/src/ui/composer/mod.rs:2338
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Kutipan (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2355
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Sisipkan Gambar (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2363
+#: app/src/ui/composer/mod.rs:2365
 msgid "Paragraph"
 msgstr "Paragraf"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2366
 msgid "Heading 1"
 msgstr "Judul 1"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2367
 msgid "Heading 2"
 msgstr "Judul 2"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2368
 msgid "Heading 3"
 msgstr "Judul 3"
 
-#: app/src/ui/composer/mod.rs:2367
+#: app/src/ui/composer/mod.rs:2369
 msgid "Code Block"
 msgstr "Blok Kode"
 
-#: app/src/ui/composer/mod.rs:2381
+#: app/src/ui/composer/mod.rs:2383
 msgid "Turn Markdown into Formatting"
 msgstr "Ubah Markdown menjadi Format"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Clear Formatting"
 msgstr "Hapus Pemformatan"
 
-#: app/src/ui/composer/mod.rs:2391
+#: app/src/ui/composer/mod.rs:2393
 msgid "Write in Markdown"
 msgstr "Tulis dalam Markdown"
 
-#: app/src/ui/composer/mod.rs:2398 app/src/ui/composer/mod.rs:2402
+#: app/src/ui/composer/mod.rs:2400 app/src/ui/composer/mod.rs:2404
 msgid "More Formatting"
 msgstr "Pemformatan Lainnya"
 
-#: app/src/ui/composer/mod.rs:2439
+#: app/src/ui/composer/mod.rs:2441
 msgid "Add a Link"
 msgstr "Tambahkan Tautan"
 
-#: app/src/ui/composer/mod.rs:2445
+#: app/src/ui/composer/mod.rs:2447
 msgid "Text"
 msgstr "Teks"
 
-#: app/src/ui/composer/mod.rs:2457
+#: app/src/ui/composer/mod.rs:2459
 msgid "Add Link"
 msgstr "Tambahkan Tautan"
 
-#: app/src/ui/composer/mod.rs:2493
+#: app/src/ui/composer/mod.rs:2495
 msgid "Markdown formatted"
 msgstr "Markdown diformat"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2611
 msgid "Pasted as rich text"
 msgstr "Ditempel sebagai teks berformat"
 
-#: app/src/ui/composer/mod.rs:2610
+#: app/src/ui/composer/mod.rs:2612
 msgid "Paste as Plain Text"
 msgstr "Tempel sebagai Teks Biasa"
 
-#: app/src/ui/composer/mod.rs:2644
+#: app/src/ui/composer/mod.rs:2646
 msgid "Editing as Markdown"
 msgstr "Mengedit sebagai Markdown"
 
-#: app/src/ui/composer/mod.rs:2680
+#: app/src/ui/composer/mod.rs:2682
 msgid "Images"
 msgstr "Gambar"
 
-#: app/src/ui/composer/mod.rs:2685
+#: app/src/ui/composer/mod.rs:2687
 msgid "Insert Image"
 msgstr "Sisipkan Gambar"
 
-#: app/src/ui/composer/mod.rs:2729
+#: app/src/ui/composer/mod.rs:2731
 msgid "Could not read the file: {reason}"
 msgstr "Tidak dapat membaca berkas: {reason}"
 
-#: app/src/ui/composer/mod.rs:2804
+#: app/src/ui/composer/mod.rs:2806
 msgid "Could not paste the image"
 msgstr "Tidak dapat menempelkan gambar"
 
-#: app/src/ui/composer/mod.rs:2849
+#: app/src/ui/composer/mod.rs:2851
 msgid "No Templates Yet"
 msgstr "Belum Ada Templat"
 
-#: app/src/ui/composer/mod.rs:2899
+#: app/src/ui/composer/mod.rs:2901
 msgid "Save as Template"
 msgstr "Simpan sebagai Templat"
 
-#: app/src/ui/composer/mod.rs:2901
+#: app/src/ui/composer/mod.rs:2903
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 "Isian seperti {{first_name}} dilengkapi setiap kali Anda menggunakannya."
 
-#: app/src/ui/composer/mod.rs:2924 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2926 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Beri nama templat"
 
-#: app/src/ui/composer/mod.rs:2932
+#: app/src/ui/composer/mod.rs:2934
 msgid "Template saved"
 msgstr "Templat disimpan"
 
-#: app/src/ui/composer/mod.rs:2935
+#: app/src/ui/composer/mod.rs:2937
 msgid "Template not saved: {reason}"
 msgstr "Templat tidak disimpan: {reason}"
 
-#: app/src/ui/composer/mod.rs:3058
+#: app/src/ui/composer/mod.rs:3060
 msgid "This looks like Markdown"
 msgstr "Ini tampaknya Markdown"
 
-#: app/src/ui/composer/mod.rs:3064
+#: app/src/ui/composer/mod.rs:3066
 msgid "Format"
 msgstr "Format"
 
-#: app/src/ui/composer/mod.rs:3065
+#: app/src/ui/composer/mod.rs:3067
 msgid "Turn the Markdown into rich text"
 msgstr "Ubah Markdown menjadi teks berformat"
 
-#: app/src/ui/composer/mod.rs:3071 app/src/ui/composer/mod.rs:3075
+#: app/src/ui/composer/mod.rs:3073 app/src/ui/composer/mod.rs:3077
 msgid "Dismiss"
 msgstr "Abaikan"
 
-#: app/src/ui/composer/mod.rs:3158
+#: app/src/ui/composer/mod.rs:3160
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Draf disimpan di komputer ini, sehingga Anda dapat menyelesaikannya nanti di "
 "sini."
 
-#: app/src/ui/composer/mod.rs:3162
+#: app/src/ui/composer/mod.rs:3164
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Draf disimpan di {provider}, sehingga Anda dapat menyelesaikannya nanti di "
 "perangkat mana pun."
 
-#: app/src/ui/composer/mod.rs:3166
+#: app/src/ui/composer/mod.rs:3168
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9675,10 +9681,15 @@ msgid "Signature"
 msgstr "Tanda Tangan"
 
 #: app/src/ui/preferences.rs:586
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "Dipakai oleh akun ini dan alamat yang tidak punya tanda tangan sendiri. "
 "Markdown didukung. <email> menjadi alamat pengirim, termasuk akhirannya; "
@@ -10021,7 +10032,7 @@ msgstr "Bahasa"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/preferences.rs:1698 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1702 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Tanpa tanda tangan"
 
@@ -10543,9 +10554,13 @@ msgid "Custom Signature"
 msgstr "Tanda Tangan Khusus"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "Markdown didukung. <email> menjadi alamat pengirim, termasuk akhirannya; "
 "<domain> menjadi domainnya."
