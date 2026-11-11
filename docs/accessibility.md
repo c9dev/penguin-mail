@@ -306,6 +306,8 @@ reachable when filters leave a server page empty; No Matching Mail explains
 that another page may still contain matches. Conditions stay selected when
 switching mailboxes and reset when the window closes.
 
+Pull to Check for Mail is a named switch in Reading preferences, off by default. When enabled, a touchpad pull past the top of the message list shows progress and requires both distance and time before running Check for Mail. Turning the switch off cancels a pull in progress. The menu item and its keyboard shortcut remain available without the gesture.
+
 ## Mail notification previews
 
 Show Message Preview is a named switch on the Notifications page. It is
