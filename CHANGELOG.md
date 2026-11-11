@@ -23,6 +23,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
 - Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
 
+- Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 
 ### Improved

@@ -1269,11 +1269,11 @@ msgstr ""
 msgid "Change the setting {name} to {value}?"
 msgstr "¿Cambiar el ajuste {name} a {value}?"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "¿Quitar tu firma de {account}?"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1283,7 +1283,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1795
+#: app/src/assistant/run.rs:1802
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
@@ -1291,16 +1291,16 @@ msgstr ""
 "Ocultar mi correo necesita direcciones enmascaradas o etiquetas, y "
 "{provider} no ofrece ninguna de las dos en esta cuenta."
 
-#: app/src/assistant/run.rs:1863
+#: app/src/assistant/run.rs:1870
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "¿Desactivar {address}? El correo enviado a ella irá a la papelera."
 
-#: app/src/assistant/run.rs:1867
+#: app/src/assistant/run.rs:1874
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr ""
 "¿Volver a activar {address}? El correo enviado a ella volverá a llegar."
 
-#: app/src/assistant/run.rs:1976
+#: app/src/assistant/run.rs:1983
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1308,7 +1308,7 @@ msgstr ""
 "¿Mover el correo de {sender} a {category} en {account} y enviar allí también "
 "su correo futuro?"
 
-#: app/src/assistant/run.rs:1988
+#: app/src/assistant/run.rs:1995
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2181,33 +2181,39 @@ msgstr "Prioritarios"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail sigue sincronizando sin ninguna ventana abierta"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "Añade al menos un destinatario."
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "«{address}» no es una dirección de correo electrónico."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "Elige una hora futura"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "El {date}, {sender} escribió:"
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} escribió:"
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail no pudo componer el mensaje."
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "La lista no ha dado ninguna dirección a la que escribir."
+
+#: app/src/compose/html_signature.rs:168
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "Firma"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -4169,8 +4175,8 @@ msgstr ""
 "propia clave, y este equipo no tiene ninguna clave ni certificado para "
 "{address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2095
-#: app/src/ui/composer/mod.rs:2098
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2097
+#: app/src/ui/composer/mod.rs:2100
 msgid "That account is not connected."
 msgstr "Esa cuenta no está conectada."
 
@@ -4299,7 +4305,7 @@ msgstr "Cifrado estándar (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Sin cifrar en tránsito"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2195
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2197
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} adjunto"
@@ -5224,8 +5230,8 @@ msgstr "Copiar el enlace"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1990 app/src/ui/composer/mod.rs:2112
-#: app/src/ui/composer/mod.rs:2456 app/src/ui/composer/mod.rs:2910
+#: app/src/ui/composer/mod.rs:1992 app/src/ui/composer/mod.rs:2114
+#: app/src/ui/composer/mod.rs:2458 app/src/ui/composer/mod.rs:2912
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5634,7 +5640,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1925
+#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1927
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Enviar"
@@ -5800,7 +5806,7 @@ msgid "No models found."
 msgstr "No se encontraron modelos."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2235
+#: app/src/ui/composer/mod.rs:2237
 msgid "Remove {file}"
 msgstr "Quitar {file}"
 
@@ -5842,7 +5848,7 @@ msgid "Edit {server}"
 msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2231 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2233 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3446
 msgid "Remove"
 msgstr "Quitar"
@@ -5885,7 +5891,7 @@ msgstr ""
 "HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2905 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:2907 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Nombre"
@@ -5921,7 +5927,7 @@ msgstr "Probar"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2910
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2912
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -7852,7 +7858,7 @@ msgstr "Solicitar confirmación de lectura"
 msgid "Choose a Time…"
 msgstr "Elegir una hora…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2005
+#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2007
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1892
 msgid "Send Later"
 msgstr "Enviar más tarde"
@@ -7971,255 +7977,255 @@ msgstr "No se pudo crear una dirección enmascarada: {reason}"
 msgid "Scheduled to send {when}"
 msgstr "Programado para enviarse {when}"
 
-#: app/src/ui/composer/mod.rs:1594 app/src/ui/composer/mod.rs:2027
+#: app/src/ui/composer/mod.rs:1594 app/src/ui/composer/mod.rs:2029
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Elige un remitente e introduce un sufijo de dirección permitido."
 
-#: app/src/ui/composer/mod.rs:1764 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1766 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Cancelar envío"
 
-#: app/src/ui/composer/mod.rs:1917 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1919 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Enviando…"
 
-#: app/src/ui/composer/mod.rs:1957
+#: app/src/ui/composer/mod.rs:1959
 msgid "Attachment Missing?"
 msgstr "¿Falta un adjunto?"
 
-#: app/src/ui/composer/mod.rs:1959
+#: app/src/ui/composer/mod.rs:1961
 msgid "The message says “{sentence}” and carries no file."
 msgstr "El mensaje dice «{sentence}» y no lleva ningún archivo."
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "Add Attachment"
 msgstr "Añadir adjunto"
 
-#: app/src/ui/composer/mod.rs:1965
+#: app/src/ui/composer/mod.rs:1967
 msgid "Send Anyway"
 msgstr "Enviar de todos modos"
 
-#: app/src/ui/composer/mod.rs:1983
+#: app/src/ui/composer/mod.rs:1985
 msgid "Send Without Encryption?"
 msgstr "¿Enviar sin cifrar?"
 
-#: app/src/ui/composer/mod.rs:1985
+#: app/src/ui/composer/mod.rs:1987
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "Este mensaje iba a salir cifrado y no puede. {reason}"
 
-#: app/src/ui/composer/mod.rs:1991
+#: app/src/ui/composer/mod.rs:1993
 msgid "Send Readable"
 msgstr "Enviar legible"
 
-#: app/src/ui/composer/mod.rs:2006
+#: app/src/ui/composer/mod.rs:2008
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail lo envía a esta hora mientras se esté ejecutando, incluso en la "
 "bandeja del sistema."
 
-#: app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:2009
 msgid "Schedule"
 msgstr "Programar"
 
-#: app/src/ui/composer/mod.rs:2069
+#: app/src/ui/composer/mod.rs:2071
 msgid "Draft saved, encrypted to your own key"
 msgstr "Borrador guardado, cifrado con tu propia clave"
 
-#: app/src/ui/composer/mod.rs:2071
+#: app/src/ui/composer/mod.rs:2073
 msgid "Draft saved"
 msgstr "Borrador guardado"
 
-#: app/src/ui/composer/mod.rs:2107
+#: app/src/ui/composer/mod.rs:2109
 msgid "Save as Draft?"
 msgstr "¿Guardar como borrador?"
 
-#: app/src/ui/composer/mod.rs:2111
+#: app/src/ui/composer/mod.rs:2113
 msgid "Discard"
 msgstr "Descartar"
 
-#: app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2115
 msgid "Save Draft"
 msgstr "Guardar borrador"
 
-#: app/src/ui/composer/mod.rs:2154
+#: app/src/ui/composer/mod.rs:2156
 msgid "Attach Files"
 msgstr "Adjuntar archivos"
 
-#: app/src/ui/composer/mod.rs:2190
+#: app/src/ui/composer/mod.rs:2192
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2272
+#: app/src/ui/composer/mod.rs:2274
 msgid "Bold (Ctrl+B)"
 msgstr "Negrita (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2273
+#: app/src/ui/composer/mod.rs:2275
 msgid "Italic (Ctrl+I)"
 msgstr "Cursiva (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2276
+#: app/src/ui/composer/mod.rs:2278
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Tachado (Ctrl+Mayús+X)"
 
-#: app/src/ui/composer/mod.rs:2279
+#: app/src/ui/composer/mod.rs:2281
 msgid "Code (Ctrl+E)"
 msgstr "Código (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2316
+#: app/src/ui/composer/mod.rs:2318
 msgid "Link (Ctrl+K)"
 msgstr "Enlace (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2326
+#: app/src/ui/composer/mod.rs:2328
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Lista con viñetas (Ctrl+Mayús+8)"
 
-#: app/src/ui/composer/mod.rs:2331
+#: app/src/ui/composer/mod.rs:2333
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Lista numerada (Ctrl+Mayús+7)"
 
-#: app/src/ui/composer/mod.rs:2336
+#: app/src/ui/composer/mod.rs:2338
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Cita (Ctrl+Mayús+9)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2355
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Insertar imagen (Ctrl+Mayús+P)"
 
-#: app/src/ui/composer/mod.rs:2363
+#: app/src/ui/composer/mod.rs:2365
 msgid "Paragraph"
 msgstr "Párrafo"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2366
 msgid "Heading 1"
 msgstr "Título 1"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2367
 msgid "Heading 2"
 msgstr "Título 2"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2368
 msgid "Heading 3"
 msgstr "Título 3"
 
-#: app/src/ui/composer/mod.rs:2367
+#: app/src/ui/composer/mod.rs:2369
 msgid "Code Block"
 msgstr "Bloque de código"
 
-#: app/src/ui/composer/mod.rs:2381
+#: app/src/ui/composer/mod.rs:2383
 msgid "Turn Markdown into Formatting"
 msgstr "Convertir Markdown en formato"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Clear Formatting"
 msgstr "Quitar formato"
 
-#: app/src/ui/composer/mod.rs:2391
+#: app/src/ui/composer/mod.rs:2393
 msgid "Write in Markdown"
 msgstr "Escribir en Markdown"
 
-#: app/src/ui/composer/mod.rs:2398 app/src/ui/composer/mod.rs:2402
+#: app/src/ui/composer/mod.rs:2400 app/src/ui/composer/mod.rs:2404
 msgid "More Formatting"
 msgstr "Más formato"
 
-#: app/src/ui/composer/mod.rs:2439
+#: app/src/ui/composer/mod.rs:2441
 msgid "Add a Link"
 msgstr "Añadir un enlace"
 
-#: app/src/ui/composer/mod.rs:2445
+#: app/src/ui/composer/mod.rs:2447
 msgid "Text"
 msgstr "Texto"
 
-#: app/src/ui/composer/mod.rs:2457
+#: app/src/ui/composer/mod.rs:2459
 msgid "Add Link"
 msgstr "Añadir enlace"
 
-#: app/src/ui/composer/mod.rs:2493
+#: app/src/ui/composer/mod.rs:2495
 msgid "Markdown formatted"
 msgstr "Markdown con formato aplicado"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2611
 msgid "Pasted as rich text"
 msgstr "Pegado como texto enriquecido"
 
-#: app/src/ui/composer/mod.rs:2610
+#: app/src/ui/composer/mod.rs:2612
 msgid "Paste as Plain Text"
 msgstr "Pegar como texto sin formato"
 
-#: app/src/ui/composer/mod.rs:2644
+#: app/src/ui/composer/mod.rs:2646
 msgid "Editing as Markdown"
 msgstr "Editando como Markdown"
 
-#: app/src/ui/composer/mod.rs:2680
+#: app/src/ui/composer/mod.rs:2682
 msgid "Images"
 msgstr "Imágenes"
 
-#: app/src/ui/composer/mod.rs:2685
+#: app/src/ui/composer/mod.rs:2687
 msgid "Insert Image"
 msgstr "Insertar imagen"
 
-#: app/src/ui/composer/mod.rs:2729
+#: app/src/ui/composer/mod.rs:2731
 msgid "Could not read the file: {reason}"
 msgstr "No se ha podido leer el archivo: {reason}"
 
-#: app/src/ui/composer/mod.rs:2804
+#: app/src/ui/composer/mod.rs:2806
 msgid "Could not paste the image"
 msgstr "No se ha podido pegar la imagen"
 
-#: app/src/ui/composer/mod.rs:2849
+#: app/src/ui/composer/mod.rs:2851
 msgid "No Templates Yet"
 msgstr "Todavía no hay plantillas"
 
-#: app/src/ui/composer/mod.rs:2899
+#: app/src/ui/composer/mod.rs:2901
 msgid "Save as Template"
 msgstr "Guardar como plantilla"
 
-#: app/src/ui/composer/mod.rs:2901
+#: app/src/ui/composer/mod.rs:2903
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Los marcadores como {{first_name}} se rellenan cada vez que la usas."
 
-#: app/src/ui/composer/mod.rs:2924 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2926 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Ponle un nombre a la plantilla"
 
-#: app/src/ui/composer/mod.rs:2932
+#: app/src/ui/composer/mod.rs:2934
 msgid "Template saved"
 msgstr "Plantilla guardada"
 
-#: app/src/ui/composer/mod.rs:2935
+#: app/src/ui/composer/mod.rs:2937
 msgid "Template not saved: {reason}"
 msgstr "Plantilla no guardada: {reason}"
 
-#: app/src/ui/composer/mod.rs:3058
+#: app/src/ui/composer/mod.rs:3060
 msgid "This looks like Markdown"
 msgstr "Esto parece Markdown"
 
-#: app/src/ui/composer/mod.rs:3064
+#: app/src/ui/composer/mod.rs:3066
 msgid "Format"
 msgstr "Dar formato"
 
-#: app/src/ui/composer/mod.rs:3065
+#: app/src/ui/composer/mod.rs:3067
 msgid "Turn the Markdown into rich text"
 msgstr "Convertir el Markdown en texto enriquecido"
 
-#: app/src/ui/composer/mod.rs:3071 app/src/ui/composer/mod.rs:3075
+#: app/src/ui/composer/mod.rs:3073 app/src/ui/composer/mod.rs:3077
 msgid "Dismiss"
 msgstr "Descartar"
 
-#: app/src/ui/composer/mod.rs:3158
+#: app/src/ui/composer/mod.rs:3160
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "El borrador se guarda en este equipo, así que puedes terminarlo más tarde "
 "aquí."
 
-#: app/src/ui/composer/mod.rs:3162
+#: app/src/ui/composer/mod.rs:3164
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "El borrador se guarda en {provider}, así que puedes terminarlo más tarde en "
 "cualquier dispositivo."
 
-#: app/src/ui/composer/mod.rs:3166
+#: app/src/ui/composer/mod.rs:3168
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9720,10 +9726,15 @@ msgid "Signature"
 msgstr "Firma"
 
 #: app/src/ui/preferences.rs:586
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "La usan esta cuenta y las direcciones que no tienen firma propia. Admite "
 "Markdown. <email> se convierte en la dirección de envío, con su sufijo; "
@@ -10072,7 +10083,7 @@ msgstr "Idioma"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail muestra un idioma nuevo tras reiniciarse"
 
-#: app/src/ui/preferences.rs:1698 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1702 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Sin firma"
 
@@ -10596,9 +10607,13 @@ msgid "Custom Signature"
 msgstr "Firma personalizada"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "Admite Markdown. <email> se convierte en la dirección de envío, con su "
 "sufijo; <domain>, en su dominio."
@@ -13884,10 +13899,125 @@ msgstr "Marcar como correo deseado"
 msgid "Move to {folder}"
 msgstr "Mover a {folder}"
 
+#~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "La usan esta cuenta y las direcciones que no tienen firma propia. Admite "
+#~ "Markdown. <email> se convierte en la dirección de envío, con su sufijo; "
+#~ "<domain>, en su dominio."
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "Admite Markdown. <email> se convierte en la dirección de envío, con su "
+#~ "sufijo; <domain>, en su dominio."
+
+#~ msgid "Accounts whose server does not report its space are not listed."
+#~ msgstr "Las cuentas cuyo servidor no indica su espacio no aparecen aquí."
+
+#~ msgid ""
+#~ "Added below new messages and above quoted text in replies. Markdown works."
+#~ msgstr ""
+#~ "Se añaden debajo de los mensajes nuevos y encima del texto citado en las "
+#~ "respuestas. Admite Markdown."
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr ""
+#~ "Cuerpos del correo que has leído, guardados para abrirlos sin conexión"
+
+#~ msgid "Choose Now"
+#~ msgstr "Elegir ahora"
+
+#~ msgid "Choose how this account signs in to get new mail"
+#~ msgstr "Elige cómo inicia sesión esta cuenta para recibir correo nuevo"
+
+#~ msgid "Choose how {address} signs in to keep your mail arriving."
+#~ msgstr ""
+#~ "Elige cómo inicia sesión {address} para que siga llegando tu correo."
+
+#~ msgid "Choose…"
+#~ msgstr "Elegir…"
+
+#~ msgid "Contacts & Calendar"
+#~ msgstr "Contactos y calendario"
+
+#~ msgid "Could not send the receipt: {reason}"
+#~ msgstr "No se pudo enviar la confirmación: {reason}"
+
+#~ msgid ""
+#~ "Every control named for screen readers and reachable from the keyboard, "
+#~ "in American English, British English, French, German, Indonesian, "
+#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
+#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr ""
+#~ "Todos los controles tienen nombre para los lectores de pantalla y se "
+#~ "pueden usar con el teclado, en inglés americano, inglés británico, "
+#~ "francés, alemán, indonesio, italiano, japonés, coreano, polaco, ruso, "
+#~ "español, portugués europeo, chino simplificado, chino tradicional "
+#~ "(Taiwán), turco y vietnamita"
+
+#~ msgid "Get Every Feature"
+#~ msgstr "Obtener todas las funciones"
+
+#~ msgid "Hide My Email works with Gmail accounts."
+#~ msgstr "Ocultar mi correo funciona con cuentas de Gmail."
+
+#~ msgid "How much of its space each server says your mail takes"
+#~ msgstr "Cuánto de su espacio ocupa tu correo, según cada servidor"
+
+#~ msgid "Install Bubblewrap"
+#~ msgstr "Instalar Bubblewrap"
+
+#~ msgid "Later"
+#~ msgstr "Más tarde"
+
 #, fuzzy
 #~| msgid "Mailboxes"
 #~ msgid "Mailbox"
 #~ msgstr "Buzones"
+
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "Muévelo primero de la papelera a la bandeja de entrada"
+
+#~ msgid ""
+#~ "Moving the account is taking too long. It goes on after you close this "
+#~ "window."
+#~ msgstr ""
+#~ "Mover la cuenta está tardando demasiado. Seguirá después de que cierres "
+#~ "esta ventana."
+
+#~ msgid "Moving your account. This takes a moment."
+#~ msgstr "Moviendo tu cuenta. Tardará un momento."
+
+#~ msgid "No accounts yet"
+#~ msgstr "Todavía no hay cuentas"
+
+#~ msgid ""
+#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
+#~ "get your mail back. Nothing on this computer was lost."
+#~ msgstr ""
+#~ "Penguin Mail no puede obtener correo nuevo de {address}. Elige cómo "
+#~ "inicia sesión para recuperar tu correo. No se ha perdido nada en este "
+#~ "equipo."
+
+#~ msgid ""
+#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+#~ "account below to keep your mail arriving. Your mail and settings stay as "
+#~ "they are."
+#~ msgstr ""
+#~ "Penguin Mail tiene nuevas formas de iniciar sesión en Google. Elige una "
+#~ "para cada cuenta de Gmail de abajo para que siga llegando tu correo. Tu "
+#~ "correo y tus ajustes se quedan como están."
+
+#~ msgid ""
+#~ "Penguin Mail looks for these when you add an account. The login is the "
+#~ "account's own."
+#~ msgstr ""
+#~ "Penguin Mail los busca cuando añades una cuenta. El inicio de sesión es "
+#~ "el de la propia cuenta."
 
 #~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
@@ -13904,9 +14034,6 @@ msgstr "Mover a {folder}"
 #~ "Se ejecuta en un entorno aislado sin acceso a tu correo ni a tu carpeta "
 #~ "personal. {network} «Permitir siempre» cubre solo esta orden exacta."
 
-#~ msgid "Move it from the Trash to the Inbox first"
-#~ msgstr "Muévelo primero de la papelera a la bandeja de entrada"
-
 #~ msgid "Save to Downloads"
 #~ msgstr "Guardar en Descargas"
 
@@ -13916,9 +14043,26 @@ msgstr "Mover a {folder}"
 #~ msgid "Saved {file} to Downloads"
 #~ msgstr "{file} guardado en Descargas"
 
-#~ msgid "Bodies of mail you have read, kept for opening offline"
-#~ msgstr ""
-#~ "Cuerpos del correo que has leído, guardados para abrirlos sin conexión"
+#~ msgid "Send New Messages From"
+#~ msgstr "Enviar los mensajes nuevos desde"
+
+#~ msgid "Sender Addresses"
+#~ msgstr "Direcciones de remitente"
+
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "Sesión iniciada con el inicio de sesión de este equipo."
+
+#~ msgid "Stop using your own Google project"
+#~ msgstr "Dejar de usar tu propio proyecto de Google"
+
+#~ msgid "Switch {address} to this computer's sign-in?"
+#~ msgstr "¿Cambiar {address} al inicio de sesión de este equipo?"
+
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "Esta cuenta ya está pasando a su nuevo inicio de sesión."
+
+#~ msgid "Waiting for the account to switch to JMAP"
+#~ msgstr "Esperando a que la cuenta cambie a JMAP"
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
@@ -13926,18 +14070,6 @@ msgstr "Mover a {folder}"
 #~ msgstr ""
 #~ "Puede que tu organización no lo permita. Pregunta a tu administrador o "
 #~ "inicia sesión de otra forma."
-
-#~ msgid ""
-#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
-#~ "get your mail back. Nothing on this computer was lost."
-#~ msgstr ""
-#~ "Penguin Mail no puede obtener correo nuevo de {address}. Elige cómo "
-#~ "inicia sesión para recuperar tu correo. No se ha perdido nada en este "
-#~ "equipo."
-
-#~ msgid "Choose how {address} signs in to keep your mail arriving."
-#~ msgstr ""
-#~ "Elige cómo inicia sesión {address} para que siga llegando tu correo."
 
 #~ msgid ""
 #~ "{count} Gmail account can't get new mail. Choose how each signs in to get "
@@ -13960,110 +14092,9 @@ msgstr "Mover a {folder}"
 #~ msgstr[1] ""
 #~ "{count} cuentas de Gmail necesitan una nueva forma de iniciar sesión"
 
-#~ msgid "Choose…"
-#~ msgstr "Elegir…"
-
-#~ msgid "Moving your account. This takes a moment."
-#~ msgstr "Moviendo tu cuenta. Tardará un momento."
-
-#~ msgid ""
-#~ "Moving the account is taking too long. It goes on after you close this "
-#~ "window."
-#~ msgstr ""
-#~ "Mover la cuenta está tardando demasiado. Seguirá después de que cierres "
-#~ "esta ventana."
-
-#~ msgid ""
-#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-#~ "account below to keep your mail arriving. Your mail and settings stay as "
-#~ "they are."
-#~ msgstr ""
-#~ "Penguin Mail tiene nuevas formas de iniciar sesión en Google. Elige una "
-#~ "para cada cuenta de Gmail de abajo para que siga llegando tu correo. Tu "
-#~ "correo y tus ajustes se quedan como están."
-
-#~ msgid "Later"
-#~ msgstr "Más tarde"
-
-#~ msgid "Choose Now"
-#~ msgstr "Elegir ahora"
-
-#~ msgid ""
-#~ "Added below new messages and above quoted text in replies. Markdown works."
-#~ msgstr ""
-#~ "Se añaden debajo de los mensajes nuevos y encima del texto citado en las "
-#~ "respuestas. Admite Markdown."
-
-#~ msgid "Switch {address} to this computer's sign-in?"
-#~ msgstr "¿Cambiar {address} al inicio de sesión de este equipo?"
-
-#~ msgid "Stop using your own Google project"
-#~ msgstr "Dejar de usar tu propio proyecto de Google"
-
-#~ msgid "Get Every Feature"
-#~ msgstr "Obtener todas las funciones"
-
-#~ msgid "Choose how this account signs in to get new mail"
-#~ msgstr "Elige cómo inicia sesión esta cuenta para recibir correo nuevo"
-
-#~ msgid ""
-#~ "Every control named for screen readers and reachable from the keyboard, "
-#~ "in American English, British English, French, German, Indonesian, "
-#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
-#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
-#~ msgstr ""
-#~ "Todos los controles tienen nombre para los lectores de pantalla y se "
-#~ "pueden usar con el teclado, en inglés americano, inglés británico, "
-#~ "francés, alemán, indonesio, italiano, japonés, coreano, polaco, ruso, "
-#~ "español, portugués europeo, chino simplificado, chino tradicional "
-#~ "(Taiwán), turco y vietnamita"
-
-#~ msgid "Install Bubblewrap"
-#~ msgstr "Instalar Bubblewrap"
-
-#~ msgid "Send New Messages From"
-#~ msgstr "Enviar los mensajes nuevos desde"
-
-#~ msgid "Contacts & Calendar"
-#~ msgstr "Contactos y calendario"
-
-#~ msgid "No accounts yet"
-#~ msgstr "Todavía no hay cuentas"
-
-#~ msgid "How much of its space each server says your mail takes"
-#~ msgstr "Cuánto de su espacio ocupa tu correo, según cada servidor"
-
-#~ msgid "Accounts whose server does not report its space are not listed."
-#~ msgstr "Las cuentas cuyo servidor no indica su espacio no aparecen aquí."
-
-#~ msgid "Could not send the receipt: {reason}"
-#~ msgstr "No se pudo enviar la confirmación: {reason}"
-
-#~ msgid "Sender Addresses"
-#~ msgstr "Direcciones de remitente"
-
-#~ msgid "Waiting for the account to switch to JMAP"
-#~ msgstr "Esperando a que la cuenta cambie a JMAP"
-
-#~ msgid "Hide My Email works with Gmail accounts."
-#~ msgstr "Ocultar mi correo funciona con cuentas de Gmail."
-
 #~ msgid ""
 #~ "{provider} does not let an API token change the automatic reply. Change "
 #~ "it on {provider}'s website."
 #~ msgstr ""
 #~ "{provider} no permite que un token de API cambie la respuesta automática. "
 #~ "Cámbiela en el sitio web de {provider}."
-
-#~ msgid ""
-#~ "Penguin Mail looks for these when you add an account. The login is the "
-#~ "account's own."
-#~ msgstr ""
-#~ "Penguin Mail los busca cuando añades una cuenta. El inicio de sesión es "
-#~ "el de la propia cuenta."
-
-#~ msgid "This account is already moving to its new sign-in."
-#~ msgstr "Esta cuenta ya está pasando a su nuevo inicio de sesión."
-
-#~ msgid "Signed in with this computer's sign-in."
-#~ msgstr "Sesión iniciada con el inicio de sesión de este equipo."
