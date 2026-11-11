@@ -8,7 +8,13 @@
 //! text: it then decides both parts, HTML from the styled blocks and plain
 //! text stripped from the same blocks.
 
+mod html_signature;
 mod senders;
+
+pub use html_signature::{
+    HtmlSignature, expand as expand_html_signature, is_html as is_html_signature,
+    names_local_file as signature_names_local_file,
+};
 pub use senders::{Suffixes, reply_addresses, sender_address, sender_for};
 
 use mail_builder::MessageBuilder;
@@ -394,15 +400,50 @@ fn split_forwarded_html(html: &str) -> (String, Option<String>) {
 }
 
 /// Where the tag that opens the forwarded block starts: the first start
-/// tag whose class names [`FORWARD_MARK`].
-///
-/// The forwarded block has to come back byte for byte, so this needs the
-/// offset in `html`, which the tokenizer does not give. It reads the tags
-/// itself, stepping over quoted attribute values, comments and the text
-/// of scripts and styles, so a `<` or `>` inside any of them cannot move
-/// the cut, and the marker's name in the text is not taken for the tag.
+/// tag whose class names [`FORWARD_MARK`]. The forwarded block has to come
+/// back byte for byte, so this goes by [`start_tags`].
 fn forward_starts_at(html: &str) -> Option<usize> {
+    start_tags(html)
+        .find(|tag| {
+            let tag = &html[tag.clone()];
+            tag.contains(FORWARD_MARK) && has_class(tag, FORWARD_MARK)
+        })
+        .map(|tag| tag.start)
+}
+
+/// Where each start tag in `html` sits, in order.
+///
+/// The tokenizer gives no offsets in `html`, so this reads the tags itself,
+/// stepping over quoted attribute values, comments and the text inside
+/// scripts, styles, text areas and the other elements the tokenizer reads
+/// as text. A `<` or `>` inside any of them cannot move a tag, and a tag's
+/// name in the text is not taken for the tag. It follows the tokenizer in
+/// the common cases only, so read what a tag says with the tokenizer, from
+/// the slice this gives.
+fn start_tags(html: &str) -> impl Iterator<Item = std::ops::Range<usize>> + '_ {
     let mut at = 0;
+    std::iter::from_fn(move || {
+        let start = next_start_tag(html, at)?;
+        let end = start + tag_length(&html[start..]);
+        at = end;
+        let name = html[start + 1..end]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+        if mailrs_mime::html::holds_text(&name) {
+            let close = format!("</{name}");
+            at = html[at..]
+                .to_ascii_lowercase()
+                .find(&close)
+                .map_or(html.len(), |found| at + found);
+        }
+        Some(start..end)
+    })
+}
+
+/// Where the next start tag from `at` on begins, past any comment.
+fn next_start_tag(html: &str, mut at: usize) -> Option<usize> {
     while let Some(offset) = html[at..].find('<') {
         let start = at + offset;
         let rest = &html[start..];
@@ -414,25 +455,7 @@ fn forward_starts_at(html: &str) -> Option<usize> {
             at = start + 1;
             continue;
         }
-        let end = start + tag_length(rest);
-        let tag = &html[start..end];
-        let name: String = tag[1..]
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric())
-            .collect::<String>()
-            .to_ascii_lowercase();
-        if tag.contains(FORWARD_MARK) && has_class(tag, FORWARD_MARK) {
-            return Some(start);
-        }
-        at = end;
-        // A script's or a style's text is not markup.
-        if matches!(name.as_str(), "script" | "style") {
-            let close = format!("</{name}");
-            at = html[at..]
-                .to_ascii_lowercase()
-                .find(&close)
-                .map_or(html.len(), |found| at + found);
-        }
+        return Some(start);
     }
     None
 }
@@ -616,6 +639,10 @@ pub struct Draft {
     /// the writer turns it on for this message.
     #[serde(default)]
     pub receipt: bool,
+    /// The HTML signature that goes out in place of its text, while the
+    /// writer leaves that text as the composer put it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub html_signature: Option<HtmlSignature>,
 }
 
 /// When the composer hands a message over for sending.
@@ -650,6 +677,7 @@ impl Draft {
             encrypt: false,
             standard: Standard::default(),
             receipt: false,
+            html_signature: None,
         }
     }
 
@@ -1084,6 +1112,9 @@ fn references(original: &MessageMeta, thread: &[MessageMeta]) -> Vec<String> {
 
 /// Expands the sender tokens before Markdown reads the signature.
 pub fn expand_signature(template: &str, email: &str) -> String {
+    if let Some(signature) = html_signature::expand(template, email) {
+        return signature.shown;
+    }
     let domain = email.rsplit_once('@').map_or("", |(_, domain)| domain);
     let literal = |text: &str| text.replace("<email>", email).replace("<domain>", domain);
     let mut replacements = Vec::new();
@@ -1518,9 +1549,9 @@ pub async fn off_thread<T: Send + 'static>(
 
 /// The RFC 822 bytes for `draft`.
 pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
-    let (text, html) = written(draft, Purpose::Send);
+    let (text, html, pictures) = written(draft, Purpose::Send);
     envelope(draft, date_secs, message_id)
-        .body(body_tree(draft, text, html))
+        .body(body_tree(draft, text, html, &pictures))
         .write_to_vec()
         .map_err(|e| e.to_string())
 }
@@ -1570,9 +1601,9 @@ pub fn build_saved_draft(
     date_secs: i64,
     message_id: &str,
 ) -> Result<Vec<u8>, String> {
-    let (text, html) = written(draft, Purpose::Keep);
+    let (text, html, pictures) = written(draft, Purpose::Keep);
     envelope(draft, date_secs, message_id)
-        .body(body_tree(draft, text, html))
+        .body(body_tree(draft, text, html, &pictures))
         .write_to_vec()
         .map_err(|e| e.to_string())
 }
@@ -1591,10 +1622,10 @@ pub fn build_saved_body_part(draft: &Draft) -> Result<Vec<u8>, String> {
 }
 
 fn body_part(draft: &Draft, purpose: Purpose) -> Result<Vec<u8>, String> {
-    let (text, html) = written(draft, purpose);
+    let (text, html, pictures) = written(draft, purpose);
     let mut out = Vec::new();
     MessageBuilder::new()
-        .body(body_tree(draft, text, html))
+        .body(body_tree(draft, text, html, &pictures))
         .write_body(&mut out)
         .map_err(|e| e.to_string())?;
     Ok(out)
@@ -1652,18 +1683,34 @@ enum Purpose {
 /// with it unfolded and untouched. A draft kept in Gmail renders the words
 /// and the quote apart, with [`QUOTE_MARK`] between them, so reopening it
 /// can fold the quote again.
-fn written(draft: &Draft, purpose: Purpose) -> (String, String) {
+///
+/// A message going out with its HTML signature untouched carries that HTML
+/// where the signature's text stood, and the pictures it shows as parts.
+/// The text part keeps the text. A draft kept in Gmail keeps the text too,
+/// so it reopens the way the composer showed it.
+fn written(draft: &Draft, purpose: Purpose) -> (String, String, Vec<OutgoingAttachment>) {
     let (mut text, mut html) = written_body(
         &draft.markdown,
         draft.rich.as_ref(),
         draft.quoted.as_deref(),
         purpose,
     );
+    let mut pictures = Vec::new();
+    if purpose == Purpose::Send
+        && let Some(signature) = &draft.html_signature
+        && let Some((markdown, rich)) =
+            html_signature::marked(&draft.markdown, draft.rich.as_ref(), &signature.shown)
+    {
+        let (_, marked) = written_body(&markdown, rich.as_ref(), draft.quoted.as_deref(), purpose);
+        let (signature, found) = html_signature::with_inline_pictures(&signature.html);
+        html = html_signature::put(&marked, &signature);
+        pictures = found;
+    }
     if let Some(forwarded) = &draft.forwarded {
         text.push_str(&forwarded.to_plain());
         html.push_str(&forwarded.to_html());
     }
-    (text, html)
+    (text, html, pictures)
 }
 
 /// The HTML a message goes out with for these words and this folded
@@ -1750,7 +1797,12 @@ fn envelope<'a>(draft: &'a Draft, date_secs: i64, message_id: &str) -> MessageBu
 /// nowhere near everywhere else. A `multipart/mixed` around that holds the
 /// files the writer attached. Each wrapper appears only when it has
 /// something to hold.
-fn body_tree<'a>(draft: &'a Draft, text: String, html: String) -> MimePart<'a> {
+fn body_tree<'a>(
+    draft: &'a Draft,
+    text: String,
+    html: String,
+    pictures: &'a [OutgoingAttachment],
+) -> MimePart<'a> {
     let mut body = MimePart::new(
         "multipart/alternative",
         vec![
@@ -1766,6 +1818,7 @@ fn body_tree<'a>(draft: &'a Draft, text: String, html: String) -> MimePart<'a> {
                 .as_deref()
                 .is_some_and(|cid| draft.shows_image(cid))
         })
+        .chain(pictures)
         .collect();
     if !shown.is_empty() {
         let mut parts = Vec::with_capacity(shown.len() + 1);

@@ -46,7 +46,7 @@ pub(super) fn show(app: &Rc<App>, parent: &impl IsA<gtk::Widget>, account: &str,
         .set_text(settings.signature_text(account, email));
     crate::ui::name(&text, &title);
     let help = gettext(
-        "Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
+        "Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
     );
     crate::ui::describe(&text, &title, &help);
     let scroll = gtk::ScrolledWindow::builder()

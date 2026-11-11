@@ -1214,11 +1214,11 @@ msgstr "Tải hình ảnh từ xa cho người gửi biết khi bạn mở thư.
 msgid "Change the setting {name} to {value}?"
 msgstr "Đổi cài đặt {name} thành {value}?"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "Xóa chữ ký cho {account}?"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1228,7 +1228,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1800
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
@@ -1236,15 +1236,15 @@ msgstr ""
 "Ẩn email của tôi cần địa chỉ ẩn hoặc nhãn, nhưng {provider} không cung cấp "
 "cả hai cho tài khoản này."
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1868
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "Tắt {address}? Thư gửi đến địa chỉ này sẽ vào Thùng rác."
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1872
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "Bật lại {address}? Thư gửi đến địa chỉ này sẽ lại được nhận."
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1981
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1252,7 +1252,7 @@ msgstr ""
 "Chuyển thư từ {sender} vào {category} trong {account} và chuyển cả thư sau "
 "này của họ vào đó?"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1993
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -2096,33 +2096,39 @@ msgstr "Ưu tiên"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail tiếp tục đồng bộ khi không có cửa sổ nào mở"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "Thêm ít nhất một người nhận."
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "“{address}” không phải địa chỉ email."
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "Chọn thời gian trong tương lai"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "Vào {date}, {sender} đã viết:"
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} đã viết:"
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail không thể tạo thư."
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "Danh sách không cung cấp một địa chỉ duy nhất để gửi thư."
+
+#: app/src/compose/html_signature.rs:168
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "Chữ ký"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -4011,8 +4017,8 @@ msgstr ""
 "Chưa lưu thư nháp. Thư mã hóa được lưu trong Thư nháp với mã hóa bằng khóa "
 "của bạn nhưng máy tính này không có khóa hay chứng chỉ cho {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2095
-#: app/src/ui/composer/mod.rs:2098
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2097
+#: app/src/ui/composer/mod.rs:2100
 msgid "That account is not connected."
 msgstr "Tài khoản đó chưa kết nối."
 
@@ -4140,7 +4146,7 @@ msgstr "Mã hóa tiêu chuẩn (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Không mã hóa khi truyền"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2195
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2197
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} tệp đính kèm"
@@ -5052,8 +5058,8 @@ msgstr "Sao chép liên kết"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1990 app/src/ui/composer/mod.rs:2112
-#: app/src/ui/composer/mod.rs:2456 app/src/ui/composer/mod.rs:2910
+#: app/src/ui/composer/mod.rs:1992 app/src/ui/composer/mod.rs:2114
+#: app/src/ui/composer/mod.rs:2458 app/src/ui/composer/mod.rs:2912
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
@@ -5457,7 +5463,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1925
+#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1927
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Gửi"
@@ -5619,7 +5625,7 @@ msgid "No models found."
 msgstr "Không tìm thấy mô hình."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2235
+#: app/src/ui/composer/mod.rs:2237
 msgid "Remove {file}"
 msgstr "Xóa {file}"
 
@@ -5659,7 +5665,7 @@ msgid "Edit {server}"
 msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2231 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2233 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
 msgid "Remove"
 msgstr "Xóa"
@@ -5700,7 +5706,7 @@ msgstr ""
 "thiết lập môi trường. URL kết nối tới máy chủ qua HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2905 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2907 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Tên"
@@ -5736,7 +5742,7 @@ msgstr "Thử"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2910
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2912
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
@@ -7630,7 +7636,7 @@ msgstr "Yêu cầu xác nhận đã đọc"
 msgid "Choose a Time…"
 msgstr "Chọn thời gian…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2005
+#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2007
 #: app/src/ui/sidebar.rs:1256
 msgid "Send Later"
 msgstr "Gửi sau"
@@ -7749,254 +7755,254 @@ msgstr "Không thể tạo địa chỉ ẩn: {reason}"
 msgid "Scheduled to send {when}"
 msgstr "Đã lên lịch gửi {when}"
 
-#: app/src/ui/composer/mod.rs:1594 app/src/ui/composer/mod.rs:2027
+#: app/src/ui/composer/mod.rs:1594 app/src/ui/composer/mod.rs:2029
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Chọn người gửi và nhập hậu tố địa chỉ được phép."
 
-#: app/src/ui/composer/mod.rs:1764 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1766 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Hủy gửi"
 
-#: app/src/ui/composer/mod.rs:1917 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1919 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Đang gửi…"
 
-#: app/src/ui/composer/mod.rs:1957
+#: app/src/ui/composer/mod.rs:1959
 msgid "Attachment Missing?"
 msgstr "Thiếu tệp đính kèm?"
 
-#: app/src/ui/composer/mod.rs:1959
+#: app/src/ui/composer/mod.rs:1961
 msgid "The message says “{sentence}” and carries no file."
 msgstr "Thư ghi “{sentence}” nhưng không kèm tệp."
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "Add Attachment"
 msgstr "Thêm tệp đính kèm"
 
-#: app/src/ui/composer/mod.rs:1965
+#: app/src/ui/composer/mod.rs:1967
 msgid "Send Anyway"
 msgstr "Vẫn gửi"
 
-#: app/src/ui/composer/mod.rs:1983
+#: app/src/ui/composer/mod.rs:1985
 msgid "Send Without Encryption?"
 msgstr "Gửi không mã hóa?"
 
-#: app/src/ui/composer/mod.rs:1985
+#: app/src/ui/composer/mod.rs:1987
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "Thư này được dự định gửi có mã hóa nhưng không thể mã hóa. {reason}"
 
-#: app/src/ui/composer/mod.rs:1991
+#: app/src/ui/composer/mod.rs:1993
 msgid "Send Readable"
 msgstr "Gửi dạng đọc được"
 
-#: app/src/ui/composer/mod.rs:2006
+#: app/src/ui/composer/mod.rs:2008
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail gửi vào thời gian này khi ứng dụng chạy, kể cả trong khay hệ "
 "thống."
 
-#: app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:2009
 msgid "Schedule"
 msgstr "Lên lịch"
 
-#: app/src/ui/composer/mod.rs:2069
+#: app/src/ui/composer/mod.rs:2071
 msgid "Draft saved, encrypted to your own key"
 msgstr "Đã lưu thư nháp, mã hóa bằng khóa của bạn"
 
-#: app/src/ui/composer/mod.rs:2071
+#: app/src/ui/composer/mod.rs:2073
 msgid "Draft saved"
 msgstr "Đã lưu thư nháp"
 
-#: app/src/ui/composer/mod.rs:2107
+#: app/src/ui/composer/mod.rs:2109
 msgid "Save as Draft?"
 msgstr "Lưu làm thư nháp?"
 
-#: app/src/ui/composer/mod.rs:2111
+#: app/src/ui/composer/mod.rs:2113
 msgid "Discard"
 msgstr "Bỏ"
 
-#: app/src/ui/composer/mod.rs:2113
+#: app/src/ui/composer/mod.rs:2115
 msgid "Save Draft"
 msgstr "Lưu thư nháp"
 
-#: app/src/ui/composer/mod.rs:2154
+#: app/src/ui/composer/mod.rs:2156
 msgid "Attach Files"
 msgstr "Đính kèm tệp"
 
-#: app/src/ui/composer/mod.rs:2190
+#: app/src/ui/composer/mod.rs:2192
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2272
+#: app/src/ui/composer/mod.rs:2274
 msgid "Bold (Ctrl+B)"
 msgstr "Đậm (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2273
+#: app/src/ui/composer/mod.rs:2275
 msgid "Italic (Ctrl+I)"
 msgstr "Nghiêng (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2276
+#: app/src/ui/composer/mod.rs:2278
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Gạch ngang (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2279
+#: app/src/ui/composer/mod.rs:2281
 msgid "Code (Ctrl+E)"
 msgstr "Mã (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2316
+#: app/src/ui/composer/mod.rs:2318
 msgid "Link (Ctrl+K)"
 msgstr "Liên kết (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2326
+#: app/src/ui/composer/mod.rs:2328
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Danh sách dấu đầu dòng (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2331
+#: app/src/ui/composer/mod.rs:2333
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Danh sách đánh số (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2336
+#: app/src/ui/composer/mod.rs:2338
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Trích dẫn (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2355
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Chèn hình ảnh (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2363
+#: app/src/ui/composer/mod.rs:2365
 msgid "Paragraph"
 msgstr "Đoạn văn"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2366
 msgid "Heading 1"
 msgstr "Tiêu đề 1"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2367
 msgid "Heading 2"
 msgstr "Tiêu đề 2"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2368
 msgid "Heading 3"
 msgstr "Tiêu đề 3"
 
-#: app/src/ui/composer/mod.rs:2367
+#: app/src/ui/composer/mod.rs:2369
 msgid "Code Block"
 msgstr "Khối mã"
 
-#: app/src/ui/composer/mod.rs:2381
+#: app/src/ui/composer/mod.rs:2383
 msgid "Turn Markdown into Formatting"
 msgstr "Chuyển Markdown thành văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Clear Formatting"
 msgstr "Xóa định dạng"
 
-#: app/src/ui/composer/mod.rs:2391
+#: app/src/ui/composer/mod.rs:2393
 msgid "Write in Markdown"
 msgstr "Viết bằng Markdown"
 
-#: app/src/ui/composer/mod.rs:2398 app/src/ui/composer/mod.rs:2402
+#: app/src/ui/composer/mod.rs:2400 app/src/ui/composer/mod.rs:2404
 msgid "More Formatting"
 msgstr "Thêm định dạng"
 
-#: app/src/ui/composer/mod.rs:2439
+#: app/src/ui/composer/mod.rs:2441
 msgid "Add a Link"
 msgstr "Thêm liên kết"
 
-#: app/src/ui/composer/mod.rs:2445
+#: app/src/ui/composer/mod.rs:2447
 msgid "Text"
 msgstr "Văn bản"
 
-#: app/src/ui/composer/mod.rs:2457
+#: app/src/ui/composer/mod.rs:2459
 msgid "Add Link"
 msgstr "Thêm liên kết"
 
-#: app/src/ui/composer/mod.rs:2493
+#: app/src/ui/composer/mod.rs:2495
 msgid "Markdown formatted"
 msgstr "Đã định dạng Markdown"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2611
 msgid "Pasted as rich text"
 msgstr "Đã dán dưới dạng văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:2610
+#: app/src/ui/composer/mod.rs:2612
 msgid "Paste as Plain Text"
 msgstr "Dán dưới dạng văn bản thuần"
 
-#: app/src/ui/composer/mod.rs:2644
+#: app/src/ui/composer/mod.rs:2646
 msgid "Editing as Markdown"
 msgstr "Đang sửa bằng Markdown"
 
-#: app/src/ui/composer/mod.rs:2680
+#: app/src/ui/composer/mod.rs:2682
 msgid "Images"
 msgstr "Hình ảnh"
 
-#: app/src/ui/composer/mod.rs:2685
+#: app/src/ui/composer/mod.rs:2687
 msgid "Insert Image"
 msgstr "Chèn hình ảnh"
 
-#: app/src/ui/composer/mod.rs:2729
+#: app/src/ui/composer/mod.rs:2731
 msgid "Could not read the file: {reason}"
 msgstr "Không thể đọc tệp: {reason}"
 
-#: app/src/ui/composer/mod.rs:2804
+#: app/src/ui/composer/mod.rs:2806
 msgid "Could not paste the image"
 msgstr "Không thể dán hình ảnh"
 
-#: app/src/ui/composer/mod.rs:2849
+#: app/src/ui/composer/mod.rs:2851
 msgid "No Templates Yet"
 msgstr "Chưa có mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2899
+#: app/src/ui/composer/mod.rs:2901
 msgid "Save as Template"
 msgstr "Lưu làm mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2901
+#: app/src/ui/composer/mod.rs:2903
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Các chỗ giữ chỗ như {{first_name}} được điền mỗi khi bạn dùng mẫu."
 
-#: app/src/ui/composer/mod.rs:2924 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2926 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Đặt tên cho mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2932
+#: app/src/ui/composer/mod.rs:2934
 msgid "Template saved"
 msgstr "Đã lưu mẫu thư"
 
-#: app/src/ui/composer/mod.rs:2935
+#: app/src/ui/composer/mod.rs:2937
 msgid "Template not saved: {reason}"
 msgstr "Chưa lưu mẫu thư: {reason}"
 
-#: app/src/ui/composer/mod.rs:3058
+#: app/src/ui/composer/mod.rs:3060
 msgid "This looks like Markdown"
 msgstr "Nội dung này có vẻ là Markdown"
 
-#: app/src/ui/composer/mod.rs:3064
+#: app/src/ui/composer/mod.rs:3066
 msgid "Format"
 msgstr "Định dạng"
 
-#: app/src/ui/composer/mod.rs:3065
+#: app/src/ui/composer/mod.rs:3067
 msgid "Turn the Markdown into rich text"
 msgstr "Chuyển Markdown thành văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:3071 app/src/ui/composer/mod.rs:3075
+#: app/src/ui/composer/mod.rs:3073 app/src/ui/composer/mod.rs:3077
 msgid "Dismiss"
 msgstr "Bỏ qua"
 
-#: app/src/ui/composer/mod.rs:3158
+#: app/src/ui/composer/mod.rs:3160
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Thư nháp được giữ trên máy tính này để bạn có thể hoàn tất sau tại đây."
 
-#: app/src/ui/composer/mod.rs:3162
+#: app/src/ui/composer/mod.rs:3164
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Thư nháp được giữ trong {provider} để bạn có thể hoàn tất sau trên mọi thiết "
 "bị."
 
-#: app/src/ui/composer/mod.rs:3166
+#: app/src/ui/composer/mod.rs:3168
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9484,10 +9490,15 @@ msgid "Signature"
 msgstr "Chữ ký"
 
 #: app/src/ui/preferences.rs:651
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "Dùng cho tài khoản này và các địa chỉ không có chữ ký riêng. Hỗ trợ "
 "Markdown. <email> trở thành địa chỉ gửi, kể cả hậu tố; <domain> trở thành "
@@ -9823,7 +9834,7 @@ msgstr "Ngôn ngữ"
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail hiển thị ngôn ngữ mới sau khi khởi động lại"
 
-#: app/src/ui/preferences.rs:1763 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1767 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Không có chữ ký"
 
@@ -10339,9 +10350,13 @@ msgid "Custom Signature"
 msgstr "Chữ ký tùy chỉnh"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "Hỗ trợ Markdown. <email> trở thành địa chỉ gửi, kể cả hậu tố; <domain> trở "
 "thành tên miền của nó."
@@ -13358,6 +13373,107 @@ msgid "Move to {folder}"
 msgstr "Chuyển vào {folder}"
 
 #~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "Dùng cho tài khoản này và các địa chỉ không có chữ ký riêng. Hỗ trợ "
+#~ "Markdown. <email> trở thành địa chỉ gửi, kể cả hậu tố; <domain> trở thành "
+#~ "tên miền của nó."
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "Hỗ trợ Markdown. <email> trở thành địa chỉ gửi, kể cả hậu tố; <domain> "
+#~ "trở thành tên miền của nó."
+
+#~ msgid "Accounts whose server does not report its space are not listed."
+#~ msgstr "Không liệt kê tài khoản có máy chủ không báo dung lượng."
+
+#~ msgid ""
+#~ "Added below new messages and above quoted text in replies. Markdown works."
+#~ msgstr ""
+#~ "Thêm dưới thư mới và trên văn bản trích dẫn khi trả lời. Hỗ trợ Markdown."
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr "Nội dung thư đã đọc, được giữ để mở khi ngoại tuyến"
+
+#~ msgid "Choose Now"
+#~ msgstr "Chọn ngay"
+
+#~ msgid "Choose how this account signs in to get new mail"
+#~ msgstr "Hãy chọn cách tài khoản này đăng nhập để nhận thư mới"
+
+#~ msgid "Choose how {address} signs in to keep your mail arriving."
+#~ msgstr "Hãy chọn cách {address} đăng nhập để thư tiếp tục được gửi đến."
+
+#~ msgid "Choose…"
+#~ msgstr "Chọn…"
+
+#~ msgid "Contacts & Calendar"
+#~ msgstr "Danh bạ và lịch"
+
+#~ msgid "Could not send the receipt: {reason}"
+#~ msgstr "Không thể gửi xác nhận: {reason}"
+
+#~ msgid ""
+#~ "Every control named for screen readers and reachable from the keyboard, "
+#~ "in American English, British English, French, German, Indonesian, "
+#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
+#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr ""
+#~ "Mọi điều khiển đều có tên cho trình đọc màn hình và sử dụng được bằng bàn "
+#~ "phím, bằng tiếng Anh Mỹ, tiếng Anh Anh, tiếng Pháp, tiếng Đức, tiếng "
+#~ "Indonesia, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng Nga, tiếng "
+#~ "Tây Ban Nha, tiếng Bồ Đào Nha châu Âu, tiếng Trung giản thể, tiếng Trung "
+#~ "phồn thể (Đài Loan), tiếng Thổ Nhĩ Kỳ và tiếng Việt"
+
+#~ msgid "Get Every Feature"
+#~ msgstr "Nhận mọi tính năng"
+
+#~ msgid "How much of its space each server says your mail takes"
+#~ msgstr "Dung lượng thư theo báo cáo của từng máy chủ"
+
+#~ msgid "Install Bubblewrap"
+#~ msgstr "Cài đặt Bubblewrap"
+
+#~ msgid "Later"
+#~ msgstr "Để sau"
+
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "Đưa thư từ Thùng rác về Hộp thư đến trước"
+
+#~ msgid ""
+#~ "Moving the account is taking too long. It goes on after you close this "
+#~ "window."
+#~ msgstr ""
+#~ "Việc chuyển tài khoản đang mất quá nhiều thời gian. Quá trình này vẫn "
+#~ "tiếp tục sau khi bạn đóng cửa sổ này."
+
+#~ msgid "Moving your account. This takes a moment."
+#~ msgstr "Đang chuyển tài khoản của bạn. Việc này mất một chút thời gian."
+
+#~ msgid "No accounts yet"
+#~ msgstr "Chưa có tài khoản"
+
+#~ msgid ""
+#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
+#~ "get your mail back. Nothing on this computer was lost."
+#~ msgstr ""
+#~ "Penguin Mail không thể nhận thư mới cho {address}. Hãy chọn cách đăng "
+#~ "nhập để lấy lại thư. Không có gì trên máy tính này bị mất."
+
+#~ msgid ""
+#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+#~ "account below to keep your mail arriving. Your mail and settings stay as "
+#~ "they are."
+#~ msgstr ""
+#~ "Penguin Mail có những cách mới để đăng nhập vào Google. Hãy chọn một cách "
+#~ "cho mỗi tài khoản Gmail bên dưới để thư tiếp tục được gửi đến. Thư và cài "
+#~ "đặt của bạn vẫn giữ nguyên."
+
+#~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
 #~ "\n"
 #~ "{command}\n"
@@ -13372,9 +13488,6 @@ msgstr "Chuyển vào {folder}"
 #~ "Lệnh chạy trong môi trường cách ly, không truy cập được thư hay thư mục "
 #~ "nhà của bạn. {network} Luôn cho phép chỉ áp dụng cho đúng lệnh này."
 
-#~ msgid "Move it from the Trash to the Inbox first"
-#~ msgstr "Đưa thư từ Thùng rác về Hộp thư đến trước"
-
 #~ msgid "Save to Downloads"
 #~ msgstr "Lưu vào Tải xuống"
 
@@ -13384,8 +13497,27 @@ msgstr "Chuyển vào {folder}"
 #~ msgid "Saved {file} to Downloads"
 #~ msgstr "Đã lưu {file} vào Tải xuống"
 
-#~ msgid "Bodies of mail you have read, kept for opening offline"
-#~ msgstr "Nội dung thư đã đọc, được giữ để mở khi ngoại tuyến"
+#~ msgid "Send New Messages From"
+#~ msgstr "Gửi thư mới từ"
+
+#~ msgid "Sender Addresses"
+#~ msgstr "Địa chỉ người gửi"
+
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "Đã đăng nhập bằng đăng nhập của máy tính này."
+
+#~ msgid "Stop using your own Google project"
+#~ msgstr "Ngừng dùng dự án Google của riêng bạn"
+
+#~ msgid "Switch {address} to this computer's sign-in?"
+#~ msgstr "Chuyển {address} sang đăng nhập của máy tính này?"
+
+#~ msgid ""
+#~ "The receipt was not sent, and Penguin Mail will not try again: {reason}"
+#~ msgstr "Chưa gửi xác nhận và Penguin Mail sẽ không thử lại: {reason}"
+
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "Tài khoản này đang chuyển sang cách đăng nhập mới."
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
@@ -13393,16 +13525,6 @@ msgstr "Chuyển vào {folder}"
 #~ msgstr ""
 #~ "Tổ chức của bạn có thể không cho phép điều này. Hãy hỏi quản trị viên, "
 #~ "hoặc đăng nhập bằng cách khác."
-
-#~ msgid ""
-#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
-#~ "get your mail back. Nothing on this computer was lost."
-#~ msgstr ""
-#~ "Penguin Mail không thể nhận thư mới cho {address}. Hãy chọn cách đăng "
-#~ "nhập để lấy lại thư. Không có gì trên máy tính này bị mất."
-
-#~ msgid "Choose how {address} signs in to keep your mail arriving."
-#~ msgstr "Hãy chọn cách {address} đăng nhập để thư tiếp tục được gửi đến."
 
 #~ msgid ""
 #~ "{count} Gmail account can't get new mail. Choose how each signs in to get "
@@ -13417,94 +13539,3 @@ msgstr "Chuyển vào {folder}"
 #~ msgid "{count} Gmail account needs a new way to sign in"
 #~ msgid_plural "{count} Gmail accounts need a new way to sign in"
 #~ msgstr[0] "{count} tài khoản Gmail cần một cách đăng nhập mới"
-
-#~ msgid "Choose…"
-#~ msgstr "Chọn…"
-
-#~ msgid "Moving your account. This takes a moment."
-#~ msgstr "Đang chuyển tài khoản của bạn. Việc này mất một chút thời gian."
-
-#~ msgid ""
-#~ "Moving the account is taking too long. It goes on after you close this "
-#~ "window."
-#~ msgstr ""
-#~ "Việc chuyển tài khoản đang mất quá nhiều thời gian. Quá trình này vẫn "
-#~ "tiếp tục sau khi bạn đóng cửa sổ này."
-
-#~ msgid ""
-#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-#~ "account below to keep your mail arriving. Your mail and settings stay as "
-#~ "they are."
-#~ msgstr ""
-#~ "Penguin Mail có những cách mới để đăng nhập vào Google. Hãy chọn một cách "
-#~ "cho mỗi tài khoản Gmail bên dưới để thư tiếp tục được gửi đến. Thư và cài "
-#~ "đặt của bạn vẫn giữ nguyên."
-
-#~ msgid "Later"
-#~ msgstr "Để sau"
-
-#~ msgid "Choose Now"
-#~ msgstr "Chọn ngay"
-
-#~ msgid ""
-#~ "Added below new messages and above quoted text in replies. Markdown works."
-#~ msgstr ""
-#~ "Thêm dưới thư mới và trên văn bản trích dẫn khi trả lời. Hỗ trợ Markdown."
-
-#~ msgid "Switch {address} to this computer's sign-in?"
-#~ msgstr "Chuyển {address} sang đăng nhập của máy tính này?"
-
-#~ msgid "Stop using your own Google project"
-#~ msgstr "Ngừng dùng dự án Google của riêng bạn"
-
-#~ msgid "Get Every Feature"
-#~ msgstr "Nhận mọi tính năng"
-
-#~ msgid "Choose how this account signs in to get new mail"
-#~ msgstr "Hãy chọn cách tài khoản này đăng nhập để nhận thư mới"
-
-#~ msgid "Install Bubblewrap"
-#~ msgstr "Cài đặt Bubblewrap"
-
-#~ msgid "Send New Messages From"
-#~ msgstr "Gửi thư mới từ"
-
-#~ msgid "Contacts & Calendar"
-#~ msgstr "Danh bạ và lịch"
-
-#~ msgid "No accounts yet"
-#~ msgstr "Chưa có tài khoản"
-
-#~ msgid "How much of its space each server says your mail takes"
-#~ msgstr "Dung lượng thư theo báo cáo của từng máy chủ"
-
-#~ msgid "Accounts whose server does not report its space are not listed."
-#~ msgstr "Không liệt kê tài khoản có máy chủ không báo dung lượng."
-
-#~ msgid "Could not send the receipt: {reason}"
-#~ msgstr "Không thể gửi xác nhận: {reason}"
-
-#~ msgid ""
-#~ "The receipt was not sent, and Penguin Mail will not try again: {reason}"
-#~ msgstr "Chưa gửi xác nhận và Penguin Mail sẽ không thử lại: {reason}"
-
-#~ msgid "Sender Addresses"
-#~ msgstr "Địa chỉ người gửi"
-
-#~ msgid ""
-#~ "Every control named for screen readers and reachable from the keyboard, "
-#~ "in American English, British English, French, German, Indonesian, "
-#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
-#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
-#~ msgstr ""
-#~ "Mọi điều khiển đều có tên cho trình đọc màn hình và sử dụng được bằng bàn "
-#~ "phím, bằng tiếng Anh Mỹ, tiếng Anh Anh, tiếng Pháp, tiếng Đức, tiếng "
-#~ "Indonesia, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng Nga, tiếng "
-#~ "Tây Ban Nha, tiếng Bồ Đào Nha châu Âu, tiếng Trung giản thể, tiếng Trung "
-#~ "phồn thể (Đài Loan), tiếng Thổ Nhĩ Kỳ và tiếng Việt"
-
-#~ msgid "This account is already moving to its new sign-in."
-#~ msgstr "Tài khoản này đang chuyển sang cách đăng nhập mới."
-
-#~ msgid "Signed in with this computer's sign-in."
-#~ msgstr "Đã đăng nhập bằng đăng nhập của máy tính này."

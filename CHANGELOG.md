@@ -8,6 +8,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### New
 
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
+- Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 
 ### Improved

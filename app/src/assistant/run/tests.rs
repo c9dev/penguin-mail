@@ -1020,6 +1020,21 @@ async fn set_signature_asks_with_the_new_text() {
 }
 
 #[tokio::test]
+async fn set_signature_refuses_html_that_sends_a_file_from_this_computer() {
+    let h = harness().await;
+    let refused = h
+        .run(
+            "set_signature",
+            json!({"account": ME, "text": "<div><img src=\"/home/dana/Pictures/passport.jpg\"></div>"}),
+        )
+        .await
+        .unwrap_err();
+    assert!(refused.contains("data: or https:"), "{refused}");
+    assert!(h.asked().questions.is_empty(), "nothing is put to the user");
+    assert!(h.asked().changes.is_empty());
+}
+
+#[tokio::test]
 async fn get_settings_reports_every_value_with_its_choices() {
     let h = harness().await;
     let settings = h.ok("get_settings", json!({})).await;
