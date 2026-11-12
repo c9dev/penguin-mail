@@ -1444,6 +1444,16 @@ impl MainWindow {
             .await
             .map(|ids| ids.into_iter().collect())
             .unwrap_or_default();
+        // The sidebar leaves out what the account hides, such as an IMAP
+        // folder nobody subscribes to; everything else here still knows it.
+        let data = data
+            .into_iter()
+            .map(|(account, labels)| {
+                let hidden = app.hidden_labels(account.id);
+                let shown = labels.into_iter().filter(|l| !hidden.contains(&l.id));
+                (account, shown.collect())
+            })
+            .collect();
         let (data, extras) = self.arrange(data, &settings, not_downloading, self.core.switchable());
         // Each IMAP account is looked at once a run; finding a JMAP
         // session for one rebuilds its row with Switch to JMAP.
@@ -2510,46 +2520,75 @@ impl MainWindow {
                 }
                 _ => None,
             });
-        for label in &labels {
-            let row = gtk::Box::builder().spacing(10).build();
-            let check = gtk::Image::from_icon_name("object-select-symbolic");
-            check.set_opacity(if applied.contains(&label.id) {
-                1.0
-            } else {
-                0.0
-            });
-            row.append(&check);
-            row.append(
-                &gtk::Label::builder()
-                    .label(shown_name(&label.name))
-                    .xalign(0.0)
-                    .build(),
-            );
-            let row = gtk::ListBoxRow::builder()
-                .child(&row)
-                .activatable(true)
-                .build();
-            if filing == Filing::Folders
-                && source.as_ref().is_some_and(|source| match source {
-                    mailrs_domain::MailSet::Mailbox(id) => *id == label.id,
-                    mailrs_domain::MailSet::Role(role) => label.role == Some(*role),
-                    _ => false,
-                })
-            {
-                row.set_sensitive(false);
+        let applied = Rc::new(applied);
+        let row_of = {
+            let applied = Rc::clone(&applied);
+            move |label: &Label| {
+                let row = gtk::Box::builder().spacing(10).build();
+                let check = gtk::Image::from_icon_name("object-select-symbolic");
+                check.set_opacity(if applied.contains(&label.id) {
+                    1.0
+                } else {
+                    0.0
+                });
+                row.append(&check);
+                row.append(
+                    &gtk::Label::builder()
+                        .label(shown_name(&label.name))
+                        .xalign(0.0)
+                        .build(),
+                );
+                let row = gtk::ListBoxRow::builder()
+                    .child(&row)
+                    .activatable(true)
+                    .build();
+                if filing == Filing::Folders
+                    && source.as_ref().is_some_and(|source| match source {
+                        mailrs_domain::MailSet::Mailbox(id) => *id == label.id,
+                        mailrs_domain::MailSet::Role(role) => label.role == Some(*role),
+                        _ => false,
+                    })
+                {
+                    row.set_sensitive(false);
+                }
+                // The tick beside the name is drawn at zero opacity when the
+                // label is off, which says nothing out loud.
+                crate::ui::name(
+                    &row,
+                    &label_row_name(&label.name, applied.contains(&label.id)),
+                );
+                row
             }
-            // The tick beside the name is drawn at zero opacity when the
-            // label is off, which says nothing out loud.
-            crate::ui::name(
-                &row,
-                &label_row_name(&label.name, applied.contains(&label.id)),
-            );
-            list.append(&row);
-        }
+        };
+        // The sidebar's hidden folders, such as IMAP folders nobody
+        // subscribes to, stay out of the list until a search names them.
+        let hidden = self
+            .app
+            .upgrade()
+            .map(|app| app.hidden_labels(account_id))
+            .unwrap_or_default();
+        let searchable = !hidden.is_empty();
+        let labels = Rc::new(labels);
+        let rows: Rc<RefCell<Vec<Label>>> = Rc::default();
+        let fill = {
+            let (list, labels, rows) = (list.clone(), Rc::clone(&labels), Rc::clone(&rows));
+            move |query: &str| {
+                list.remove_all();
+                let found: Vec<Label> = organize::picked(&labels, &hidden, query)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                for label in &found {
+                    list.append(&row_of(label));
+                }
+                *rows.borrow_mut() = found;
+            }
+        };
+        fill("");
         let (weak, pop) = (Rc::downgrade(self), popover.clone());
         list.connect_row_activated(move |_, row| {
-            let (Some(win), Some(label)) = (weak.upgrade(), labels.get(row.index() as usize))
-            else {
+            let Some(win) = weak.upgrade() else { return };
+            let Some(label) = rows.borrow().get(row.index() as usize).cloned() else {
                 return;
             };
             pop.popdown();
@@ -2564,6 +2603,24 @@ impl MainWindow {
                 follow.as_ref(),
             );
         });
+        if searchable {
+            let search = gtk::SearchEntry::builder()
+                .placeholder_text(gettext("Search all folders"))
+                .margin_top(6)
+                .margin_start(6)
+                .margin_end(6)
+                .build();
+            crate::ui::name(&search, &gettext("Search all folders"));
+            search.connect_search_changed(move |search| fill(&search.text()));
+            // Enter takes the first folder found.
+            let first = list.clone();
+            search.connect_activate(move |_| {
+                if let Some(row) = first.row_at_index(0) {
+                    row.emit_activate();
+                }
+            });
+            content.append(&search);
+        }
         let scroller = gtk::ScrolledWindow::builder()
             .child(&list)
             .hscrollbar_policy(gtk::PolicyType::Never)
@@ -3563,6 +3620,12 @@ impl MainWindow {
         with_account(
             "account-switch-jmap",
             Box::new(|win, account| win.switch_to_jmap(account)),
+        );
+        with_account(
+            "account-manage-folders",
+            Box::new(|win, account| {
+                crate::ui::manage_folders::present(&win.core, &win.window, account)
+            }),
         );
         with_account(
             "account-not-downloading",

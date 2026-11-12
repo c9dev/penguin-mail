@@ -21,6 +21,7 @@ fn gmail_settings() -> ImapSettings {
         provider_name: "Gmail".into(),
         files_sent_mail: true,
         window_days: crate::DEFAULT_WINDOW_DAYS,
+        all_folders: false,
     }
 }
 
