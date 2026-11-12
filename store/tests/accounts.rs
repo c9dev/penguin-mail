@@ -41,10 +41,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 68);
+    assert_eq!(schema_version(&conn).unwrap(), 69);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 68);
+    assert_eq!(schema_version(&conn).unwrap(), 69);
 }
 
 #[test]

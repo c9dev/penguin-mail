@@ -109,6 +109,8 @@ pub struct Listed {
     /// `\Noselect` or `\NonExistent`: a parent in the tree that holds no
     /// mail and cannot be selected.
     pub no_select: bool,
+    /// The person subscribes to it, as LSUB or LIST's `\Subscribed` says.
+    pub subscribed: bool,
 }
 
 impl Listed {
@@ -125,7 +127,14 @@ impl Listed {
             delimiter,
             special_use,
             no_select,
+            subscribed: false,
         }
+    }
+
+    /// The same mailbox, subscribed or not.
+    pub fn subscribed(mut self, subscribed: bool) -> Self {
+        self.subscribed = subscribed;
+        self
     }
 }
 
