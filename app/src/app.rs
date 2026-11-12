@@ -1469,6 +1469,30 @@ impl App {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             while let Ok(event) = this.core.events.recv().await {
+                if let ChangeEvent::LabelsPlaced {
+                    account_id,
+                    moved,
+                    order,
+                } = &event
+                {
+                    let id = *account_id;
+                    match this
+                        .core
+                        .db
+                        .read(move |c| mailrs_store::accounts::account(c, id))
+                        .await
+                    {
+                        Ok(Some(account)) => {
+                            let mut layout = this.settings().sidebar;
+                            layout.placed(&account.email, moved, order);
+                            this.change_settings(Change::Sidebar(layout));
+                        }
+                        Ok(None) => {}
+                        Err(error) => {
+                            tracing::error!(%error, "could not update mailbox customization after a folder move")
+                        }
+                    }
+                }
                 this.unread.heard(&event);
                 this.storage.heard(&event);
                 this.tell_window(Notice::Engine(&event));

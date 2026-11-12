@@ -4,6 +4,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
+**Smart unread count**: a smart mailbox's optional count of unread messages, not conversations. Local mode counts downloaded messages once across overlapping folders, so mail outside the sync window can be missing. Server mode asks each matching account in the background and shows a count only when all have answered. Gmail, IMAP, Gmail over IMAP and JMAP support it for conditions their servers can express; unsupported searches and offline accounts show an unavailable count. Answers expire after a minute or a local mail change. Hidden is the default. `smart::UnreadCount`, `mailbox::smart_counts`.
+
 **Delivery address**: an address from Delivered-To, X-Original-To or a Received for clause, kept with body provenance. It can explain delivery through a mailing list or blind copy when To/Cc omit the reader. Reply selection uses only a configured sender, an enabled suffix or a known masked address; headers never authorize a new sending identity. `mailrs_mime::delivery`.
 
 **Toolbar layout**: the saved order of conversation header buttons. Customize Toolbar chooses, reorders and restores them; narrow windows keep secondary actions in More. `ui::toolbar`.
@@ -58,7 +60,9 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Press**: one use of a mail button, a key, a menu item or a drop on a sidebar mailbox, and the plan it comes to: the targets, the mail action and whether Undo keeps it, whether the window moves on first, the question before erasing, the toast's words, or what Delete calls off in Send Later and the Outbox. `ui::window::press::plan` reads the reach, the mailbox and whether the press covers what is shown, rows carried by a drag, or one message, and `press::carry_out` makes the plan happen through `PressEffects`, which the window stands behind and the tests fake. `press::trash_words` words the Delete button from the same table in each mailbox. _Avoid_: click, command, handler.
 
-**Favorites**: the first section of the mail sidebar: All Inboxes, VIPs, Flagged with a row per flag colour in use, and Follow Up. The unified mailboxes that follow sit under Mailboxes, and each account's own under Accounts. `mailrs::ui::sidebar::sections::LAYOUT`. _Avoid_: pinned, starred mailboxes.
+**Favorites**: the first section of the mail sidebar. It starts with All Inboxes, VIPs when present, Flagged with a row per flag colour in use, and Follow Up. A person can add other mailboxes, reorder them and give each a name independent of its name under Mailboxes or Accounts. `mailrs::settings::SidebarLayout`, `mailrs::ui::sidebar`. _Avoid_: pinned, starred mailboxes.
+
+**Sidebar layout**: which sidebar sections, account headings and mailbox rows a person shows, plus their order. Hiding a mailbox in its ordinary section does not remove it from Favorites. `mailrs::settings::SidebarLayout`. _Avoid_: mailbox sync settings.
 
 **Mailbox**: one choice in the sidebar, and what the thread list then shows: a standard mailbox in one account or across all, a person's label, a mail set with no row of its own that the assistant asks for by name, a folder, a search, a smart mailbox, a flag colour, VIP mail, Follow Up, Remind Me, Send Later, or the Outbox. `mailrs_sync::Mailbox`. _Avoid_: view, source, box.
 
@@ -70,7 +74,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Mailbox on screen**: the mailbox the main window lists, the one a search goes back to when it closes, the inbox category, and the list feed that loads its rows. `ui::window::on_screen::OnScreen`. The sidebar, the search bar, a notification, a deleted label and a settings change each make one transition on it, and every transition answers with a `Redraw` naming what it left stale, such as the selection, the title, the buttons that hang on the mailbox, and a first page to list, which the listing run carries out. A conversation in a window of its own keeps the mailbox it was opened from instead. _Avoid_: current mailbox, view state, navigation.
 
-**Smart mailbox**: conditions saved in Preferences that become a query tree, such as "from Ann" and "newer than 7 days". Gmail receives the tree as a search. `mailrs_domain::SmartMailbox`. _Avoid_: saved search, filter.
+**Smart mailbox**: conditions saved in Preferences that become a query tree, such as "from Ann", "newer than 7 days" or "in any of these folders". A folder condition combines its chosen folders with OR and keeps each folder’s account; the account choice limits where the query runs. Older folder choices without an account still apply to every account in scope. `mailrs_domain::SmartMailbox`. Deleting a conversation from a smart mailbox on a folder account asks before also trashing Sent messages that match its query. Consent names those messages, keeps Undo, and can be remembered or reset for that smart mailbox alone. _Avoid_: saved search, filter.
 
 **Listing**: one page of a mailbox, with its rows, its unread count, the title and subtitle the header shows, and what an empty list should say. `mailrs_sync::Mailboxes` produces it for the window and the assistant alike, so only it knows which mailboxes the store answers and which Gmail does. _Avoid_: result, page, query.
 
@@ -495,5 +499,7 @@ The sidebar places nested folders under the server mailbox whose role it knows, 
 **List filter**: temporary conditions that narrow the current message list to unread rows, flagged rows, or rows with attachments. Selected conditions all apply, and follow the reader between mailboxes until cleared or the window closes. Grouped rows match the conversation; ungrouped rows match one message. Stored lists filter before paging; server pages keep their unfiltered cursor so More remains usable even when a page has no matches. `mailrs_domain::ListFilter`.
 
 **Analysis chat**: a fresh assistant conversation started by Summarize or Explain with only the displayed mail's loaded text. Tools and web search are disabled by default, including for follow-up questions, until New Chat. The Safety preference can allow tools when a new analysis chat starts. `mailrs::assistant::chat::Chat::analyze`. _Avoid_: read-only agent, safe mode.
+
+Mailbox placements report their committed old-to-new IDs and sibling order through `ChangeEvent::LabelsPlaced`. The app applies them to saved sidebar keys before refreshing folders, including placements made by the assistant.
 
 **Pull to check for mail**: an optional touchpad overscroll at the top of the message list. Reading preferences enable it, off by default. A pull must travel 140 logical pixels over at least 350 milliseconds at the top; reversing direction or leaving the top resets both. It runs the same Check for Mail action as the menu. `ui::thread_list::pull`.

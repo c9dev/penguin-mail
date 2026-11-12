@@ -207,6 +207,8 @@ async fn delete_label_without_a_provider_name_names_the_account() {
 
 fn smart(id: &str, name: &str, from: &str) -> SmartMailbox {
     SmartMailbox {
+        trash_sent_without_asking: false,
+        unread_count: Default::default(),
         id: id.into(),
         name: name.into(),
         account: None,
@@ -216,6 +218,24 @@ fn smart(id: &str, name: &str, from: &str) -> SmartMailbox {
             value: from.into(),
         }],
     }
+}
+
+#[tokio::test]
+async fn scoped_smart_folders_keep_their_conditions_without_a_global_search_string() {
+    let h = harness().await;
+    let mut mailbox = smart("scoped", "Work folders", "");
+    let value = json!([{"account": ME, "mailbox": "role:inbox"}]).to_string();
+    mailbox.conditions = vec![Condition {
+        field: Field::InMailbox,
+        value: value.clone(),
+    }];
+    h.desk.0.borrow_mut().settings.smart_mailboxes = vec![mailbox];
+    let listed = h.ok("list_smart_mailboxes", json!({})).await;
+    assert!(listed["smart_mailboxes"][0]["query"].is_null());
+    assert_eq!(
+        listed["smart_mailboxes"][0]["conditions"][0]["value"],
+        value
+    );
 }
 
 #[tokio::test]

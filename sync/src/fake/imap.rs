@@ -1052,7 +1052,7 @@ impl ImapApi for FakeImap {
             let found: Vec<u32> = m
                 .messages
                 .iter()
-                .filter(|(uid, message)| query.matches(**uid, highest, message))
+                .filter(|(uid, message)| query.matches(**uid, highest, message, mailbox))
                 .map(|(uid, _)| *uid)
                 .collect();
             s.answered += found.len() as u64;
@@ -1748,7 +1748,13 @@ mod search {
         /// Whether message `uid` matches, in a mailbox whose highest UID
         /// is `highest`: a UID set that runs to `*` names that message
         /// even when its UID is below the set's start (RFC 3501).
-        pub(super) fn matches(&self, uid: u32, highest: u32, message: &FakeMessage) -> bool {
+        pub(super) fn matches(
+            &self,
+            uid: u32,
+            highest: u32,
+            message: &FakeMessage,
+            mailbox: &str,
+        ) -> bool {
             let has = |needle: &str, hay: &str| hay.to_lowercase().contains(&needle.to_lowercase());
             let day =
                 || DateTime::from_timestamp_millis(message.internal_date).map(|d| d.date_naive());
@@ -1801,35 +1807,86 @@ mod search {
                     .is_some_and(|g| g.labels.iter().any(|l| l.eq_ignore_ascii_case(label))),
                 Key::GmMsgid(id) => message.gmail.as_ref().is_some_and(|g| g.msgid == *id),
                 Key::GmThrid(id) => message.gmail.as_ref().is_some_and(|g| g.thrid == *id),
-                Key::GmRaw(text) => gm_raw_matches(text, message),
-                Key::Not(inner) => !inner.matches(uid, highest, message),
+                Key::GmRaw(text) => gm_raw_matches(text, message, mailbox),
+                Key::Not(inner) => !inner.matches(uid, highest, message, mailbox),
                 Key::Or(left, right) => {
-                    left.matches(uid, highest, message) || right.matches(uid, highest, message)
+                    left.matches(uid, highest, message, mailbox)
+                        || right.matches(uid, highest, message, mailbox)
                 }
-                Key::And(all) => all.iter().all(|k| k.matches(uid, highest, message)),
+                Key::And(all) => all
+                    .iter()
+                    .all(|k| k.matches(uid, highest, message, mailbox)),
             }
         }
     }
 }
 
-/// Gmail's search box on the few operators the tests use: `in:inbox`,
-/// `category:<tab>`, `label:<name>` with Gmail's spelling of the name, and
-/// plain words in the subject. Anything else matches.
-fn gm_raw_matches(text: &str, message: &FakeMessage) -> bool {
+/// The same Gmail query evaluator as the HTTP fake, with IMAP's labels and flags.
+fn gm_raw_matches(text: &str, message: &FakeMessage, mailbox: &str) -> bool {
     let Some(g) = message.gmail.as_ref() else {
         return false;
     };
-    let spell = |name: &str| name.to_lowercase().replace([' ', '/'], "-");
-    let subject = Fetched::from_header(0, &message.raw).subject.to_lowercase();
-    text.split_whitespace()
-        .all(|term| match term.split_once(':') {
-            Some(("in", "inbox")) => g.labels.contains("\\Inbox"),
-            Some(("category", tab)) => g.category.as_deref() == Some(tab),
-            Some(("-category", tab)) => g.category.as_deref() != Some(tab),
-            Some(("label", name)) => g.labels.iter().any(|l| spell(l) == spell(name)),
-            Some(_) => true,
-            None => subject.contains(&term.to_lowercase()),
+    let mut labels: Vec<String> = g
+        .labels
+        .iter()
+        .filter_map(|label| {
+            Some(
+                match label.as_str() {
+                    "\\Inbox" => "INBOX",
+                    "\\Sent" => "SENT",
+                    "\\Draft" => "DRAFT",
+                    "\\Important" => "IMPORTANT",
+                    "\\Starred" => "STARRED",
+                    other if other.starts_with('\\') => return None,
+                    other => other,
+                }
+                .to_string(),
+            )
         })
+        .collect();
+    match mailbox {
+        "[Gmail]/Trash" => labels.push("TRASH".into()),
+        "[Gmail]/Spam" => labels.push("SPAM".into()),
+        _ => {}
+    }
+    if !message.flags.contains("\\Seen") {
+        labels.push("UNREAD".into());
+    }
+    if message.flags.contains("\\Flagged") {
+        labels.push("STARRED".into());
+    }
+    if let Some(tab) = &g.category {
+        labels.push(if tab == "primary" {
+            "CATEGORY_PERSONAL".into()
+        } else {
+            format!("CATEGORY_{}", tab.to_uppercase())
+        });
+    }
+    let names: Vec<_> = labels
+        .iter()
+        .map(|label| mailrs_gmail::RemoteLabel {
+            id: label.clone(),
+            name: label.clone(),
+            kind: None,
+            color: None,
+        })
+        .collect();
+    let mut meta = super::meta(
+        "query",
+        "query",
+        message.internal_date,
+        &labels.iter().map(String::as_str).collect::<Vec<_>>(),
+    );
+    let header = Fetched::from_header(0, &message.raw);
+    meta.subject = header.subject;
+    meta.from = header.from;
+    meta.to = header.to;
+    meta.cc = header.cc;
+    meta.rfc822_msgid = header.message_id;
+    meta.has_attachments = header.mixed;
+    meta.size = message.raw.len() as i64;
+    meta.snippet = String::from_utf8_lossy(&message.raw).into_owned();
+    super::query::Query::parse(text).matches(&meta, &names, Utc::now().timestamp_millis())
 }
 
 /// An SMTP submission server that keeps what it is handed.

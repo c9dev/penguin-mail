@@ -303,6 +303,10 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, inbox_ids())
     }
 
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        forward_all!(AnyMail, self, count_query(query))
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,
