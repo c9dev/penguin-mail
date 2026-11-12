@@ -237,6 +237,34 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         Ok(Backfill { refs, next })
     }
 
+    pub(in crate::services::imap) async fn gm_count(
+        &self,
+        query: &mailrs_domain::query::Query,
+    ) -> Result<i64, BackendError> {
+        use mailrs_domain::{MailSet, Role};
+        let boxes = self.gm_synced().await?;
+        let text = mailrs_gmail::query::print(query);
+        let keys = format!("{} UNDELETED", gm_raw(&text)?);
+        let mut mailboxes = vec![&boxes.all];
+        if query.asks_for(&MailSet::Role(Role::Junk)) {
+            mailboxes.push(&boxes.spam);
+        }
+        if query.asks_for(&MailSet::Role(Role::Trash)) {
+            mailboxes.push(&boxes.trash);
+        }
+        let mut ids = std::collections::HashSet::new();
+        for mailbox in mailboxes {
+            let (validity, uids) = self.gm_matching(mailbox, &keys).await?;
+            ids.extend(
+                self.gm_refs(mailbox, validity, &uids)
+                    .await?
+                    .into_iter()
+                    .map(|hit| hit.id),
+            );
+        }
+        Ok(ids.len() as i64)
+    }
+
     /// A search in Gmail's syntax, run by Gmail. A tree prints as the text
     /// the folders and smart mailboxes sent before they became trees.
     pub(in crate::services::imap) async fn gm_search(
@@ -249,18 +277,68 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             SearchQuery::Tree(tree) => mailrs_gmail::query::print(tree),
         };
         let boxes = self.gm_synced().await?;
-        let mailbox = if names_term(text, "in:trash") {
-            &boxes.trash
-        } else if names_term(text, "in:spam") {
-            &boxes.spam
-        } else {
-            &boxes.all
+        let includes = |role, term| match query {
+            SearchQuery::Tree(tree) => tree.asks_for(&mailrs_domain::MailSet::Role(role)),
+            SearchQuery::Native(_) => names_term(text, term) || names_term(text, "in:anywhere"),
         };
+        let mut mailboxes = vec![&boxes.all];
+        if includes(mailrs_domain::Role::Junk, "in:spam") {
+            mailboxes.push(&boxes.spam);
+        }
+        if includes(mailrs_domain::Role::Trash, "in:trash") {
+            mailboxes.push(&boxes.trash);
+        }
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
         let keys = format!("{} UNDELETED", gm_raw(text)?);
-        let selected = self.select(mailbox, None).await?;
-        let top = self.top_uid(mailbox, &selected).await?;
-        let uids = self.newest_matching(mailbox, &keys, top, limit).await?;
-        self.gm_refs(mailbox, selected.uidvalidity, &uids).await
+        if mailboxes.len() == 1 {
+            let mailbox = mailboxes[0];
+            let selected = self.select(mailbox, None).await?;
+            let top = self.top_uid(mailbox, &selected).await?;
+            let uids = self.newest_matching(mailbox, &keys, top, limit).await?;
+            return self.gm_refs(mailbox, selected.uidvalidity, &uids).await;
+        }
+        let mut found = Vec::new();
+        for mailbox in mailboxes {
+            // Moving old mail gives it a new UID, so compare dates before limiting either location.
+            let (uidvalidity, uids) = self.gm_matching(mailbox, &keys).await?;
+            for chunk in uids.chunks(BATCH_LIMIT) {
+                let set = UidSet::from_uids(chunk.iter().copied());
+                for fetched in self.api.gmail_headers(mailbox, &set).await? {
+                    if keywords::is_deleted(&fetched.flags) {
+                        continue;
+                    }
+                    let Some(gmail) = fetched.gmail else {
+                        continue;
+                    };
+                    found.push((
+                        fetched.internal_date.unwrap_or_default(),
+                        RemoteRef {
+                            id: gmail.id(),
+                            thread_id: gmail.thread_id(),
+                        },
+                        Location {
+                            mailbox: mailbox.clone(),
+                            uidvalidity,
+                            uid: fetched.uid,
+                        },
+                    ));
+                }
+                found.sort_unstable_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.id.cmp(&a.1.id)));
+                let mut seen = std::collections::HashSet::new();
+                found.retain(|(_, hit, _)| seen.insert(hit.id.clone()));
+                found.truncate(limit);
+            }
+        }
+        let mut known = self.known();
+        Ok(found
+            .into_iter()
+            .map(|(_, hit, at)| {
+                known.places.put(hit.id.clone(), at);
+                hit
+            })
+            .collect())
     }
 
     /// The message of Sent with Message-ID `message_id`, by hex id.
@@ -507,8 +585,8 @@ fn names_term(text: &str, term: &str) -> bool {
     }
     words.push(word);
     words.iter().any(|w| {
-        w.trim_start_matches('(')
-            .trim_end_matches(')')
+        w.trim_start_matches(['(', '{'])
+            .trim_end_matches([')', '}'])
             .eq_ignore_ascii_case(term)
     })
 }
@@ -521,6 +599,8 @@ mod tests {
     fn a_search_names_trash_only_as_a_word_of_its_own() {
         assert!(names_term("from:ann in:trash", "in:trash"));
         assert!(names_term("(IN:TRASH)", "in:trash"));
+        assert!(names_term("{in:inbox in:trash}", "in:trash"));
+        assert!(names_term("{in:spam in:inbox}", "in:spam"));
         assert!(!names_term("from:ann -in:trash", "in:trash"));
         assert!(!names_term("subject:\"in:trash please\"", "in:trash"));
     }

@@ -391,6 +391,10 @@ impl<J: JmapApi> MailBackend for Jmap<J> {
         self.folder_page(mailbox, cursor, limit, true).await
     }
 
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        self.count_matches(query).await
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,

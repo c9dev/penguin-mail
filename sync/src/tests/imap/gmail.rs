@@ -492,3 +492,101 @@ async fn a_gmail_account_offers_no_label_colours() {
     assert!(h.sync.services().offers().labels);
     assert!(!h.sync.services().offers().label_colors);
 }
+
+#[tokio::test]
+async fn exact_count_includes_each_requested_gmail_location_once() {
+    use mailrs_domain::query::{Query, Term};
+    use mailrs_domain::{MailSet, Role};
+    let imap = FakeImap::gmail();
+    imap.deliver_gmail(
+        &["\\Inbox", "Work"],
+        message("a", "Inbox", ""),
+        days_ago(400),
+    );
+    let trash = imap.deliver_gmail(&[], message("b", "Trash", ""), days_ago(400));
+    imap.remote_trash(trash);
+    let (_, adapter) = adapter_on(imap);
+    let folders = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Trash)),
+        Query::term(Term::MailboxNamed("Work".into())),
+    ]);
+    assert_eq!(
+        adapter
+            .count_query(&Query::And(vec![folders, Query::term(Term::Unread)]))
+            .await
+            .unwrap(),
+        2
+    );
+}
+
+#[tokio::test]
+async fn folder_unions_search_all_selected_gmail_locations_once() {
+    use mailrs_domain::{MailSet, Role, query::Query};
+    let imap = FakeImap::gmail();
+    let inbox = imap.deliver_gmail(
+        &["\\Inbox"],
+        message("union-inbox", "Invoice", ""),
+        days_ago(2),
+    );
+    let trash = imap.deliver_gmail(&[], message("union-trash", "Invoice", ""), days_ago(1));
+    imap.remote_trash(trash);
+    let (imap, adapter) = adapter_on(imap);
+    // A second location for one ID must not duplicate the search result.
+    imap.with(|state| {
+        let copy = state.mailboxes[ALL_MAIL]
+            .messages
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        let target = state.mailboxes.get_mut(TRASH).unwrap();
+        target.messages.insert(target.uidnext, copy);
+        target.uidnext += 1;
+    });
+    let query = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Trash)),
+    ]);
+    for search in [
+        SearchQuery::Tree(query.clone()),
+        SearchQuery::Native("{in:inbox in:trash}".into()),
+    ] {
+        let refs = adapter.search(&search, 10).await.unwrap();
+        let ids: std::collections::BTreeSet<_> = refs.iter().map(|r| r.id.clone()).collect();
+        assert_eq!(ids, [hex(inbox), hex(trash)].into());
+        assert_eq!(refs.len(), 2);
+        let limited = adapter.search(&search, 1).await.unwrap();
+        assert_eq!(limited.len(), 1);
+        assert_eq!(limited[0].id, hex(trash));
+        let fetched = adapter
+            .fetch(vec![crate::services::Want::message(&limited[0].id)])
+            .await
+            .unwrap();
+        assert_eq!(fetched.metas.len(), 1);
+        assert_eq!(fetched.metas[0].id, hex(trash));
+        assert!(adapter.search(&search, 0).await.unwrap().is_empty());
+    }
+    assert_eq!(adapter.count_query(&query).await.unwrap(), 2);
+    imap.with(|state| {
+        let messages = std::mem::take(&mut state.mailboxes.get_mut(TRASH).unwrap().messages);
+        let spam = state.mailboxes.get_mut("[Gmail]/Spam").unwrap();
+        spam.uidnext = messages.keys().max().copied().unwrap() + 1;
+        spam.messages = messages;
+    });
+    let query = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Junk)),
+    ]);
+    for search in [
+        SearchQuery::Tree(query),
+        SearchQuery::Native("{in:inbox in:spam}".into()),
+        SearchQuery::Native("in:anywhere".into()),
+    ] {
+        let found = adapter.search(&search, 10).await.unwrap();
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().any(|r| r.id == hex(trash)));
+        assert_eq!(adapter.search(&search, 1).await.unwrap()[0].id, hex(trash));
+    }
+    assert_eq!(imap.calls_to("body"), 0);
+}

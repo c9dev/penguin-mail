@@ -538,3 +538,5 @@ impl ImapHarness {
         }
     }
 }
+
+mod smart_counts;
