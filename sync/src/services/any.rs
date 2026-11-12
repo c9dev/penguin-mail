@@ -236,6 +236,29 @@ impl AnyMail {
         }
     }
 
+    /// Every folder on the server with whether the person subscribes to
+    /// it. Only an IMAP account keeps subscriptions; any other answers
+    /// that it cannot.
+    pub async fn folder_subscriptions(
+        &self,
+    ) -> Result<Vec<super::imap::FolderSubscription>, BackendError> {
+        match self {
+            AnyMail::Imap(adapter) => adapter.subscriptions().await,
+            _ => Err(BackendError::Refused(
+                "this account keeps no folder subscriptions".into(),
+            )),
+        }
+    }
+
+    pub async fn set_folder_subscribed(&self, id: &str, on: bool) -> Result<(), BackendError> {
+        match self {
+            AnyMail::Imap(adapter) => adapter.set_subscribed(id, on).await,
+            _ => Err(BackendError::Refused(
+                "this account keeps no folder subscriptions".into(),
+            )),
+        }
+    }
+
     /// The services an organization refused a Microsoft account this run.
     /// No other provider learns of such a refusal.
     pub fn refused(&self) -> Refused {

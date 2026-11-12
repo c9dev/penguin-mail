@@ -1069,11 +1069,11 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr ""
 "Continuar abre la página de inicio de sesión de {provider} en el navegador."
 
-#: app/src/app.rs:424
+#: app/src/app.rs:428
 msgid "Could not mark all mail as read: {reason}"
 msgstr "No se pudo marcar todo el correo como leído: {reason}"
 
-#: app/src/app.rs:471
+#: app/src/app.rs:475
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -2277,12 +2277,12 @@ msgstr ""
 
 #: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
 #: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1639
+#: app/src/core.rs:1417 app/src/core.rs:1669
 msgid "Demo mode cannot add real accounts."
 msgstr "El modo de demostración no puede añadir cuentas reales."
 
-#: app/src/core.rs:982 app/src/core.rs:1663 app/src/core.rs:1704
-#: app/src/core.rs:1960
+#: app/src/core.rs:982 app/src/core.rs:1693 app/src/core.rs:1734
+#: app/src/core.rs:1990
 msgid "Canceled."
 msgstr "Cancelado."
 
@@ -2292,22 +2292,22 @@ msgstr ""
 "Esta cuenta no guarda ninguna contraseña que acepte un servidor de "
 "calendario o de contactos."
 
-#: app/src/core.rs:1708
+#: app/src/core.rs:1738
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Elimina los buzones compartidos de esta cuenta antes de eliminar su cuenta "
 "de inicio de sesión."
 
-#: app/src/core.rs:1886 app/src/core.rs:1986
+#: app/src/core.rs:1916 app/src/core.rs:2016
 msgid "The demo cannot switch accounts."
 msgstr "El modo de demostración no puede cambiar cuentas."
 
-#: app/src/core.rs:1940
+#: app/src/core.rs:1970
 msgid "The demo cannot connect a calendar."
 msgstr "La demostración no puede conectar un calendario."
 
-#: app/src/core.rs:2006
+#: app/src/core.rs:2036
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Se ha dejado de esperar al navegador tras cinco minutos."
 
@@ -4184,8 +4184,8 @@ msgstr "Esa cuenta no está conectada."
 msgid "Could not save: {reason}"
 msgstr "No se ha podido guardar: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2937
-#: app/src/ui/window.rs:2960
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2994
+#: app/src/ui/window.rs:3017
 msgid "Could not open the draft: {reason}"
 msgstr "No se ha podido abrir el borrador: {reason}"
 
@@ -4450,7 +4450,7 @@ msgid "Set up a different project"
 msgstr "Configurar otro proyecto"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3290
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3347
 msgid "Set up your own Google project"
 msgstr "Configurar tu propio proyecto de Google"
 
@@ -4593,7 +4593,7 @@ msgstr "{host} ha rechazado el inicio de sesión: {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:445 app/src/ui/sidebar.rs:496
-#: app/src/ui/sidebar.rs:1789 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1793 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Calendario"
 
@@ -4617,7 +4617,7 @@ msgstr "En el servidor"
 
 #: app/src/settings/mod.rs:225 app/src/settings/mod.rs:434
 #: app/src/settings/mod.rs:836 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1086
+#: app/src/ui/preferences.rs:1089
 msgid "Off"
 msgstr "Desactivado"
 
@@ -4633,8 +4633,8 @@ msgstr "API de Anthropic"
 msgid "Claude Subscription"
 msgstr "Suscripción a Claude"
 
-#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3676
-#: app/src/ui/window.rs:3764
+#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3739
+#: app/src/ui/window.rs:3827
 msgid "Assistant"
 msgstr "Asistente"
 
@@ -5011,7 +5011,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] "{count} mensaje sin leer"
 msgstr[1] "{count} mensajes sin leer"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1813
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1817
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} mensaje sin leer"
@@ -5035,7 +5035,7 @@ msgstr "Abrir Penguin Mail"
 msgid "New Message"
 msgstr "Mensaje nuevo"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2406 app/src/ui/window.rs:3682
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2410 app/src/ui/window.rs:3745
 msgid "Check for Mail"
 msgstr "Comprobar el correo"
 
@@ -5049,11 +5049,11 @@ msgstr "Novedades de la versión {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1146 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1149 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Buscar actualizaciones"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3703
+#: app/src/tray.rs:266 app/src/ui/window.rs:3766
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Salir"
@@ -5074,7 +5074,7 @@ msgstr "Novedades"
 msgid "Website"
 msgstr "Sitio web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3702
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3765
 msgid "Donate"
 msgstr "Donar"
 
@@ -5082,7 +5082,7 @@ msgstr "Donar"
 msgid "License"
 msgstr "Licencia"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3701
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3764
 msgid "About Penguin Mail"
 msgstr "Acerca de Penguin Mail"
 
@@ -5133,12 +5133,12 @@ msgid "The update to {version} failed"
 msgstr "Ha fallado la actualización a {version}"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1563
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1573
 msgid "Copy Command"
 msgstr "Copiar la orden"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1568
+#: app/src/ui/window.rs:1578
 msgid "Command copied"
 msgstr "Orden copiada"
 
@@ -5248,7 +5248,7 @@ msgstr "Cancelar"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1507
+#: app/src/ui/window.rs:1517
 msgid "Sign In"
 msgstr "Iniciar sesión"
 
@@ -5372,7 +5372,7 @@ msgstr "Ahora no"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1640
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1650
 msgid "Grant Access"
 msgstr "Conceder acceso"
 
@@ -5393,7 +5393,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail guarda en este equipo todos los mensajes que descarga."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1507
+#: app/src/ui/preferences.rs:1510
 msgid "Days"
 msgstr "Días"
 
@@ -5522,7 +5522,7 @@ msgid "Sign In Again"
 msgstr "Volver a iniciar sesión"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2244
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2254
 msgid "Open Google Cloud"
 msgstr "Abrir Google Cloud"
 
@@ -5616,13 +5616,13 @@ msgstr "Redacta una respuesta a la conversación abierta"
 msgid "Choose a Model"
 msgstr "Elegir un modelo"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3811
-#: app/src/ui/window.rs:3812
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3874
+#: app/src/ui/window.rs:3875
 msgid "Detach"
 msgstr "Separar"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4491
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4554
 msgid "Close"
 msgstr "Cerrar"
 
@@ -5849,7 +5849,7 @@ msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2233 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3446
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "Quitar"
 
@@ -6238,7 +6238,7 @@ msgstr ""
 "correo, tus claves ni tu carpeta personal, y el asistente pregunta antes de "
 "cada orden."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:514
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:517
 msgid "Not Available"
 msgstr "No disponible"
 
@@ -6425,7 +6425,7 @@ msgid "Declined"
 msgstr "Rechazado"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1313
+#: app/src/ui/preferences.rs:1316
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6540,11 +6540,11 @@ msgstr "Fecha de fin"
 msgid "End time"
 msgstr "Hora de fin"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1459
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1462
 msgid "Starts"
 msgstr "Empieza"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1461
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1464
 msgid "Ends"
 msgstr "Termina"
 
@@ -6708,8 +6708,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Solo las personas que pueden cambiar este calendario ven los detalles"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2123
-#: app/src/ui/sidebar.rs:2423
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2127
+#: app/src/ui/sidebar.rs:2428
 msgid "Color"
 msgstr "Color"
 
@@ -7221,7 +7221,7 @@ msgstr "Todo el día"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1327 app/src/ui/preferences.rs:1515
+#: app/src/ui/preferences.rs:1330 app/src/ui/preferences.rs:1518
 msgid "%a"
 msgstr "%a"
 
@@ -7575,19 +7575,19 @@ msgstr "Conceder acceso para {account}"
 msgid "Sign in again to {account}"
 msgstr "Volver a iniciar sesión en {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2428
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2433
 msgid "Sign In Again…"
 msgstr "Volver a iniciar sesión…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2436
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2441
 msgid "Remove Account…"
 msgstr "Quitar cuenta…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2443
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2448
 msgid "Account options"
 msgstr "Opciones de la cuenta"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2448
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2453
 msgid "Options for {account}"
 msgstr "Opciones de {account}"
 
@@ -7615,13 +7615,13 @@ msgstr "Ocultar de la lista"
 msgid "Original Color"
 msgstr "Color original"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2111
-#: app/src/ui/sidebar.rs:2413
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2115
+#: app/src/ui/sidebar.rs:2418
 msgid "Rename…"
 msgstr "Renombrar…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:2012
-#: app/src/ui/sidebar.rs:2139
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:2016
+#: app/src/ui/sidebar.rs:2143
 msgid "Delete…"
 msgstr "Eliminar…"
 
@@ -7743,7 +7743,7 @@ msgstr "{date}, tiene eventos"
 msgid "Offline, last updated {time}"
 msgstr "Sin conexión, actualizado por última vez {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2506
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2513
 msgid "Offline"
 msgstr "Sin conexión"
 
@@ -7859,7 +7859,7 @@ msgid "Choose a Time…"
 msgstr "Elegir una hora…"
 
 #: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2007
-#: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1892
+#: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "Enviar más tarde"
 
@@ -8310,11 +8310,11 @@ msgid "Find Again"
 msgstr "Volver a buscar"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2006
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2010
 msgid "Edit…"
 msgstr "Editar…"
 
-#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:499
+#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:502
 msgid "Shared mailboxes support mail only."
 msgstr "Los buzones compartidos solo admiten correo."
 
@@ -8395,7 +8395,7 @@ msgid "Export…"
 msgstr "Exportar…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3692
+#: app/src/ui/window.rs:3755
 msgid "Customize Toolbar…"
 msgstr "Personalizar barra de herramientas…"
 
@@ -8509,7 +8509,7 @@ msgid "Tags…"
 msgstr "Marcas…"
 
 #: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1374
-#: app/src/ui/sidebar.rs:1898 app/src/ui/window/reminders.rs:25
+#: app/src/ui/sidebar.rs:1902 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Recordármelo"
@@ -8962,7 +8962,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar mi correo"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3905
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3968
 msgid "Add an account first"
 msgstr "Añade primero una cuenta"
 
@@ -9400,7 +9400,62 @@ msgid "This link contains hidden or direction-changing characters."
 msgstr ""
 "Este enlace contiene caracteres ocultos o que cambian la dirección del texto."
 
-#: app/src/ui/mod.rs:556
+#: app/src/ui/manage_folders.rs:188 app/src/ui/manage_folders.rs:191
+#, fuzzy
+#| msgid "Search models"
+msgid "Search folders"
+msgstr "Buscar modelos"
+
+#: app/src/ui/manage_folders.rs:207
+#, fuzzy
+#| msgid "Could Not Load the Rules"
+msgid "Could Not List the Folders"
+msgstr "No se han podido cargar las reglas"
+
+#: app/src/ui/manage_folders.rs:211
+#, fuzzy
+#| msgid "No Matching Mail"
+msgid "No Matching Folders"
+msgstr "No hay correo que coincida"
+
+#: app/src/ui/manage_folders.rs:225
+msgid ""
+"The sidebar shows the folders you subscribe to. Inbox and the folders mail "
+"is filed into always show."
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:242
+#, fuzzy
+#| msgid "Rules for {account}"
+msgid "Folders of {account}"
+msgstr "Reglas de {account}"
+
+#: app/src/ui/manage_folders.rs:347
+msgid "Hide the folders in {folder}"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:348
+#, fuzzy
+#| msgid "Show the calendar"
+msgid "Show the folders in {folder}"
+msgstr "Mostrar el calendario"
+
+#: app/src/ui/manage_folders.rs:366
+msgid "{folder}, always shown"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:402 app/src/ui/manage_folders.rs:508
+#: app/src/ui/preferences.rs:631
+msgid "This account is not syncing yet"
+msgstr "Esta cuenta todavía no se está sincronizando"
+
+#: app/src/ui/manage_folders.rs:514
+#, fuzzy
+#| msgid "Could not change the color: {reason}"
+msgid "Could not change the subscription: {reason}"
+msgstr "No se ha podido cambiar el color: {reason}"
+
+#: app/src/ui/mod.rs:557
 msgid "Gray"
 msgstr "Gris"
 
@@ -9693,11 +9748,11 @@ msgstr ""
 "Firma, direcciones de envío, servidores, contactos y el espacio que informa "
 "el servidor."
 
-#: app/src/ui/preferences.rs:424 app/src/ui/preferences.rs:691
+#: app/src/ui/preferences.rs:424 app/src/ui/preferences.rs:694
 msgid "No Accounts Yet"
 msgstr "Todavía no hay cuentas"
 
-#: app/src/ui/preferences.rs:426 app/src/ui/preferences.rs:693
+#: app/src/ui/preferences.rs:426 app/src/ui/preferences.rs:696
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Añade una cuenta para elegir un remitente y escribir firmas."
 
@@ -9713,19 +9768,19 @@ msgstr "El servidor no ha informado de su uso de almacenamiento."
 msgid "Space on the Server"
 msgstr "Espacio en el servidor"
 
-#: app/src/ui/preferences.rs:492
+#: app/src/ui/preferences.rs:495
 msgid "Shared Mailbox"
 msgstr "Buzón compartido"
 
-#: app/src/ui/preferences.rs:496
+#: app/src/ui/preferences.rs:499
 msgid "Signed in through {account}"
 msgstr "Sesión iniciada mediante {account}"
 
-#: app/src/ui/preferences.rs:572 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:575 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "Firma"
 
-#: app/src/ui/preferences.rs:586
+#: app/src/ui/preferences.rs:589
 #, fuzzy
 #| msgid ""
 #| "Used by this account and addresses without their own signature. Markdown "
@@ -9740,44 +9795,40 @@ msgstr ""
 "Markdown. <email> se convierte en la dirección de envío, con su sufijo; "
 "<domain>, en su dominio."
 
-#: app/src/ui/preferences.rs:594 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:597 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "Firma de {account}"
 
-#: app/src/ui/preferences.rs:608
+#: app/src/ui/preferences.rs:611
 msgid "Import from Gmail"
 msgstr "Importar de Gmail"
 
-#: app/src/ui/preferences.rs:628
-msgid "This account is not syncing yet"
-msgstr "Esta cuenta todavía no se está sincronizando"
-
-#: app/src/ui/preferences.rs:644
+#: app/src/ui/preferences.rs:647
 msgid "Imported the signature from Gmail"
 msgstr "Se ha importado la firma de Gmail"
 
-#: app/src/ui/preferences.rs:648
+#: app/src/ui/preferences.rs:651
 msgid "Gmail has no signature for this account"
 msgstr "Gmail no tiene ninguna firma para esta cuenta"
 
-#: app/src/ui/preferences.rs:651
+#: app/src/ui/preferences.rs:654
 msgid "Could not import: {reason}"
 msgstr "No se ha podido importar: {reason}"
 
-#: app/src/ui/preferences.rs:686 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:689 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Escritura"
 
-#: app/src/ui/preferences.rs:702 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:705 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Mensajes nuevos"
 
-#: app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:709
 msgid "New Messages Start As"
 msgstr "Los mensajes nuevos empiezan en"
 
-#: app/src/ui/preferences.rs:708
+#: app/src/ui/preferences.rs:711
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "El texto enriquecido da estilo a las propias palabras; Markdown muestra sus "
@@ -9785,30 +9836,30 @@ msgstr ""
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:715 app/src/ui/sidebar.rs:65
+#: app/src/ui/preferences.rs:718 app/src/ui/sidebar.rs:65
 #: app/src/ui/sidebar.rs:78
 msgid "Undo Send"
 msgstr "Deshacer envío"
 
-#: app/src/ui/preferences.rs:717
+#: app/src/ui/preferences.rs:720
 msgid "How long you can take a message back after sending it"
 msgstr "Cuánto tiempo tienes para recuperar un mensaje después de enviarlo"
 
-#: app/src/ui/preferences.rs:724
+#: app/src/ui/preferences.rs:727
 msgid "Check for Missing Attachments"
 msgstr "Comprobar si faltan adjuntos"
 
-#: app/src/ui/preferences.rs:726
+#: app/src/ui/preferences.rs:729
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Preguntar antes de enviar un mensaje que promete un archivo y no lleva "
 "ninguno"
 
-#: app/src/ui/preferences.rs:760
+#: app/src/ui/preferences.rs:763
 msgid "Signing and Encryption"
 msgstr "Firma y cifrado"
 
-#: app/src/ui/preferences.rs:762
+#: app/src/ui/preferences.rs:765
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9816,51 +9867,51 @@ msgstr ""
 "Penguin Mail firma y cifra mediante GnuPG, que guarda tus claves y pide él "
 "mismo tu frase de contraseña."
 
-#: app/src/ui/preferences.rs:767
+#: app/src/ui/preferences.rs:770
 msgid "Your OpenPGP Keys"
 msgstr "Tus claves OpenPGP"
 
-#: app/src/ui/preferences.rs:768
+#: app/src/ui/preferences.rs:771
 msgid "Asking gpg…"
 msgstr "Preguntando a gpg…"
 
-#: app/src/ui/preferences.rs:772
+#: app/src/ui/preferences.rs:775
 msgid "Your S/MIME Certificates"
 msgstr "Tus certificados S/MIME"
 
-#: app/src/ui/preferences.rs:773
+#: app/src/ui/preferences.rs:776
 msgid "Asking gpgsm…"
 msgstr "Preguntando a gpgsm…"
 
-#: app/src/ui/preferences.rs:780
+#: app/src/ui/preferences.rs:783
 msgid "Sign My Messages by Default"
 msgstr "Firmar mis mensajes de forma predeterminada"
 
-#: app/src/ui/preferences.rs:781
+#: app/src/ui/preferences.rs:784
 msgid "New messages open with Sign turned on"
 msgstr "Los mensajes nuevos se abren con Firmar activado"
 
-#: app/src/ui/preferences.rs:787
+#: app/src/ui/preferences.rs:790
 msgid "Encrypt When I Can"
 msgstr "Cifrar cuando sea posible"
 
-#: app/src/ui/preferences.rs:789
+#: app/src/ui/preferences.rs:792
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr ""
 "Activar Cifrar en cuanto todos los destinatarios tengan una clave o un "
 "certificado"
 
-#: app/src/ui/preferences.rs:878
+#: app/src/ui/preferences.rs:881
 msgid "gpg could not be asked: {reason}"
 msgstr "No se ha podido preguntar a gpg: {reason}"
 
-#: app/src/ui/preferences.rs:897
+#: app/src/ui/preferences.rs:900
 msgid "gpgsm could not be asked: {reason}"
 msgstr "No se ha podido preguntar a gpgsm: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:906
+#: app/src/ui/preferences.rs:909
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9874,11 +9925,11 @@ msgstr[1] ""
 "Penguin Mail firma y cifra mediante {programs}, que guardan tus claves y "
 "piden ellos mismos tu frase de contraseña."
 
-#: app/src/ui/preferences.rs:938 app/src/ui/preferences.rs:951
+#: app/src/ui/preferences.rs:941 app/src/ui/preferences.rs:954
 msgid "Spelling"
 msgstr "Ortografía"
 
-#: app/src/ui/preferences.rs:940
+#: app/src/ui/preferences.rs:943
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9888,7 +9939,7 @@ msgstr ""
 "ortografía. Instala un diccionario de Hunspell, como hunspell-es o hunspell-"
 "en-us, y vuelve a abrir el editor."
 
-#: app/src/ui/preferences.rs:953
+#: app/src/ui/preferences.rs:956
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -9896,59 +9947,59 @@ msgstr ""
 "El idioma en el que cada cuenta revisa la ortografía. Diccionarios "
 "instalados: {languages}."
 
-#: app/src/ui/preferences.rs:965
+#: app/src/ui/preferences.rs:968
 msgid "System: {language}"
 msgstr "Sistema: {language}"
 
-#: app/src/ui/preferences.rs:980
+#: app/src/ui/preferences.rs:983
 msgid "All Installed Languages"
 msgstr "Todos los idiomas instalados"
 
-#: app/src/ui/preferences.rs:1023
+#: app/src/ui/preferences.rs:1026
 msgid "Sync"
 msgstr "Sincronización"
 
-#: app/src/ui/preferences.rs:1031
+#: app/src/ui/preferences.rs:1034
 msgid "Checking"
 msgstr "Comprobación"
 
-#: app/src/ui/preferences.rs:1037
+#: app/src/ui/preferences.rs:1040
 msgid "Check for New Mail"
 msgstr "Buscar correo nuevo"
 
-#: app/src/ui/preferences.rs:1046
+#: app/src/ui/preferences.rs:1049
 msgid "Storage"
 msgstr "Almacenamiento"
 
-#: app/src/ui/preferences.rs:1054
+#: app/src/ui/preferences.rs:1057
 msgid "Keep Mail on This Computer For"
 msgstr "Guardar el correo en este equipo durante"
 
-#: app/src/ui/preferences.rs:1075
+#: app/src/ui/preferences.rs:1078
 msgid "Message text kept for opening offline"
 msgstr "Texto de los mensajes guardado para abrirlos sin conexión"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1081
 msgid "Message Cache"
 msgstr "Caché de mensajes"
 
-#: app/src/ui/preferences.rs:1087
+#: app/src/ui/preferences.rs:1090
 msgid "100 messages"
 msgstr "100 mensajes"
 
-#: app/src/ui/preferences.rs:1088
+#: app/src/ui/preferences.rs:1091
 msgid "300 messages"
 msgstr "300 mensajes"
 
-#: app/src/ui/preferences.rs:1089
+#: app/src/ui/preferences.rs:1092
 msgid "1,000 messages"
 msgstr "1000 mensajes"
 
-#: app/src/ui/preferences.rs:1093
+#: app/src/ui/preferences.rs:1096
 msgid "Download Recent Inbox Messages"
 msgstr "Descargar mensajes recientes de la bandeja de entrada"
 
-#: app/src/ui/preferences.rs:1094
+#: app/src/ui/preferences.rs:1097
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -9956,134 +10007,150 @@ msgstr ""
 "Descarga el texto de los mensajes de cada cuenta para abrirlos más rápido y "
 "leerlos sin conexión. Los adjuntos y las imágenes remotas no se descargan."
 
-#: app/src/ui/preferences.rs:1121
+#: app/src/ui/preferences.rs:1124
 msgid "Startup"
 msgstr "Inicio"
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1127
 msgid "Start in the Tray at Login"
 msgstr "Iniciar en la bandeja del sistema al iniciar sesión"
 
-#: app/src/ui/preferences.rs:1139
+#: app/src/ui/preferences.rs:1142
 msgid "Not available in demo mode"
 msgstr "No disponible en el modo de demostración"
 
-#: app/src/ui/preferences.rs:1147
+#: app/src/ui/preferences.rs:1150
 msgid "Look for a new release once a day"
 msgstr "Buscar una versión nueva una vez al día"
 
-#: app/src/ui/preferences.rs:1188
+#: app/src/ui/preferences.rs:1191
 msgid "{used} of {limit}"
 msgstr "{used} de {limit}"
 
-#: app/src/ui/preferences.rs:1200
+#: app/src/ui/preferences.rs:1203
 msgid "{amount} · Full"
 msgstr "{amount} · Lleno"
 
-#: app/src/ui/preferences.rs:1202
+#: app/src/ui/preferences.rs:1205
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Casi lleno"
 
-#: app/src/ui/preferences.rs:1214
+#: app/src/ui/preferences.rs:1217
 msgid "Senders Who May Load Images"
 msgstr "Remitentes que pueden cargar imágenes"
 
-#: app/src/ui/preferences.rs:1215 app/src/ui/preferences.rs:1224
+#: app/src/ui/preferences.rs:1218 app/src/ui/preferences.rs:1227
 msgid "Nobody yet"
 msgstr "Nadie todavía"
 
-#: app/src/ui/preferences.rs:1226
+#: app/src/ui/preferences.rs:1229
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} remitente"
 msgstr[1] "{count} remitentes"
 
-#: app/src/ui/preferences.rs:1236
+#: app/src/ui/preferences.rs:1239
 msgid "Anyone at this domain"
 msgstr "Cualquiera de este dominio"
 
-#: app/src/ui/preferences.rs:1238
+#: app/src/ui/preferences.rs:1241
 msgid "This address"
 msgstr "Esta dirección"
 
-#: app/src/ui/preferences.rs:1243
+#: app/src/ui/preferences.rs:1246
 msgid "Stop Loading Images from This Sender"
 msgstr "Dejar de cargar imágenes de este remitente"
 
-#: app/src/ui/preferences.rs:1250
+#: app/src/ui/preferences.rs:1253
 msgid "Stop loading images from {sender}"
 msgstr "Dejar de cargar imágenes de {sender}"
 
-#: app/src/ui/preferences.rs:1320
+#: app/src/ui/preferences.rs:1323
 msgid "Monday to Friday"
 msgstr "De lunes a viernes"
 
-#: app/src/ui/preferences.rs:1321
+#: app/src/ui/preferences.rs:1324
 msgid "Every day of the week"
 msgstr "Todos los días de la semana"
 
-#: app/src/ui/preferences.rs:1322
+#: app/src/ui/preferences.rs:1325
 msgid "No days"
 msgstr "Ningún día"
 
-#: app/src/ui/preferences.rs:1329
+#: app/src/ui/preferences.rs:1332
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1332
+#: app/src/ui/preferences.rs:1335
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1395
+#: app/src/ui/preferences.rs:1398
 msgid "Time Format"
 msgstr "Formato de hora"
 
-#: app/src/ui/preferences.rs:1399
+#: app/src/ui/preferences.rs:1402
 msgid "Automatic follows the system clock format"
 msgstr "Automático sigue el formato horario del sistema"
 
-#: app/src/ui/preferences.rs:1413
+#: app/src/ui/preferences.rs:1416
 msgid "Week Starts On"
 msgstr "La semana empieza el"
 
-#: app/src/ui/preferences.rs:1418
+#: app/src/ui/preferences.rs:1421
 msgid "Automatic follows the locale's own first day of the week"
 msgstr ""
 "Automático sigue el primer día de la semana de la configuración regional"
 
-#: app/src/ui/preferences.rs:1432
+#: app/src/ui/preferences.rs:1435
 msgid "Working Hours"
 msgstr "Horario laboral"
 
-#: app/src/ui/preferences.rs:1451
+#: app/src/ui/preferences.rs:1454
 msgid "Hours"
 msgstr "Horas"
 
-#: app/src/ui/preferences.rs:1502
+#: app/src/ui/preferences.rs:1505
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1585
+#: app/src/ui/preferences.rs:1563
+msgid "Show Only Subscribed Folders"
+msgstr ""
+
+#: app/src/ui/preferences.rs:1565
+msgid ""
+"Folders you do not subscribe to stay out of the sidebar. Choose them in "
+"Manage Folders, in the account's menu."
+msgstr ""
+
+#: app/src/ui/preferences.rs:1609
+#, fuzzy
+#| msgid "Could not change the color: {reason}"
+msgid "Could not change the folders: {reason}"
+msgstr "No se ha podido cambiar el color: {reason}"
+
+#: app/src/ui/preferences.rs:1653
 msgid "Never Translate"
 msgstr "No traducir nunca"
 
-#: app/src/ui/preferences.rs:1587
+#: app/src/ui/preferences.rs:1655
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Los mensajes en estos idiomas no ofrecen traducción"
 
-#: app/src/ui/preferences.rs:1616
+#: app/src/ui/preferences.rs:1684
 msgid "Follow System"
 msgstr "Seguir al sistema"
 
-#: app/src/ui/preferences.rs:1620
+#: app/src/ui/preferences.rs:1688
 msgid "Language"
 msgstr "Idioma"
 
-#: app/src/ui/preferences.rs:1621
+#: app/src/ui/preferences.rs:1689
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail muestra un idioma nuevo tras reiniciarse"
 
-#: app/src/ui/preferences.rs:1702 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1770 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Sin firma"
 
@@ -10178,7 +10245,7 @@ msgstr "Mover {account} hacia abajo"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3699 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3762 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferencias"
 
@@ -10558,7 +10625,7 @@ msgstr "Añadir dirección"
 msgid "Default sender"
 msgstr "Remitente predeterminado"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2315
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2319
 msgid "Signature…"
 msgstr "Firma…"
 
@@ -10629,12 +10696,12 @@ msgid "Mailboxes"
 msgstr "Buzones"
 
 #: app/src/ui/sidebar.rs:441 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1788 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:1792 app/src/ui/thread_list.rs:372
 msgid "Mail"
 msgstr "Correo"
 
-#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1779
-#: app/src/ui/sidebar.rs:2873
+#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1783
+#: app/src/ui/sidebar.rs:2880
 msgid "99+"
 msgstr "99+"
 
@@ -10643,11 +10710,11 @@ msgid "Calendars"
 msgstr "Calendarios"
 
 #: app/src/ui/sidebar.rs:1316 app/src/ui/sidebar.rs:1318
-#: app/src/ui/sidebar.rs:1915 app/src/ui/sidebar.rs:1917
+#: app/src/ui/sidebar.rs:1919 app/src/ui/sidebar.rs:1921
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/sidebar.rs:1358 app/src/ui/sidebar.rs:1886
+#: app/src/ui/sidebar.rs:1358 app/src/ui/sidebar.rs:1890
 msgid "Outbox"
 msgstr "Bandeja de salida"
 
@@ -10655,116 +10722,122 @@ msgstr "Bandeja de salida"
 msgid "Holds folders, not mail"
 msgstr "Contiene carpetas, no correo"
 
-#: app/src/ui/sidebar.rs:1646
+#: app/src/ui/sidebar.rs:1650
 msgid "Approximate unread message count from downloaded mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1649
+#: app/src/ui/sidebar.rs:1653
 #, fuzzy
 #| msgid "The message is larger than the server sends."
 msgid "Unread messages counted on the server"
 msgstr "El mensaje es más grande de lo que envía el servidor."
 
-#: app/src/ui/sidebar.rs:1652
+#: app/src/ui/sidebar.rs:1656
 #, fuzzy
 #| msgid "{count} unread message"
 #| msgid_plural "{count} unread messages"
 msgid "Counting unread messages on the server…"
 msgstr "{count} mensaje sin leer"
 
-#: app/src/ui/sidebar.rs:1655
+#: app/src/ui/sidebar.rs:1659
 msgid ""
 "Unread count unavailable. The account may be offline or the server may not "
 "support these conditions."
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1738
+#: app/src/ui/sidebar.rs:1742
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} mensaje sin leer"
 msgstr[1] "{mailbox}, {count} mensajes sin leer"
 
-#: app/src/ui/sidebar.rs:1744
+#: app/src/ui/sidebar.rs:1748
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mensaje"
 msgstr[1] "{mailbox}, {count} mensajes"
 
-#: app/src/ui/sidebar.rs:1791
+#: app/src/ui/sidebar.rs:1795
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Correo, {count} sin leer"
 msgstr[1] "Correo, {count} sin leer"
 
-#: app/src/ui/sidebar.rs:1797
+#: app/src/ui/sidebar.rs:1801
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Calendario, {count} esperando tu respuesta"
 msgstr[1] "Calendario, {count} esperando tu respuesta"
 
-#: app/src/ui/sidebar.rs:2008 app/src/ui/sidebar.rs:2130
-#: app/src/ui/sidebar.rs:2424
+#: app/src/ui/sidebar.rs:2012 app/src/ui/sidebar.rs:2134
+#: app/src/ui/sidebar.rs:2429
 msgid "Move Up"
 msgstr "Subir"
 
-#: app/src/ui/sidebar.rs:2009 app/src/ui/sidebar.rs:2133
-#: app/src/ui/sidebar.rs:2425
+#: app/src/ui/sidebar.rs:2013 app/src/ui/sidebar.rs:2137
+#: app/src/ui/sidebar.rs:2430
 msgid "Move Down"
 msgstr "Bajar"
 
-#: app/src/ui/sidebar.rs:2161
+#: app/src/ui/sidebar.rs:2165
 msgid "Empty Trash…"
 msgstr "Vaciar la papelera…"
 
-#: app/src/ui/sidebar.rs:2314
+#: app/src/ui/sidebar.rs:2318
 msgid "Automatic Reply…"
 msgstr "Respuesta automática…"
 
-#: app/src/ui/sidebar.rs:2316
+#: app/src/ui/sidebar.rs:2320
 msgid "Rules…"
 msgstr "Reglas…"
 
-#: app/src/ui/sidebar.rs:2317 app/src/ui/window.rs:3685
+#: app/src/ui/sidebar.rs:2321 app/src/ui/window.rs:3748
 msgid "Hide My Email…"
 msgstr "Ocultar mi correo…"
 
-#: app/src/ui/sidebar.rs:2326
+#: app/src/ui/sidebar.rs:2330
 msgid "On this computer"
 msgstr "En este equipo"
 
-#: app/src/ui/sidebar.rs:2334
+#: app/src/ui/sidebar.rs:2338
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "En este equipo. Mostrar u ocultar los buzones de esta cuenta"
 
-#: app/src/ui/sidebar.rs:2335
+#: app/src/ui/sidebar.rs:2339
 msgid "Show or hide this account's mailboxes"
 msgstr "Mostrar u ocultar los buzones de esta cuenta"
 
-#: app/src/ui/sidebar.rs:2429
+#: app/src/ui/sidebar.rs:2415
+#, fuzzy
+#| msgid "New Folder…"
+msgid "Manage Folders…"
+msgstr "Carpeta nueva…"
+
+#: app/src/ui/sidebar.rs:2434
 msgid "Switch to JMAP…"
 msgstr "Cambiar a JMAP…"
 
-#: app/src/ui/sidebar.rs:2431
+#: app/src/ui/sidebar.rs:2436
 msgid "Messages That Will Not Download…"
 msgstr "Mensajes que no se descargan…"
 
-#: app/src/ui/sidebar.rs:2504
+#: app/src/ui/sidebar.rs:2511
 msgid "Sign in again to keep syncing"
 msgstr "Vuelve a iniciar sesión para seguir sincronizando"
 
-#: app/src/ui/sidebar.rs:2510
+#: app/src/ui/sidebar.rs:2517
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} no responde; reintentando"
 
-#: app/src/ui/sidebar.rs:2521
+#: app/src/ui/sidebar.rs:2528
 msgid "The keyring is not responding; retrying"
 msgstr "El depósito de claves no responde; reintentando"
 
-#: app/src/ui/sidebar.rs:2524
+#: app/src/ui/sidebar.rs:2531
 msgid "Downloading mail"
 msgstr "Descargando correo"
 
-#: app/src/ui/sidebar.rs:2528
+#: app/src/ui/sidebar.rs:2535
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "La sincronización se ha detenido tras un error; reinicia Penguin Mail para "
@@ -10772,7 +10845,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2535
+#: app/src/ui/sidebar.rs:2542
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11353,7 +11426,7 @@ msgstr "No se ha podido cargar el correo: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Se ha añadido {account}. Descargando el correo…"
 
-#: app/src/ui/window.rs:366 app/src/ui/window.rs:3052
+#: app/src/ui/window.rs:366 app/src/ui/window.rs:3109
 msgid "{account} is signed in again."
 msgstr "{account} ha vuelto a iniciar sesión."
 
@@ -11501,55 +11574,61 @@ msgstr "Penguin Mail (demostración)"
 msgid "Could not read accounts: {reason}"
 msgstr "No se han podido leer las cuentas: {reason}"
 
-#: app/src/ui/window.rs:2135
+#: app/src/ui/window.rs:2145
 msgid "Could not delete the mail: {reason}"
 msgstr "No se ha podido eliminar el correo: {reason}"
 
-#: app/src/ui/window.rs:2242
+#: app/src/ui/window.rs:2252
 msgid "Turn On the {service}"
 msgstr "Activar {service}"
 
-#: app/src/ui/window.rs:2427 app/src/ui/window.rs:2430
+#: app/src/ui/window.rs:2437 app/src/ui/window.rs:2440
 msgid "Move to Inbox"
 msgstr "Mover a la bandeja de entrada"
 
-#: app/src/ui/window.rs:2625
+#: app/src/ui/window.rs:2608 app/src/ui/window.rs:2613
+#, fuzzy
+#| msgid "Search models"
+msgid "Search all folders"
+msgstr "Buscar modelos"
+
+#: app/src/ui/window.rs:2682
 msgid "Select mail from one account to tag it."
 msgstr "Selecciona correo de una sola cuenta para marcarlo."
 
-#: app/src/ui/window.rs:2637
+#: app/src/ui/window.rs:2694
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Esta cuenta todavía no tiene marcas. Crea una en Outlook."
 
-#: app/src/ui/window.rs:2730
+#: app/src/ui/window.rs:2787
 msgid "Add an account to reply or forward"
 msgstr "Añade una cuenta para responder o reenviar"
 
-#: app/src/ui/window.rs:2835
+#: app/src/ui/window.rs:2892
 msgid "Could not include {file}: {reason}"
 msgstr "No se ha podido incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:2916
+#: app/src/ui/window.rs:2973
 msgid "The server had already sent this message."
 msgstr "El servidor ya había enviado este mensaje."
 
-#: app/src/ui/window.rs:2921
+#: app/src/ui/window.rs:2978
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Este mensaje se canceló en otra aplicación y ya no está en Borradores."
 
-#: app/src/ui/window.rs:3237
+#: app/src/ui/window.rs:3294
 msgid "Continue in your browser"
 msgstr "Continúa en el navegador"
 
-#: app/src/ui/window.rs:3287
+#: app/src/ui/window.rs:3344
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Esta copia de Penguin Mail se compiló sin inicio de sesión de Google."
 
-#: app/src/ui/window.rs:3309
+#: app/src/ui/window.rs:3366
 msgid "Get a Release"
 msgstr "Descargar una versión publicada"
 
-#: app/src/ui/window.rs:3432
+#: app/src/ui/window.rs:3489
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11557,86 +11636,86 @@ msgstr ""
 "No se pudieron comprobar los mensajes que el servidor guarda para enviar más "
 "tarde, así que {account} se queda: {reason}"
 
-#: app/src/ui/window.rs:3443
+#: app/src/ui/window.rs:3500
 msgid "Remove {account}?"
 msgstr "¿Quitar {account}?"
 
-#: app/src/ui/window.rs:3462
+#: app/src/ui/window.rs:3519
 msgid "Remove Anyway"
 msgstr "Quitar de todos modos"
 
-#: app/src/ui/window.rs:3475
+#: app/src/ui/window.rs:3532
 msgid "Removed {account}"
 msgstr "Se ha quitado {account}"
 
-#: app/src/ui/window.rs:3477
+#: app/src/ui/window.rs:3534
 msgid "Could not remove {account}: {reason}"
 msgstr "No se ha podido quitar {account}: {reason}"
 
-#: app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3726
 msgid "Refresh"
 msgstr "Actualizar"
 
-#: app/src/ui/window.rs:3667
+#: app/src/ui/window.rs:3730
 msgid "Show Declined Events"
 msgstr "Mostrar eventos rechazados"
 
-#: app/src/ui/window.rs:3683
+#: app/src/ui/window.rs:3746
 msgid "Add Account…"
 msgstr "Añadir cuenta…"
 
-#: app/src/ui/window.rs:3684
+#: app/src/ui/window.rs:3747
 msgid "New Smart Mailbox…"
 msgstr "Buzón inteligente nuevo…"
 
-#: app/src/ui/window.rs:3696
+#: app/src/ui/window.rs:3759
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Personalizar barra de herramientas…"
 
-#: app/src/ui/window.rs:3700 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3763 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Atajos de teclado"
 
-#: app/src/ui/window.rs:3709 app/src/ui/window.rs:3711
+#: app/src/ui/window.rs:3772 app/src/ui/window.rs:3774
 msgid "Main Menu"
 msgstr "Menú principal"
 
-#: app/src/ui/window.rs:3776 app/src/ui/window.rs:3777
+#: app/src/ui/window.rs:3839 app/src/ui/window.rs:3840
 msgid "Dock"
 msgstr "Acoplar"
 
-#: app/src/ui/window.rs:3906
+#: app/src/ui/window.rs:3969
 msgid "Add a mail account first"
 msgstr "Añade primero una cuenta de correo"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4157
+#: app/src/ui/window.rs:4220
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Se han conectado el calendario y los contactos de {account}."
 
-#: app/src/ui/window.rs:4273
+#: app/src/ui/window.rs:4336
 msgid "Open a message from the person first"
 msgstr "Abre primero un mensaje de esa persona"
 
-#: app/src/ui/window.rs:4374
+#: app/src/ui/window.rs:4437
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail muestra el idioma nuevo tras reiniciarse"
 
-#: app/src/ui/window.rs:4376 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4439 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:4440
+#: app/src/ui/window.rs:4503
 msgid "Show Rules"
 msgstr "Mostrar reglas"
 
-#: app/src/ui/window.rs:4466
+#: app/src/ui/window.rs:4529
 msgid "Messages That Will Not Download"
 msgstr "Mensajes que no se descargan"
 
-#: app/src/ui/window.rs:4468
+#: app/src/ui/window.rs:4531
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -13900,126 +13979,6 @@ msgid "Move to {folder}"
 msgstr "Mover a {folder}"
 
 #~ msgid ""
-#~ "Used by this account and addresses without their own signature. Markdown "
-#~ "works. <email> becomes the sending address, including its suffix; "
-#~ "<domain> becomes its domain."
-#~ msgstr ""
-#~ "La usan esta cuenta y las direcciones que no tienen firma propia. Admite "
-#~ "Markdown. <email> se convierte en la dirección de envío, con su sufijo; "
-#~ "<domain>, en su dominio."
-
-#~ msgid ""
-#~ "Markdown works. <email> becomes the sending address, including its "
-#~ "suffix; <domain> becomes its domain."
-#~ msgstr ""
-#~ "Admite Markdown. <email> se convierte en la dirección de envío, con su "
-#~ "sufijo; <domain>, en su dominio."
-
-#~ msgid "Accounts whose server does not report its space are not listed."
-#~ msgstr "Las cuentas cuyo servidor no indica su espacio no aparecen aquí."
-
-#~ msgid ""
-#~ "Added below new messages and above quoted text in replies. Markdown works."
-#~ msgstr ""
-#~ "Se añaden debajo de los mensajes nuevos y encima del texto citado en las "
-#~ "respuestas. Admite Markdown."
-
-#~ msgid "Bodies of mail you have read, kept for opening offline"
-#~ msgstr ""
-#~ "Cuerpos del correo que has leído, guardados para abrirlos sin conexión"
-
-#~ msgid "Choose Now"
-#~ msgstr "Elegir ahora"
-
-#~ msgid "Choose how this account signs in to get new mail"
-#~ msgstr "Elige cómo inicia sesión esta cuenta para recibir correo nuevo"
-
-#~ msgid "Choose how {address} signs in to keep your mail arriving."
-#~ msgstr ""
-#~ "Elige cómo inicia sesión {address} para que siga llegando tu correo."
-
-#~ msgid "Choose…"
-#~ msgstr "Elegir…"
-
-#~ msgid "Contacts & Calendar"
-#~ msgstr "Contactos y calendario"
-
-#~ msgid "Could not send the receipt: {reason}"
-#~ msgstr "No se pudo enviar la confirmación: {reason}"
-
-#~ msgid ""
-#~ "Every control named for screen readers and reachable from the keyboard, "
-#~ "in American English, British English, French, German, Indonesian, "
-#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
-#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
-#~ msgstr ""
-#~ "Todos los controles tienen nombre para los lectores de pantalla y se "
-#~ "pueden usar con el teclado, en inglés americano, inglés británico, "
-#~ "francés, alemán, indonesio, italiano, japonés, coreano, polaco, ruso, "
-#~ "español, portugués europeo, chino simplificado, chino tradicional "
-#~ "(Taiwán), turco y vietnamita"
-
-#~ msgid "Get Every Feature"
-#~ msgstr "Obtener todas las funciones"
-
-#~ msgid "Hide My Email works with Gmail accounts."
-#~ msgstr "Ocultar mi correo funciona con cuentas de Gmail."
-
-#~ msgid "How much of its space each server says your mail takes"
-#~ msgstr "Cuánto de su espacio ocupa tu correo, según cada servidor"
-
-#~ msgid "Install Bubblewrap"
-#~ msgstr "Instalar Bubblewrap"
-
-#~ msgid "Later"
-#~ msgstr "Más tarde"
-
-#, fuzzy
-#~| msgid "Mailboxes"
-#~ msgid "Mailbox"
-#~ msgstr "Buzones"
-
-#~ msgid "Move it from the Trash to the Inbox first"
-#~ msgstr "Muévelo primero de la papelera a la bandeja de entrada"
-
-#~ msgid ""
-#~ "Moving the account is taking too long. It goes on after you close this "
-#~ "window."
-#~ msgstr ""
-#~ "Mover la cuenta está tardando demasiado. Seguirá después de que cierres "
-#~ "esta ventana."
-
-#~ msgid "Moving your account. This takes a moment."
-#~ msgstr "Moviendo tu cuenta. Tardará un momento."
-
-#~ msgid "No accounts yet"
-#~ msgstr "Todavía no hay cuentas"
-
-#~ msgid ""
-#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
-#~ "get your mail back. Nothing on this computer was lost."
-#~ msgstr ""
-#~ "Penguin Mail no puede obtener correo nuevo de {address}. Elige cómo "
-#~ "inicia sesión para recuperar tu correo. No se ha perdido nada en este "
-#~ "equipo."
-
-#~ msgid ""
-#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-#~ "account below to keep your mail arriving. Your mail and settings stay as "
-#~ "they are."
-#~ msgstr ""
-#~ "Penguin Mail tiene nuevas formas de iniciar sesión en Google. Elige una "
-#~ "para cada cuenta de Gmail de abajo para que siga llegando tu correo. Tu "
-#~ "correo y tus ajustes se quedan como están."
-
-#~ msgid ""
-#~ "Penguin Mail looks for these when you add an account. The login is the "
-#~ "account's own."
-#~ msgstr ""
-#~ "Penguin Mail los busca cuando añades una cuenta. El inicio de sesión es "
-#~ "el de la propia cuenta."
-
-#~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
 #~ "\n"
 #~ "{command}\n"
@@ -14034,6 +13993,9 @@ msgstr "Mover a {folder}"
 #~ "Se ejecuta en un entorno aislado sin acceso a tu correo ni a tu carpeta "
 #~ "personal. {network} «Permitir siempre» cubre solo esta orden exacta."
 
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "Muévelo primero de la papelera a la bandeja de entrada"
+
 #~ msgid "Save to Downloads"
 #~ msgstr "Guardar en Descargas"
 
@@ -14043,26 +14005,9 @@ msgstr "Mover a {folder}"
 #~ msgid "Saved {file} to Downloads"
 #~ msgstr "{file} guardado en Descargas"
 
-#~ msgid "Send New Messages From"
-#~ msgstr "Enviar los mensajes nuevos desde"
-
-#~ msgid "Sender Addresses"
-#~ msgstr "Direcciones de remitente"
-
-#~ msgid "Signed in with this computer's sign-in."
-#~ msgstr "Sesión iniciada con el inicio de sesión de este equipo."
-
-#~ msgid "Stop using your own Google project"
-#~ msgstr "Dejar de usar tu propio proyecto de Google"
-
-#~ msgid "Switch {address} to this computer's sign-in?"
-#~ msgstr "¿Cambiar {address} al inicio de sesión de este equipo?"
-
-#~ msgid "This account is already moving to its new sign-in."
-#~ msgstr "Esta cuenta ya está pasando a su nuevo inicio de sesión."
-
-#~ msgid "Waiting for the account to switch to JMAP"
-#~ msgstr "Esperando a que la cuenta cambie a JMAP"
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr ""
+#~ "Cuerpos del correo que has leído, guardados para abrirlos sin conexión"
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
@@ -14070,6 +14015,18 @@ msgstr "Mover a {folder}"
 #~ msgstr ""
 #~ "Puede que tu organización no lo permita. Pregunta a tu administrador o "
 #~ "inicia sesión de otra forma."
+
+#~ msgid ""
+#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
+#~ "get your mail back. Nothing on this computer was lost."
+#~ msgstr ""
+#~ "Penguin Mail no puede obtener correo nuevo de {address}. Elige cómo "
+#~ "inicia sesión para recuperar tu correo. No se ha perdido nada en este "
+#~ "equipo."
+
+#~ msgid "Choose how {address} signs in to keep your mail arriving."
+#~ msgstr ""
+#~ "Elige cómo inicia sesión {address} para que siga llegando tu correo."
 
 #~ msgid ""
 #~ "{count} Gmail account can't get new mail. Choose how each signs in to get "
@@ -14092,9 +14049,131 @@ msgstr "Mover a {folder}"
 #~ msgstr[1] ""
 #~ "{count} cuentas de Gmail necesitan una nueva forma de iniciar sesión"
 
+#~ msgid "Choose…"
+#~ msgstr "Elegir…"
+
+#~ msgid "Moving your account. This takes a moment."
+#~ msgstr "Moviendo tu cuenta. Tardará un momento."
+
+#~ msgid ""
+#~ "Moving the account is taking too long. It goes on after you close this "
+#~ "window."
+#~ msgstr ""
+#~ "Mover la cuenta está tardando demasiado. Seguirá después de que cierres "
+#~ "esta ventana."
+
+#~ msgid ""
+#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+#~ "account below to keep your mail arriving. Your mail and settings stay as "
+#~ "they are."
+#~ msgstr ""
+#~ "Penguin Mail tiene nuevas formas de iniciar sesión en Google. Elige una "
+#~ "para cada cuenta de Gmail de abajo para que siga llegando tu correo. Tu "
+#~ "correo y tus ajustes se quedan como están."
+
+#~ msgid "Later"
+#~ msgstr "Más tarde"
+
+#~ msgid "Choose Now"
+#~ msgstr "Elegir ahora"
+
+#~ msgid ""
+#~ "Added below new messages and above quoted text in replies. Markdown works."
+#~ msgstr ""
+#~ "Se añaden debajo de los mensajes nuevos y encima del texto citado en las "
+#~ "respuestas. Admite Markdown."
+
+#~ msgid "Switch {address} to this computer's sign-in?"
+#~ msgstr "¿Cambiar {address} al inicio de sesión de este equipo?"
+
+#~ msgid "Stop using your own Google project"
+#~ msgstr "Dejar de usar tu propio proyecto de Google"
+
+#~ msgid "Get Every Feature"
+#~ msgstr "Obtener todas las funciones"
+
+#~ msgid "Choose how this account signs in to get new mail"
+#~ msgstr "Elige cómo inicia sesión esta cuenta para recibir correo nuevo"
+
+#~ msgid ""
+#~ "Every control named for screen readers and reachable from the keyboard, "
+#~ "in American English, British English, French, German, Indonesian, "
+#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
+#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr ""
+#~ "Todos los controles tienen nombre para los lectores de pantalla y se "
+#~ "pueden usar con el teclado, en inglés americano, inglés británico, "
+#~ "francés, alemán, indonesio, italiano, japonés, coreano, polaco, ruso, "
+#~ "español, portugués europeo, chino simplificado, chino tradicional "
+#~ "(Taiwán), turco y vietnamita"
+
+#~ msgid "Install Bubblewrap"
+#~ msgstr "Instalar Bubblewrap"
+
+#~ msgid "Send New Messages From"
+#~ msgstr "Enviar los mensajes nuevos desde"
+
+#~ msgid "Contacts & Calendar"
+#~ msgstr "Contactos y calendario"
+
+#~ msgid "No accounts yet"
+#~ msgstr "Todavía no hay cuentas"
+
+#~ msgid "How much of its space each server says your mail takes"
+#~ msgstr "Cuánto de su espacio ocupa tu correo, según cada servidor"
+
+#~ msgid "Accounts whose server does not report its space are not listed."
+#~ msgstr "Las cuentas cuyo servidor no indica su espacio no aparecen aquí."
+
+#~ msgid "Could not send the receipt: {reason}"
+#~ msgstr "No se pudo enviar la confirmación: {reason}"
+
+#~ msgid "Sender Addresses"
+#~ msgstr "Direcciones de remitente"
+
+#~ msgid "Waiting for the account to switch to JMAP"
+#~ msgstr "Esperando a que la cuenta cambie a JMAP"
+
+#~ msgid "Hide My Email works with Gmail accounts."
+#~ msgstr "Ocultar mi correo funciona con cuentas de Gmail."
+
 #~ msgid ""
 #~ "{provider} does not let an API token change the automatic reply. Change "
 #~ "it on {provider}'s website."
 #~ msgstr ""
 #~ "{provider} no permite que un token de API cambie la respuesta automática. "
 #~ "Cámbiela en el sitio web de {provider}."
+
+#~ msgid ""
+#~ "Penguin Mail looks for these when you add an account. The login is the "
+#~ "account's own."
+#~ msgstr ""
+#~ "Penguin Mail los busca cuando añades una cuenta. El inicio de sesión es "
+#~ "el de la propia cuenta."
+
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "Esta cuenta ya está pasando a su nuevo inicio de sesión."
+
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "Sesión iniciada con el inicio de sesión de este equipo."
+
+#~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "La usan esta cuenta y las direcciones que no tienen firma propia. Admite "
+#~ "Markdown. <email> se convierte en la dirección de envío, con su sufijo; "
+#~ "<domain>, en su dominio."
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "Admite Markdown. <email> se convierte en la dirección de envío, con su "
+#~ "sufijo; <domain>, en su dominio."
+
+#, fuzzy
+#~| msgid "Mailboxes"
+#~ msgid "Mailbox"
+#~ msgstr "Buzones"
