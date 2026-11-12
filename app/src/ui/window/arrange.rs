@@ -53,6 +53,7 @@ impl MainWindow {
             .collect();
         crate::format::set_account_labels(crate::format::account_labels(&named));
         let extras = Extras {
+            sidebar: settings.sidebar.clone(),
             vips: settings
                 .vips
                 .iter()
@@ -79,18 +80,38 @@ impl MainWindow {
             self.settings_with(|s| s.smart_mailboxes.iter().find(|m| m.id == id).cloned())
         });
         let accounts: Vec<String> = self.mail_accounts().into_iter().map(|a| a.email).collect();
+        let mailboxes: Vec<(String, Vec<String>)> = self
+            .mail_accounts()
+            .iter()
+            .map(|a| {
+                (
+                    a.email.clone(),
+                    self.labels_of(a.id)
+                        .into_iter()
+                        .filter(|label| label.kind == mailrs_domain::LabelKind::User)
+                        .map(|label| label.name)
+                        .collect(),
+                )
+            })
+            .collect();
         let weak = Rc::downgrade(self);
-        super::super::smart_editor::present(&self.window, existing, accounts, move |mailbox| {
-            let (Some(win), Some(app)) =
-                (weak.upgrade(), weak.upgrade().and_then(|w| w.app.upgrade()))
-            else {
-                return;
-            };
-            let shown = Mailbox::Smart(mailbox.clone());
-            app.change_settings(Change::SaveSmartMailbox(Box::new(mailbox)));
-            win.sidebar.select(&shown);
-            win.show_mailbox(shown);
-        });
+        super::super::smart_editor::present(
+            &self.window,
+            existing,
+            accounts,
+            mailboxes,
+            move |mailbox| {
+                let (Some(win), Some(app)) =
+                    (weak.upgrade(), weak.upgrade().and_then(|w| w.app.upgrade()))
+                else {
+                    return;
+                };
+                let shown = Mailbox::Smart(mailbox.clone());
+                app.change_settings(Change::SaveSmartMailbox(Box::new(mailbox)));
+                win.sidebar.select(&shown);
+                win.show_mailbox(shown);
+            },
+        );
     }
 
     pub(super) fn delete_smart(self: &Rc<Self>, id: String) {

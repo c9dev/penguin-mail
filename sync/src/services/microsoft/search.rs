@@ -2,6 +2,8 @@
 
 mod kql;
 
+use std::collections::{HashSet, VecDeque};
+
 use mailrs_domain::MailSet;
 use mailrs_graph::{Fields, Listing};
 
@@ -22,50 +24,69 @@ impl<G: GraphApi> Microsoft<G> {
             return Err(BackendError::Unsupported);
         };
         let today = chrono::Local::now().date_naive();
-        let printed = kql::print(tree, today).map_err(|_| BackendError::Unsupported)?;
+        let printed = kql::print_parts(tree, today).map_err(|_| BackendError::Unsupported)?;
         self.synced().await?;
-        let folder = match printed.within {
-            None => None,
-            Some(Place::Set(MailSet::Role(role))) => Some(
-                self.known()
-                    .roles
-                    .get(&role)
-                    .cloned()
-                    .ok_or(BackendError::Unsupported)?,
-            ),
-            Some(Place::Set(MailSet::Mailbox(id))) => Some(id),
-            Some(Place::Set(_)) => return Err(BackendError::Unsupported),
-            Some(Place::Named(name)) => {
-                let wanted = name.to_lowercase();
-                let found = self
-                    .known()
-                    .names
-                    .iter()
-                    .find(|(_, path)| path.to_lowercase() == wanted)
-                    .map(|(id, _)| id.clone());
-                Some(found.ok_or(BackendError::Unsupported)?)
+        let mut pages: Vec<VecDeque<RemoteRef>> = Vec::new();
+        for printed in printed {
+            let folder = match printed.within {
+                None => None,
+                Some(Place::Set(MailSet::Role(role))) => Some(
+                    self.known()
+                        .roles
+                        .get(&role)
+                        .cloned()
+                        .ok_or(BackendError::Unsupported)?,
+                ),
+                Some(Place::Set(MailSet::Mailbox(id))) => Some(id),
+                Some(Place::Set(_)) => return Err(BackendError::Unsupported),
+                Some(Place::Named(name)) => {
+                    let wanted = name.to_lowercase();
+                    let found = self
+                        .known()
+                        .names
+                        .iter()
+                        .find(|(_, path)| path.to_lowercase() == wanted)
+                        .map(|(id, _)| id.clone());
+                    Some(found.ok_or(BackendError::Unsupported)?)
+                }
+            };
+            let listing = Listing {
+                folder,
+                search: (!printed.kql.is_empty()).then_some(printed.kql),
+                top: u32::try_from(limit.clamp(1, 250)).unwrap_or(250),
+                fields: Fields::Ids,
+                ..Listing::default()
+            };
+            let page = self
+                .graph()
+                .list_messages(&listing, None)
+                .await
+                .map_err(backend)?;
+            pages.push(
+                page.value
+                    .into_iter()
+                    .take(limit)
+                    .map(|m| RemoteRef {
+                        thread_id: m.conversation_id.clone().unwrap_or_else(|| m.id.clone()),
+                        id: m.id,
+                    })
+                    .collect(),
+            );
+        }
+        let mut found = Vec::new();
+        let mut seen = HashSet::new();
+        while found.len() < limit && pages.iter().any(|page| !page.is_empty()) {
+            for page in &mut pages {
+                if let Some(hit) = page.pop_front()
+                    && seen.insert(hit.id.clone())
+                {
+                    found.push(hit);
+                }
+                if found.len() == limit {
+                    break;
+                }
             }
-        };
-        let listing = Listing {
-            folder,
-            search: (!printed.kql.is_empty()).then_some(printed.kql),
-            top: u32::try_from(limit.clamp(1, 250)).unwrap_or(250),
-            fields: Fields::Ids,
-            ..Listing::default()
-        };
-        let page = self
-            .graph()
-            .list_messages(&listing, None)
-            .await
-            .map_err(backend)?;
-        Ok(page
-            .value
-            .into_iter()
-            .take(limit)
-            .map(|m| RemoteRef {
-                thread_id: m.conversation_id.clone().unwrap_or_else(|| m.id.clone()),
-                id: m.id,
-            })
-            .collect())
+        }
+        Ok(found)
     }
 }

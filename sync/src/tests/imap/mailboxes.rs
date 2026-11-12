@@ -420,3 +420,51 @@ async fn an_accepted_subscription_holds_when_the_listing_after_it_fails() {
 
     assert!(!h.imap.with(|s| s.unsubscribed.contains("Old")));
 }
+
+#[tokio::test]
+async fn folder_placements_report_new_ids_and_descendants_before_refresh() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    for name in ["Work", "Work/Child", "Home"] {
+        h.imap.add_mailbox(name, None);
+    }
+    h.sync.refresh_labels().await.unwrap();
+    h.drain();
+    h.sync
+        .place_label("Work", "Home/Work", &["Work".into(), "Home".into()])
+        .await
+        .unwrap();
+    let events = h.drain();
+    let at = events
+        .iter()
+        .position(|e| matches!(e, ChangeEvent::LabelsPlaced { .. }))
+        .unwrap();
+    match &events[at] {
+        ChangeEvent::LabelsPlaced {
+            account_id,
+            moved,
+            order,
+        } => {
+            assert_eq!(*account_id, h.account_id);
+            assert_eq!(
+                moved,
+                &[
+                    ("Work".into(), "Home/Work".into()),
+                    ("Work/Child".into(), "Home/Work/Child".into())
+                ]
+            );
+            assert_eq!(order, &["Home/Work", "Home"]);
+        }
+        _ => unreachable!(),
+    }
+    assert!(
+        events[at + 1..]
+            .iter()
+            .any(|e| matches!(e, ChangeEvent::LabelsChanged { .. }))
+    );
+    h.sync.rename_label("Home/Work", "Jobs").await.unwrap();
+    assert!(h.drain().iter().any(
+        |e| matches!(e, ChangeEvent::LabelsPlaced { moved, order, .. }
+        if order.is_empty() && moved.contains(&("Home/Work/Child".into(), "Jobs/Child".into())))
+    ));
+}

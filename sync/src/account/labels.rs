@@ -184,10 +184,16 @@ impl AccountSync {
             if order.is_empty() {
                 return Ok(());
             }
-            let order = order.to_vec();
+            let placed_order = order.to_vec();
+            let order = placed_order.clone();
             self.db
                 .write(move |c| mailboxes::set_positions(c, account_id, &order))
                 .await?;
+            self.emit(ChangeEvent::LabelsPlaced {
+                account_id,
+                moved: Vec::new(),
+                order: placed_order,
+            });
             self.emit(ChangeEvent::LabelsChanged { account_id });
             return Ok(());
         }
@@ -236,6 +242,7 @@ impl AccountSync {
                 },
             )
             .collect();
+        let placed_order = order.clone();
         self.db
             .write(move |c| {
                 for ((from, to), mailbox) in pairs.iter().zip(&renamed) {
@@ -250,6 +257,11 @@ impl AccountSync {
                 mailboxes::set_positions(c, account_id, &order)
             })
             .await?;
+        self.emit(ChangeEvent::LabelsPlaced {
+            account_id,
+            moved: moved.clone(),
+            order: placed_order,
+        });
         self.emit(ChangeEvent::LabelsChanged { account_id });
         self.follow_folders(&moved).await;
         if renames {

@@ -1299,6 +1299,15 @@ pub trait MailBackend: Send + Sync + 'static {
     /// leaves nothing to compare.
     fn inbox_ids(&self) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
 
+    /// The complete number of matching messages, without fetching their bodies.
+    /// A capped or unsupported search must fail rather than return a partial count.
+    fn count_query(
+        &self,
+        _query: &mailrs_domain::query::Query,
+    ) -> impl Future<Output = Result<i64, BackendError>> + Send {
+        async { Err(BackendError::Unsupported) }
+    }
+
     /// At most `limit` messages `query` matches, newest first.
     fn search(
         &self,

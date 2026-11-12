@@ -53,6 +53,9 @@ mod assistant;
 mod attachments;
 mod categories;
 mod column_width;
+mod customize_mailboxes;
+#[cfg(test)]
+pub(crate) use customize_mailboxes::check_released;
 mod detached;
 mod export;
 mod flags;
@@ -82,6 +85,7 @@ mod scheduled;
 mod searching;
 mod senders;
 mod shortcuts;
+mod smart_trash;
 mod spaces;
 mod storage;
 mod thread;
@@ -1320,6 +1324,7 @@ impl MainWindow {
                 }
             }
             ChangeEvent::LabelsChanged { .. } => self.refresh_accounts(Reload::Yes),
+            ChangeEvent::LabelsPlaced { .. } => {}
             ChangeEvent::ThreadsChanged {
                 account_id,
                 thread_ids,
@@ -1718,7 +1723,7 @@ impl MainWindow {
 
     /// What the sidebar, the space badge and the category switcher show.
     fn show_counts(&self, counted: &Counted) {
-        self.sidebar.set_counts(&counted.counts.mailboxes);
+        self.sidebar.set_counts(&counted.counts);
         self.sidebar.set_unread(counted.all_inboxes());
         self.set_follow_up_count(counted.of(&Mailbox::FollowUp) as usize);
         self.set_category_counts(&counted.counts.categories);
@@ -2022,6 +2027,7 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
+        let mailbox = reach.mailbox.clone();
         let accounts = press::reached(&reach.targets, |id| self.account(id), |id| self.offers(id));
         let plan = press::plan(Pressed {
             press,
@@ -2033,6 +2039,7 @@ impl MainWindow {
         });
         let taken = plan.taken();
         let pressing = Pressing {
+            mailbox,
             window: Rc::clone(self),
             view: Rc::clone(view),
         };
@@ -3433,6 +3440,19 @@ impl MainWindow {
     }
 
     fn label_order(&self, account_id: AccountId) -> HashMap<String, i64> {
+        if let Some(account) = self.account(account_id)
+            && let Some(ids) = self
+                .settings()
+                .sidebar
+                .label_order
+                .get(&format!("account:{}", account.email.to_ascii_lowercase()))
+        {
+            return ids
+                .iter()
+                .enumerate()
+                .map(|(position, id)| (id.clone(), position as i64))
+                .collect();
+        }
         self.app
             .upgrade()
             .map(|app| app.label_order(account_id))
@@ -3734,6 +3754,10 @@ impl MainWindow {
         second.append(
             Some(&gettext("Customize Toolbar…")),
             Some("win.customize-toolbar"),
+        );
+        second.append(
+            Some(&gettext("Customize Mailboxes…")),
+            Some("win.customize-mailboxes"),
         );
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
@@ -4560,11 +4584,20 @@ impl MainWindow {
 
 /// The main window and one conversation view, as a press changes them.
 struct Pressing {
+    mailbox: Mailbox,
     window: Rc<MainWindow>,
     view: Rc<ConversationView>,
 }
 
 impl PressEffects for Pressing {
+    fn prepare_trash(
+        &self,
+        targets: Vec<Target>,
+        from: MovedFrom,
+    ) -> crate::wanted::Answer<'_, Option<MovedFrom>> {
+        Box::pin(self.prepare_smart_trash(targets, from))
+    }
+
     fn move_on(&self) {
         self.window.move_on(&self.view);
     }
@@ -4840,6 +4873,8 @@ mod tests {
         };
         let unified = Mailbox::Unified(super::super::Standard::Inbox);
         let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            trash_sent_without_asking: false,
+            unread_count: Default::default(),
             id: "smart-1".into(),
             name: "Big mail".into(),
             account: None,

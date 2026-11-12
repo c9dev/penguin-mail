@@ -141,6 +141,7 @@ app/src/ui/window/attachments.rs
 app/src/ui/window/categories/chip.rs
 app/src/ui/window/categories.rs
 app/src/ui/window/column_width.rs
+app/src/ui/window/customize_mailboxes.rs
 app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs
@@ -154,6 +155,7 @@ app/src/ui/window/on_screen.rs
 app/src/ui/window/organize.rs
 app/src/ui/window/outbox.rs
 app/src/ui/window/press.rs
+app/src/ui/window/smart_trash.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/reveal.rs
 app/src/ui/window/save_contacts.rs

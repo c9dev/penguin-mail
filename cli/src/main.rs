@@ -344,6 +344,7 @@ fn print_event(emails: &HashMap<AccountId, String>, event: &ChangeEvent) {
         ChangeEvent::AccountStateChanged { account_id, state } => {
             println!("{}: {}", who(emails, *account_id), state.as_str());
         }
+        ChangeEvent::LabelsPlaced { .. } => {}
         ChangeEvent::LabelsChanged { account_id } => {
             println!("{}: labels updated", who(emails, *account_id))
         }

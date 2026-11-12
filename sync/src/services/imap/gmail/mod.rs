@@ -233,6 +233,10 @@ impl<I: ImapApi, S: Submit> MailBackend for GmailImap<I, S> {
         self.0.gm_window(days, Some("INBOX")).await
     }
 
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        self.0.gm_count(query).await
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,

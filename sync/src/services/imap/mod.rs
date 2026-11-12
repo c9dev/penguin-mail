@@ -561,6 +561,17 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         self.inbox_refs().await
     }
 
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        let refs = self
+            .search_server(&SearchQuery::Tree(query.clone()), usize::MAX)
+            .await?;
+        Ok(refs
+            .into_iter()
+            .map(|hit| hit.id)
+            .collect::<std::collections::HashSet<_>>()
+            .len() as i64)
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,
