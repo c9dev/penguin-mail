@@ -477,6 +477,10 @@ pub(super) fn trash_words(mailbox: &Mailbox) -> Option<(String, String)> {
 /// How a plan changes the window. The main window is one adapter and the
 /// tests are another.
 pub(super) trait PressEffects {
+    /// Checks whether matching Sent messages need consent before any mail moves.
+    fn prepare_trash(&self, targets: Vec<Target>, from: MovedFrom)
+    -> Answer<'_, Option<MovedFrom>>;
+
     /// Steps past the mail the view shows.
     fn move_on(&self);
     /// Asks `question`; true on the verb.
@@ -516,6 +520,14 @@ pub(super) async fn carry_out(plan: Plan, effects: &dyn PressEffects) {
             words,
             said,
         } => {
+            let from = if action == MailAction::Triage(TriageAction::Trash) {
+                let Some(from) = effects.prepare_trash(targets.clone(), from).await else {
+                    return;
+                };
+                from
+            } else {
+                from
+            };
             if move_on {
                 effects.move_on();
             }
@@ -1093,6 +1105,7 @@ mod tests {
     /// every question with `yes`.
     struct Window {
         yes: bool,
+        trash_ready: bool,
         did: RefCell<Vec<String>>,
         /// The place each action was told its mail came from.
         from: RefCell<Vec<MovedFrom>>,
@@ -1102,6 +1115,7 @@ mod tests {
         fn answering(yes: bool) -> Window {
             Window {
                 yes,
+                trash_ready: true,
                 did: RefCell::new(Vec::new()),
                 from: RefCell::new(Vec::new()),
             }
@@ -1112,7 +1126,30 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn canceling_sent_consent_neither_moves_on_nor_changes_mail() {
+        let mut effects = Window::answering(true);
+        effects.trash_ready = false;
+        let plan = Plan {
+            targets: vec![Target::thread(1, "t1")],
+            from: MovedFrom::nowhere(),
+            step: Step::Act {
+                action: MailAction::Triage(TriageAction::Trash),
+                history: History::Record,
+                move_on: true,
+                words: None,
+                said: None,
+            },
+        };
+        carry_out(plan, &effects).await;
+        assert!(effects.did.borrow().is_empty());
+    }
+
     impl PressEffects for Window {
+        fn prepare_trash(&self, _: Vec<Target>, from: MovedFrom) -> Answer<'_, Option<MovedFrom>> {
+            Box::pin(std::future::ready(self.trash_ready.then_some(from)))
+        }
+
         fn move_on(&self) {
             self.did("move on");
         }

@@ -1022,6 +1022,12 @@ pub enum ChangeEvent {
     LabelsChanged {
         account_id: AccountId,
     },
+    /// A local rename or move committed these mailbox IDs and sibling positions.
+    LabelsPlaced {
+        account_id: AccountId,
+        moved: Vec<(String, String)>,
+        order: Vec<String>,
+    },
     /// Threads whose summary changed or that disappeared. Re-query to find out which.
     ThreadsChanged {
         account_id: AccountId,

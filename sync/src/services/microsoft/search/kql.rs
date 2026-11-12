@@ -50,6 +50,39 @@ pub(crate) fn print(query: &Query, today: NaiveDate) -> Result<Printed, Unsayabl
     })
 }
 
+pub(crate) fn print_parts(query: &Query, today: NaiveDate) -> Result<Vec<Printed>, Unsayable> {
+    match print(query, today) {
+        Ok(one) => Ok(vec![one]),
+        Err(_) => match query {
+            Query::Or(parts) => {
+                let mut printed = Vec::new();
+                for part in parts {
+                    printed.extend(print_parts(part, today)?);
+                }
+                Ok(printed)
+            }
+            Query::And(parts) => {
+                let Some((at, choices)) =
+                    parts.iter().enumerate().find_map(|(at, part)| match part {
+                        Query::Or(choices) => Some((at, choices)),
+                        _ => None,
+                    })
+                else {
+                    return Err(Unsayable);
+                };
+                let mut printed = Vec::new();
+                for choice in choices {
+                    let mut branch = parts.clone();
+                    branch[at] = choice.clone();
+                    printed.extend(print_parts(&Query::And(branch), today)?);
+                }
+                Ok(printed)
+            }
+            _ => Err(Unsayable),
+        },
+    }
+}
+
 fn clause(query: &Query, today: NaiveDate) -> Result<Option<String>, Unsayable> {
     Ok(match query {
         Query::Term(term) => term_clause(term, today)?,
@@ -196,6 +229,29 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn inbox_or_sent_searches_both_folders() {
+        let query = Query::And(vec![
+            Query::Or(vec![
+                Query::is_in(MailSet::Role(Role::Inbox)),
+                Query::is_in(MailSet::Role(Role::Sent)),
+            ]),
+            Query::term(Term::From("ann".into())),
+        ]);
+        let parts = print_parts(&query, today()).unwrap();
+        assert_eq!(
+            parts
+                .iter()
+                .map(|part| part.within.clone())
+                .collect::<Vec<_>>(),
+            vec![
+                Some(Place::Set(MailSet::Role(Role::Inbox))),
+                Some(Place::Set(MailSet::Role(Role::Sent))),
+            ]
+        );
+        assert!(parts.iter().all(|part| part.kql == "from:\"ann\""));
     }
 
     #[test]

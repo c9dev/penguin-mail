@@ -5,7 +5,23 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Closing Customize Mailboxes releases its folder lists.
+- Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
+- Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
+
+- The smart mailbox folder picker groups folders by account and searches only the accounts chosen for each folder.
+
+- The smart mailbox folder picker shows readable folder names in a wider list.
+- Favorites stay visible when their account is collapsed, and folder moves respect the customized order.
+
 ### New
+
+- Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
+
+- Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
+- Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
 
 - Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
@@ -14,6 +30,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Paste clipboard images into a draft with Paste or Cmd/Ctrl+V, and open attached files from their rows before sending.
 
+- Deleting a conversation from a smart mailbox asks before also moving matching sent messages to Trash, with a separate remember choice for each smart mailbox.
+
+- Customize Mailboxes separates sections into tabs and places available mailboxes beside editable, draggable Favorites.
 
 - On IMAP accounts, the messages of a conversation opened for the first time load faster.
 - An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.

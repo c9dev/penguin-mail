@@ -1261,7 +1261,7 @@ msgstr "Вилучити правило з {account}?"
 msgid "Load remote images from every sender?"
 msgstr "Завантажувати віддалені зображення від усіх відправників?"
 
-#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:644
+#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:653
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 "Завантаження віддаленого зображення повідомляє відправника, коли ви відкрили "
@@ -1285,7 +1285,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1800
+#: app/src/assistant/run.rs:1802
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
@@ -1293,18 +1293,18 @@ msgstr ""
 "«Сховати e-mail» потребує замаскованих адрес або міток, а {provider} не "
 "пропонує жодного з них для цього облікового запису."
 
-#: app/src/assistant/run.rs:1868
+#: app/src/assistant/run.rs:1870
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr ""
 "Вимкнути {address}? Пошта, надіслана на цю адресу, потраплятиме до "
 "«Смітника»."
 
-#: app/src/assistant/run.rs:1872
+#: app/src/assistant/run.rs:1874
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr ""
 "Знову ввімкнути {address}? Пошта, надіслана на цю адресу, знову надходитиме."
 
-#: app/src/assistant/run.rs:1981
+#: app/src/assistant/run.rs:1983
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1312,7 +1312,7 @@ msgstr ""
 "Перемістити пошту від {sender} до {category} в {account} і надсилати туди "
 "їхню майбутню пошту також?"
 
-#: app/src/assistant/run.rs:1993
+#: app/src/assistant/run.rs:1995
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -1771,57 +1771,57 @@ msgstr[2] ""
 "Вилучити теку «{label}» з {account}? У ній {count} розмов. Пошту в теці буде "
 "вилучено разом із нею."
 
-#: app/src/assistant/run/manage.rs:397
+#: app/src/assistant/run/manage.rs:406
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr ""
 "Вилучити розумну скриньку «{name}»? Пошта, яку вона показує, залишиться на "
 "місці."
 
-#: app/src/assistant/run/manage.rs:458
+#: app/src/assistant/run/manage.rs:467
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr "Замінити шаблон «{name}» цим? Збережений шаблон буде втрачено."
 
-#: app/src/assistant/run/manage.rs:462
+#: app/src/assistant/run/manage.rs:471
 msgid "Save a template called “{name}”?"
 msgstr "Зберегти шаблон із назвою «{name}»?"
 
-#: app/src/assistant/run/manage.rs:500
+#: app/src/assistant/run/manage.rs:509
 msgid "Delete the template “{name}”?"
 msgstr "Вилучити шаблон «{name}»?"
 
-#: app/src/assistant/run/manage.rs:531
+#: app/src/assistant/run/manage.rs:540
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "Додати {contact} до контактів {account}?"
 
-#: app/src/assistant/run/manage.rs:575
+#: app/src/assistant/run/manage.rs:584
 msgid "this contact"
 msgstr "цей контакт"
 
-#: app/src/assistant/run/manage.rs:587
+#: app/src/assistant/run/manage.rs:596
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "Змінити {contact} у контактах {account}?"
 
-#: app/src/assistant/run/manage.rs:634
+#: app/src/assistant/run/manage.rs:643
 msgid "Always load images from anyone at {domain}?"
 msgstr "Завжди завантажувати зображення від усіх із домену {domain}?"
 
-#: app/src/assistant/run/manage.rs:638
+#: app/src/assistant/run/manage.rs:647
 msgid "Always load images from {sender}?"
 msgstr "Завжди завантажувати зображення від {sender}?"
 
-#: app/src/assistant/run/manage.rs:669
+#: app/src/assistant/run/manage.rs:678
 msgid "Stop loading images from {sender}?"
 msgstr "Більше не завантажувати зображення від {sender}?"
 
-#: app/src/assistant/run/manage.rs:704
+#: app/src/assistant/run/manage.rs:713
 msgid "Export {what} to {file}?"
 msgstr "Експортувати {what} до {file}?"
 
-#: app/src/assistant/run/manage.rs:710
+#: app/src/assistant/run/manage.rs:719
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "Файл із такою назвою вже існує, і експорт його замінить."
 
-#: app/src/assistant/run/manage.rs:790
+#: app/src/assistant/run/manage.rs:799
 msgid "the message “{subject}”"
 msgstr "повідомлення «{subject}»"
 
@@ -2700,8 +2700,8 @@ msgstr "Повідомити про проблему"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:467
 #: app/src/ui/conversation.rs:625 app/src/ui/conversation.rs:1124
-#: app/src/ui/toolbar/customize.rs:20 app/src/ui/window/message_menu.rs:132
-#: app/src/ui/window/shortcuts.rs:396
+#: app/src/ui/smart_editor.rs:119 app/src/ui/toolbar/customize.rs:20
+#: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Архівувати"
 
@@ -2716,7 +2716,7 @@ msgstr "Позначити як прочитане"
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
-#: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:108
+#: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "Вилучити"
@@ -4207,8 +4207,8 @@ msgstr "Цей обліковий запис не під'єднано."
 msgid "Could not save: {reason}"
 msgstr "Не вдалося зберегти: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2930
-#: app/src/ui/window.rs:2953
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2937
+#: app/src/ui/window.rs:2960
 msgid "Could not open the draft: {reason}"
 msgstr "Не вдалося відкрити чернетку: {reason}"
 
@@ -4476,7 +4476,7 @@ msgid "Set up a different project"
 msgstr "Налаштувати інший проєкт"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3283
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3290
 msgid "Set up your own Google project"
 msgstr "Налаштувати власний проєкт Google"
 
@@ -4543,7 +4543,7 @@ msgstr "Менше за {size}"
 msgid "Larger than {size}"
 msgstr "Більше за {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:918
+#: app/src/rules.rs:251 app/src/settings/mod.rs:924
 msgid "All mail"
 msgstr "Уся пошта"
 
@@ -4618,8 +4618,8 @@ msgstr "{host} відхилив вхід: {reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:444 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1646 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:445 app/src/ui/sidebar.rs:496
+#: app/src/ui/sidebar.rs:1789 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Календар"
 
@@ -4641,221 +4641,221 @@ msgstr "На цьому комп'ютері, поки відкрито Penguin M
 msgid "On the server"
 msgstr "На сервері"
 
-#: app/src/settings/mod.rs:220 app/src/settings/mod.rs:429
-#: app/src/settings/mod.rs:830 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:225 app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:836 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1086
 msgid "Off"
 msgstr "Вимкнено"
 
-#: app/src/settings/mod.rs:221
+#: app/src/settings/mod.rs:226
 msgid "Local Server"
 msgstr "Локальний сервер"
 
-#: app/src/settings/mod.rs:222
+#: app/src/settings/mod.rs:227
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:223
+#: app/src/settings/mod.rs:228
 msgid "Claude Subscription"
 msgstr "Передплата Claude"
 
-#: app/src/settings/mod.rs:248 app/src/ui/window.rs:3656
-#: app/src/ui/window.rs:3740
+#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3676
+#: app/src/ui/window.rs:3764
 msgid "Assistant"
 msgstr "Асистент"
 
-#: app/src/settings/mod.rs:249 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:254 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Переклад"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:253
+#: app/src/settings/mod.rs:258
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Відписка"
 
-#: app/src/settings/mod.rs:259
+#: app/src/settings/mod.rs:264
 msgid "Answers questions and acts on your mail"
 msgstr "Відповідає на запитання та виконує дії з вашою поштою"
 
-#: app/src/settings/mod.rs:260
+#: app/src/settings/mod.rs:265
 msgid "Translates a message when you ask"
 msgstr "Перекладає повідомлення на ваш запит"
 
-#: app/src/settings/mod.rs:262
+#: app/src/settings/mod.rs:267
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Читає сторінку відписки від розсилки, коли правила не впораються"
 
-#: app/src/settings/mod.rs:300
+#: app/src/settings/mod.rs:305
 msgid "Same as the Assistant"
 msgstr "Як в асистента"
 
-#: app/src/settings/mod.rs:430
+#: app/src/settings/mod.rs:435
 msgid "Claude's own only"
 msgstr "Лише власний пошук Claude"
 
-#: app/src/settings/mod.rs:431
+#: app/src/settings/mod.rs:436
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:437
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:438
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:608
+#: app/src/settings/mod.rs:614
 msgid "Rich text"
 msgstr "Форматований текст"
 
-#: app/src/settings/mod.rs:609
+#: app/src/settings/mod.rs:615
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:628 app/src/settings/mod.rs:650
+#: app/src/settings/mod.rs:634 app/src/settings/mod.rs:656
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Автоматично"
 
-#: app/src/settings/mod.rs:629 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:635 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "понеділок"
 
-#: app/src/settings/mod.rs:630 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:636 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "неділя"
 
-#: app/src/settings/mod.rs:651
+#: app/src/settings/mod.rs:657
 msgid "12-hour (AM/PM)"
 msgstr "12-годинний (AM/PM)"
 
-#: app/src/settings/mod.rs:652
+#: app/src/settings/mod.rs:658
 msgid "24-hour"
 msgstr "24-годинний"
 
-#: app/src/settings/mod.rs:690
+#: app/src/settings/mod.rs:696
 msgid "When opened"
 msgstr "Під час відкриття"
 
-#: app/src/settings/mod.rs:691
+#: app/src/settings/mod.rs:697
 msgid "After 2 seconds"
 msgstr "Через 2 секунди"
 
-#: app/src/settings/mod.rs:692
+#: app/src/settings/mod.rs:698
 msgid "Only when I choose"
 msgstr "Лише коли я виберу"
 
-#: app/src/settings/mod.rs:708 app/src/settings/mod.rs:726
+#: app/src/settings/mod.rs:714 app/src/settings/mod.rs:732
 msgid "Ask each time"
 msgstr "Питати щоразу"
 
-#: app/src/settings/mod.rs:709
+#: app/src/settings/mod.rs:715
 msgid "Always load"
 msgstr "Завжди завантажувати"
 
-#: app/src/settings/mod.rs:727
+#: app/src/settings/mod.rs:733
 msgid "Never ask"
 msgstr "Ніколи не питати"
 
-#: app/src/settings/mod.rs:754
+#: app/src/settings/mod.rs:760
 msgid "No Preview"
 msgstr "Без попереднього перегляду"
 
-#: app/src/settings/mod.rs:755
+#: app/src/settings/mod.rs:761
 msgid "1 Line"
 msgstr "1 рядок"
 
-#: app/src/settings/mod.rs:756
+#: app/src/settings/mod.rs:762
 msgid "2 Lines"
 msgstr "2 рядки"
 
-#: app/src/settings/mod.rs:790
+#: app/src/settings/mod.rs:796
 msgid "Small"
 msgstr "Малий"
 
-#: app/src/settings/mod.rs:791
+#: app/src/settings/mod.rs:797
 msgid "Default"
 msgstr "Типовий"
 
-#: app/src/settings/mod.rs:792
+#: app/src/settings/mod.rs:798
 msgid "Large"
 msgstr "Великий"
 
-#: app/src/settings/mod.rs:793
+#: app/src/settings/mod.rs:799
 msgid "Larger"
 msgstr "Більший"
 
-#: app/src/settings/mod.rs:831
+#: app/src/settings/mod.rs:837
 msgid "5 seconds"
 msgstr "5 секунд"
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:838
 msgid "10 seconds"
 msgstr "10 секунд"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:839
 msgid "20 seconds"
 msgstr "20 секунд"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:840
 msgid "30 seconds"
 msgstr "30 секунд"
 
-#: app/src/settings/mod.rs:851
+#: app/src/settings/mod.rs:857
 msgid "Follow system"
 msgstr "Як у системі"
 
-#: app/src/settings/mod.rs:852
+#: app/src/settings/mod.rs:858
 msgid "Light"
 msgstr "Світла"
 
-#: app/src/settings/mod.rs:853
+#: app/src/settings/mod.rs:859
 msgid "Dark"
 msgstr "Темна"
 
-#: app/src/settings/mod.rs:887
+#: app/src/settings/mod.rs:893
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Кожну {count} секунду"
 msgstr[1] "Кожні {count} секунди"
 msgstr[2] "Кожні {count} секунд"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:901
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Кожну {count} хвилину"
 msgstr[1] "Кожні {count} хвилини"
 msgstr[2] "Кожні {count} хвилин"
 
-#: app/src/settings/mod.rs:912
+#: app/src/settings/mod.rs:918
 msgid "2 weeks"
 msgstr "2 тижні"
 
-#: app/src/settings/mod.rs:913
+#: app/src/settings/mod.rs:919
 msgid "30 days"
 msgstr "30 днів"
 
-#: app/src/settings/mod.rs:914
+#: app/src/settings/mod.rs:920
 msgid "90 days"
 msgstr "90 днів"
 
-#: app/src/settings/mod.rs:915
+#: app/src/settings/mod.rs:921
 msgid "1 year"
 msgstr "1 рік"
 
-#: app/src/settings/mod.rs:916
+#: app/src/settings/mod.rs:922
 msgid "2 years"
 msgstr "2 роки"
 
-#: app/src/settings/mod.rs:917
+#: app/src/settings/mod.rs:923
 msgid "5 years"
 msgstr "5 років"
 
-#: app/src/settings/mod.rs:939
+#: app/src/settings/mod.rs:945
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4864,20 +4864,20 @@ msgstr ""
 "займає багато місця на диску й пам'яті, а старіша пошта завантажується у "
 "фоновому режимі."
 
-#: app/src/settings/mod.rs:941
+#: app/src/settings/mod.rs:947
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Усе у «Вхідних» теж залишається, а старішу пошту й далі можна знайти пошуком"
 
-#: app/src/settings/mod.rs:948
+#: app/src/settings/mod.rs:954
 msgid "256 MB"
 msgstr "256 МБ"
 
-#: app/src/settings/mod.rs:949
+#: app/src/settings/mod.rs:955
 msgid "1 GB"
 msgstr "1 ГБ"
 
-#: app/src/settings/mod.rs:950
+#: app/src/settings/mod.rs:956
 msgid "4 GB"
 msgstr "4 ГБ"
 
@@ -5038,7 +5038,7 @@ msgstr[0] "{count} непрочитане повідомлення"
 msgstr[1] "{count} непрочитані повідомлення"
 msgstr[2] "{count} непрочитаних повідомлень"
 
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1670
+#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1813
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} непрочитане повідомлення"
@@ -5063,7 +5063,7 @@ msgstr "Відкрити Penguin Mail"
 msgid "New Message"
 msgstr "Нове повідомлення"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2125 app/src/ui/window.rs:3662
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2406 app/src/ui/window.rs:3682
 msgid "Check for Mail"
 msgstr "Перевірити пошту"
 
@@ -5081,7 +5081,7 @@ msgstr "Що нового у {version}"
 msgid "Check for Updates"
 msgstr "Перевірити оновлення"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3679
+#: app/src/tray.rs:266 app/src/ui/window.rs:3703
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Вийти"
@@ -5103,7 +5103,7 @@ msgstr "Що нового"
 msgid "Website"
 msgstr "Вебсайт"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3678
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3702
 msgid "Donate"
 msgstr "Пожертвувати"
 
@@ -5111,7 +5111,7 @@ msgstr "Пожертвувати"
 msgid "License"
 msgstr "Ліцензія"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3677
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3701
 msgid "About Penguin Mail"
 msgstr "Про Penguin Mail"
 
@@ -5161,12 +5161,12 @@ msgid "The update to {version} failed"
 msgstr "Не вдалося оновити до {version}"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1558
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1563
 msgid "Copy Command"
 msgstr "Копіювати команду"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1563
+#: app/src/ui/window.rs:1568
 msgid "Command copied"
 msgstr "Команду скопійовано"
 
@@ -5263,13 +5263,13 @@ msgstr "Копіювати посилання"
 #: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
+#: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
 #: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
 #: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
-#: app/src/ui/window/arrange.rs:148 app/src/ui/window/images.rs:87
+#: app/src/ui/window/arrange.rs:169 app/src/ui/window/images.rs:87
 #: app/src/ui/window/images.rs:157 app/src/ui/window/organize.rs:78
-#: app/src/ui/window/organize.rs:127
+#: app/src/ui/window/organize.rs:127 app/src/ui/window/smart_trash.rs:81
 msgid "Cancel"
 msgstr "Скасувати"
 
@@ -5277,7 +5277,7 @@ msgstr "Скасувати"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1502
+#: app/src/ui/window.rs:1507
 msgid "Sign In"
 msgstr "Увійти"
 
@@ -5401,7 +5401,7 @@ msgstr "Не зараз"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1635
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1640
 msgid "Grant Access"
 msgstr "Надати доступ"
 
@@ -5551,7 +5551,7 @@ msgid "Sign In Again"
 msgstr "Увійти знову"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2237
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2244
 msgid "Open Google Cloud"
 msgstr "Відкрити Google Cloud"
 
@@ -5641,13 +5641,13 @@ msgstr "Написати чернетку відповіді на відкрит
 msgid "Choose a Model"
 msgstr "Вибрати модель"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3787
-#: app/src/ui/window.rs:3788
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3811
+#: app/src/ui/window.rs:3812
 msgid "Detach"
 msgstr "Відкріпити"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4467
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4491
 msgid "Close"
 msgstr "Закрити"
 
@@ -5872,7 +5872,7 @@ msgstr "Змінити {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3426
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3446
 msgid "Remove"
 msgstr "Прибрати"
 
@@ -5915,7 +5915,7 @@ msgstr ""
 "з'єднується із сервером через HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Назва"
@@ -5954,8 +5954,8 @@ msgstr "Перевірити"
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
-#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:148
+#: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
+#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:169
 #: app/src/ui/window/save_contacts.rs:112
 msgid "Save"
 msgstr "Зберегти"
@@ -6732,8 +6732,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Подробиці бачать лише ті, хто може змінювати цей календар"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1842
-#: app/src/ui/sidebar.rs:2142
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2123
+#: app/src/ui/sidebar.rs:2423
 msgid "Color"
 msgstr "Колір"
 
@@ -7133,7 +7133,7 @@ msgid "New Calendar"
 msgstr "Новий календар"
 
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
-#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:322
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:363
 msgid "Create"
@@ -7604,19 +7604,19 @@ msgstr "Надати доступ для {account}"
 msgid "Sign in again to {account}"
 msgstr "Увійти знову до {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2147
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2428
 msgid "Sign In Again…"
 msgstr "Увійти знову…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2155
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2436
 msgid "Remove Account…"
 msgstr "Прибрати обліковий запис…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2162
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2443
 msgid "Account options"
 msgstr "Параметри облікового запису"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2167
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2448
 msgid "Options for {account}"
 msgstr "Параметри для {account}"
 
@@ -7644,13 +7644,13 @@ msgstr "Сховати зі списку"
 msgid "Original Color"
 msgstr "Початковий колір"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1830
-#: app/src/ui/sidebar.rs:2132
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2111
+#: app/src/ui/sidebar.rs:2413
 msgid "Rename…"
 msgstr "Перейменувати…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1731
-#: app/src/ui/sidebar.rs:1858
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:2012
+#: app/src/ui/sidebar.rs:2139
 msgid "Delete…"
 msgstr "Вилучити…"
 
@@ -7778,7 +7778,7 @@ msgstr "{date}, є події"
 msgid "Offline, last updated {time}"
 msgstr "Поза мережею, востаннє оновлено {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2225
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2506
 msgid "Offline"
 msgstr "Поза мережею"
 
@@ -7915,7 +7915,7 @@ msgid "Choose a Time…"
 msgstr "Вибрати час…"
 
 #: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
-#: app/src/ui/sidebar.rs:1256
+#: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1892
 msgid "Send Later"
 msgstr "Надіслати пізніше"
 
@@ -8333,7 +8333,7 @@ msgstr "Інша ел. пошта"
 msgid "Phone"
 msgstr "Телефон"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1219
+#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1329
 msgid "Remove from VIPs"
 msgstr "Прибрати з VIP-контактів"
 
@@ -8370,7 +8370,7 @@ msgid "Find Again"
 msgstr "Знайти знову"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1725
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2006
 msgid "Edit…"
 msgstr "Змінити…"
 
@@ -8455,7 +8455,7 @@ msgid "Export…"
 msgstr "Експортувати…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3672
+#: app/src/ui/window.rs:3692
 msgid "Customize Toolbar…"
 msgstr "Налаштувати панель інструментів…"
 
@@ -8491,7 +8491,7 @@ msgstr "Ігнорувати"
 
 #: app/src/ui/conversation.rs:472 app/src/ui/conversation.rs:626
 #: app/src/ui/conversation.rs:1112 app/src/ui/toolbar/customize.rs:21
-#: app/src/ui/window/message_menu.rs:133
+#: app/src/ui/window/message_menu.rs:133 app/src/ui/window/smart_trash.rs:82
 msgid "Move to Trash"
 msgstr "Перемістити до «Смітника»"
 
@@ -8568,8 +8568,9 @@ msgstr "Позначити як прочитане або непрочитане
 msgid "Tags…"
 msgstr "Теги…"
 
-#: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1264
-#: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
+#: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1374
+#: app/src/ui/sidebar.rs:1898 app/src/ui/window/reminders.rs:25
+#: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Нагадати"
 
@@ -9023,7 +9024,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Дозволити «Сховати e-mail»"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3881
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3905
 msgid "Add an account first"
 msgstr "Спершу додайте обліковий запис"
 
@@ -9175,7 +9176,7 @@ msgid "Events to add"
 msgstr "Події для додавання"
 
 #: app/src/ui/invitation.rs:430 app/src/ui/invitation.rs:436
-#: app/src/ui/sidebar.rs:141
+#: app/src/ui/sidebar.rs:142
 msgid "Show in Calendar"
 msgstr "Показати в календарі"
 
@@ -9754,7 +9755,8 @@ msgid ""
 msgstr "Сповіщення перед кожною подією в час, заданий подією або її календарем"
 
 #: app/src/ui/preferences.rs:411 app/src/ui/preferences.rs:418
-#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
+#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:47
+#: app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
 msgstr "Облікові записи"
 
@@ -9856,8 +9858,8 @@ msgstr "Форматований текст оформлює самі слова
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:715 app/src/ui/sidebar.rs:64
-#: app/src/ui/sidebar.rs:77
+#: app/src/ui/preferences.rs:715 app/src/ui/sidebar.rs:65
+#: app/src/ui/sidebar.rs:78
 msgid "Undo Send"
 msgstr "Скасувати надсилання"
 
@@ -10251,7 +10253,7 @@ msgstr "Перемістити {account} вниз"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3675 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3699 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Параметри"
 
@@ -10627,7 +10629,7 @@ msgstr "Додати адресу"
 msgid "Default sender"
 msgstr "Типовий відправник"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2034
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2315
 msgid "Signature…"
 msgstr "Підпис…"
 
@@ -10687,134 +10689,159 @@ msgstr ""
 "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
 "суфіксом, <domain> — її доменом."
 
-#: app/src/ui/sidebar.rs:73
+#: app/src/ui/sidebar.rs:74
 msgid "Stop the message from going out"
 msgstr "Не дати повідомленню піти"
 
-#: app/src/ui/sidebar.rs:428 app/src/ui/sidebar.rs:853
+#: app/src/ui/sidebar.rs:429 app/src/ui/sidebar.rs:854
 #: app/src/ui/sidebar/sections.rs:26
+#: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "Пошта"
 
-#: app/src/ui/sidebar.rs:440 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:1645 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:441 app/src/ui/sidebar.rs:495
+#: app/src/ui/sidebar.rs:1788 app/src/ui/thread_list.rs:372
 msgid "Mail"
 msgstr "Пошта"
 
-#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:1636
-#: app/src/ui/sidebar.rs:2592
+#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1779
+#: app/src/ui/sidebar.rs:2873
 msgid "99+"
 msgstr "99+"
 
-#: app/src/ui/sidebar.rs:844
+#: app/src/ui/sidebar.rs:845
 msgid "Calendars"
 msgstr "Календарі"
 
-#: app/src/ui/sidebar.rs:1206 app/src/ui/sidebar.rs:1208
+#: app/src/ui/sidebar.rs:1316 app/src/ui/sidebar.rs:1318
+#: app/src/ui/sidebar.rs:1915 app/src/ui/sidebar.rs:1917
 msgid "VIPs"
 msgstr "VIP-контакти"
 
-#: app/src/ui/sidebar.rs:1248
+#: app/src/ui/sidebar.rs:1358 app/src/ui/sidebar.rs:1886
 msgid "Outbox"
 msgstr "Вихідні"
 
-#: app/src/ui/sidebar.rs:1311
+#: app/src/ui/sidebar.rs:1421
 msgid "Holds folders, not mail"
 msgstr "Містить теки, а не пошту"
 
-#: app/src/ui/sidebar.rs:1595
+#: app/src/ui/sidebar.rs:1646
+msgid "Approximate unread message count from downloaded mail"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1649
+#, fuzzy
+#| msgid "The message is larger than the server sends."
+msgid "Unread messages counted on the server"
+msgstr "Повідомлення більше, ніж дозволяє надсилати сервер."
+
+#: app/src/ui/sidebar.rs:1652
+#, fuzzy
+#| msgid "{count} unread message"
+#| msgid_plural "{count} unread messages"
+msgid "Counting unread messages on the server…"
+msgstr "{count} непрочитане повідомлення"
+
+#: app/src/ui/sidebar.rs:1655
+msgid ""
+"Unread count unavailable. The account may be offline or the server may not "
+"support these conditions."
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1738
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} непрочитане повідомлення"
 msgstr[1] "{mailbox}, {count} непрочитані повідомлення"
 msgstr[2] "{mailbox}, {count} непрочитаних повідомлень"
 
-#: app/src/ui/sidebar.rs:1601
+#: app/src/ui/sidebar.rs:1744
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} повідомлення"
 msgstr[1] "{mailbox}, {count} повідомлення"
 msgstr[2] "{mailbox}, {count} повідомлень"
 
-#: app/src/ui/sidebar.rs:1648
+#: app/src/ui/sidebar.rs:1791
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Пошта, {count} непрочитане"
 msgstr[1] "Пошта, {count} непрочитані"
 msgstr[2] "Пошта, {count} непрочитаних"
 
-#: app/src/ui/sidebar.rs:1654
+#: app/src/ui/sidebar.rs:1797
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Календар, {count} очікує на вашу відповідь"
 msgstr[1] "Календар, {count} очікують на вашу відповідь"
 msgstr[2] "Календар, {count} очікують на вашу відповідь"
 
-#: app/src/ui/sidebar.rs:1727 app/src/ui/sidebar.rs:1849
-#: app/src/ui/sidebar.rs:2143
+#: app/src/ui/sidebar.rs:2008 app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2424
 msgid "Move Up"
 msgstr "Перемістити вгору"
 
-#: app/src/ui/sidebar.rs:1728 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2144
+#: app/src/ui/sidebar.rs:2009 app/src/ui/sidebar.rs:2133
+#: app/src/ui/sidebar.rs:2425
 msgid "Move Down"
 msgstr "Перемістити вниз"
 
-#: app/src/ui/sidebar.rs:1880
+#: app/src/ui/sidebar.rs:2161
 msgid "Empty Trash…"
 msgstr "Спорожнити смітник…"
 
-#: app/src/ui/sidebar.rs:2033
+#: app/src/ui/sidebar.rs:2314
 msgid "Automatic Reply…"
 msgstr "Автовідповідь…"
 
-#: app/src/ui/sidebar.rs:2035
+#: app/src/ui/sidebar.rs:2316
 msgid "Rules…"
 msgstr "Правила…"
 
-#: app/src/ui/sidebar.rs:2036 app/src/ui/window.rs:3665
+#: app/src/ui/sidebar.rs:2317 app/src/ui/window.rs:3685
 msgid "Hide My Email…"
 msgstr "Сховати e-mail…"
 
-#: app/src/ui/sidebar.rs:2045
+#: app/src/ui/sidebar.rs:2326
 msgid "On this computer"
 msgstr "На цьому комп'ютері"
 
-#: app/src/ui/sidebar.rs:2053
+#: app/src/ui/sidebar.rs:2334
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "На цьому комп'ютері. Показати або сховати поштові скриньки цього облікового "
 "запису"
 
-#: app/src/ui/sidebar.rs:2054
+#: app/src/ui/sidebar.rs:2335
 msgid "Show or hide this account's mailboxes"
 msgstr "Показати або сховати поштові скриньки цього облікового запису"
 
-#: app/src/ui/sidebar.rs:2148
+#: app/src/ui/sidebar.rs:2429
 msgid "Switch to JMAP…"
 msgstr "Перейти на JMAP…"
 
-#: app/src/ui/sidebar.rs:2150
+#: app/src/ui/sidebar.rs:2431
 msgid "Messages That Will Not Download…"
 msgstr "Повідомлення, які не завантажуються…"
 
-#: app/src/ui/sidebar.rs:2223
+#: app/src/ui/sidebar.rs:2504
 msgid "Sign in again to keep syncing"
 msgstr "Увійдіть знову, щоб продовжити синхронізацію"
 
-#: app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2510
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} не відповідає; повторна спроба"
 
-#: app/src/ui/sidebar.rs:2240
+#: app/src/ui/sidebar.rs:2521
 msgid "The keyring is not responding; retrying"
 msgstr "В'язка ключів не відповідає; повторна спроба"
 
-#: app/src/ui/sidebar.rs:2243
+#: app/src/ui/sidebar.rs:2524
 msgid "Downloading mail"
 msgstr "Завантаження пошти"
 
-#: app/src/ui/sidebar.rs:2247
+#: app/src/ui/sidebar.rs:2528
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Синхронізацію зупинено через помилку; перезапустіть Penguin Mail, щоб "
@@ -10822,7 +10849,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2254
+#: app/src/ui/sidebar.rs:2535
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -10831,62 +10858,118 @@ msgstr ""
 "Mail спробує ще раз пізніше."
 
 #: app/src/ui/sidebar/sections.rs:25
+#: app/src/ui/window/customize_mailboxes.rs:288
+#: app/src/ui/window/customize_mailboxes.rs:298
 msgid "Favorites"
 msgstr "Вибране"
 
 #: app/src/ui/sidebar/sections.rs:27
+#: app/src/ui/window/customize_mailboxes.rs:597
 msgid "Smart Mailboxes"
 msgstr "Розумні скриньки"
 
-#: app/src/ui/smart_editor.rs:39
+#: app/src/ui/smart_editor.rs:43 app/src/ui/smart_editor.rs:203
 msgid "All Accounts"
 msgstr "Усі облікові записи"
 
-#: app/src/ui/smart_editor.rs:54
+#: app/src/ui/smart_editor.rs:58
 msgid "Match"
 msgstr "Потрібно виконати"
 
-#: app/src/ui/smart_editor.rs:56
+#: app/src/ui/smart_editor.rs:60
 msgid "All of the conditions"
 msgstr "Усі умови"
 
-#: app/src/ui/smart_editor.rs:57
+#: app/src/ui/smart_editor.rs:61
 msgid "Any of the conditions"
 msgstr "Будь-яка з умов"
 
-#: app/src/ui/smart_editor.rs:67
+#: app/src/ui/smart_editor.rs:66
+#, fuzzy
+#| msgid "read contacts"
+msgid "Unread count"
+msgstr "читати контакти"
+
+#: app/src/ui/smart_editor.rs:68
+msgid "Do not show"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:69
+msgid "Fast, approximate"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:70
+msgid "Slow, exact"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:80
+msgid "Counts downloaded unread messages. Older mail may be missing."
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:81
+msgid ""
+"Counts unread messages on the server in the background. Some servers or "
+"conditions are unsupported."
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:82
+#, fuzzy
+#| msgid "Creating a smart mailbox"
+msgid "No unread count beside this smart mailbox."
+msgstr "Створення розумної скриньки"
+
+#: app/src/ui/smart_editor.rs:88
+msgid "Delete Sent Messages Without Asking"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:90
+msgid ""
+"When deleting a conversation here, also move matching sent messages to Trash"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:102
 msgid "Conditions"
 msgstr "Умови"
 
-#: app/src/ui/smart_editor.rs:73
+#: app/src/ui/smart_editor.rs:108
 msgid "Add Condition"
 msgstr "Додати умову"
 
-#: app/src/ui/smart_editor.rs:106 app/src/ui/smart_editor.rs:112
+#: app/src/ui/smart_editor.rs:122
+msgid "All Mail"
+msgstr "Уся пошта"
+
+#: app/src/ui/smart_editor.rs:237 app/src/ui/smart_editor.rs:241
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Choose Mailboxes"
+msgstr "Показати поштові скриньки"
+
+#: app/src/ui/smart_editor.rs:276 app/src/ui/smart_editor.rs:282
 msgid "Remove Condition"
 msgstr "Прибрати умову"
 
-#: app/src/ui/smart_editor.rs:110
+#: app/src/ui/smart_editor.rs:280
 msgid "Condition"
 msgstr "Умова"
 
-#: app/src/ui/smart_editor.rs:111
+#: app/src/ui/smart_editor.rs:281
 msgid "Matches"
 msgstr "Збігається з"
 
-#: app/src/ui/smart_editor.rs:162
+#: app/src/ui/smart_editor.rs:338
 msgid "Edit Smart Mailbox"
 msgstr "Змінити розумну скриньку"
 
-#: app/src/ui/smart_editor.rs:164
+#: app/src/ui/smart_editor.rs:340
 msgid "New Smart Mailbox"
 msgstr "Нова розумна скринька"
 
-#: app/src/ui/smart_editor.rs:193
+#: app/src/ui/smart_editor.rs:375
 msgid "Give the mailbox a name"
 msgstr "Дайте скриньці назву"
 
-#: app/src/ui/smart_editor.rs:197
+#: app/src/ui/smart_editor.rs:379
 msgid "Add a condition with a value"
 msgstr "Додайте умову зі значенням"
 
@@ -11042,7 +11125,7 @@ msgstr "Перевірка пошти"
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:410
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:414
 msgid "Muted"
 msgstr "Ігноровані"
 
@@ -11071,10 +11154,14 @@ msgid "Labels or Move to Folder"
 msgstr "Мітки або переміщення до теки"
 
 #: app/src/ui/toolbar/customize.rs:116
+#: app/src/ui/window/customize_mailboxes.rs:111
+#: app/src/ui/window/customize_mailboxes.rs:334
 msgid "Move {button} Up"
 msgstr "Перемістити {button} вгору"
 
 #: app/src/ui/toolbar/customize.rs:120
+#: app/src/ui/window/customize_mailboxes.rs:115
+#: app/src/ui/window/customize_mailboxes.rs:338
 msgid "Move {button} Down"
 msgstr "Перемістити {button} вниз"
 
@@ -11089,6 +11176,7 @@ msgstr ""
 "порядку."
 
 #: app/src/ui/toolbar/customize.rs:238
+#: app/src/ui/window/customize_mailboxes.rs:847
 msgid "Restore Defaults"
 msgstr "Відновити типові значення"
 
@@ -11310,254 +11398,254 @@ msgstr ""
 "Виберіть, де зберігається ваша пошта. Інші можна додати пізніше з головного "
 "меню."
 
-#: app/src/ui/window.rs:291
+#: app/src/ui/window.rs:295
 msgid "Deleted forever"
 msgstr "Вилучено назавжди"
 
-#: app/src/ui/window.rs:293
+#: app/src/ui/window.rs:297
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "Назавжди вилучено {count} розмову"
 msgstr[1] "Назавжди вилучено {count} розмови"
 msgstr[2] "Назавжди вилучено {count} розмов"
 
-#: app/src/ui/window.rs:299
+#: app/src/ui/window.rs:303
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "Назавжди вилучено {count} повідомлення"
 msgstr[1] "Назавжди вилучено {count} повідомлення"
 msgstr[2] "Назавжди вилучено {count} повідомлень"
 
-#: app/src/ui/window.rs:312
+#: app/src/ui/window.rs:316
 msgid "{label}, on this mail"
 msgstr "{label}, на цьому листі"
 
-#: app/src/ui/window.rs:341
+#: app/src/ui/window.rs:345
 msgid "Added {person} to VIPs"
 msgstr "{person} додано до VIP-контактів"
 
-#: app/src/ui/window.rs:342
+#: app/src/ui/window.rs:346
 msgid "Removed {person} from VIPs"
 msgstr "{person} прибрано з VIP-контактів"
 
-#: app/src/ui/window.rs:348
+#: app/src/ui/window.rs:352
 msgid "Could not load mail: {reason}"
 msgstr "Не вдалося завантажити пошту: {reason}"
 
-#: app/src/ui/window.rs:358
+#: app/src/ui/window.rs:362
 msgid "Added {account}. Downloading mail…"
 msgstr "Додано {account}. Завантаження пошти…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3045
+#: app/src/ui/window.rs:366 app/src/ui/window.rs:3052
 msgid "{account} is signed in again."
 msgstr "Вхід до {account} виконано знову."
 
-#: app/src/ui/window.rs:381
+#: app/src/ui/window.rs:385
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "Створено теку «{name}» на {provider} для архівованої пошти"
 
-#: app/src/ui/window.rs:390
+#: app/src/ui/window.rs:394
 msgid "Flagged red"
 msgstr "Позначено червоним прапорцем"
 
-#: app/src/ui/window.rs:391
+#: app/src/ui/window.rs:395
 msgid "Flagged orange"
 msgstr "Позначено помаранчевим прапорцем"
 
-#: app/src/ui/window.rs:392
+#: app/src/ui/window.rs:396
 msgid "Flagged yellow"
 msgstr "Позначено жовтим прапорцем"
 
-#: app/src/ui/window.rs:393
+#: app/src/ui/window.rs:397
 msgid "Flagged green"
 msgstr "Позначено зеленим прапорцем"
 
-#: app/src/ui/window.rs:394
+#: app/src/ui/window.rs:398
 msgid "Flagged blue"
 msgstr "Позначено синім прапорцем"
 
-#: app/src/ui/window.rs:395
+#: app/src/ui/window.rs:399
 msgid "Flagged purple"
 msgstr "Позначено фіолетовим прапорцем"
 
-#: app/src/ui/window.rs:396
+#: app/src/ui/window.rs:400
 msgid "Flagged gray"
 msgstr "Позначено сірим прапорцем"
 
-#: app/src/ui/window.rs:407 app/src/ui/window.rs:505
+#: app/src/ui/window.rs:411 app/src/ui/window.rs:509
 msgid "Labels changed"
 msgstr "Мітки змінено"
 
-#: app/src/ui/window.rs:411
+#: app/src/ui/window.rs:415
 msgid "Unmuted"
 msgstr "Більше не ігнорується"
 
-#: app/src/ui/window.rs:413
+#: app/src/ui/window.rs:417
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "Ігнорується {count} розмова"
 msgstr[1] "Ігноруються {count} розмови"
 msgstr[2] "Ігнорується {count} розмов"
 
-#: app/src/ui/window.rs:419
+#: app/src/ui/window.rs:423
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "Ігнорується {count} повідомлення"
 msgstr[1] "Ігноруються {count} повідомлення"
 msgstr[2] "Ігнорується {count} повідомлень"
 
-#: app/src/ui/window.rs:425
+#: app/src/ui/window.rs:429
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "Більше не ігнорується {count} розмова"
 msgstr[1] "Більше не ігноруються {count} розмови"
 msgstr[2] "Більше не ігнорується {count} розмов"
 
-#: app/src/ui/window.rs:431
+#: app/src/ui/window.rs:435
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "Більше не ігнорується {count} повідомлення"
 msgstr[1] "Більше не ігноруються {count} повідомлення"
 msgstr[2] "Більше не ігнорується {count} повідомлень"
 
-#: app/src/ui/window.rs:441
+#: app/src/ui/window.rs:445
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "Закрито {count} нагадування про відповідь"
 msgstr[1] "Закрито {count} нагадування про відповідь"
 msgstr[2] "Закрито {count} нагадувань про відповідь"
 
-#: app/src/ui/window.rs:450
+#: app/src/ui/window.rs:454
 msgid "Archived"
 msgstr "Архівовано"
 
-#: app/src/ui/window.rs:452
+#: app/src/ui/window.rs:456
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "Архівовано {count} розмову"
 msgstr[1] "Архівовано {count} розмови"
 msgstr[2] "Архівовано {count} розмов"
 
-#: app/src/ui/window.rs:458
+#: app/src/ui/window.rs:462
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "Архівовано {count} повідомлення"
 msgstr[1] "Архівовано {count} повідомлення"
 msgstr[2] "Архівовано {count} повідомлень"
 
-#: app/src/ui/window.rs:463
+#: app/src/ui/window.rs:467
 msgid "Moved to Trash"
 msgstr "Переміщено до «Смітника»"
 
-#: app/src/ui/window.rs:465
+#: app/src/ui/window.rs:469
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "{count} розмову переміщено до «Смітника»"
 msgstr[1] "{count} розмови переміщено до «Смітника»"
 msgstr[2] "{count} розмов переміщено до «Смітника»"
 
-#: app/src/ui/window.rs:471
+#: app/src/ui/window.rs:475
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "{count} повідомлення переміщено до «Смітника»"
 msgstr[1] "{count} повідомлення переміщено до «Смітника»"
 msgstr[2] "{count} повідомлень переміщено до «Смітника»"
 
-#: app/src/ui/window.rs:476
+#: app/src/ui/window.rs:480
 msgid "Marked as junk"
 msgstr "Позначено як спам"
 
-#: app/src/ui/window.rs:478
+#: app/src/ui/window.rs:482
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "{count} розмову позначено як спам"
 msgstr[1] "{count} розмови позначено як спам"
 msgstr[2] "{count} розмов позначено як спам"
 
-#: app/src/ui/window.rs:484
+#: app/src/ui/window.rs:488
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "{count} повідомлення позначено як спам"
 msgstr[1] "{count} повідомлення позначено як спам"
 msgstr[2] "{count} повідомлень позначено як спам"
 
-#: app/src/ui/window.rs:489
+#: app/src/ui/window.rs:493
 msgid "Moved to the Inbox"
 msgstr "Переміщено до «Вхідних»"
 
-#: app/src/ui/window.rs:491
+#: app/src/ui/window.rs:495
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "{count} розмову переміщено до «Вхідних»"
 msgstr[1] "{count} розмови переміщено до «Вхідних»"
 msgstr[2] "{count} розмов переміщено до «Вхідних»"
 
-#: app/src/ui/window.rs:497
+#: app/src/ui/window.rs:501
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "{count} повідомлення переміщено до «Вхідних»"
 msgstr[1] "{count} повідомлення переміщено до «Вхідних»"
 msgstr[2] "{count} повідомлень переміщено до «Вхідних»"
 
-#: app/src/ui/window.rs:945
+#: app/src/ui/window.rs:949
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (демо)"
 
-#: app/src/ui/window.rs:1388
+#: app/src/ui/window.rs:1393
 msgid "Could not read accounts: {reason}"
 msgstr "Не вдалося прочитати облікові записи: {reason}"
 
-#: app/src/ui/window.rs:2128
+#: app/src/ui/window.rs:2135
 msgid "Could not delete the mail: {reason}"
 msgstr "Не вдалося вилучити пошту: {reason}"
 
-#: app/src/ui/window.rs:2235
+#: app/src/ui/window.rs:2242
 msgid "Turn On the {service}"
 msgstr "Увімкніть {service}"
 
-#: app/src/ui/window.rs:2420 app/src/ui/window.rs:2423
+#: app/src/ui/window.rs:2427 app/src/ui/window.rs:2430
 msgid "Move to Inbox"
 msgstr "Перемістити до «Вхідних»"
 
-#: app/src/ui/window.rs:2618
+#: app/src/ui/window.rs:2625
 msgid "Select mail from one account to tag it."
 msgstr "Щоб додати тег, виберіть пошту з одного облікового запису."
 
-#: app/src/ui/window.rs:2630
+#: app/src/ui/window.rs:2637
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Цей обліковий запис ще не має тегів. Створіть тег в Outlook."
 
-#: app/src/ui/window.rs:2723
+#: app/src/ui/window.rs:2730
 msgid "Add an account to reply or forward"
 msgstr "Додайте обліковий запис, щоб відповідати або пересилати"
 
-#: app/src/ui/window.rs:2828
+#: app/src/ui/window.rs:2835
 msgid "Could not include {file}: {reason}"
 msgstr "Не вдалося додати {file}: {reason}"
 
-#: app/src/ui/window.rs:2909
+#: app/src/ui/window.rs:2916
 msgid "The server had already sent this message."
 msgstr "Сервер уже надіслав це повідомлення."
 
-#: app/src/ui/window.rs:2914
+#: app/src/ui/window.rs:2921
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Це повідомлення скасовано в іншій програмі, і його більше немає в "
 "«Чернетках»."
 
-#: app/src/ui/window.rs:3230
+#: app/src/ui/window.rs:3237
 msgid "Continue in your browser"
 msgstr "Продовжте в браузері"
 
-#: app/src/ui/window.rs:3280
+#: app/src/ui/window.rs:3287
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Цю копію Penguin Mail зібрано без входу через Google."
 
-#: app/src/ui/window.rs:3302
+#: app/src/ui/window.rs:3309
 msgid "Get a Release"
 msgstr "Отримати випуск"
 
-#: app/src/ui/window.rs:3412
+#: app/src/ui/window.rs:3432
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11565,80 +11653,86 @@ msgstr ""
 "Не вдалося перевірити, чи сервер зберігає повідомлення для пізнішого "
 "надсилання, тому {account} залишається: {reason}"
 
-#: app/src/ui/window.rs:3423
+#: app/src/ui/window.rs:3443
 msgid "Remove {account}?"
 msgstr "Прибрати {account}?"
 
-#: app/src/ui/window.rs:3442
+#: app/src/ui/window.rs:3462
 msgid "Remove Anyway"
 msgstr "Усе одно прибрати"
 
-#: app/src/ui/window.rs:3455
+#: app/src/ui/window.rs:3475
 msgid "Removed {account}"
 msgstr "{account} прибрано"
 
-#: app/src/ui/window.rs:3457
+#: app/src/ui/window.rs:3477
 msgid "Could not remove {account}: {reason}"
 msgstr "Не вдалося прибрати {account}: {reason}"
 
-#: app/src/ui/window.rs:3643
+#: app/src/ui/window.rs:3663
 msgid "Refresh"
 msgstr "Оновити"
 
-#: app/src/ui/window.rs:3647
+#: app/src/ui/window.rs:3667
 msgid "Show Declined Events"
 msgstr "Показувати відхилені події"
 
-#: app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3683
 msgid "Add Account…"
 msgstr "Додати обліковий запис…"
 
-#: app/src/ui/window.rs:3664
+#: app/src/ui/window.rs:3684
 msgid "New Smart Mailbox…"
 msgstr "Нова розумна скринька…"
 
-#: app/src/ui/window.rs:3676 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3696
+#, fuzzy
+#| msgid "Customize Toolbar…"
+msgid "Customize Mailboxes…"
+msgstr "Налаштувати панель інструментів…"
+
+#: app/src/ui/window.rs:3700 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Комбінації клавіш"
 
-#: app/src/ui/window.rs:3685 app/src/ui/window.rs:3687
+#: app/src/ui/window.rs:3709 app/src/ui/window.rs:3711
 msgid "Main Menu"
 msgstr "Головне меню"
 
-#: app/src/ui/window.rs:3752 app/src/ui/window.rs:3753
+#: app/src/ui/window.rs:3776 app/src/ui/window.rs:3777
 msgid "Dock"
 msgstr "Закріпити"
 
-#: app/src/ui/window.rs:3882
+#: app/src/ui/window.rs:3906
 msgid "Add a mail account first"
 msgstr "Спочатку додайте поштовий обліковий запис"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4133
+#: app/src/ui/window.rs:4157
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Календар і контакти {account} підключено."
 
-#: app/src/ui/window.rs:4249
+#: app/src/ui/window.rs:4273
 msgid "Open a message from the person first"
 msgstr "Спочатку відкрийте повідомлення від цієї людини"
 
-#: app/src/ui/window.rs:4350
+#: app/src/ui/window.rs:4374
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail покаже нову мову після перезапуску"
 
-#: app/src/ui/window.rs:4352 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4376 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Перезапустити"
 
-#: app/src/ui/window.rs:4416
+#: app/src/ui/window.rs:4440
 msgid "Show Rules"
 msgstr "Показати правила"
 
-#: app/src/ui/window.rs:4442
+#: app/src/ui/window.rs:4466
 msgid "Messages That Will Not Download"
 msgstr "Повідомлення, які не завантажуються"
 
-#: app/src/ui/window.rs:4444
+#: app/src/ui/window.rs:4468
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11646,21 +11740,21 @@ msgstr ""
 "Penguin Mail не вдалося завантажити їх із сервера {address}. Програма пробує "
 "знову під час кожної перевірки, крім повідомлень, завеликих для завантаження."
 
-#: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:215
+#: app/src/ui/window/arrange.rs:127 app/src/ui/window/organize.rs:215
 msgid "Delete “{name}”?"
 msgstr "Вилучити «{name}»?"
 
-#: app/src/ui/window/arrange.rs:107
+#: app/src/ui/window/arrange.rs:128
 msgid "Only the smart mailbox goes. The mail it shows stays where it is."
 msgstr ""
 "Вилучається лише розумна скринька. Пошта, яку вона показує, залишається на "
 "місці."
 
-#: app/src/ui/window/arrange.rs:141
+#: app/src/ui/window/arrange.rs:162
 msgid "Name This Account"
 msgstr "Назвати цей обліковий запис"
 
-#: app/src/ui/window/arrange.rs:143
+#: app/src/ui/window/arrange.rs:164
 msgid ""
 "The sidebar shows the name instead of the address. Leave it empty for the "
 "address."
@@ -11753,6 +11847,46 @@ msgid ""
 msgstr ""
 "Перетягніть, щоб змінити розмір, або скористайтеся клавішами Ліворуч і "
 "Праворуч. Home і End вибирають найменшу та найбільшу ширину."
+
+#: app/src/ui/window/customize_mailboxes.rs:106
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Show {mailbox}"
+msgstr "Показати поштові скриньки"
+
+#: app/src/ui/window/customize_mailboxes.rs:297
+#, fuzzy
+#| msgid "Smart Mailboxes"
+msgid "Available Mailboxes"
+msgstr "Розумні скриньки"
+
+#: app/src/ui/window/customize_mailboxes.rs:327
+#, fuzzy
+#| msgid "Favorites"
+msgid "Add to Favorites"
+msgstr "Вибране"
+
+#: app/src/ui/window/customize_mailboxes.rs:330
+#, fuzzy
+#| msgid "Remove from VIPs"
+msgid "Remove from Favorites"
+msgstr "Прибрати з VIP-контактів"
+
+#: app/src/ui/window/customize_mailboxes.rs:351
+#, fuzzy
+#| msgid "Favorites"
+msgid "Favorite name"
+msgstr "Вибране"
+
+#: app/src/ui/window/customize_mailboxes.rs:359
+msgid "Name for {mailbox} in Favorites"
+msgstr ""
+
+#: app/src/ui/window/customize_mailboxes.rs:862
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Customize Mailboxes"
+msgstr "Показати поштові скриньки"
 
 #: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
@@ -12493,6 +12627,29 @@ msgstr "Показати або сховати асистента"
 msgid "Close window"
 msgstr "Закрити вікно"
 
+#: app/src/ui/window/smart_trash.rs:56
+#, fuzzy
+#| msgid "Could not build the message: {reason}"
+msgid "Could not check sent messages: {reason}"
+msgstr "Не вдалося створити повідомлення: {reason}"
+
+#: app/src/ui/window/smart_trash.rs:69
+msgid "Don't Ask Again for This Smart Mailbox"
+msgstr ""
+
+#: app/src/ui/window/smart_trash.rs:71
+#, fuzzy
+#| msgid "Moved {count} message to Trash"
+#| msgid_plural "Moved {count} messages to Trash"
+msgid "Also Move Sent Messages to Trash?"
+msgstr "{count} повідомлення переміщено до «Смітника»"
+
+#: app/src/ui/window/smart_trash.rs:74
+msgid ""
+"Sent messages keep these conversations in “{mailbox}”. Move the matching "
+"sent messages to Trash too? You can undo this action."
+msgstr ""
+
 #: app/src/ui/window/spaces.rs:24
 msgid ""
 "“{title}” was saved without “{file}”, which moved or was deleted before it "
@@ -12877,39 +13034,45 @@ msgstr ""
 msgid "Nothing here"
 msgstr "Тут нічого немає"
 
-#: domain/src/smart.rs:69
+#: domain/src/smart.rs:87
 msgid "From contains"
 msgstr "Відправник містить"
 
-#: domain/src/smart.rs:70
+#: domain/src/smart.rs:88
 msgid "To contains"
 msgstr "Отримувач містить"
 
-#: domain/src/smart.rs:71
+#: domain/src/smart.rs:89
 msgid "Subject contains"
 msgstr "Тема містить"
 
-#: domain/src/smart.rs:72
+#: domain/src/smart.rs:90
 msgid "Message contains"
 msgstr "Повідомлення містить"
 
-#: domain/src/smart.rs:73
+#: domain/src/smart.rs:91
 msgid "Has label"
 msgstr "Має мітку"
 
-#: domain/src/smart.rs:74
+#: domain/src/smart.rs:92
+#, fuzzy
+#| msgid "Reading a mailbox"
+msgid "In mailbox"
+msgstr "Читання поштової скриньки"
+
+#: domain/src/smart.rs:93
 msgid "Received in the last (days)"
 msgstr "Отримано за останні (днів)"
 
-#: domain/src/smart.rs:75
+#: domain/src/smart.rs:94
 msgid "Larger than (MB)"
 msgstr "Більше ніж (МБ)"
 
-#: domain/src/smart.rs:77
+#: domain/src/smart.rs:96
 msgid "Is unread"
 msgstr "Непрочитане"
 
-#: domain/src/smart.rs:78
+#: domain/src/smart.rs:97
 msgid "Is flagged"
 msgstr "З прапорцем"
 
@@ -12947,11 +13110,11 @@ msgstr "Це повідомлення просить не надсилати с�
 msgid "The server refused this request."
 msgstr "Сервер відхилив цей запит."
 
-#: sync/src/account/writes.rs:791
+#: sync/src/account/writes.rs:801
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} зайнятий. Ще триває обробка: {conversations}."
 
-#: sync/src/account/writes.rs:814
+#: sync/src/account/writes.rs:824
 msgid ""
 "{provider} is busy, so “{action}” did not go through for {conversations}. "
 "Try again in a moment."
@@ -12959,7 +13122,7 @@ msgstr ""
 "{provider} зайнятий, тому дію «{action}» не виконано для: {conversations}. "
 "Спробуйте ще раз за мить."
 
-#: sync/src/account/writes.rs:823
+#: sync/src/account/writes.rs:833
 msgid ""
 "{provider} stayed busy for {waited}, so “{action}” did not go through for "
 "{conversations}."
@@ -12967,38 +13130,38 @@ msgstr ""
 "{provider} був зайнятий упродовж {waited}, тому дію «{action}» не виконано "
 "для: {conversations}."
 
-#: sync/src/account/writes.rs:830
+#: sync/src/account/writes.rs:840
 msgid "{action} failed: {reason}"
 msgstr "Не вдалося виконати дію «{action}»: {reason}"
 
-#: sync/src/account/writes.rs:848
+#: sync/src/account/writes.rs:858
 msgid "a moment"
 msgstr "мить"
 
-#: sync/src/account/writes.rs:850
+#: sync/src/account/writes.rs:860
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} секунду"
 msgstr[1] "{count} секунди"
 msgstr[2] "{count} секунд"
 
-#: sync/src/account/writes.rs:855
+#: sync/src/account/writes.rs:865
 msgid "a minute"
 msgstr "хвилину"
 
-#: sync/src/actions.rs:125 sync/src/actions.rs:804 sync/src/actions.rs:905
+#: sync/src/actions.rs:126 sync/src/actions.rs:819 sync/src/actions.rs:920
 msgid "Change labels"
 msgstr "Змінити мітки"
 
-#: sync/src/actions.rs:403
+#: sync/src/actions.rs:404
 msgid "Delete Forever failed: {reason}"
 msgstr "Не вдалося вилучити назавжди: {reason}"
 
-#: sync/src/actions.rs:671 sync/src/actions.rs:795
+#: sync/src/actions.rs:686 sync/src/actions.rs:810
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr "Цю пошту відтоді перемістили, тому скасування залишило її на місці."
 
-#: sync/src/actions.rs:735 sync/src/actions.rs:762 sync/src/actions.rs:912
+#: sync/src/actions.rs:750 sync/src/actions.rs:777 sync/src/actions.rs:927
 msgid "Could not undo: {reason}"
 msgstr "Не вдалося скасувати: {reason}"
 
@@ -13075,184 +13238,180 @@ msgstr "{host} відхилив запит на відписку (HTTP {status})
 msgid "could not reach {host}"
 msgstr "не вдалося з'єднатися з {host}"
 
-#: sync/src/mailbox.rs:195
+#: sync/src/mailbox.rs:196
 msgid "{color} Flag"
 msgstr "{color} прапорець"
 
-#: sync/src/mailbox.rs:325
+#: sync/src/mailbox.rs:329
 msgid "No Results"
 msgstr "Нічого не знайдено"
 
-#: sync/src/mailbox.rs:327
+#: sync/src/mailbox.rs:331
 msgid "Try other words, or fewer of them."
 msgstr "Спробуйте інші слова або менше слів."
 
-#: sync/src/mailbox.rs:331
+#: sync/src/mailbox.rs:335
 msgid "Nothing Scheduled"
 msgstr "Нічого не заплановано"
 
-#: sync/src/mailbox.rs:334
+#: sync/src/mailbox.rs:338
 msgid "Outbox Is Empty"
 msgstr "Вихідні порожні"
 
-#: sync/src/mailbox.rs:338
+#: sync/src/mailbox.rs:342
 msgid "No Reminders"
 msgstr "Немає нагадувань"
 
-#: sync/src/mailbox.rs:340
+#: sync/src/mailbox.rs:344
 msgid "Choose Remind Me on a conversation to bring it back here later."
 msgstr "Виберіть «Нагадати» для розмови, щоб пізніше повернути її сюди."
 
-#: sync/src/mailbox.rs:344
+#: sync/src/mailbox.rs:348
 msgid "No Follow-Ups"
 msgstr "Немає листів без відповіді"
 
-#: sync/src/mailbox.rs:347
+#: sync/src/mailbox.rs:351
 msgid "No Flagged Mail"
 msgstr "Немає пошти з прапорцем"
 
-#: sync/src/mailbox.rs:349
+#: sync/src/mailbox.rs:353
 msgid "No Mail from VIPs"
 msgstr "Немає пошти від VIP-контактів"
 
-#: sync/src/mailbox.rs:351 sync/src/mailbox.rs:520
+#: sync/src/mailbox.rs:355 sync/src/mailbox.rs:524
 msgid "No Matching Mail"
 msgstr "Немає відповідної пошти"
 
-#: sync/src/mailbox.rs:356
+#: sync/src/mailbox.rs:360
 msgid "No Archived Mail"
 msgstr "Немає архівованої пошти"
 
-#: sync/src/mailbox.rs:357
+#: sync/src/mailbox.rs:361
 msgid "No Junk"
 msgstr "Немає спаму"
 
-#: sync/src/mailbox.rs:358
+#: sync/src/mailbox.rs:362
 msgid "Trash Is Empty"
 msgstr "Смітник порожній"
 
-#: sync/src/mailbox.rs:364
+#: sync/src/mailbox.rs:368
 msgid "Inbox Zero"
 msgstr "Вхідні порожні"
 
-#: sync/src/mailbox.rs:365
+#: sync/src/mailbox.rs:369
 msgid "No Starred Mail"
 msgstr "Немає пошти із зірочкою"
 
-#: sync/src/mailbox.rs:366
+#: sync/src/mailbox.rs:370
 msgid "No Sent Mail"
 msgstr "Немає надісланої пошти"
 
-#: sync/src/mailbox.rs:368
+#: sync/src/mailbox.rs:372
 msgid "No Drafts"
 msgstr "Немає чернеток"
 
-#: sync/src/mailbox.rs:370
+#: sync/src/mailbox.rs:374
 msgid "Close a message without sending it and Penguin Mail keeps it here."
 msgstr ""
 "Закрийте повідомлення, не надсилаючи його, і Penguin Mail збереже його тут."
 
-#: sync/src/mailbox.rs:372
+#: sync/src/mailbox.rs:376
 msgid "No Muted Mail"
 msgstr "Немає ігнорованої пошти"
 
-#: sync/src/mailbox.rs:413
+#: sync/src/mailbox.rs:417
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Не вдалося завантажити пошту для {account}: {reason}"
 
-#: sync/src/mailbox.rs:423
-msgid "All Mail"
-msgstr "Уся пошта"
-
-#: sync/src/mailbox.rs:521
+#: sync/src/mailbox.rs:525
 msgid "Change the filters or load more messages if available."
 msgstr "Змініть фільтри або завантажте ще повідомлення, якщо вони є."
 
-#: sync/src/mailbox.rs:1031
+#: sync/src/mailbox.rs:1051
 msgid "This smart mailbox has no conditions"
 msgstr "Ця розумна скринька не має умов"
 
-#: sync/src/mailbox.rs:1605
+#: sync/src/mailbox.rs:1652
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Результати для {account} знайдено лише в пошті на цьому комп'ютері"
 
-#: sync/src/mailbox.rs:1813
+#: sync/src/mailbox.rs:1860
 msgid "Returns {when}"
 msgstr "Повернеться {when}"
 
-#: sync/src/mailbox.rs:1856 sync/src/mailbox.rs:1959
+#: sync/src/mailbox.rs:1903 sync/src/mailbox.rs:2006
 msgid "No recipients"
 msgstr "Немає отримувачів"
 
-#: sync/src/mailbox.rs:1859 sync/src/mailbox.rs:1962
+#: sync/src/mailbox.rs:1906 sync/src/mailbox.rs:2009
 msgid "To {recipients}"
 msgstr "Кому: {recipients}"
 
-#: sync/src/mailbox.rs:1902
+#: sync/src/mailbox.rs:1949
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} непрочитане · {category}"
 msgstr[1] "{count} непрочитані · {category}"
 msgstr[2] "{count} непрочитаних · {category}"
 
-#: sync/src/mailbox.rs:1907
+#: sync/src/mailbox.rs:1954
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} непрочитане"
 msgstr[1] "{count} непрочитані"
 msgstr[2] "{count} непрочитаних"
 
-#: sync/src/mailbox.rs:1914
+#: sync/src/mailbox.rs:1961
 msgid "Sent yesterday, no reply yet"
 msgstr "Надіслано вчора, відповіді ще немає"
 
-#: sync/src/mailbox.rs:1916
+#: sync/src/mailbox.rs:1963
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Надіслано {days} день тому, відповіді ще немає"
 msgstr[1] "Надіслано {days} дні тому, відповіді ще немає"
 msgstr[2] "Надіслано {days} днів тому, відповіді ще немає"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2047
 msgid "The server has not sent this message yet."
 msgstr "Сервер ще не надіслав це повідомлення."
 
-#: sync/src/mailbox.rs:2001
+#: sync/src/mailbox.rs:2048
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr ""
 "Penguin Mail не отримав підтвердження, що сервер прийняв це повідомлення."
 
-#: sync/src/mailbox.rs:2011
+#: sync/src/mailbox.rs:2058
 msgid "Sends {when}."
 msgstr "Буде надіслано {when}."
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2059
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Сервер надішле його, навіть якщо Penguin Mail закрито."
 
-#: sync/src/mailbox.rs:2014
+#: sync/src/mailbox.rs:2061
 msgid "Sends {when}"
 msgstr "Буде надіслано {when}"
 
-#: sync/src/mailbox.rs:2021
+#: sync/src/mailbox.rs:2068
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Перевірте «Надіслані». Penguin Mail не вдалося підтвердити, що лист "
 "надіслано."
 
-#: sync/src/mailbox.rs:2024
+#: sync/src/mailbox.rs:2071
 msgid "Canceled in another app."
 msgstr "Скасовано в іншій програмі."
 
-#: sync/src/mailbox.rs:2026
+#: sync/src/mailbox.rs:2073
 msgid "Not sent"
 msgstr "Не надіслано"
 
-#: sync/src/mailbox.rs:2033
+#: sync/src/mailbox.rs:2080
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Повторна спроба {when}"
 
-#: sync/src/mailbox.rs:2040
+#: sync/src/mailbox.rs:2087
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail припинив спроби"
 
@@ -13407,11 +13566,11 @@ msgstr "Penguin Mail не може зберегти це повторення в
 msgid "This server keeps no colors for its mailboxes."
 msgstr "Цей сервер не зберігає кольорів поштових скриньок."
 
-#: sync/src/services/jmap/mod.rs:421
+#: sync/src/services/jmap/mod.rs:425
 msgid "This server files sent mail itself."
 msgstr "Цей сервер сам розкладає надіслану пошту."
 
-#: sync/src/services/jmap/mod.rs:604
+#: sync/src/services/jmap/mod.rs:608
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "Сервер створив адресу, яку Penguin Mail не може прочитати."
 
@@ -13847,22 +14006,6 @@ msgid "Move to {folder}"
 msgstr "Перемістити до {folder}"
 
 #~ msgid ""
-#~ "Used by this account and addresses without their own signature. Markdown "
-#~ "works. <email> becomes the sending address, including its suffix; "
-#~ "<domain> becomes its domain."
-#~ msgstr ""
-#~ "Використовується цим обліковим записом і адресами без власного підпису. "
-#~ "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
-#~ "суфіксом, <domain> — її доменом."
-
-#~ msgid ""
-#~ "Markdown works. <email> becomes the sending address, including its "
-#~ "suffix; <domain> becomes its domain."
-#~ msgstr ""
-#~ "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
-#~ "суфіксом, <domain> — її доменом."
-
-#~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."
 #~ msgstr ""
 #~ "Додається під новими повідомленнями та над цитованим текстом у "
@@ -13888,6 +14031,18 @@ msgstr "Перемістити до {folder}"
 
 #~ msgid "Later"
 #~ msgstr "Пізніше"
+
+#, fuzzy
+#~| msgid "Mailboxes"
+#~ msgid "Mailbox"
+#~ msgstr "Пошта"
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
+#~ "суфіксом, <domain> — її доменом."
 
 #~ msgid "Move it from the Trash to the Inbox first"
 #~ msgstr "Спершу перемістіть її зі «Смітника» до «Вхідних»"
@@ -13954,6 +14109,15 @@ msgstr "Перемістити до {folder}"
 
 #~ msgid "This account is already moving to its new sign-in."
 #~ msgstr "Цей обліковий запис уже переходить на новий спосіб входу."
+
+#~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "Використовується цим обліковим записом і адресами без власного підпису. "
+#~ "Підтримується Markdown. <email> замінюється адресою відправлення разом із "
+#~ "суфіксом, <domain> — її доменом."
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
