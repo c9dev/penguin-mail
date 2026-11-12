@@ -469,6 +469,8 @@ pub(crate) async fn tick(
     if local {
         return Ok(false);
     }
+    // Also after the look at new mail, for the same reason.
+    sync.list_mailboxes_once().await?;
     if Instant::now() >= *next_prune {
         sync.prune(now_millis()).await?;
         sync.reconcile_inbox().await?;

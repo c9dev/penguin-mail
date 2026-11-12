@@ -260,6 +260,7 @@ mod tests {
                 provider_name: "Fastmail".into(),
                 files_sent_mail: false,
                 window_days: 30,
+                all_folders: false,
             },
         );
         for n in 0..=UNREADABLE_KEPT {

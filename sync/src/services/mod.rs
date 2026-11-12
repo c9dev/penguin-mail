@@ -431,6 +431,7 @@ pub fn gmail_over_imap(
             provider_name: "Gmail".to_string(),
             files_sent_mail: true,
             window_days,
+            all_folders: false,
         },
     ));
     (
@@ -656,6 +657,7 @@ impl AccountServices {
             provider_name: "Fastmail".into(),
             files_sent_mail: false,
             window_days: crate::DEFAULT_WINDOW_DAYS,
+            all_folders: false,
         };
         AccountServices::imap(imap, smtp, settings)
     }
@@ -1296,6 +1298,15 @@ pub trait MailBackend: Send + Sync + 'static {
     /// `Unsupported` when the inbox is too large to list whole, which
     /// leaves nothing to compare.
     fn inbox_ids(&self) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
+
+    /// The complete number of matching messages, without fetching their bodies.
+    /// A capped or unsupported search must fail rather than return a partial count.
+    fn count_query(
+        &self,
+        _query: &mailrs_domain::query::Query,
+    ) -> impl Future<Output = Result<i64, BackendError>> + Send {
+        async { Err(BackendError::Unsupported) }
+    }
 
     /// At most `limit` messages `query` matches, newest first.
     fn search(
