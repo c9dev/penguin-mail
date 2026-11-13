@@ -4228,8 +4228,8 @@ msgstr ""
 "propria cheie, iar acest calculator nu are nicio cheie sau certificat pentru "
 "{address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2099
-#: app/src/ui/composer/mod.rs:2102
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2240
+#: app/src/ui/composer/mod.rs:2243
 msgid "That account is not connected."
 msgstr "Acel cont nu este conectat."
 
@@ -4359,7 +4359,7 @@ msgstr "Criptare standard (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Necriptat în tranzit"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2343
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} atașament"
@@ -4410,8 +4410,8 @@ msgstr[2] "{named} și încă {count}"
 msgid "me"
 msgstr "eu"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
-#: app/src/ui/composer/mod.rs:622
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:653
+#: app/src/ui/composer/mod.rs:657
 msgid "Show trimmed content"
 msgstr "Afișează conținutul ascuns"
 
@@ -4574,7 +4574,7 @@ msgstr "Mai mic de {size}"
 msgid "Larger than {size}"
 msgstr "Mai mare de {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:924
+#: app/src/rules.rs:251 app/src/settings/mod.rs:928
 msgid "All mail"
 msgstr "Toată corespondența"
 
@@ -4672,222 +4672,222 @@ msgstr "Pe acest calculator, cât timp Penguin Mail este deschis"
 msgid "On the server"
 msgstr "Pe server"
 
-#: app/src/settings/mod.rs:225 app/src/settings/mod.rs:434
-#: app/src/settings/mod.rs:836 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1089
+#: app/src/settings/mod.rs:228 app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:840 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1098
 msgid "Off"
 msgstr "Dezactivat"
 
-#: app/src/settings/mod.rs:226
+#: app/src/settings/mod.rs:229
 msgid "Local Server"
 msgstr "Server local"
 
-#: app/src/settings/mod.rs:227
+#: app/src/settings/mod.rs:230
 msgid "Anthropic API"
 msgstr "API Anthropic"
 
-#: app/src/settings/mod.rs:228
+#: app/src/settings/mod.rs:231
 msgid "Claude Subscription"
 msgstr "Abonament Claude"
 
-#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:256 app/src/ui/window.rs:3739
 #: app/src/ui/window.rs:3827
 msgid "Assistant"
 msgstr "Asistent"
 
-#: app/src/settings/mod.rs:254 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:257 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Traducere"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:258
+#: app/src/settings/mod.rs:261
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Dezabonare"
 
-#: app/src/settings/mod.rs:264
+#: app/src/settings/mod.rs:267
 msgid "Answers questions and acts on your mail"
 msgstr "Răspunde la întrebări și acționează asupra corespondenței"
 
-#: app/src/settings/mod.rs:265
+#: app/src/settings/mod.rs:268
 msgid "Translates a message when you ask"
 msgstr "Traduce un mesaj când cereți"
 
-#: app/src/settings/mod.rs:267
+#: app/src/settings/mod.rs:270
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Citește pagina de dezabonare a unui buletin informativ când regulile nu pot"
 
-#: app/src/settings/mod.rs:305
+#: app/src/settings/mod.rs:308
 msgid "Same as the Assistant"
 msgstr "La fel ca Asistentul"
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:438
 msgid "Claude's own only"
 msgstr "Doar căutarea proprie Claude"
 
-#: app/src/settings/mod.rs:436
+#: app/src/settings/mod.rs:439
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:440
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:438
+#: app/src/settings/mod.rs:441
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:614
+#: app/src/settings/mod.rs:618
 msgid "Rich text"
 msgstr "Text formatat"
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:619
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:634 app/src/settings/mod.rs:656
+#: app/src/settings/mod.rs:638 app/src/settings/mod.rs:660
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Automat"
 
-#: app/src/settings/mod.rs:635 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:639 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "luni"
 
-#: app/src/settings/mod.rs:636 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:640 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "duminică"
 
-#: app/src/settings/mod.rs:657
+#: app/src/settings/mod.rs:661
 msgid "12-hour (AM/PM)"
 msgstr "12 ore (AM/PM)"
 
-#: app/src/settings/mod.rs:658
+#: app/src/settings/mod.rs:662
 msgid "24-hour"
 msgstr "24 de ore"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:700
 msgid "When opened"
 msgstr "La deschidere"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:701
 msgid "After 2 seconds"
 msgstr "După 2 secunde"
 
-#: app/src/settings/mod.rs:698
+#: app/src/settings/mod.rs:702
 msgid "Only when I choose"
 msgstr "Doar când aleg eu"
 
-#: app/src/settings/mod.rs:714 app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:718 app/src/settings/mod.rs:736
 msgid "Ask each time"
 msgstr "Întreabă de fiecare dată"
 
-#: app/src/settings/mod.rs:715
+#: app/src/settings/mod.rs:719
 msgid "Always load"
 msgstr "Încarcă întotdeauna"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:737
 msgid "Never ask"
 msgstr "Nu întreba niciodată"
 
-#: app/src/settings/mod.rs:760
+#: app/src/settings/mod.rs:764
 msgid "No Preview"
 msgstr "Fără previzualizare"
 
-#: app/src/settings/mod.rs:761
+#: app/src/settings/mod.rs:765
 msgid "1 Line"
 msgstr "1 rând"
 
-#: app/src/settings/mod.rs:762
+#: app/src/settings/mod.rs:766
 msgid "2 Lines"
 msgstr "2 rânduri"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:800
 msgid "Small"
 msgstr "Mic"
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:801
 msgid "Default"
 msgstr "Implicit"
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:802
 msgid "Large"
 msgstr "Mare"
 
-#: app/src/settings/mod.rs:799
+#: app/src/settings/mod.rs:803
 msgid "Larger"
 msgstr "Mai mare"
 
-#: app/src/settings/mod.rs:837
+#: app/src/settings/mod.rs:841
 msgid "5 seconds"
 msgstr "5 secunde"
 
-#: app/src/settings/mod.rs:838
+#: app/src/settings/mod.rs:842
 msgid "10 seconds"
 msgstr "10 secunde"
 
-#: app/src/settings/mod.rs:839
+#: app/src/settings/mod.rs:843
 msgid "20 seconds"
 msgstr "20 de secunde"
 
-#: app/src/settings/mod.rs:840
+#: app/src/settings/mod.rs:844
 msgid "30 seconds"
 msgstr "30 de secunde"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:861
 msgid "Follow system"
 msgstr "Ca sistemul"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:862
 msgid "Light"
 msgstr "Luminos"
 
-#: app/src/settings/mod.rs:859
+#: app/src/settings/mod.rs:863
 msgid "Dark"
 msgstr "Întunecat"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:897
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "În fiecare secundă"
 msgstr[1] "La fiecare {count} secunde"
 msgstr[2] "La fiecare {count} de secunde"
 
-#: app/src/settings/mod.rs:901
+#: app/src/settings/mod.rs:905
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "În fiecare minut"
 msgstr[1] "La fiecare {count} minute"
 msgstr[2] "La fiecare {count} de minute"
 
-#: app/src/settings/mod.rs:918
+#: app/src/settings/mod.rs:922
 msgid "2 weeks"
 msgstr "2 săptămâni"
 
-#: app/src/settings/mod.rs:919
+#: app/src/settings/mod.rs:923
 msgid "30 days"
 msgstr "30 de zile"
 
-#: app/src/settings/mod.rs:920
+#: app/src/settings/mod.rs:924
 msgid "90 days"
 msgstr "90 de zile"
 
-#: app/src/settings/mod.rs:921
+#: app/src/settings/mod.rs:925
 msgid "1 year"
 msgstr "1 an"
 
-#: app/src/settings/mod.rs:922
+#: app/src/settings/mod.rs:926
 msgid "2 years"
 msgstr "2 ani"
 
-#: app/src/settings/mod.rs:923
+#: app/src/settings/mod.rs:927
 msgid "5 years"
 msgstr "5 ani"
 
-#: app/src/settings/mod.rs:945
+#: app/src/settings/mod.rs:949
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4895,21 +4895,21 @@ msgstr ""
 "Fiecare mesaj rămâne pe acest calculator. Un cont mare ocupă mult spațiu pe "
 "disc și multă memorie, iar corespondența mai veche se descarcă în fundal."
 
-#: app/src/settings/mod.rs:947
+#: app/src/settings/mod.rs:951
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Tot ce se află în Mesaje primite rămâne și el, iar corespondența mai veche "
 "poate fi căutată în continuare"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:958
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:959
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:960
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5093,8 +5093,8 @@ msgstr "Marchează tot ca citit"
 msgid "Open Penguin Mail"
 msgstr "Deschide Penguin Mail"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:371
-#: app/src/ui/composer/mod.rs:674 app/src/ui/composer/mod.rs:1564
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:406
+#: app/src/ui/composer/mod.rs:709 app/src/ui/composer/mod.rs:1620
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "Mesaj nou"
@@ -5113,7 +5113,7 @@ msgstr "Noutăți în {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1149 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1158 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Caută actualizări"
 
@@ -5295,8 +5295,8 @@ msgstr "Copiază legătura"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1994 app/src/ui/composer/mod.rs:2116
-#: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
+#: app/src/ui/composer/mod.rs:2063 app/src/ui/composer/mod.rs:2258
+#: app/src/ui/composer/mod.rs:2621 app/src/ui/composer/mod.rs:3040
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5459,7 +5459,7 @@ msgstr ""
 "Penguin Mail păstrează pe acest calculator fiecare mesaj pe care îl descarcă."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1510
+#: app/src/ui/preferences.rs:1519
 msgid "Days"
 msgstr "Zile"
 
@@ -5705,7 +5705,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1929
+#: app/src/ui/composer/mod.rs:421 app/src/ui/composer/mod.rs:1998
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Trimite"
@@ -5869,7 +5869,7 @@ msgid "No models found."
 msgstr "Nu s-a găsit niciun model."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2256
+#: app/src/ui/composer/mod.rs:2400
 msgid "Remove {file}"
 msgstr "Elimină {file}"
 
@@ -5912,7 +5912,7 @@ msgid "Edit {server}"
 msgstr "Editează {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2396 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "Elimină"
@@ -5955,7 +5955,7 @@ msgstr ""
 "NAME=value în față pentru mediu. Un URL accesează un server prin HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:3035 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Nume"
@@ -5991,7 +5991,7 @@ msgstr "Testează"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:3040
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6488,7 +6488,7 @@ msgid "Declined"
 msgstr "Refuzat"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1316
+#: app/src/ui/preferences.rs:1325
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6576,7 +6576,7 @@ msgstr "Doar cele noi"
 msgid "New and existing"
 msgstr "Noi și existente"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:591
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:626
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -6604,11 +6604,11 @@ msgstr "Data de sfârșit"
 msgid "End time"
 msgstr "Ora de sfârșit"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1462
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1471
 msgid "Starts"
 msgstr "Începe"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1464
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1473
 msgid "Ends"
 msgstr "Se termină"
 
@@ -6750,7 +6750,7 @@ msgstr "Se încarcă {file}"
 msgid "Could not attach {file}: {reason}"
 msgstr "Nu s-a putut atașa {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:415
+#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:450
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
@@ -7292,7 +7292,7 @@ msgstr "Toată ziua"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1330 app/src/ui/preferences.rs:1518
+#: app/src/ui/preferences.rs:1339 app/src/ui/preferences.rs:1527
 msgid "%a"
 msgstr "%a"
 
@@ -7308,7 +7308,7 @@ msgstr "„{title}” a fost șters"
 msgid "Could not delete the event: {reason}"
 msgstr "Nu s-a putut șterge evenimentul: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1401
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1457
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7928,406 +7928,406 @@ msgstr "{file} nu a putut fi deschis: {reason}"
 #. Attach Files moves here on a narrow window, where its button goes
 #. so Send keeps its word; the action is off, and the item hidden,
 #. while the button shows.
-#: app/src/ui/composer/mod.rs:149
+#: app/src/ui/composer/mod.rs:152
 msgid "Attach Files…"
 msgstr "Atașează fișiere…"
 
-#: app/src/ui/composer/mod.rs:152 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:155 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "Șabloane"
 
-#: app/src/ui/composer/mod.rs:153 app/src/ui/composer/mod.rs:1033
+#: app/src/ui/composer/mod.rs:156 app/src/ui/composer/mod.rs:1089
 msgid "Preview"
 msgstr "Previzualizare"
 
-#: app/src/ui/composer/mod.rs:157
+#: app/src/ui/composer/mod.rs:160
 msgid "Sign"
 msgstr "Semnează"
 
-#: app/src/ui/composer/mod.rs:158
+#: app/src/ui/composer/mod.rs:161
 msgid "Encrypt"
 msgstr "Criptează"
 
-#: app/src/ui/composer/mod.rs:166
+#: app/src/ui/composer/mod.rs:169
 msgid "Request Read Receipt"
 msgstr "Cere confirmare de citire"
 
-#: app/src/ui/composer/mod.rs:380 app/src/ui/conversation.rs:1804
+#: app/src/ui/composer/mod.rs:415 app/src/ui/conversation.rs:1804
 msgid "Choose a Time…"
 msgstr "Alegeți o oră…"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
+#: app/src/ui/composer/mod.rs:426 app/src/ui/composer/mod.rs:2078
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "Trimite mai târziu"
 
-#: app/src/ui/composer/mod.rs:393 app/src/ui/composer/mod.rs:1608
+#: app/src/ui/composer/mod.rs:428 app/src/ui/composer/mod.rs:1664
 msgid "Send (Ctrl+Enter)"
 msgstr "Trimite (Ctrl+Enter)"
 
-#: app/src/ui/composer/mod.rs:397
+#: app/src/ui/composer/mod.rs:432
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "Atașează fișiere (Ctrl+Shift+A)"
 
-#: app/src/ui/composer/mod.rs:404
+#: app/src/ui/composer/mod.rs:439
 msgid "Save as Template…"
 msgstr "Salvează ca șablon…"
 
-#: app/src/ui/composer/mod.rs:421
+#: app/src/ui/composer/mod.rs:456
 msgid "Add a recipient this computer can encrypt to."
 msgstr "Adăugați un destinatar pentru care acest calculator poate cripta."
 
-#: app/src/ui/composer/mod.rs:466
+#: app/src/ui/composer/mod.rs:501
 msgid "Recipients"
 msgstr "Destinatari"
 
-#: app/src/ui/composer/mod.rs:467
+#: app/src/ui/composer/mod.rs:502
 msgid "Carbon copy"
 msgstr "Copie la indigo"
 
-#: app/src/ui/composer/mod.rs:468
+#: app/src/ui/composer/mod.rs:503
 msgid "Blind carbon copy"
 msgstr "Copie ascunsă"
 
-#: app/src/ui/composer/mod.rs:480
+#: app/src/ui/composer/mod.rs:515
 msgid "Cc/Bcc"
 msgstr "Cc/Bcc"
 
-#: app/src/ui/composer/mod.rs:481 app/src/ui/composer/mod.rs:1202
+#: app/src/ui/composer/mod.rs:516 app/src/ui/composer/mod.rs:1258
 msgid "Show Cc and Bcc"
 msgstr "Afișează Cc și Bcc"
 
-#: app/src/ui/composer/mod.rs:492
+#: app/src/ui/composer/mod.rs:527
 msgid "+suffix or .suffix"
 msgstr "+sufix sau .sufix"
 
-#: app/src/ui/composer/mod.rs:495
+#: app/src/ui/composer/mod.rs:530
 msgid "Address Suffix"
 msgstr "Sufixul adresei"
 
-#: app/src/ui/composer/mod.rs:507 app/src/ui/composer/mod.rs:512
+#: app/src/ui/composer/mod.rs:542 app/src/ui/composer/mod.rs:547
 msgid "New Masked Address"
 msgstr "Adresă mascată nouă"
 
-#: app/src/ui/composer/mod.rs:529
+#: app/src/ui/composer/mod.rs:564
 msgid "Masked"
 msgstr "Mascată"
 
-#: app/src/ui/composer/mod.rs:557 app/src/ui/composer/mod.rs:558
+#: app/src/ui/composer/mod.rs:592 app/src/ui/composer/mod.rs:593
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "De la"
 
-#: app/src/ui/composer/mod.rs:563 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:598 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "Către"
 
-#: app/src/ui/composer/mod.rs:567
+#: app/src/ui/composer/mod.rs:602
 msgid "Cc"
 msgstr "Cc"
 
-#: app/src/ui/composer/mod.rs:569
+#: app/src/ui/composer/mod.rs:604
 msgid "Bcc"
 msgstr "Bcc"
 
-#: app/src/ui/composer/mod.rs:579 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:614 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "Subiect"
 
-#: app/src/ui/composer/mod.rs:643
+#: app/src/ui/composer/mod.rs:678
 msgid "Formatting"
 msgstr "Formatare"
 
-#: app/src/ui/composer/mod.rs:662 app/src/ui/composer/mod.rs:1367
+#: app/src/ui/composer/mod.rs:697 app/src/ui/composer/mod.rs:1423
 msgid "Forwarded Message"
 msgstr "Mesaj redirecționat"
 
-#: app/src/ui/composer/mod.rs:1200
+#: app/src/ui/composer/mod.rs:1256
 msgid "Hide Cc and Bcc"
 msgstr "Ascunde Cc și Bcc"
 
-#: app/src/ui/composer/mod.rs:1285
+#: app/src/ui/composer/mod.rs:1341
 msgid "Remove Quoted Text"
 msgstr "Elimină textul citat"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1342
 msgid "Do Not Forward the Original"
 msgstr "Nu redirecționa originalul"
 
-#: app/src/ui/composer/mod.rs:1396
+#: app/src/ui/composer/mod.rs:1452
 msgid "Quoted text removed"
 msgstr "Textul citat a fost eliminat"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1453
 msgid "Forwarded message removed"
 msgstr "Mesajul redirecționat a fost eliminat"
 
-#: app/src/ui/composer/mod.rs:1502
+#: app/src/ui/composer/mod.rs:1558
 msgid "Sending from {address}"
 msgstr "Se trimite de la {address}"
 
-#: app/src/ui/composer/mod.rs:1508
+#: app/src/ui/composer/mod.rs:1564
 msgid "Could not make a masked address: {reason}"
 msgstr "Nu s-a putut crea o adresă mascată: {reason}"
 
-#: app/src/ui/composer/mod.rs:1572
+#: app/src/ui/composer/mod.rs:1628
 msgid "Scheduled to send {when}"
 msgstr "Programat pentru trimitere {when}"
 
-#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2031
+#: app/src/ui/composer/mod.rs:1652 app/src/ui/composer/mod.rs:2111
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Alegeți un expeditor și introduceți un sufix de adresă permis."
 
-#: app/src/ui/composer/mod.rs:1768 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1824 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Anulează trimiterea"
 
-#: app/src/ui/composer/mod.rs:1921 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1990 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Se trimite…"
 
-#: app/src/ui/composer/mod.rs:1961
+#: app/src/ui/composer/mod.rs:2030
 msgid "Attachment Missing?"
 msgstr "Lipsește atașamentul?"
 
-#: app/src/ui/composer/mod.rs:1963
+#: app/src/ui/composer/mod.rs:2032
 msgid "The message says “{sentence}” and carries no file."
 msgstr "Mesajul spune „{sentence}”, dar nu conține niciun fișier."
 
-#: app/src/ui/composer/mod.rs:1968
+#: app/src/ui/composer/mod.rs:2037
 msgid "Add Attachment"
 msgstr "Adaugă atașament"
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:2038
 msgid "Send Anyway"
 msgstr "Trimite oricum"
 
-#: app/src/ui/composer/mod.rs:1987
+#: app/src/ui/composer/mod.rs:2056
 msgid "Send Without Encryption?"
 msgstr "Trimiteți fără criptare?"
 
-#: app/src/ui/composer/mod.rs:1989
+#: app/src/ui/composer/mod.rs:2058
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "Acest mesaj trebuia trimis criptat, dar nu se poate. {reason}"
 
-#: app/src/ui/composer/mod.rs:1995
+#: app/src/ui/composer/mod.rs:2064
 msgid "Send Readable"
 msgstr "Trimite necriptat"
 
-#: app/src/ui/composer/mod.rs:2010
+#: app/src/ui/composer/mod.rs:2079
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail îl trimite la această oră cât timp rulează, chiar și în bara de "
 "sistem."
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2080
 msgid "Schedule"
 msgstr "Programează"
 
-#: app/src/ui/composer/mod.rs:2073
+#: app/src/ui/composer/mod.rs:2170
 msgid "Draft saved, encrypted to your own key"
 msgstr "Ciorna a fost salvată, criptată cu propria cheie"
 
-#: app/src/ui/composer/mod.rs:2075
+#: app/src/ui/composer/mod.rs:2172
 msgid "Draft saved"
 msgstr "Ciorna a fost salvată"
 
-#: app/src/ui/composer/mod.rs:2111
+#: app/src/ui/composer/mod.rs:2253
 msgid "Save as Draft?"
 msgstr "Salvați ca ciornă?"
 
-#: app/src/ui/composer/mod.rs:2115
+#: app/src/ui/composer/mod.rs:2257
 msgid "Discard"
 msgstr "Renunță"
 
-#: app/src/ui/composer/mod.rs:2117
+#: app/src/ui/composer/mod.rs:2259
 msgid "Save Draft"
 msgstr "Salvează ciorna"
 
-#: app/src/ui/composer/mod.rs:2158
+#: app/src/ui/composer/mod.rs:2302
 msgid "Attach Files"
 msgstr "Atașează fișiere"
 
-#: app/src/ui/composer/mod.rs:2194
+#: app/src/ui/composer/mod.rs:2338
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2240
+#: app/src/ui/composer/mod.rs:2384
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "Deschide {file}, {size}"
 
-#: app/src/ui/composer/mod.rs:2293
+#: app/src/ui/composer/mod.rs:2437
 msgid "Bold (Ctrl+B)"
 msgstr "Aldin (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2438
 msgid "Italic (Ctrl+I)"
 msgstr "Cursiv (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2297
+#: app/src/ui/composer/mod.rs:2441
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Tăiat (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2300
+#: app/src/ui/composer/mod.rs:2444
 msgid "Code (Ctrl+E)"
 msgstr "Cod (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2337
+#: app/src/ui/composer/mod.rs:2481
 msgid "Link (Ctrl+K)"
 msgstr "Legătură (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2347
+#: app/src/ui/composer/mod.rs:2491
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Listă cu buline (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2352
+#: app/src/ui/composer/mod.rs:2496
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Listă numerotată (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2357
+#: app/src/ui/composer/mod.rs:2501
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Citat (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2374
+#: app/src/ui/composer/mod.rs:2518
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Inserează imagine (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2528
 msgid "Paragraph"
 msgstr "Paragraf"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2529
 msgid "Heading 1"
 msgstr "Titlu 1"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2530
 msgid "Heading 2"
 msgstr "Titlu 2"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2531
 msgid "Heading 3"
 msgstr "Titlu 3"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2532
 msgid "Code Block"
 msgstr "Bloc de cod"
 
-#: app/src/ui/composer/mod.rs:2402
+#: app/src/ui/composer/mod.rs:2546
 msgid "Turn Markdown into Formatting"
 msgstr "Transformă Markdown în formatare"
 
-#: app/src/ui/composer/mod.rs:2406
+#: app/src/ui/composer/mod.rs:2550
 msgid "Clear Formatting"
 msgstr "Șterge formatarea"
 
-#: app/src/ui/composer/mod.rs:2412
+#: app/src/ui/composer/mod.rs:2556
 msgid "Write in Markdown"
 msgstr "Scrie în Markdown"
 
-#: app/src/ui/composer/mod.rs:2419 app/src/ui/composer/mod.rs:2423
+#: app/src/ui/composer/mod.rs:2563 app/src/ui/composer/mod.rs:2567
 msgid "More Formatting"
 msgstr "Mai multe formatări"
 
-#: app/src/ui/composer/mod.rs:2460
+#: app/src/ui/composer/mod.rs:2604
 msgid "Add a Link"
 msgstr "Adăugați o legătură"
 
-#: app/src/ui/composer/mod.rs:2466
+#: app/src/ui/composer/mod.rs:2610
 msgid "Text"
 msgstr "Text"
 
-#: app/src/ui/composer/mod.rs:2478
+#: app/src/ui/composer/mod.rs:2622
 msgid "Add Link"
 msgstr "Adaugă legătura"
 
-#: app/src/ui/composer/mod.rs:2514
+#: app/src/ui/composer/mod.rs:2658
 msgid "Markdown formatted"
 msgstr "Markdown formatat"
 
-#: app/src/ui/composer/mod.rs:2633
+#: app/src/ui/composer/mod.rs:2777
 msgid "Pasted as rich text"
 msgstr "Lipit ca text formatat"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2778
 msgid "Paste as Plain Text"
 msgstr "Lipește ca text simplu"
 
-#: app/src/ui/composer/mod.rs:2668
+#: app/src/ui/composer/mod.rs:2812
 msgid "Editing as Markdown"
 msgstr "Editare ca Markdown"
 
-#: app/src/ui/composer/mod.rs:2704
+#: app/src/ui/composer/mod.rs:2848
 msgid "Images"
 msgstr "Imagini"
 
-#: app/src/ui/composer/mod.rs:2709
+#: app/src/ui/composer/mod.rs:2853
 msgid "Insert Image"
 msgstr "Inserează imagine"
 
-#: app/src/ui/composer/mod.rs:2753
+#: app/src/ui/composer/mod.rs:2897
 msgid "Could not read the file: {reason}"
 msgstr "Nu s-a putut citi fișierul: {reason}"
 
-#: app/src/ui/composer/mod.rs:2835
+#: app/src/ui/composer/mod.rs:2979
 msgid "No Templates Yet"
 msgstr "Niciun șablon încă"
 
-#: app/src/ui/composer/mod.rs:2885
+#: app/src/ui/composer/mod.rs:3029
 msgid "Save as Template"
 msgstr "Salvați ca șablon"
 
-#: app/src/ui/composer/mod.rs:2887
+#: app/src/ui/composer/mod.rs:3031
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 "Substituenții precum {{first_name}} se completează de fiecare dată când îl "
 "folosiți."
 
-#: app/src/ui/composer/mod.rs:2910 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:3054 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Dați un nume șablonului"
 
-#: app/src/ui/composer/mod.rs:2918
+#: app/src/ui/composer/mod.rs:3062
 msgid "Template saved"
 msgstr "Șablonul a fost salvat"
 
-#: app/src/ui/composer/mod.rs:2921
+#: app/src/ui/composer/mod.rs:3065
 msgid "Template not saved: {reason}"
 msgstr "Șablonul nu a fost salvat: {reason}"
 
-#: app/src/ui/composer/mod.rs:3044
+#: app/src/ui/composer/mod.rs:3188
 msgid "This looks like Markdown"
 msgstr "Pare a fi Markdown"
 
-#: app/src/ui/composer/mod.rs:3050
+#: app/src/ui/composer/mod.rs:3194
 msgid "Format"
 msgstr "Formatează"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3195
 msgid "Turn the Markdown into rich text"
 msgstr "Transformă Markdown în text formatat"
 
-#: app/src/ui/composer/mod.rs:3057 app/src/ui/composer/mod.rs:3061
+#: app/src/ui/composer/mod.rs:3201 app/src/ui/composer/mod.rs:3205
 msgid "Dismiss"
 msgstr "Închide"
 
-#: app/src/ui/composer/mod.rs:3144
+#: app/src/ui/composer/mod.rs:3288
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Ciorna este păstrată pe acest calculator, așa că o puteți termina mai târziu "
 "aici."
 
-#: app/src/ui/composer/mod.rs:3148
+#: app/src/ui/composer/mod.rs:3292
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Ciorna este păstrată în {provider}, așa că o puteți termina mai târziu pe "
 "orice dispozitiv."
 
-#: app/src/ui/composer/mod.rs:3152
+#: app/src/ui/composer/mod.rs:3296
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9981,11 +9981,20 @@ msgstr ""
 "Întreabă înainte de a trimite un mesaj care promite un fișier, dar nu are "
 "niciunul"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:736
+msgid "Save Drafts While Writing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:738
+msgid ""
+"Keep an open message in Drafts as you write, so closing early loses nothing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:772
 msgid "Signing and Encryption"
 msgstr "Semnare și criptare"
 
-#: app/src/ui/preferences.rs:765
+#: app/src/ui/preferences.rs:774
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9993,51 +10002,51 @@ msgstr ""
 "Penguin Mail semnează și criptează prin GnuPG, care vă păstrează cheile și "
 "vă cere singur fraza de acces."
 
-#: app/src/ui/preferences.rs:770
+#: app/src/ui/preferences.rs:779
 msgid "Your OpenPGP Keys"
 msgstr "Cheile dumneavoastră OpenPGP"
 
-#: app/src/ui/preferences.rs:771
+#: app/src/ui/preferences.rs:780
 msgid "Asking gpg…"
 msgstr "Se interoghează gpg…"
 
-#: app/src/ui/preferences.rs:775
+#: app/src/ui/preferences.rs:784
 msgid "Your S/MIME Certificates"
 msgstr "Certificatele dumneavoastră S/MIME"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:785
 msgid "Asking gpgsm…"
 msgstr "Se interoghează gpgsm…"
 
-#: app/src/ui/preferences.rs:783
+#: app/src/ui/preferences.rs:792
 msgid "Sign My Messages by Default"
 msgstr "Semnează implicit mesajele mele"
 
-#: app/src/ui/preferences.rs:784
+#: app/src/ui/preferences.rs:793
 msgid "New messages open with Sign turned on"
 msgstr "Mesajele noi se deschid cu „Semnează” activat"
 
-#: app/src/ui/preferences.rs:790
+#: app/src/ui/preferences.rs:799
 msgid "Encrypt When I Can"
 msgstr "Criptează când este posibil"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:801
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr ""
 "Activează „Criptează” imediat ce fiecare destinatar are o cheie sau un "
 "certificat"
 
-#: app/src/ui/preferences.rs:881
+#: app/src/ui/preferences.rs:890
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg nu a putut fi interogat: {reason}"
 
-#: app/src/ui/preferences.rs:900
+#: app/src/ui/preferences.rs:909
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm nu a putut fi interogat: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:909
+#: app/src/ui/preferences.rs:918
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -10054,11 +10063,11 @@ msgstr[2] ""
 "Penguin Mail semnează și criptează prin {programs}, care vă păstrează cheile "
 "și vă cer singure fraza de acces."
 
-#: app/src/ui/preferences.rs:941 app/src/ui/preferences.rs:954
+#: app/src/ui/preferences.rs:950 app/src/ui/preferences.rs:963
 msgid "Spelling"
 msgstr "Ortografie"
 
-#: app/src/ui/preferences.rs:943
+#: app/src/ui/preferences.rs:952
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10068,7 +10077,7 @@ msgstr ""
 "ortografia. Instalați un dicționar Hunspell, de exemplu hunspell-en-us sau "
 "hunspell-pt-pt, și redeschideți fereastra de scriere."
 
-#: app/src/ui/preferences.rs:956
+#: app/src/ui/preferences.rs:965
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10076,59 +10085,59 @@ msgstr ""
 "Limba în care fiecare cont verifică ortografia. Dicționare instalate: "
 "{languages}."
 
-#: app/src/ui/preferences.rs:968
+#: app/src/ui/preferences.rs:977
 msgid "System: {language}"
 msgstr "Sistem: {language}"
 
-#: app/src/ui/preferences.rs:983
+#: app/src/ui/preferences.rs:992
 msgid "All Installed Languages"
 msgstr "Toate limbile instalate"
 
-#: app/src/ui/preferences.rs:1026
+#: app/src/ui/preferences.rs:1035
 msgid "Sync"
 msgstr "Sincronizare"
 
-#: app/src/ui/preferences.rs:1034
+#: app/src/ui/preferences.rs:1043
 msgid "Checking"
 msgstr "Verificare"
 
-#: app/src/ui/preferences.rs:1040
+#: app/src/ui/preferences.rs:1049
 msgid "Check for New Mail"
 msgstr "Verifică mesajele noi"
 
-#: app/src/ui/preferences.rs:1049
+#: app/src/ui/preferences.rs:1058
 msgid "Storage"
 msgstr "Stocare"
 
-#: app/src/ui/preferences.rs:1057
+#: app/src/ui/preferences.rs:1066
 msgid "Keep Mail on This Computer For"
 msgstr "Păstrează mesajele pe acest calculator timp de"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1087
 msgid "Message text kept for opening offline"
 msgstr "Textul mesajelor păstrat pentru deschidere fără conexiune"
 
-#: app/src/ui/preferences.rs:1081
+#: app/src/ui/preferences.rs:1090
 msgid "Message Cache"
 msgstr "Cache de mesaje"
 
-#: app/src/ui/preferences.rs:1090
+#: app/src/ui/preferences.rs:1099
 msgid "100 messages"
 msgstr "100 de mesaje"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1100
 msgid "300 messages"
 msgstr "300 de mesaje"
 
-#: app/src/ui/preferences.rs:1092
+#: app/src/ui/preferences.rs:1101
 msgid "1,000 messages"
 msgstr "1.000 de mesaje"
 
-#: app/src/ui/preferences.rs:1096
+#: app/src/ui/preferences.rs:1105
 msgid "Download Recent Inbox Messages"
 msgstr "Descarcă mesajele recente din Inbox"
 
-#: app/src/ui/preferences.rs:1097
+#: app/src/ui/preferences.rs:1106
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10136,150 +10145,150 @@ msgstr ""
 "Descarcă textul mesajelor din fiecare cont, pentru deschidere mai rapidă și "
 "citire fără conexiune. Atașamentele și imaginile la distanță nu se descarcă."
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1133
 msgid "Startup"
 msgstr "Pornire"
 
-#: app/src/ui/preferences.rs:1127
+#: app/src/ui/preferences.rs:1136
 msgid "Start in the Tray at Login"
 msgstr "Pornește în bara de sistem la autentificare"
 
-#: app/src/ui/preferences.rs:1142
+#: app/src/ui/preferences.rs:1151
 msgid "Not available in demo mode"
 msgstr "Indisponibil în modul demonstrativ"
 
-#: app/src/ui/preferences.rs:1150
+#: app/src/ui/preferences.rs:1159
 msgid "Look for a new release once a day"
 msgstr "Caută o versiune nouă o dată pe zi"
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1200
 msgid "{used} of {limit}"
 msgstr "{used} din {limit}"
 
-#: app/src/ui/preferences.rs:1203
+#: app/src/ui/preferences.rs:1212
 msgid "{amount} · Full"
 msgstr "{amount} · Plin"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1214
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Aproape plin"
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1226
 msgid "Senders Who May Load Images"
 msgstr "Expeditori care pot încărca imagini"
 
-#: app/src/ui/preferences.rs:1218 app/src/ui/preferences.rs:1227
+#: app/src/ui/preferences.rs:1227 app/src/ui/preferences.rs:1236
 msgid "Nobody yet"
 msgstr "Nimeni încă"
 
-#: app/src/ui/preferences.rs:1229
+#: app/src/ui/preferences.rs:1238
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} expeditor"
 msgstr[1] "{count} expeditori"
 msgstr[2] "{count} de expeditori"
 
-#: app/src/ui/preferences.rs:1239
+#: app/src/ui/preferences.rs:1248
 msgid "Anyone at this domain"
 msgstr "Oricine din acest domeniu"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1250
 msgid "This address"
 msgstr "Această adresă"
 
-#: app/src/ui/preferences.rs:1246
+#: app/src/ui/preferences.rs:1255
 msgid "Stop Loading Images from This Sender"
 msgstr "Nu mai încărca imagini de la acest expeditor"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1262
 msgid "Stop loading images from {sender}"
 msgstr "Nu mai încărca imagini de la {sender}"
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1332
 msgid "Monday to Friday"
 msgstr "De luni până vineri"
 
-#: app/src/ui/preferences.rs:1324
+#: app/src/ui/preferences.rs:1333
 msgid "Every day of the week"
 msgstr "În fiecare zi a săptămânii"
 
-#: app/src/ui/preferences.rs:1325
+#: app/src/ui/preferences.rs:1334
 msgid "No days"
 msgstr "Nicio zi"
 
-#: app/src/ui/preferences.rs:1332
+#: app/src/ui/preferences.rs:1341
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1335
+#: app/src/ui/preferences.rs:1344
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1398
+#: app/src/ui/preferences.rs:1407
 msgid "Time Format"
 msgstr "Formatul orei"
 
-#: app/src/ui/preferences.rs:1402
+#: app/src/ui/preferences.rs:1411
 msgid "Automatic follows the system clock format"
 msgstr "Automat urmează formatul orei din sistem"
 
-#: app/src/ui/preferences.rs:1416
+#: app/src/ui/preferences.rs:1425
 msgid "Week Starts On"
 msgstr "Săptămâna începe"
 
-#: app/src/ui/preferences.rs:1421
+#: app/src/ui/preferences.rs:1430
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "„Automat” folosește prima zi a săptămânii din setările regionale"
 
-#: app/src/ui/preferences.rs:1435
+#: app/src/ui/preferences.rs:1444
 msgid "Working Hours"
 msgstr "Program de lucru"
 
-#: app/src/ui/preferences.rs:1454
+#: app/src/ui/preferences.rs:1463
 msgid "Hours"
 msgstr "Ore"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1514
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1563
+#: app/src/ui/preferences.rs:1572
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1565
+#: app/src/ui/preferences.rs:1574
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1609
+#: app/src/ui/preferences.rs:1618
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Nu s-a putut schimba culoarea: {reason}"
 
-#: app/src/ui/preferences.rs:1653
+#: app/src/ui/preferences.rs:1662
 msgid "Never Translate"
 msgstr "Nu traduce niciodată"
 
-#: app/src/ui/preferences.rs:1655
+#: app/src/ui/preferences.rs:1664
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Pentru mesajele în aceste limbi nu se oferă traducerea"
 
-#: app/src/ui/preferences.rs:1684
+#: app/src/ui/preferences.rs:1693
 msgid "Follow System"
 msgstr "Ca sistemul"
 
-#: app/src/ui/preferences.rs:1688
+#: app/src/ui/preferences.rs:1697
 msgid "Language"
 msgstr "Limbă"
 
-#: app/src/ui/preferences.rs:1689
+#: app/src/ui/preferences.rs:1698
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail afișează noua limbă după repornire"
 
-#: app/src/ui/preferences.rs:1770 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1779 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Fără semnătură"
 

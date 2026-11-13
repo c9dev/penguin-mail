@@ -69,6 +69,9 @@ pub struct Writing {
     pub remember: Rc<dyn Fn(Remembered)>,
     /// Ask before a message that promises a file goes without one.
     pub check_attachments: bool,
+    /// Keep the draft in Drafts as it is written. Off, the writer saves
+    /// by hand and the close prompt guards them.
+    pub autosave_drafts: bool,
     /// Start with Sign on.
     pub sign_by_default: bool,
     /// Turn Encrypt on as soon as gpg holds a key for every recipient.
@@ -177,6 +180,15 @@ const HISTORY_ROOM: i32 = 40;
 const HISTORY_GAP: i32 = 12;
 /// How long the writer pauses before the body is read for Markdown.
 const MARKDOWN_PAUSE: std::time::Duration = std::time::Duration::from_millis(600);
+/// How often the autosave looks at the window, and how long the writer
+/// should have been quiet before it saves. A save also lands after
+/// AUTOSAVE_CAP of continuous writing, so typing for an hour into an
+/// unsaved message is not a thing that can happen.
+const AUTOSAVE_TICK: std::time::Duration = std::time::Duration::from_secs(5);
+const AUTOSAVE_QUIET: std::time::Duration = std::time::Duration::from_secs(5);
+const AUTOSAVE_CAP: std::time::Duration = std::time::Duration::from_secs(30);
+/// The longest autosave waits after failures before trying again.
+const AUTOSAVE_MAX_RETRY: std::time::Duration = std::time::Duration::from_secs(300);
 
 /// A history the writer dropped, held for the toast's Undo.
 enum Folded {
@@ -329,6 +341,28 @@ pub struct Composer {
     /// of it was saved: either way it is no longer the one it opened as.
     handed: Cell<bool>,
     saved: Cell<bool>,
+    /// Bumped by every change, so a save finishing late can tell whether
+    /// the writer typed while it ran, and leave the window dirty if they
+    /// did. Autosave counts this, not the clock, for the same reason.
+    edits: Cell<u64>,
+    /// When the writer last changed anything, and when the last save or
+    /// failed attempt ran. A quiet window saves soon; failures wait,
+    /// doubling each time, so an offline account is not asked every few
+    /// seconds.
+    last_edit: Cell<std::time::Instant>,
+    last_save: Cell<std::time::Instant>,
+    fails: Cell<u32>,
+    /// Whether the current run of save failures has been mentioned yet.
+    fail_told: Cell<bool>,
+    /// Set while the close dialog is open: the window's fate is being
+    /// asked, so autosave holds off rather than saving under the answer.
+    /// Whether this composer saves itself; from Preferences, read once.
+    autosave_drafts: bool,
+    prompting: Cell<bool>,
+    /// Set for a composer reopened from a scheduled send, which belongs
+    /// to the schedule until its window closes. Autosave keeps its hands
+    /// off: a save would mark it kept and quietly unschedule it.
+    holding: Cell<bool>,
     /// The send or save running now. A second press waits, and closing the
     /// window cancels it.
     work: Work,
@@ -362,6 +396,7 @@ impl Composer {
             dictionaries,
             remember,
             check_attachments,
+            autosave_drafts,
             sign_by_default,
             encrypt_when_possible,
         } = writing;
@@ -780,6 +815,14 @@ impl Composer {
             locked: Cell::new(false),
             handed: Cell::new(false),
             saved: Cell::new(false),
+            edits: Cell::new(0),
+            last_edit: Cell::new(std::time::Instant::now()),
+            last_save: Cell::new(std::time::Instant::now()),
+            fails: Cell::new(0),
+            fail_told: Cell::new(false),
+            autosave_drafts,
+            prompting: Cell::new(false),
+            holding: Cell::new(false),
             work: Work::default(),
             saving: Saving::default(),
             send_content,
@@ -811,6 +854,19 @@ impl Composer {
         });
         let this = Rc::clone(&composer);
         glib::spawn_future_local(async move { this.check_spelling(dictionaries.await) });
+        // A draft left open saves itself, as in Mac's Mail, so closing the
+        // laptop over one loses nothing. The composer is held weakly: when
+        // the window closes, the clock stops with it.
+        let weak = Rc::downgrade(&composer);
+        glib::timeout_add_local(AUTOSAVE_TICK, move || {
+            match weak.upgrade() {
+                Some(c) => {
+                    c.autosave_tick();
+                    glib::ControlFlow::Continue
+                }
+                None => glib::ControlFlow::Break,
+            }
+        });
         composer.window.present();
         if composer.to.is_empty() {
             composer.to.entry.grab_focus();
@@ -841,7 +897,7 @@ impl Composer {
         let weak = Rc::downgrade(self);
         let mark_dirty = move || {
             if let Some(c) = weak.upgrade() {
-                c.dirty.set(true);
+                c.touch();
                 c.update_title();
                 c.check_send();
             }
@@ -923,7 +979,7 @@ impl Composer {
         let weak = Rc::downgrade(self);
         self.suffix.connect_changed(move |_| {
             if let Some(c) = weak.upgrade() {
-                c.dirty.set(true);
+                c.touch();
                 c.update_signature();
                 c.check_send();
                 c.check_own();
@@ -938,7 +994,7 @@ impl Composer {
         let weak = Rc::downgrade(self);
         self.sign.connect_toggled(move |_| {
             if let Some(c) = weak.upgrade() {
-                c.dirty.set(true);
+                c.touch();
                 c.show_protection();
             }
         });
@@ -958,7 +1014,7 @@ impl Composer {
                 c.encrypt_chosen.set(true);
                 c.secret.set(on);
             }
-            c.dirty.set(true);
+            c.touch();
             c.show_protection();
         });
 
@@ -1137,7 +1193,7 @@ impl Composer {
             {
                 return glib::Propagation::Proceed;
             }
-            c.dirty.set(true);
+            c.touch();
             glib::Propagation::Stop
         });
         self.body.add_controller(keys);
@@ -1313,7 +1369,7 @@ impl Composer {
         };
         self.unfolded.replace(Some(unfolding.markdown.clone()));
         self.editor.append_history(&unfolding);
-        self.dirty.set(true);
+        self.touch();
         self.refresh_history();
         // The button that had the focus is gone; the body takes it.
         self.body.grab_focus();
@@ -1389,7 +1445,7 @@ impl Composer {
             }
         };
         let Some(dropped) = dropped else { return };
-        self.dirty.set(true);
+        self.touch();
         self.refresh_history();
         self.body.grab_focus();
         let title = match dropped {
@@ -1413,7 +1469,7 @@ impl Composer {
                     Folded::Forward(forwarded) => base.forwarded = Some(forwarded),
                 }
             }
-            c.dirty.set(true);
+            c.touch();
             c.refresh_history();
         });
         self.toasts.add_toast(toast);
@@ -1495,7 +1551,7 @@ impl Composer {
                     }));
                     this.suffix.set_visible(false);
                     this.update_signature();
-                    this.dirty.set(true);
+                    this.touch();
                     this.check_send();
                     this.check_own();
                     this.toast_wrapping(&fill(
@@ -1524,7 +1580,7 @@ impl Composer {
         );
         self.mask
             .set_visible(self.identities.get(to).is_some_and(|i| i.masks));
-        self.dirty.set(true);
+        self.touch();
         self.check_send();
         let sending = self.identities.get(to).map(|i| i.account_id);
         for field in [&self.to, &self.cc, &self.bcc] {
@@ -1798,6 +1854,9 @@ impl Composer {
     /// opened: not sent, not scheduled, not saved, and with no change
     /// made, kept or thrown away.
     pub fn on_closed_unchanged(self: &Rc<Self>, unchanged: Box<dyn Fn()>) {
+        // This window belongs to the schedule now; a save would only
+        // overwrite the draft it is holding or mark it kept.
+        self.holding.set(true);
         let weak = Rc::downgrade(self);
         self.window.connect_close_request(move |_| {
             if let Some(c) = weak.upgrade()
@@ -1813,7 +1872,17 @@ impl Composer {
 
     /// Treats the message as unsaved, so closing asks before discarding it.
     pub fn mark_unsaved(&self) {
+        self.touch();
+    }
+
+    /// Records that the message changed. Autosave waits on this, and a
+    /// finished save checks it before marking the window clean.
+    fn touch(&self) {
         self.dirty.set(true);
+        self.edits.set(self.edits.get() + 1);
+        self.last_edit.set(std::time::Instant::now());
+        // A new edit is a new draft worth retrying at once.
+        self.fails.set(0);
     }
 
     pub fn toast(&self, text: &str) {
@@ -2023,16 +2092,30 @@ impl Composer {
     /// their own key, since Gmail would otherwise hold it readable until it
     /// went out. `protection::draft` says how, and how it comes back.
     fn save_draft(self: &Rc<Self>, then_close: bool) {
+        self.save_mine(then_close, false);
+    }
+
+    /// Writes the draft. A quiet save is the autosave's: it does not
+    /// claim the header, does not toast success, does not nag about an
+    /// unfinished address, and mentions a failure only once per run of
+    /// them, since the next tick would otherwise repeat itself.
+    fn save_mine(self: &Rc<Self>, then_close: bool, quiet: bool) {
         if self.locked.get() || self.work.is_busy() {
             return;
         }
         let Some(draft) = self.collect() else {
+            if quiet {
+                return;
+            }
             self.toast(&gettext(
                 "Choose a sender and enter a permitted address suffix.",
             ));
             self.suffix.grab_focus();
             return;
         };
+        // Counted now, so the answer below can tell whether the writer
+        // typed while this save was running.
+        let edits = self.edits.get();
         let secret = self.secret.get() || draft.encrypt;
         // The recipients choose the standard of an encrypted message, and
         // the writer's own holdings that of one they cannot encrypt yet.
@@ -2043,7 +2126,9 @@ impl Composer {
         let Some(ticket) = self.work.begin() else {
             return;
         };
-        self.show_busy(false);
+        if !quiet {
+            self.show_busy(false);
+        }
         self.saving.began();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -2060,24 +2145,80 @@ impl Composer {
             if !this.work.finish(ticket) {
                 return;
             }
-            this.show_idle();
+            if !quiet {
+                this.show_idle();
+            }
             match saved {
                 Ok(saved) => {
                     this.base.borrow_mut().draft_id = Some(saved.draft_id);
                     this.saved.set(true);
-                    this.dirty.set(false);
+                    // Only clean if nothing was typed while this ran: a
+                    // save of an older draft does not vouch for a newer
+                    // one.
+                    if this.edits.get() == edits {
+                        this.dirty.set(false);
+                    }
+                    this.last_save.set(std::time::Instant::now());
+                    this.fails.set(0);
+                    this.fail_told.set(false);
                     if then_close {
                         this.closing.set(true);
                         this.window.close();
+                    } else if quiet {
+                        // Quiet as promised.
                     } else if secret {
                         this.toast(&gettext("Draft saved, encrypted to your own key"));
                     } else {
                         this.toast(&gettext("Draft saved"));
                     }
                 }
-                Err(problem) => this.toast(&problem),
+                Err(problem) => {
+                    this.fails.set(this.fails.get() + 1);
+                    if !quiet || !this.fail_told.get() {
+                        this.fail_told.set(true);
+                        this.toast(&problem);
+                    }
+                }
             }
         });
+    }
+
+    /// The autosave's look at the window: saves it once it is worth a
+    /// draft, and stays out of the way otherwise. Anything the person is
+    /// mid-way through (a dialog, a send, a schedule's hold) is left
+    /// alone, and an encrypted draft is not saved quietly at all: a
+    /// passphrase asked every few seconds is worse than no autosave.
+    fn autosave_tick(self: &Rc<Self>) {
+        if !self.autosave_drafts
+            || self.locked.get()
+            || self.handed.get()
+            || self.closing.get()
+            || self.prompting.get()
+            || self.holding.get()
+            || self.work.is_busy()
+            || !self.dirty.get()
+            || self.is_blank()
+        {
+            return;
+        }
+        let now = std::time::Instant::now();
+        let quiet = now.duration_since(self.last_edit.get()) >= AUTOSAVE_QUIET;
+        let since = now.duration_since(self.last_save.get());
+        if self.fails.get() == 0 {
+            if !quiet && since < AUTOSAVE_CAP {
+                return;
+            }
+        } else {
+            let wait = (AUTOSAVE_CAP.saturating_mul(1 << self.fails.get().min(4)))
+                .min(AUTOSAVE_MAX_RETRY);
+            if since < wait {
+                return;
+            }
+        }
+        if self.collect().is_none_or(|draft| draft.encrypt) {
+            return;
+        }
+        self.save_mine(false, true);
     }
 
     /// Deletes the draft a save made after the writer chose Discard.
@@ -2107,6 +2248,7 @@ impl Composer {
     }
 
     fn confirm_close(self: &Rc<Self>) {
+        self.prompting.set(true);
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Save as Draft?")),
             Some(&self.draft_kept_line()),
@@ -2122,7 +2264,9 @@ impl Composer {
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match dialog.choose_future(Some(&this.window)).await.as_str() {
+            let answer = dialog.choose_future(Some(&this.window)).await;
+            this.prompting.set(false);
+            match answer.as_str() {
                 "discard" => {
                     this.saving.discard();
                     this.work.cancel();
@@ -2259,7 +2403,7 @@ impl Composer {
             remove.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
                     c.attachments.borrow_mut().remove(index);
-                    c.dirty.set(true);
+                    c.touch();
                     c.refresh_files();
                 }
             });
@@ -2438,14 +2582,14 @@ impl Composer {
     /// Makes the lines the cursor touches a list, a quote, or plain again.
     fn list(self: &Rc<Self>, kind: BlockKind) {
         self.editor.list(kind);
-        self.dirty.set(true);
+        self.touch();
         self.body.grab_focus();
     }
 
     /// The menu's paragraph kinds, which do not toggle back off.
     fn set_block(self: &Rc<Self>, kind: BlockKind) {
         self.editor.set_block(kind);
-        self.dirty.set(true);
+        self.touch();
         self.body.grab_focus();
     }
 
@@ -2500,7 +2644,7 @@ impl Composer {
                 shown
             };
             this.editor.link(held, &shown, &address);
-            this.dirty.set(true);
+            this.touch();
             this.body.grab_focus();
         });
     }
@@ -2509,7 +2653,7 @@ impl Composer {
     fn format_markdown(self: &Rc<Self>) {
         self.editor
             .switch_format(ComposeFormat::Rich, &self.attachments.borrow());
-        self.dirty.set(true);
+        self.touch();
         self.refresh_toggles();
         self.toast(&gettext("Markdown formatted"));
     }
@@ -2615,7 +2759,7 @@ impl Composer {
     /// The bar's Format: styles the Markdown where it stands.
     fn format_typed_markdown(self: &Rc<Self>) {
         if self.editor.format_stray_markdown() {
-            self.dirty.set(true);
+            self.touch();
             self.refresh_toggles();
         }
         self.markdown_bar.set_reveal_child(false);
@@ -2626,7 +2770,7 @@ impl Composer {
     /// toast for a writer who meant the marks.
     fn paste_markdown(self: &Rc<Self>, text: &str) {
         let pasted = self.editor.paste_markdown(text);
-        self.dirty.set(true);
+        self.touch();
         self.body
             .scroll_mark_onscreen(&self.body.buffer().get_insert());
         let toast = adw::Toast::builder()
@@ -2641,7 +2785,7 @@ impl Composer {
                 return;
             };
             if c.editor.unpaste(pasted) {
-                c.dirty.set(true);
+                c.touch();
             }
             c.body.grab_focus();
         });
@@ -2663,7 +2807,7 @@ impl Composer {
         }
         self.editor
             .switch_format(ComposeFormat::Markdown, &self.attachments.borrow());
-        self.dirty.set(true);
+        self.touch();
         self.refresh_toggles();
         self.toast(&gettext("Editing as Markdown"));
     }
@@ -2674,7 +2818,7 @@ impl Composer {
             return;
         }
         self.editor.clear();
-        self.dirty.set(true);
+        self.touch();
         self.refresh_toggles();
     }
 
@@ -2745,7 +2889,7 @@ impl Composer {
                         data: glib::Bytes::from_owned(bytes).into(),
                         content_id: None,
                     });
-                    self.dirty.set(true);
+                    self.touch();
                     self.refresh_files();
                     self.check_send();
                 }
@@ -2771,7 +2915,7 @@ impl Composer {
             data: data.into(),
             content_id: Some(cid),
         });
-        self.dirty.set(true);
+        self.touch();
         self.refresh_files();
     }
 
@@ -2867,7 +3011,7 @@ impl Composer {
         }
         let body = templates::fill(&RichBody::from_markdown(&template.markdown), &filling);
         self.editor.insert_body(&body);
-        self.dirty.set(true);
+        self.touch();
         self.body.grab_focus();
     }
 

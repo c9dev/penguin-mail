@@ -18,6 +18,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- An open message saves itself to Drafts while you write, so closing the lid loses nothing. Writing preferences can turn this off.
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
 
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.

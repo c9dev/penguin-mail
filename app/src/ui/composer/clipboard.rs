@@ -95,6 +95,7 @@ pub(super) mod checks {
                 dictionaries: Box::pin(async { Rc::new(spell::Dictionaries::load(&[], &[])) }),
                 remember: Rc::new(|_| {}),
                 check_attachments: false,
+                autosave_drafts: false,
                 sign_by_default: false,
                 encrypt_when_possible: false,
             },

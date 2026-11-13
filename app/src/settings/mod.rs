@@ -134,6 +134,9 @@ pub struct Settings {
     pub compose_format: ComposeFormat,
     /// Ask before sending a message that promises a file and carries none.
     pub check_attachments: bool,
+    /// Keep an open message in Drafts as it is written, so closing the
+    /// window or the laptop early loses nothing.
+    pub autosave_drafts: bool,
     /// Whether a message that asks for a read receipt shows the card that
     /// offers to send one. Never ask leaves every such request unanswered.
     pub read_receipts: ReadReceipts,
@@ -554,6 +557,7 @@ impl Default for Settings {
             send_as_checked: BTreeMap::new(),
             compose_format: ComposeFormat::Rich,
             check_attachments: true,
+            autosave_drafts: true,
             read_receipts: ReadReceipts::Ask,
             sign_by_default: false,
             encrypt_when_possible: false,

@@ -4004,8 +4004,8 @@ msgstr ""
 "임시보관 메일을 저장하지 못했습니다. 암호화된 메시지는 내 키로 암호화하여 임"
 "시보관함에 보관하지만 이 컴퓨터에는 {address}의 키나 인증서가 없습니다."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2099
-#: app/src/ui/composer/mod.rs:2102
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2240
+#: app/src/ui/composer/mod.rs:2243
 msgid "That account is not connected."
 msgstr "해당 계정이 연결되어 있지 않습니다."
 
@@ -4132,7 +4132,7 @@ msgstr "표준 암호화(TLS)"
 msgid "Not encrypted in transit"
 msgstr "전송 중 암호화되지 않음"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2343
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "첨부 파일 {count}개"
@@ -4177,8 +4177,8 @@ msgstr[0] "{named} 외 {count}명"
 msgid "me"
 msgstr "나"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
-#: app/src/ui/composer/mod.rs:622
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:653
+#: app/src/ui/composer/mod.rs:657
 msgid "Show trimmed content"
 msgstr "생략한 내용 표시"
 
@@ -4338,7 +4338,7 @@ msgstr "{size} 미만"
 msgid "Larger than {size}"
 msgstr "{size} 초과"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:924
+#: app/src/rules.rs:251 app/src/settings/mod.rs:928
 msgid "All mail"
 msgstr "모든 메일"
 
@@ -4436,217 +4436,217 @@ msgstr "Penguin Mail이 열려 있는 동안 이 컴퓨터에서"
 msgid "On the server"
 msgstr "서버에서"
 
-#: app/src/settings/mod.rs:225 app/src/settings/mod.rs:434
-#: app/src/settings/mod.rs:836 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1089
+#: app/src/settings/mod.rs:228 app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:840 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1098
 msgid "Off"
 msgstr "끄기"
 
-#: app/src/settings/mod.rs:226
+#: app/src/settings/mod.rs:229
 msgid "Local Server"
 msgstr "로컬 서버"
 
-#: app/src/settings/mod.rs:227
+#: app/src/settings/mod.rs:230
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:228
+#: app/src/settings/mod.rs:231
 msgid "Claude Subscription"
 msgstr "Claude 구독"
 
-#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:256 app/src/ui/window.rs:3739
 #: app/src/ui/window.rs:3827
 msgid "Assistant"
 msgstr "도우미"
 
-#: app/src/settings/mod.rs:254 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:257 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "번역"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:258
+#: app/src/settings/mod.rs:261
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "구독 해지"
 
-#: app/src/settings/mod.rs:264
+#: app/src/settings/mod.rs:267
 msgid "Answers questions and acts on your mail"
 msgstr "메일에 관한 질문에 답하고 작업 수행"
 
-#: app/src/settings/mod.rs:265
+#: app/src/settings/mod.rs:268
 msgid "Translates a message when you ask"
 msgstr "요청한 메시지 번역"
 
-#: app/src/settings/mod.rs:267
+#: app/src/settings/mod.rs:270
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "규칙으로 처리할 수 없는 뉴스레터 구독 해지 페이지 읽기"
 
-#: app/src/settings/mod.rs:305
+#: app/src/settings/mod.rs:308
 msgid "Same as the Assistant"
 msgstr "도우미와 동일"
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:438
 msgid "Claude's own only"
 msgstr "Claude 자체 검색만"
 
-#: app/src/settings/mod.rs:436
+#: app/src/settings/mod.rs:439
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:440
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:438
+#: app/src/settings/mod.rs:441
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:614
+#: app/src/settings/mod.rs:618
 msgid "Rich text"
 msgstr "서식 있는 텍스트"
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:619
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:634 app/src/settings/mod.rs:656
+#: app/src/settings/mod.rs:638 app/src/settings/mod.rs:660
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "자동"
 
-#: app/src/settings/mod.rs:635 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:639 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "월요일"
 
-#: app/src/settings/mod.rs:636 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:640 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "일요일"
 
-#: app/src/settings/mod.rs:657
+#: app/src/settings/mod.rs:661
 msgid "12-hour (AM/PM)"
 msgstr "12시간제 (AM/PM)"
 
-#: app/src/settings/mod.rs:658
+#: app/src/settings/mod.rs:662
 msgid "24-hour"
 msgstr "24시간제"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:700
 msgid "When opened"
 msgstr "열었을 때"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:701
 msgid "After 2 seconds"
 msgstr "2초 후"
 
-#: app/src/settings/mod.rs:698
+#: app/src/settings/mod.rs:702
 msgid "Only when I choose"
 msgstr "직접 선택할 때만"
 
-#: app/src/settings/mod.rs:714 app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:718 app/src/settings/mod.rs:736
 msgid "Ask each time"
 msgstr "매번 묻기"
 
-#: app/src/settings/mod.rs:715
+#: app/src/settings/mod.rs:719
 msgid "Always load"
 msgstr "항상 불러오기"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:737
 msgid "Never ask"
 msgstr "묻지 않기"
 
-#: app/src/settings/mod.rs:760
+#: app/src/settings/mod.rs:764
 msgid "No Preview"
 msgstr "미리 보기 없음"
 
-#: app/src/settings/mod.rs:761
+#: app/src/settings/mod.rs:765
 msgid "1 Line"
 msgstr "1줄"
 
-#: app/src/settings/mod.rs:762
+#: app/src/settings/mod.rs:766
 msgid "2 Lines"
 msgstr "2줄"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:800
 msgid "Small"
 msgstr "작게"
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:801
 msgid "Default"
 msgstr "기본값"
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:802
 msgid "Large"
 msgstr "크게"
 
-#: app/src/settings/mod.rs:799
+#: app/src/settings/mod.rs:803
 msgid "Larger"
 msgstr "더 크게"
 
-#: app/src/settings/mod.rs:837
+#: app/src/settings/mod.rs:841
 msgid "5 seconds"
 msgstr "5초"
 
-#: app/src/settings/mod.rs:838
+#: app/src/settings/mod.rs:842
 msgid "10 seconds"
 msgstr "10초"
 
-#: app/src/settings/mod.rs:839
+#: app/src/settings/mod.rs:843
 msgid "20 seconds"
 msgstr "20초"
 
-#: app/src/settings/mod.rs:840
+#: app/src/settings/mod.rs:844
 msgid "30 seconds"
 msgstr "30초"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:861
 msgid "Follow system"
 msgstr "시스템 설정 따르기"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:862
 msgid "Light"
 msgstr "밝게"
 
-#: app/src/settings/mod.rs:859
+#: app/src/settings/mod.rs:863
 msgid "Dark"
 msgstr "어둡게"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:897
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "{count}초마다"
 
-#: app/src/settings/mod.rs:901
+#: app/src/settings/mod.rs:905
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "{count}분마다"
 
-#: app/src/settings/mod.rs:918
+#: app/src/settings/mod.rs:922
 msgid "2 weeks"
 msgstr "2주"
 
-#: app/src/settings/mod.rs:919
+#: app/src/settings/mod.rs:923
 msgid "30 days"
 msgstr "30일"
 
-#: app/src/settings/mod.rs:920
+#: app/src/settings/mod.rs:924
 msgid "90 days"
 msgstr "90일"
 
-#: app/src/settings/mod.rs:921
+#: app/src/settings/mod.rs:925
 msgid "1 year"
 msgstr "1년"
 
-#: app/src/settings/mod.rs:922
+#: app/src/settings/mod.rs:926
 msgid "2 years"
 msgstr "2년"
 
-#: app/src/settings/mod.rs:923
+#: app/src/settings/mod.rs:927
 msgid "5 years"
 msgstr "5년"
 
-#: app/src/settings/mod.rs:945
+#: app/src/settings/mod.rs:949
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4654,19 +4654,19 @@ msgstr ""
 "모든 메시지를 이 컴퓨터에 보관합니다. 큰 계정은 많은 디스크 공간과 메모리를 "
 "사용하며 이전 메일은 백그라운드에서 다운로드합니다."
 
-#: app/src/settings/mod.rs:947
+#: app/src/settings/mod.rs:951
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "받은편지함의 메일은 모두 유지하며 이전 메일도 검색할 수 있습니다"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:958
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:959
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:960
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4837,8 +4837,8 @@ msgstr "모두 읽음으로 표시"
 msgid "Open Penguin Mail"
 msgstr "Penguin Mail 열기"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:371
-#: app/src/ui/composer/mod.rs:674 app/src/ui/composer/mod.rs:1564
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:406
+#: app/src/ui/composer/mod.rs:709 app/src/ui/composer/mod.rs:1620
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "새 메시지"
@@ -4857,7 +4857,7 @@ msgstr "{version}의 새로운 기능"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1149 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1158 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "업데이트 확인"
 
@@ -5036,8 +5036,8 @@ msgstr "링크 복사"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1994 app/src/ui/composer/mod.rs:2116
-#: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
+#: app/src/ui/composer/mod.rs:2063 app/src/ui/composer/mod.rs:2258
+#: app/src/ui/composer/mod.rs:2621 app/src/ui/composer/mod.rs:3040
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5198,7 +5198,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail은 다운로드한 모든 메시지를 이 컴퓨터에 보관합니다."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1510
+#: app/src/ui/preferences.rs:1519
 msgid "Days"
 msgstr "일"
 
@@ -5438,7 +5438,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1929
+#: app/src/ui/composer/mod.rs:421 app/src/ui/composer/mod.rs:1998
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "보내기"
@@ -5600,7 +5600,7 @@ msgid "No models found."
 msgstr "모델을 찾지 못했습니다."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2256
+#: app/src/ui/composer/mod.rs:2400
 msgid "Remove {file}"
 msgstr "{file} 제거"
 
@@ -5640,7 +5640,7 @@ msgid "Edit {server}"
 msgstr "{server} 편집"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2396 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "제거"
@@ -5681,7 +5681,7 @@ msgstr ""
 "NAME=value로 지정하세요. URL은 HTTP를 통해 서버에 연결합니다."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:3035 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "이름"
@@ -5717,7 +5717,7 @@ msgstr "테스트"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:3040
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6203,7 +6203,7 @@ msgid "Declined"
 msgstr "거절함"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1316
+#: app/src/ui/preferences.rs:1325
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6289,7 +6289,7 @@ msgstr "새 회의만"
 msgid "New and existing"
 msgstr "새 회의 및 기존 회의"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:591
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:626
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -6317,11 +6317,11 @@ msgstr "종료 날짜"
 msgid "End time"
 msgstr "종료 시간"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1462
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1471
 msgid "Starts"
 msgstr "시작"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1464
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1473
 msgid "Ends"
 msgstr "종료"
 
@@ -6461,7 +6461,7 @@ msgstr "{file} 업로드 중"
 msgid "Could not attach {file}: {reason}"
 msgstr "{file}을(를) 첨부할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:415
+#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:450
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
@@ -6985,7 +6985,7 @@ msgstr "종일"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1330 app/src/ui/preferences.rs:1518
+#: app/src/ui/preferences.rs:1339 app/src/ui/preferences.rs:1527
 msgid "%a"
 msgstr "%a"
 
@@ -7001,7 +7001,7 @@ msgstr "\"{title}\" 삭제됨"
 msgid "Could not delete the event: {reason}"
 msgstr "일정을 삭제할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1401
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1457
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7598,402 +7598,402 @@ msgstr "{file}을(를) 열 수 없습니다: {reason}"
 #. Attach Files moves here on a narrow window, where its button goes
 #. so Send keeps its word; the action is off, and the item hidden,
 #. while the button shows.
-#: app/src/ui/composer/mod.rs:149
+#: app/src/ui/composer/mod.rs:152
 msgid "Attach Files…"
 msgstr "파일 첨부…"
 
-#: app/src/ui/composer/mod.rs:152 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:155 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "템플릿"
 
-#: app/src/ui/composer/mod.rs:153 app/src/ui/composer/mod.rs:1033
+#: app/src/ui/composer/mod.rs:156 app/src/ui/composer/mod.rs:1089
 msgid "Preview"
 msgstr "미리 보기"
 
-#: app/src/ui/composer/mod.rs:157
+#: app/src/ui/composer/mod.rs:160
 msgid "Sign"
 msgstr "서명"
 
-#: app/src/ui/composer/mod.rs:158
+#: app/src/ui/composer/mod.rs:161
 msgid "Encrypt"
 msgstr "암호화"
 
-#: app/src/ui/composer/mod.rs:166
+#: app/src/ui/composer/mod.rs:169
 msgid "Request Read Receipt"
 msgstr "수신 확인 요청"
 
-#: app/src/ui/composer/mod.rs:380 app/src/ui/conversation.rs:1804
+#: app/src/ui/composer/mod.rs:415 app/src/ui/conversation.rs:1804
 msgid "Choose a Time…"
 msgstr "시간 선택…"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
+#: app/src/ui/composer/mod.rs:426 app/src/ui/composer/mod.rs:2078
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "예약 발송"
 
-#: app/src/ui/composer/mod.rs:393 app/src/ui/composer/mod.rs:1608
+#: app/src/ui/composer/mod.rs:428 app/src/ui/composer/mod.rs:1664
 msgid "Send (Ctrl+Enter)"
 msgstr "보내기(Ctrl+Enter)"
 
-#: app/src/ui/composer/mod.rs:397
+#: app/src/ui/composer/mod.rs:432
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "파일 첨부(Ctrl+Shift+A)"
 
-#: app/src/ui/composer/mod.rs:404
+#: app/src/ui/composer/mod.rs:439
 msgid "Save as Template…"
 msgstr "템플릿으로 저장…"
 
-#: app/src/ui/composer/mod.rs:421
+#: app/src/ui/composer/mod.rs:456
 msgid "Add a recipient this computer can encrypt to."
 msgstr "이 컴퓨터에서 암호화할 수 있는 받는 사람을 추가하세요."
 
-#: app/src/ui/composer/mod.rs:466
+#: app/src/ui/composer/mod.rs:501
 msgid "Recipients"
 msgstr "받는 사람"
 
-#: app/src/ui/composer/mod.rs:467
+#: app/src/ui/composer/mod.rs:502
 msgid "Carbon copy"
 msgstr "참조"
 
-#: app/src/ui/composer/mod.rs:468
+#: app/src/ui/composer/mod.rs:503
 msgid "Blind carbon copy"
 msgstr "숨은참조"
 
-#: app/src/ui/composer/mod.rs:480
+#: app/src/ui/composer/mod.rs:515
 msgid "Cc/Bcc"
 msgstr "참조/숨은참조"
 
-#: app/src/ui/composer/mod.rs:481 app/src/ui/composer/mod.rs:1202
+#: app/src/ui/composer/mod.rs:516 app/src/ui/composer/mod.rs:1258
 msgid "Show Cc and Bcc"
 msgstr "참조 및 숨은참조 표시"
 
-#: app/src/ui/composer/mod.rs:492
+#: app/src/ui/composer/mod.rs:527
 msgid "+suffix or .suffix"
 msgstr "+suffix 또는 .suffix"
 
-#: app/src/ui/composer/mod.rs:495
+#: app/src/ui/composer/mod.rs:530
 msgid "Address Suffix"
 msgstr "주소 접미사"
 
-#: app/src/ui/composer/mod.rs:507 app/src/ui/composer/mod.rs:512
+#: app/src/ui/composer/mod.rs:542 app/src/ui/composer/mod.rs:547
 msgid "New Masked Address"
 msgstr "새 가려진 주소"
 
-#: app/src/ui/composer/mod.rs:529
+#: app/src/ui/composer/mod.rs:564
 msgid "Masked"
 msgstr "가려진 주소"
 
-#: app/src/ui/composer/mod.rs:557 app/src/ui/composer/mod.rs:558
+#: app/src/ui/composer/mod.rs:592 app/src/ui/composer/mod.rs:593
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "보낸 사람"
 
-#: app/src/ui/composer/mod.rs:563 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:598 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "받는 사람"
 
-#: app/src/ui/composer/mod.rs:567
+#: app/src/ui/composer/mod.rs:602
 msgid "Cc"
 msgstr "참조"
 
-#: app/src/ui/composer/mod.rs:569
+#: app/src/ui/composer/mod.rs:604
 msgid "Bcc"
 msgstr "숨은참조"
 
-#: app/src/ui/composer/mod.rs:579 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:614 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "제목"
 
-#: app/src/ui/composer/mod.rs:643
+#: app/src/ui/composer/mod.rs:678
 msgid "Formatting"
 msgstr "서식"
 
-#: app/src/ui/composer/mod.rs:662 app/src/ui/composer/mod.rs:1367
+#: app/src/ui/composer/mod.rs:697 app/src/ui/composer/mod.rs:1423
 msgid "Forwarded Message"
 msgstr "전달된 메시지"
 
-#: app/src/ui/composer/mod.rs:1200
+#: app/src/ui/composer/mod.rs:1256
 msgid "Hide Cc and Bcc"
 msgstr "참조 및 숨은참조 숨기기"
 
-#: app/src/ui/composer/mod.rs:1285
+#: app/src/ui/composer/mod.rs:1341
 msgid "Remove Quoted Text"
 msgstr "인용문 제거"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1342
 msgid "Do Not Forward the Original"
 msgstr "원본 전달 안 함"
 
-#: app/src/ui/composer/mod.rs:1396
+#: app/src/ui/composer/mod.rs:1452
 msgid "Quoted text removed"
 msgstr "인용문 제거됨"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1453
 msgid "Forwarded message removed"
 msgstr "전달 메시지 제거됨"
 
-#: app/src/ui/composer/mod.rs:1502
+#: app/src/ui/composer/mod.rs:1558
 msgid "Sending from {address}"
 msgstr "{address}에서 보내기"
 
-#: app/src/ui/composer/mod.rs:1508
+#: app/src/ui/composer/mod.rs:1564
 msgid "Could not make a masked address: {reason}"
 msgstr "가려진 주소를 만들 수 없습니다: {reason}"
 
-#: app/src/ui/composer/mod.rs:1572
+#: app/src/ui/composer/mod.rs:1628
 msgid "Scheduled to send {when}"
 msgstr "{when} 발송 예약됨"
 
-#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2031
+#: app/src/ui/composer/mod.rs:1652 app/src/ui/composer/mod.rs:2111
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "발신자를 선택하고 허용된 주소 접미사를 입력하세요."
 
-#: app/src/ui/composer/mod.rs:1768 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1824 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "보내기 취소"
 
-#: app/src/ui/composer/mod.rs:1921 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1990 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "보내는 중…"
 
-#: app/src/ui/composer/mod.rs:1961
+#: app/src/ui/composer/mod.rs:2030
 msgid "Attachment Missing?"
 msgstr "첨부 파일이 빠졌나요?"
 
-#: app/src/ui/composer/mod.rs:1963
+#: app/src/ui/composer/mod.rs:2032
 msgid "The message says “{sentence}” and carries no file."
 msgstr "메시지에 \"{sentence}\" 문구가 있지만 첨부 파일이 없습니다."
 
-#: app/src/ui/composer/mod.rs:1968
+#: app/src/ui/composer/mod.rs:2037
 msgid "Add Attachment"
 msgstr "첨부 파일 추가"
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:2038
 msgid "Send Anyway"
 msgstr "그대로 보내기"
 
-#: app/src/ui/composer/mod.rs:1987
+#: app/src/ui/composer/mod.rs:2056
 msgid "Send Without Encryption?"
 msgstr "암호화 없이 보낼까요?"
 
-#: app/src/ui/composer/mod.rs:1989
+#: app/src/ui/composer/mod.rs:2058
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "이 메시지는 암호화하여 보내도록 설정했으나 암호화할 수 없습니다. {reason}"
 
-#: app/src/ui/composer/mod.rs:1995
+#: app/src/ui/composer/mod.rs:2064
 msgid "Send Readable"
 msgstr "암호화 없이 보내기"
 
-#: app/src/ui/composer/mod.rs:2010
+#: app/src/ui/composer/mod.rs:2079
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "트레이에 있을 때도 Penguin Mail이 실행 중이면 이 시간에 보냅니다."
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2080
 msgid "Schedule"
 msgstr "예약"
 
-#: app/src/ui/composer/mod.rs:2073
+#: app/src/ui/composer/mod.rs:2170
 msgid "Draft saved, encrypted to your own key"
 msgstr "내 키로 암호화하여 임시보관 메일 저장됨"
 
-#: app/src/ui/composer/mod.rs:2075
+#: app/src/ui/composer/mod.rs:2172
 msgid "Draft saved"
 msgstr "임시보관 메일 저장됨"
 
-#: app/src/ui/composer/mod.rs:2111
+#: app/src/ui/composer/mod.rs:2253
 msgid "Save as Draft?"
 msgstr "임시보관 메일로 저장할까요?"
 
-#: app/src/ui/composer/mod.rs:2115
+#: app/src/ui/composer/mod.rs:2257
 msgid "Discard"
 msgstr "버리기"
 
-#: app/src/ui/composer/mod.rs:2117
+#: app/src/ui/composer/mod.rs:2259
 msgid "Save Draft"
 msgstr "임시보관 메일 저장"
 
-#: app/src/ui/composer/mod.rs:2158
+#: app/src/ui/composer/mod.rs:2302
 msgid "Attach Files"
 msgstr "파일 첨부"
 
-#: app/src/ui/composer/mod.rs:2194
+#: app/src/ui/composer/mod.rs:2338
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2240
+#: app/src/ui/composer/mod.rs:2384
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "{file} 열기, {size}"
 
-#: app/src/ui/composer/mod.rs:2293
+#: app/src/ui/composer/mod.rs:2437
 msgid "Bold (Ctrl+B)"
 msgstr "굵게(Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2438
 msgid "Italic (Ctrl+I)"
 msgstr "기울임(Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2297
+#: app/src/ui/composer/mod.rs:2441
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "취소선(Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2300
+#: app/src/ui/composer/mod.rs:2444
 msgid "Code (Ctrl+E)"
 msgstr "코드(Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2337
+#: app/src/ui/composer/mod.rs:2481
 msgid "Link (Ctrl+K)"
 msgstr "링크(Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2347
+#: app/src/ui/composer/mod.rs:2491
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "글머리 기호 목록(Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2352
+#: app/src/ui/composer/mod.rs:2496
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "번호 목록(Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2357
+#: app/src/ui/composer/mod.rs:2501
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "인용(Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2374
+#: app/src/ui/composer/mod.rs:2518
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "이미지 삽입(Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2528
 msgid "Paragraph"
 msgstr "문단"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2529
 msgid "Heading 1"
 msgstr "제목 1"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2530
 msgid "Heading 2"
 msgstr "제목 2"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2531
 msgid "Heading 3"
 msgstr "제목 3"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2532
 msgid "Code Block"
 msgstr "코드 블록"
 
-#: app/src/ui/composer/mod.rs:2402
+#: app/src/ui/composer/mod.rs:2546
 msgid "Turn Markdown into Formatting"
 msgstr "Markdown을 서식으로 변환"
 
-#: app/src/ui/composer/mod.rs:2406
+#: app/src/ui/composer/mod.rs:2550
 msgid "Clear Formatting"
 msgstr "서식 지우기"
 
-#: app/src/ui/composer/mod.rs:2412
+#: app/src/ui/composer/mod.rs:2556
 msgid "Write in Markdown"
 msgstr "Markdown으로 작성"
 
-#: app/src/ui/composer/mod.rs:2419 app/src/ui/composer/mod.rs:2423
+#: app/src/ui/composer/mod.rs:2563 app/src/ui/composer/mod.rs:2567
 msgid "More Formatting"
 msgstr "서식 더 보기"
 
-#: app/src/ui/composer/mod.rs:2460
+#: app/src/ui/composer/mod.rs:2604
 msgid "Add a Link"
 msgstr "링크 추가"
 
-#: app/src/ui/composer/mod.rs:2466
+#: app/src/ui/composer/mod.rs:2610
 msgid "Text"
 msgstr "텍스트"
 
-#: app/src/ui/composer/mod.rs:2478
+#: app/src/ui/composer/mod.rs:2622
 msgid "Add Link"
 msgstr "링크 추가"
 
-#: app/src/ui/composer/mod.rs:2514
+#: app/src/ui/composer/mod.rs:2658
 msgid "Markdown formatted"
 msgstr "Markdown 서식 적용됨"
 
-#: app/src/ui/composer/mod.rs:2633
+#: app/src/ui/composer/mod.rs:2777
 msgid "Pasted as rich text"
 msgstr "서식 있는 텍스트로 붙여넣음"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2778
 msgid "Paste as Plain Text"
 msgstr "Markdown으로 편집 중"
 
-#: app/src/ui/composer/mod.rs:2668
+#: app/src/ui/composer/mod.rs:2812
 msgid "Editing as Markdown"
 msgstr "이미지"
 
-#: app/src/ui/composer/mod.rs:2704
+#: app/src/ui/composer/mod.rs:2848
 msgid "Images"
 msgstr "이미지"
 
-#: app/src/ui/composer/mod.rs:2709
+#: app/src/ui/composer/mod.rs:2853
 msgid "Insert Image"
 msgstr "이미지 삽입"
 
-#: app/src/ui/composer/mod.rs:2753
+#: app/src/ui/composer/mod.rs:2897
 msgid "Could not read the file: {reason}"
 msgstr "파일을 읽을 수 없습니다: {reason}"
 
-#: app/src/ui/composer/mod.rs:2835
+#: app/src/ui/composer/mod.rs:2979
 msgid "No Templates Yet"
 msgstr "아직 템플릿 없음"
 
-#: app/src/ui/composer/mod.rs:2885
+#: app/src/ui/composer/mod.rs:3029
 msgid "Save as Template"
 msgstr "템플릿으로 저장"
 
-#: app/src/ui/composer/mod.rs:2887
+#: app/src/ui/composer/mod.rs:3031
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "{{first_name}} 같은 자리표시자는 사용할 때마다 채워집니다."
 
-#: app/src/ui/composer/mod.rs:2910 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:3054 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "템플릿 이름을 입력하세요"
 
-#: app/src/ui/composer/mod.rs:2918
+#: app/src/ui/composer/mod.rs:3062
 msgid "Template saved"
 msgstr "템플릿 저장됨"
 
-#: app/src/ui/composer/mod.rs:2921
+#: app/src/ui/composer/mod.rs:3065
 msgid "Template not saved: {reason}"
 msgstr "템플릿을 저장하지 못했습니다: {reason}"
 
-#: app/src/ui/composer/mod.rs:3044
+#: app/src/ui/composer/mod.rs:3188
 msgid "This looks like Markdown"
 msgstr "Markdown으로 보입니다"
 
-#: app/src/ui/composer/mod.rs:3050
+#: app/src/ui/composer/mod.rs:3194
 msgid "Format"
 msgstr "서식 적용"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3195
 msgid "Turn the Markdown into rich text"
 msgstr "Markdown을 서식 있는 텍스트로 변환"
 
-#: app/src/ui/composer/mod.rs:3057 app/src/ui/composer/mod.rs:3061
+#: app/src/ui/composer/mod.rs:3201 app/src/ui/composer/mod.rs:3205
 msgid "Dismiss"
 msgstr "닫기"
 
-#: app/src/ui/composer/mod.rs:3144
+#: app/src/ui/composer/mod.rs:3288
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "임시보관 메일은 이 컴퓨터에 보관하므로 나중에 여기서 마저 작성할 수 있습니다."
 
-#: app/src/ui/composer/mod.rs:3148
+#: app/src/ui/composer/mod.rs:3292
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "임시보관 메일은 {provider}에 보관하므로 나중에 어떤 기기에서든 마저 작성할 "
 "수 있습니다."
 
-#: app/src/ui/composer/mod.rs:3152
+#: app/src/ui/composer/mod.rs:3296
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9568,11 +9568,20 @@ msgstr "첨부 파일 누락 확인"
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr "파일을 첨부했다고 썼지만 첨부 파일이 없는 메시지를 보내기 전에 확인"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:736
+msgid "Save Drafts While Writing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:738
+msgid ""
+"Keep an open message in Drafts as you write, so closing early loses nothing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:772
 msgid "Signing and Encryption"
 msgstr "서명 및 암호화"
 
-#: app/src/ui/preferences.rs:765
+#: app/src/ui/preferences.rs:774
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9580,49 +9589,49 @@ msgstr ""
 "Penguin Mail은 키를 보관하고 암호를 직접 요청하는 GnuPG를 통해 서명하고 암호"
 "화합니다."
 
-#: app/src/ui/preferences.rs:770
+#: app/src/ui/preferences.rs:779
 msgid "Your OpenPGP Keys"
 msgstr "내 OpenPGP 키"
 
-#: app/src/ui/preferences.rs:771
+#: app/src/ui/preferences.rs:780
 msgid "Asking gpg…"
 msgstr "gpg에 요청 중…"
 
-#: app/src/ui/preferences.rs:775
+#: app/src/ui/preferences.rs:784
 msgid "Your S/MIME Certificates"
 msgstr "내 S/MIME 인증서"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:785
 msgid "Asking gpgsm…"
 msgstr "gpgsm에 요청 중…"
 
-#: app/src/ui/preferences.rs:783
+#: app/src/ui/preferences.rs:792
 msgid "Sign My Messages by Default"
 msgstr "기본적으로 내 메시지에 서명"
 
-#: app/src/ui/preferences.rs:784
+#: app/src/ui/preferences.rs:793
 msgid "New messages open with Sign turned on"
 msgstr "새 메시지를 열 때 서명 켜기"
 
-#: app/src/ui/preferences.rs:790
+#: app/src/ui/preferences.rs:799
 msgid "Encrypt When I Can"
 msgstr "가능하면 암호화"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:801
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "모든 수신자에게 키 또는 인증서가 있으면 암호화 켜기"
 
-#: app/src/ui/preferences.rs:881
+#: app/src/ui/preferences.rs:890
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg에 요청할 수 없습니다: {reason}"
 
-#: app/src/ui/preferences.rs:900
+#: app/src/ui/preferences.rs:909
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm에 요청할 수 없습니다: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:909
+#: app/src/ui/preferences.rs:918
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9633,11 +9642,11 @@ msgstr[0] ""
 "Penguin Mail은 키를 보관하고 암호를 직접 요청하는 {programs}을 통해 서명하고 "
 "암호화합니다."
 
-#: app/src/ui/preferences.rs:941 app/src/ui/preferences.rs:954
+#: app/src/ui/preferences.rs:950 app/src/ui/preferences.rs:963
 msgid "Spelling"
 msgstr "맞춤법"
 
-#: app/src/ui/preferences.rs:943
+#: app/src/ui/preferences.rs:952
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9646,65 +9655,65 @@ msgstr ""
 "설치된 사전이 없어 Penguin Mail이 맞춤법을 검사하지 않습니다. hunspell-en-us "
 "또는 hunspell-pt-pt 같은 Hunspell 사전을 설치한 후 작성 창을 다시 여세요."
 
-#: app/src/ui/preferences.rs:956
+#: app/src/ui/preferences.rs:965
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "각 계정의 맞춤법 검사 언어입니다. 설치된 사전: {languages}."
 
-#: app/src/ui/preferences.rs:968
+#: app/src/ui/preferences.rs:977
 msgid "System: {language}"
 msgstr "시스템: {language}"
 
-#: app/src/ui/preferences.rs:983
+#: app/src/ui/preferences.rs:992
 msgid "All Installed Languages"
 msgstr "설치된 모든 언어"
 
-#: app/src/ui/preferences.rs:1026
+#: app/src/ui/preferences.rs:1035
 msgid "Sync"
 msgstr "동기화"
 
-#: app/src/ui/preferences.rs:1034
+#: app/src/ui/preferences.rs:1043
 msgid "Checking"
 msgstr "확인"
 
-#: app/src/ui/preferences.rs:1040
+#: app/src/ui/preferences.rs:1049
 msgid "Check for New Mail"
 msgstr "새 메일 확인"
 
-#: app/src/ui/preferences.rs:1049
+#: app/src/ui/preferences.rs:1058
 msgid "Storage"
 msgstr "저장 공간"
 
-#: app/src/ui/preferences.rs:1057
+#: app/src/ui/preferences.rs:1066
 msgid "Keep Mail on This Computer For"
 msgstr "이 컴퓨터의 메일 보관 기간"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1087
 msgid "Message text kept for opening offline"
 msgstr "오프라인에서 열 수 있도록 보관하는 메시지 본문"
 
-#: app/src/ui/preferences.rs:1081
+#: app/src/ui/preferences.rs:1090
 msgid "Message Cache"
 msgstr "메시지 캐시"
 
-#: app/src/ui/preferences.rs:1090
+#: app/src/ui/preferences.rs:1099
 msgid "100 messages"
 msgstr "메시지 100개"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1100
 msgid "300 messages"
 msgstr "메시지 300개"
 
-#: app/src/ui/preferences.rs:1092
+#: app/src/ui/preferences.rs:1101
 msgid "1,000 messages"
 msgstr "메시지 1,000개"
 
-#: app/src/ui/preferences.rs:1096
+#: app/src/ui/preferences.rs:1105
 msgid "Download Recent Inbox Messages"
 msgstr "받은편지함의 최근 메시지 다운로드"
 
-#: app/src/ui/preferences.rs:1097
+#: app/src/ui/preferences.rs:1106
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -9712,148 +9721,148 @@ msgstr ""
 "각 계정의 메시지 본문을 다운로드하여 더 빨리 열고 오프라인에서도 읽을 수 있"
 "게 합니다. 첨부 파일과 원격 이미지는 다운로드하지 않습니다."
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1133
 msgid "Startup"
 msgstr "시작"
 
-#: app/src/ui/preferences.rs:1127
+#: app/src/ui/preferences.rs:1136
 msgid "Start in the Tray at Login"
 msgstr "로그인 시 트레이에서 시작"
 
-#: app/src/ui/preferences.rs:1142
+#: app/src/ui/preferences.rs:1151
 msgid "Not available in demo mode"
 msgstr "데모 모드에서는 사용할 수 없음"
 
-#: app/src/ui/preferences.rs:1150
+#: app/src/ui/preferences.rs:1159
 msgid "Look for a new release once a day"
 msgstr "하루에 한 번 새 버전 확인"
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1200
 msgid "{used} of {limit}"
 msgstr "{limit} 중 {used} 사용"
 
-#: app/src/ui/preferences.rs:1203
+#: app/src/ui/preferences.rs:1212
 msgid "{amount} · Full"
 msgstr "{amount} · 가득 참"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1214
 msgid "{amount} · Nearly full"
 msgstr "{amount} · 거의 가득 참"
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1226
 msgid "Senders Who May Load Images"
 msgstr "이미지 로드를 허용한 발신자"
 
-#: app/src/ui/preferences.rs:1218 app/src/ui/preferences.rs:1227
+#: app/src/ui/preferences.rs:1227 app/src/ui/preferences.rs:1236
 msgid "Nobody yet"
 msgstr "아직 없음"
 
-#: app/src/ui/preferences.rs:1229
+#: app/src/ui/preferences.rs:1238
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "발신자 {count}명"
 
-#: app/src/ui/preferences.rs:1239
+#: app/src/ui/preferences.rs:1248
 msgid "Anyone at this domain"
 msgstr "이 도메인의 모든 발신자"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1250
 msgid "This address"
 msgstr "이 주소"
 
-#: app/src/ui/preferences.rs:1246
+#: app/src/ui/preferences.rs:1255
 msgid "Stop Loading Images from This Sender"
 msgstr "이 발신자의 이미지 로드 중지"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1262
 msgid "Stop loading images from {sender}"
 msgstr "{sender}의 이미지 로드 중지"
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1332
 msgid "Monday to Friday"
 msgstr "월요일부터 금요일까지"
 
-#: app/src/ui/preferences.rs:1324
+#: app/src/ui/preferences.rs:1333
 msgid "Every day of the week"
 msgstr "매일"
 
-#: app/src/ui/preferences.rs:1325
+#: app/src/ui/preferences.rs:1334
 msgid "No days"
 msgstr "선택한 요일 없음"
 
-#: app/src/ui/preferences.rs:1332
+#: app/src/ui/preferences.rs:1341
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1335
+#: app/src/ui/preferences.rs:1344
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1398
+#: app/src/ui/preferences.rs:1407
 msgid "Time Format"
 msgstr "시간 형식"
 
-#: app/src/ui/preferences.rs:1402
+#: app/src/ui/preferences.rs:1411
 msgid "Automatic follows the system clock format"
 msgstr "자동은 시스템 시간 형식을 따릅니다"
 
-#: app/src/ui/preferences.rs:1416
+#: app/src/ui/preferences.rs:1425
 msgid "Week Starts On"
 msgstr "한 주의 시작 요일"
 
-#: app/src/ui/preferences.rs:1421
+#: app/src/ui/preferences.rs:1430
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "자동을 선택하면 지역 설정의 주 시작 요일을 따릅니다"
 
-#: app/src/ui/preferences.rs:1435
+#: app/src/ui/preferences.rs:1444
 msgid "Working Hours"
 msgstr "근무 시간"
 
-#: app/src/ui/preferences.rs:1454
+#: app/src/ui/preferences.rs:1463
 msgid "Hours"
 msgstr "시간"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1514
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1563
+#: app/src/ui/preferences.rs:1572
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1565
+#: app/src/ui/preferences.rs:1574
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1609
+#: app/src/ui/preferences.rs:1618
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "색을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/preferences.rs:1653
+#: app/src/ui/preferences.rs:1662
 msgid "Never Translate"
 msgstr "번역하지 않을 언어"
 
-#: app/src/ui/preferences.rs:1655
+#: app/src/ui/preferences.rs:1664
 msgid "Messages in these languages get no offer to translate them"
 msgstr "이 언어로 된 메시지에는 번역을 제안하지 않습니다"
 
-#: app/src/ui/preferences.rs:1684
+#: app/src/ui/preferences.rs:1693
 msgid "Follow System"
 msgstr "시스템 설정 따르기"
 
-#: app/src/ui/preferences.rs:1688
+#: app/src/ui/preferences.rs:1697
 msgid "Language"
 msgstr "언어"
 
-#: app/src/ui/preferences.rs:1689
+#: app/src/ui/preferences.rs:1698
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/preferences.rs:1770 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1779 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "서명 없음"
 

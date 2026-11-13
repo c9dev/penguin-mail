@@ -119,6 +119,7 @@ impl App {
                     })
                 },
                 check_attachments: settings.check_attachments,
+                autosave_drafts: settings.autosave_drafts,
                 sign_by_default: settings.sign_by_default,
                 encrypt_when_possible: settings.encrypt_when_possible,
             }
