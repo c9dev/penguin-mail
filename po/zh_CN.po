@@ -3909,8 +3909,8 @@ msgstr ""
 "未保存草稿。加密邮件会以自己的密钥加密后存放在 [草稿] 中，但此电脑没有 "
 "{address} 的密钥或证书。"
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2099
-#: app/src/ui/composer/mod.rs:2102
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2240
+#: app/src/ui/composer/mod.rs:2243
 msgid "That account is not connected."
 msgstr "此账号尚未连接。"
 
@@ -4036,7 +4036,7 @@ msgstr "标准加密（TLS）"
 msgid "Not encrypted in transit"
 msgstr "传输过程未加密"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2343
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 个附件"
@@ -4081,8 +4081,8 @@ msgstr[0] "{named} 与其他 {count} 位"
 msgid "me"
 msgstr "我"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
-#: app/src/ui/composer/mod.rs:622
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:653
+#: app/src/ui/composer/mod.rs:657
 msgid "Show trimmed content"
 msgstr "显示省略的内容"
 
@@ -4234,7 +4234,7 @@ msgstr "小于 {size}"
 msgid "Larger than {size}"
 msgstr "大于 {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:924
+#: app/src/rules.rs:251 app/src/settings/mod.rs:928
 msgid "All mail"
 msgstr "所有邮件"
 
@@ -4332,217 +4332,217 @@ msgstr "在此电脑上，Penguin Mail 打开时"
 msgid "On the server"
 msgstr "在服务器上"
 
-#: app/src/settings/mod.rs:225 app/src/settings/mod.rs:434
-#: app/src/settings/mod.rs:836 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1089
+#: app/src/settings/mod.rs:228 app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:840 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1098
 msgid "Off"
 msgstr "关闭"
 
-#: app/src/settings/mod.rs:226
+#: app/src/settings/mod.rs:229
 msgid "Local Server"
 msgstr "本地服务器"
 
-#: app/src/settings/mod.rs:227
+#: app/src/settings/mod.rs:230
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:228
+#: app/src/settings/mod.rs:231
 msgid "Claude Subscription"
 msgstr "Claude 订阅"
 
-#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:256 app/src/ui/window.rs:3739
 #: app/src/ui/window.rs:3827
 msgid "Assistant"
 msgstr "助手"
 
-#: app/src/settings/mod.rs:254 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:257 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "翻译"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:258
+#: app/src/settings/mod.rs:261
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "取消订阅"
 
-#: app/src/settings/mod.rs:264
+#: app/src/settings/mod.rs:267
 msgid "Answers questions and acts on your mail"
 msgstr "回答问题并处理邮件"
 
-#: app/src/settings/mod.rs:265
+#: app/src/settings/mod.rs:268
 msgid "Translates a message when you ask"
 msgstr "依要求翻译邮件"
 
-#: app/src/settings/mod.rs:267
+#: app/src/settings/mod.rs:270
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "规则无法处理时，读取邮件简报的取消订阅页面"
 
-#: app/src/settings/mod.rs:305
+#: app/src/settings/mod.rs:308
 msgid "Same as the Assistant"
 msgstr "与助手相同"
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:438
 msgid "Claude's own only"
 msgstr "仅限 Claude 内置搜索"
 
-#: app/src/settings/mod.rs:436
+#: app/src/settings/mod.rs:439
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:440
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:438
+#: app/src/settings/mod.rs:441
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:614
+#: app/src/settings/mod.rs:618
 msgid "Rich text"
 msgstr "富文本"
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:619
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:634 app/src/settings/mod.rs:656
+#: app/src/settings/mod.rs:638 app/src/settings/mod.rs:660
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "自动"
 
-#: app/src/settings/mod.rs:635 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:639 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "星期一"
 
-#: app/src/settings/mod.rs:636 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:640 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "星期日"
 
-#: app/src/settings/mod.rs:657
+#: app/src/settings/mod.rs:661
 msgid "12-hour (AM/PM)"
 msgstr "12 小时制（AM/PM）"
 
-#: app/src/settings/mod.rs:658
+#: app/src/settings/mod.rs:662
 msgid "24-hour"
 msgstr "24 小时制"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:700
 msgid "When opened"
 msgstr "打开时"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:701
 msgid "After 2 seconds"
 msgstr "2 秒后"
 
-#: app/src/settings/mod.rs:698
+#: app/src/settings/mod.rs:702
 msgid "Only when I choose"
 msgstr "仅在手动选择时"
 
-#: app/src/settings/mod.rs:714 app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:718 app/src/settings/mod.rs:736
 msgid "Ask each time"
 msgstr "每次询问"
 
-#: app/src/settings/mod.rs:715
+#: app/src/settings/mod.rs:719
 msgid "Always load"
 msgstr "始终加载"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:737
 msgid "Never ask"
 msgstr "永不询问"
 
-#: app/src/settings/mod.rs:760
+#: app/src/settings/mod.rs:764
 msgid "No Preview"
 msgstr "无预览"
 
-#: app/src/settings/mod.rs:761
+#: app/src/settings/mod.rs:765
 msgid "1 Line"
 msgstr "1 行"
 
-#: app/src/settings/mod.rs:762
+#: app/src/settings/mod.rs:766
 msgid "2 Lines"
 msgstr "2 行"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:800
 msgid "Small"
 msgstr "小"
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:801
 msgid "Default"
 msgstr "默认"
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:802
 msgid "Large"
 msgstr "大"
 
-#: app/src/settings/mod.rs:799
+#: app/src/settings/mod.rs:803
 msgid "Larger"
 msgstr "更大"
 
-#: app/src/settings/mod.rs:837
+#: app/src/settings/mod.rs:841
 msgid "5 seconds"
 msgstr "5 秒"
 
-#: app/src/settings/mod.rs:838
+#: app/src/settings/mod.rs:842
 msgid "10 seconds"
 msgstr "10 秒"
 
-#: app/src/settings/mod.rs:839
+#: app/src/settings/mod.rs:843
 msgid "20 seconds"
 msgstr "20 秒"
 
-#: app/src/settings/mod.rs:840
+#: app/src/settings/mod.rs:844
 msgid "30 seconds"
 msgstr "30 秒"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:861
 msgid "Follow system"
 msgstr "跟随系统"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:862
 msgid "Light"
 msgstr "浅色"
 
-#: app/src/settings/mod.rs:859
+#: app/src/settings/mod.rs:863
 msgid "Dark"
 msgstr "深色"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:897
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "每 {count} 秒"
 
-#: app/src/settings/mod.rs:901
+#: app/src/settings/mod.rs:905
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "每 {count} 分钟"
 
-#: app/src/settings/mod.rs:918
+#: app/src/settings/mod.rs:922
 msgid "2 weeks"
 msgstr "2 周"
 
-#: app/src/settings/mod.rs:919
+#: app/src/settings/mod.rs:923
 msgid "30 days"
 msgstr "30 天"
 
-#: app/src/settings/mod.rs:920
+#: app/src/settings/mod.rs:924
 msgid "90 days"
 msgstr "90 天"
 
-#: app/src/settings/mod.rs:921
+#: app/src/settings/mod.rs:925
 msgid "1 year"
 msgstr "1 年"
 
-#: app/src/settings/mod.rs:922
+#: app/src/settings/mod.rs:926
 msgid "2 years"
 msgstr "2 年"
 
-#: app/src/settings/mod.rs:923
+#: app/src/settings/mod.rs:927
 msgid "5 years"
 msgstr "5 年"
 
-#: app/src/settings/mod.rs:945
+#: app/src/settings/mod.rs:949
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4550,19 +4550,19 @@ msgstr ""
 "每封邮件都会保留在此电脑上。大型账号会占用大量磁盘空间和内存，较旧的邮件会在"
 "后台下载。"
 
-#: app/src/settings/mod.rs:947
+#: app/src/settings/mod.rs:951
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "收件箱中的所有邮件也会保留，较旧的邮件仍可搜索"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:958
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:959
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:960
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4728,8 +4728,8 @@ msgstr "全部标记为已读"
 msgid "Open Penguin Mail"
 msgstr "打开 Penguin Mail"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:371
-#: app/src/ui/composer/mod.rs:674 app/src/ui/composer/mod.rs:1564
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:406
+#: app/src/ui/composer/mod.rs:709 app/src/ui/composer/mod.rs:1620
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "新建邮件"
@@ -4748,7 +4748,7 @@ msgstr "{version} 的新功能"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1149 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1158 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "检查更新"
 
@@ -4927,8 +4927,8 @@ msgstr "复制链接"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1994 app/src/ui/composer/mod.rs:2116
-#: app/src/ui/composer/mod.rs:2477 app/src/ui/composer/mod.rs:2896
+#: app/src/ui/composer/mod.rs:2063 app/src/ui/composer/mod.rs:2258
+#: app/src/ui/composer/mod.rs:2621 app/src/ui/composer/mod.rs:3040
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5085,7 +5085,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail 会在此电脑上保留下载的每封邮件。"
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1510
+#: app/src/ui/preferences.rs:1519
 msgid "Days"
 msgstr "天数"
 
@@ -5323,7 +5323,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:386 app/src/ui/composer/mod.rs:1929
+#: app/src/ui/composer/mod.rs:421 app/src/ui/composer/mod.rs:1998
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "发送"
@@ -5481,7 +5481,7 @@ msgid "No models found."
 msgstr "找不到模型。"
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2256
+#: app/src/ui/composer/mod.rs:2400
 msgid "Remove {file}"
 msgstr "移除 {file}"
 
@@ -5521,7 +5521,7 @@ msgid "Edit {server}"
 msgstr "编辑 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2252 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2396 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "移除"
@@ -5562,7 +5562,7 @@ msgstr ""
 "设置环境变量。URL 则通过 HTTP 连接至服务器。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2891 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:3035 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "名称"
@@ -5598,7 +5598,7 @@ msgstr "测试"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2896
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:3040
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6070,7 +6070,7 @@ msgid "Declined"
 msgstr "已拒绝"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1316
+#: app/src/ui/preferences.rs:1325
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6154,7 +6154,7 @@ msgstr "仅新会议"
 msgid "New and existing"
 msgstr "新旧会议"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:591
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:626
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -6182,11 +6182,11 @@ msgstr "结束日期"
 msgid "End time"
 msgstr "结束时间"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1462
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1471
 msgid "Starts"
 msgstr "开始"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1464
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1473
 msgid "Ends"
 msgstr "结束"
 
@@ -6326,7 +6326,7 @@ msgstr "正在上传 {file}"
 msgid "Could not attach {file}: {reason}"
 msgstr "无法附加 {file}：{reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:415
+#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:450
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
@@ -6843,7 +6843,7 @@ msgstr "全天"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1330 app/src/ui/preferences.rs:1518
+#: app/src/ui/preferences.rs:1339 app/src/ui/preferences.rs:1527
 msgid "%a"
 msgstr "%a"
 
@@ -6859,7 +6859,7 @@ msgstr "已删除「{title}」"
 msgid "Could not delete the event: {reason}"
 msgstr "无法删除活动：{reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1401
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1457
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7453,398 +7453,398 @@ msgstr "无法打开 {file}：{reason}"
 #. Attach Files moves here on a narrow window, where its button goes
 #. so Send keeps its word; the action is off, and the item hidden,
 #. while the button shows.
-#: app/src/ui/composer/mod.rs:149
+#: app/src/ui/composer/mod.rs:152
 msgid "Attach Files…"
 msgstr "附加文件…"
 
-#: app/src/ui/composer/mod.rs:152 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:155 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "模板"
 
-#: app/src/ui/composer/mod.rs:153 app/src/ui/composer/mod.rs:1033
+#: app/src/ui/composer/mod.rs:156 app/src/ui/composer/mod.rs:1089
 msgid "Preview"
 msgstr "预览"
 
-#: app/src/ui/composer/mod.rs:157
+#: app/src/ui/composer/mod.rs:160
 msgid "Sign"
 msgstr "签名"
 
-#: app/src/ui/composer/mod.rs:158
+#: app/src/ui/composer/mod.rs:161
 msgid "Encrypt"
 msgstr "加密"
 
-#: app/src/ui/composer/mod.rs:166
+#: app/src/ui/composer/mod.rs:169
 msgid "Request Read Receipt"
 msgstr "要求已读回执"
 
-#: app/src/ui/composer/mod.rs:380 app/src/ui/conversation.rs:1804
+#: app/src/ui/composer/mod.rs:415 app/src/ui/conversation.rs:1804
 msgid "Choose a Time…"
 msgstr "选择时间…"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:2009
+#: app/src/ui/composer/mod.rs:426 app/src/ui/composer/mod.rs:2078
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "定时发送"
 
-#: app/src/ui/composer/mod.rs:393 app/src/ui/composer/mod.rs:1608
+#: app/src/ui/composer/mod.rs:428 app/src/ui/composer/mod.rs:1664
 msgid "Send (Ctrl+Enter)"
 msgstr "发送（Ctrl+Enter）"
 
-#: app/src/ui/composer/mod.rs:397
+#: app/src/ui/composer/mod.rs:432
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "附加文件（Ctrl+Shift+A）"
 
-#: app/src/ui/composer/mod.rs:404
+#: app/src/ui/composer/mod.rs:439
 msgid "Save as Template…"
 msgstr "保存为模板…"
 
-#: app/src/ui/composer/mod.rs:421
+#: app/src/ui/composer/mod.rs:456
 msgid "Add a recipient this computer can encrypt to."
 msgstr "请添加此电脑可为其加密的收件人。"
 
-#: app/src/ui/composer/mod.rs:466
+#: app/src/ui/composer/mod.rs:501
 msgid "Recipients"
 msgstr "收件人"
 
-#: app/src/ui/composer/mod.rs:467
+#: app/src/ui/composer/mod.rs:502
 msgid "Carbon copy"
 msgstr "抄送"
 
-#: app/src/ui/composer/mod.rs:468
+#: app/src/ui/composer/mod.rs:503
 msgid "Blind carbon copy"
 msgstr "密送"
 
-#: app/src/ui/composer/mod.rs:480
+#: app/src/ui/composer/mod.rs:515
 msgid "Cc/Bcc"
 msgstr "抄送／密送"
 
-#: app/src/ui/composer/mod.rs:481 app/src/ui/composer/mod.rs:1202
+#: app/src/ui/composer/mod.rs:516 app/src/ui/composer/mod.rs:1258
 msgid "Show Cc and Bcc"
 msgstr "显示抄送与密送"
 
-#: app/src/ui/composer/mod.rs:492
+#: app/src/ui/composer/mod.rs:527
 msgid "+suffix or .suffix"
 msgstr "+suffix 或 .suffix"
 
-#: app/src/ui/composer/mod.rs:495
+#: app/src/ui/composer/mod.rs:530
 msgid "Address Suffix"
 msgstr "地址后缀"
 
-#: app/src/ui/composer/mod.rs:507 app/src/ui/composer/mod.rs:512
+#: app/src/ui/composer/mod.rs:542 app/src/ui/composer/mod.rs:547
 msgid "New Masked Address"
 msgstr "新建隐藏地址"
 
-#: app/src/ui/composer/mod.rs:529
+#: app/src/ui/composer/mod.rs:564
 msgid "Masked"
 msgstr "隐藏"
 
-#: app/src/ui/composer/mod.rs:557 app/src/ui/composer/mod.rs:558
+#: app/src/ui/composer/mod.rs:592 app/src/ui/composer/mod.rs:593
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "发件人"
 
-#: app/src/ui/composer/mod.rs:563 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:598 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "收件人"
 
-#: app/src/ui/composer/mod.rs:567
+#: app/src/ui/composer/mod.rs:602
 msgid "Cc"
 msgstr "抄送"
 
-#: app/src/ui/composer/mod.rs:569
+#: app/src/ui/composer/mod.rs:604
 msgid "Bcc"
 msgstr "密送"
 
-#: app/src/ui/composer/mod.rs:579 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:614 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "主题"
 
-#: app/src/ui/composer/mod.rs:643
+#: app/src/ui/composer/mod.rs:678
 msgid "Formatting"
 msgstr "格式"
 
-#: app/src/ui/composer/mod.rs:662 app/src/ui/composer/mod.rs:1367
+#: app/src/ui/composer/mod.rs:697 app/src/ui/composer/mod.rs:1423
 msgid "Forwarded Message"
 msgstr "转发的邮件"
 
-#: app/src/ui/composer/mod.rs:1200
+#: app/src/ui/composer/mod.rs:1256
 msgid "Hide Cc and Bcc"
 msgstr "隐藏抄送与密送"
 
-#: app/src/ui/composer/mod.rs:1285
+#: app/src/ui/composer/mod.rs:1341
 msgid "Remove Quoted Text"
 msgstr "移除引用文本"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1342
 msgid "Do Not Forward the Original"
 msgstr "不转发原始邮件"
 
-#: app/src/ui/composer/mod.rs:1396
+#: app/src/ui/composer/mod.rs:1452
 msgid "Quoted text removed"
 msgstr "已移除引用文本"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1453
 msgid "Forwarded message removed"
 msgstr "已移除转发的邮件"
 
-#: app/src/ui/composer/mod.rs:1502
+#: app/src/ui/composer/mod.rs:1558
 msgid "Sending from {address}"
 msgstr "将从 {address} 发送"
 
-#: app/src/ui/composer/mod.rs:1508
+#: app/src/ui/composer/mod.rs:1564
 msgid "Could not make a masked address: {reason}"
 msgstr "无法创建隐藏地址：{reason}"
 
-#: app/src/ui/composer/mod.rs:1572
+#: app/src/ui/composer/mod.rs:1628
 msgid "Scheduled to send {when}"
 msgstr "已定于 {when} 发送"
 
-#: app/src/ui/composer/mod.rs:1596 app/src/ui/composer/mod.rs:2031
+#: app/src/ui/composer/mod.rs:1652 app/src/ui/composer/mod.rs:2111
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "请选择发件人，并输入允许使用的地址后缀。"
 
-#: app/src/ui/composer/mod.rs:1768 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1824 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "取消发送"
 
-#: app/src/ui/composer/mod.rs:1921 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1990 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "正在发送…"
 
-#: app/src/ui/composer/mod.rs:1961
+#: app/src/ui/composer/mod.rs:2030
 msgid "Attachment Missing?"
 msgstr "忘记附件了吗？"
 
-#: app/src/ui/composer/mod.rs:1963
+#: app/src/ui/composer/mod.rs:2032
 msgid "The message says “{sentence}” and carries no file."
 msgstr "邮件提到「{sentence}」，但没有附上文件。"
 
-#: app/src/ui/composer/mod.rs:1968
+#: app/src/ui/composer/mod.rs:2037
 msgid "Add Attachment"
 msgstr "添加附件"
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:2038
 msgid "Send Anyway"
 msgstr "仍要发送"
 
-#: app/src/ui/composer/mod.rs:1987
+#: app/src/ui/composer/mod.rs:2056
 msgid "Send Without Encryption?"
 msgstr "是否不加密发送？"
 
-#: app/src/ui/composer/mod.rs:1989
+#: app/src/ui/composer/mod.rs:2058
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "此邮件原定加密发送，但无法加密。{reason}"
 
-#: app/src/ui/composer/mod.rs:1995
+#: app/src/ui/composer/mod.rs:2064
 msgid "Send Readable"
 msgstr "以明文发送"
 
-#: app/src/ui/composer/mod.rs:2010
+#: app/src/ui/composer/mod.rs:2079
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "Penguin Mail 运行时会在此时间发送，即使只在系统托盘中运行也一样。"
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2080
 msgid "Schedule"
 msgstr "定时发送"
 
-#: app/src/ui/composer/mod.rs:2073
+#: app/src/ui/composer/mod.rs:2170
 msgid "Draft saved, encrypted to your own key"
 msgstr "已保存草稿，并以自己的密钥加密"
 
-#: app/src/ui/composer/mod.rs:2075
+#: app/src/ui/composer/mod.rs:2172
 msgid "Draft saved"
 msgstr "已保存草稿"
 
-#: app/src/ui/composer/mod.rs:2111
+#: app/src/ui/composer/mod.rs:2253
 msgid "Save as Draft?"
 msgstr "是否保存为草稿？"
 
-#: app/src/ui/composer/mod.rs:2115
+#: app/src/ui/composer/mod.rs:2257
 msgid "Discard"
 msgstr "舍弃"
 
-#: app/src/ui/composer/mod.rs:2117
+#: app/src/ui/composer/mod.rs:2259
 msgid "Save Draft"
 msgstr "保存草稿"
 
-#: app/src/ui/composer/mod.rs:2158
+#: app/src/ui/composer/mod.rs:2302
 msgid "Attach Files"
 msgstr "附加文件"
 
-#: app/src/ui/composer/mod.rs:2194
+#: app/src/ui/composer/mod.rs:2338
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2240
+#: app/src/ui/composer/mod.rs:2384
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "打开 {file}，{size}"
 
-#: app/src/ui/composer/mod.rs:2293
+#: app/src/ui/composer/mod.rs:2437
 msgid "Bold (Ctrl+B)"
 msgstr "粗体（Ctrl+B）"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2438
 msgid "Italic (Ctrl+I)"
 msgstr "斜体（Ctrl+I）"
 
-#: app/src/ui/composer/mod.rs:2297
+#: app/src/ui/composer/mod.rs:2441
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "删除线（Ctrl+Shift+X）"
 
-#: app/src/ui/composer/mod.rs:2300
+#: app/src/ui/composer/mod.rs:2444
 msgid "Code (Ctrl+E)"
 msgstr "代码（Ctrl+E）"
 
-#: app/src/ui/composer/mod.rs:2337
+#: app/src/ui/composer/mod.rs:2481
 msgid "Link (Ctrl+K)"
 msgstr "链接（Ctrl+K）"
 
-#: app/src/ui/composer/mod.rs:2347
+#: app/src/ui/composer/mod.rs:2491
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "无序列表（Ctrl+Shift+8）"
 
-#: app/src/ui/composer/mod.rs:2352
+#: app/src/ui/composer/mod.rs:2496
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "有序列表（Ctrl+Shift+7）"
 
-#: app/src/ui/composer/mod.rs:2357
+#: app/src/ui/composer/mod.rs:2501
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "引用（Ctrl+Shift+9）"
 
-#: app/src/ui/composer/mod.rs:2374
+#: app/src/ui/composer/mod.rs:2518
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "插入图片（Ctrl+Shift+P）"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2528
 msgid "Paragraph"
 msgstr "段落"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2529
 msgid "Heading 1"
 msgstr "标题 1"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2530
 msgid "Heading 2"
 msgstr "标题 2"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2531
 msgid "Heading 3"
 msgstr "标题 3"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2532
 msgid "Code Block"
 msgstr "代码块"
 
-#: app/src/ui/composer/mod.rs:2402
+#: app/src/ui/composer/mod.rs:2546
 msgid "Turn Markdown into Formatting"
 msgstr "将 Markdown 转为格式"
 
-#: app/src/ui/composer/mod.rs:2406
+#: app/src/ui/composer/mod.rs:2550
 msgid "Clear Formatting"
 msgstr "清除格式"
 
-#: app/src/ui/composer/mod.rs:2412
+#: app/src/ui/composer/mod.rs:2556
 msgid "Write in Markdown"
 msgstr "以 Markdown 撰写"
 
-#: app/src/ui/composer/mod.rs:2419 app/src/ui/composer/mod.rs:2423
+#: app/src/ui/composer/mod.rs:2563 app/src/ui/composer/mod.rs:2567
 msgid "More Formatting"
 msgstr "更多格式"
 
-#: app/src/ui/composer/mod.rs:2460
+#: app/src/ui/composer/mod.rs:2604
 msgid "Add a Link"
 msgstr "添加链接"
 
-#: app/src/ui/composer/mod.rs:2466
+#: app/src/ui/composer/mod.rs:2610
 msgid "Text"
 msgstr "文本"
 
-#: app/src/ui/composer/mod.rs:2478
+#: app/src/ui/composer/mod.rs:2622
 msgid "Add Link"
 msgstr "添加链接"
 
-#: app/src/ui/composer/mod.rs:2514
+#: app/src/ui/composer/mod.rs:2658
 msgid "Markdown formatted"
 msgstr "已应用 Markdown 格式"
 
-#: app/src/ui/composer/mod.rs:2633
+#: app/src/ui/composer/mod.rs:2777
 msgid "Pasted as rich text"
 msgstr "已粘贴为富文本"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2778
 msgid "Paste as Plain Text"
 msgstr "粘贴为纯文本"
 
-#: app/src/ui/composer/mod.rs:2668
+#: app/src/ui/composer/mod.rs:2812
 msgid "Editing as Markdown"
 msgstr "以 Markdown 编辑"
 
-#: app/src/ui/composer/mod.rs:2704
+#: app/src/ui/composer/mod.rs:2848
 msgid "Images"
 msgstr "图片"
 
-#: app/src/ui/composer/mod.rs:2709
+#: app/src/ui/composer/mod.rs:2853
 msgid "Insert Image"
 msgstr "插入图片"
 
-#: app/src/ui/composer/mod.rs:2753
+#: app/src/ui/composer/mod.rs:2897
 msgid "Could not read the file: {reason}"
 msgstr "无法读取文件：{reason}"
 
-#: app/src/ui/composer/mod.rs:2835
+#: app/src/ui/composer/mod.rs:2979
 msgid "No Templates Yet"
 msgstr "尚无模板"
 
-#: app/src/ui/composer/mod.rs:2885
+#: app/src/ui/composer/mod.rs:3029
 msgid "Save as Template"
 msgstr "保存为模板"
 
-#: app/src/ui/composer/mod.rs:2887
+#: app/src/ui/composer/mod.rs:3031
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "每次使用时，会填入 {{first_name}} 等占位符。"
 
-#: app/src/ui/composer/mod.rs:2910 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:3054 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "请为模板命名"
 
-#: app/src/ui/composer/mod.rs:2918
+#: app/src/ui/composer/mod.rs:3062
 msgid "Template saved"
 msgstr "已保存模板"
 
-#: app/src/ui/composer/mod.rs:2921
+#: app/src/ui/composer/mod.rs:3065
 msgid "Template not saved: {reason}"
 msgstr "未保存模板：{reason}"
 
-#: app/src/ui/composer/mod.rs:3044
+#: app/src/ui/composer/mod.rs:3188
 msgid "This looks like Markdown"
 msgstr "内容看起来像 Markdown"
 
-#: app/src/ui/composer/mod.rs:3050
+#: app/src/ui/composer/mod.rs:3194
 msgid "Format"
 msgstr "应用格式"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3195
 msgid "Turn the Markdown into rich text"
 msgstr "将 Markdown 转为富文本"
 
-#: app/src/ui/composer/mod.rs:3057 app/src/ui/composer/mod.rs:3061
+#: app/src/ui/composer/mod.rs:3201 app/src/ui/composer/mod.rs:3205
 msgid "Dismiss"
 msgstr "关闭"
 
-#: app/src/ui/composer/mod.rs:3144
+#: app/src/ui/composer/mod.rs:3288
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "草稿会留在此电脑上，稍后可在这里继续撰写。"
 
-#: app/src/ui/composer/mod.rs:3148
+#: app/src/ui/composer/mod.rs:3292
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr "草稿会保留在 {provider} 中，稍后可在任何设备上继续撰写。"
 
-#: app/src/ui/composer/mod.rs:3152
+#: app/src/ui/composer/mod.rs:3296
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr "草稿会保存在您的账号中，方便您稍后在任何设备上完成。"
@@ -9398,60 +9398,69 @@ msgstr "检查遗漏的附件"
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr "邮件提到文件却没有附件时，发送前询问"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:736
+msgid "Save Drafts While Writing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:738
+msgid ""
+"Keep an open message in Drafts as you write, so closing early loses nothing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:772
 msgid "Signing and Encryption"
 msgstr "签名与加密"
 
-#: app/src/ui/preferences.rs:765
+#: app/src/ui/preferences.rs:774
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
 msgstr ""
 "Penguin Mail 通过 GnuPG 签名与加密。GnuPG 会保管密钥，并自行要求输入密语。"
 
-#: app/src/ui/preferences.rs:770
+#: app/src/ui/preferences.rs:779
 msgid "Your OpenPGP Keys"
 msgstr "OpenPGP 密钥"
 
-#: app/src/ui/preferences.rs:771
+#: app/src/ui/preferences.rs:780
 msgid "Asking gpg…"
 msgstr "正在查询 gpg…"
 
-#: app/src/ui/preferences.rs:775
+#: app/src/ui/preferences.rs:784
 msgid "Your S/MIME Certificates"
 msgstr "S/MIME 证书"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:785
 msgid "Asking gpgsm…"
 msgstr "正在查询 gpgsm…"
 
-#: app/src/ui/preferences.rs:783
+#: app/src/ui/preferences.rs:792
 msgid "Sign My Messages by Default"
 msgstr "默认对邮件签名"
 
-#: app/src/ui/preferences.rs:784
+#: app/src/ui/preferences.rs:793
 msgid "New messages open with Sign turned on"
 msgstr "打开新邮件时，自动启用 [签名]"
 
-#: app/src/ui/preferences.rs:790
+#: app/src/ui/preferences.rs:799
 msgid "Encrypt When I Can"
 msgstr "可加密时加密"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:801
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "每位收件人都有密钥或证书时，立即启用 [加密]"
 
-#: app/src/ui/preferences.rs:881
+#: app/src/ui/preferences.rs:890
 msgid "gpg could not be asked: {reason}"
 msgstr "无法查询 gpg：{reason}"
 
-#: app/src/ui/preferences.rs:900
+#: app/src/ui/preferences.rs:909
 msgid "gpgsm could not be asked: {reason}"
 msgstr "无法查询 gpgsm：{reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:909
+#: app/src/ui/preferences.rs:918
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9462,11 +9471,11 @@ msgstr[0] ""
 "Penguin Mail 通过 {programs} 签名与加密。这些程序会保管密钥，并自行要求输入密"
 "语。"
 
-#: app/src/ui/preferences.rs:941 app/src/ui/preferences.rs:954
+#: app/src/ui/preferences.rs:950 app/src/ui/preferences.rs:963
 msgid "Spelling"
 msgstr "拼写检查"
 
-#: app/src/ui/preferences.rs:943
+#: app/src/ui/preferences.rs:952
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9475,213 +9484,213 @@ msgstr ""
 "尚未安装词典，因此 Penguin Mail 不会检查拼写。请安装 hunspell-en-us 或 "
 "hunspell-pt-pt 等 Hunspell 词典，再重新打开邮件编辑器。"
 
-#: app/src/ui/preferences.rs:956
+#: app/src/ui/preferences.rs:965
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "各账号的拼写检查语言。已安装的词典：{languages}。"
 
-#: app/src/ui/preferences.rs:968
+#: app/src/ui/preferences.rs:977
 msgid "System: {language}"
 msgstr "系统：{language}"
 
-#: app/src/ui/preferences.rs:983
+#: app/src/ui/preferences.rs:992
 msgid "All Installed Languages"
 msgstr "所有已安装的语言"
 
-#: app/src/ui/preferences.rs:1026
+#: app/src/ui/preferences.rs:1035
 msgid "Sync"
 msgstr "同步"
 
-#: app/src/ui/preferences.rs:1034
+#: app/src/ui/preferences.rs:1043
 msgid "Checking"
 msgstr "检查"
 
-#: app/src/ui/preferences.rs:1040
+#: app/src/ui/preferences.rs:1049
 msgid "Check for New Mail"
 msgstr "检查新邮件"
 
-#: app/src/ui/preferences.rs:1049
+#: app/src/ui/preferences.rs:1058
 msgid "Storage"
 msgstr "存储空间"
 
-#: app/src/ui/preferences.rs:1057
+#: app/src/ui/preferences.rs:1066
 msgid "Keep Mail on This Computer For"
 msgstr "此电脑上的邮件保留期间"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1087
 msgid "Message text kept for opening offline"
 msgstr "为离线打开而保存的邮件正文"
 
-#: app/src/ui/preferences.rs:1081
+#: app/src/ui/preferences.rs:1090
 msgid "Message Cache"
 msgstr "邮件缓存"
 
-#: app/src/ui/preferences.rs:1090
+#: app/src/ui/preferences.rs:1099
 msgid "100 messages"
 msgstr "100 封邮件"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1100
 msgid "300 messages"
 msgstr "300 封邮件"
 
-#: app/src/ui/preferences.rs:1092
+#: app/src/ui/preferences.rs:1101
 msgid "1,000 messages"
 msgstr "1,000 封邮件"
 
-#: app/src/ui/preferences.rs:1096
+#: app/src/ui/preferences.rs:1105
 msgid "Download Recent Inbox Messages"
 msgstr "下载收件箱中的近期邮件"
 
-#: app/src/ui/preferences.rs:1097
+#: app/src/ui/preferences.rs:1106
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
 msgstr ""
 "下载每个账户的邮件正文，以便更快打开并离线阅读。不会下载附件和远程图片。"
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1133
 msgid "Startup"
 msgstr "启动"
 
-#: app/src/ui/preferences.rs:1127
+#: app/src/ui/preferences.rs:1136
 msgid "Start in the Tray at Login"
 msgstr "登录时在系统托盘中启动"
 
-#: app/src/ui/preferences.rs:1142
+#: app/src/ui/preferences.rs:1151
 msgid "Not available in demo mode"
 msgstr "示范模式无法使用"
 
-#: app/src/ui/preferences.rs:1150
+#: app/src/ui/preferences.rs:1159
 msgid "Look for a new release once a day"
 msgstr "每天检查一次新版本"
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1200
 msgid "{used} of {limit}"
 msgstr "{used} / {limit}"
 
-#: app/src/ui/preferences.rs:1203
+#: app/src/ui/preferences.rs:1212
 msgid "{amount} · Full"
 msgstr "{amount} · 已满"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1214
 msgid "{amount} · Nearly full"
 msgstr "{amount} · 快满了"
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1226
 msgid "Senders Who May Load Images"
 msgstr "允许加载图片的发件人"
 
-#: app/src/ui/preferences.rs:1218 app/src/ui/preferences.rs:1227
+#: app/src/ui/preferences.rs:1227 app/src/ui/preferences.rs:1236
 msgid "Nobody yet"
 msgstr "尚无发件人"
 
-#: app/src/ui/preferences.rs:1229
+#: app/src/ui/preferences.rs:1238
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} 位发件人"
 
-#: app/src/ui/preferences.rs:1239
+#: app/src/ui/preferences.rs:1248
 msgid "Anyone at this domain"
 msgstr "此域名的所有人"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1250
 msgid "This address"
 msgstr "此地址"
 
-#: app/src/ui/preferences.rs:1246
+#: app/src/ui/preferences.rs:1255
 msgid "Stop Loading Images from This Sender"
 msgstr "停止加载此发件人的图片"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1262
 msgid "Stop loading images from {sender}"
 msgstr "停止加载 {sender} 的图片"
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1332
 msgid "Monday to Friday"
 msgstr "星期一至星期五"
 
-#: app/src/ui/preferences.rs:1324
+#: app/src/ui/preferences.rs:1333
 msgid "Every day of the week"
 msgstr "每一天"
 
-#: app/src/ui/preferences.rs:1325
+#: app/src/ui/preferences.rs:1334
 msgid "No days"
 msgstr "未选择工作日"
 
-#: app/src/ui/preferences.rs:1332
+#: app/src/ui/preferences.rs:1341
 msgid ", "
 msgstr "、"
 
-#: app/src/ui/preferences.rs:1335
+#: app/src/ui/preferences.rs:1344
 msgid "{time}, {days}"
 msgstr "{time}，{days}"
 
-#: app/src/ui/preferences.rs:1398
+#: app/src/ui/preferences.rs:1407
 msgid "Time Format"
 msgstr "时间格式"
 
-#: app/src/ui/preferences.rs:1402
+#: app/src/ui/preferences.rs:1411
 msgid "Automatic follows the system clock format"
 msgstr "自动使用系统时钟格式"
 
-#: app/src/ui/preferences.rs:1416
+#: app/src/ui/preferences.rs:1425
 msgid "Week Starts On"
 msgstr "每周起始日"
 
-#: app/src/ui/preferences.rs:1421
+#: app/src/ui/preferences.rs:1430
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "[自动] 会使用区域设置的每周起始日"
 
-#: app/src/ui/preferences.rs:1435
+#: app/src/ui/preferences.rs:1444
 msgid "Working Hours"
 msgstr "工作时间"
 
-#: app/src/ui/preferences.rs:1454
+#: app/src/ui/preferences.rs:1463
 msgid "Hours"
 msgstr "时段"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1514
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1563
+#: app/src/ui/preferences.rs:1572
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1565
+#: app/src/ui/preferences.rs:1574
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1609
+#: app/src/ui/preferences.rs:1618
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "无法更改颜色：{reason}"
 
-#: app/src/ui/preferences.rs:1653
+#: app/src/ui/preferences.rs:1662
 msgid "Never Translate"
 msgstr "不翻译"
 
-#: app/src/ui/preferences.rs:1655
+#: app/src/ui/preferences.rs:1664
 msgid "Messages in these languages get no offer to translate them"
 msgstr "不提供翻译这些语言邮件的选项"
 
-#: app/src/ui/preferences.rs:1684
+#: app/src/ui/preferences.rs:1693
 msgid "Follow System"
 msgstr "跟随系统"
 
-#: app/src/ui/preferences.rs:1688
+#: app/src/ui/preferences.rs:1697
 msgid "Language"
 msgstr "语言"
 
-#: app/src/ui/preferences.rs:1689
+#: app/src/ui/preferences.rs:1698
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "重新启动后，Penguin Mail 会显示新的语言"
 
-#: app/src/ui/preferences.rs:1770 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1779 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "无签名"
 

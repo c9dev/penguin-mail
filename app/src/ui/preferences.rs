@@ -731,6 +731,15 @@ fn writing_page(
         settings.check_attachments,
         Change::CheckAttachments,
     ));
+    sending.add(&switch(
+        app,
+        &gettext("Save Drafts While Writing"),
+        Some(&gettext(
+            "Keep an open message in Drafts as you write, so closing early loses nothing",
+        )),
+        settings.autosave_drafts,
+        Change::AutosaveDrafts,
+    ));
     page.add(&sending);
 
     if let Some(protection) = protection_group(app, settings, accounts, dialog) {
