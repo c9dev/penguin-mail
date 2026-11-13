@@ -7,6 +7,7 @@ pub(crate) mod tree;
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::time::Duration;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
@@ -340,6 +341,58 @@ pub struct Sidebar {
     /// The label being dragged, while one is, so the rows it passes over
     /// can tell it from dragged mail.
     dragging: Rc<RefCell<Option<Dragged>>>,
+    /// Drags resting on account headings, waiting to open them.
+    holds: Rc<RefCell<Holds>>,
+}
+
+/// How long a drag rests on a closed account's heading before it opens.
+const HOLD: Duration = Duration::from_millis(2000);
+
+/// Drags resting on account headings, each with the beat after which its
+/// account opens, the way Mac's Mail lets a held drop reach a folder that
+/// is out of sight. Moving on cancels the beat, a beat that rang takes
+/// itself away, and only one can wait because only one pointer exists.
+#[derive(Default)]
+struct Holds {
+    pending: HashMap<AccountId, glib::JoinHandle<()>>,
+}
+
+impl Holds {
+    /// A drag has come to rest on `account`'s heading: `open` runs after
+    /// `after`, unless a `left` says the drag moved on first.
+    fn arrived(
+        holds: &Rc<RefCell<Self>>,
+        context: &glib::MainContext,
+        account: AccountId,
+        after: Duration,
+        open: impl FnOnce() + 'static,
+    ) {
+        let mut pending = holds.borrow_mut();
+        pending.left_all();
+        let rang = Rc::clone(holds);
+        let handle = context.spawn_local(async move {
+            glib::timeout_future(after).await;
+            open();
+            rang.borrow_mut().left(account);
+        });
+        pending.pending.insert(account, handle);
+    }
+
+    /// The drag left `account`'s heading before its beat was up, or the
+    /// beat rang and is over.
+    fn left(&mut self, account: AccountId) {
+        if let Some(handle) = self.pending.remove(&account) {
+            handle.abort();
+        }
+    }
+
+    /// Only one drag rests anywhere at a time, and no beat outlives the
+    /// rows it waited on: `rebuild` tears those down without a goodbye.
+    fn left_all(&mut self) {
+        for (_, handle) in self.pending.drain() {
+            handle.abort();
+        }
+    }
 }
 
 /// A label on the move, by account and id.
@@ -621,6 +674,7 @@ impl Sidebar {
             on_drop: Rc::new(on_drop),
             on_label_drop: Rc::new(on_label_drop),
             dragging: Rc::default(),
+            holds: Rc::default(),
         });
         let weak = Rc::downgrade(&sidebar);
         sidebar.list.connect_row_selected(move |_, row| {
@@ -973,6 +1027,16 @@ impl Sidebar {
             .unwrap_or(default)
     }
 
+    /// Opens one account because a drag rested on its heading for a beat.
+    /// An account that is open already keeps its peace.
+    fn open_under_hold(&self, account_id: AccountId) {
+        if self.is_expanded(account_id) {
+            return;
+        }
+        self.expanded.borrow_mut().insert(account_id, true);
+        self.apply_expansion();
+    }
+
     /// Shows or hides each account's rows. The selected row always stays visible.
     fn apply_expansion(&self) {
         let selected = self.list.selected_row();
@@ -1029,7 +1093,7 @@ impl Sidebar {
     /// Rebuilds every row. `vips` lists VIPs by address and name. `offers`
     /// says what each account offers, which words its menu.
     pub fn rebuild(
-        &self,
+        self: &Rc<Self>,
         accounts: &[(Account, Vec<Label>)],
         extras: &Extras,
         selected: &Mailbox,
@@ -1037,6 +1101,10 @@ impl Sidebar {
     ) {
         let vips = &extras.vips;
         let mut label_rules = String::new();
+        // A beat waits on a heading row, and every one of those is about
+        // to be torn down; a drag still resting on one gets no `leave`
+        // from its own corpse, so its beat is cancelled here.
+        self.holds.borrow_mut().left_all();
         // Keep the scroll position; label changes rebuild every row.
         let scrolled = self.scroller.vadjustment().value();
         self.muted.set(true);
@@ -1136,6 +1204,49 @@ impl Sidebar {
                 extras.not_downloading.contains(&account.id),
                 extras.switchable.contains(&account.id),
             );
+            // A drag held on a closed heading opens the account after a
+            // beat. The heading itself is not a mailbox, so releasing on
+            // it never drops anything: the drop is left to the rows the
+            // opening reveals, as in Mac's Mail. The target still says
+            // MOVE on entry because refusing there would blind it to the
+            // resting drag; the always-false drop below is the truer word.
+            let (dragging, weak) = (Rc::clone(&self.dragging), Rc::downgrade(self));
+            let account_id = account.id;
+            let heading_drop = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
+            let holds = Rc::clone(&self.holds);
+            let enter_holds = Rc::clone(&holds);
+            heading_drop.connect_enter(move |target, _, _| {
+                if dragging.borrow().is_some()
+                    || !weak
+                        .upgrade()
+                        .is_some_and(|sidebar| !sidebar.is_expanded(account_id))
+                {
+                    target.reject();
+                    return gdk::DragAction::empty();
+                }
+                let opener = weak.clone();
+                Holds::arrived(
+                    &enter_holds,
+                    &glib::MainContext::default(),
+                    account_id,
+                    HOLD,
+                    move || {
+                        if let Some(sidebar) = opener.upgrade() {
+                            sidebar.open_under_hold(account_id);
+                        }
+                    },
+                );
+                gdk::DragAction::MOVE
+            });
+            let (leave_holds, drop_holds) = (Rc::clone(&holds), holds);
+            heading_drop.connect_leave(move |_| {
+                leave_holds.borrow_mut().left(account_id);
+            });
+            heading_drop.connect_drop(move |_, _, _, _| {
+                drop_holds.borrow_mut().left(account_id);
+                false
+            });
+            row.add_controller(heading_drop);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -2805,6 +2916,106 @@ mod tests {
 }
 
 #[cfg(test)]
+mod hold_tests {
+    use gtk::glib;
+
+    use super::Holds;
+    use std::cell::{Cell, RefCell};
+    use std::rc::Rc;
+    use std::time::{Duration, Instant};
+
+    /// Drives `context` for the given time. The spawned beat arms its
+    /// timeout the first time the context runs it; the loop keeps asking
+    /// and never blocks, so a cancelled beat that leaves nothing ready
+    /// ends the rest by the clock rather than hanging it. The context
+    /// must be this thread's default for the arming to land here.
+    fn rest_for(context: &glib::MainContext, millis: u64) {
+        context
+            .with_thread_default(|| {
+                let end = Instant::now() + Duration::from_millis(millis);
+                while Instant::now() < end {
+                    if context.pending() {
+                        context.iteration(false);
+                    } else {
+                        std::thread::sleep(Duration::from_millis(2));
+                    }
+                }
+            })
+            .expect("the private context can be this thread's default");
+    }
+
+    #[test]
+    fn a_drag_held_on_a_heading_opens_it_after_a_beat() {
+        let context = glib::MainContext::new();
+        let opened = Rc::new(Cell::new(false));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(10), move || {
+            fired.set(true)
+        });
+        assert!(!opened.get(), "the account opened before its beat was up");
+        rest_for(&context, 100);
+        assert!(opened.get(), "the account never opened after a beat");
+        assert!(
+            holds.borrow().pending.is_empty(),
+            "a rung beat stayed in the book"
+        );
+    }
+
+    #[test]
+    fn a_drag_moving_on_before_the_beat_cancels_it() {
+        let context = glib::MainContext::new();
+        let opened = Rc::new(Cell::new(false));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(10), move || {
+            fired.set(true)
+        });
+        holds.borrow_mut().left(1);
+        rest_for(&context, 100);
+        assert!(!opened.get(), "the account opened after the drag moved on");
+    }
+
+    #[test]
+    fn resting_on_the_next_heading_cancels_the_first_beat() {
+        let context = glib::MainContext::new();
+        let first = Rc::new(Cell::new(false));
+        let second = Rc::new(Cell::new(false));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&first);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(300), move || {
+            fired.set(true)
+        });
+        let fired = Rc::clone(&second);
+        Holds::arrived(&holds, &context, 2, Duration::from_millis(10), move || {
+            fired.set(true)
+        });
+        rest_for(&context, 100);
+        assert!(!first.get(), "the heading the drag left opened anyway");
+        assert!(second.get(), "the heading the drag reached never opened");
+    }
+
+    #[test]
+    fn one_beat_waits_even_across_accounts() {
+        // Leaving a heading always runs `left`, but a beat must not pile
+        // up if a drag jumps between windows without one.
+        let context = glib::MainContext::new();
+        let opened = Rc::new(RefCell::new(Vec::new()));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(300), move || {
+            fired.borrow_mut().push(1)
+        });
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 2, Duration::from_millis(10), move || {
+            fired.borrow_mut().push(2)
+        });
+        rest_for(&context, 100);
+        assert_eq!(opened.borrow().as_slice(), &[2]);
+    }
+}
+
+#[cfg(test)]
 mod badge_tests {
     use super::{badge_text, space_badges, toggle_name};
     use crate::settings::Space;
@@ -2856,6 +3067,37 @@ pub(crate) mod checks {
 
     pub fn run() {
         let sidebar = Sidebar::new(|_| {}, |_| false, |_| {});
+        // A held drag opens a closed account: every heading row carries
+        // the drop target that starts the beat, and the beat's opener
+        // reaches the rows the opening reveals.
+        let account = Account {
+            id: 7,
+            email: "held@example.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+            provider_name: None,
+        };
+        sidebar.start_expanded.set(Some(false));
+        sidebar.rebuild(
+            &[(account, vec![])],
+            &Extras::default(),
+            &Mailbox::Unified(Standard::Inbox),
+            |_| Offers::EVERYTHING,
+        );
+        let heading = &sidebar.headings.borrow()[0];
+        let controllers = heading.row.observe_controllers();
+        assert!(
+            (0..controllers.n_items())
+                .filter_map(|i| controllers.item(i))
+                .any(|c| c.is::<gtk::DropTarget>()),
+            "a heading row lost its hold target"
+        );
+        assert!(!sidebar.is_expanded(7), "the account starts open");
+        sidebar.open_under_hold(7);
+        assert!(
+            sidebar.is_expanded(7),
+            "a held beat did not open the account"
+        );
         sidebar.set_switch_visible(true);
         let bin = sidebar
             .switch
