@@ -125,11 +125,16 @@ fn envelope(message: &mail_parser::Message<'_>, snippet: String, has_files: bool
 
 /// The start of `text`, its white space folded to single spaces.
 pub fn preview(text: Option<&str>) -> String {
+    preview_up_to(text, SNIPPET_CHARS)
+}
+
+/// The start of `text`, folded to at most `characters` Unicode characters.
+pub fn preview_up_to(text: Option<&str>, characters: usize) -> String {
     text.unwrap_or_default()
         .split_whitespace()
         .flat_map(|word| std::iter::once(' ').chain(word.chars()))
         .skip(1)
-        .take(SNIPPET_CHARS)
+        .take(characters)
         .collect()
 }
 

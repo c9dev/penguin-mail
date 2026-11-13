@@ -1138,11 +1138,11 @@ msgstr "S-a trimis {message}"
 msgid "Still in the Outbox: {message}"
 msgstr "Încă în „De trimis”: {message}"
 
-#: app/src/app/sending.rs:513
+#: app/src/app/sending.rs:509
 msgid "your message"
 msgstr "mesajul dumneavoastră"
 
-#: app/src/app/sending.rs:515
+#: app/src/app/sending.rs:511
 msgid "“{subject}”"
 msgstr "„{subject}”"
 
@@ -2737,18 +2737,18 @@ msgstr "Șterge"
 msgid "Reply"
 msgstr "Răspunde"
 
-#: app/src/notify.rs:158
+#: app/src/notify.rs:167
 msgid "{count} new message"
 msgid_plural "{count} new messages"
 msgstr[0] "{count} mesaj nou"
 msgstr[1] "{count} mesaje noi"
 msgstr[2] "{count} de mesaje noi"
 
-#: app/src/notify.rs:176 app/src/ui/window/shortcuts.rs:467
+#: app/src/notify.rs:185 app/src/ui/window/shortcuts.rs:467
 msgid "New message"
 msgstr "Mesaj nou"
 
-#: app/src/notify.rs:193
+#: app/src/notify.rs:216
 msgid "From {senders}"
 msgstr "De la {senders}"
 
@@ -4574,7 +4574,7 @@ msgstr "Mai mic de {size}"
 msgid "Larger than {size}"
 msgstr "Mai mare de {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:924
+#: app/src/rules.rs:251 app/src/settings/mod.rs:960
 msgid "All mail"
 msgstr "Toată corespondența"
 
@@ -4672,222 +4672,234 @@ msgstr "Pe acest calculator, cât timp Penguin Mail este deschis"
 msgid "On the server"
 msgstr "Pe server"
 
-#: app/src/settings/mod.rs:225 app/src/settings/mod.rs:434
-#: app/src/settings/mod.rs:836 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1089
+#: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
+#: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1154
 msgid "Off"
 msgstr "Dezactivat"
 
-#: app/src/settings/mod.rs:226
+#: app/src/settings/mod.rs:230
 msgid "Local Server"
 msgstr "Server local"
 
-#: app/src/settings/mod.rs:227
+#: app/src/settings/mod.rs:231
 msgid "Anthropic API"
 msgstr "API Anthropic"
 
-#: app/src/settings/mod.rs:228
+#: app/src/settings/mod.rs:232
 msgid "Claude Subscription"
 msgstr "Abonament Claude"
 
-#: app/src/settings/mod.rs:253 app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3739
 #: app/src/ui/window.rs:3827
 msgid "Assistant"
 msgstr "Asistent"
 
-#: app/src/settings/mod.rs:254 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:258 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Traducere"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:258
+#: app/src/settings/mod.rs:262
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Dezabonare"
 
-#: app/src/settings/mod.rs:264
+#: app/src/settings/mod.rs:268
 msgid "Answers questions and acts on your mail"
 msgstr "Răspunde la întrebări și acționează asupra corespondenței"
 
-#: app/src/settings/mod.rs:265
+#: app/src/settings/mod.rs:269
 msgid "Translates a message when you ask"
 msgstr "Traduce un mesaj când cereți"
 
-#: app/src/settings/mod.rs:267
+#: app/src/settings/mod.rs:271
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Citește pagina de dezabonare a unui buletin informativ când regulile nu pot"
 
-#: app/src/settings/mod.rs:305
+#: app/src/settings/mod.rs:309
 msgid "Same as the Assistant"
 msgstr "La fel ca Asistentul"
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:439
 msgid "Claude's own only"
 msgstr "Doar căutarea proprie Claude"
 
-#: app/src/settings/mod.rs:436
+#: app/src/settings/mod.rs:440
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:437
+#: app/src/settings/mod.rs:441
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:438
+#: app/src/settings/mod.rs:442
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:614
+#: app/src/settings/mod.rs:621
 msgid "Rich text"
 msgstr "Text formatat"
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:622
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:634 app/src/settings/mod.rs:656
+#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:663
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Automat"
 
-#: app/src/settings/mod.rs:635 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "luni"
 
-#: app/src/settings/mod.rs:636 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "duminică"
 
-#: app/src/settings/mod.rs:657
+#: app/src/settings/mod.rs:664
 msgid "12-hour (AM/PM)"
 msgstr "12 ore (AM/PM)"
 
-#: app/src/settings/mod.rs:658
+#: app/src/settings/mod.rs:665
 msgid "24-hour"
 msgstr "24 de ore"
 
-#: app/src/settings/mod.rs:696
+#: app/src/settings/mod.rs:703
 msgid "When opened"
 msgstr "La deschidere"
 
-#: app/src/settings/mod.rs:697
+#: app/src/settings/mod.rs:704
 msgid "After 2 seconds"
 msgstr "După 2 secunde"
 
-#: app/src/settings/mod.rs:698
+#: app/src/settings/mod.rs:705
 msgid "Only when I choose"
 msgstr "Doar când aleg eu"
 
-#: app/src/settings/mod.rs:714 app/src/settings/mod.rs:732
+#: app/src/settings/mod.rs:721 app/src/settings/mod.rs:739
 msgid "Ask each time"
 msgstr "Întreabă de fiecare dată"
 
-#: app/src/settings/mod.rs:715
+#: app/src/settings/mod.rs:722
 msgid "Always load"
 msgstr "Încarcă întotdeauna"
 
-#: app/src/settings/mod.rs:733
+#: app/src/settings/mod.rs:740
 msgid "Never ask"
 msgstr "Nu întreba niciodată"
 
-#: app/src/settings/mod.rs:760
+#: app/src/settings/mod.rs:767
 msgid "No Preview"
 msgstr "Fără previzualizare"
 
-#: app/src/settings/mod.rs:761
+#: app/src/settings/mod.rs:768
 msgid "1 Line"
 msgstr "1 rând"
 
-#: app/src/settings/mod.rs:762
+#: app/src/settings/mod.rs:769
 msgid "2 Lines"
 msgstr "2 rânduri"
 
 #: app/src/settings/mod.rs:796
+msgid "Short (80 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:797
+msgid "Medium (140 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:798
+msgid "Long (280 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:832
 msgid "Small"
 msgstr "Mic"
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:833
 msgid "Default"
 msgstr "Implicit"
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:834
 msgid "Large"
 msgstr "Mare"
 
-#: app/src/settings/mod.rs:799
+#: app/src/settings/mod.rs:835
 msgid "Larger"
 msgstr "Mai mare"
 
-#: app/src/settings/mod.rs:837
+#: app/src/settings/mod.rs:873
 msgid "5 seconds"
 msgstr "5 secunde"
 
-#: app/src/settings/mod.rs:838
+#: app/src/settings/mod.rs:874
 msgid "10 seconds"
 msgstr "10 secunde"
 
-#: app/src/settings/mod.rs:839
+#: app/src/settings/mod.rs:875
 msgid "20 seconds"
 msgstr "20 de secunde"
 
-#: app/src/settings/mod.rs:840
+#: app/src/settings/mod.rs:876
 msgid "30 seconds"
 msgstr "30 de secunde"
 
-#: app/src/settings/mod.rs:857
+#: app/src/settings/mod.rs:893
 msgid "Follow system"
 msgstr "Ca sistemul"
 
-#: app/src/settings/mod.rs:858
+#: app/src/settings/mod.rs:894
 msgid "Light"
 msgstr "Luminos"
 
-#: app/src/settings/mod.rs:859
+#: app/src/settings/mod.rs:895
 msgid "Dark"
 msgstr "Întunecat"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:929
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "În fiecare secundă"
 msgstr[1] "La fiecare {count} secunde"
 msgstr[2] "La fiecare {count} de secunde"
 
-#: app/src/settings/mod.rs:901
+#: app/src/settings/mod.rs:937
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "În fiecare minut"
 msgstr[1] "La fiecare {count} minute"
 msgstr[2] "La fiecare {count} de minute"
 
-#: app/src/settings/mod.rs:918
+#: app/src/settings/mod.rs:954
 msgid "2 weeks"
 msgstr "2 săptămâni"
 
-#: app/src/settings/mod.rs:919
+#: app/src/settings/mod.rs:955
 msgid "30 days"
 msgstr "30 de zile"
 
-#: app/src/settings/mod.rs:920
+#: app/src/settings/mod.rs:956
 msgid "90 days"
 msgstr "90 de zile"
 
-#: app/src/settings/mod.rs:921
+#: app/src/settings/mod.rs:957
 msgid "1 year"
 msgstr "1 an"
 
-#: app/src/settings/mod.rs:922
+#: app/src/settings/mod.rs:958
 msgid "2 years"
 msgstr "2 ani"
 
-#: app/src/settings/mod.rs:923
+#: app/src/settings/mod.rs:959
 msgid "5 years"
 msgstr "5 ani"
 
-#: app/src/settings/mod.rs:945
+#: app/src/settings/mod.rs:981
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4895,21 +4907,21 @@ msgstr ""
 "Fiecare mesaj rămâne pe acest calculator. Un cont mare ocupă mult spațiu pe "
 "disc și multă memorie, iar corespondența mai veche se descarcă în fundal."
 
-#: app/src/settings/mod.rs:947
+#: app/src/settings/mod.rs:983
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Tot ce se află în Mesaje primite rămâne și el, iar corespondența mai veche "
 "poate fi căutată în continuare"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:990
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:991
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:992
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5113,7 +5125,7 @@ msgstr "Noutăți în {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1149 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Caută actualizări"
 
@@ -5459,7 +5471,7 @@ msgstr ""
 "Penguin Mail păstrează pe acest calculator fiecare mesaj pe care îl descarcă."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1510
+#: app/src/ui/preferences.rs:1575
 msgid "Days"
 msgstr "Zile"
 
@@ -6300,7 +6312,7 @@ msgstr ""
 "cheile sau dosarul personal, iar asistentul întreabă înainte de fiecare "
 "comandă."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:517
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:582
 msgid "Not Available"
 msgstr "Indisponibil"
 
@@ -6488,7 +6500,7 @@ msgid "Declined"
 msgstr "Refuzat"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1316
+#: app/src/ui/preferences.rs:1381
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6604,11 +6616,11 @@ msgstr "Data de sfârșit"
 msgid "End time"
 msgstr "Ora de sfârșit"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1462
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
 msgid "Starts"
 msgstr "Începe"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1464
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
 msgid "Ends"
 msgstr "Se termină"
 
@@ -7292,7 +7304,7 @@ msgstr "Toată ziua"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1330 app/src/ui/preferences.rs:1518
+#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
 msgstr "%a"
 
@@ -8415,7 +8427,7 @@ msgstr "Caută din nou"
 msgid "Edit…"
 msgstr "Editează…"
 
-#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:502
+#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:567
 msgid "Shared mailboxes support mail only."
 msgstr "Cutiile poștale partajate acceptă doar poștă."
 
@@ -9570,7 +9582,7 @@ msgid "{folder}, always shown"
 msgstr ""
 
 #: app/src/ui/manage_folders.rs:402 app/src/ui/manage_folders.rs:508
-#: app/src/ui/preferences.rs:631
+#: app/src/ui/preferences.rs:696
 msgid "This account is not syncing yet"
 msgstr "Acest cont nu se sincronizează încă"
 
@@ -9833,39 +9845,67 @@ msgid "Turn off to see only how much mail arrived"
 msgstr "Dezactivați pentru a vedea doar câte mesaje au sosit"
 
 #: app/src/ui/preferences.rs:342
+#, fuzzy
+#| msgid "Message Preview"
+msgid "Show Message Preview"
+msgstr "Previzualizarea mesajelor"
+
+#: app/src/ui/preferences.rs:344
+#, fuzzy
+#| msgid "Lines of message text below the subject"
+msgid "Include a short extract of the message below the subject"
+msgstr "Rânduri din textul mesajului sub subiect"
+
+#: app/src/ui/preferences.rs:365
+#, fuzzy
+#| msgid "Subject"
+msgid "Bold Subject"
+msgstr "Subiect"
+
+#: app/src/ui/preferences.rs:382
+#, fuzzy
+#| msgid "Message Preview"
+msgid "Message Preview Length"
+msgstr "Previzualizarea mesajelor"
+
+#: app/src/ui/preferences.rs:384
+msgid "The desktop may show fewer characters to fit the notification"
+msgstr ""
+
+#: app/src/ui/preferences.rs:402
 msgid "Only for VIPs"
 msgstr "Doar pentru contacte VIP"
 
-#: app/src/ui/preferences.rs:343
+#: app/src/ui/preferences.rs:403
 msgid "Stay quiet about mail from everyone else"
 msgstr "Fără notificări pentru mesajele de la ceilalți"
 
-#: app/src/ui/preferences.rs:353
+#: app/src/ui/preferences.rs:413
 msgid "Buttons"
 msgstr "Butoane"
 
-#: app/src/ui/preferences.rs:355
+#: app/src/ui/preferences.rs:415
 msgid "What a notification offers besides opening the conversation"
 msgstr "Ce oferă o notificare în afară de deschiderea conversației"
 
-#: app/src/ui/preferences.rs:386
+#: app/src/ui/preferences.rs:451
 msgid "Event Reminders"
 msgstr "Mementouri pentru evenimente"
 
-#: app/src/ui/preferences.rs:388
+#: app/src/ui/preferences.rs:453
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr ""
 "O notificare înaintea fiecărui eveniment, la orele stabilite de eveniment "
 "sau de calendarul său"
 
-#: app/src/ui/preferences.rs:411 app/src/ui/preferences.rs:418
+#: app/src/ui/preferences.rs:476 app/src/ui/preferences.rs:483
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:47
 #: app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
 msgstr "Conturi"
 
-#: app/src/ui/preferences.rs:419
+#: app/src/ui/preferences.rs:484
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
@@ -9873,41 +9913,41 @@ msgstr ""
 "Semnătura, adresele de pe care trimiteți, serverele, contactele și spațiul "
 "raportat de server."
 
-#: app/src/ui/preferences.rs:424 app/src/ui/preferences.rs:694
+#: app/src/ui/preferences.rs:489 app/src/ui/preferences.rs:759
 msgid "No Accounts Yet"
 msgstr "Niciun cont încă"
 
-#: app/src/ui/preferences.rs:426 app/src/ui/preferences.rs:696
+#: app/src/ui/preferences.rs:491 app/src/ui/preferences.rs:761
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Adăugați un cont pentru a alege un expeditor și a scrie semnături."
 
-#: app/src/ui/preferences.rs:476
+#: app/src/ui/preferences.rs:541
 msgid "Mailbox storage is not available through this connection."
 msgstr ""
 "Spațiul de stocare al căsuței poștale nu este disponibil prin această "
 "conexiune."
 
-#: app/src/ui/preferences.rs:478
+#: app/src/ui/preferences.rs:543
 msgid "The server has not reported its storage usage."
 msgstr "Serverul nu a raportat spațiul de stocare folosit."
 
-#: app/src/ui/preferences.rs:481
+#: app/src/ui/preferences.rs:546
 msgid "Space on the Server"
 msgstr "Spațiu pe server"
 
-#: app/src/ui/preferences.rs:495
+#: app/src/ui/preferences.rs:560
 msgid "Shared Mailbox"
 msgstr "Cutie poștală partajată"
 
-#: app/src/ui/preferences.rs:499
+#: app/src/ui/preferences.rs:564
 msgid "Signed in through {account}"
 msgstr "Autentificat prin {account}"
 
-#: app/src/ui/preferences.rs:575 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:640 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "Semnătură"
 
-#: app/src/ui/preferences.rs:589
+#: app/src/ui/preferences.rs:654
 #, fuzzy
 #| msgid ""
 #| "Used by this account and addresses without their own signature. Markdown "
@@ -9922,70 +9962,70 @@ msgstr ""
 "folosi Markdown. <email> devine adresa de trimitere, cu tot cu sufix; "
 "<domain> devine domeniul ei."
 
-#: app/src/ui/preferences.rs:597 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:662 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "Semnătura pentru {account}"
 
-#: app/src/ui/preferences.rs:611
+#: app/src/ui/preferences.rs:676
 msgid "Import from Gmail"
 msgstr "Importă din Gmail"
 
-#: app/src/ui/preferences.rs:647
+#: app/src/ui/preferences.rs:712
 msgid "Imported the signature from Gmail"
 msgstr "Semnătura a fost importată din Gmail"
 
-#: app/src/ui/preferences.rs:651
+#: app/src/ui/preferences.rs:716
 msgid "Gmail has no signature for this account"
 msgstr "Gmail nu are nicio semnătură pentru acest cont"
 
-#: app/src/ui/preferences.rs:654
+#: app/src/ui/preferences.rs:719
 msgid "Could not import: {reason}"
 msgstr "Nu s-a putut importa: {reason}"
 
-#: app/src/ui/preferences.rs:689 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:754 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Scriere"
 
-#: app/src/ui/preferences.rs:705 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:770 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Mesaje noi"
 
-#: app/src/ui/preferences.rs:709
+#: app/src/ui/preferences.rs:774
 msgid "New Messages Start As"
 msgstr "Mesajele noi pornesc ca"
 
-#: app/src/ui/preferences.rs:711
+#: app/src/ui/preferences.rs:776
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "Textul formatat stilizează cuvintele direct; Markdown își arată marcajele"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:718 app/src/ui/sidebar.rs:65
+#: app/src/ui/preferences.rs:783 app/src/ui/sidebar.rs:65
 #: app/src/ui/sidebar.rs:78
 msgid "Undo Send"
 msgstr "Anulează trimiterea"
 
-#: app/src/ui/preferences.rs:720
+#: app/src/ui/preferences.rs:785
 msgid "How long you can take a message back after sending it"
 msgstr "Cât timp puteți retrage un mesaj după ce l-ați trimis"
 
-#: app/src/ui/preferences.rs:727
+#: app/src/ui/preferences.rs:792
 msgid "Check for Missing Attachments"
 msgstr "Verifică atașamentele lipsă"
 
-#: app/src/ui/preferences.rs:729
+#: app/src/ui/preferences.rs:794
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Întreabă înainte de a trimite un mesaj care promite un fișier, dar nu are "
 "niciunul"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:828
 msgid "Signing and Encryption"
 msgstr "Semnare și criptare"
 
-#: app/src/ui/preferences.rs:765
+#: app/src/ui/preferences.rs:830
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9993,51 +10033,51 @@ msgstr ""
 "Penguin Mail semnează și criptează prin GnuPG, care vă păstrează cheile și "
 "vă cere singur fraza de acces."
 
-#: app/src/ui/preferences.rs:770
+#: app/src/ui/preferences.rs:835
 msgid "Your OpenPGP Keys"
 msgstr "Cheile dumneavoastră OpenPGP"
 
-#: app/src/ui/preferences.rs:771
+#: app/src/ui/preferences.rs:836
 msgid "Asking gpg…"
 msgstr "Se interoghează gpg…"
 
-#: app/src/ui/preferences.rs:775
+#: app/src/ui/preferences.rs:840
 msgid "Your S/MIME Certificates"
 msgstr "Certificatele dumneavoastră S/MIME"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:841
 msgid "Asking gpgsm…"
 msgstr "Se interoghează gpgsm…"
 
-#: app/src/ui/preferences.rs:783
+#: app/src/ui/preferences.rs:848
 msgid "Sign My Messages by Default"
 msgstr "Semnează implicit mesajele mele"
 
-#: app/src/ui/preferences.rs:784
+#: app/src/ui/preferences.rs:849
 msgid "New messages open with Sign turned on"
 msgstr "Mesajele noi se deschid cu „Semnează” activat"
 
-#: app/src/ui/preferences.rs:790
+#: app/src/ui/preferences.rs:855
 msgid "Encrypt When I Can"
 msgstr "Criptează când este posibil"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:857
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr ""
 "Activează „Criptează” imediat ce fiecare destinatar are o cheie sau un "
 "certificat"
 
-#: app/src/ui/preferences.rs:881
+#: app/src/ui/preferences.rs:946
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg nu a putut fi interogat: {reason}"
 
-#: app/src/ui/preferences.rs:900
+#: app/src/ui/preferences.rs:965
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm nu a putut fi interogat: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:909
+#: app/src/ui/preferences.rs:974
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -10054,11 +10094,11 @@ msgstr[2] ""
 "Penguin Mail semnează și criptează prin {programs}, care vă păstrează cheile "
 "și vă cer singure fraza de acces."
 
-#: app/src/ui/preferences.rs:941 app/src/ui/preferences.rs:954
+#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
 msgid "Spelling"
 msgstr "Ortografie"
 
-#: app/src/ui/preferences.rs:943
+#: app/src/ui/preferences.rs:1008
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10068,7 +10108,7 @@ msgstr ""
 "ortografia. Instalați un dicționar Hunspell, de exemplu hunspell-en-us sau "
 "hunspell-pt-pt, și redeschideți fereastra de scriere."
 
-#: app/src/ui/preferences.rs:956
+#: app/src/ui/preferences.rs:1021
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10076,59 +10116,59 @@ msgstr ""
 "Limba în care fiecare cont verifică ortografia. Dicționare instalate: "
 "{languages}."
 
-#: app/src/ui/preferences.rs:968
+#: app/src/ui/preferences.rs:1033
 msgid "System: {language}"
 msgstr "Sistem: {language}"
 
-#: app/src/ui/preferences.rs:983
+#: app/src/ui/preferences.rs:1048
 msgid "All Installed Languages"
 msgstr "Toate limbile instalate"
 
-#: app/src/ui/preferences.rs:1026
+#: app/src/ui/preferences.rs:1091
 msgid "Sync"
 msgstr "Sincronizare"
 
-#: app/src/ui/preferences.rs:1034
+#: app/src/ui/preferences.rs:1099
 msgid "Checking"
 msgstr "Verificare"
 
-#: app/src/ui/preferences.rs:1040
+#: app/src/ui/preferences.rs:1105
 msgid "Check for New Mail"
 msgstr "Verifică mesajele noi"
 
-#: app/src/ui/preferences.rs:1049
+#: app/src/ui/preferences.rs:1114
 msgid "Storage"
 msgstr "Stocare"
 
-#: app/src/ui/preferences.rs:1057
+#: app/src/ui/preferences.rs:1122
 msgid "Keep Mail on This Computer For"
 msgstr "Păstrează mesajele pe acest calculator timp de"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1143
 msgid "Message text kept for opening offline"
 msgstr "Textul mesajelor păstrat pentru deschidere fără conexiune"
 
-#: app/src/ui/preferences.rs:1081
+#: app/src/ui/preferences.rs:1146
 msgid "Message Cache"
 msgstr "Cache de mesaje"
 
-#: app/src/ui/preferences.rs:1090
+#: app/src/ui/preferences.rs:1155
 msgid "100 messages"
 msgstr "100 de mesaje"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1156
 msgid "300 messages"
 msgstr "300 de mesaje"
 
-#: app/src/ui/preferences.rs:1092
+#: app/src/ui/preferences.rs:1157
 msgid "1,000 messages"
 msgstr "1.000 de mesaje"
 
-#: app/src/ui/preferences.rs:1096
+#: app/src/ui/preferences.rs:1161
 msgid "Download Recent Inbox Messages"
 msgstr "Descarcă mesajele recente din Inbox"
 
-#: app/src/ui/preferences.rs:1097
+#: app/src/ui/preferences.rs:1162
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10136,150 +10176,150 @@ msgstr ""
 "Descarcă textul mesajelor din fiecare cont, pentru deschidere mai rapidă și "
 "citire fără conexiune. Atașamentele și imaginile la distanță nu se descarcă."
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1189
 msgid "Startup"
 msgstr "Pornire"
 
-#: app/src/ui/preferences.rs:1127
+#: app/src/ui/preferences.rs:1192
 msgid "Start in the Tray at Login"
 msgstr "Pornește în bara de sistem la autentificare"
 
-#: app/src/ui/preferences.rs:1142
+#: app/src/ui/preferences.rs:1207
 msgid "Not available in demo mode"
 msgstr "Indisponibil în modul demonstrativ"
 
-#: app/src/ui/preferences.rs:1150
+#: app/src/ui/preferences.rs:1215
 msgid "Look for a new release once a day"
 msgstr "Caută o versiune nouă o dată pe zi"
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1256
 msgid "{used} of {limit}"
 msgstr "{used} din {limit}"
 
-#: app/src/ui/preferences.rs:1203
+#: app/src/ui/preferences.rs:1268
 msgid "{amount} · Full"
 msgstr "{amount} · Plin"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1270
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Aproape plin"
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1282
 msgid "Senders Who May Load Images"
 msgstr "Expeditori care pot încărca imagini"
 
-#: app/src/ui/preferences.rs:1218 app/src/ui/preferences.rs:1227
+#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
 msgid "Nobody yet"
 msgstr "Nimeni încă"
 
-#: app/src/ui/preferences.rs:1229
+#: app/src/ui/preferences.rs:1294
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} expeditor"
 msgstr[1] "{count} expeditori"
 msgstr[2] "{count} de expeditori"
 
-#: app/src/ui/preferences.rs:1239
+#: app/src/ui/preferences.rs:1304
 msgid "Anyone at this domain"
 msgstr "Oricine din acest domeniu"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1306
 msgid "This address"
 msgstr "Această adresă"
 
-#: app/src/ui/preferences.rs:1246
+#: app/src/ui/preferences.rs:1311
 msgid "Stop Loading Images from This Sender"
 msgstr "Nu mai încărca imagini de la acest expeditor"
 
-#: app/src/ui/preferences.rs:1253
+#: app/src/ui/preferences.rs:1318
 msgid "Stop loading images from {sender}"
 msgstr "Nu mai încărca imagini de la {sender}"
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1388
 msgid "Monday to Friday"
 msgstr "De luni până vineri"
 
-#: app/src/ui/preferences.rs:1324
+#: app/src/ui/preferences.rs:1389
 msgid "Every day of the week"
 msgstr "În fiecare zi a săptămânii"
 
-#: app/src/ui/preferences.rs:1325
+#: app/src/ui/preferences.rs:1390
 msgid "No days"
 msgstr "Nicio zi"
 
-#: app/src/ui/preferences.rs:1332
+#: app/src/ui/preferences.rs:1397
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1335
+#: app/src/ui/preferences.rs:1400
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1398
+#: app/src/ui/preferences.rs:1463
 msgid "Time Format"
 msgstr "Formatul orei"
 
-#: app/src/ui/preferences.rs:1402
+#: app/src/ui/preferences.rs:1467
 msgid "Automatic follows the system clock format"
 msgstr "Automat urmează formatul orei din sistem"
 
-#: app/src/ui/preferences.rs:1416
+#: app/src/ui/preferences.rs:1481
 msgid "Week Starts On"
 msgstr "Săptămâna începe"
 
-#: app/src/ui/preferences.rs:1421
+#: app/src/ui/preferences.rs:1486
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "„Automat” folosește prima zi a săptămânii din setările regionale"
 
-#: app/src/ui/preferences.rs:1435
+#: app/src/ui/preferences.rs:1500
 msgid "Working Hours"
 msgstr "Program de lucru"
 
-#: app/src/ui/preferences.rs:1454
+#: app/src/ui/preferences.rs:1519
 msgid "Hours"
 msgstr "Ore"
 
-#: app/src/ui/preferences.rs:1505
+#: app/src/ui/preferences.rs:1570
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1563
+#: app/src/ui/preferences.rs:1628
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1565
+#: app/src/ui/preferences.rs:1630
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1609
+#: app/src/ui/preferences.rs:1674
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Nu s-a putut schimba culoarea: {reason}"
 
-#: app/src/ui/preferences.rs:1653
+#: app/src/ui/preferences.rs:1718
 msgid "Never Translate"
 msgstr "Nu traduce niciodată"
 
-#: app/src/ui/preferences.rs:1655
+#: app/src/ui/preferences.rs:1720
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Pentru mesajele în aceste limbi nu se oferă traducerea"
 
-#: app/src/ui/preferences.rs:1684
+#: app/src/ui/preferences.rs:1749
 msgid "Follow System"
 msgstr "Ca sistemul"
 
-#: app/src/ui/preferences.rs:1688
+#: app/src/ui/preferences.rs:1753
 msgid "Language"
 msgstr "Limbă"
 
-#: app/src/ui/preferences.rs:1689
+#: app/src/ui/preferences.rs:1754
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail afișează noua limbă după repornire"
 
-#: app/src/ui/preferences.rs:1770 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Fără semnătură"
 
@@ -13481,91 +13521,91 @@ msgstr "Nu s-a putut încărca corespondența pentru {account}: {reason}"
 msgid "Change the filters or load more messages if available."
 msgstr "Schimbați filtrele sau încărcați mai multe mesaje, dacă există."
 
-#: sync/src/mailbox.rs:1051
+#: sync/src/mailbox.rs:1074
 msgid "This smart mailbox has no conditions"
 msgstr "Această căsuță inteligentă nu are condiții"
 
-#: sync/src/mailbox.rs:1652
+#: sync/src/mailbox.rs:1675
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Rezultatele pentru {account} provin doar din corespondența de pe acest "
 "calculator"
 
-#: sync/src/mailbox.rs:1860
+#: sync/src/mailbox.rs:1883
 msgid "Returns {when}"
 msgstr "Revine {when}"
 
-#: sync/src/mailbox.rs:1903 sync/src/mailbox.rs:2006
+#: sync/src/mailbox.rs:1926 sync/src/mailbox.rs:2029
 msgid "No recipients"
 msgstr "Niciun destinatar"
 
-#: sync/src/mailbox.rs:1906 sync/src/mailbox.rs:2009
+#: sync/src/mailbox.rs:1929 sync/src/mailbox.rs:2032
 msgid "To {recipients}"
 msgstr "Către {recipients}"
 
-#: sync/src/mailbox.rs:1949
+#: sync/src/mailbox.rs:1972
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} necitit · {category}"
 msgstr[1] "{count} necitite · {category}"
 msgstr[2] "{count} de necitite · {category}"
 
-#: sync/src/mailbox.rs:1954
+#: sync/src/mailbox.rs:1977
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} necitit"
 msgstr[1] "{count} necitite"
 msgstr[2] "{count} de necitite"
 
-#: sync/src/mailbox.rs:1961
+#: sync/src/mailbox.rs:1984
 msgid "Sent yesterday, no reply yet"
 msgstr "Trimis ieri, încă fără răspuns"
 
-#: sync/src/mailbox.rs:1963
+#: sync/src/mailbox.rs:1986
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Trimis acum {days} zi, încă fără răspuns"
 msgstr[1] "Trimis acum {days} zile, încă fără răspuns"
 msgstr[2] "Trimis acum {days} de zile, încă fără răspuns"
 
-#: sync/src/mailbox.rs:2047
+#: sync/src/mailbox.rs:2070
 msgid "The server has not sent this message yet."
 msgstr "Serverul nu a trimis încă acest mesaj."
 
-#: sync/src/mailbox.rs:2048
+#: sync/src/mailbox.rs:2071
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail nu a confirmat că serverul a preluat acest mesaj."
 
-#: sync/src/mailbox.rs:2058
+#: sync/src/mailbox.rs:2081
 msgid "Sends {when}."
 msgstr "Se trimite {when}."
 
-#: sync/src/mailbox.rs:2059
+#: sync/src/mailbox.rs:2082
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "Serverul îl trimite chiar dacă Penguin Mail este închis."
 
-#: sync/src/mailbox.rs:2061
+#: sync/src/mailbox.rs:2084
 msgid "Sends {when}"
 msgstr "Se trimite {when}"
 
-#: sync/src/mailbox.rs:2068
+#: sync/src/mailbox.rs:2091
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr ""
 "Verificați în Trimise. Penguin Mail nu a putut confirma că a fost trimis."
 
-#: sync/src/mailbox.rs:2071
+#: sync/src/mailbox.rs:2094
 msgid "Canceled in another app."
 msgstr "Anulat în altă aplicație."
 
-#: sync/src/mailbox.rs:2073
+#: sync/src/mailbox.rs:2096
 msgid "Not sent"
 msgstr "Netrimis"
 
-#: sync/src/mailbox.rs:2080
+#: sync/src/mailbox.rs:2103
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Se încearcă din nou {when}"
 
-#: sync/src/mailbox.rs:2087
+#: sync/src/mailbox.rs:2110
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail nu mai încearcă"
 

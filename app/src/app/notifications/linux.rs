@@ -10,10 +10,16 @@ impl Desktop {
         Self(app.clone())
     }
 
-    pub fn post(&self, id: &str, title: &str, body: &str, actions: Actions) {
+    pub fn post(&self, id: &str, title: &str, subtitle: &str, body: &str, actions: Actions) {
         let notification = gio::Notification::new(title);
-        if !body.is_empty() {
-            notification.set_body(Some(body));
+        // GIO has no subtitle field; keep the subject as plain text.
+        let text = [subtitle, body]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n");
+        if !text.is_empty() {
+            notification.set_body(Some(&text));
         }
         notification.set_icon(&gio::ThemedIcon::new(crate::APP_ID));
         if actions.open == Some(Action::OpenEvent) {

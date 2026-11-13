@@ -18,11 +18,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
+
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
 
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
 - Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
-
 - Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.

@@ -155,7 +155,7 @@ async fn cached_html_is_used_without_a_fetch_and_encrypted_text_is_not_saved() {
     );
     assert_eq!(
         lists
-            .preview(target(&h, "INBOX/1001/2").await)
+            .preview_up_to(target(&h, "INBOX/1001/2").await, 280)
             .await
             .unwrap()
             .as_deref(),
@@ -259,4 +259,84 @@ async fn gmail_over_imap_previews_a_row_from_its_body() {
         Some("Hi.")
     );
     assert_eq!(h.stored(&id).await.unwrap().snippet, "Hi.");
+}
+
+#[tokio::test]
+async fn longer_notifications_keep_list_previews_short_and_mail_unread() {
+    let h = imap_harness().await;
+    let raw = String::from_utf8(message(
+        "long",
+        "Kites",
+        "Content-Type: text/plain; charset=utf-8\r\n",
+    ))
+    .unwrap()
+    .replace("Hi.", &"é".repeat(500));
+    h.imap
+        .deliver_flagged("INBOX", raw.as_bytes(), &[], days_ago(1));
+    h.bootstrap().await;
+    let target = target(&h, "INBOX/1001/1").await;
+    let lists = lists(&h);
+    assert_eq!(
+        lists.preview(target.clone()).await.unwrap(),
+        Some("é".repeat(140))
+    );
+    let calls = h.imap.calls();
+    assert_eq!(
+        lists.preview_up_to(target.clone(), 280).await.unwrap(),
+        Some("é".repeat(280))
+    );
+    assert_eq!(
+        lists.preview_up_to(target, 80).await.unwrap(),
+        Some("é".repeat(80))
+    );
+    assert_eq!(
+        h.imap.calls(),
+        calls,
+        "the cached body supplies the longer preview"
+    );
+    let account = h.account_id;
+    h.db.write(move |c| {
+        c.execute("DELETE FROM bodies WHERE account_id = ?1", [account])?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        lists
+            .preview_up_to(
+                Target {
+                    account_id: account,
+                    thread_id: h.thread_of("INBOX/1001/1").await.unwrap(),
+                    message_id: Some("INBOX/1001/1".into())
+                },
+                280
+            )
+            .await
+            .unwrap(),
+        Some("é".repeat(280)),
+        "a saved short snippet does not prevent an unread-safe longer fetch"
+    );
+    let calls = h.imap.calls();
+    let stored = h.stored("INBOX/1001/1").await.unwrap();
+    assert_eq!(stored.snippet, "é".repeat(140));
+    h.db.write(move |c| bodies::put_body(c, account, "INBOX/1001/1", &MessageBody::default(), 0))
+        .await
+        .unwrap();
+    assert_eq!(
+        lists
+            .preview_up_to(
+                Target {
+                    account_id: account,
+                    thread_id: stored.thread_id.clone(),
+                    message_id: Some(stored.id.clone())
+                },
+                280
+            )
+            .await
+            .unwrap(),
+        Some("é".repeat(140)),
+        "an empty body must not erase the available snippet"
+    );
+    assert!(stored.is_unread());
+    assert!(!calls.iter().any(|call| call.starts_with("store ")));
 }
