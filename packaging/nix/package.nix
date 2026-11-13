@@ -18,6 +18,8 @@
   bubblewrap,
   cacert,
   callPackage,
+  aws-lc,
+  sqlite,
   skillRuntime ? callPackage ./skill-runtime.nix { },
   googleClientId ? "",
   googleClientSecret ? "",
@@ -63,6 +65,8 @@ rustPlatform.buildRustPackage {
     gsettings-desktop-schemas
     adwaita-icon-theme
     shared-mime-info
+    aws-lc
+    sqlite
   ];
 
   PENGUIN_MAIL_GOOGLE_CLIENT_ID = googleClientId;
