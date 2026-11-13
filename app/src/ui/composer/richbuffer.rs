@@ -438,7 +438,13 @@ pub fn read_line(buffer: &gtk::TextBuffer, anchors: &Anchors, line: i32) -> Opti
         push_text(&mut spans, &text[from..], style, &link);
         iter = next;
     }
-    Some(Block { kind, spans })
+    // The buffer holds a quoted paragraph as a quote and a quoted list
+    // as the list alone, which is what a line in the editor can say.
+    Some(Block {
+        kind,
+        quoted: kind == BlockKind::Quote,
+        spans,
+    })
 }
 
 /// Adds `text` to the end of `spans`, joining the last span when it has
@@ -501,11 +507,12 @@ pub fn write(
                 let start = at.offset();
                 if let Some((cid, attachment)) = carried {
                     insert_image(view, &mut at, cid, &span.text, &attachment.data, anchors);
-                // A picture inside a quote came with someone else's mail.
-                // Asking its host for a copy would tell that host this
-                // person has read the message it arrived in, so only the
-                // writer's own lines are asked.
-                } else if block.kind != BlockKind::Quote && web_picture::drawable(src) {
+                // A picture inside a quote came with someone else's mail,
+                // the quote's lists and headings included. Asking its host
+                // for a copy would tell that host this person has read the
+                // message it arrived in, so only the writer's own lines
+                // are asked.
+                } else if !block.is_quote() && web_picture::drawable(src) {
                     insert_web_picture(view, &mut at, src, &span.text, anchors);
                 } else {
                     // With no bytes to draw and no address to ask, the words
@@ -1268,21 +1275,23 @@ mod tests {
     /// Asking a stranger's server for a copy of a picture it sent would
     /// tell that server that this person has read the mail it arrived in.
     /// A quoted picture keeps the words that stand for it and is never
-    /// asked for.
+    /// asked for, whatever the quote made of its line.
     fn a_quoted_picture_keeps_its_words() {
         const LOGO: &str = "https://example.invalid/Logo.jpg";
         let (view, buffer, mut anchors) = buffer();
-        let body = RichBody::from_markdown(&format!("> ![Logo]({LOGO})"));
+        let body =
+            RichBody::from_markdown(&format!("> ![Logo]({LOGO})\n> - ![List]({LOGO})\n> # ![Big]({LOGO})"));
         assert!(
-            body.blocks
-                .iter()
-                .any(|block| block.kind == BlockKind::Quote),
-            "{}",
+            body.blocks.iter().all(|block| block.is_quote()),
+            "the quote holds the list and the heading too: {}",
             body.to_markdown()
         );
         write(&view, &body, &[], &mut anchors);
         assert!(anchors.is_empty(), "no picture is drawn for a quote");
-        assert_eq!(read(&buffer, &anchors).to_plain(), "> [Logo]");
+        let words = read(&buffer, &anchors).to_plain();
+        for word in ["[Logo]", "[List]", "[Big]"] {
+            assert!(words.contains(word), "{words}");
+        }
     }
 
     /// Bytes GDK does not read itself would go to glycin's sandboxed
