@@ -470,6 +470,13 @@ impl Composer {
         for field in [&to, &cc, &bcc] {
             field.set_from(sending);
         }
+        // One book for the three fields: a chip lifted from any of them
+        // can be dropped on any of the others, which is how replying to
+        // a Cc'd message stops meaning deleting and retyping.
+        let moves = recipients::Moves::new();
+        for field in [&to, &cc, &bcc] {
+            field.share_moves(&moves);
+        }
         let subject = gtk::Entry::builder()
             .text(&draft.subject)
             .hexpand(true)
@@ -663,9 +670,26 @@ impl Composer {
         forward_box.append(&line());
         content.append(&forward_box);
         content.append(&files);
+        // A thrown chip is carried in view by a ghost pill that rides in
+        // this Fixed over the whole content, so it can pass over the
+        // body as well as the rows. It takes no events of its own, is
+        // empty and so draws nothing until a drag puts a pill in it, and
+        // is never shown or hidden, as that change touches the whole
+        // window and can upset frame damage.
+        let ghost_stage = gtk::Fixed::new();
+        let stage = gtk::Overlay::builder().child(&content).build();
+        stage.add_overlay(&ghost_stage);
+        // The stage and every pill in it refuse to be a pointer target,
+        // so picking falls through to the widgets underneath. Since GTK
+        // 4.20 the layout child of an overlay is no longer a widget, so
+        // there is nothing in between that could take events anyway.
+        ghost_stage.set_can_target(false);
+        for field in [&to, &cc, &bcc] {
+            field.set_ghost_stage(&ghost_stage);
+        }
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
-        toolbar.set_content(Some(&content));
+        toolbar.set_content(Some(&stage));
         let toasts = adw::ToastOverlay::new();
         toasts.set_child(Some(&toolbar));
         let window = adw::Window::builder()

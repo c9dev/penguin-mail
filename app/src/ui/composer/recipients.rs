@@ -38,6 +38,108 @@ pub struct Recipients {
     /// The account the message goes out from, whose contacts the
     /// suggestions put first.
     sending: Sending,
+    /// Shared with the sibling fields of one composer, so a chip thrown
+    /// from one of them can be caught by another. See `Moves`.
+    moves: RefCell<Option<Rc<Moves>>>,
+    /// Where a thrown chip rides under the pointer. Owned by the
+    /// composer, which hands it to each of its rows.
+    ghost_stage: RefCell<Option<gtk::Fixed>>,
+}
+
+/// What the three rows of one composer share: each other, and which
+/// chip is currently under the pointer. A chip is thrown with an
+/// ordinary pointer gesture rather than the drag-and-drop protocol,
+/// because the move never leaves this window and Wayland compositors
+/// have been measured killing the drag session at the moment of the
+/// lift; the pointer is the one thing that cannot get lost. The entry
+/// keeps its own drag-and-drop answer, so text dropped from outside
+/// still lands in the row.
+pub struct Moves {
+    /// The chip being thrown, from the row it was lifted out of.
+    moving: RefCell<Option<Moving>>,
+    /// The three rows, so the release can ask which one stands under
+    /// the pointer. Weak: the rows outlive the gesture, not the other
+    /// way around.
+    siblings: RefCell<Vec<std::rc::Weak<Recipients>>>,
+}
+
+impl Moves {
+    pub fn new() -> Rc<Moves> {
+        Rc::new(Moves {
+            moving: RefCell::new(None),
+            siblings: RefCell::new(Vec::new()),
+        })
+    }
+}
+
+/// The chip being thrown and the row it came from. The whole address
+/// rides, not the chip's shown text, so a named address keeps its
+/// name through the move.
+pub struct Moving {
+    address: Address,
+    from: Rc<Recipients>,
+}
+
+/// The pill that rides under the pointer while a chip is thrown. The
+/// Remove button stays home with the chip: its action would not resolve
+/// out here, and a second unnamed button is noise on the accessibility
+/// bus.
+fn ghost_pill(address: &Address) -> gtk::Box {
+    let shown = address
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .unwrap_or(&address.email);
+    let pill = gtk::Box::builder()
+        .css_classes(["recipient-chip", "drag-ghost"])
+        .build();
+    pill.append(
+        &gtk::Label::builder()
+            .label(shown)
+            .ellipsize(gtk::pango::EllipsizeMode::Middle)
+            .max_width_chars(28)
+            .build(),
+    );
+    pill
+}
+
+/// Which row of the book stands under the pointer at its offset from
+/// the gesture's start, if any.
+fn caught(
+    gesture: &gtk::GestureDrag,
+    offset_x: f64,
+    offset_y: f64,
+    moves: &Moves,
+) -> Option<Rc<Recipients>> {
+    let (x, y) = gesture.start_point()?;
+    let widget = gesture.widget()?;
+    let root = widget.root()?;
+    let at = widget.compute_point(
+        &root,
+        &gtk::graphene::Point::new((x + offset_x) as f32, (y + offset_y) as f32),
+    )?;
+    moves
+        .siblings
+        .borrow()
+        .iter()
+        .filter_map(|s| s.upgrade())
+        .find(|sibling| covers(&sibling.field, at.x(), at.y()))
+}
+
+/// Whether a point in window coordinates falls inside a row.
+fn covers(field: &gtk::FlowBox, x: f32, y: f32) -> bool {
+    let widget = field.upcast_ref::<gtk::Widget>();
+    let Some(root) = widget.root() else {
+        return false;
+    };
+    let Some(at) = widget.compute_point(&root, &gtk::graphene::Point::new(0., 0.)) else {
+        return false;
+    };
+    x >= at.x()
+        && x < at.x() + field.width() as f32
+        && y >= at.y()
+        && y < at.y() + field.height() as f32
 }
 
 /// What one chip says out loud: the name it shows, the address behind it
@@ -114,6 +216,8 @@ impl Recipients {
             next: RefCell::new(None),
             previous: RefCell::new(None),
             sending,
+            moves: RefCell::new(None),
+            ghost_stage: RefCell::new(None),
         });
         field.rebuild();
         field.wire();
@@ -146,6 +250,59 @@ impl Recipients {
 
     pub fn is_empty(&self) -> bool {
         self.addresses.borrow().is_empty() && self.entry.text().trim().is_empty()
+    }
+
+    /// Gives this row the place a thrown chip rides in under the
+    /// pointer. Without one, a move still works; it just shows no ghost.
+    pub fn set_ghost_stage(&self, stage: &gtk::Fixed) {
+        *self.ghost_stage.borrow_mut() = Some(stage.clone());
+    }
+
+    /// Joins this row to the book its siblings share. A lone field, as
+    /// in the tests, holds none and never takes part in a move.
+    pub fn share_moves(self: &Rc<Self>, moves: &Rc<Moves>) {
+        if !self.moves.borrow().iter().any(|held| Rc::ptr_eq(held, moves)) {
+            moves.siblings.borrow_mut().push(Rc::downgrade(self));
+        }
+        *self.moves.borrow_mut() = Some(Rc::clone(moves));
+    }
+
+    /// Adds one recipient to the end of the field, as if it had been
+    /// typed and committed.
+    pub fn add(self: &Rc<Self>, address: Address) {
+        self.addresses.borrow_mut().push(address);
+        self.rebuild();
+        self.announce();
+    }
+
+    /// Takes the first chip holding this address away, saying whether
+    /// there was one. Focus is left where it was: a moved chip lands in
+    /// the field under the pointer, not the one it started in.
+    pub fn remove_address(self: &Rc<Self>, email: &str) -> bool {
+        let at = self.addresses.borrow().iter().position(|a| a.email == email);
+        let Some(index) = at else { return false };
+        self.addresses.borrow_mut().remove(index);
+        self.rebuild();
+        self.announce();
+        true
+    }
+
+    /// Moves the thrown chip into this field. Letting go on the row the
+    /// chip came from is a quiet no-op, as in Mac's Mail. The gesture
+    /// and the field's checks both come through here, so the
+    /// arithmetic of a move is read once.
+    fn land(self: &Rc<Self>, moving: Moving) -> bool {
+        if Rc::ptr_eq(&moving.from, self) {
+            return true;
+        }
+        moving.from.remove_address(&moving.address.email);
+        self.add(moving.address);
+        // Ask for both rows again outright. A rebuild usually damages
+        // enough on its own, but a chip that left its row under a
+        // gesture has been seen to keep its last pixels in the frame.
+        moving.from.field.queue_draw();
+        self.field.queue_draw();
+        true
     }
 
     fn announce(&self) {
@@ -355,6 +512,138 @@ impl Recipients {
             });
             actions.add_action(&action);
             holder.insert_action_group("recipient", Some(&actions));
+            // Lifting a chip and letting go over a sibling row moves
+            // the recipient there.
+            let drag = gtk::GestureDrag::new();
+            let carried = address.clone();
+            let owner = Rc::downgrade(self);
+            let in_hand = chip.clone();
+            let lit: Rc<RefCell<Option<Rc<Recipients>>>> = Rc::default();
+            let held: Rc<RefCell<Option<gtk::Box>>> = Rc::default();
+            let held_begin = Rc::clone(&held);
+            let held_seen = Rc::clone(&held);
+            let held_landed = Rc::clone(&held);
+            let held_lost = Rc::clone(&held);
+            drag.connect_drag_begin(move |gesture, _, _| {
+                let Some(field) = owner.upgrade() else { return };
+                let Some(moves) = field.moves.borrow().clone() else { return };
+                *moves.moving.borrow_mut() = Some(Moving {
+                    address: carried.clone(),
+                    from: Rc::clone(&field),
+                });
+                in_hand.add_css_class("dragging");
+                if let (Some(widget), Some(cursor)) =
+                    (gesture.widget(), gdk::Cursor::from_name("dnd-move", None))
+                {
+                    widget.set_cursor(Some(&cursor));
+                }
+                if let Some(stage) = field.ghost_stage.borrow().clone() {
+                    let ghost = ghost_pill(&carried);
+                    ghost.set_can_target(false);
+                    stage.put(&ghost, 0., 0.);
+                    *held_begin.borrow_mut() = Some(ghost);
+                }
+            });
+            let owner = Rc::downgrade(self);
+            drag.connect_drag_update({
+                let lit = Rc::clone(&lit);
+                let held = held_seen;
+                move |gesture, offset_x, offset_y| {
+                    let Some(field) = owner.upgrade() else { return };
+                    let Some(moves) = field.moves.borrow().clone() else { return };
+                    // The ghost rides wherever the pointer goes, whether
+                    // or not the row under it just changed.
+                    if let (Some(stage), Some(ghost), Some(widget), Some((x0, y0))) = (
+                        field.ghost_stage.borrow().as_ref(),
+                        held.borrow().as_ref(),
+                        gesture.widget(),
+                        gesture.start_point(),
+                    ) && let Some(under) = widget.compute_point(
+                        stage,
+                        &gtk::graphene::Point::new(offset_x as f32, offset_y as f32),
+                    ) {
+                        stage.move_(ghost, f64::from(under.x()) - x0, f64::from(under.y()) - y0);
+                    }
+                    let now = caught(gesture, offset_x, offset_y, &moves);
+                    let changed = match (&*lit.borrow(), &now) {
+                        (None, None) => false,
+                        (Some(old), Some(new)) => !Rc::ptr_eq(old, new),
+                        _ => true,
+                    };
+                    if !changed {
+                        return;
+                    }
+                    if let Some(previous) = lit.borrow().as_ref() {
+                        previous.field.remove_css_class("recipient-drop");
+                    }
+                    if let Some(next) = now.as_ref() {
+                        next.field.add_css_class("recipient-drop");
+                    }
+                    *lit.borrow_mut() = now;
+                }
+            });
+            let owner = Rc::downgrade(self);
+            let at_home = chip.clone();
+            let lit3 = Rc::clone(&lit);
+            let carried_ghost = held_landed;
+            drag.connect_drag_end(move |gesture, offset_x, offset_y| {
+                if let Some(previous) = lit3.borrow_mut().take() {
+                    previous.field.remove_css_class("recipient-drop");
+                }
+                at_home.remove_css_class("dragging");
+                if let Some(widget) = gesture.widget() {
+                    widget.set_cursor(None as Option<&gdk::Cursor>);
+                }
+                let Some(field) = owner.upgrade() else { return };
+                // Above the click guard below: a jittered click that
+                // never became a throw must not strand a ghost.
+                if let (Some(stage), Some(ghost)) =
+                    (field.ghost_stage.borrow().as_ref(), carried_ghost.borrow_mut().take())
+                {
+                    stage.remove(&ghost);
+                }
+                let Some(moves) = field.moves.borrow().clone() else { return };
+                let Some(moving) = moves.moving.borrow_mut().take() else { return };
+                // Under five pixels of travel the pointer was clicking
+                // the chip, not throwing it at another row.
+                if offset_x.hypot(offset_y) < 5. {
+                    return;
+                }
+                // Claude Code's read of the stale chip pixels: the
+                // widget that leaves is torn down inside its own
+                // gesture's emission, in the frame that also hides the
+                // overlay, and Wayland damage can miss it. Let the
+                // gesture finish, then move in a later frame.
+                if let Some(onto) = caught(gesture, offset_x, offset_y, &moves) {
+                    glib::idle_add_local_once(move || {
+                        onto.land(moving);
+                    });
+                }
+            });
+            let owner = Rc::downgrade(self);
+            let lit2 = Rc::clone(&lit);
+            let dimmed = chip.clone();
+            let lost_ghost = held_lost;
+            drag.connect_cancel(move |gesture, _| {
+                if let Some(previous) = lit2.borrow_mut().take() {
+                    previous.field.remove_css_class("recipient-drop");
+                }
+                dimmed.remove_css_class("dragging");
+                if let Some(widget) = gesture.widget() {
+                    widget.set_cursor(None as Option<&gdk::Cursor>);
+                }
+                if let Some(field) = owner.upgrade() {
+                    if let (Some(stage), Some(ghost)) =
+                        (field.ghost_stage.borrow().as_ref(), lost_ghost.borrow_mut().take())
+                    {
+                        stage.remove(&ghost);
+                    }
+                    if let Some(moves) = field.moves.borrow().clone() {
+                        *moves.moving.borrow_mut() = None;
+                    }
+                }
+            });
+            holder.add_controller(drag);
             self.field.append(&holder);
             chips.push(holder);
         }
@@ -473,6 +762,87 @@ impl Recipients {
             }
         });
         self.field.add_controller(click);
+    }
+}
+
+/// The field's checks. They run from the one GTK test in `richbuffer`,
+/// because GTK belongs to the thread that starts it and the test
+/// harness gives each test a thread of its own.
+#[cfg(test)]
+pub(super) mod checks {
+    use super::*;
+
+    fn no_contacts() -> Contacts {
+        Rc::new(RefCell::new(Rc::new(Vec::new())))
+    }
+
+    fn an_address(name: Option<&str>, email: &str) -> Address {
+        Address {
+            name: name.map(str::to_string),
+            email: email.to_string(),
+        }
+    }
+
+    /// Whether one widget carries the named controller, in the shape
+    /// the codebase already reads a widget's controllers in.
+    fn carries<C: glib::object::Cast>(widget: &impl IsA<gtk::Widget>) -> bool {
+        let list = widget.observe_controllers();
+        (0..list.n_items())
+            .filter_map(|i| list.item(i))
+            .any(|c| c.is::<C>())
+    }
+
+    fn a_chip_offers_itself_to_be_lifted() {
+        let to = Recipients::new("To", &[an_address(None, "bea@example.com")], no_contacts());
+        let chip = to.chips.borrow()[0].clone();
+        assert!(
+            carries::<gtk::GestureDrag>(&chip),
+            "a chip that cannot be lifted is a chip that cannot move"
+        );
+    }
+
+    fn a_moved_recipient_leaves_one_field_and_lands_in_the_other() {
+        let to = Recipients::new(
+            "To",
+            &[
+                an_address(Some("Bea"), "bea@example.com"),
+                an_address(None, "hazel@example.com"),
+            ],
+            no_contacts(),
+        );
+        let cc = Recipients::new("Cc", &[], no_contacts());
+        let moves = Moves::new();
+        to.share_moves(&moves);
+        cc.share_moves(&moves);
+        assert_eq!(
+            moves.siblings.borrow().len(),
+            2,
+            "a joined row failed to join the book"
+        );
+        // Lift Bea out of To. The throw itself is GTK's device work;
+        // the checks drive what the release calls.
+        let lifted = || Moving {
+            address: to.addresses.borrow()[0].clone(),
+            from: Rc::clone(&to),
+        };
+        // Letting go on the field the chip came from moves nothing and
+        // says the chip went somewhere.
+        assert!(to.land(lifted()), "the chip's own field refused it");
+        assert_eq!(to.addresses().len(), 2, "a quiet drop moved a chip");
+        assert!(cc.land(lifted()), "the chip never reached the Cc field");
+        assert_eq!(to.addresses(), vec![an_address(None, "hazel@example.com")]);
+        assert_eq!(cc.addresses(), vec![an_address(Some("Bea"), "bea@example.com")]);
+        // A row that shares no book has no chip to catch.
+        let lone = Recipients::new("To", &[], no_contacts());
+        assert!(
+            lone.moves.borrow().is_none(),
+            "a lone row joined a book it was never given"
+        );
+    }
+
+    pub fn run() {
+        a_chip_offers_itself_to_be_lifted();
+        a_moved_recipient_leaves_one_field_and_lands_in_the_other();
     }
 }
 

@@ -922,6 +922,7 @@ mod tests {
         super::super::editor::checks::run();
         super::super::clipboard::checks::run();
         super::super::spell::checks::run();
+        super::super::recipients::checks::run();
         crate::ui::assistant::checks::run();
         crate::ui::calendar::pager::checks::run();
         crate::ui::calendar::popover::checks::run();
