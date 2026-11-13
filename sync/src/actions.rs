@@ -12,7 +12,9 @@ use mailrs_domain::{AccountId, Applied, EpochMillis, FlagColor, Folder, MailSet,
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
+use crate::account::carry::CopyOut;
 use crate::account::Snapshot;
+use crate::mailbox::Mailbox;
 use crate::ops::undo_ops;
 use crate::{
     AccountServices, AccountSync, BackendError, MailBackend, MailOp, MovedFrom, OneClick,
@@ -22,6 +24,7 @@ use crate::{
 mod categorize;
 mod labelling;
 mod returning;
+pub(crate) mod carry;
 mod smart_trash;
 
 pub use categorize::Categorized;
@@ -103,6 +106,13 @@ pub enum MailAction {
     /// again. Only this computer knows about Follow Up, so Gmail hears
     /// nothing of it.
     DismissFollowUp,
+    /// Carries the targets to a mailbox of another account: each message
+    /// lands there as a copy that keeps its marks and its arrival hour,
+    /// and only once it is safe does the original leave. Targets of the
+    /// destination account's own move the ordinary way. Only a label,
+    /// folder or Inbox of one account can be `at`; the window asks for
+    /// nothing else.
+    MoveTo { at: Box<Mailbox> },
 }
 
 impl MailAction {
@@ -125,6 +135,10 @@ impl MailAction {
             MailAction::Mute { muted: false } => TriageAction::Unmute.describe(),
             MailAction::Label { .. } => gettext("Change labels"),
             MailAction::DismissFollowUp => gettext("Dismiss Follow-Up"),
+            MailAction::MoveTo { at } => fill(
+                &gettext("Move to {mailbox}"),
+                &[("mailbox", &at.title())],
+            ),
         }
     }
 }
@@ -202,6 +216,23 @@ struct Undo {
     /// Mail a whole-mailbox action changed, kept on disk rather than in
     /// `relabel`, so a mailbox of any size holds one batch in memory.
     staged: Vec<Staged>,
+    /// Targets carried to another account, and the way back.
+    cross: Vec<CrossReversal>,
+}
+
+/// One target carried to another account, and how to bring it back.
+/// Undo reads each copy's bytes out of the account they arrived in and
+/// files them again where they started, then takes the copies back.
+struct CrossReversal {
+    target: Target,
+    /// The account the copies arrived in.
+    arrived: AccountId,
+    /// The mailbox they were moved to, for the words when one of them
+    /// will not come back.
+    at: Mailbox,
+    /// Each carried message: the name its copy landed under over there,
+    /// and the place it came from.
+    carried: Vec<(String, CopyOut)>,
 }
 
 /// The messages of one account a whole-mailbox action changed, as the
@@ -236,6 +267,11 @@ impl Undo {
         self.relabel.retain(|r| !same_thread(&r.target, target));
         self.reminders.retain(|(t, _)| !same_thread(t, target));
         self.follow_ups.retain(|t| !same_thread(t, target));
+        // A carry is matched by the thread it left. The thread its copy
+        // arrived under belongs to the other account and stays unknown
+        // to the reversal, so erasing that side leaves the entry; undo
+        // will find the copy gone and say so instead of guessing.
+        self.cross.retain(|c| !same_thread(&c.target, target));
     }
 
     /// Drops the staged rows of `erased`, and a staged change with nothing
@@ -258,6 +294,10 @@ impl Undo {
         self.colors.retain(|(id, _, _)| *id != account_id);
         self.follow_ups.retain(|t| t.account_id != account_id);
         self.staged.retain(|s| s.account_id != account_id);
+        // A carry touches the account it left and the one it arrived at;
+        // dropping either side would orphan the other.
+        self.cross
+            .retain(|c| c.target.account_id != account_id && c.arrived != account_id);
     }
 
     /// Whether anything is left to reverse.
@@ -267,6 +307,7 @@ impl Undo {
             && self.colors.is_empty()
             && self.follow_ups.is_empty()
             && self.staged.is_empty()
+            && self.cross.is_empty()
     }
 }
 
@@ -321,6 +362,11 @@ impl<A: Accounts> MailActions<A> {
         history: History,
         from: &MovedFrom,
     ) -> Outcome {
+        // Mail moved to a mailbox of another account: rows of that
+        // account's own move the ordinary way, and the rest are carried.
+        if let MailAction::MoveTo { at } = &action {
+            return carry::run(self, targets, at, history, from).await;
+        }
         let mut outcome = Outcome::default();
         let mut undo = Undo {
             id: self.next.fetch_add(1, Ordering::Relaxed),
@@ -330,6 +376,7 @@ impl<A: Accounts> MailActions<A> {
             reminders: Vec::new(),
             follow_ups: Vec::new(),
             staged: Vec::new(),
+            cross: Vec::new(),
         };
         let resolved = self.resolve(targets, &action).await;
         // The label change goes first: it fetches threads the store lacks,
@@ -590,7 +637,11 @@ impl<A: Accounts> MailActions<A> {
                     .await?;
                 undo.follow_ups.extend(targets);
             }
-            MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
+            MailAction::Triage(_)
+            | MailAction::Label { .. }
+            | MailAction::Mute { .. }
+            // A carry to another account keeps nothing on this computer.
+            | MailAction::MoveTo { .. } => {}
         }
         Ok(())
     }
@@ -701,6 +752,12 @@ impl<A: Accounts> MailActions<A> {
         }
         for staged in &undo.staged {
             self.reverse_staged(staged, &mut outcome).await;
+        }
+        // Carried mail goes back the way it came: read out of the
+        // account it arrived in, filed where it started, and taken back
+        // once it is home.
+        for reversal in &undo.cross {
+            self.reverse_carried(reversal, &mut outcome).await;
         }
         // A flag colour is a mark on this computer rather than a place, so
         // it goes back even on mail that moved. A reminder would put the
@@ -879,6 +936,7 @@ impl<A: Accounts> MailActions<A> {
             reminders: Vec::new(),
             follow_ups: Vec::new(),
             staged,
+            cross: Vec::new(),
         };
         let recorded = Recorded(undo.id);
         let mut stack = self.lock();
@@ -1078,6 +1136,9 @@ impl<A: Accounts> MailActions<A> {
                     remove: vec![],
                 });
             }
+            // A carry to another account runs on its own path, which
+            // works out each target's label change there and then.
+            MailAction::MoveTo { .. } => return vec![Ok(None); targets.len()],
             MailAction::DismissFollowUp => return vec![Ok(None); targets.len()],
             MailAction::Label {
                 add,

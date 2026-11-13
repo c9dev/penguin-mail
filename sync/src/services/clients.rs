@@ -139,6 +139,7 @@ either_client! {
         fn batch_modify(ids: &[String], add: &[String], remove: &[String]) -> Gmail<()>;
         fn delete_messages(ids: &[String]) -> Gmail<()>;
         fn send(raw: &[u8], thread_id: Option<&str>) -> Gmail<String>;
+        fn insert(raw: &[u8], label_ids: &[String], at: Option<i64>) -> Gmail<String>;
         fn save_draft(draft_id: Option<&str>, raw: &[u8], thread_id: Option<&str>) -> Gmail<SavedDraft>;
         fn send_draft(draft_id: &str) -> Gmail<String>;
         fn delete_draft(draft_id: &str) -> Gmail<()>;
@@ -265,7 +266,7 @@ either_client! {
         fn move_to(mailbox: &str, uids: &UidSet, to: &str) -> Imapped<Option<CopyUid>>;
         fn copy_to(mailbox: &str, uids: &UidSet, to: &str) -> Imapped<Option<CopyUid>>;
         fn expunge(mailbox: &str, uids: &UidSet) -> Imapped<()>;
-        fn append(mailbox: &str, flags: &[String], raw: &[u8]) -> Imapped<Option<AppendUid>>;
+        fn append(mailbox: &str, flags: &[String], at: Option<i64>, raw: &[u8]) -> Imapped<Option<AppendUid>>;
         fn create(mailbox: &str) -> Imapped<()>;
         fn rename(from: &str, to: &str) -> Imapped<()>;
         fn delete(mailbox: &str) -> Imapped<()>;

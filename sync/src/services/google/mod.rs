@@ -17,6 +17,7 @@ use std::time::Duration;
 use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::mailbox::keyword;
+use mailrs_domain::mailbox::Membership;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
@@ -30,9 +31,9 @@ use mailrs_mime::html::html_to_text;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
-    KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, Relocated, RemoteRef,
-    RulesService, SearchQuery, SendAsAddress, Storage, SyncState, Unapplied, Want, Withheld,
-    priority,
+    KeywordsPage, Landing, MailBackend, MailCapabilities, Priority, RawMessage, Relocated,
+    RemoteRef, RulesService, SearchQuery, SendAsAddress, Storage, SyncState, Unapplied, Want,
+    Withheld, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -430,6 +431,40 @@ impl<G: GmailApi> MailBackend for Google<G> {
     /// asks it to file one.
     async fn append(&self, _raw: &[u8], _mailbox: &str) -> Result<String, BackendError> {
         Err(BackendError::Unsupported)
+    }
+
+    fn lands_copies(&self) -> bool {
+        true
+    }
+
+    /// `messages.insert`: the copy arrives under the labels it belongs
+    /// in, marked as the source had it, and Gmail keeps the arrival hour
+    /// it is given, so the list shows the date the message first came.
+    /// The marks are spelled Gmail's own way: starred is STARRED, muted
+    /// is MUTE, and being unread is the one label a new message has to
+    /// carry, since being read is the absence of UNREAD.
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        let mut labels = at.mailboxes.to_vec();
+        let mut seen = false;
+        for keyword in at.keywords {
+            let Some((label, on)) = gmail::label_of(&Membership::Keyword(keyword.clone()), true)
+            else {
+                continue;
+            };
+            if keyword == keyword::SEEN {
+                // Gmail answers that being seen means lacking UNREAD,
+                // which a message fresh off the wire lacks anyway.
+                seen = true;
+                continue;
+            }
+            if on {
+                labels.push(label);
+            }
+        }
+        if !seen {
+            labels.push(gmail::UNREAD.to_string());
+        }
+        Ok(paced(self.gmail.insert(raw, &labels, at.at)).await?)
     }
 
     /// Gmail sends a text part by reference when it carries a file name,

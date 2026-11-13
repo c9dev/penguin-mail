@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use mailrs_discover::Server;
+use mailrs_domain::EpochMillis;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
@@ -334,13 +335,16 @@ impl<D: Dial> ImapClient<D> {
         on_worker!(self, conn => conn.expunge(mailbox, uids))
     }
 
+    /// Appends `raw` to `mailbox`. `at`, when given, is the copy's
+    /// INTERNALDATE.
     pub async fn append(
         &self,
         mailbox: &str,
         flags: &[String],
+        at: Option<EpochMillis>,
         raw: &[u8],
     ) -> Result<Option<AppendUid>, ImapError> {
-        on_worker!(self, conn => conn.append(mailbox, flags, raw))
+        on_worker!(self, conn => conn.append(mailbox, flags, at, raw))
     }
 
     pub async fn create(&self, mailbox: &str) -> Result<(), ImapError> {
@@ -1092,7 +1096,7 @@ mod tests {
         sendable(client.move_to("INBOX", &uids, "Archive"));
         sendable(client.copy_to("INBOX", &uids, "Archive"));
         sendable(client.expunge("INBOX", &uids));
-        sendable(client.append("INBOX", &[], b"raw"));
+        sendable(client.append("INBOX", &[], None, b"raw"));
         sendable(client.create("INBOX"));
         sendable(client.rename("INBOX", "Old"));
         sendable(client.delete("INBOX"));

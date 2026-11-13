@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 
+use mailrs_domain::mailbox::keyword;
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{Location, Role};
 use mailrs_imap::UidSet;
@@ -86,7 +87,19 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         mailbox: &str,
         flags: &[String],
     ) -> Result<String, BackendError> {
-        if let Some(appended) = self.api.append(mailbox, flags, raw).await? {
+        self.file_at(raw, mailbox, flags, None).await
+    }
+
+    /// [`Self::file`] with the copy's arrival hour given: a message
+    /// carried in from another account keeps its INTERNALDATE.
+    pub(super) async fn file_at(
+        &self,
+        raw: &[u8],
+        mailbox: &str,
+        flags: &[String],
+        at: Option<i64>,
+    ) -> Result<String, BackendError> {
+        if let Some(appended) = self.api.append(mailbox, flags, at, raw).await? {
             // Dovecot's first APPEND into a listed mailbox it has not made
             // yet answers a UIDVALIDITY one above what SELECT reports after,
             // and SELECT's is the one every later call checks. On a
@@ -255,9 +268,40 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 }
 
+/// The APPEND flag list a moved message's keywords ask for. The store
+/// spells being-read `$seen` the JMAP way; the server wants `\Seen`.
+/// A keyword neither system owns rides along only in the shape IMAP
+/// already accepts, a backslash flag or a `$keyword`.
+pub(super) fn landing_flags(keywords: &[String]) -> Vec<String> {
+    let mut flags: Vec<String> = Vec::new();
+    for keyword in keywords {
+        let flag: Cow<str> = match keyword.as_str() {
+            keyword::SEEN => "\\Seen".into(),
+            keyword::FLAGGED => "\\Flagged".into(),
+            keyword::ANSWERED => "\\Answered".into(),
+            keyword::DRAFT => "\\Draft".into(),
+            other if other.starts_with('\\') || other.starts_with('$') => other.into(),
+            _ => continue,
+        };
+        if !flags.iter().any(|listed| listed == &flag) {
+            flags.push(flag.into_owned());
+        }
+    }
+    flags
+}
+
 #[cfg(test)]
 mod tests {
-    use super::without_bcc;
+    use super::{landing_flags, without_bcc};
+
+    #[test]
+    fn a_moved_message_keeps_its_marks_and_theirs_is_spelled_the_imap_way() {
+        let keywords = ["$seen".to_string(), "$flagged".to_string(), "$muted".to_string()];
+        // The store's own spellings of read and flagged become the
+        // server's system flags; a keyword both sides already share,
+        // like muted, rides along untouched.
+        assert_eq!(landing_flags(&keywords), ["\\Seen", "\\Flagged", "$muted"]);
+    }
 
     #[test]
     fn the_bcc_header_and_its_folded_lines_stay_behind() {

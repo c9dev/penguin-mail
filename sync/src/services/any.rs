@@ -23,8 +23,8 @@ use super::local::LocalRules;
 use super::{
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, Claimed,
     ContactsService, Found, GmailImap, Google, Held, IdentityService, Imap, Jmap, JmapSieve,
-    KeywordsPage, Look, MailBackend, MailCapabilities, Microsoft, NoMail, Pop3, RawMessage,
-    ReceiptOut, Refused, Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery,
+    KeywordsPage, Landing, Look, MailBackend, MailCapabilities, Microsoft, NoMail, Pop3,
+    RawMessage, ReceiptOut, Refused, Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery,
     SendAsAddress, Settled, SieveRules, Storage, SyncState, Unapplied, Unheld, Want, Withheld,
 };
 use crate::api::{DraftRef, SavedDraft};
@@ -374,6 +374,14 @@ impl MailBackend for AnyMail {
 
     async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
         forward_all!(AnyMail, self, append(raw, mailbox))
+    }
+
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        forward_all!(AnyMail, self, land_copy(raw, at))
+    }
+
+    fn lands_copies(&self) -> bool {
+        forward_all_now!(AnyMail, self, lands_copies())
     }
 
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {

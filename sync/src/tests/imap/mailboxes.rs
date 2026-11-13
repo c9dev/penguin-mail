@@ -58,6 +58,7 @@ fn an_imap_account_offers_mail_alone() {
             auto_reply_contacts_only: false,
             search: true,
             tags: false,
+            lands_mail: true,
             focused: false,
             event_files: false,
             moves_events: false,

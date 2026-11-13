@@ -155,6 +155,10 @@ pub(super) struct Pressed {
     pub threaded: bool,
     /// The accounts the targets belong to, from [`reached`].
     pub accounts: Vec<Reached>,
+    /// When the press is a drop: whether the mailbox it was dropped on
+    /// belongs to an account whose server takes a copy of another
+    /// account's mail. Anywhere else the answer is `false` and unused.
+    pub lands: bool,
 }
 
 /// The question before a step nothing brings back.
@@ -216,6 +220,7 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         flag_color,
         threaded,
         accounts,
+        lands,
     } = pressed;
     let mut targets = reach.targets;
     // What the list shows is where the mail was picked from, a drag's
@@ -313,7 +318,7 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         ),
         Press::Flag(color) => act(MailAction::Flag(color), History::Record, None),
         Press::DismissFollowUp => act(MailAction::DismissFollowUp, History::Record, None),
-        Press::Drop(to) => dropped(&targets, mailbox, &to, &accounts, act),
+        Press::Drop(to) => dropped(&targets, mailbox, &to, &accounts, lands, act),
     };
     Plan {
         targets,
@@ -323,18 +328,41 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
 }
 
 /// What dropping `targets`, listed in `from`, on `to` comes to. `accounts`
-/// are the accounts the targets belong to.
+/// are the accounts the targets belong to, and `lands` says whether the
+/// account `to` belongs to takes a copy of another account's mail.
 fn dropped(
     targets: &[Target],
     from: &Mailbox,
     to: &Mailbox,
     accounts: &[Reached],
+    lands: bool,
     act: impl Fn(MailAction, History, Option<String>) -> Step,
 ) -> Step {
+    // Mail dropped on a mailbox of another account is carried there,
+    // date and marks riding along, if that account's server takes the
+    // copy. Only a folder, a label or the Inbox of one account can
+    // receive it; the rest have no place to file it.
     if let Some(account_id) = to.account()
         && targets.iter().any(|t| t.account_id != account_id)
     {
-        return Step::Refuse(gettext("Drop mail on its own account's mailboxes"));
+        let receivable = matches!(
+            to,
+            Mailbox::Label { .. }
+                | Mailbox::Standard {
+                    which: crate::ui::Standard::Inbox,
+                    ..
+                }
+        );
+        if !receivable || !lands {
+            return Step::Refuse(gettext("Mail cannot go there"));
+        }
+        return act(
+            MailAction::MoveTo {
+                at: Box::new(to.clone()),
+            },
+            History::Record,
+            Some(moved_to(&to.title())),
+        );
     }
     if matches!(
         to,
@@ -597,6 +625,14 @@ mod tests {
             flag_color: FlagColor::Orange,
             threaded: true,
             accounts: vec![gmail(1)],
+            lands: false,
+        }
+    }
+
+    fn carried(press: Press, mailbox: Mailbox) -> Pressed {
+        Pressed {
+            lands: true,
+            ..pressed(press, mailbox, Scope::Carried { open: false })
         }
     }
 
@@ -980,7 +1016,38 @@ mod tests {
     }
 
     #[test]
-    fn a_drop_on_another_accounts_label_or_where_the_mail_is_is_refused() {
+    fn a_drop_on_another_accounts_folder_or_inbox_carries_the_mail_there() {
+        let other = Mailbox::Label {
+            account_id: 2,
+            label_id: "Travel".into(),
+            name: "Travel".into(),
+        };
+        let other_inbox = Mailbox::Standard {
+            account_id: 2,
+            which: Standard::Inbox,
+        };
+        for to in [other, other_inbox] {
+            let plan = plan(carried(Press::Drop(to.clone()), inbox()));
+            assert!(plan.taken(), "a drop on {to:?} is taken");
+            let Step::Act {
+                action,
+                history,
+                words,
+                ..
+            } = plan.step
+            else {
+                panic!("the drop on {to:?} is taken");
+            };
+            assert_eq!(action, MailAction::MoveTo { at: Box::new(to.clone()) });
+            assert_eq!(history, History::Record, "a carry can be undone");
+            assert!(words.is_some(), "the carry names the mailbox");
+        }
+    }
+
+    #[test]
+    fn a_carry_is_refused_where_the_server_takes_no_copies() {
+        // The window asks the destination account's server first: an
+        // account that cannot file another account's mail hears nothing.
         let other = Mailbox::Label {
             account_id: 2,
             label_id: "Travel".into(),
@@ -988,20 +1055,12 @@ mod tests {
         };
         assert_eq!(
             step(Press::Drop(other), inbox(), Scope::Carried { open: false }),
-            Step::Refuse("Drop mail on its own account's mailboxes".into())
+            Step::Refuse("Mail cannot go there".into())
         );
-        let other_inbox = Mailbox::Standard {
-            account_id: 2,
-            which: Standard::Inbox,
-        };
-        assert_eq!(
-            step(
-                Press::Drop(other_inbox),
-                inbox(),
-                Scope::Carried { open: false }
-            ),
-            Step::Refuse("Drop mail on its own account's mailboxes".into())
-        );
+    }
+
+    #[test]
+    fn a_drop_on_the_mailbox_the_mail_is_already_in_is_refused() {
         assert!(matches!(
             step(
                 Press::Drop(inbox()),
@@ -1016,6 +1075,29 @@ mod tests {
             Scope::Carried { open: false },
         ));
         assert!(!plan.taken());
+    }
+
+    #[test]
+    fn another_accounts_marks_refuse_dropped_mail() {
+        // Only a folder, a label or an Inbox takes a carry. The places
+        // a mark lists refuse it wherever the mail came from.
+        for to in [
+            Mailbox::Unified(Standard::Sent),
+            Mailbox::Standard {
+                account_id: 2,
+                which: Standard::Sent,
+            },
+            Mailbox::Standard {
+                account_id: 2,
+                which: Standard::Drafts,
+            },
+        ] {
+            assert_eq!(
+                plan(carried(Press::Drop(to.clone()), inbox())).step,
+                Step::Refuse("Mail cannot go there".into()),
+                "a carry to {to:?} is refused"
+            );
+        }
     }
 
     #[test]
@@ -1035,7 +1117,7 @@ mod tests {
                     inbox(),
                     Scope::Carried { open: false }
                 ),
-                Step::Refuse("Drop mail on its own account's mailboxes".into())
+                Step::Refuse("Mail cannot go there".into())
             );
         }
     }
