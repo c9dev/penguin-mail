@@ -24,6 +24,7 @@ pub use api::{ImapApi, Submit};
 pub use gmail::GmailImap;
 pub use mailboxes::FolderSubscription;
 pub(crate) use outgoing::{envelope_of, submit_over, without_bcc};
+use outgoing::landing_flags;
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::ops::RangeInclusive;
@@ -38,9 +39,9 @@ use mailrs_mime::Parts;
 use tokio::time::Instant;
 
 use super::{
-    Backfill, Changes, Found, IdentityService, KeywordsPage, MailBackend, MailCapabilities,
-    RawMessage, Relocated, RemoteRef, SearchQuery, SendAsAddress, Storage, SyncState, Unapplied,
-    Want,
+    Backfill, Changes, Found, IdentityService, KeywordsPage, Landing, MailBackend,
+    MailCapabilities, RawMessage, Relocated, RemoteRef, SearchQuery, SendAsAddress, Storage,
+    SyncState, Unapplied, Want,
 };
 use crate::api::{DraftRef, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -620,6 +621,25 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     /// would have filed it.
     async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
         self.file(raw, mailbox, &["\\Seen".to_string()]).await
+    }
+
+    fn lands_copies(&self) -> bool {
+        true
+    }
+
+    /// An APPEND with the message's marks and its arrival hour, which is
+    /// what a move from another account asks a server to take. Several
+    /// mailboxes get one copy each, as a message filed in more than one
+    /// folder is; the answer names the first copy, which is all a single
+    /// landing ever needs.
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        let flags = landing_flags(at.keywords);
+        let mut landed: Option<String> = None;
+        for mailbox in at.mailboxes {
+            let name = self.file_at(raw, mailbox, &flags, at.at).await?;
+            landed.get_or_insert(name);
+        }
+        landed.ok_or(BackendError::Unsupported)
     }
 
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {

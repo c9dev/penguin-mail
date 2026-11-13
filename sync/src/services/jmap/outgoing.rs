@@ -191,7 +191,7 @@ impl<J: JmapApi> Jmap<J> {
         let blob = self.api().upload(raw.to_vec()).await.map_err(backend)?;
         let saved = match self
             .api()
-            .import(&blob, &[drafts], &["$draft", "$seen"], draft_id)
+            .import(&blob, &[drafts], &["$draft", "$seen"], draft_id, None)
             .await
         {
             Ok(saved) => saved,

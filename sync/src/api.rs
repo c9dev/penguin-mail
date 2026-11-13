@@ -117,6 +117,15 @@ pub trait GmailApi: Send + Sync + 'static {
         thread_id: Option<&str>,
     ) -> impl Future<Output = Result<String, GmailError>> + Send;
 
+    /// Files raw RFC 822 bytes Gmail never received, under `label_ids`,
+    /// with `at` as the arrival hour. Returns the new message id.
+    fn insert(
+        &self,
+        raw: &[u8],
+        label_ids: &[String],
+        at: Option<i64>,
+    ) -> impl Future<Output = Result<String, GmailError>> + Send;
+
     /// Creates a draft, or replaces draft `draft_id`.
     fn save_draft(
         &self,
@@ -460,6 +469,15 @@ impl GmailApi for AccountClient {
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         Ok(self.client.send(raw, thread_id).await?.id)
+    }
+
+    async fn insert(
+        &self,
+        raw: &[u8],
+        label_ids: &[String],
+        at: Option<i64>,
+    ) -> Result<String, GmailError> {
+        Ok(self.client.insert(raw, label_ids, at).await?.id)
     }
 
     async fn save_draft(

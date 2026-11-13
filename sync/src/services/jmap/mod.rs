@@ -48,7 +48,7 @@ pub(crate) use outgoing::{bare_message_id, has_message_id};
 pub use sieve::{JmapSieve, SERVER_REPLY_SCRIPT};
 
 use super::{
-    Backfill, Changes, Claimed, Found, Held, KeywordsPage, MailBackend, MailCapabilities,
+    Backfill, Changes, Claimed, Found, Held, KeywordsPage, Landing, MailBackend, MailCapabilities,
     RawMessage, ReceiptOut, Relocated, RemoteRef, SearchQuery, Settled, Storage, SyncState,
     Unapplied, Unheld, Want,
 };
@@ -424,6 +424,29 @@ impl<J: JmapApi> MailBackend for Jmap<J> {
         Err(BackendError::Refused(mailrs_domain::translate::gettext(
             "This server files sent mail itself.",
         )))
+    }
+
+    fn lands_copies(&self) -> bool {
+        true
+    }
+
+    /// `Email/import`: the copy arrives in the mailbox it was moved to,
+    /// keeping its keywords and — per RFC 8621 section 4.8, whose
+    /// `receivedAt` this passes — the hour it arrived at the account it
+    /// left. Without it a carried message would show as freshly received.
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        let blob = self.api.upload(raw.to_vec()).await.map_err(backend)?;
+        let keywords: Vec<&str> = at.keywords.iter().map(String::as_str).collect();
+        let hour = at
+            .at
+            .and_then(chrono::DateTime::from_timestamp_millis)
+            .map(|when| when.to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
+        let saved = self
+            .api
+            .import(&blob, at.mailboxes, &keywords, None, hour.as_deref())
+            .await
+            .map_err(backend)?;
+        Ok(saved.email.id)
     }
 
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {

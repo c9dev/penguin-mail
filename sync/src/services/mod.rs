@@ -390,6 +390,18 @@ pub struct RawMessage {
     pub bytes: Vec<u8>,
 }
 
+/// Where a message carried in from another account lands: the mailboxes
+/// it belongs in on this account, the keywords it keeps, and the hour it
+/// first arrived. A move files one mailbox; Undo restores every mailbox
+/// the message sat in at home. A server that stores no arrival hour
+/// stamps the copy with the present instead.
+#[derive(Debug)]
+pub struct Landing<'a> {
+    pub mailboxes: &'a [String],
+    pub keywords: &'a [String],
+    pub at: Option<EpochMillis>,
+}
+
 /// A search. A backend that speaks the syntax takes what the person typed
 /// as they typed it, which is how every Gmail operator keeps working.
 /// Folders and smart mailboxes search with a tree, which each backend
@@ -737,6 +749,7 @@ impl AccountServices {
             // A calendar account has no mail to search at all.
             search: self.serves_mail() && !caps.local_mailboxes,
             tags: caps.tags,
+            lands_mail: self.mail.lands_copies(),
             focused: caps.focus,
             event_files: features.event_files,
             moves_events: features.moves_events,
@@ -957,6 +970,11 @@ pub struct Offers {
     /// The account keeps tags beside its folders, so the window offers
     /// Tags… beside Move to Folder.
     pub tags: bool,
+    /// The server takes a copy of a message carried in from another
+    /// account, so the window may let one land on this account's
+    /// mailboxes. Microsoft does not: Graph has no call that files a
+    /// message in a chosen folder, and its arrival date is read-only.
+    pub lands_mail: bool,
     /// The inbox splits into Focused and Other.
     pub focused: bool,
     /// An event can carry files the person attaches from this computer.
@@ -1002,6 +1020,7 @@ impl Offers {
         auto_reply_contacts_only: true,
         search: true,
         tags: false,
+        lands_mail: true,
         focused: false,
         event_files: true,
         moves_events: true,
@@ -1370,6 +1389,30 @@ pub trait MailBackend: Send + Sync + 'static {
         raw: &[u8],
         mailbox: &str,
     ) -> impl Future<Output = Result<String, BackendError>> + Send;
+
+    /// Files `raw`, a message carried in from another account, so it
+    /// reads at home: filed in `at.mailboxes`, keeping `at.keywords` and
+    /// the hour it arrived. Answers the copy's name on this server, the
+    /// name that destroys it again. A server that cannot take a copy of
+    /// another account's mail says so; the person then hears it before
+    /// anything moves.
+    fn land_copy(
+        &self,
+        raw: &[u8],
+        at: &Landing<'_>,
+    ) -> impl Future<Output = Result<String, BackendError>> + Send {
+        // No default server can do this. Each protocol that can says so
+        // over it, and `lands_copies` tells the window beforehand.
+        let _ = (raw, at);
+        async { Err(BackendError::Unsupported) }
+    }
+
+    /// Whether this server takes another account's mail through
+    /// [`Self::land_copy`], so the window can refuse an impossible drop
+    /// before it moves anything.
+    fn lands_copies(&self) -> bool {
+        false
+    }
 
     /// The message's parts with the bytes of the text parts its body
     /// needs, and without its files: for a message too large to fetch
