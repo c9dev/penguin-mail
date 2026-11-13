@@ -13,6 +13,7 @@ mod calendar_read;
 mod calendar_series;
 mod calendar_switch;
 mod carddav;
+mod carry;
 mod connect;
 mod connector;
 mod contacts;
