@@ -4118,8 +4118,8 @@ msgstr ""
 "şifrelenmiş olarak bekler, ancak bu bilgisayarda {address} için anahtar veya "
 "sertifika yok."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2100
-#: app/src/ui/composer/mod.rs:2103
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2124
+#: app/src/ui/composer/mod.rs:2127
 msgid "That account is not connected."
 msgstr "Bu hesap bağlı değil."
 
@@ -4248,7 +4248,7 @@ msgstr "Standart şifreleme (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Aktarım sırasında şifrelenmemiş"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2200
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2224
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} ek"
@@ -4296,8 +4296,8 @@ msgstr[1] "{named} ve {count} kişi daha"
 msgid "me"
 msgstr "ben"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:619
-#: app/src/ui/composer/mod.rs:623
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:626
+#: app/src/ui/composer/mod.rs:630
 msgid "Show trimmed content"
 msgstr "Kırpılmış içeriği göster"
 
@@ -4977,7 +4977,7 @@ msgid "Open Penguin Mail"
 msgstr "Penguin Mail'i Aç"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
-#: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
+#: app/src/ui/composer/mod.rs:699 app/src/ui/composer/mod.rs:1589
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "Yeni İleti"
@@ -5175,8 +5175,8 @@ msgstr "Bağlantıyı Kopyala"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
-#: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/mod.rs:2019 app/src/ui/composer/mod.rs:2141
+#: app/src/ui/composer/mod.rs:2502 app/src/ui/composer/mod.rs:2921
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5581,7 +5581,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1930
+#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1954
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Gönder"
@@ -5744,7 +5744,7 @@ msgid "No models found."
 msgstr "Model bulunamadı."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2257
+#: app/src/ui/composer/mod.rs:2281
 msgid "Remove {file}"
 msgstr "{file} dosyasını kaldır"
 
@@ -5785,7 +5785,7 @@ msgid "Edit {server}"
 msgstr "{server} düzenle"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2277 app/src/ui/composer/recipients.rs:486
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "Kaldır"
@@ -5828,7 +5828,7 @@ msgstr ""
 "erişir."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2892 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:2916 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Ad"
@@ -5864,7 +5864,7 @@ msgstr "Sına"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2921
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6287,7 +6287,7 @@ msgid "Keenable API Key (Optional)"
 msgstr "Keenable API Anahtarı (İsteğe Bağlı)"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2412
-#: app/src/ui/composer/recipients.rs:50
+#: app/src/ui/composer/recipients.rs:158
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
 
@@ -6442,7 +6442,7 @@ msgstr "Yalnızca yeni"
 msgid "New and existing"
 msgstr "Yeni ve mevcut"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:592
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:599
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -7165,7 +7165,7 @@ msgstr "“{title}” silindi"
 msgid "Could not delete the event: {reason}"
 msgstr "Etkinlik silinemedi: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1402
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1426
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7783,7 +7783,7 @@ msgstr "Dosya Ekle…"
 msgid "Templates"
 msgstr "Şablonlar"
 
-#: app/src/ui/composer/mod.rs:154 app/src/ui/composer/mod.rs:1034
+#: app/src/ui/composer/mod.rs:154 app/src/ui/composer/mod.rs:1058
 msgid "Preview"
 msgstr "Önizleme"
 
@@ -7803,12 +7803,12 @@ msgstr "Okundu Bildirimi İste"
 msgid "Choose a Time…"
 msgstr "Zaman Seç…"
 
-#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2010
+#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2034
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "Daha Sonra Gönder"
 
-#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1609
+#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1633
 msgid "Send (Ctrl+Enter)"
 msgstr "Gönder (Ctrl+Enter)"
 
@@ -7836,356 +7836,356 @@ msgstr "Bilgi kopyası"
 msgid "Blind carbon copy"
 msgstr "Gizli bilgi kopyası"
 
-#: app/src/ui/composer/mod.rs:481
+#: app/src/ui/composer/mod.rs:488
 msgid "Cc/Bcc"
 msgstr "Bilgi/Gizli"
 
-#: app/src/ui/composer/mod.rs:482 app/src/ui/composer/mod.rs:1203
+#: app/src/ui/composer/mod.rs:489 app/src/ui/composer/mod.rs:1227
 msgid "Show Cc and Bcc"
 msgstr "Bilgi ve Gizli'yi Göster"
 
-#: app/src/ui/composer/mod.rs:493
+#: app/src/ui/composer/mod.rs:500
 msgid "+suffix or .suffix"
 msgstr "+suffix veya .suffix"
 
-#: app/src/ui/composer/mod.rs:496
+#: app/src/ui/composer/mod.rs:503
 msgid "Address Suffix"
 msgstr "Adres Soneki"
 
-#: app/src/ui/composer/mod.rs:508 app/src/ui/composer/mod.rs:513
+#: app/src/ui/composer/mod.rs:515 app/src/ui/composer/mod.rs:520
 msgid "New Masked Address"
 msgstr "Yeni Maskeli Adres"
 
-#: app/src/ui/composer/mod.rs:530
+#: app/src/ui/composer/mod.rs:537
 msgid "Masked"
 msgstr "Maskeli"
 
-#: app/src/ui/composer/mod.rs:558 app/src/ui/composer/mod.rs:559
+#: app/src/ui/composer/mod.rs:565 app/src/ui/composer/mod.rs:566
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "Gönderen"
 
-#: app/src/ui/composer/mod.rs:564 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:571 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "Kime"
 
-#: app/src/ui/composer/mod.rs:568
+#: app/src/ui/composer/mod.rs:575
 msgid "Cc"
 msgstr "Bilgi"
 
-#: app/src/ui/composer/mod.rs:570
+#: app/src/ui/composer/mod.rs:577
 msgid "Bcc"
 msgstr "Gizli"
 
-#: app/src/ui/composer/mod.rs:580 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:587 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "Konu"
 
-#: app/src/ui/composer/mod.rs:644
+#: app/src/ui/composer/mod.rs:651
 msgid "Formatting"
 msgstr "Biçimlendirme"
 
-#: app/src/ui/composer/mod.rs:663 app/src/ui/composer/mod.rs:1368
+#: app/src/ui/composer/mod.rs:670 app/src/ui/composer/mod.rs:1392
 msgid "Forwarded Message"
 msgstr "Yönlendirilen İleti"
 
-#: app/src/ui/composer/mod.rs:1201
+#: app/src/ui/composer/mod.rs:1225
 msgid "Hide Cc and Bcc"
 msgstr "Bilgi ve Gizli'yi Gizle"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1310
 msgid "Remove Quoted Text"
 msgstr "Alıntılanan Metni Kaldır"
 
-#: app/src/ui/composer/mod.rs:1287
+#: app/src/ui/composer/mod.rs:1311
 msgid "Do Not Forward the Original"
 msgstr "Özgün İletiyi Yönlendirme"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1421
 msgid "Quoted text removed"
 msgstr "Alıntılanan metin kaldırıldı"
 
-#: app/src/ui/composer/mod.rs:1398
+#: app/src/ui/composer/mod.rs:1422
 msgid "Forwarded message removed"
 msgstr "Yönlendirilen ileti kaldırıldı"
 
-#: app/src/ui/composer/mod.rs:1503
+#: app/src/ui/composer/mod.rs:1527
 msgid "Sending from {address}"
 msgstr "Gönderen: {address}"
 
-#: app/src/ui/composer/mod.rs:1509
+#: app/src/ui/composer/mod.rs:1533
 msgid "Could not make a masked address: {reason}"
 msgstr "Maskeli adres oluşturulamadı: {reason}"
 
-#: app/src/ui/composer/mod.rs:1573
+#: app/src/ui/composer/mod.rs:1597
 msgid "Scheduled to send {when}"
 msgstr "Gönderim zamanı: {when}"
 
-#: app/src/ui/composer/mod.rs:1597 app/src/ui/composer/mod.rs:2032
+#: app/src/ui/composer/mod.rs:1621 app/src/ui/composer/mod.rs:2056
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Bir gönderen seçip izin verilen bir adres soneki girin."
 
-#: app/src/ui/composer/mod.rs:1769 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1793 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Göndermeyi İptal Et"
 
-#: app/src/ui/composer/mod.rs:1922 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1946 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Gönderiliyor…"
 
-#: app/src/ui/composer/mod.rs:1962
+#: app/src/ui/composer/mod.rs:1986
 msgid "Attachment Missing?"
 msgstr "Ek Eksik mi?"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1988
 msgid "The message says “{sentence}” and carries no file."
 msgstr "İleti “{sentence}” diyor ancak dosya içermiyor."
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:1993
 msgid "Add Attachment"
 msgstr "Ek Ekle"
 
-#: app/src/ui/composer/mod.rs:1970
+#: app/src/ui/composer/mod.rs:1994
 msgid "Send Anyway"
 msgstr "Yine de Gönder"
 
-#: app/src/ui/composer/mod.rs:1988
+#: app/src/ui/composer/mod.rs:2012
 msgid "Send Without Encryption?"
 msgstr "Şifrelemeden Gönderilsin mi?"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:2014
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Bu iletinin şifreli gönderilmesi istendi ancak şifrelenemiyor. {reason}"
 
-#: app/src/ui/composer/mod.rs:1996
+#: app/src/ui/composer/mod.rs:2020
 msgid "Send Readable"
 msgstr "Okunabilir Gönder"
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2035
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail, sistem tepsisinde olsa bile çalışırken bu saatte gönderir."
 
-#: app/src/ui/composer/mod.rs:2012
+#: app/src/ui/composer/mod.rs:2036
 msgid "Schedule"
 msgstr "Zamanla"
 
-#: app/src/ui/composer/mod.rs:2074
+#: app/src/ui/composer/mod.rs:2098
 msgid "Draft saved, encrypted to your own key"
 msgstr "Taslak, kendi anahtarınızla şifrelenerek kaydedildi"
 
-#: app/src/ui/composer/mod.rs:2076
+#: app/src/ui/composer/mod.rs:2100
 msgid "Draft saved"
 msgstr "Taslak kaydedildi"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2136
 msgid "Save as Draft?"
 msgstr "Taslak Olarak Kaydedilsin mi?"
 
-#: app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2140
 msgid "Discard"
 msgstr "Vazgeç"
 
-#: app/src/ui/composer/mod.rs:2118
+#: app/src/ui/composer/mod.rs:2142
 msgid "Save Draft"
 msgstr "Taslağı Kaydet"
 
-#: app/src/ui/composer/mod.rs:2159
+#: app/src/ui/composer/mod.rs:2183
 msgid "Attach Files"
 msgstr "Dosya Ekle"
 
-#: app/src/ui/composer/mod.rs:2195
+#: app/src/ui/composer/mod.rs:2219
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2241
+#: app/src/ui/composer/mod.rs:2265
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "{file} dosyasını aç, {size}"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2318
 msgid "Bold (Ctrl+B)"
 msgstr "Kalın (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2319
 msgid "Italic (Ctrl+I)"
 msgstr "İtalik (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2322
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Üstü Çizili (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2301
+#: app/src/ui/composer/mod.rs:2325
 msgid "Code (Ctrl+E)"
 msgstr "Kod (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2338
+#: app/src/ui/composer/mod.rs:2362
 msgid "Link (Ctrl+K)"
 msgstr "Bağlantı (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2348
+#: app/src/ui/composer/mod.rs:2372
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Madde İşaretli Liste (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2377
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Numaralı Liste (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2358
+#: app/src/ui/composer/mod.rs:2382
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Alıntı (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2375
+#: app/src/ui/composer/mod.rs:2399
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Resim Ekle (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2409
 msgid "Paragraph"
 msgstr "Paragraf"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2410
 msgid "Heading 1"
 msgstr "Başlık 1"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2411
 msgid "Heading 2"
 msgstr "Başlık 2"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2412
 msgid "Heading 3"
 msgstr "Başlık 3"
 
-#: app/src/ui/composer/mod.rs:2389
+#: app/src/ui/composer/mod.rs:2413
 msgid "Code Block"
 msgstr "Kod Bloğu"
 
-#: app/src/ui/composer/mod.rs:2403
+#: app/src/ui/composer/mod.rs:2427
 msgid "Turn Markdown into Formatting"
 msgstr "Markdown'ı Biçimlendirmeye Dönüştür"
 
-#: app/src/ui/composer/mod.rs:2407
+#: app/src/ui/composer/mod.rs:2431
 msgid "Clear Formatting"
 msgstr "Biçimlendirmeyi Temizle"
 
-#: app/src/ui/composer/mod.rs:2413
+#: app/src/ui/composer/mod.rs:2437
 msgid "Write in Markdown"
 msgstr "Markdown ile Yaz"
 
-#: app/src/ui/composer/mod.rs:2420 app/src/ui/composer/mod.rs:2424
+#: app/src/ui/composer/mod.rs:2444 app/src/ui/composer/mod.rs:2448
 msgid "More Formatting"
 msgstr "Diğer Biçimlendirmeler"
 
-#: app/src/ui/composer/mod.rs:2461
+#: app/src/ui/composer/mod.rs:2485
 msgid "Add a Link"
 msgstr "Bağlantı Ekle"
 
-#: app/src/ui/composer/mod.rs:2467
+#: app/src/ui/composer/mod.rs:2491
 msgid "Text"
 msgstr "Metin"
 
-#: app/src/ui/composer/mod.rs:2479
+#: app/src/ui/composer/mod.rs:2503
 msgid "Add Link"
 msgstr "Bağlantı Ekle"
 
-#: app/src/ui/composer/mod.rs:2515
+#: app/src/ui/composer/mod.rs:2539
 msgid "Markdown formatted"
 msgstr "Markdown biçimlendirildi"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2658
 msgid "Pasted as rich text"
 msgstr "Zengin metin olarak yapıştırıldı"
 
-#: app/src/ui/composer/mod.rs:2635
+#: app/src/ui/composer/mod.rs:2659
 msgid "Paste as Plain Text"
 msgstr "Düz Metin Olarak Yapıştır"
 
-#: app/src/ui/composer/mod.rs:2669
+#: app/src/ui/composer/mod.rs:2693
 msgid "Editing as Markdown"
 msgstr "Markdown olarak düzenleniyor"
 
-#: app/src/ui/composer/mod.rs:2705
+#: app/src/ui/composer/mod.rs:2729
 msgid "Images"
 msgstr "Resimler"
 
-#: app/src/ui/composer/mod.rs:2710
+#: app/src/ui/composer/mod.rs:2734
 msgid "Insert Image"
 msgstr "Resim Ekle"
 
-#: app/src/ui/composer/mod.rs:2754
+#: app/src/ui/composer/mod.rs:2778
 msgid "Could not read the file: {reason}"
 msgstr "Dosya okunamadı: {reason}"
 
-#: app/src/ui/composer/mod.rs:2836
+#: app/src/ui/composer/mod.rs:2860
 msgid "No Templates Yet"
 msgstr "Henüz Şablon Yok"
 
-#: app/src/ui/composer/mod.rs:2886
+#: app/src/ui/composer/mod.rs:2910
 msgid "Save as Template"
 msgstr "Şablon Olarak Kaydet"
 
-#: app/src/ui/composer/mod.rs:2888
+#: app/src/ui/composer/mod.rs:2912
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "{{first_name}} gibi yer tutucular her kullanımda doldurulur."
 
-#: app/src/ui/composer/mod.rs:2911 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2935 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Şablona bir ad verin"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2943
 msgid "Template saved"
 msgstr "Şablon kaydedildi"
 
-#: app/src/ui/composer/mod.rs:2922
+#: app/src/ui/composer/mod.rs:2946
 msgid "Template not saved: {reason}"
 msgstr "Şablon kaydedilmedi: {reason}"
 
-#: app/src/ui/composer/mod.rs:3045
+#: app/src/ui/composer/mod.rs:3069
 msgid "This looks like Markdown"
 msgstr "Bu metin Markdown gibi görünüyor"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3075
 msgid "Format"
 msgstr "Biçimlendir"
 
-#: app/src/ui/composer/mod.rs:3052
+#: app/src/ui/composer/mod.rs:3076
 msgid "Turn the Markdown into rich text"
 msgstr "Markdown'ı zengin metne dönüştür"
 
-#: app/src/ui/composer/mod.rs:3058 app/src/ui/composer/mod.rs:3062
+#: app/src/ui/composer/mod.rs:3082 app/src/ui/composer/mod.rs:3086
 msgid "Dismiss"
 msgstr "Kapat"
 
-#: app/src/ui/composer/mod.rs:3145
+#: app/src/ui/composer/mod.rs:3169
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "Taslak bu bilgisayarda tutulur. Daha sonra burada tamamlayabilirsiniz."
 
-#: app/src/ui/composer/mod.rs:3149
+#: app/src/ui/composer/mod.rs:3173
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Taslak {provider} üzerinde tutulur. Daha sonra herhangi bir cihazda "
 "tamamlayabilirsiniz."
 
-#: app/src/ui/composer/mod.rs:3153
+#: app/src/ui/composer/mod.rs:3177
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
 "Taslak hesabınızda tutulur. Daha sonra herhangi bir cihazda "
 "tamamlayabilirsiniz."
 
-#: app/src/ui/composer/recipients.rs:57
+#: app/src/ui/composer/recipients.rs:165
 msgid "{recipient}, not an address"
 msgstr "{recipient}, adres değil"
 
-#: app/src/ui/composer/recipients.rs:323
+#: app/src/ui/composer/recipients.rs:491
 msgid "Remove {recipient}"
 msgstr "{recipient} kaldır"
 
-#: app/src/ui/composer/recipients.rs:337
+#: app/src/ui/composer/recipients.rs:505
 msgid "Press Delete to remove"
 msgstr "Kaldırmak için Delete tuşuna basın"
 
