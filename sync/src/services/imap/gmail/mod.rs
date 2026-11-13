@@ -26,9 +26,9 @@ use mailrs_mime::Parts;
 use super::{BATCH_LIMIT, Imap, ImapApi, Submit};
 use crate::api::{DraftRef, SavedDraft};
 use crate::services::{
-    Backfill, Changes, Found, IdentityService, KeywordsPage, MailBackend, MailCapabilities,
-    RawMessage, Relocated, RemoteRef, SearchQuery, SendAsAddress, Storage, SyncState, Unapplied,
-    Want,
+    Backfill, Changes, Found, IdentityService, KeywordsPage, Landing, MailBackend,
+    MailCapabilities, RawMessage, Relocated, RemoteRef, SearchQuery, SendAsAddress, Storage,
+    SyncState, Unapplied, Want,
 };
 use crate::{BackendError, MailOp};
 use labels::GmailPlace;
@@ -272,6 +272,18 @@ impl<I: ImapApi, S: Submit> MailBackend for GmailImap<I, S> {
 
     async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
         self.0.append(raw, mailbox).await
+    }
+
+    fn lands_copies(&self) -> bool {
+        true
+    }
+
+    /// APPEND into the folder, with the arrival hour. The message's
+    /// Gmail labels beyond the destination do not ride along: on this
+    /// kind of account they are `X-GM-LABELS`, which APPEND takes only
+    /// in a command this client does not speak yet.
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        self.0.land_copy(raw, at).await
     }
 
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {

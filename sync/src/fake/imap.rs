@@ -1350,6 +1350,7 @@ impl ImapApi for FakeImap {
         &self,
         mailbox: &str,
         flags: &[String],
+        at: Option<i64>,
         raw: &[u8],
     ) -> Result<Option<AppendUid>, ImapError> {
         check_name(mailbox)?;
@@ -1366,7 +1367,7 @@ impl ImapApi for FakeImap {
             let uid = m.add(
                 raw.to_vec(),
                 flags.iter().cloned().collect(),
-                Utc::now().timestamp_millis(),
+                at.unwrap_or_else(|| Utc::now().timestamp_millis()),
             );
             Ok(uidplus.then_some(AppendUid {
                 uidvalidity: m.uidvalidity.wrapping_add(ahead),
@@ -2277,6 +2278,7 @@ mod tests {
             .append(
                 "Sent",
                 &flags(&["\\Seen"]),
+                None,
                 &raw_message("s", "sent", MARCH, None),
             )
             .await
@@ -2704,13 +2706,21 @@ mod tests {
         fake.with(|s| s.mailbox_mut("Drafts").unmade = true);
         let selected = fake.select("Drafts", None).await.unwrap().uidvalidity;
         let raw = raw_message("d", "draft", MARCH, None);
-        let first = fake.append("Drafts", &[], &raw).await.unwrap().unwrap();
+        let first = fake
+            .append("Drafts", &[], None, &raw)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(first.uidvalidity, selected + 1);
         assert_eq!(
             fake.select("Drafts", None).await.unwrap().uidvalidity,
             selected
         );
-        let second = fake.append("Drafts", &[], &raw).await.unwrap().unwrap();
+        let second = fake
+            .append("Drafts", &[], None, &raw)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(second.uidvalidity, selected);
     }
 

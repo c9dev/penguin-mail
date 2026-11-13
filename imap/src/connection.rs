@@ -15,11 +15,13 @@ use async_imap::{Authenticator, Client, Session};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::time::Instant;
 
+use mailrs_domain::EpochMillis;
+
 use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SectionsReader, SelectReader,
-    StructureReader, SubscribedReader,
+    StructureReader, SubscribedReader, internal_date_text,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::types::{check_label, label_text};
@@ -656,13 +658,25 @@ impl<S: Stream> Conn<S> {
         .await
     }
 
+    /// Appends `raw` to `mailbox`. `at` becomes the copy's INTERNALDATE,
+    /// so a message carried in from another account keeps the hour it
+    /// arrived.
     pub(crate) async fn append(
         &mut self,
         mailbox: &str,
         flags: &[String],
+        at: Option<EpochMillis>,
         raw: &[u8],
     ) -> Result<Option<AppendUid>, ImapError> {
-        let head = format!("APPEND {} ({}) ", quoted(mailbox)?, flag_list(flags)?);
+        let head = match at {
+            Some(at) => format!(
+                "APPEND {} ({}) \"{}\" ",
+                quoted(mailbox)?,
+                flag_list(flags)?,
+                internal_date_text(at)
+            ),
+            None => format!("APPEND {} ({}) ", quoted(mailbox)?, flag_list(flags)?),
+        };
         let mut reader = AppendUidReader::default();
         self.exec_with_literals(
             &head,
@@ -1615,7 +1629,7 @@ mod tests {
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
         let raw = b"Subject: sent\r\n\r\nhello\r\n";
         let uid = conn
-            .append("Sent", &["\\Seen".to_string()], raw)
+            .append("Sent", &["\\Seen".to_string()], None, raw)
             .await
             .unwrap();
         assert_eq!(
@@ -1629,6 +1643,31 @@ mod tests {
             seen(&log).contains(
                 &"APPEND \"Sent\" (\\Seen) {24}Subject: sent\r\n\r\nhello\r\n".to_string()
             )
+        );
+    }
+
+    #[tokio::test]
+    async fn append_files_a_carried_copy_under_the_date_it_arrived_at_home() {
+        let log = log();
+        let stream = pipe(GREETING, server(ALL, log.clone(), |_| vec!["{tag} OK".into()]));
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        // Noon on New Year's Day 2025, in UTC.
+        let at = 1_735_732_800_000;
+        conn.append(
+            "Work",
+            &["\\Seen".to_string(), "\\Flagged".to_string()],
+            Some(at),
+            b"hi\r\n",
+        )
+        .await
+        .unwrap();
+        assert!(
+            seen(&log).contains(
+                &"APPEND \"Work\" (\\Seen \\Flagged) \"01-Jan-2025 12:00:00 +0000\" {4}hi\r\n"
+                    .to_string()
+            ),
+            "{:?}",
+            seen(&log)
         );
     }
 

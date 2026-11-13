@@ -72,6 +72,8 @@ pub mod cost {
     pub const BATCH_MODIFY: u32 = 50;
     pub const BATCH_DELETE: u32 = 50;
     pub const SEND: u32 = 100;
+    /// Filing a message Gmail did not receive itself, with `messages.insert`.
+    pub const INSERT: u32 = 5;
     pub const DRAFT_CREATE: u32 = 10;
     pub const DRAFT_UPDATE: u32 = 15;
     pub const DRAFT_DELETE: u32 = 10;
@@ -449,6 +451,29 @@ impl GmailClient {
         let body = raw_message(raw, thread_id);
         self.call(cost::SEND, || {
             self.http().post(self.url("messages/send")).json(&body)
+        })
+        .await
+    }
+
+    /// Files a complete RFC 822 message Gmail never received, as the copy
+    /// of a move from another account: it arrives under `label_ids`, and
+    /// `at` becomes its internalDate, so the list shows the hour it first
+    /// came rather than the hour it was carried.
+    pub async fn insert(
+        &self,
+        raw: &[u8],
+        label_ids: &[String],
+        at: Option<i64>,
+    ) -> Result<Message, GmailError> {
+        let mut body = raw_message(raw, None);
+        if !label_ids.is_empty() {
+            body["labelIds"] = json!(label_ids);
+        }
+        if let Some(at) = at {
+            body["internalDate"] = json!(at.to_string());
+        }
+        self.call(cost::INSERT, || {
+            self.http().post(self.url("messages")).json(&body)
         })
         .await
     }
