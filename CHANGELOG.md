@@ -31,6 +31,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Paste clipboard images into a draft with Paste or Cmd/Ctrl+V, and open attached files from their rows before sending.
+
 - Deleting a conversation from a smart mailbox asks before also moving matching sent messages to Trash, with a separate remember choice for each smart mailbox.
 
 - Customize Mailboxes separates sections into tabs and places available mailboxes beside editable, draggable Favorites.

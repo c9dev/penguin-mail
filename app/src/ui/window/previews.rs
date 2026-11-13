@@ -15,7 +15,7 @@ use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 /// The folder under the cache the copies go in.
-pub(super) fn folder() -> PathBuf {
+pub(crate) fn folder() -> PathBuf {
     gtk::glib::user_cache_dir()
         .join("penguin-mail")
         .join("previews")
@@ -23,7 +23,7 @@ pub(super) fn folder() -> PathBuf {
 
 /// Writes `data` under `dir` as `name`, or `name (2)` and so on when that
 /// is taken, readable by the person alone. Runs on any thread.
-pub(super) fn write(dir: &Path, name: &str, data: &[u8]) -> io::Result<PathBuf> {
+pub(crate) fn write(dir: &Path, name: &str, data: &[u8]) -> io::Result<PathBuf> {
     fs::DirBuilder::new()
         .recursive(true)
         .mode(0o700)
