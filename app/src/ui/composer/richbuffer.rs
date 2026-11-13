@@ -11,23 +11,26 @@ use gtk::{gdk, glib, pango};
 
 use mailrs_domain::translate::gettext;
 
+use super::web_picture;
 use crate::compose::OutgoingAttachment;
 use crate::richtext::{Block, BlockKind, RichBody, Span, Style};
 
-/// A picture shown in the text: the anchor it sits in, the `cid:` the
-/// message refers to it by, and the words that describe it, which go out
-/// as its alt text.
+/// A picture shown in the text: the anchor it sits in, where the picture
+/// comes from, and the words that describe it, which go out as its alt
+/// text.
 #[derive(Debug, Clone)]
 pub struct Placed {
     pub anchor: gtk::TextChildAnchor,
-    pub cid: String,
+    /// The `cid:` the message refers to the picture by, or the address the
+    /// message names it by when the bytes stay on someone else's computer.
+    pub src: String,
     pub alt: String,
 }
 
 impl Placed {
     /// The picture as a span of the body.
     pub fn span(&self) -> Span {
-        Span::image(self.alt.as_str(), format!("cid:{}", self.cid))
+        Span::image(self.alt.as_str(), self.src.as_str())
     }
 }
 
@@ -488,27 +491,35 @@ pub fn write(
         for span in &block.spans {
             let mut at = buffer.end_iter();
             if let Some(src) = &span.image {
-                let cid = src.strip_prefix("cid:").unwrap_or(src);
-                let found = attachments
-                    .iter()
-                    .find(|a| a.content_id.as_deref() == Some(cid));
-                match found {
-                    Some(attachment) => {
-                        let start = at.offset();
-                        insert_image(view, &mut at, cid, &span.text, &attachment.data, anchors);
-                        let (from, to) = (buffer.iter_at_offset(start), buffer.end_iter());
-                        buffer.apply_tag_by_name(tag, &from, &to);
-                    }
-                    // A draft reopened without its pictures says where one
-                    // was, rather than losing the line it sat on.
-                    None => {
-                        let name = match span.text.trim() {
-                            "" => "image".to_string(),
-                            alt => alt.to_string(),
-                        };
-                        buffer.insert_with_tags_by_name(&mut at, &format!("[{name}]"), &[tag]);
-                    }
+                let carried = match src.strip_prefix("cid:") {
+                    Some(cid) => attachments
+                        .iter()
+                        .find(|a| a.content_id.as_deref() == Some(cid))
+                        .map(|a| (cid, a)),
+                    None => None,
+                };
+                let start = at.offset();
+                if let Some((cid, attachment)) = carried {
+                    insert_image(view, &mut at, cid, &span.text, &attachment.data, anchors);
+                // A picture inside a quote came with someone else's mail.
+                // Asking its host for a copy would tell that host this
+                // person has read the message it arrived in, so only the
+                // writer's own lines are asked.
+                } else if block.kind != BlockKind::Quote && web_picture::drawable(src) {
+                    insert_web_picture(view, &mut at, src, &span.text, anchors);
+                } else {
+                    // With no bytes to draw and no address to ask, the words
+                    // that describe the picture say where one was, rather
+                    // than the line it sat on being lost.
+                    let name = match span.text.trim() {
+                        "" => "image".to_string(),
+                        alt => alt.to_string(),
+                    };
+                    buffer.insert_with_tags_by_name(&mut at, &format!("[{name}]"), &[tag]);
+                    continue;
                 }
+                let (from, to) = (buffer.iter_at_offset(start), buffer.end_iter());
+                buffer.apply_tag_by_name(tag, &from, &to);
                 continue;
             }
             let mut names: Vec<&str> = vec![tag];
@@ -703,6 +714,29 @@ pub fn insert_spans(
     }
 }
 
+/// Puts `picture` in at `at`, held by an anchor the reader maps back to
+/// `src`, described by `alt`.
+fn place(
+    view: &gtk::TextView,
+    at: &mut gtk::TextIter,
+    picture: &gtk::Picture,
+    src: &str,
+    alt: &str,
+    anchors: &mut Anchors,
+) {
+    let anchor = view.buffer().create_child_anchor(at);
+    view.add_child_at_anchor(picture, &anchor);
+    picture.set_visible(true);
+    keep_placed(
+        anchors,
+        Placed {
+            anchor,
+            src: src.to_string(),
+            alt: alt.to_string(),
+        },
+    );
+}
+
 /// Puts the picture in `data` at `at`, held by an anchor the reader maps
 /// back to `cid`, described by `alt`.
 pub fn insert_image(
@@ -714,17 +748,21 @@ pub fn insert_image(
     anchors: &mut Anchors,
 ) {
     let picture = new_picture(alt, data);
-    let anchor = view.buffer().create_child_anchor(at);
-    view.add_child_at_anchor(&picture, &anchor);
-    picture.set_visible(true);
-    keep_placed(
-        anchors,
-        Placed {
-            anchor,
-            cid: cid.to_string(),
-            alt: alt.to_string(),
-        },
-    );
+    place(view, at, &picture, &format!("cid:{cid}"), alt, anchors);
+}
+
+/// Puts the picture at `url` at `at`, held by an anchor the reader maps
+/// back to that address, described by `alt`. The message goes out naming
+/// the address, so the bytes are only ever fetched to show the writer.
+pub fn insert_web_picture(
+    view: &gtk::TextView,
+    at: &mut gtk::TextIter,
+    url: &str,
+    alt: &str,
+    anchors: &mut Anchors,
+) {
+    let picture = new_web_picture(alt, url);
+    place(view, at, &picture, url, alt, anchors);
 }
 
 /// Adds `placed` to `anchors`, and lets go of pictures no longer in the
@@ -817,6 +855,34 @@ pub fn new_picture(alt: &str, data: &[u8]) -> gtk::Picture {
             });
         }
     }
+    picture
+}
+
+/// A picture of the bytes at `url`, described by `alt`, not yet in the
+/// text. It shows a placeholder until a copy arrives, and keeps a
+/// placeholder when none does: the message names the address either way,
+/// and the reader's own client asks for the picture there.
+pub fn new_web_picture(alt: &str, url: &str) -> gtk::Picture {
+    let picture = gtk::Picture::new();
+    picture.set_can_shrink(true);
+    describe(&picture, alt);
+    show_placeholder(&picture, "image-x-generic-symbolic");
+    let weak = picture.downgrade();
+    let url = url.to_string();
+    glib::spawn_future_local(async move {
+        let texture = match web_picture::pull(&url).await {
+            Some(bytes) => crate::ui::texture::decode(bytes).await,
+            None => None,
+        };
+        // The composer may have closed while the picture was fetched.
+        let Some(picture) = weak.upgrade() else {
+            return;
+        };
+        match texture {
+            Some(texture) => show_picture(&picture, &texture),
+            None => show_placeholder(&picture, "image-missing-symbolic"),
+        }
+    });
     picture
 }
 
@@ -918,6 +984,8 @@ mod tests {
         typing_after_styled_words_carries_the_style_on();
         an_inserted_body_lands_at_the_cursor();
         a_picture_reads_back_where_it_sits();
+        a_picture_at_an_address_reads_back_that_address();
+        a_quoted_picture_keeps_its_words();
         a_picture_gdk_cannot_read_itself_waits_in_a_placeholder();
         super::super::editor::checks::run();
         super::super::clipboard::checks::run();
@@ -1169,6 +1237,52 @@ mod tests {
             .find_map(|widget| widget.downcast::<gtk::Picture>().ok())
             .expect("a picture sits in the anchor");
         assert_eq!(picture.alternative_text().as_deref(), Some("A red dot"));
+    }
+
+    /// A signature's logo arrives as Markdown naming an address, with no
+    /// bytes to draw it from. It still holds its place in the text, and the
+    /// body that goes out still names the address it was written with.
+    fn a_picture_at_an_address_reads_back_that_address() {
+        const LOGO: &str = "https://example.invalid/Logo.jpg";
+        let (view, buffer, mut anchors) = buffer();
+        let body = RichBody::from_markdown(&format!("![Logo]({LOGO})"));
+        write(&view, &body, &[], &mut anchors);
+        assert_eq!(anchors.len(), 1, "the picture has its place in the text");
+        let read_back = read(&buffer, &anchors);
+        assert_eq!(read_back, body, "{}", read_back.to_markdown());
+        assert!(
+            read_back.to_html().contains(&format!("src=\"{LOGO}\"")),
+            "{}",
+            read_back.to_html()
+        );
+        // A screen reader names the picture by the words that describe it.
+        let picture = anchors[0]
+            .anchor
+            .widgets()
+            .into_iter()
+            .find_map(|widget| widget.downcast::<gtk::Picture>().ok())
+            .expect("a picture sits in the anchor");
+        assert_eq!(picture.alternative_text().as_deref(), Some("Logo"));
+    }
+
+    /// Asking a stranger's server for a copy of a picture it sent would
+    /// tell that server that this person has read the mail it arrived in.
+    /// A quoted picture keeps the words that stand for it and is never
+    /// asked for.
+    fn a_quoted_picture_keeps_its_words() {
+        const LOGO: &str = "https://example.invalid/Logo.jpg";
+        let (view, buffer, mut anchors) = buffer();
+        let body = RichBody::from_markdown(&format!("> ![Logo]({LOGO})"));
+        assert!(
+            body.blocks
+                .iter()
+                .any(|block| block.kind == BlockKind::Quote),
+            "{}",
+            body.to_markdown()
+        );
+        write(&view, &body, &[], &mut anchors);
+        assert!(anchors.is_empty(), "no picture is drawn for a quote");
+        assert_eq!(read(&buffer, &anchors).to_plain(), "> [Logo]");
     }
 
     /// Bytes GDK does not read itself would go to glycin's sandboxed

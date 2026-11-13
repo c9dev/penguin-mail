@@ -55,12 +55,12 @@ pub struct Held {
 }
 
 /// A picture deleted from the body, kept for an Undo or a Redo that puts
-/// back the character that stood for it: the widget that showed it, the
-/// `cid:` the message knows it by, and the words that describe it.
+/// back the character that stood for it: the widget that showed it, where
+/// the picture comes from, and the words that describe it.
 #[derive(Debug, Clone)]
 struct KeptPicture {
     widget: gtk::Widget,
-    cid: String,
+    src: String,
     alt: String,
 }
 
@@ -425,7 +425,7 @@ impl Editor {
                     let placed = anchors.iter().find(|p| p.anchor == anchor)?;
                     Some(KeptPicture {
                         widget: anchor.widgets().into_iter().next()?,
-                        cid: placed.cid.clone(),
+                        src: placed.src.clone(),
                         alt: placed.alt.clone(),
                     })
                 });
@@ -488,7 +488,7 @@ impl Editor {
                     &mut self.anchors.borrow_mut(),
                     richbuffer::Placed {
                         anchor,
-                        cid: picture.cid,
+                        src: picture.src,
                         alt: picture.alt,
                     },
                 );
@@ -1152,7 +1152,7 @@ impl Editor {
             offset,
             KeptPicture {
                 widget: picture.upcast(),
-                cid: cid.to_string(),
+                src: format!("cid:{cid}"),
                 alt: alt.to_string(),
             },
         )));
@@ -1853,8 +1853,8 @@ pub(super) mod checks {
         texture.save_to_png_bytes().to_vec()
     }
 
-    /// The pictures the buffer shows, in order: the `cid:` of each and the
-    /// size it is drawn at.
+    /// The pictures the buffer shows, in order: where each one comes from
+    /// and the size it is drawn at.
     fn shown(editor: &Editor) -> Vec<(String, (i32, i32))> {
         let buffer = &editor.buffer;
         let anchors = editor.anchors.borrow();
@@ -1864,11 +1864,11 @@ pub(super) mod checks {
             if let Some(anchor) = iter.child_anchor()
                 && let Some(widget) = anchor.widgets().first()
             {
-                let cid = anchors
+                let src = anchors
                     .iter()
                     .find(|placed| placed.anchor == anchor)
-                    .map_or_else(String::new, |placed| placed.cid.clone());
-                found.push((cid, widget.size_request()));
+                    .map_or_else(String::new, |placed| placed.src.clone());
+                found.push((src, widget.size_request()));
             }
             if !iter.forward_char() {
                 break;

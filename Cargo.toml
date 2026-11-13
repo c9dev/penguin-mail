@@ -77,7 +77,9 @@ oo7 = "0.6.0"
 psl = "2.1.241"
 pulldown-cmark = "0.13.6"
 rand = "0.10.3"
-reqwest = { version = "0.13.5", features = ["json", "form", "query"] }
+# "stream" lets the composer stop reading a picture at its size limit
+# rather than at the end of whatever its host sends.
+reqwest = { version = "0.13.5", features = ["json", "form", "query", "stream"] }
 # Reads autoconfig files. It refuses a document type declaration, so a file
 # cannot expand entities.
 roxmltree = "0.21.1"
