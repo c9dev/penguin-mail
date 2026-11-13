@@ -448,8 +448,13 @@ impl Recipients {
         let mut chips = Vec::new();
         for (index, address) in self.addresses.borrow().iter().enumerate() {
             let valid = is_address(&address.email);
+            // A FlowBox gives every child in a row the width of the
+            // widest, so the pill asks for its own: otherwise its
+            // background runs past the Remove button of a short chip
+            // sitting beside a long one.
             let chip = gtk::Box::builder()
                 .spacing(4)
+                .halign(gtk::Align::Start)
                 .css_classes(if valid {
                     vec!["recipient-chip"]
                 } else {
