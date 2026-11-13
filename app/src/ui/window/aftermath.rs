@@ -156,7 +156,9 @@ fn moves_mail(action: &MailAction) -> bool {
         MailAction::Remind { .. }
         | MailAction::CancelReminder
         | MailAction::Mute { .. }
-        | MailAction::Label { .. } => true,
+        | MailAction::Label { .. }
+        // A carry to another account is the fullest move there is.
+        | MailAction::MoveTo { .. } => true,
         MailAction::Flag(_) | MailAction::DismissFollowUp => false,
     }
 }
@@ -173,6 +175,14 @@ pub(super) fn leaves(action: &MailAction, mailbox: &Mailbox) -> bool {
         }
         MailAction::CancelReminder => *mailbox == Mailbox::Reminders,
         MailAction::DismissFollowUp => *mailbox == Mailbox::FollowUp,
+        // A carry to another account leaves whatever list showed it:
+        // the account that held the mail no longer holds it, and a mark
+        // such as Flagged lists it again only as the other account's.
+        // Rows of the destination account's own, which a mixed drop
+        // carries along, take the ordinary label change instead and may
+        // well stay in view; pruning them early is a small cost paid to
+        // knowing the action, not each row, before the run.
+        MailAction::MoveTo { .. } => true,
         MailAction::Flag(_) | MailAction::Label { .. } => false,
     }
 }
