@@ -4198,8 +4198,8 @@ msgstr ""
 "зашифрованим вашим власним ключем, а на цьому комп'ютері немає ключа чи "
 "сертифіката для {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2100
-#: app/src/ui/composer/mod.rs:2103
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2265
+#: app/src/ui/composer/mod.rs:2268
 msgid "That account is not connected."
 msgstr "Цей обліковий запис не під'єднано."
 
@@ -4329,7 +4329,7 @@ msgstr "Стандартне шифрування (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Не зашифровано під час передавання"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2200
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2368
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} вкладення"
@@ -4380,8 +4380,8 @@ msgstr[2] "{named} та ще {count}"
 msgid "me"
 msgstr "я"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:619
-#: app/src/ui/composer/mod.rs:623
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:658
+#: app/src/ui/composer/mod.rs:662
 msgid "Show trimmed content"
 msgstr "Показати обрізаний вміст"
 
@@ -4543,7 +4543,7 @@ msgstr "Менше за {size}"
 msgid "Larger than {size}"
 msgstr "Більше за {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:960
+#: app/src/rules.rs:251 app/src/settings/mod.rs:964
 msgid "All mail"
 msgstr "Уся пошта"
 
@@ -4641,233 +4641,233 @@ msgstr "На цьому комп'ютері, поки відкрито Penguin M
 msgid "On the server"
 msgstr "На сервері"
 
-#: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
-#: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/settings/mod.rs:232 app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:876 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1163
 msgid "Off"
 msgstr "Вимкнено"
 
-#: app/src/settings/mod.rs:230
+#: app/src/settings/mod.rs:233
 msgid "Local Server"
 msgstr "Локальний сервер"
 
-#: app/src/settings/mod.rs:231
+#: app/src/settings/mod.rs:234
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:232
+#: app/src/settings/mod.rs:235
 msgid "Claude Subscription"
 msgstr "Передплата Claude"
 
-#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:260 app/src/ui/window.rs:3739
 #: app/src/ui/window.rs:3827
 msgid "Assistant"
 msgstr "Асистент"
 
-#: app/src/settings/mod.rs:258 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:261 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Переклад"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:262
+#: app/src/settings/mod.rs:265
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Відписка"
 
-#: app/src/settings/mod.rs:268
+#: app/src/settings/mod.rs:271
 msgid "Answers questions and acts on your mail"
 msgstr "Відповідає на запитання та виконує дії з вашою поштою"
 
-#: app/src/settings/mod.rs:269
+#: app/src/settings/mod.rs:272
 msgid "Translates a message when you ask"
 msgstr "Перекладає повідомлення на ваш запит"
 
-#: app/src/settings/mod.rs:271
+#: app/src/settings/mod.rs:274
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Читає сторінку відписки від розсилки, коли правила не впораються"
 
-#: app/src/settings/mod.rs:309
+#: app/src/settings/mod.rs:312
 msgid "Same as the Assistant"
 msgstr "Як в асистента"
 
-#: app/src/settings/mod.rs:439
+#: app/src/settings/mod.rs:442
 msgid "Claude's own only"
 msgstr "Лише власний пошук Claude"
 
-#: app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:443
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:444
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:445
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:621
+#: app/src/settings/mod.rs:625
 msgid "Rich text"
 msgstr "Форматований текст"
 
-#: app/src/settings/mod.rs:622
+#: app/src/settings/mod.rs:626
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:645 app/src/settings/mod.rs:667
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Автоматично"
 
-#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:646 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "понеділок"
 
-#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:647 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "неділя"
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:668
 msgid "12-hour (AM/PM)"
 msgstr "12-годинний (AM/PM)"
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:669
 msgid "24-hour"
 msgstr "24-годинний"
 
-#: app/src/settings/mod.rs:703
+#: app/src/settings/mod.rs:707
 msgid "When opened"
 msgstr "Під час відкриття"
 
-#: app/src/settings/mod.rs:704
+#: app/src/settings/mod.rs:708
 msgid "After 2 seconds"
 msgstr "Через 2 секунди"
 
-#: app/src/settings/mod.rs:705
+#: app/src/settings/mod.rs:709
 msgid "Only when I choose"
 msgstr "Лише коли я виберу"
 
-#: app/src/settings/mod.rs:721 app/src/settings/mod.rs:739
+#: app/src/settings/mod.rs:725 app/src/settings/mod.rs:743
 msgid "Ask each time"
 msgstr "Питати щоразу"
 
-#: app/src/settings/mod.rs:722
+#: app/src/settings/mod.rs:726
 msgid "Always load"
 msgstr "Завжди завантажувати"
 
-#: app/src/settings/mod.rs:740
+#: app/src/settings/mod.rs:744
 msgid "Never ask"
 msgstr "Ніколи не питати"
 
-#: app/src/settings/mod.rs:767
+#: app/src/settings/mod.rs:771
 msgid "No Preview"
 msgstr "Без попереднього перегляду"
 
-#: app/src/settings/mod.rs:768
+#: app/src/settings/mod.rs:772
 msgid "1 Line"
 msgstr "1 рядок"
 
-#: app/src/settings/mod.rs:769
+#: app/src/settings/mod.rs:773
 msgid "2 Lines"
 msgstr "2 рядки"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:800
 msgid "Short (80 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:801
 msgid "Medium (140 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:802
 msgid "Long (280 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:836
 msgid "Small"
 msgstr "Малий"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:837
 msgid "Default"
 msgstr "Типовий"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:838
 msgid "Large"
 msgstr "Великий"
 
-#: app/src/settings/mod.rs:835
+#: app/src/settings/mod.rs:839
 msgid "Larger"
 msgstr "Більший"
 
-#: app/src/settings/mod.rs:873
+#: app/src/settings/mod.rs:877
 msgid "5 seconds"
 msgstr "5 секунд"
 
-#: app/src/settings/mod.rs:874
+#: app/src/settings/mod.rs:878
 msgid "10 seconds"
 msgstr "10 секунд"
 
-#: app/src/settings/mod.rs:875
+#: app/src/settings/mod.rs:879
 msgid "20 seconds"
 msgstr "20 секунд"
 
-#: app/src/settings/mod.rs:876
+#: app/src/settings/mod.rs:880
 msgid "30 seconds"
 msgstr "30 секунд"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:897
 msgid "Follow system"
 msgstr "Як у системі"
 
-#: app/src/settings/mod.rs:894
+#: app/src/settings/mod.rs:898
 msgid "Light"
 msgstr "Світла"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:899
 msgid "Dark"
 msgstr "Темна"
 
-#: app/src/settings/mod.rs:929
+#: app/src/settings/mod.rs:933
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Кожну {count} секунду"
 msgstr[1] "Кожні {count} секунди"
 msgstr[2] "Кожні {count} секунд"
 
-#: app/src/settings/mod.rs:937
+#: app/src/settings/mod.rs:941
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Кожну {count} хвилину"
 msgstr[1] "Кожні {count} хвилини"
 msgstr[2] "Кожні {count} хвилин"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:958
 msgid "2 weeks"
 msgstr "2 тижні"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:959
 msgid "30 days"
 msgstr "30 днів"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:960
 msgid "90 days"
 msgstr "90 днів"
 
-#: app/src/settings/mod.rs:957
+#: app/src/settings/mod.rs:961
 msgid "1 year"
 msgstr "1 рік"
 
-#: app/src/settings/mod.rs:958
+#: app/src/settings/mod.rs:962
 msgid "2 years"
 msgstr "2 роки"
 
-#: app/src/settings/mod.rs:959
+#: app/src/settings/mod.rs:963
 msgid "5 years"
 msgstr "5 років"
 
-#: app/src/settings/mod.rs:981
+#: app/src/settings/mod.rs:985
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4876,20 +4876,20 @@ msgstr ""
 "займає багато місця на диску й пам'яті, а старіша пошта завантажується у "
 "фоновому режимі."
 
-#: app/src/settings/mod.rs:983
+#: app/src/settings/mod.rs:987
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Усе у «Вхідних» теж залишається, а старішу пошту й далі можна знайти пошуком"
 
-#: app/src/settings/mod.rs:990
+#: app/src/settings/mod.rs:994
 msgid "256 MB"
 msgstr "256 МБ"
 
-#: app/src/settings/mod.rs:991
+#: app/src/settings/mod.rs:995
 msgid "1 GB"
 msgstr "1 ГБ"
 
-#: app/src/settings/mod.rs:992
+#: app/src/settings/mod.rs:996
 msgid "4 GB"
 msgstr "4 ГБ"
 
@@ -5069,8 +5069,8 @@ msgstr "Позначити все як прочитане"
 msgid "Open Penguin Mail"
 msgstr "Відкрити Penguin Mail"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
-#: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
+#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:411
+#: app/src/ui/composer/mod.rs:714 app/src/ui/composer/mod.rs:1625
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "Нове повідомлення"
@@ -5089,7 +5089,7 @@ msgstr "Що нового у {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1223 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Перевірити оновлення"
 
@@ -5271,8 +5271,8 @@ msgstr "Копіювати посилання"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
-#: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/mod.rs:2068 app/src/ui/composer/mod.rs:2283
+#: app/src/ui/composer/mod.rs:2646 app/src/ui/composer/mod.rs:3065
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5435,7 +5435,7 @@ msgstr ""
 "Penguin Mail зберігає на цьому комп'ютері кожне завантажене повідомлення."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1584
 msgid "Days"
 msgstr "Дні"
 
@@ -5677,7 +5677,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1930
+#: app/src/ui/composer/mod.rs:426 app/src/ui/composer/mod.rs:2003
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Надіслати"
@@ -5840,7 +5840,7 @@ msgid "No models found."
 msgstr "Моделей не знайдено."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2257
+#: app/src/ui/composer/mod.rs:2425
 msgid "Remove {file}"
 msgstr "Прибрати {file}"
 
@@ -5883,7 +5883,7 @@ msgid "Edit {server}"
 msgstr "Змінити {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2421 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "Прибрати"
@@ -5927,7 +5927,7 @@ msgstr ""
 "з'єднується із сервером через HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2892 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:3060 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Назва"
@@ -5963,7 +5963,7 @@ msgstr "Перевірити"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:3065
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6460,7 +6460,7 @@ msgid "Declined"
 msgstr "Відхилено"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1390
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6547,7 +6547,7 @@ msgstr "Лише нові"
 msgid "New and existing"
 msgstr "Нові й наявні"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:592
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:631
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -6575,11 +6575,11 @@ msgstr "Дата завершення"
 msgid "End time"
 msgstr "Час завершення"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1536
 msgid "Starts"
 msgstr "Початок"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1538
 msgid "Ends"
 msgstr "Завершення"
 
@@ -6721,7 +6721,7 @@ msgstr "Вивантаження {file}"
 msgid "Could not attach {file}: {reason}"
 msgstr "Не вдалося вкласти {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
+#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:455
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
@@ -7262,7 +7262,7 @@ msgstr "Увесь день"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1404 app/src/ui/preferences.rs:1592
 msgid "%a"
 msgstr "%a"
 
@@ -7278,7 +7278,7 @@ msgstr "Вилучено «{title}»"
 msgid "Could not delete the event: {reason}"
 msgstr "Не вдалося вилучити подію: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1402
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1462
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7898,407 +7898,407 @@ msgstr "Не вдалося відкрити {file}: {reason}"
 #. Attach Files moves here on a narrow window, where its button goes
 #. so Send keeps its word; the action is off, and the item hidden,
 #. while the button shows.
-#: app/src/ui/composer/mod.rs:150
+#: app/src/ui/composer/mod.rs:153
 msgid "Attach Files…"
 msgstr "Вкласти файли…"
 
-#: app/src/ui/composer/mod.rs:153 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:156 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "Шаблони"
 
-#: app/src/ui/composer/mod.rs:154 app/src/ui/composer/mod.rs:1034
+#: app/src/ui/composer/mod.rs:157 app/src/ui/composer/mod.rs:1094
 msgid "Preview"
 msgstr "Попередній перегляд"
 
-#: app/src/ui/composer/mod.rs:158
+#: app/src/ui/composer/mod.rs:161
 msgid "Sign"
 msgstr "Підписати"
 
-#: app/src/ui/composer/mod.rs:159
+#: app/src/ui/composer/mod.rs:162
 msgid "Encrypt"
 msgstr "Зашифрувати"
 
-#: app/src/ui/composer/mod.rs:167
+#: app/src/ui/composer/mod.rs:170
 msgid "Request Read Receipt"
 msgstr "Запитати підтвердження прочитання"
 
-#: app/src/ui/composer/mod.rs:381 app/src/ui/conversation.rs:1804
+#: app/src/ui/composer/mod.rs:420 app/src/ui/conversation.rs:1804
 msgid "Choose a Time…"
 msgstr "Вибрати час…"
 
-#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2010
+#: app/src/ui/composer/mod.rs:431 app/src/ui/composer/mod.rs:2083
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "Надіслати пізніше"
 
-#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1609
+#: app/src/ui/composer/mod.rs:433 app/src/ui/composer/mod.rs:1669
 msgid "Send (Ctrl+Enter)"
 msgstr "Надіслати (Ctrl+Enter)"
 
-#: app/src/ui/composer/mod.rs:398
+#: app/src/ui/composer/mod.rs:437
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "Вкласти файли (Ctrl+Shift+A)"
 
-#: app/src/ui/composer/mod.rs:405
+#: app/src/ui/composer/mod.rs:444
 msgid "Save as Template…"
 msgstr "Зберегти як шаблон…"
 
-#: app/src/ui/composer/mod.rs:422
+#: app/src/ui/composer/mod.rs:461
 msgid "Add a recipient this computer can encrypt to."
 msgstr "Додайте отримувача, для якого цей комп'ютер може шифрувати."
 
-#: app/src/ui/composer/mod.rs:467
+#: app/src/ui/composer/mod.rs:506
 msgid "Recipients"
 msgstr "Отримувачі"
 
-#: app/src/ui/composer/mod.rs:468
+#: app/src/ui/composer/mod.rs:507
 msgid "Carbon copy"
 msgstr "Копія"
 
-#: app/src/ui/composer/mod.rs:469
+#: app/src/ui/composer/mod.rs:508
 msgid "Blind carbon copy"
 msgstr "Прихована копія"
 
-#: app/src/ui/composer/mod.rs:481
+#: app/src/ui/composer/mod.rs:520
 msgid "Cc/Bcc"
 msgstr "Копія/прихована копія"
 
-#: app/src/ui/composer/mod.rs:482 app/src/ui/composer/mod.rs:1203
+#: app/src/ui/composer/mod.rs:521 app/src/ui/composer/mod.rs:1263
 msgid "Show Cc and Bcc"
 msgstr "Показати копію та приховану копію"
 
-#: app/src/ui/composer/mod.rs:493
+#: app/src/ui/composer/mod.rs:532
 msgid "+suffix or .suffix"
 msgstr "+суфікс або .суфікс"
 
-#: app/src/ui/composer/mod.rs:496
+#: app/src/ui/composer/mod.rs:535
 msgid "Address Suffix"
 msgstr "Суфікс адреси"
 
-#: app/src/ui/composer/mod.rs:508 app/src/ui/composer/mod.rs:513
+#: app/src/ui/composer/mod.rs:547 app/src/ui/composer/mod.rs:552
 msgid "New Masked Address"
 msgstr "Нова замаскована адреса"
 
-#: app/src/ui/composer/mod.rs:530
+#: app/src/ui/composer/mod.rs:569
 msgid "Masked"
 msgstr "Замаскована"
 
-#: app/src/ui/composer/mod.rs:558 app/src/ui/composer/mod.rs:559
+#: app/src/ui/composer/mod.rs:597 app/src/ui/composer/mod.rs:598
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "Від"
 
-#: app/src/ui/composer/mod.rs:564 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:603 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "Кому"
 
-#: app/src/ui/composer/mod.rs:568
+#: app/src/ui/composer/mod.rs:607
 msgid "Cc"
 msgstr "Копія"
 
-#: app/src/ui/composer/mod.rs:570
+#: app/src/ui/composer/mod.rs:609
 msgid "Bcc"
 msgstr "Прихована копія"
 
-#: app/src/ui/composer/mod.rs:580 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:619 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "Тема"
 
-#: app/src/ui/composer/mod.rs:644
+#: app/src/ui/composer/mod.rs:683
 msgid "Formatting"
 msgstr "Форматування"
 
-#: app/src/ui/composer/mod.rs:663 app/src/ui/composer/mod.rs:1368
+#: app/src/ui/composer/mod.rs:702 app/src/ui/composer/mod.rs:1428
 msgid "Forwarded Message"
 msgstr "Переслане повідомлення"
 
-#: app/src/ui/composer/mod.rs:1201
+#: app/src/ui/composer/mod.rs:1261
 msgid "Hide Cc and Bcc"
 msgstr "Сховати копію та приховану копію"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1346
 msgid "Remove Quoted Text"
 msgstr "Прибрати цитований текст"
 
-#: app/src/ui/composer/mod.rs:1287
+#: app/src/ui/composer/mod.rs:1347
 msgid "Do Not Forward the Original"
 msgstr "Не пересилати оригінал"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1457
 msgid "Quoted text removed"
 msgstr "Цитований текст прибрано"
 
-#: app/src/ui/composer/mod.rs:1398
+#: app/src/ui/composer/mod.rs:1458
 msgid "Forwarded message removed"
 msgstr "Переслане повідомлення прибрано"
 
-#: app/src/ui/composer/mod.rs:1503
+#: app/src/ui/composer/mod.rs:1563
 msgid "Sending from {address}"
 msgstr "Надсилання з {address}"
 
-#: app/src/ui/composer/mod.rs:1509
+#: app/src/ui/composer/mod.rs:1569
 msgid "Could not make a masked address: {reason}"
 msgstr "Не вдалося створити замасковану адресу: {reason}"
 
-#: app/src/ui/composer/mod.rs:1573
+#: app/src/ui/composer/mod.rs:1633
 msgid "Scheduled to send {when}"
 msgstr "Заплановано надсилання {when}"
 
-#: app/src/ui/composer/mod.rs:1597 app/src/ui/composer/mod.rs:2032
+#: app/src/ui/composer/mod.rs:1657 app/src/ui/composer/mod.rs:2116
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Виберіть відправника і введіть дозволений суфікс адреси."
 
-#: app/src/ui/composer/mod.rs:1769 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1829 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Скасувати надсилання"
 
-#: app/src/ui/composer/mod.rs:1922 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1995 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Надсилання…"
 
-#: app/src/ui/composer/mod.rs:1962
+#: app/src/ui/composer/mod.rs:2035
 msgid "Attachment Missing?"
 msgstr "Забули вкладення?"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:2037
 msgid "The message says “{sentence}” and carries no file."
 msgstr "У повідомленні сказано «{sentence}», але файлу немає."
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:2042
 msgid "Add Attachment"
 msgstr "Додати вкладення"
 
-#: app/src/ui/composer/mod.rs:1970
+#: app/src/ui/composer/mod.rs:2043
 msgid "Send Anyway"
 msgstr "Усе одно надіслати"
 
-#: app/src/ui/composer/mod.rs:1988
+#: app/src/ui/composer/mod.rs:2061
 msgid "Send Without Encryption?"
 msgstr "Надіслати без шифрування?"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:2063
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Це повідомлення мало бути надіслане зашифрованим, але це неможливо. {reason}"
 
-#: app/src/ui/composer/mod.rs:1996
+#: app/src/ui/composer/mod.rs:2069
 msgid "Send Readable"
 msgstr "Надіслати незашифрованим"
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2084
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail надішле його в цей час, якщо працюватиме, навіть у системному "
 "лотку."
 
-#: app/src/ui/composer/mod.rs:2012
+#: app/src/ui/composer/mod.rs:2085
 msgid "Schedule"
 msgstr "Запланувати"
 
-#: app/src/ui/composer/mod.rs:2074
+#: app/src/ui/composer/mod.rs:2186
 msgid "Draft saved, encrypted to your own key"
 msgstr "Чернетку збережено, зашифровано вашим власним ключем"
 
-#: app/src/ui/composer/mod.rs:2076
+#: app/src/ui/composer/mod.rs:2188
 msgid "Draft saved"
 msgstr "Чернетку збережено"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2278
 msgid "Save as Draft?"
 msgstr "Зберегти як чернетку?"
 
-#: app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2282
 msgid "Discard"
 msgstr "Відкинути"
 
-#: app/src/ui/composer/mod.rs:2118
+#: app/src/ui/composer/mod.rs:2284
 msgid "Save Draft"
 msgstr "Зберегти чернетку"
 
-#: app/src/ui/composer/mod.rs:2159
+#: app/src/ui/composer/mod.rs:2327
 msgid "Attach Files"
 msgstr "Вкласти файли"
 
-#: app/src/ui/composer/mod.rs:2195
+#: app/src/ui/composer/mod.rs:2363
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2241
+#: app/src/ui/composer/mod.rs:2409
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "Відкрити {file}, {size}"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2462
 msgid "Bold (Ctrl+B)"
 msgstr "Жирний (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2463
 msgid "Italic (Ctrl+I)"
 msgstr "Курсив (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2466
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Закреслений (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2301
+#: app/src/ui/composer/mod.rs:2469
 msgid "Code (Ctrl+E)"
 msgstr "Код (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2338
+#: app/src/ui/composer/mod.rs:2506
 msgid "Link (Ctrl+K)"
 msgstr "Посилання (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2348
+#: app/src/ui/composer/mod.rs:2516
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Маркований список (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2521
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Нумерований список (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2358
+#: app/src/ui/composer/mod.rs:2526
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Цитата (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2375
+#: app/src/ui/composer/mod.rs:2543
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Вставити зображення (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2553
 msgid "Paragraph"
 msgstr "Абзац"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2554
 msgid "Heading 1"
 msgstr "Заголовок 1"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2555
 msgid "Heading 2"
 msgstr "Заголовок 2"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2556
 msgid "Heading 3"
 msgstr "Заголовок 3"
 
-#: app/src/ui/composer/mod.rs:2389
+#: app/src/ui/composer/mod.rs:2557
 msgid "Code Block"
 msgstr "Блок коду"
 
-#: app/src/ui/composer/mod.rs:2403
+#: app/src/ui/composer/mod.rs:2571
 msgid "Turn Markdown into Formatting"
 msgstr "Перетворити Markdown на форматування"
 
-#: app/src/ui/composer/mod.rs:2407
+#: app/src/ui/composer/mod.rs:2575
 msgid "Clear Formatting"
 msgstr "Очистити форматування"
 
-#: app/src/ui/composer/mod.rs:2413
+#: app/src/ui/composer/mod.rs:2581
 msgid "Write in Markdown"
 msgstr "Писати в Markdown"
 
-#: app/src/ui/composer/mod.rs:2420 app/src/ui/composer/mod.rs:2424
+#: app/src/ui/composer/mod.rs:2588 app/src/ui/composer/mod.rs:2592
 msgid "More Formatting"
 msgstr "Інше форматування"
 
-#: app/src/ui/composer/mod.rs:2461
+#: app/src/ui/composer/mod.rs:2629
 msgid "Add a Link"
 msgstr "Додати посилання"
 
-#: app/src/ui/composer/mod.rs:2467
+#: app/src/ui/composer/mod.rs:2635
 msgid "Text"
 msgstr "Текст"
 
-#: app/src/ui/composer/mod.rs:2479
+#: app/src/ui/composer/mod.rs:2647
 msgid "Add Link"
 msgstr "Додати посилання"
 
-#: app/src/ui/composer/mod.rs:2515
+#: app/src/ui/composer/mod.rs:2683
 msgid "Markdown formatted"
 msgstr "Markdown відформатовано"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2802
 msgid "Pasted as rich text"
 msgstr "Вставлено як форматований текст"
 
-#: app/src/ui/composer/mod.rs:2635
+#: app/src/ui/composer/mod.rs:2803
 msgid "Paste as Plain Text"
 msgstr "Вставити як звичайний текст"
 
-#: app/src/ui/composer/mod.rs:2669
+#: app/src/ui/composer/mod.rs:2837
 msgid "Editing as Markdown"
 msgstr "Редагування в Markdown"
 
-#: app/src/ui/composer/mod.rs:2705
+#: app/src/ui/composer/mod.rs:2873
 msgid "Images"
 msgstr "Зображення"
 
-#: app/src/ui/composer/mod.rs:2710
+#: app/src/ui/composer/mod.rs:2878
 msgid "Insert Image"
 msgstr "Вставити зображення"
 
-#: app/src/ui/composer/mod.rs:2754
+#: app/src/ui/composer/mod.rs:2922
 msgid "Could not read the file: {reason}"
 msgstr "Не вдалося прочитати файл: {reason}"
 
-#: app/src/ui/composer/mod.rs:2836
+#: app/src/ui/composer/mod.rs:3004
 msgid "No Templates Yet"
 msgstr "Шаблонів ще немає"
 
-#: app/src/ui/composer/mod.rs:2886
+#: app/src/ui/composer/mod.rs:3054
 msgid "Save as Template"
 msgstr "Зберегти як шаблон"
 
-#: app/src/ui/composer/mod.rs:2888
+#: app/src/ui/composer/mod.rs:3056
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 "Заповнювачі на зразок {{first_name}} заповнюються щоразу, коли ви його "
 "використовуєте."
 
-#: app/src/ui/composer/mod.rs:2911 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:3079 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Дайте шаблону назву"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:3087
 msgid "Template saved"
 msgstr "Шаблон збережено"
 
-#: app/src/ui/composer/mod.rs:2922
+#: app/src/ui/composer/mod.rs:3090
 msgid "Template not saved: {reason}"
 msgstr "Шаблон не збережено: {reason}"
 
-#: app/src/ui/composer/mod.rs:3045
+#: app/src/ui/composer/mod.rs:3213
 msgid "This looks like Markdown"
 msgstr "Схоже на Markdown"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3219
 msgid "Format"
 msgstr "Форматувати"
 
-#: app/src/ui/composer/mod.rs:3052
+#: app/src/ui/composer/mod.rs:3220
 msgid "Turn the Markdown into rich text"
 msgstr "Перетворити Markdown на форматований текст"
 
-#: app/src/ui/composer/mod.rs:3058 app/src/ui/composer/mod.rs:3062
+#: app/src/ui/composer/mod.rs:3226 app/src/ui/composer/mod.rs:3230
 msgid "Dismiss"
 msgstr "Закрити"
 
-#: app/src/ui/composer/mod.rs:3145
+#: app/src/ui/composer/mod.rs:3313
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Чернетка зберігається на цьому комп'ютері, тож ви зможете завершити її тут "
 "пізніше."
 
-#: app/src/ui/composer/mod.rs:3149
+#: app/src/ui/composer/mod.rs:3317
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Чернетка зберігається в {provider}, тож ви зможете завершити її пізніше на "
 "будь-якому пристрої."
 
-#: app/src/ui/composer/mod.rs:3153
+#: app/src/ui/composer/mod.rs:3321
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9968,11 +9968,20 @@ msgstr ""
 "Запитувати перед надсиланням повідомлення, яке згадує файл, але не містить "
 "його"
 
-#: app/src/ui/preferences.rs:828
+#: app/src/ui/preferences.rs:801
+msgid "Save Drafts While Writing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:803
+msgid ""
+"Keep an open message in Drafts as you write, so closing early loses nothing"
+msgstr ""
+
+#: app/src/ui/preferences.rs:837
 msgid "Signing and Encryption"
 msgstr "Підписування і шифрування"
 
-#: app/src/ui/preferences.rs:830
+#: app/src/ui/preferences.rs:839
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9980,49 +9989,49 @@ msgstr ""
 "Penguin Mail підписує й шифрує через GnuPG, що зберігає ваші ключі й сам "
 "запитує вашу парольну фразу."
 
-#: app/src/ui/preferences.rs:835
+#: app/src/ui/preferences.rs:844
 msgid "Your OpenPGP Keys"
 msgstr "Ваші ключі OpenPGP"
 
-#: app/src/ui/preferences.rs:836
+#: app/src/ui/preferences.rs:845
 msgid "Asking gpg…"
 msgstr "Запит до gpg…"
 
-#: app/src/ui/preferences.rs:840
+#: app/src/ui/preferences.rs:849
 msgid "Your S/MIME Certificates"
 msgstr "Ваші сертифікати S/MIME"
 
-#: app/src/ui/preferences.rs:841
+#: app/src/ui/preferences.rs:850
 msgid "Asking gpgsm…"
 msgstr "Запит до gpgsm…"
 
-#: app/src/ui/preferences.rs:848
+#: app/src/ui/preferences.rs:857
 msgid "Sign My Messages by Default"
 msgstr "Типово підписувати мої повідомлення"
 
-#: app/src/ui/preferences.rs:849
+#: app/src/ui/preferences.rs:858
 msgid "New messages open with Sign turned on"
 msgstr "Нові повідомлення відкриваються з увімкненим «Підписати»"
 
-#: app/src/ui/preferences.rs:855
+#: app/src/ui/preferences.rs:864
 msgid "Encrypt When I Can"
 msgstr "Шифрувати, коли можливо"
 
-#: app/src/ui/preferences.rs:857
+#: app/src/ui/preferences.rs:866
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Вмикати «Зашифрувати», щойно кожен отримувач має ключ або сертифікат"
 
-#: app/src/ui/preferences.rs:946
+#: app/src/ui/preferences.rs:955
 msgid "gpg could not be asked: {reason}"
 msgstr "Не вдалося звернутися до gpg: {reason}"
 
-#: app/src/ui/preferences.rs:965
+#: app/src/ui/preferences.rs:974
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Не вдалося звернутися до gpgsm: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:974
+#: app/src/ui/preferences.rs:983
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -10039,11 +10048,11 @@ msgstr[2] ""
 "Penguin Mail підписує й шифрує через {programs}, які зберігають ваші ключі й "
 "самі запитують вашу парольну фразу."
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
+#: app/src/ui/preferences.rs:1015 app/src/ui/preferences.rs:1028
 msgid "Spelling"
 msgstr "Правопис"
 
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:1017
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10053,7 +10062,7 @@ msgstr ""
 "Встановіть словник Hunspell, наприклад hunspell-uk або hunspell-en-us, і "
 "знову відкрийте вікно написання."
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1030
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10061,59 +10070,59 @@ msgstr ""
 "Мова перевірки правопису для кожного облікового запису. Встановлені "
 "словники: {languages}."
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1042
 msgid "System: {language}"
 msgstr "Системна: {language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1057
 msgid "All Installed Languages"
 msgstr "Усі встановлені мови"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1100
 msgid "Sync"
 msgstr "Синхронізація"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1108
 msgid "Checking"
 msgstr "Перевірка"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1114
 msgid "Check for New Mail"
 msgstr "Перевіряти нову пошту"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1123
 msgid "Storage"
 msgstr "Сховище"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1131
 msgid "Keep Mail on This Computer For"
 msgstr "Зберігати пошту на цьому комп'ютері"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1152
 msgid "Message text kept for opening offline"
 msgstr "Текст листів, збережений для відкриття без з’єднання"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1155
 msgid "Message Cache"
 msgstr "Кеш повідомлень"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1164
 msgid "100 messages"
 msgstr "100 листів"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1165
 msgid "300 messages"
 msgstr "300 листів"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1166
 msgid "1,000 messages"
 msgstr "1000 листів"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1170
 msgid "Download Recent Inbox Messages"
 msgstr "Завантажувати останні листи з «Вхідних»"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1171
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10122,150 +10131,150 @@ msgstr ""
 "відкривалися й були доступні без з’єднання. Вкладення та зовнішні зображення "
 "не завантажуються."
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1198
 msgid "Startup"
 msgstr "Запуск"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1201
 msgid "Start in the Tray at Login"
 msgstr "Запускати в системному лотку під час входу"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1216
 msgid "Not available in demo mode"
 msgstr "Недоступно в демонстраційному режимі"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1224
 msgid "Look for a new release once a day"
 msgstr "Шукати новий випуск раз на день"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1265
 msgid "{used} of {limit}"
 msgstr "{used} з {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1277
 msgid "{amount} · Full"
 msgstr "{amount} · Заповнено"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1279
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Майже заповнено"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1291
 msgid "Senders Who May Load Images"
 msgstr "Відправники, яким дозволено завантажувати зображення"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1292 app/src/ui/preferences.rs:1301
 msgid "Nobody yet"
 msgstr "Поки нікого"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1303
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} відправник"
 msgstr[1] "{count} відправники"
 msgstr[2] "{count} відправників"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1313
 msgid "Anyone at this domain"
 msgstr "Будь-хто з цього домену"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1315
 msgid "This address"
 msgstr "Ця адреса"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1320
 msgid "Stop Loading Images from This Sender"
 msgstr "Не завантажувати зображення від цього відправника"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1327
 msgid "Stop loading images from {sender}"
 msgstr "Не завантажувати зображення від {sender}"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1397
 msgid "Monday to Friday"
 msgstr "З понеділка по п'ятницю"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1398
 msgid "Every day of the week"
 msgstr "Щодня"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1399
 msgid "No days"
 msgstr "Жодного дня"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1406
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1409
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1472
 msgid "Time Format"
 msgstr "Формат часу"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1476
 msgid "Automatic follows the system clock format"
 msgstr "Автоматичний режим використовує системний формат часу"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1490
 msgid "Week Starts On"
 msgstr "Тиждень починається з"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1495
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "«Автоматично» використовує перший день тижня з локалі"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1509
 msgid "Working Hours"
 msgstr "Робочі години"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1528
 msgid "Hours"
 msgstr "Години"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1579
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1637
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1639
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1683
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Не вдалося змінити колір: {reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1727
 msgid "Never Translate"
 msgstr "Ніколи не перекладати"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1729
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Для повідомлень цими мовами переклад не пропонується"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1758
 msgid "Follow System"
 msgstr "Як у системі"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1762
 msgid "Language"
 msgstr "Мова"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1763
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail покаже нову мову після перезапуску"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1844 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Без підпису"
 

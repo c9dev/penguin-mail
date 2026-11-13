@@ -74,6 +74,7 @@ pub enum Change {
     ComposeFormat(ComposeFormat),
     /// Ask before a message that promises a file goes without one.
     CheckAttachments(bool),
+    AutosaveDrafts(bool),
     /// Offer the read receipts senders ask for, or never ask.
     ReadReceipts(ReadReceipts),
     /// Open the composer with Sign on.
@@ -344,6 +345,7 @@ impl Change {
             Change::UpdateAnnounced(version) => settings.announced_update = Some(version),
             Change::ComposeFormat(format) => settings.compose_format = format,
             Change::CheckAttachments(on) => settings.check_attachments = on,
+            Change::AutosaveDrafts(on) => settings.autosave_drafts = on,
             Change::ReadReceipts(when) => settings.read_receipts = when,
             Change::SignByDefault(on) => settings.sign_by_default = on,
             Change::EncryptWhenPossible(on) => settings.encrypt_when_possible = on,
@@ -699,6 +701,9 @@ settable! {
         // The composer reads this as a message goes out, so the assistant
         // has no business turning the warning off.
         check_attachments,
+        // Whether a draft is kept while it is written is the person's
+        // habit to set, not the assistant's.
+        autosave_drafts,
         // Telling a sender their mail was read is the person's call, so
         // the assistant does not turn the question on or off.
         read_receipts,
@@ -960,6 +965,7 @@ impl Effects {
             send_as_checked,
             compose_format,
             check_attachments,
+            autosave_drafts,
             read_receipts,
             sign_by_default,
             encrypt_when_possible,
@@ -1017,6 +1023,9 @@ impl Effects {
             send_as_checked,
             compose_format,
             check_attachments,
+            // The composer reads this on its own clock; a change takes
+            // effect on the next look, with nothing for the window to do.
+            autosave_drafts,
             // The run reads this as each message opens.
             read_receipts,
             sign_by_default,

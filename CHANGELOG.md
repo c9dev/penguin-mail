@@ -19,7 +19,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### New
 
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
-
+- An open message saves itself to Drafts while you write, so closing the lid loses nothing. Writing preferences can turn this off.
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
 
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
