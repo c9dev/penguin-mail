@@ -175,6 +175,10 @@ pub trait ImapApi: Send + Sync + 'static {
 
     fn delete(&self, mailbox: &str) -> impl Future<Output = Result<(), ImapError>> + Send;
 
+    fn subscribe(&self, mailbox: &str) -> impl Future<Output = Result<(), ImapError>> + Send;
+
+    fn unsubscribe(&self, mailbox: &str) -> impl Future<Output = Result<(), ImapError>> + Send;
+
     /// Waits in IDLE on `mailbox` until the server reports a change or `limit` passes.
     /// `ImapError::Unsupported("IDLE")` without IDLE.
     fn idle(
@@ -329,6 +333,14 @@ impl ImapApi for ImapClient {
 
     async fn delete(&self, mailbox: &str) -> Result<(), ImapError> {
         ImapClient::delete(self, mailbox).await
+    }
+
+    async fn subscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        ImapClient::subscribe(self, mailbox).await
+    }
+
+    async fn unsubscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        ImapClient::unsubscribe(self, mailbox).await
     }
 
     async fn idle(&self, mailbox: &str, limit: Duration) -> Result<Woke, ImapError> {

@@ -1123,6 +1123,9 @@ CREATE TABLE microsoft_shared (
     // Retire refresh callbacks after a sign-in or removal, even if an
     // account id is reused for the same address.
     "ALTER TABLE accounts ADD COLUMN microsoft_session TEXT;",
+    // An IMAP account shows only the folders the person subscribes to,
+    // as Thunderbird does, unless this asks for every folder.
+    "ALTER TABLE accounts ADD COLUMN all_folders INTEGER NOT NULL DEFAULT 0;",
 ];
 
 /// How long the copy taken before a migration stays once the store has

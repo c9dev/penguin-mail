@@ -101,6 +101,11 @@ pub struct ImapState {
     pub gmail: bool,
     /// The X-GM-MSGID the next delivery gets.
     next_msgid: u64,
+    /// The names the person does not subscribe to. Every mailbox a test
+    /// makes starts subscribed; CREATE and RENAME leave the name they make
+    /// unsubscribed, as a server that keeps subscriptions apart from its
+    /// mailboxes does.
+    pub unsubscribed: BTreeSet<String>,
 }
 
 pub struct FakeMailbox {
@@ -298,6 +303,7 @@ impl FakeImap {
                 answered: 0,
                 next_uidvalidity: 1000,
                 gmail: false,
+                unsubscribed: BTreeSet::new(),
                 next_msgid: 0x18c2_f0a1_b2c3_d4e5,
             }),
             changed: Notify::new(),
@@ -927,6 +933,7 @@ impl ImapApi for FakeImap {
                         m.special_use.filter(|_| special_use),
                         m.no_select,
                     )
+                    .subscribed(!s.unsubscribed.contains(name))
                 })
                 .collect())
         })
@@ -1052,7 +1059,7 @@ impl ImapApi for FakeImap {
             let found: Vec<u32> = m
                 .messages
                 .iter()
-                .filter(|(uid, message)| query.matches(**uid, highest, message))
+                .filter(|(uid, message)| query.matches(**uid, highest, message, mailbox))
                 .map(|(uid, _)| *uid)
                 .collect();
             s.answered += found.len() as u64;
@@ -1379,6 +1386,7 @@ impl ImapApi for FakeImap {
             let uidvalidity = s.fresh_uidvalidity();
             s.mailboxes
                 .insert(mailbox.to_string(), FakeMailbox::new(uidvalidity, None));
+            s.unsubscribed.insert(mailbox.to_string());
             Ok(())
         })
     }
@@ -1405,8 +1413,9 @@ impl ImapApi for FakeImap {
                 .collect();
             for name in names {
                 if let Some(mailbox) = s.mailboxes.remove(&name) {
-                    s.mailboxes
-                        .insert(format!("{to}{}", &name[from.len()..]), mailbox);
+                    let renamed = format!("{to}{}", &name[from.len()..]);
+                    s.unsubscribed.insert(renamed.clone());
+                    s.mailboxes.insert(renamed, mailbox);
                 }
             }
             Ok(())
@@ -1420,6 +1429,22 @@ impl ImapApi for FakeImap {
                 Some(_) => Ok(()),
                 None => Err(ImapError::NoMailbox(mailbox.to_string())),
             }
+        })
+    }
+
+    async fn subscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("subscribe {mailbox}"), |s| {
+            s.unsubscribed.remove(mailbox);
+            Ok(())
+        })
+    }
+
+    async fn unsubscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("unsubscribe {mailbox}"), |s| {
+            s.unsubscribed.insert(mailbox.to_string());
+            Ok(())
         })
     }
 
@@ -1748,7 +1773,13 @@ mod search {
         /// Whether message `uid` matches, in a mailbox whose highest UID
         /// is `highest`: a UID set that runs to `*` names that message
         /// even when its UID is below the set's start (RFC 3501).
-        pub(super) fn matches(&self, uid: u32, highest: u32, message: &FakeMessage) -> bool {
+        pub(super) fn matches(
+            &self,
+            uid: u32,
+            highest: u32,
+            message: &FakeMessage,
+            mailbox: &str,
+        ) -> bool {
             let has = |needle: &str, hay: &str| hay.to_lowercase().contains(&needle.to_lowercase());
             let day =
                 || DateTime::from_timestamp_millis(message.internal_date).map(|d| d.date_naive());
@@ -1801,35 +1832,86 @@ mod search {
                     .is_some_and(|g| g.labels.iter().any(|l| l.eq_ignore_ascii_case(label))),
                 Key::GmMsgid(id) => message.gmail.as_ref().is_some_and(|g| g.msgid == *id),
                 Key::GmThrid(id) => message.gmail.as_ref().is_some_and(|g| g.thrid == *id),
-                Key::GmRaw(text) => gm_raw_matches(text, message),
-                Key::Not(inner) => !inner.matches(uid, highest, message),
+                Key::GmRaw(text) => gm_raw_matches(text, message, mailbox),
+                Key::Not(inner) => !inner.matches(uid, highest, message, mailbox),
                 Key::Or(left, right) => {
-                    left.matches(uid, highest, message) || right.matches(uid, highest, message)
+                    left.matches(uid, highest, message, mailbox)
+                        || right.matches(uid, highest, message, mailbox)
                 }
-                Key::And(all) => all.iter().all(|k| k.matches(uid, highest, message)),
+                Key::And(all) => all
+                    .iter()
+                    .all(|k| k.matches(uid, highest, message, mailbox)),
             }
         }
     }
 }
 
-/// Gmail's search box on the few operators the tests use: `in:inbox`,
-/// `category:<tab>`, `label:<name>` with Gmail's spelling of the name, and
-/// plain words in the subject. Anything else matches.
-fn gm_raw_matches(text: &str, message: &FakeMessage) -> bool {
+/// The same Gmail query evaluator as the HTTP fake, with IMAP's labels and flags.
+fn gm_raw_matches(text: &str, message: &FakeMessage, mailbox: &str) -> bool {
     let Some(g) = message.gmail.as_ref() else {
         return false;
     };
-    let spell = |name: &str| name.to_lowercase().replace([' ', '/'], "-");
-    let subject = Fetched::from_header(0, &message.raw).subject.to_lowercase();
-    text.split_whitespace()
-        .all(|term| match term.split_once(':') {
-            Some(("in", "inbox")) => g.labels.contains("\\Inbox"),
-            Some(("category", tab)) => g.category.as_deref() == Some(tab),
-            Some(("-category", tab)) => g.category.as_deref() != Some(tab),
-            Some(("label", name)) => g.labels.iter().any(|l| spell(l) == spell(name)),
-            Some(_) => true,
-            None => subject.contains(&term.to_lowercase()),
+    let mut labels: Vec<String> = g
+        .labels
+        .iter()
+        .filter_map(|label| {
+            Some(
+                match label.as_str() {
+                    "\\Inbox" => "INBOX",
+                    "\\Sent" => "SENT",
+                    "\\Draft" => "DRAFT",
+                    "\\Important" => "IMPORTANT",
+                    "\\Starred" => "STARRED",
+                    other if other.starts_with('\\') => return None,
+                    other => other,
+                }
+                .to_string(),
+            )
         })
+        .collect();
+    match mailbox {
+        "[Gmail]/Trash" => labels.push("TRASH".into()),
+        "[Gmail]/Spam" => labels.push("SPAM".into()),
+        _ => {}
+    }
+    if !message.flags.contains("\\Seen") {
+        labels.push("UNREAD".into());
+    }
+    if message.flags.contains("\\Flagged") {
+        labels.push("STARRED".into());
+    }
+    if let Some(tab) = &g.category {
+        labels.push(if tab == "primary" {
+            "CATEGORY_PERSONAL".into()
+        } else {
+            format!("CATEGORY_{}", tab.to_uppercase())
+        });
+    }
+    let names: Vec<_> = labels
+        .iter()
+        .map(|label| mailrs_gmail::RemoteLabel {
+            id: label.clone(),
+            name: label.clone(),
+            kind: None,
+            color: None,
+        })
+        .collect();
+    let mut meta = super::meta(
+        "query",
+        "query",
+        message.internal_date,
+        &labels.iter().map(String::as_str).collect::<Vec<_>>(),
+    );
+    let header = Fetched::from_header(0, &message.raw);
+    meta.subject = header.subject;
+    meta.from = header.from;
+    meta.to = header.to;
+    meta.cc = header.cc;
+    meta.rfc822_msgid = header.message_id;
+    meta.has_attachments = header.mixed;
+    meta.size = message.raw.len() as i64;
+    meta.snippet = String::from_utf8_lossy(&message.raw).into_owned();
+    super::query::Query::parse(text).matches(&meta, &names, Utc::now().timestamp_millis())
 }
 
 /// An SMTP submission server that keeps what it is handed.

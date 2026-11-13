@@ -355,6 +355,14 @@ impl<D: Dial> ImapClient<D> {
         on_worker!(self, conn => conn.delete(mailbox))
     }
 
+    pub async fn subscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        on_worker!(self, conn => conn.subscribe(mailbox))
+    }
+
+    pub async fn unsubscribe(&self, mailbox: &str) -> Result<(), ImapError> {
+        on_worker!(self, conn => conn.unsubscribe(mailbox))
+    }
+
     /// Waits in IDLE on `mailbox`, on the connection kept for it, until
     /// the server reports a change or `limit` passes; `limit` is cut to
     /// [`IDLE_LIMIT`]. One IDLE runs at a time; a second call waits for
@@ -773,19 +781,20 @@ mod tests {
         tokio::time::advance(Duration::from_secs(6 * 60)).await;
         client.list().await.unwrap();
         let commands = seen.lock().unwrap_or_else(PoisonError::into_inner).clone();
-        let last_three: Vec<&str> = commands
+        let last_four: Vec<&str> = commands
             .iter()
             .rev()
-            .take(3)
+            .take(4)
             .rev()
             .map(String::as_str)
             .collect();
         assert_eq!(
-            last_three,
+            last_four,
             [
-                "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
+                "LSUB \"\" \"*\"",
                 "NOOP",
-                "LIST \"\" \"*\" RETURN (SPECIAL-USE)"
+                "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
+                "LSUB \"\" \"*\""
             ]
         );
     }

@@ -34,6 +34,8 @@ fn found(conn: &Connection, account_id: i64, query: &Query) -> Vec<String> {
 
 fn smart(match_all: bool, conditions: &[(Field, &str)]) -> Query {
     SmartMailbox {
+        trash_sent_without_asking: false,
+        unread_count: Default::default(),
         id: "s1".into(),
         name: "Test".into(),
         account: None,
@@ -321,4 +323,33 @@ fn a_mailbox_name_matches_by_gmails_label_spelling() {
     assert!(named("nowhere").is_empty());
     let not_named = Query::Not(Box::new(Query::term(Term::MailboxNamed("nowhere".into()))));
     assert_eq!(found(&conn, a, &not_named), ["receipt", "client", "other"]);
+}
+
+#[test]
+fn unread_counts_messages_once_across_overlapping_folders() {
+    let (conn, a) = db();
+    let b = accounts::insert_account(&conn, "second@example.com", 0).unwrap();
+    common::list_gmail_roles(&conn, b);
+    store(
+        &conn,
+        &[
+            meta(a, "both", "thread", NOW, &["INBOX", "SENT", "UNREAD"]),
+            meta(a, "reply", "thread", NOW, &["INBOX", "UNREAD"]),
+            meta(a, "read", "read", NOW, &["INBOX"]),
+            meta(a, "junk", "junk", NOW, &["INBOX", "SPAM", "UNREAD"]),
+            meta(b, "other", "other", NOW, &["INBOX", "UNREAD"]),
+        ],
+    );
+    let query = Query::Or(vec![
+        Query::is_in(MailSet::Role(Role::Inbox)),
+        Query::is_in(MailSet::Role(Role::Sent)),
+    ]);
+    assert_eq!(
+        mailrs_store::query::unread_count(&conn, a, &query, &now()).unwrap(),
+        2
+    );
+    assert_eq!(
+        mailrs_store::query::unread_count(&conn, b, &query, &now()).unwrap(),
+        1
+    );
 }

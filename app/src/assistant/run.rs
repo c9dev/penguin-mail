@@ -1686,6 +1686,8 @@ impl<A: Accounts> Tools<A> {
             None => None,
         };
         let mailbox = SmartMailbox {
+            trash_sent_without_asking: false,
+            unread_count: Default::default(),
             id: format!("smart-{}", mailrs_gmail::random_token(6)),
             name: required(input, "name")?,
             account,
