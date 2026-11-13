@@ -335,6 +335,21 @@ flowboxchild:focus-visible > .recipient-chip {
   background: alpha(currentColor, 0.16);
 }
 .recipient-entry { padding-left: 2px; }
+/* A chip in hand, dimmed where it sits while a ghost pill, painted at
+   the pointer, carries the name to another row. The ring says which row
+   is ready to catch; an outline costs no layout, so nothing reflows
+   mid-throw. */
+.recipient-chip.dragging { opacity: 0.35; }
+.recipient-chip.drag-ghost {
+  background: alpha(currentColor, 0.16);
+  box-shadow: 0 3px 10px alpha(black, 0.35);
+}
+.recipient-drop {
+  outline: 2px solid alpha(var(--accent-color), 0.6);
+  outline-offset: -2px;
+  border-radius: 999px;
+  background: alpha(var(--accent-bg-color), 0.04);
+}
 
 /* The seven weekday toggles in Preferences. A button's own padding and
    minimum width make them 344 px together, wider than the row has in a
