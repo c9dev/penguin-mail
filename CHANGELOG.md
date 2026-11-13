@@ -28,6 +28,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
 - Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
 - Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
+- Drag a message onto a collapsed account and hold it there: the account opens so the message can be dropped on a folder that was out of sight.
 
 ### Improved
 
