@@ -30,7 +30,6 @@ mailrs-smime.workspace = true
 # Debian 13 ships libadwaita 1.7 and GTK 4.18; the `adwaita-1-8` and
 # `gtk-4-20` features below turn on what newer ones add.
 adw = { workspace = true, features = ["v1_7"] }
-ammonia.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 reqwest.workspace = true

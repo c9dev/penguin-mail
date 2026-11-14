@@ -132,7 +132,9 @@ a good icon look broken.
   and so on), and is read through `read` and `find`. Add a named change
   rather than reaching into `OpenThread`, and put its data half on
   `OpenThread` (`take_bodies`, `take_engine_answer`), so the thread
-  run's fake changes the thread the way the view does.
+  run's fake changes the thread the way the view does. Inline picture
+  types and their address codec live in `client/src/inline.rs`; the
+  thread's picture methods stay in `app/src/open_thread/inline.rs`.
 - **Architecture vocabulary** is the `codebase-design` skill's: module,
   interface, depth, seam, adapter, leverage, locality. A seam gets
   introduced when a second adapter exists, not before.

@@ -11,7 +11,7 @@ use std::rc::Rc;
 use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance, ReadReport};
 
 use crate::format::{avatar_hue, full_date, header_date, human_size, initials};
-use crate::quoted;
+use mailrs_client::quoted;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 pub mod receipt;

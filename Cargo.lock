@@ -2444,7 +2444,6 @@ dependencies = [
 name = "mailrs"
 version = "1.0.12"
 dependencies = [
- "ammonia",
  "anyhow",
  "async-channel 2.5.0",
  "base64 0.23.1",
@@ -2538,6 +2537,7 @@ dependencies = [
 name = "mailrs-client"
 version = "1.0.12"
 dependencies = [
+ "ammonia",
  "chrono",
  "gettext-rs",
  "mailrs-domain",

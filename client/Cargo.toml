@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-mime.workspace = true
+ammonia.workspace = true
 chrono.workspace = true
 gettext-rs.workspace = true
 psl.workspace = true

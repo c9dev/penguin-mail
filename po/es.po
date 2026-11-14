@@ -2633,7 +2633,7 @@ msgstr ""
 "acceder a tu depósito de claves. Ejecuta {command} en una terminal y luego "
 "reinicia Penguin Mail."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2657,15 +2657,15 @@ msgstr ""
 "  ARCHIVO.ics    abre un archivo de calendario para añadir sus eventos a un "
 "calendario"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opción desconocida {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail no se ha podido iniciar"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Informar de un problema"
 

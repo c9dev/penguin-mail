@@ -2667,7 +2667,7 @@ msgstr ""
 "accesa inelul de chei. Rulați {command} într-un terminal, apoi reporniți "
 "Penguin Mail."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2692,15 +2692,15 @@ msgstr ""
 "  FIȘIER.ics     deschide un fișier de calendar, pentru a-i adăuga "
 "evenimentele într-un calendar"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opțiune necunoscută {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail nu a putut porni"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Raportează o problemă"
 

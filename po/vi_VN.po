@@ -2538,7 +2538,7 @@ msgstr ""
 "được kho khóa. Chạy {command} trong thiết bị đầu cuối, rồi khởi động lại "
 "Penguin Mail."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2560,15 +2560,15 @@ msgstr ""
 "  mailto:...     giống --compose mailto:...\n"
 "  FILE.ics       mở tệp lịch để thêm các sự kiện vào lịch"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: tùy chọn không xác định {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail không thể khởi động"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Báo cáo sự cố"
 

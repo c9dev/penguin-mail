@@ -2608,7 +2608,7 @@ msgstr ""
 "Snap anahtarlığınıza erişene kadar Penguin Mail oturum açma bilgilerini "
 "kaydedemez. Uçbirimde {command} çalıştırıp Penguin Mail'i yeniden başlatın."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2630,15 +2630,15 @@ msgstr ""
 "  mailto:...     --compose mailto:... ile aynı\n"
 "  FILE.ics       etkinliklerini takvime eklemek için takvim dosyası aç"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: bilinmeyen seçenek {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Başlatılamadı"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Sorun Bildir"
 

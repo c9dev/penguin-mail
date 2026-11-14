@@ -2475,7 +2475,7 @@ msgstr ""
 "此 snap 必须能访问密钥环，Penguin Mail 才能保存登录数据。请在终端中运行 "
 "{command}，再重新启动 Penguin Mail。"
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2497,15 +2497,15 @@ msgstr ""
 "  mailto:...     等同于 --compose mailto:...\n"
 "  FILE.ics       打开日历文件，将其中活动加入日历"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知选项 {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 无法启动"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "报告问题"
 

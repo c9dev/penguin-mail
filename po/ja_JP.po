@@ -2557,7 +2557,7 @@ msgstr ""
 "を保存できません。端末で {command} を実行してから Penguin Mail を再起動してく"
 "ださい。"
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2579,15 +2579,15 @@ msgstr ""
 "  mailto:...     --compose mailto:... と同じ\n"
 "  FILE.ics       カレンダーファイルを開いて予定をカレンダーに追加"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 不明なオプション {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail を起動できませんでした"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "問題を報告"
 

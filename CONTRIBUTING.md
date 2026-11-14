@@ -139,7 +139,8 @@ sync/     one sync loop per account: bootstrap, history replay, backfill,
 pgp/      OpenPGP mail through the person's own gpg
 smime/    S/MIME mail through their gpgsm
 ai/       model providers, tool calls, the Claude Code bridge
-client/   GTK-free client logic shared by frontends
+client/   GTK-free client logic shared by frontends: HTML cleaning, quoted
+          history, inline picture addresses, rich text and late answers
 cli/      penguin-mail-cli
 app/      the GTK 4 and libadwaita app, with the calendar view in
           app/src/ui/calendar/
@@ -152,6 +153,9 @@ modules take an account lookup and the store, so their tests run against an
 in-memory database and a fake Gmail with no window on screen. The terms the
 code uses are defined in [CONTEXT.md](CONTEXT.md), and
 [AGENTS.md](AGENTS.md) has the conventions and the testing traps.
+
+The thread run (`app/src/open_thread/run.rs`) and its fake window remain in
+`app/`, with the protection, translation and queued-draft integration they use.
 
 Sync follows Gmail's history API, polling every 30 seconds per account, so a
 change made on your phone shows up within half a minute. When history runs

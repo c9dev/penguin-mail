@@ -2309,7 +2309,7 @@ msgstr "Open Online Accounts"
 msgid "Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run {command} in a terminal, then restart Penguin Mail."
 msgstr "Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run {command} in a terminal, then restart Penguin Mail."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] [FILE.ics]\n"
 "\n"
@@ -2329,15 +2329,15 @@ msgstr ""
 "  mailto:...     the same as --compose mailto:...\n"
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: unknown option {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Could Not Start"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Report a Problem"
 

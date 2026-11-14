@@ -2659,7 +2659,7 @@ msgstr ""
 "dostępu do pęku kluczy. Uruchom {command} w terminalu, a następnie ponownie "
 "uruchom Penguin Mail."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2684,15 +2684,15 @@ msgstr ""
 "  FILE.ics       otwiera plik kalendarza, aby dodać jego wydarzenia do "
 "kalendarza"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: nieznana opcja {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Nie udało się uruchomić Penguin Mail"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Zgłoś problem"
 

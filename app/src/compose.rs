@@ -386,7 +386,7 @@ pub fn preview_page(title: &str, body: &str, dark: bool) -> String {
         } else {
             "background:#fff"
         },
-        crate::sanitize::sanitize_html(body, None)
+        mailrs_client::sanitize::sanitize_html(body, None)
     )
 }
 

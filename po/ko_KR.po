@@ -2532,7 +2532,7 @@ msgstr ""
 "snap이 키 모음에 접근해야 로그인 정보를 저장할 수 있습니다. 터미널에서 "
 "{command}을(를) 실행한 후 Penguin Mail을 다시 시작하세요."
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2554,15 +2554,15 @@ msgstr ""
 "  mailto:...     --compose mailto:...와 같음\n"
 "  FILE.ics       캘린더 파일을 열어 일정을 캘린더에 추가"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 알 수 없는 옵션 {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail을 시작할 수 없습니다"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "문제 보고"
 

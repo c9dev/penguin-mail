@@ -2476,7 +2476,7 @@ msgstr ""
 "此 snap 必須能存取鑰匙圈，Penguin Mail 才能儲存登入資料。請在終端機中執行 "
 "{command}，再重新啟動 Penguin Mail。"
 
-#: app/src/main.rs:96
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2498,15 +2498,15 @@ msgstr ""
 "  mailto:...     等同於 --compose mailto:...\n"
 "  FILE.ics       開啟行事曆檔案，將其中活動加入行事曆"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:206
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知選項 {option}"
 
-#: app/src/main.rs:486
+#: app/src/main.rs:484
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 無法啟動"
 
-#: app/src/main.rs:491 app/src/ui/about.rs:181
+#: app/src/main.rs:489 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "回報問題"
 
