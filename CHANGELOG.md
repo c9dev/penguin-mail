@@ -43,6 +43,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- On IMAP accounts, a check for new mail no longer skips a message for good when the app was also reading or changing mail on that account at the time, which left the Inbox badge counting unread mail the list did not show.
 - The pull-to-check indicator stays readable over message rows in light and dark themes.
 - Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
