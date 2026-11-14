@@ -71,12 +71,28 @@ impl Span {
 #[serde(default)]
 pub struct Block {
     pub kind: BlockKind,
+    /// Whether the line sits inside a block quote, whatever kind of line
+    /// it is. A list item or a heading under a quote is still somebody
+    /// else's quoted words, which is what asks for it to be treated as
+    /// such even though [`BlockKind`] has stopped saying.
+    pub quoted: bool,
     pub spans: Vec<Span>,
 }
 
 impl Block {
     pub fn new(kind: BlockKind, spans: Vec<Span>) -> Block {
-        Block { kind, spans }
+        Block {
+            kind,
+            quoted: kind == BlockKind::Quote,
+            spans,
+        }
+    }
+
+    /// Whether the line is quoted content, list and heading included.
+    /// Reading only [`BlockKind::Quote`] misses the lines a quote holds
+    /// that the quote made into something else.
+    pub fn is_quote(&self) -> bool {
+        self.quoted || self.kind == BlockKind::Quote
     }
 
     /// The line's text with every style dropped.
@@ -248,7 +264,7 @@ impl RichBody {
                 continue;
             }
             let body: String = block.spans.iter().map(span_to_markdown).collect();
-            out.push(match block.kind {
+            let line = match block.kind {
                 BlockKind::Heading(level) => {
                     format!("{} {body}", "#".repeat(level.clamp(1, 3) as usize))
                 }
@@ -256,6 +272,12 @@ impl RichBody {
                 BlockKind::Numbered => format!("{number}. {body}"),
                 BlockKind::Quote => format!("> {body}").trim_end().to_string(),
                 BlockKind::Paragraph | BlockKind::Code => body,
+            };
+            // A quoted list item is still a list item, under a quote.
+            out.push(if block.quoted && block.kind != BlockKind::Quote {
+                format!("> {line}").trim_end().to_string()
+            } else {
+                line
             });
         }
         if fenced {
@@ -450,7 +472,11 @@ impl Builder {
         if spans.is_empty() && !self.open {
             return;
         }
-        self.body.blocks.push(Block { kind, spans });
+        self.body.blocks.push(Block {
+            kind,
+            quoted: self.quoted,
+            spans,
+        });
     }
 
     /// A blank line between blocks, unless one is already there.
@@ -464,7 +490,10 @@ impl Builder {
             return;
         }
         if !self.body.blocks.is_empty() {
-            self.body.blocks.push(Block::default());
+            self.body.blocks.push(Block {
+                quoted: self.quoted,
+                ..Block::default()
+            });
         }
     }
 
@@ -728,7 +757,11 @@ impl HtmlBuilder {
         }
         let kind = self.kind();
         let spans = std::mem::take(&mut self.spans);
-        self.body.blocks.push(Block { kind, spans });
+        self.body.blocks.push(Block {
+            kind,
+            quoted: self.open.contains(&BlockKind::Quote),
+            spans,
+        });
     }
 
     /// A blank line between blocks, unless one is already there.
@@ -1065,11 +1098,51 @@ mod tests {
 
     #[test]
     fn markdown_round_trips_through_blocks() {
-        let markdown = "# Title\n\nHi **Ann**, see [the menu](https://e.com).\nSecond *line*.\n\n- milk\n- ~~eggs~~\n\n> quoted\n\n1. one\n2. two\n\n```\ncargo test\n```\n\nBye.";
+        let markdown = "# Title\n\nHi **Ann**, see [the menu](https://e.com).\nSecond *line*.\n\n- milk\n- ~~eggs~~\n\n> quoted\n\n1. one\n2. two\n\n> - salt\n\n> # Note\n\n```\ncargo test\n```\n\nBye.";
         let once = RichBody::from_markdown(markdown);
         let again = RichBody::from_markdown(&once.to_markdown());
         assert_eq!(once, again, "{}", once.to_markdown());
         assert_eq!(once.to_html(), again.to_html());
+    }
+
+    /// A list and a heading inside a quote keep being quoted, whatever the
+    /// quote made of them. The composer needs to know their words are not
+    /// the writer's own, after a re-parse of what it wrote out included.
+    #[test]
+    fn a_quote_holds_its_lists_and_headings() {
+        let doc = RichBody::from_markdown("> - milk\n> # Title\n> said");
+        let bullet = doc
+            .blocks
+            .iter()
+            .find(|block| block.kind == BlockKind::Bullet)
+            .expect("the list item survives");
+        assert!(bullet.quoted, "{doc:#?}");
+        let heading = doc
+            .blocks
+            .iter()
+            .find(|block| matches!(block.kind, BlockKind::Heading(_)))
+            .expect("the heading survives");
+        assert!(heading.quoted, "{doc:#?}");
+        assert_eq!(
+            doc.to_markdown(),
+            "> - milk\n>\n> # Title\n>\n> said",
+            "the quote survives the way back too"
+        );
+        assert_eq!(RichBody::from_markdown(&doc.to_markdown()), doc);
+    }
+
+    /// A reply arrives as HTML, and a list inside its quote is quoted
+    /// content too. The composer reads bodies in from HTML as well, so
+    /// the same rule holds there.
+    #[test]
+    fn a_quoted_list_from_html_keeps_being_quoted() {
+        let doc = RichBody::from_html("<blockquote><ul><li>milk</li></ul></blockquote>");
+        assert!(
+            doc.blocks
+                .iter()
+                .any(|block| block.kind == BlockKind::Bullet && block.quoted),
+            "{doc:#?}"
+        );
     }
 
     #[test]
