@@ -154,9 +154,6 @@ in-memory database and a fake Gmail with no window on screen. The terms the
 code uses are defined in [CONTEXT.md](CONTEXT.md), and
 [AGENTS.md](AGENTS.md) has the conventions and the testing traps.
 
-The thread run (`app/src/open_thread/run.rs`) and its fake window remain in
-`app/`, with the protection, translation and queued-draft integration they use.
-
 Sync follows Gmail's history API, polling every 30 seconds per account, so a
 change made on your phone shows up within half a minute. When history runs
 out, the account re-lists its mail and removes anything deleted in the gap.
