@@ -11,7 +11,7 @@
 //!
 //! The model never writes markup. Every piece it sends back goes into the
 //! page as text, escaped, and the rebuilt body is cleaned again by
-//! [`crate::sanitize`] before the WebView sees it.
+//! [`mailrs_client::sanitize`] before the WebView sees it.
 
 use std::sync::Arc;
 
@@ -624,7 +624,7 @@ fn script_of(c: char) -> Script {
 
 /// A message body, as the page draws it.
 pub enum Body<'a> {
-    /// HTML that has already been through [`crate::sanitize`].
+    /// HTML that has already been through [`mailrs_client::sanitize`].
     Html(&'a str),
     Text(&'a str),
 }
@@ -1456,7 +1456,7 @@ mod tests {
             "[[1]] Good morning\n[[2]] See you <b>soon</b>",
             pieces.len(),
         );
-        let clean = crate::sanitize::sanitize_html(&prose.rebuild(&said), None);
+        let clean = mailrs_client::sanitize::sanitize_html(&prose.rebuild(&said), None);
         assert_eq!(
             clean,
             "<p>Good morning</p><p>See you &lt;b&gt;soon&lt;/b&gt;</p>"

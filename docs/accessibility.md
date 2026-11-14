@@ -87,8 +87,8 @@ sender is a heading under it, the details panel is a real `<details>`,
 the attachment rows are a list whose links say which file they act on,
 and the page carries the language it is written in. A picture the sender
 described keeps their words; one nobody described is given an empty
-description in `sanitize.rs`, so a reader passes over it rather than
-spelling a kilobyte of base64 out.
+description in `client/src/sanitize.rs`, so a reader passes over it rather
+than spelling a kilobyte of base64 out.
 
 ## Labels, tags and the inbox tabs
 

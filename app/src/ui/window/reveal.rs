@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use mailrs_domain::{AccountId, Target};
 
-use crate::wanted::{Answer, Screen, Wanted};
+use mailrs_client::wanted::{Answer, Screen, Wanted};
 
 /// How long the reply waits for the thread and its body to arrive before
 /// it quotes the snippet instead.

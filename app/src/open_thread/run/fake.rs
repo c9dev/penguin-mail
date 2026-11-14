@@ -26,15 +26,14 @@ use super::{
     Answer, Card, Desk, Effects, Fetched, InlinePictures, Preferences, ReceiptCard, Stored,
     ThreadRun,
 };
-use crate::open_thread::{
-    Cleaned, Document, InlineImage, Loose, OpenThread, Origin, Page, ToClean, Unsent,
-};
+use crate::open_thread::{Cleaned, Document, Loose, OpenThread, Origin, Page, ToClean, Unsent};
 use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::Translation;
 use crate::ui::invitation::strip::{Strip, Verdict};
 use crate::ui::invitation::{AddTo, Showing};
-use crate::wanted::Screen as OnScreen;
+use mailrs_client::inline::InlineImage;
+use mailrs_client::wanted::Screen as OnScreen;
 
 /// The account and thread every fixture belongs to.
 pub const ACCOUNT: AccountId = 1;

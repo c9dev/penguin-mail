@@ -10,9 +10,10 @@ use mailrs_domain::{MessageBody, MessageMeta, Target};
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{outbox_row, waiting_line};
 
-use super::{InlineImage, OpenThread};
+use super::OpenThread;
 use crate::compose::{self, Draft};
 use crate::protection::opened_body;
+use mailrs_client::inline::InlineImage;
 
 /// What the pane says about the queued message it shows, above the
 /// message itself.

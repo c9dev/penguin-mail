@@ -13,15 +13,15 @@ use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
 use crate::translation::{Body, Language, Prose, Translation};
 
-pub mod inline;
+mod inline;
 pub mod loose;
 mod page;
 pub mod queued;
 mod receipt;
 pub mod run;
 
-pub use inline::{InlineImage, Served};
 pub use loose::{Loose, Origin, Parsed, loose_id};
+use mailrs_client::inline::InlineImage;
 #[cfg(test)]
 pub use page::Document;
 pub use page::{Article, Cleaned, Page, ToClean};
@@ -688,7 +688,7 @@ mod tests {
             .insert("m1".to_string(), Ok(MessageBody::default().into()));
         // What Gmail fetched for the message as it arrived, including a
         // picture from a part nobody signed.
-        let stranger = crate::open_thread::InlineImage {
+        let stranger = mailrs_client::inline::InlineImage {
             mime: "image/png".to_string(),
             bytes: vec![0].into(),
         };
@@ -698,7 +698,7 @@ mod tests {
         )]));
         assert!(matches!(
             open.picture("m1", 0, "stranger"),
-            crate::open_thread::Served::Ready(_)
+            mailrs_client::inline::Served::Ready(_)
         ));
         let signed = MessageBody {
             html: Some("<img src=\"cid:logo\">".to_string()),
@@ -732,7 +732,7 @@ mod tests {
         assert_eq!(pictures["logo"].mime, "image/png");
         // The page's old address for the stranger reaches nothing now, and
         // the logo comes under a new one.
-        use crate::open_thread::Served;
+        use mailrs_client::inline::Served;
         assert_eq!(open.picture("m1", 0, "stranger"), Served::Gone);
         assert_eq!(open.picture("m1", 0, "logo"), Served::Gone);
         assert!(matches!(open.picture("m1", 1, "logo"), Served::Ready(_)));

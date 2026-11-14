@@ -12,7 +12,7 @@ use gtk::{gdk, glib, pango};
 use mailrs_domain::translate::gettext;
 
 use crate::compose::OutgoingAttachment;
-use crate::richtext::{Block, BlockKind, RichBody, Span, Style};
+use mailrs_client::richtext::{Block, BlockKind, RichBody, Span, Style};
 
 /// A picture shown in the text: the anchor it sits in, the `cid:` the
 /// message refers to it by, and the words that describe it, which go out
@@ -1103,7 +1103,7 @@ mod tests {
         for text in ["one", "two", "three"] {
             body.blocks.push(Block::new(
                 BlockKind::Numbered,
-                vec![crate::richtext::Span::plain(text)],
+                vec![mailrs_client::richtext::Span::plain(text)],
             ));
         }
         write(&view, &body, &[], &mut anchors);

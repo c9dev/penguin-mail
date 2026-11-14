@@ -701,7 +701,7 @@ fn html_text(html: &str) -> String {
         Some(at) => &html[at..],
         None => html,
     };
-    let clean = crate::sanitize::sanitize_html(body, None);
+    let clean = mailrs_client::sanitize::sanitize_html(body, None);
     crate::compose::html_to_text(&clean)
 }
 

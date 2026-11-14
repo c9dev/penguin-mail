@@ -43,8 +43,8 @@ use super::block::{EventKey, key_of};
 use super::next::{self, NextUp};
 use super::range::{self, Range, ViewKind};
 use super::{layout, scope, time_grid};
-pub use crate::wanted::Answer;
-use crate::wanted::{Screen, Wanted};
+pub use mailrs_client::wanted::Answer;
+use mailrs_client::wanted::{Screen, Wanted};
 
 #[cfg(test)]
 mod change_tests;

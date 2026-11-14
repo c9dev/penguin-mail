@@ -30,11 +30,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use chrono::NaiveDate;
 use mailrs_domain::{AccountId, MessageBody, MessageMeta};
 
-use super::{OpenThread, inline};
-use crate::quoted;
+use super::OpenThread;
 use crate::render::{self, BodyState, Face, Head, MessageView, Receipt, Sanitized, TAIL, Theme};
-use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
+use mailrs_client::inline;
+use mailrs_client::quoted;
+use mailrs_client::sanitize::sanitize_html;
 
 /// A message body after cleaning, with the body and the version of its
 /// pictures it was made from, and what three scans of the cleaned HTML

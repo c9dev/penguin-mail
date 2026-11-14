@@ -112,7 +112,7 @@ a good icon look broken.
   starts doing its own Gmail work is drifting.
 - **Late answers.** Any `await` in the UI can finish after the reader
   has moved to another conversation. A run that talks to the window
-  holds a `Wanted` (`app/src/wanted.rs`) for the `Target` it started on
+  holds a `Wanted` (`client/src/wanted.rs`) for the `Target` it started on
   and reaches its effect port only through it: `wait` and `ask` drop an
   answer once that target has left the screen, and `on_screen` makes a
   change only while it is there. The thread run
@@ -132,7 +132,9 @@ a good icon look broken.
   and so on), and is read through `read` and `find`. Add a named change
   rather than reaching into `OpenThread`, and put its data half on
   `OpenThread` (`take_bodies`, `take_engine_answer`), so the thread
-  run's fake changes the thread the way the view does.
+  run's fake changes the thread the way the view does. Inline picture
+  types and their address codec live in `client/src/inline.rs`; the
+  thread's picture methods stay in `app/src/open_thread/inline.rs`.
 - **Architecture vocabulary** is the `codebase-design` skill's: module,
   interface, depth, seam, adapter, leverage, locality. A seam gets
   introduced when a second adapter exists, not before.

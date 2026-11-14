@@ -32,7 +32,7 @@ use super::on_screen::{OnScreen, Redraw, Revealed};
 use crate::search::typing::{self, Reach, Run, Typed, Typing};
 use crate::ui::Mailbox;
 use crate::ui::list_feed::{Named, Refresh, Splice, Ticket};
-pub(super) use crate::wanted::Answer;
+pub(super) use mailrs_client::wanted::Answer;
 
 #[cfg(test)]
 mod fake;

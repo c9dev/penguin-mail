@@ -8,7 +8,7 @@
 //! so the first placeholder after the rewrite is the first picture before
 //! it, and the buffer keeps each picture in the anchor it already had.
 
-use crate::richtext::{RichBody, Span};
+use mailrs_client::richtext::{RichBody, Span};
 
 /// What stands in for a picture while its lines are rewritten.
 pub const HELD: char = '\u{fffc}';
@@ -72,7 +72,7 @@ pub fn restore(body: &mut RichBody, pictures: &[Span]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::richtext::{Block, BlockKind};
+    use mailrs_client::richtext::{Block, BlockKind};
 
     fn picture(cid: &str) -> Span {
         Span::image("image", format!("cid:{cid}"))

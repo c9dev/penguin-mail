@@ -9,8 +9,8 @@ use super::fake::{
     portuguese, queued, row, spot, strip, with_inline_picture, with_picture,
 };
 use super::{Card, Event, ReceiptCard, Stale};
-use crate::open_thread::Served;
 use crate::protection::{Mark, Read, Tone};
+use mailrs_client::inline::Served;
 
 fn target(message_id: Option<&str>) -> Target {
     Target {

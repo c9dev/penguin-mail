@@ -139,6 +139,8 @@ sync/     one sync loop per account: bootstrap, history replay, backfill,
 pgp/      OpenPGP mail through the person's own gpg
 smime/    S/MIME mail through their gpgsm
 ai/       model providers, tool calls, the Claude Code bridge
+client/   GTK-free client logic shared by frontends: HTML cleaning, quoted
+          history, inline picture addresses, rich text and late answers
 cli/      penguin-mail-cli
 app/      the GTK 4 and libadwaita app, with the calendar view in
           app/src/ui/calendar/
