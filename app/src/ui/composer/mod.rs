@@ -8,7 +8,9 @@
 //! the other.
 
 mod body_view;
+mod clipboard;
 mod editor;
+mod files;
 mod pictures;
 mod recipients;
 mod removals;
@@ -2212,8 +2214,9 @@ impl Composer {
                 .spacing(8)
                 .css_classes(["attachment-row"])
                 .build();
-            row.append(&gtk::Image::from_icon_name("mail-attachment-symbolic"));
-            row.append(
+            let details = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            details.append(&gtk::Image::from_icon_name("mail-attachment-symbolic"));
+            details.append(
                 &gtk::Label::builder()
                     .label(&attachment.filename)
                     .xalign(0.0)
@@ -2221,12 +2224,28 @@ impl Composer {
                     .ellipsize(gtk::pango::EllipsizeMode::Middle)
                     .build(),
             );
-            row.append(
+            details.append(
                 &gtk::Label::builder()
                     .label(human_size(attachment.data.len() as i64))
                     .css_classes(["dim-label", "caption"])
                     .build(),
             );
+            let open = gtk::Button::builder()
+                .child(&details)
+                .hexpand(true)
+                .css_classes(["flat"])
+                .build();
+            name(
+                &open,
+                &fill(&gettext("Open {file}"), &[("file", &attachment.filename)]),
+            );
+            let weak = Rc::downgrade(self);
+            open.connect_clicked(move |_| {
+                if let Some(c) = weak.upgrade() {
+                    c.preview_file(index);
+                }
+            });
+            row.append(&open);
             let remove = gtk::Button::builder()
                 .icon_name("window-close-symbolic")
                 .css_classes(["flat", "circular"])
@@ -2522,6 +2541,9 @@ impl Composer {
         let weak = Rc::downgrade(self);
         self.body.connect_paste_clipboard(move |view| {
             let Some(c) = weak.upgrade() else { return };
+            if c.paste_image(view) {
+                return;
+            }
             if c.editor.format() != ComposeFormat::Rich {
                 return;
             }
@@ -2772,44 +2794,6 @@ impl Composer {
 
     /// Pasted images go into the text; dropped files go in or attach.
     fn accept_images(self: &Rc<Self>) {
-        let keys = gtk::EventControllerKey::new();
-        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
-        let weak = Rc::downgrade(self);
-        keys.connect_key_pressed(move |_, key, _, modifiers| {
-            let Some(c) = weak.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            let paste =
-                modifiers.contains(crate::ui::PRIMARY) && matches!(key, gdk::Key::v | gdk::Key::V);
-            let clipboard = c.body.clipboard();
-            let formats = clipboard.formats();
-            if !paste
-                || !formats.contains_type(gdk::Texture::static_type())
-                || formats.contain_mime_type("text/plain")
-            {
-                return glib::Propagation::Proceed;
-            }
-            glib::spawn_future_local(async move {
-                match clipboard.read_texture_future().await {
-                    Ok(Some(texture)) => {
-                        let png = texture.save_to_png_bytes();
-                        // The file name is made up, so it says nothing of
-                        // the picture. The writer can describe it from its
-                        // menu.
-                        c.add_inline_image(
-                            "pasted-image.png".into(),
-                            "",
-                            "image/png".into(),
-                            png.to_vec(),
-                        );
-                    }
-                    _ => c.toast(&gettext("Could not paste the image")),
-                }
-            });
-            glib::Propagation::Stop
-        });
-        self.body.add_controller(keys);
-
         let drop = gtk::DropTarget::new(gdk::FileList::static_type(), gdk::DragAction::COPY);
         let weak = Rc::downgrade(self);
         drop.connect_drop(move |_, value, _, _| {
