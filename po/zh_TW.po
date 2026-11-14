@@ -2476,11 +2476,7 @@ msgstr ""
 "此 snap 必須能存取鑰匙圈，Penguin Mail 才能儲存登入資料。請在終端機中執行 "
 "{command}，再重新啟動 Penguin Mail。"
 
-#: app/src/language_names.rs:48
-msgid "{language} ({country})"
-msgstr "{language}（{country}）"
-
-#: app/src/main.rs:104
+#: app/src/main.rs:96
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2502,15 +2498,15 @@ msgstr ""
 "  mailto:...     等同於 --compose mailto:...\n"
 "  FILE.ics       開啟行事曆檔案，將其中活動加入行事曆"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:208
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知選項 {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:486
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 無法啟動"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:491 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "回報問題"
 
@@ -3983,110 +3979,110 @@ msgstr "無法顯示此郵件"
 msgid "View Source"
 msgstr "檢視原始碼"
 
-#: app/src/render.rs:448
+#: app/src/render.rs:447
 msgid "Possible phishing links"
 msgstr "可能的網路釣魚連結"
 
-#: app/src/render.rs:450
+#: app/src/render.rs:449
 msgid ""
 "This message contains potentially deceptive links. Check the destination "
 "before opening them."
 msgstr "這封郵件包含可能具有誤導性的連結。開啟前請先確認目的地。"
 
-#: app/src/render.rs:503
+#: app/src/render.rs:502
 msgid "Details"
 msgstr "詳細資料"
 
-#: app/src/render.rs:524
+#: app/src/render.rs:523
 msgid "from"
 msgstr "寄件者"
 
-#: app/src/render.rs:535
+#: app/src/render.rs:534
 msgid "to"
 msgstr "收件者"
 
-#: app/src/render.rs:549
+#: app/src/render.rs:548
 msgid "delivered-to"
 msgstr "投遞位址"
 
-#: app/src/render.rs:552
+#: app/src/render.rs:551
 msgid "cc"
 msgstr "副本"
 
-#: app/src/render.rs:556
+#: app/src/render.rs:555
 msgid "date"
 msgstr "日期"
 
-#: app/src/render.rs:558
+#: app/src/render.rs:557
 msgid "subject"
 msgstr "主旨"
 
-#: app/src/render.rs:560
+#: app/src/render.rs:559
 msgid "mailed-by"
 msgstr "郵寄網域"
 
-#: app/src/render.rs:563
+#: app/src/render.rs:562
 msgid "signed-by"
 msgstr "簽署網域"
 
-#: app/src/render.rs:567
+#: app/src/render.rs:566
 msgid "security"
 msgstr "安全性"
 
-#: app/src/render.rs:569
+#: app/src/render.rs:568
 msgid "Standard encryption (TLS)"
 msgstr "標準加密（TLS）"
 
-#: app/src/render.rs:574
+#: app/src/render.rs:573
 msgid "Not encrypted in transit"
 msgstr "傳輸過程未加密"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:610 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 個附件"
 
-#: app/src/render.rs:643
+#: app/src/render.rs:642
 msgid "Quick Look"
 msgstr "快速查看"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
+#: app/src/render.rs:643 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "另存新檔…"
 
-#: app/src/render.rs:646
+#: app/src/render.rs:645
 msgid "Open {file}, {size}"
 msgstr "開啟 {file}，{size}"
 
-#: app/src/render.rs:653
+#: app/src/render.rs:652
 msgid "Save {file}…"
 msgstr "儲存 {file}…"
 
-#: app/src/render.rs:660
+#: app/src/render.rs:659
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "全部儲存（{count}）"
 
-#: app/src/render.rs:671
+#: app/src/render.rs:670
 msgid "Save every attachment to a folder"
 msgstr "將所有附件儲存至資料夾"
 
-#: app/src/render.rs:735
+#: app/src/render.rs:734
 msgid "undisclosed recipients"
 msgstr "未公開的收件者"
 
-#: app/src/render.rs:738
+#: app/src/render.rs:737
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named} 與其他 {count} 位"
 
-#: app/src/render.rs:751
+#: app/src/render.rs:750
 msgid "me"
 msgstr "我"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
+#: app/src/render.rs:760 app/src/ui/composer/mod.rs:618
 #: app/src/ui/composer/mod.rs:622
 msgid "Show trimmed content"
 msgstr "顯示省略的內容"
@@ -4631,10 +4627,6 @@ msgstr "此檔案需要密語，但尚未提供。未匯入任何內容。"
 #: app/src/smime.rs:286
 msgid "gpgsm failed: {reason}"
 msgstr "gpgsm 失敗：{reason}"
-
-#: app/src/templates.rs:28
-msgid "%-d %B %Y"
-msgstr "%Y 年 %B %-d 日"
 
 #: app/src/translation.rs:76
 msgid "Russian"
@@ -12204,6 +12196,14 @@ msgstr "此發行版本未以 Penguin Mail 的金鑰簽署，因此 Penguin Mail
 msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr "驗證發行版本簽章需要 gpgv 或 gpg，但兩者都未安裝。"
+
+#: client/src/language_names.rs:48
+msgid "{language} ({country})"
+msgstr "{language}（{country}）"
+
+#: client/src/templates.rs:28
+msgid "%-d %B %Y"
+msgstr "%Y 年 %B %-d 日"
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".

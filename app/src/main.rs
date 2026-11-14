@@ -7,7 +7,6 @@ mod app;
 #[cfg(any(feature = "packaging-appimage", test))]
 mod appimage;
 mod assistant;
-mod attachcheck;
 mod autostart;
 #[cfg(target_os = "macos")]
 mod bundle;
@@ -16,7 +15,6 @@ mod compose;
 mod contacts;
 mod core;
 mod demo;
-mod diff;
 #[cfg(all(target_os = "macos", debug_assertions))]
 mod drive;
 mod event_reminders;
@@ -29,8 +27,6 @@ mod icon_theme;
 mod images;
 mod keyring_plug;
 mod language;
-mod language_names;
-mod link_safety;
 mod locale_time;
 mod logging;
 mod notify;
@@ -46,7 +42,6 @@ mod protection;
 mod quoted;
 mod recent;
 mod render;
-mod richtext;
 mod route_choice;
 mod rules;
 mod sanitize;
@@ -55,8 +50,6 @@ mod servers;
 mod settings;
 mod smime;
 mod starting;
-mod stray_markdown;
-mod templates;
 #[cfg(test)]
 mod text_contrast;
 mod translation;
@@ -66,7 +59,6 @@ mod unread;
 mod unsubscribe;
 mod unsubscribe_page;
 mod update;
-mod wanted;
 mod web;
 
 use std::cell::RefCell;
@@ -135,7 +127,7 @@ fn main() -> glib::ExitCode {
                     // request that answers quickly; the call itself
                     // still succeeds.
                     tracing_subscriber::EnvFilter::new(
-                        "warn,penguin_mail=info,mailrs_sync=info,zbus::proxy=error",
+                        "warn,penguin_mail=info,mailrs_client=info,mailrs_sync=info,zbus::proxy=error",
                     )
                 }),
             )

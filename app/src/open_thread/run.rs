@@ -41,8 +41,8 @@ use super::{Cleaned, InlineImage, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::ui::invitation::strip::Strip;
 use crate::ui::invitation::{AddTo, Showing};
-pub use crate::wanted::Answer;
-use crate::wanted::{Screen, Wanted};
+pub use mailrs_client::wanted::Answer;
+use mailrs_client::wanted::{Screen, Wanted};
 
 #[cfg(test)]
 mod fake;

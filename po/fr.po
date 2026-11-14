@@ -2661,11 +2661,7 @@ msgstr ""
 "accès à votre trousseau. Exécutez {command} dans un terminal, puis "
 "redémarrez Penguin Mail."
 
-#: app/src/language_names.rs:48
-msgid "{language} ({country})"
-msgstr "{language} ({country})"
-
-#: app/src/main.rs:104
+#: app/src/main.rs:96
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2691,15 +2687,15 @@ msgstr ""
 "  FICHIER.ics    ouvrir un fichier d’agenda pour ajouter ses événements à un "
 "agenda"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:208
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail : option inconnue {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:486
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail n’a pas pu démarrer"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:491 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Signaler un problème"
 
@@ -4283,11 +4279,11 @@ msgstr "Ce message n’a pas pu être affiché"
 msgid "View Source"
 msgstr "Afficher la source"
 
-#: app/src/render.rs:448
+#: app/src/render.rs:447
 msgid "Possible phishing links"
 msgstr "Liens potentiellement frauduleux"
 
-#: app/src/render.rs:450
+#: app/src/render.rs:449
 msgid ""
 "This message contains potentially deceptive links. Check the destination "
 "before opening them."
@@ -4295,103 +4291,103 @@ msgstr ""
 "Ce message contient des liens potentiellement trompeurs. Vérifiez leur "
 "destination avant de les ouvrir."
 
-#: app/src/render.rs:503
+#: app/src/render.rs:502
 msgid "Details"
 msgstr "Détails"
 
-#: app/src/render.rs:524
+#: app/src/render.rs:523
 msgid "from"
 msgstr "de"
 
-#: app/src/render.rs:535
+#: app/src/render.rs:534
 msgid "to"
 msgstr "à"
 
-#: app/src/render.rs:549
+#: app/src/render.rs:548
 msgid "delivered-to"
 msgstr "adresse de livraison"
 
-#: app/src/render.rs:552
+#: app/src/render.rs:551
 msgid "cc"
 msgstr "cc"
 
-#: app/src/render.rs:556
+#: app/src/render.rs:555
 msgid "date"
 msgstr "date"
 
-#: app/src/render.rs:558
+#: app/src/render.rs:557
 msgid "subject"
 msgstr "objet"
 
-#: app/src/render.rs:560
+#: app/src/render.rs:559
 msgid "mailed-by"
 msgstr "envoyé par"
 
-#: app/src/render.rs:563
+#: app/src/render.rs:562
 msgid "signed-by"
 msgstr "signé par"
 
-#: app/src/render.rs:567
+#: app/src/render.rs:566
 msgid "security"
 msgstr "sécurité"
 
-#: app/src/render.rs:569
+#: app/src/render.rs:568
 msgid "Standard encryption (TLS)"
 msgstr "Chiffrement standard (TLS)"
 
-#: app/src/render.rs:574
+#: app/src/render.rs:573
 msgid "Not encrypted in transit"
 msgstr "Non chiffré pendant le transfert"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:610 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} pièce jointe"
 msgstr[1] "{count} pièces jointes"
 
-#: app/src/render.rs:643
+#: app/src/render.rs:642
 msgid "Quick Look"
 msgstr "Aperçu rapide"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
+#: app/src/render.rs:643 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Enregistrer sous…"
 
-#: app/src/render.rs:646
+#: app/src/render.rs:645
 msgid "Open {file}, {size}"
 msgstr "Ouvrir {file}, {size}"
 
-#: app/src/render.rs:653
+#: app/src/render.rs:652
 msgid "Save {file}…"
 msgstr "Enregistrer {file}…"
 
-#: app/src/render.rs:660
+#: app/src/render.rs:659
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "Tout enregistrer ({count})"
 msgstr[1] "Tout enregistrer ({count})"
 
-#: app/src/render.rs:671
+#: app/src/render.rs:670
 msgid "Save every attachment to a folder"
 msgstr "Enregistrer toutes les pièces jointes dans un dossier"
 
-#: app/src/render.rs:735
+#: app/src/render.rs:734
 msgid "undisclosed recipients"
 msgstr "destinataires non divulgués"
 
-#: app/src/render.rs:738
+#: app/src/render.rs:737
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named}, et {count} autre"
 msgstr[1] "{named}, et {count} autres"
 
-#: app/src/render.rs:751
+#: app/src/render.rs:750
 msgid "me"
 msgstr "moi"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
+#: app/src/render.rs:760 app/src/ui/composer/mod.rs:618
 #: app/src/ui/composer/mod.rs:622
 msgid "Show trimmed content"
 msgstr "Afficher le contenu masqué"
@@ -4965,10 +4961,6 @@ msgstr ""
 #: app/src/smime.rs:286
 msgid "gpgsm failed: {reason}"
 msgstr "Échec de gpgsm : {reason}"
-
-#: app/src/templates.rs:28
-msgid "%-d %B %Y"
-msgstr "%-d %B %Y"
 
 #: app/src/translation.rs:76
 msgid "Russian"
@@ -12884,6 +12876,14 @@ msgid ""
 msgstr ""
 "Vérifier la signature de la version demande gpgv ou gpg, et aucun des deux "
 "n’est installé."
+
+#: client/src/language_names.rs:48
+msgid "{language} ({country})"
+msgstr "{language} ({country})"
+
+#: client/src/templates.rs:28
+msgid "%-d %B %Y"
+msgstr "%-d %B %Y"
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".

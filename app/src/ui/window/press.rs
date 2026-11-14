@@ -20,7 +20,7 @@ use super::triage::{Cancel, Decision, decide};
 use crate::ui::Mailbox;
 use crate::ui::conversation::Action;
 use crate::ui::moving::move_action;
-use crate::wanted::Answer;
+use mailrs_client::wanted::Answer;
 
 /// A mail button, and the keys and menu items that stand for one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

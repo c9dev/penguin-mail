@@ -2538,11 +2538,7 @@ msgstr ""
 "được kho khóa. Chạy {command} trong thiết bị đầu cuối, rồi khởi động lại "
 "Penguin Mail."
 
-#: app/src/language_names.rs:48
-msgid "{language} ({country})"
-msgstr "{language} ({country})"
-
-#: app/src/main.rs:104
+#: app/src/main.rs:96
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2564,15 +2560,15 @@ msgstr ""
 "  mailto:...     giống --compose mailto:...\n"
 "  FILE.ics       mở tệp lịch để thêm các sự kiện vào lịch"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:208
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: tùy chọn không xác định {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:486
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail không thể khởi động"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:491 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Báo cáo sự cố"
 
@@ -4086,11 +4082,11 @@ msgstr "Không thể hiển thị thư này"
 msgid "View Source"
 msgstr "Xem nguồn"
 
-#: app/src/render.rs:448
+#: app/src/render.rs:447
 msgid "Possible phishing links"
 msgstr "Liên kết có thể là lừa đảo"
 
-#: app/src/render.rs:450
+#: app/src/render.rs:449
 msgid ""
 "This message contains potentially deceptive links. Check the destination "
 "before opening them."
@@ -4098,100 +4094,100 @@ msgstr ""
 "Thư này chứa các liên kết có thể gây hiểu nhầm. Hãy kiểm tra địa chỉ đích "
 "trước khi mở."
 
-#: app/src/render.rs:503
+#: app/src/render.rs:502
 msgid "Details"
 msgstr "Chi tiết"
 
-#: app/src/render.rs:524
+#: app/src/render.rs:523
 msgid "from"
 msgstr "từ"
 
-#: app/src/render.rs:535
+#: app/src/render.rs:534
 msgid "to"
 msgstr "đến"
 
-#: app/src/render.rs:549
+#: app/src/render.rs:548
 msgid "delivered-to"
 msgstr "địa chỉ nhận thư"
 
-#: app/src/render.rs:552
+#: app/src/render.rs:551
 msgid "cc"
 msgstr "cc"
 
-#: app/src/render.rs:556
+#: app/src/render.rs:555
 msgid "date"
 msgstr "ngày"
 
-#: app/src/render.rs:558
+#: app/src/render.rs:557
 msgid "subject"
 msgstr "tiêu đề"
 
-#: app/src/render.rs:560
+#: app/src/render.rs:559
 msgid "mailed-by"
 msgstr "gửi qua"
 
-#: app/src/render.rs:563
+#: app/src/render.rs:562
 msgid "signed-by"
 msgstr "ký bởi"
 
-#: app/src/render.rs:567
+#: app/src/render.rs:566
 msgid "security"
 msgstr "bảo mật"
 
-#: app/src/render.rs:569
+#: app/src/render.rs:568
 msgid "Standard encryption (TLS)"
 msgstr "Mã hóa tiêu chuẩn (TLS)"
 
-#: app/src/render.rs:574
+#: app/src/render.rs:573
 msgid "Not encrypted in transit"
 msgstr "Không mã hóa khi truyền"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:610 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} tệp đính kèm"
 
-#: app/src/render.rs:643
+#: app/src/render.rs:642
 msgid "Quick Look"
 msgstr "Xem nhanh"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
+#: app/src/render.rs:643 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Lưu thành…"
 
-#: app/src/render.rs:646
+#: app/src/render.rs:645
 msgid "Open {file}, {size}"
 msgstr "Mở {file}, {size}"
 
-#: app/src/render.rs:653
+#: app/src/render.rs:652
 msgid "Save {file}…"
 msgstr "Lưu {file}…"
 
-#: app/src/render.rs:660
+#: app/src/render.rs:659
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "Lưu tất cả ({count})"
 
-#: app/src/render.rs:671
+#: app/src/render.rs:670
 msgid "Save every attachment to a folder"
 msgstr "Lưu mọi tệp đính kèm vào một thư mục"
 
-#: app/src/render.rs:735
+#: app/src/render.rs:734
 msgid "undisclosed recipients"
 msgstr "người nhận không được tiết lộ"
 
-#: app/src/render.rs:738
+#: app/src/render.rs:737
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named} và {count} người khác"
 
-#: app/src/render.rs:751
+#: app/src/render.rs:750
 msgid "me"
 msgstr "tôi"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
+#: app/src/render.rs:760 app/src/ui/composer/mod.rs:618
 #: app/src/ui/composer/mod.rs:622
 msgid "Show trimmed content"
 msgstr "Hiện nội dung đã thu gọn"
@@ -4743,10 +4739,6 @@ msgstr "Tệp cần cụm mật khẩu nhưng chưa được cung cấp. Chưa n
 #: app/src/smime.rs:286
 msgid "gpgsm failed: {reason}"
 msgstr "gpgsm thất bại: {reason}"
-
-#: app/src/templates.rs:28
-msgid "%-d %B %Y"
-msgstr "%-d/%-m/%Y"
 
 #: app/src/translation.rs:76
 msgid "Russian"
@@ -12443,6 +12435,14 @@ msgid ""
 msgstr ""
 "Kiểm tra chữ ký bản phát hành cần gpgv hoặc gpg nhưng chưa cài chương trình "
 "nào."
+
+#: client/src/language_names.rs:48
+msgid "{language} ({country})"
+msgstr "{language} ({country})"
+
+#: client/src/templates.rs:28
+msgid "%-d %B %Y"
+msgstr "%-d/%-m/%Y"
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".

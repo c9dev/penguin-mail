@@ -13,6 +13,7 @@ name = "penguin-mail"
 path = "src/main.rs"
 
 [dependencies]
+mailrs-client.workspace = true
 mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
@@ -52,7 +53,6 @@ mail-builder.workspace = true
 mail-parser.workspace = true
 notify-rust.workspace = true
 pulldown-cmark.workspace = true
-psl.workspace = true
 rand.workspace = true
 rusqlite.workspace = true
 serde.workspace = true

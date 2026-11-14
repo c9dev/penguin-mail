@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["domain", "mime", "gmail", "graph", "jmap", "discover", "imap", "dav", "sieve", "pop3", "store", "sync", "pgp", "smime", "ai", "cli", "app", "testmail"]
+members = ["domain", "mime", "gmail", "graph", "jmap", "discover", "imap", "dav", "sieve", "pop3", "store", "sync", "pgp", "smime", "ai", "cli", "client", "app", "testmail"]
 exclude = ["vendor/ksni"]
 
 [workspace.package]
@@ -14,6 +14,7 @@ publish = false
 repository = "https://github.com/c9dev/penguin-mail"
 
 [workspace.dependencies]
+mailrs-client = { path = "client" }
 mailrs-domain = { path = "domain" }
 mailrs-mime = { path = "mime" }
 mailrs-gmail = { path = "gmail" }

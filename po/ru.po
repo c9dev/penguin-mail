@@ -2658,11 +2658,7 @@ msgstr ""
 "к вашей связке ключей. Выполните {command} в терминале, затем перезапустите "
 "Penguin Mail."
 
-#: app/src/language_names.rs:48
-msgid "{language} ({country})"
-msgstr "{language} ({country})"
-
-#: app/src/main.rs:104
+#: app/src/main.rs:96
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2687,15 +2683,15 @@ msgstr ""
 "  ФАЙЛ.ics       открыть файл календаря, чтобы добавить его события в "
 "календарь"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:208
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: неизвестный параметр {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:486
 msgid "Penguin Mail Could Not Start"
 msgstr "Не удалось запустить Penguin Mail"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:491 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Сообщить о проблеме"
 
@@ -4265,11 +4261,11 @@ msgstr "Не удалось показать это сообщение"
 msgid "View Source"
 msgstr "Показать исходный код"
 
-#: app/src/render.rs:448
+#: app/src/render.rs:447
 msgid "Possible phishing links"
 msgstr "Возможные фишинговые ссылки"
 
-#: app/src/render.rs:450
+#: app/src/render.rs:449
 msgid ""
 "This message contains potentially deceptive links. Check the destination "
 "before opening them."
@@ -4277,106 +4273,106 @@ msgstr ""
 "Это сообщение содержит ссылки, которые могут вводить в заблуждение. "
 "Проверьте адрес перед тем, как открыть их."
 
-#: app/src/render.rs:503
+#: app/src/render.rs:502
 msgid "Details"
 msgstr "Подробности"
 
-#: app/src/render.rs:524
+#: app/src/render.rs:523
 msgid "from"
 msgstr "от"
 
-#: app/src/render.rs:535
+#: app/src/render.rs:534
 msgid "to"
 msgstr "кому"
 
-#: app/src/render.rs:549
+#: app/src/render.rs:548
 msgid "delivered-to"
 msgstr "адрес доставки"
 
-#: app/src/render.rs:552
+#: app/src/render.rs:551
 msgid "cc"
 msgstr "копия"
 
-#: app/src/render.rs:556
+#: app/src/render.rs:555
 msgid "date"
 msgstr "дата"
 
-#: app/src/render.rs:558
+#: app/src/render.rs:557
 msgid "subject"
 msgstr "тема"
 
-#: app/src/render.rs:560
+#: app/src/render.rs:559
 msgid "mailed-by"
 msgstr "отправлено через"
 
-#: app/src/render.rs:563
+#: app/src/render.rs:562
 msgid "signed-by"
 msgstr "подписано"
 
-#: app/src/render.rs:567
+#: app/src/render.rs:566
 msgid "security"
 msgstr "безопасность"
 
-#: app/src/render.rs:569
+#: app/src/render.rs:568
 msgid "Standard encryption (TLS)"
 msgstr "Стандартное шифрование (TLS)"
 
-#: app/src/render.rs:574
+#: app/src/render.rs:573
 msgid "Not encrypted in transit"
 msgstr "Не зашифровано при передаче"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:610 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} вложение"
 msgstr[1] "{count} вложения"
 msgstr[2] "{count} вложений"
 
-#: app/src/render.rs:643
+#: app/src/render.rs:642
 msgid "Quick Look"
 msgstr "Быстрый просмотр"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
+#: app/src/render.rs:643 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Сохранить как…"
 
-#: app/src/render.rs:646
+#: app/src/render.rs:645
 msgid "Open {file}, {size}"
 msgstr "Открыть {file}, {size}"
 
-#: app/src/render.rs:653
+#: app/src/render.rs:652
 msgid "Save {file}…"
 msgstr "Сохранить {file}…"
 
-#: app/src/render.rs:660
+#: app/src/render.rs:659
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "Сохранить все ({count})"
 msgstr[1] "Сохранить все ({count})"
 msgstr[2] "Сохранить все ({count})"
 
-#: app/src/render.rs:671
+#: app/src/render.rs:670
 msgid "Save every attachment to a folder"
 msgstr "Сохранить все вложения в папку"
 
-#: app/src/render.rs:735
+#: app/src/render.rs:734
 msgid "undisclosed recipients"
 msgstr "скрытые получатели"
 
-#: app/src/render.rs:738
+#: app/src/render.rs:737
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named} и ещё {count}"
 msgstr[1] "{named} и ещё {count}"
 msgstr[2] "{named} и ещё {count}"
 
-#: app/src/render.rs:751
+#: app/src/render.rs:750
 msgid "me"
 msgstr "я"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
+#: app/src/render.rs:760 app/src/ui/composer/mod.rs:618
 #: app/src/ui/composer/mod.rs:622
 msgid "Show trimmed content"
 msgstr "Показать скрытое содержимое"
@@ -4940,10 +4936,6 @@ msgstr ""
 #: app/src/smime.rs:286
 msgid "gpgsm failed: {reason}"
 msgstr "Ошибка gpgsm: {reason}"
-
-#: app/src/templates.rs:28
-msgid "%-d %B %Y"
-msgstr "%-d %B %Y"
 
 #: app/src/translation.rs:76
 msgid "Russian"
@@ -12901,6 +12893,14 @@ msgid ""
 msgstr ""
 "Для проверки подписи выпуска нужен gpgv или gpg, но ни один из них не "
 "установлен."
+
+#: client/src/language_names.rs:48
+msgid "{language} ({country})"
+msgstr "{language} ({country})"
+
+#: client/src/templates.rs:28
+msgid "%-d %B %Y"
+msgstr "%-d %B %Y"
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".

@@ -35,7 +35,7 @@ use crate::translation::{self, Translation};
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::strip::{self, Strip};
 use crate::ui::invitation::{AddTo, Showing};
-use crate::wanted::Screen;
+use mailrs_client::wanted::Screen;
 
 impl MainWindow {
     /// The thread run, with this window and `view` behind both ports.

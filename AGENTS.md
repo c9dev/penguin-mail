@@ -112,7 +112,7 @@ a good icon look broken.
   starts doing its own Gmail work is drifting.
 - **Late answers.** Any `await` in the UI can finish after the reader
   has moved to another conversation. A run that talks to the window
-  holds a `Wanted` (`app/src/wanted.rs`) for the `Target` it started on
+  holds a `Wanted` (`client/src/wanted.rs`) for the `Target` it started on
   and reaches its effect port only through it: `wait` and `ask` drop an
   answer once that target has left the screen, and `on_screen` makes a
   change only while it is there. The thread run

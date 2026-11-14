@@ -22,9 +22,9 @@ use crate::compose::{
     LineChange, LinePrefix, OutgoingAttachment, Unfolding, markdown_to_html, signature_change,
     toggle_prefix,
 };
-use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
-use crate::stray_markdown;
+use mailrs_client::richtext::{Block, BlockKind, RichBody, Style};
+use mailrs_client::stray_markdown;
 
 /// The body read out once, in the two forms a draft keeps.
 pub struct Written {
@@ -1606,7 +1606,7 @@ fn style_quotes(buffer: &gtk::TextBuffer, first: i32, last: i32) -> usize {
 pub(super) mod checks {
     use super::*;
     use crate::compose::restyle_signature;
-    use crate::richtext::Span;
+    use mailrs_client::richtext::Span;
 
     pub fn run() {
         a_style_goes_on_the_selection_and_comes_off_again();

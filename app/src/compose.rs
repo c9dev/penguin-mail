@@ -27,10 +27,10 @@ use mailrs_mime::address::parse_address_list_keeping_invalid;
 use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
-use crate::attachcheck::{self, Promise};
 use crate::format::full_date;
 use crate::protection::Standard;
-use crate::richtext::{self, Block, RichBody};
+use mailrs_client::attachcheck::{self, Promise};
+use mailrs_client::richtext::{self, Block, RichBody};
 use mailrs_domain::translate::{fill, gettext};
 
 /// An address reported by Gmail or configured for an SMTP account.
@@ -2823,7 +2823,7 @@ mod tests {
         // swapping, so the block has to come out of that round trip intact,
         // trailing space and all.
         let signed = with_signature("\n\nOn Monday, Ann wrote:\n> hi", "Dana");
-        let round_tripped = crate::richtext::RichBody::from_markdown(&signed).to_markdown();
+        let round_tripped = mailrs_client::richtext::RichBody::from_markdown(&signed).to_markdown();
         let swapped = restyle_signature(&round_tripped, "Dana", "Dana, Sales");
         assert!(
             swapped.contains("\n\n-- \nDana, Sales"),
@@ -3119,7 +3119,7 @@ mod tests {
 
     #[test]
     fn a_rich_body_decides_both_parts_of_the_message() {
-        use crate::richtext::{Block, BlockKind, Span, Style};
+        use mailrs_client::richtext::{Block, BlockKind, Span, Style};
 
         let bold = |text: &str| Span {
             style: Style {
@@ -3169,7 +3169,7 @@ mod tests {
 
     #[test]
     fn a_rich_body_keeps_the_images_it_still_shows() {
-        use crate::richtext::{Block, BlockKind, Span};
+        use mailrs_client::richtext::{Block, BlockKind, Span};
 
         let mut draft = Draft::new(1, me());
         draft.to = vec![addr(None, "ann@example.com")];
@@ -3404,7 +3404,7 @@ mod tests {
 
     #[test]
     fn a_rich_draft_comes_back_from_the_message_it_was_saved_as() {
-        use crate::richtext::{Block, BlockKind, Span, Style};
+        use mailrs_client::richtext::{Block, BlockKind, Span, Style};
 
         let bold = |text: &str| Span {
             style: Style {
@@ -3729,7 +3729,7 @@ mod tests {
         let mut open = folded.clone();
         open.quoted = None;
         let mut blocks = RichBody::from_markdown("Thanks.").blocks;
-        blocks.push(crate::richtext::Block::default());
+        blocks.push(mailrs_client::richtext::Block::default());
         blocks.extend(RichBody::from_markdown(&quoted).blocks);
         open.rich = Some(RichBody { blocks });
         let (text, html) = parts(&build_mime(&folded, 0, "id@example.com").unwrap());

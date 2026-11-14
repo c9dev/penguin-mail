@@ -2557,11 +2557,7 @@ msgstr ""
 "を保存できません。端末で {command} を実行してから Penguin Mail を再起動してく"
 "ださい。"
 
-#: app/src/language_names.rs:48
-msgid "{language} ({country})"
-msgstr "{language}（{country}）"
-
-#: app/src/main.rs:104
+#: app/src/main.rs:96
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2583,15 +2579,15 @@ msgstr ""
 "  mailto:...     --compose mailto:... と同じ\n"
 "  FILE.ics       カレンダーファイルを開いて予定をカレンダーに追加"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:208
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 不明なオプション {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:486
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail を起動できませんでした"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:491 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "問題を報告"
 
@@ -4111,11 +4107,11 @@ msgstr "このメッセージを表示できませんでした"
 msgid "View Source"
 msgstr "ソースを表示"
 
-#: app/src/render.rs:448
+#: app/src/render.rs:447
 msgid "Possible phishing links"
 msgstr "フィッシングの疑いがあるリンク"
 
-#: app/src/render.rs:450
+#: app/src/render.rs:449
 msgid ""
 "This message contains potentially deceptive links. Check the destination "
 "before opening them."
@@ -4123,100 +4119,100 @@ msgstr ""
 "このメッセージには偽装の疑いがあるリンクが含まれています。開く前にリンク先を"
 "確認してください。"
 
-#: app/src/render.rs:503
+#: app/src/render.rs:502
 msgid "Details"
 msgstr "詳細"
 
-#: app/src/render.rs:524
+#: app/src/render.rs:523
 msgid "from"
 msgstr "差出人"
 
-#: app/src/render.rs:535
+#: app/src/render.rs:534
 msgid "to"
 msgstr "宛先"
 
-#: app/src/render.rs:549
+#: app/src/render.rs:548
 msgid "delivered-to"
 msgstr "配信先"
 
-#: app/src/render.rs:552
+#: app/src/render.rs:551
 msgid "cc"
 msgstr "cc"
 
-#: app/src/render.rs:556
+#: app/src/render.rs:555
 msgid "date"
 msgstr "日付"
 
-#: app/src/render.rs:558
+#: app/src/render.rs:557
 msgid "subject"
 msgstr "件名"
 
-#: app/src/render.rs:560
+#: app/src/render.rs:559
 msgid "mailed-by"
 msgstr "送信元"
 
-#: app/src/render.rs:563
+#: app/src/render.rs:562
 msgid "signed-by"
 msgstr "署名元"
 
-#: app/src/render.rs:567
+#: app/src/render.rs:566
 msgid "security"
 msgstr "セキュリティ"
 
-#: app/src/render.rs:569
+#: app/src/render.rs:568
 msgid "Standard encryption (TLS)"
 msgstr "標準の暗号化（TLS）"
 
-#: app/src/render.rs:574
+#: app/src/render.rs:573
 msgid "Not encrypted in transit"
 msgstr "転送中の暗号化なし"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2199
+#: app/src/render.rs:610 app/src/ui/composer/mod.rs:2199
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 個の添付ファイル"
 
-#: app/src/render.rs:643
+#: app/src/render.rs:642
 msgid "Quick Look"
 msgstr "クイックルック"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
+#: app/src/render.rs:643 app/src/ui/window/attachments.rs:284
 #: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "名前を付けて保存…"
 
-#: app/src/render.rs:646
+#: app/src/render.rs:645
 msgid "Open {file}, {size}"
 msgstr "{file} を開く、{size}"
 
-#: app/src/render.rs:653
+#: app/src/render.rs:652
 msgid "Save {file}…"
 msgstr "{file}を保存…"
 
-#: app/src/render.rs:660
+#: app/src/render.rs:659
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "すべて保存（{count}）"
 
-#: app/src/render.rs:671
+#: app/src/render.rs:670
 msgid "Save every attachment to a folder"
 msgstr "すべての添付ファイルをフォルダーに保存"
 
-#: app/src/render.rs:735
+#: app/src/render.rs:734
 msgid "undisclosed recipients"
 msgstr "非公開の宛先"
 
-#: app/src/render.rs:738
+#: app/src/render.rs:737
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named}、他 {count} 人"
 
-#: app/src/render.rs:751
+#: app/src/render.rs:750
 msgid "me"
 msgstr "自分"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:618
+#: app/src/render.rs:760 app/src/ui/composer/mod.rs:618
 #: app/src/ui/composer/mod.rs:622
 msgid "Show trimmed content"
 msgstr "省略した内容を表示"
@@ -4778,10 +4774,6 @@ msgstr ""
 #: app/src/smime.rs:286
 msgid "gpgsm failed: {reason}"
 msgstr "gpgsm が失敗しました: {reason}"
-
-#: app/src/templates.rs:28
-msgid "%-d %B %Y"
-msgstr "%Y年%-m月%-d日"
 
 #: app/src/translation.rs:76
 msgid "Russian"
@@ -12494,6 +12486,14 @@ msgid ""
 msgstr ""
 "リリースの署名の検証にはgpgvまたはgpgが必要ですが、どちらもインストールされて"
 "いません。"
+
+#: client/src/language_names.rs:48
+msgid "{language} ({country})"
+msgstr "{language}（{country}）"
+
+#: client/src/templates.rs:28
+msgid "%-d %B %Y"
+msgstr "%Y年%-m月%-d日"
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".

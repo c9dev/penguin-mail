@@ -34,7 +34,7 @@ use crate::render::Theme;
 use crate::translation::Translation;
 use crate::ui::invitation::strip::{Strip, Verdict};
 use crate::ui::invitation::{AddTo, Showing};
-use crate::wanted::Screen as OnScreen;
+use mailrs_client::wanted::Screen as OnScreen;
 
 /// The account and thread every fixture belongs to.
 pub const ACCOUNT: AccountId = 1;

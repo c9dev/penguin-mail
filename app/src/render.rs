@@ -435,11 +435,10 @@ fn render_body(html: &mut String, view: &MessageView) {
         }
         BodyState::Loaded(body) => {
             let suspicious = match &view.sanitized {
-                Some(clean) => crate::link_safety::suspicious_html(clean.html),
-                None => body
-                    .text
-                    .as_deref()
-                    .is_some_and(|text| crate::link_safety::suspicious_html(&render_text(text))),
+                Some(clean) => mailrs_client::link_safety::suspicious_html(clean.html),
+                None => body.text.as_deref().is_some_and(|text| {
+                    mailrs_client::link_safety::suspicious_html(&render_text(text))
+                }),
             };
             if suspicious {
                 let _ = write!(

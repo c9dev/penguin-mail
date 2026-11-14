@@ -2459,6 +2459,7 @@ dependencies = [
  "mail-builder 2.0.1",
  "mail-parser 1.0.1",
  "mailrs-ai",
+ "mailrs-client",
  "mailrs-discover",
  "mailrs-domain",
  "mailrs-gmail",
@@ -2478,7 +2479,6 @@ dependencies = [
  "objc2-quartz-core",
  "objc2-user-notifications",
  "objc2-web-kit",
- "psl",
  "pulldown-cmark",
  "rand 0.10.3",
  "reqwest",
@@ -2532,6 +2532,23 @@ dependencies = [
  "mailrs-sync",
  "tokio",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "mailrs-client"
+version = "1.0.12"
+dependencies = [
+ "chrono",
+ "gettext-rs",
+ "mailrs-domain",
+ "mailrs-mime",
+ "psl",
+ "pulldown-cmark",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]
