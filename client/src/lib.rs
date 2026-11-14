@@ -2,6 +2,7 @@
 
 pub mod attachcheck;
 pub mod diff;
+pub mod inline;
 pub mod language_names;
 pub mod link_safety;
 pub mod richtext;

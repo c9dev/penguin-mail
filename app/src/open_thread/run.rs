@@ -37,10 +37,11 @@ use mailrs_sync::{Opened, Spot, outbox_id};
 
 use super::{Loose, Parsed, loose_id};
 
-use super::{Cleaned, InlineImage, OpenThread, ToClean, Unsent};
+use super::{Cleaned, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::ui::invitation::strip::Strip;
 use crate::ui::invitation::{AddTo, Showing};
+use mailrs_client::inline::InlineImage;
 pub use mailrs_client::wanted::Answer;
 use mailrs_client::wanted::{Screen, Wanted};
 

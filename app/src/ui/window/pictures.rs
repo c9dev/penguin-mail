@@ -24,9 +24,9 @@ use futures::future::LocalBoxFuture;
 use mailrs_domain::{AccountId, MessageBody};
 
 use crate::core::{Core, Sync};
-use crate::open_thread::InlineImage;
 use crate::open_thread::run::InlinePictures as Found;
 use crate::recent::Weighed;
+use mailrs_client::inline::InlineImage;
 
 /// Largest inline image a page shows.
 const INLINE_LIMIT: i64 = 5 * 1024 * 1024;
