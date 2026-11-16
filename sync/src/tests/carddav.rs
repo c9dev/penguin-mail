@@ -171,3 +171,216 @@ async fn an_inline_photo_comes_from_the_card_and_a_photo_url_is_never_fetched() 
             .starts_with(&[0xff, 0xd8])
     );
 }
+
+#[tokio::test]
+async fn editing_a_contact_preserves_groups_and_rejects_stale_revisions() {
+    use mailrs_domain::contact::Changes;
+    let (dav, carddav) = adapter();
+    let href = "/card/default/demo.vcf";
+    dav.put_resource(href, &card("demo", "Demo Person", "demo@example.org"));
+    dav.put_resource(
+        "/card/default/group.vcf",
+        &mailrs_dav::vcard::new_group("group", "Friends", "demo"),
+    );
+    let read = read_all(&carddav, None).await.unwrap();
+    let person = read.people.iter().find(|p| p.resource == href).unwrap();
+    let revision = person.details.revision.clone();
+    let changed = carddav
+        .update_contact(
+            href,
+            &ContactFields {
+                expected_revision: Some(revision.clone()),
+                details: Changes {
+                    groups: Some(vec!["Colleagues".into()]),
+                    birthday: Some("2000-02-29".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_ne!(changed.details.revision, revision);
+    assert_eq!(
+        mailrs_dav::vcard::read_card(&dav.body("/card/default/group.vcf").unwrap())
+            .unwrap()
+            .details
+            .members,
+        Some(vec![])
+    );
+    let read = read_all(&carddav, None).await.unwrap();
+    assert!(
+        read.people
+            .iter()
+            .any(|p| p.name.as_deref() == Some("Colleagues")
+                && p.details.members.as_deref() == Some(&["demo".to_string()]))
+    );
+    let writes = dav.with(|s| s.puts);
+    assert!(
+        carddav
+            .update_contact(
+                href,
+                &ContactFields {
+                    expected_revision: Some(revision.clone()),
+                    name: Some("Stale".into()),
+                    ..Default::default()
+                }
+            )
+            .await
+            .is_err()
+    );
+    assert!(carddav.delete_contact(href, Some(&revision)).await.is_err());
+    assert_eq!(dav.with(|s| s.puts), writes);
+    carddav
+        .delete_contact(href, Some(&changed.details.revision))
+        .await
+        .unwrap();
+    assert!(dav.body(href).is_none());
+}
+
+#[tokio::test]
+async fn retrying_contact_creation_reuses_its_resource() {
+    let (dav, carddav) = adapter();
+    let fields = ContactFields {
+        creation_key: Some("12345678-1234-1234-1234-123456789abc".into()),
+        name: Some("Demo".into()),
+        ..Default::default()
+    };
+    let first = carddav.create_contact(&fields).await.unwrap();
+    let second = carddav.create_contact(&fields).await.unwrap();
+    assert_eq!(first.resource, second.resource);
+    assert_eq!(read_all(&carddav, None).await.unwrap().people.len(), 1);
+    assert!(dav.body(&first.resource).is_some());
+    let external = dav
+        .body(&first.resource)
+        .unwrap()
+        .replace("FN:Demo", "FN:Changed Elsewhere");
+    dav.put_resource(&first.resource, &external);
+    let writes = dav.with(|s| s.puts);
+    assert!(carddav.create_contact(&fields).await.is_err());
+    assert_eq!(dav.with(|s| s.puts), writes);
+    assert_eq!(dav.body(&first.resource).unwrap(), external);
+}
+
+#[tokio::test]
+async fn new_contacts_go_into_the_chosen_book() {
+    let (dav, carddav) = adapter();
+    assert_eq!(carddav.address_books().await.unwrap().len(), 2);
+    let made = carddav
+        .create_contact(&ContactFields {
+            name: Some("Demo".into()),
+            address_book: Some("/card/work/".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert!(made.resource.starts_with("/card/work/"));
+    assert!(dav.body(&made.resource).is_some());
+    let count = dav.with(|s| s.puts);
+    assert!(
+        carddav
+            .create_contact(&ContactFields {
+                address_book: Some("https://elsewhere.example/book/".into()),
+                ..Default::default()
+            })
+            .await
+            .is_err()
+    );
+    assert_eq!(dav.with(|s| s.puts), count);
+}
+
+#[tokio::test]
+async fn a_membership_change_on_another_device_is_not_overwritten() {
+    use mailrs_domain::contact::Changes;
+    let (dav, carddav) = adapter();
+    let href = "/card/default/demo.vcf";
+    dav.put_resource(href, &card("demo", "Demo", "demo@example.org"));
+    dav.put_resource(
+        "/card/default/group.vcf",
+        &mailrs_dav::vcard::new_group("group", "Friends", "someone-else"),
+    );
+    let read = read_all(&carddav, None).await.unwrap();
+    let revision = read
+        .people
+        .iter()
+        .find(|p| p.resource == href)
+        .unwrap()
+        .details
+        .revision
+        .clone();
+    let writes = dav.with(|s| s.puts);
+    let result = carddav
+        .update_contact(
+            href,
+            &ContactFields {
+                expected_revision: Some(revision),
+                expected_groups: Some(vec!["Friends".into()]),
+                details: Changes {
+                    groups: Some(vec!["Colleagues".into()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await;
+    assert!(result.is_err());
+    assert_eq!(dav.with(|s| s.puts), writes);
+    assert!(!dav.body(href).unwrap().contains("Colleagues"));
+}
+
+#[tokio::test]
+async fn groups_with_the_same_name_do_not_gain_unwanted_members() {
+    use mailrs_domain::contact::Changes;
+    let (dav, carddav) = adapter();
+    let href = "/card/default/demo.vcf";
+    dav.put_resource(href, &card("demo", "Demo", "demo@example.org"));
+    dav.put_resource(
+        "/card/default/one.vcf",
+        &mailrs_dav::vcard::new_group("one", "Friends", "demo"),
+    );
+    dav.put_resource(
+        "/card/default/two.vcf",
+        &mailrs_dav::vcard::new_group("two", "Friends", "someone-else"),
+    );
+    carddav
+        .update_contact(
+            href,
+            &ContactFields {
+                expected_groups: Some(vec!["Friends".into()]),
+                details: Changes {
+                    groups: Some(vec!["Friends".into(), "Colleagues".into()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        mailrs_dav::vcard::read_card(&dav.body("/card/default/two.vcf").unwrap())
+            .unwrap()
+            .details
+            .members,
+        Some(vec!["someone-else".into()])
+    );
+    let other = "/card/default/other.vcf";
+    dav.put_resource(other, &card("other", "Other", "other@example.org"));
+    let writes = dav.with(|s| s.puts);
+    assert!(
+        carddav
+            .update_contact(
+                other,
+                &ContactFields {
+                    expected_groups: Some(vec![]),
+                    details: Changes {
+                        groups: Some(vec!["Friends".into()]),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+            )
+            .await
+            .is_err()
+    );
+    assert_eq!(dav.with(|s| s.puts), writes);
+}

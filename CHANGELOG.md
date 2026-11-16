@@ -18,6 +18,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Open Contacts from the menu to search and edit address books, manage CardDAV groups, dates and custom fields, crop photos, write mail, and open phone or SMS links.
+
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
 
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.

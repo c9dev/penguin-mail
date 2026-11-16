@@ -233,3 +233,8 @@ sync/src/account/space.rs
 app/src/ui/window/trash.rs
 app/src/ui/thread_list/filters.rs
 app/src/ui/toolbar/customize.rs
+app/src/ui/contacts/mod.rs
+app/src/ui/contacts/editor.rs
+app/src/ui/contacts/photo.rs
+dav/src/vcard.rs
+sync/src/services/carddav.rs

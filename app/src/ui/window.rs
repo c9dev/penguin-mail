@@ -159,6 +159,7 @@ pub struct MainWindow {
     about: RefCell<Option<Rc<crate::ui::about::About>>>,
     /// Preferences while it is open, so another press brings it back
     /// rather than stacking a second one.
+    contacts_window: RefCell<Option<Rc<super::contacts::Window>>>,
     preferences: RefCell<Option<Rc<super::preferences::dialog::Dialog>>>,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
@@ -1013,6 +1014,7 @@ impl MainWindow {
                 storage_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
+                contacts_window: RefCell::new(None),
                 preferences: RefCell::new(None),
                 stack,
                 split,
@@ -3743,6 +3745,7 @@ impl MainWindow {
         );
         first.append_item(&assistant);
         first.append(Some(&gettext("Check for Mail")), Some("win.check"));
+        first.append(Some(&gettext("Contacts")), Some("win.contacts"));
         first.append(Some(&gettext("Add Account…")), Some("win.add-account"));
         first.append(Some(&gettext("New Smart Mailbox…")), Some("win.smart-new"));
         first.append(Some(&gettext("Hide My Email…")), Some("win.hide-my-email"));
@@ -4107,6 +4110,33 @@ impl MainWindow {
             Some(app) => app.settings_with(read),
             None => read(&Settings::default()),
         }
+    }
+
+    fn show_contacts(self: &Rc<Self>) {
+        if let Some(open) = self.contacts_window.borrow().as_ref() {
+            open.window.present();
+            return;
+        }
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        let contacts = super::contacts::Window::new(&app, &self.window, move |address| {
+            if let Some(win) = weak.upgrade() {
+                let address = address.replace('\\', "\\\\").replace('"', "\\\"");
+                win.show_space(crate::settings::Space::Mail);
+                win.search(format!("from:\"{address}\" OR to:\"{address}\""));
+                win.window.present();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        contacts.window.connect_close_request(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.contacts_window.replace(None);
+            }
+            glib::Propagation::Proceed
+        });
+        self.contacts_window.replace(Some(contacts));
     }
 
     fn show_preferences(self: &Rc<Self>) {

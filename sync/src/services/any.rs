@@ -649,6 +649,21 @@ macro_rules! forward_contacts {
 }
 
 impl ContactsService for AnyContacts {
+    async fn address_books(&self) -> Result<Vec<(String, String)>, BackendError> {
+        forward_contacts!(self, address_books())
+    }
+
+    fn edits_details(&self) -> bool {
+        matches!(self, Self::Dav(_))
+    }
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        forward_contacts!(self, delete_contact(resource, revision))
+    }
+
     async fn connections(
         &self,
         page_token: Option<&str>,

@@ -72,6 +72,7 @@ async fn a_new_contact_goes_into_the_default_book() {
         emails: Some(vec!["ada@example.com".into()]),
         phones: Some(vec!["+44 20".into()]),
         organization: Some("Engines".into()),
+        ..Default::default()
     };
     let made = contacts.create_contact(&fields).await.unwrap();
     assert_eq!(made.organization.as_deref(), Some("Engines"));

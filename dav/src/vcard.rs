@@ -7,6 +7,7 @@
 
 use base64::Engine;
 use calcard::vcard::{VCard, VCardEntry, VCardProperty, VCardValue};
+use mailrs_domain::translate::gettext;
 
 use crate::{DavError, MOST_RESOURCE_BYTES};
 
@@ -16,6 +17,7 @@ pub const MOST_PHOTO_BYTES: usize = 512 * 1024;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Card {
     pub uid: Option<String>,
+    pub details: mailrs_domain::contact::Details,
     pub name: Option<String>,
     /// The preferred address first.
     pub emails: Vec<String>,
@@ -34,6 +36,8 @@ pub enum Photo {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CardFields {
+    pub details: mailrs_domain::contact::Changes,
+    pub photo: Option<Vec<u8>>,
     pub name: Option<String>,
     pub emails: Option<Vec<String>>,
     pub phones: Option<Vec<String>>,
@@ -44,7 +48,14 @@ fn parse(text: &str) -> Result<VCard, DavError> {
     if text.len() > MOST_RESOURCE_BYTES {
         return Err(DavError::TooLarge(MOST_RESOURCE_BYTES));
     }
-    VCard::parse(text).map_err(|other| DavError::Parse(format!("not a vCard: {other:?}")))
+    let mut card =
+        VCard::parse(text).map_err(|other| DavError::Parse(format!("not a vCard: {other:?}")))?;
+    for entry in &mut card.entries {
+        if let VCardProperty::Other(name) = &mut entry.name {
+            name.make_ascii_uppercase();
+        }
+    }
+    Ok(card)
 }
 
 fn texts(entry: &VCardEntry) -> Vec<String> {
@@ -139,6 +150,7 @@ pub fn read_card(text: &str) -> Result<Card, DavError> {
             (!joined.is_empty()).then_some(joined)
         });
     Ok(Card {
+        details: details(&card),
         uid: card.uid().map(str::to_string),
         name,
         emails: listed(&card, VCardProperty::Email),
@@ -150,7 +162,9 @@ pub fn read_card(text: &str) -> Result<Card, DavError> {
 
 /// Text escaped for a vCard value.
 fn escape(text: &str) -> String {
-    text.replace('\\', "\\\\")
+    text.replace("\r\n", "\n")
+        .replace('\r', "\n")
+        .replace('\\', "\\\\")
         .replace(';', "\\;")
         .replace(',', "\\,")
         .replace('\n', "\\n")
@@ -176,7 +190,7 @@ fn lines_for(fields: &CardFields) -> Vec<(VCardProperty, Vec<String>)> {
             VCardProperty::Email,
             emails
                 .iter()
-                .map(|e| format!("EMAIL;TYPE=INTERNET:{}", e.trim()))
+                .map(|e| format!("EMAIL;TYPE=INTERNET:{}", escape(e.trim())))
                 .collect(),
         ));
     }
@@ -192,6 +206,7 @@ fn lines_for(fields: &CardFields) -> Vec<(VCardProperty, Vec<String>)> {
     if let Some(org) = &fields.organization {
         out.push((VCardProperty::Org, vec![format!("ORG:{}", escape(org))]));
     }
+    extra_lines(fields, &mut out);
     out
 }
 
@@ -236,6 +251,7 @@ fn entries(lines: &[String], v4: bool) -> Result<Vec<VCardEntry>, DavError> {
 }
 
 pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavError> {
+    validate(fields)?;
     let mut card = parse(existing)?;
     let before = read_card(existing)?;
     let v4 = card.version().is_some_and(|v| v as u8 >= 40);
@@ -244,13 +260,103 @@ pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavErro
         VCardProperty::Email => fields.emails.as_ref() == Some(&before.emails),
         VCardProperty::Tel => fields.phones.as_ref() == Some(&before.phones),
         VCardProperty::Org => fields.organization == before.organization,
-        _ => true,
+        _ => false,
     };
-    for (property, lines) in lines_for(fields) {
+    if let Some(custom) = &fields.details.custom {
+        let removed: Vec<_> = before
+            .details
+            .custom
+            .iter()
+            .filter(|old| !custom.iter().any(|new| new.label == old.label))
+            .map(|old| old.label.clone())
+            .collect();
+        card.entries.retain(|e| {
+            !removed
+                .iter()
+                .any(|name| e.name == VCardProperty::Other(name.clone()))
+        });
+    }
+    if fields.details.dates.is_some() {
+        let groups: Vec<_> = of(&card, VCardProperty::Other("X-ABDATE".into()))
+            .filter_map(|e| e.group.clone())
+            .collect();
+        card.entries.retain(|e| {
+            e.name != VCardProperty::Other("X-ABDATE".into())
+                && !(e.name == VCardProperty::Other("X-ABLABEL".into())
+                    && e.group.as_ref().is_some_and(|g| groups.contains(g)))
+        });
+    }
+    for (property, mut lines) in lines_for(fields) {
+        if v4 && property == VCardProperty::Photo {
+            lines = fields
+                .photo
+                .iter()
+                .filter(|b| !b.is_empty())
+                .map(|b| {
+                    format!(
+                        "PHOTO:data:image/png;base64,{}",
+                        base64::engine::general_purpose::STANDARD.encode(b)
+                    )
+                })
+                .collect();
+        }
         if unchanged(&property) {
             continue;
         }
-        let new = entries(&lines, v4)?;
+        let mut new = entries(&lines, v4)?;
+        let mut renamed = std::collections::HashMap::new();
+        for entry in &mut new {
+            if let Some(group) = &entry.group
+                && group.starts_with("pmdate")
+            {
+                let replacement = renamed.entry(group.clone()).or_insert_with(|| {
+                    let mut name = group.clone();
+                    while card.entries.iter().any(|e| e.group.as_ref() == Some(&name)) {
+                        name.push('x');
+                    }
+                    name
+                });
+                entry.group = Some(replacement.clone());
+            }
+        }
+        // Reuse entries whose value survived, including their TYPE and Apple labels.
+        let old: Vec<_> = card
+            .entries
+            .iter()
+            .filter(|e| e.name == property)
+            .cloned()
+            .collect();
+        let mut used = vec![false; old.len()];
+        let mut matched = vec![false; new.len()];
+        for (index, entry) in new.iter_mut().enumerate() {
+            if let Some(i) = old
+                .iter()
+                .enumerate()
+                .position(|(i, e)| !used[i] && e.values == entry.values)
+            {
+                *entry = old[i].clone();
+                used[i] = true;
+                matched[index] = true;
+            }
+        }
+        // A changed value in the same position retains its label and type too.
+        for (i, entry) in new.iter_mut().enumerate() {
+            if !matched[i]
+                && old.get(i).is_some()
+                && !used[i]
+                && matches!(
+                    property,
+                    VCardProperty::Email
+                        | VCardProperty::Tel
+                        | VCardProperty::Adr
+                        | VCardProperty::Url
+                )
+            {
+                entry.group = old[i].group.clone();
+                entry.params = old[i].params.clone();
+                used[i] = true;
+            }
+        }
         // The first line of the property keeps its place in the card.
         let at = card
             .entries
@@ -262,6 +368,316 @@ pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavErro
         for (offset, entry) in new.into_iter().enumerate() {
             card.entries.insert(at + offset, entry);
         }
+    }
+    let written = card.to_string();
+    parse(&written)?;
+    Ok(written)
+}
+
+fn written_value(entry: &VCardEntry) -> String {
+    let mut line = String::new();
+    let _ = entry.write_to(&mut line, true);
+    line.split_once(':')
+        .map(|(_, v)| v.trim().to_string())
+        .unwrap_or_default()
+}
+
+fn details(card: &VCard) -> mailrs_domain::contact::Details {
+    use mailrs_domain::contact::{Details, Field};
+    Details {
+        revision: String::new(),
+        uid: card.uid().unwrap_or_default().to_string(),
+        members: is_group(card).then(|| {
+            card.entries
+                .iter()
+                .filter(|e| {
+                    e.name == VCardProperty::Member
+                        || e.name == VCardProperty::Other("X-ADDRESSBOOKSERVER-MEMBER".into())
+                })
+                .filter_map(first_text)
+                .map(|v| v.strip_prefix("urn:uuid:").unwrap_or(&v).to_string())
+                .collect()
+        }),
+        phones: listed(card, VCardProperty::Tel),
+        birthday: of(card, VCardProperty::Bday)
+            .next()
+            .map(written_value)
+            .unwrap_or_default(),
+        notes: listed(card, VCardProperty::Note).join("\n"),
+        addresses: of(card, VCardProperty::Adr)
+            .map(|e| {
+                e.values
+                    .iter()
+                    .map(|v| match v {
+                        VCardValue::Component(parts) => parts.join(", "),
+                        value => value.as_text().unwrap_or_default().to_string(),
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .collect(),
+        urls: listed(card, VCardProperty::Url),
+        groups: of(card, VCardProperty::Categories)
+            .flat_map(texts)
+            .collect(),
+        dates: card
+            .entries
+            .iter()
+            .filter_map(|e| {
+                if e.name == VCardProperty::Anniversary {
+                    Some(Field {
+                        label: "Anniversary".into(),
+                        value: written_value(e),
+                    })
+                } else if e.name == VCardProperty::Other("X-ABDATE".into()) {
+                    let label = card
+                        .entries
+                        .iter()
+                        .find(|label| {
+                            label.name == VCardProperty::Other("X-ABLABEL".into())
+                                && label.group == e.group
+                        })
+                        .and_then(first_text)
+                        .unwrap_or_default();
+                    Some(Field {
+                        label,
+                        value: first_text(e).unwrap_or_default(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        custom: card
+            .entries
+            .iter()
+            .filter_map(|e| match &e.name {
+                VCardProperty::Other(name) if editable_custom(name) => {
+                    first_text(e).map(|value| Field {
+                        label: name.clone(),
+                        value,
+                    })
+                }
+                _ => None,
+            })
+            .collect(),
+    }
+}
+
+fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>) {
+    let d = &fields.details;
+    for (property, value) in [
+        (VCardProperty::Bday, &d.birthday),
+        (VCardProperty::Note, &d.notes),
+    ] {
+        if let Some(value) = value {
+            let lines = if value.is_empty() {
+                vec![]
+            } else {
+                vec![format!("{}:{}", property.as_str(), escape(value))]
+            };
+            out.push((property, lines));
+        }
+    }
+    if let Some(values) = &d.addresses {
+        out.push((
+            VCardProperty::Adr,
+            values
+                .iter()
+                .map(|s| {
+                    let mut components: Vec<_> = s.lines().map(escape).collect();
+                    components.resize(7, String::new());
+                    format!("ADR:{}", components.join(";"))
+                })
+                .collect(),
+        ));
+    }
+    if let Some(values) = &d.urls {
+        out.push((
+            VCardProperty::Url,
+            values
+                .iter()
+                .map(|s| format!("URL:{}", escape(s)))
+                .collect(),
+        ));
+    }
+    if let Some(values) = &d.groups {
+        out.push((
+            VCardProperty::Categories,
+            if values.is_empty() {
+                vec![]
+            } else {
+                vec![format!(
+                    "CATEGORIES:{}",
+                    values
+                        .iter()
+                        .map(|s| escape(s))
+                        .collect::<Vec<_>>()
+                        .join(",")
+                )]
+            },
+        ));
+    }
+    if let Some(values) = &d.dates {
+        out.push((
+            VCardProperty::Anniversary,
+            values
+                .iter()
+                .enumerate()
+                .flat_map(|(i, s)| {
+                    if s.label == "Anniversary" {
+                        vec![format!("ANNIVERSARY:{}", escape(&s.value))]
+                    } else {
+                        vec![
+                            format!("pmdate{i}.X-ABDATE:{}", escape(&s.value)),
+                            format!("pmdate{i}.X-ABLABEL:{}", escape(&s.label)),
+                        ]
+                    }
+                })
+                .collect(),
+        ));
+    }
+    if let Some(values) = &d.custom {
+        for field in values {
+            let property = VCardProperty::Other(field.label.clone());
+            out.push((
+                property,
+                if field.value.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("{}:{}", field.label, escape(&field.value))]
+                },
+            ));
+        }
+    }
+    if let Some(bytes) = &fields.photo {
+        out.push((
+            VCardProperty::Photo,
+            if bytes.is_empty() {
+                vec![]
+            } else {
+                vec![format!(
+                    "PHOTO;ENCODING=b;TYPE=PNG:{}",
+                    base64::engine::general_purpose::STANDARD.encode(bytes)
+                )]
+            },
+        ));
+    }
+}
+
+fn editable_custom(name: &str) -> bool {
+    name.starts_with("X-") && !name.starts_with("X-AB") && !name.starts_with("X-ADDRESSBOOKSERVER-")
+}
+
+/// Reject property-name injection and malformed dates before a network write.
+pub fn validate(fields: &CardFields) -> Result<(), DavError> {
+    let bad = |reason: &str| DavError::Parse(reason.to_string());
+    if let Some(custom) = &fields.details.custom {
+        let mut names = std::collections::HashSet::new();
+        for field in custom {
+            if !editable_custom(&field.label)
+                || field.label.len() < 3
+                || !field
+                    .label
+                    .bytes()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'-')
+                || !names.insert(&field.label)
+            {
+                return Err(bad(&gettext(
+                    "Custom field names must be unique uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved",
+                )));
+            }
+        }
+    }
+    for date in fields
+        .details
+        .birthday
+        .iter()
+        .chain(fields.details.dates.iter().flatten().map(|f| &f.value))
+    {
+        if !date.is_empty() && !valid_date(date) {
+            return Err(bad(&gettext("Use YYYY-MM-DD or --MM-DD for dates")));
+        }
+    }
+    if fields.details.dates.as_ref().is_some_and(|dates| {
+        dates
+            .iter()
+            .any(|d| d.label.is_empty() || d.value.is_empty())
+    }) {
+        return Err(bad(&gettext("A date needs a label and a value")));
+    }
+    if fields.photo.as_ref().is_some_and(|p| {
+        p.len() > MOST_PHOTO_BYTES || (!p.is_empty() && !p.starts_with(b"\x89PNG\r\n\x1a\n"))
+    }) {
+        return Err(bad(&gettext(
+            "Contact photos must be PNG images no larger than 512 KB",
+        )));
+    }
+    if fields
+        .details
+        .addresses
+        .as_ref()
+        .is_some_and(|a| a.iter().any(|v| v.split('\n').count() > 7))
+    {
+        return Err(bad(&gettext("A postal address has seven components")));
+    }
+    Ok(())
+}
+fn valid_date(date: &str) -> bool {
+    let full = if let Some(rest) = date.strip_prefix("--") {
+        format!(
+            "2000-{}",
+            if rest.len() == 4 && rest.is_ascii() {
+                format!("{}-{}", &rest[..2], &rest[2..])
+            } else {
+                rest.to_string()
+            }
+        )
+    } else {
+        date.to_string()
+    };
+    ["%Y-%m-%d", "%Y%m%d"]
+        .iter()
+        .any(|format| chrono::NaiveDate::parse_from_str(&full, format).is_ok())
+}
+
+fn is_group(card: &VCard) -> bool {
+    card.entries.iter().any(|e| {
+        (e.name == VCardProperty::Kind
+            || e.name == VCardProperty::Other("X-ADDRESSBOOKSERVER-KIND".into()))
+            && first_text(e).is_some_and(|v| v.eq_ignore_ascii_case("group"))
+    })
+}
+
+pub fn new_group(uid: &str, name: &str, member: &str) -> String {
+    format!(
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:{}\r\nFN:{}\r\nX-ADDRESSBOOKSERVER-KIND:group\r\nX-ADDRESSBOOKSERVER-MEMBER:urn:uuid:{}\r\nEND:VCARD\r\n",
+        escape(uid),
+        escape(name),
+        escape(member)
+    )
+}
+
+pub fn group_membership(text: &str, uid: &str, include: bool) -> Result<String, DavError> {
+    let mut card = parse(text)?;
+    if !is_group(&card) {
+        return Err(DavError::Parse("not a group".into()));
+    }
+    let member = format!("urn:uuid:{uid}");
+    card.entries.retain(|e| {
+        !((e.name == VCardProperty::Member
+            || e.name == VCardProperty::Other("X-ADDRESSBOOKSERVER-MEMBER".into()))
+            && first_text(e).is_some_and(|v| v == member))
+    });
+    if include {
+        let v4 = card.version().is_some_and(|v| v as u8 >= 40);
+        let property = if v4 {
+            "MEMBER"
+        } else {
+            "X-ADDRESSBOOKSERVER-MEMBER"
+        };
+        card.entries
+            .extend(entries(&[format!("{property}:{}", escape(&member))], v4)?);
     }
     Ok(card.to_string())
 }

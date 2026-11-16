@@ -1656,6 +1656,26 @@ pub trait CalendarService: Send + Sync + 'static {
 
 /// The account's address book.
 pub trait ContactsService: Send + Sync + 'static {
+    /// Address book ids and display names for choosing where to create a contact.
+    fn address_books(
+        &self,
+    ) -> impl Future<Output = Result<Vec<(String, String)>, BackendError>> + Send {
+        async { Ok(Vec::new()) }
+    }
+
+    fn edits_details(&self) -> bool {
+        false
+    }
+
+    fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> impl Future<Output = Result<(), BackendError>> + Send {
+        let _ = (resource, revision);
+        async { Err(BackendError::Unsupported) }
+    }
+
     /// One page of the contacts. `sync_token` from the last read asks for
     /// changes alone. Answers `BackendError::NeedsPermission` until the
     /// account grants the contacts permission.

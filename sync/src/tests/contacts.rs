@@ -29,6 +29,7 @@ fn book(h: &Harness) -> Book {
 
 fn person(resource: &str, name: &str, emails: &[&str], photo: Option<&str>) -> Person {
     Person {
+        details: Default::default(),
         resource: resource.into(),
         name: Some(name.into()),
         emails: emails.iter().map(|e| e.to_string()).collect(),

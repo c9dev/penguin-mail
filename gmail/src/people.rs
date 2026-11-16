@@ -42,6 +42,7 @@ pub const PHOTO_PIXELS: u32 = 128;
 pub struct Person {
     /// Google's name for this person, such as `people/c17`.
     pub resource: String,
+    pub details: mailrs_domain::contact::Details,
     pub name: Option<String>,
     /// Every address, the primary one first.
     pub emails: Vec<String>,
@@ -71,6 +72,13 @@ pub struct ConnectionsPage {
 /// whole list.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ContactFields {
+    pub expected_revision: Option<String>,
+    pub expected_groups: Option<Vec<String>>,
+    /// A stable UUID lets a CardDAV editor retry a partially completed creation.
+    pub creation_key: Option<String>,
+    pub address_book: Option<String>,
+    pub photo: Option<Vec<u8>>,
+    pub details: mailrs_domain::contact::Changes,
     pub name: Option<String>,
     pub emails: Option<Vec<String>>,
     pub phones: Option<Vec<String>>,
@@ -117,7 +125,7 @@ impl ContactFields {
 
     /// Whether the change names no field at all.
     pub fn is_empty(&self) -> bool {
-        self.mask().is_empty()
+        self.mask().is_empty() && self.details == Default::default() && self.photo.is_none()
     }
 }
 
@@ -149,9 +157,7 @@ pub fn parse_connections(body: &str) -> Result<ConnectionsPage, GmailError> {
             continue;
         }
         let person = flatten(person);
-        if !person.emails.is_empty() {
-            page.people.push(person);
-        }
+        page.people.push(person);
     }
     Ok(page)
 }
@@ -170,6 +176,14 @@ fn flatten(person: Connection) -> Person {
             .map(|url| photo_url(url, PHOTO_PIXELS)),
         organization: primary(&person.organizations, |o| o.name.as_deref()),
         phone: primary(&person.phone_numbers, |p| p.value.as_deref()),
+        details: mailrs_domain::contact::Details {
+            phones: person
+                .phone_numbers
+                .iter()
+                .filter_map(|p| p.value.clone())
+                .collect(),
+            ..Default::default()
+        },
         resource: person.resource_name,
     }
 }
@@ -359,8 +373,8 @@ mod tests {
         let page = parse_connections(LAST_PAGE).unwrap();
         assert_eq!(page.next_page_token, None);
         assert_eq!(page.next_sync_token.as_deref(), Some("sync-token-1"));
-        // The contact with no address is nothing to suggest, so it is left out.
-        assert_eq!(page.people.len(), 1);
+        // A contact without email still belongs in the address book window.
+        assert_eq!(page.people.len(), 2);
         assert_eq!(page.people[0].resource, "people/c3");
     }
 

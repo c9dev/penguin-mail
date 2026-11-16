@@ -323,3 +323,16 @@ when Show Message Preview is on. The desktop controls the displayed line count.
 On macOS, Bold Subject puts the subject on a separate native subtitle line. It
 requires Notify About New Mail and Show Sender and Subject. Disabling either
 keeps both choices for later. Linux notifications keep the subject in plain text.
+
+## Contacts
+
+Open Contacts from the main menu. Tab reaches search, account and group filters,
+the contact list, and the selected person's actions. Arrow keys select a contact.
+Email and phone rows have named compose, mail search, copy, call and SMS buttons.
+Edit opens a keyboard-accessible form. Add and Remove Field buttons manage repeatable
+fields. Crop Photo uses named zoom and position sliders; dragging is not required.
+Closing an edited form asks whether to discard its changes.
+
+Phone and SMS actions open the system's `tel:` and `sms:` handlers. On Linux,
+KDE Connect can provide these handlers and let the person choose a paired phone.
+Penguin Mail does not place a call or send an SMS by itself.
