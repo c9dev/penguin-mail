@@ -43,6 +43,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A picture a signature or Markdown body names by an address, such as a logo, now shows while you write and goes out with the message instead of vanishing.
 - The pull-to-check indicator stays readable over message rows in light and dark themes.
 - Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
