@@ -99,12 +99,13 @@ impl Desktop {
         }
     }
 
-    pub fn post(&self, id: &str, title: &str, body: &str, actions: Actions) {
+    pub fn post(&self, id: &str, title: &str, subtitle: &str, body: &str, actions: Actions) {
         let Some(native) = &self.native else { return };
         let category_id =
             serde_json::to_string(&actions.buttons).expect("notification buttons serialize");
         let content = UNMutableNotificationContent::new();
         content.setTitle(&NSString::from_str(title));
+        content.setSubtitle(&NSString::from_str(subtitle));
         content.setBody(&NSString::from_str(body));
         content.setCategoryIdentifier(&NSString::from_str(&category_id));
         let payload = NSString::from_str(
