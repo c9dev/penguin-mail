@@ -44,12 +44,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- On IMAP accounts, a check for new mail no longer skips a message for good when the app was also reading or changing mail on that account at the time, which left the Inbox badge counting unread mail the list did not show.
+- A picture a signature or Markdown body names by an address, such as a logo, now shows while you write and goes out with the message instead of vanishing.
 - The pull-to-check indicator stays readable over message rows in light and dark themes.
 - Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
 - Microsoft accounts no longer list the folders Outlook keeps hidden.
+- `nix build` and `nix flake check` build the app again: the Nix package now links the aws-lc and SQLite libraries the bundled Rust crates build against.
 
 ## 1.0.12 (2026-11-05)
 

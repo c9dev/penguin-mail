@@ -71,12 +71,28 @@ impl Span {
 #[serde(default)]
 pub struct Block {
     pub kind: BlockKind,
+    /// Whether the line sits inside a block quote, whatever kind of line
+    /// it is. A list item or a heading under a quote is still somebody
+    /// else's quoted words, which is what asks for it to be treated as
+    /// such even though [`BlockKind`] has stopped saying.
+    pub quoted: bool,
     pub spans: Vec<Span>,
 }
 
 impl Block {
     pub fn new(kind: BlockKind, spans: Vec<Span>) -> Block {
-        Block { kind, spans }
+        Block {
+            kind,
+            quoted: kind == BlockKind::Quote,
+            spans,
+        }
+    }
+
+    /// Whether the line is quoted content, list and heading included.
+    /// Reading only [`BlockKind::Quote`] misses the lines a quote holds
+    /// that the quote made into something else.
+    pub fn is_quote(&self) -> bool {
+        self.quoted || self.kind == BlockKind::Quote
     }
 
     /// The line's text with every style dropped.
@@ -248,7 +264,7 @@ impl RichBody {
                 continue;
             }
             let body: String = block.spans.iter().map(span_to_markdown).collect();
-            out.push(match block.kind {
+            let line = match block.kind {
                 BlockKind::Heading(level) => {
                     format!("{} {body}", "#".repeat(level.clamp(1, 3) as usize))
                 }
@@ -256,6 +272,12 @@ impl RichBody {
                 BlockKind::Numbered => format!("{number}. {body}"),
                 BlockKind::Quote => format!("> {body}").trim_end().to_string(),
                 BlockKind::Paragraph | BlockKind::Code => body,
+            };
+            // A quoted list item is still a list item, under a quote.
+            out.push(if block.quoted && block.kind != BlockKind::Quote {
+                format!("> {line}").trim_end().to_string()
+            } else {
+                line
             });
         }
         if fenced {
@@ -404,7 +426,12 @@ struct Builder {
     link: Option<String>,
     /// The list kinds we are inside, innermost last.
     lists: Vec<BlockKind>,
-    quoted: bool,
+    /// How many quotes we are inside. A quote inside a quote ends
+    /// halfway, so a boolean would drop the outer one with it. Wide
+    /// because a sender controls the nesting and a counter that saturates
+    /// would fail open: back at zero inside live quotes, an image there
+    /// would be fetched.
+    quote_depth: usize,
     /// The heading level or code block we are inside.
     block: Option<BlockKind>,
     open: bool,
@@ -420,7 +447,7 @@ impl Builder {
         if let Some(list) = self.lists.last() {
             return *list;
         }
-        if self.quoted {
+        if self.quote_depth > 0 {
             return BlockKind::Quote;
         }
         BlockKind::Paragraph
@@ -450,7 +477,11 @@ impl Builder {
         if spans.is_empty() && !self.open {
             return;
         }
-        self.body.blocks.push(Block { kind, spans });
+        self.body.blocks.push(Block {
+            kind,
+            quoted: self.quote_depth > 0,
+            spans,
+        });
     }
 
     /// A blank line between blocks, unless one is already there.
@@ -464,7 +495,10 @@ impl Builder {
             return;
         }
         if !self.body.blocks.is_empty() {
-            self.body.blocks.push(Block::default());
+            self.body.blocks.push(Block {
+                quoted: self.quote_depth > 0,
+                ..Block::default()
+            });
         }
     }
 
@@ -510,9 +544,11 @@ impl Builder {
                     self.gap();
                 }
             }
-            Event::Start(Tag::BlockQuote(_)) => self.quoted = true,
+            Event::Start(Tag::BlockQuote(_)) => {
+                self.quote_depth = self.quote_depth.saturating_add(1);
+            }
             Event::End(TagEnd::BlockQuote(_)) => {
-                self.quoted = false;
+                self.quote_depth = self.quote_depth.saturating_sub(1);
                 self.gap();
             }
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(_) | CodeBlockKind::Indented)) => {
@@ -728,7 +764,11 @@ impl HtmlBuilder {
         }
         let kind = self.kind();
         let spans = std::mem::take(&mut self.spans);
-        self.body.blocks.push(Block { kind, spans });
+        self.body.blocks.push(Block {
+            kind,
+            quoted: self.open.contains(&BlockKind::Quote),
+            spans,
+        });
     }
 
     /// A blank line between blocks, unless one is already there.
@@ -1065,11 +1105,141 @@ mod tests {
 
     #[test]
     fn markdown_round_trips_through_blocks() {
-        let markdown = "# Title\n\nHi **Ann**, see [the menu](https://e.com).\nSecond *line*.\n\n- milk\n- ~~eggs~~\n\n> quoted\n\n1. one\n2. two\n\n```\ncargo test\n```\n\nBye.";
+        let markdown = "# Title\n\nHi **Ann**, see [the menu](https://e.com).\nSecond *line*.\n\n- milk\n- ~~eggs~~\n\n> quoted\n\n1. one\n2. two\n\n> - salt\n\n> # Note\n\n```\ncargo test\n```\n\nBye.";
         let once = RichBody::from_markdown(markdown);
         let again = RichBody::from_markdown(&once.to_markdown());
         assert_eq!(once, again, "{}", once.to_markdown());
         assert_eq!(once.to_html(), again.to_html());
+    }
+
+    /// A list and a heading inside a quote keep being quoted, whatever the
+    /// quote made of them. The composer needs to know their words are not
+    /// the writer's own, after a re-parse of what it wrote out included.
+    #[test]
+    fn a_quote_holds_its_lists_and_headings() {
+        let doc = RichBody::from_markdown("> - milk\n> # Title\n> said");
+        let bullet = doc
+            .blocks
+            .iter()
+            .find(|block| block.kind == BlockKind::Bullet)
+            .expect("the list item survives");
+        assert!(bullet.quoted, "{doc:#?}");
+        let heading = doc
+            .blocks
+            .iter()
+            .find(|block| matches!(block.kind, BlockKind::Heading(_)))
+            .expect("the heading survives");
+        assert!(heading.quoted, "{doc:#?}");
+        assert_eq!(
+            doc.to_markdown(),
+            "> - milk\n>\n> # Title\n>\n> said",
+            "the quote survives the way back too"
+        );
+        assert_eq!(RichBody::from_markdown(&doc.to_markdown()), doc);
+    }
+
+    /// A reply arrives as HTML, and a list inside its quote is quoted
+    /// content too. The composer reads bodies in from HTML as well, so
+    /// the same rule holds there.
+    #[test]
+    fn a_quoted_list_from_html_keeps_being_quoted() {
+        let doc = RichBody::from_html("<blockquote><ul><li>milk</li></ul></blockquote>");
+        assert!(
+            doc.blocks
+                .iter()
+                .any(|block| block.kind == BlockKind::Bullet && block.quoted),
+            "{doc:#?}"
+        );
+    }
+
+    /// A quote inside a quote ends halfway through the outer one, and a
+    /// list or heading after it is still the other person's words.
+    #[test]
+    fn a_list_after_an_inner_quote_stays_quoted() {
+        let doc = RichBody::from_markdown("> > inner\n>\n> - milk\n>\n> # Note");
+        for kind in [BlockKind::Bullet, BlockKind::Heading(1)] {
+            let block = doc
+                .blocks
+                .iter()
+                .find(|block| block.kind == kind)
+                .unwrap_or_else(|| panic!("no {kind:?} in {doc:#?}"));
+            assert!(block.is_quote(), "{kind:?} lost the quote: {doc:#?}");
+        }
+    }
+
+    #[test]
+    fn a_list_after_an_inner_blockquote_stays_quoted() {
+        let doc = RichBody::from_html(
+            "<blockquote><blockquote>inner</blockquote><ul><li>milk</li></ul><h2>Note</h2></blockquote>",
+        );
+        for kind in [BlockKind::Bullet, BlockKind::Heading(2)] {
+            let block = doc
+                .blocks
+                .iter()
+                .find(|block| block.kind == kind)
+                .unwrap_or_else(|| panic!("no {kind:?} in {doc:#?}"));
+            assert!(block.is_quote(), "{kind:?} lost the quote: {doc:#?}");
+        }
+    }
+
+    /// The reply chains Gmail and Thunderbird send put bare words after
+    /// the inner quote, not paragraphs. They are the outer person's words
+    /// too, and they must stay on a line of their own.
+    #[test]
+    fn bare_words_after_an_inner_quote_stay_separate_and_quoted() {
+        let doc = RichBody::from_html(
+            "<blockquote>On Monday Ann wrote:<blockquote>the old mail</blockquote>the reply</blockquote>",
+        );
+        let words: Vec<String> = doc.blocks.iter().map(|block| block.text()).collect();
+        let joined = words.join(" / ");
+        assert!(
+            words.iter().any(|line| line == "the reply"),
+            "the reply merged into another line: {joined}"
+        );
+        for block in &doc.blocks {
+            assert!(block.is_quote(), "a line lost the quote: {block:?}");
+        }
+    }
+
+    /// The counter returning to zero is what hands the writer's own lines
+    /// back: words after the outermost quote are theirs, not quoted.
+    #[test]
+    fn words_after_the_outermost_quote_are_not_quoted() {
+        let doc = RichBody::from_html("<blockquote>their line</blockquote>my line");
+        let mine = doc
+            .blocks
+            .iter()
+            .find(|block| block.text() == "my line")
+            .unwrap_or_else(|| panic!("{doc:#?}"));
+        assert!(!mine.is_quote(), "trailing words stayed quoted: {doc:#?}");
+    }
+
+    /// A sender may send a quote close with no quote open. Nothing may
+    /// panic, and nothing after it may be mistaken for quoted words.
+    #[test]
+    fn a_stray_quote_close_changes_nothing_after() {
+        let doc = RichBody::from_html("<p>hi</p></blockquote><p>after</p>");
+        let after = doc
+            .blocks
+            .iter()
+            .find(|block| block.text() == "after")
+            .unwrap_or_else(|| panic!("{doc:#?}"));
+        assert!(!after.is_quote(), "{doc:#?}");
+    }
+
+    /// The reason the counter is wide: a sender controls the nesting, and
+    /// a count that saturates would read zero while still inside quotes.
+    #[test]
+    fn quotes_deeper_than_a_byte_stay_quotes() {
+        let open = "<blockquote>".repeat(300);
+        let close = "</blockquote>".repeat(299);
+        let doc = RichBody::from_html(&format!("{open}buried{close}"));
+        let buried = doc
+            .blocks
+            .iter()
+            .find(|block| block.text() == "buried")
+            .unwrap_or_else(|| panic!("{doc:#?}"));
+        assert!(buried.is_quote(), "buried lost the quote: {doc:#?}");
     }
 
     #[test]

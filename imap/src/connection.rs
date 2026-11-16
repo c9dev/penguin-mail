@@ -52,6 +52,14 @@ pub(crate) struct Conn<S: Stream> {
     /// When a command last went out, to tell a connection a router may
     /// have dropped in silence.
     last_used: Instant,
+    /// True from the pool handing the connection back until a SELECT or
+    /// a NOOP. IMAP lets a server report new mail to a connection when
+    /// it chooses (RFC 3501 section 5.2), and Dovecot does so only at the
+    /// end of a command on the selected mailbox. A connection that kept a
+    /// mailbox selected while it sat in the pool may not see mail that
+    /// another connection's later SELECT counted, so its next command on
+    /// that mailbox NOOPs first.
+    handed_back: bool,
 }
 
 /// SASL PLAIN (RFC 4616): no authorization identity, then the user and
@@ -191,6 +199,7 @@ impl<S: Stream> Conn<S> {
             selected: None,
             uidvalidity: 0,
             last_used: Instant::now(),
+            handed_back: false,
         };
         let mut after = CapabilityReader::default();
         conn.exec("CAPABILITY", Doing::Other, &mut after).await?;
@@ -212,8 +221,16 @@ impl<S: Stream> Conn<S> {
         self.last_used.elapsed()
     }
 
+    /// The pool took the connection back; its view of the selected mailbox
+    /// may fall behind until a SELECT or a NOOP.
+    pub(crate) fn handed_back(&mut self) {
+        self.handed_back = true;
+    }
+
     pub(crate) async fn noop(&mut self) -> Result<(), ImapError> {
-        self.exec("NOOP", Doing::Other, &mut ()).await
+        self.exec("NOOP", Doing::Other, &mut ()).await?;
+        self.handed_back = false;
+        Ok(())
     }
 
     /// Every mailbox on the server, each marked with whether the person
@@ -266,6 +283,11 @@ impl<S: Stream> Conn<S> {
 
     pub(crate) async fn unread(&mut self, mailbox: &str) -> Result<u32, ImapError> {
         let command = format!("STATUS {} (UNSEEN)", quoted(mailbox)?);
+        // Dovecot answers a STATUS of the selected mailbox from this
+        // connection's view, which the NOOP brings up to date.
+        if self.selected.as_deref() == Some(mailbox) && self.handed_back {
+            self.noop().await?;
+        }
         let mut reader = crate::parse::UnreadReader {
             mailbox,
             unread: None,
@@ -322,6 +344,7 @@ impl<S: Stream> Conn<S> {
         };
         self.selected = Some(mailbox.to_string());
         self.uidvalidity = selected.uidvalidity;
+        self.handed_back = false;
         Ok(selected)
     }
 
@@ -344,6 +367,12 @@ impl<S: Stream> Conn<S> {
     pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
         if self.selected.as_deref() != Some(mailbox) {
             self.select(mailbox, None).await?;
+        } else if self.handed_back {
+            // The SELECT that would have brought the view up to date is
+            // skipped, so a NOOP does it: the server reports what arrived
+            // before answering, and the command after, a read or a write,
+            // sees it. A STATUS brings no view up to date (`unread`).
+            self.noop().await?;
         }
         Ok(())
     }
@@ -410,8 +439,8 @@ impl<S: Stream> Conn<S> {
         mailbox: &str,
         keys: &str,
     ) -> Result<Vec<u32>, ImapError> {
-        self.ensure_selected(mailbox).await?;
         let (head, literals) = search_command(keys)?;
+        self.ensure_selected(mailbox).await?;
         let literals: Vec<(&[u8], String)> = literals
             .iter()
             .map(|(bytes, after)| (bytes.as_slice(), after.clone()))
@@ -766,6 +795,9 @@ impl<S: Stream> Conn<S> {
                 selected,
                 uidvalidity,
                 last_used: Instant::now(),
+                // The IDLE connection never goes through the pool, and
+                // its view is as fresh as the DONE that ended the IDLE.
+                handed_back: false,
             },
             woke,
         ))

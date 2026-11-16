@@ -17,6 +17,7 @@ mod removals;
 mod richbuffer;
 mod saving;
 pub mod spell;
+mod web_picture;
 mod work;
 
 use std::cell::{Cell, RefCell};
