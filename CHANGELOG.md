@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Open a contact's websites by clicking their links.
+
 - Contact birthdays show the day, month and current age, and dates without a year stay yearless.
 - CardDAV contacts split comma-separated groups and refresh previously cached group lists.
 

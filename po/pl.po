@@ -2700,7 +2700,7 @@ msgstr "Oznacz jako przeczytane"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:368 app/src/ui/contacts/mod.rs:552
+#: app/src/ui/contacts/mod.rs:368 app/src/ui/contacts/mod.rs:578
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -5257,7 +5257,7 @@ msgstr "Kopiuj odnośnik"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
 #: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:551
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:577
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -6658,7 +6658,7 @@ msgstr "Usuń przypomnienie"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:272 app/src/ui/contacts/editor.rs:397
-#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:477
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:476
 msgid "Notes"
 msgstr "Notatki"
 
@@ -8407,7 +8407,7 @@ msgstr ""
 msgid "Groups"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:476
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:500
 #, fuzzy
 #| msgid "Website"
 msgid "Websites"
@@ -8624,21 +8624,21 @@ msgstr "Dołącz do rozmowy"
 msgid "Send SMS"
 msgstr "Wyślij"
 
-#: app/src/ui/contacts/mod.rs:526
+#: app/src/ui/contacts/mod.rs:552
 msgid "Allow contacts access in Preferences, then try again."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:544
+#: app/src/ui/contacts/mod.rs:570
 #, fuzzy
 #| msgid "Delete {name}?"
 msgid "Delete Contact?"
 msgstr "Usunąć {name}?"
 
-#: app/src/ui/contacts/mod.rs:546
+#: app/src/ui/contacts/mod.rs:572
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:617 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:643 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Kopiuj"

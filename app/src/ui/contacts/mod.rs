@@ -473,7 +473,6 @@ impl Window {
             ),
             (gettext("Groups"), d.groups.join(", ")),
             (gettext("Postal Addresses"), d.addresses.join("\n\n")),
-            (gettext("Websites"), d.urls.join("\n")),
             (gettext("Notes"), d.notes.clone()),
         ] {
             if !value.is_empty() {
@@ -496,6 +495,33 @@ impl Window {
             );
         }
         self.detail.append(&details);
+        if !d.urls.is_empty() {
+            let websites = adw::PreferencesGroup::builder()
+                .title(gettext("Websites"))
+                .build();
+            for address in &d.urls {
+                if let Some(uri) = website_uri(address) {
+                    let label = gtk::Label::builder()
+                        .label(address)
+                        .xalign(0.0)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
+                        .build();
+                    let link = gtk::LinkButton::builder().uri(uri).child(&label).build();
+                    super::name(&link, address);
+                    websites.add(&link);
+                } else {
+                    websites.add(
+                        &adw::ActionRow::builder()
+                            .use_markup(false)
+                            .title(address)
+                            .title_lines(0)
+                            .build(),
+                    );
+                }
+            }
+            self.detail.append(&websites);
+        }
     }
 
     fn refresh(self: &Rc<Self>) {
@@ -619,6 +645,18 @@ fn copy(text: &str) -> gtk::Button {
     b.connect_clicked(move |b| b.clipboard().set_text(&text));
     b
 }
+fn website_uri(address: &str) -> Option<String> {
+    let address = address.trim();
+    let url = url::Url::parse(address)
+        .or_else(|_| url::Url::parse(&format!("https://{address}")))
+        .ok()?;
+    (matches!(url.scheme(), "http" | "https")
+        && url.host_str().is_some()
+        && url.username().is_empty()
+        && url.password().is_none())
+    .then(|| url.to_string())
+}
+
 fn phone_uri(scheme: &str, number: &str) -> String {
     format!(
         "{scheme}:{}",
@@ -641,6 +679,32 @@ fn matches(contact: &Contact, query: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn contact_websites_open_web_addresses_only() {
+        assert_eq!(
+            website_uri("https://example.org/a?q=1&b=2").as_deref(),
+            Some("https://example.org/a?q=1&b=2")
+        );
+        assert_eq!(
+            website_uri("http://example.org").as_deref(),
+            Some("http://example.org/")
+        );
+        assert_eq!(
+            website_uri(" www.example.org ").as_deref(),
+            Some("https://www.example.org/")
+        );
+        for value in [
+            "",
+            "not a website",
+            "file:///tmp/file",
+            "javascript:alert(1)",
+            "mailto:demo@example.org",
+            "https://name:password@example.org",
+        ] {
+            assert_eq!(website_uri(value), None, "{value}");
+        }
+    }
+
     #[test]
     fn search_and_phone_links_keep_the_whole_value() {
         let contact = Contact {
