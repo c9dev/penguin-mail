@@ -4899,7 +4899,7 @@ msgstr "Penguin Mail を開く"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:514
 msgid "New Message"
 msgstr "新規メッセージ"
 
@@ -6528,8 +6528,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "{file} を添付できませんでした: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
-#: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:355 app/src/ui/thread_list.rs:361
+#: app/src/ui/thread_list.rs:1186
 msgid "More"
 msgstr "その他"
 
@@ -10031,7 +10031,7 @@ msgstr "最後に使ったカレンダーアカウント"
 msgid "Same as New Messages"
 msgstr "新規メッセージと同じ"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:275
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:279
 msgid "All Inboxes"
 msgstr "すべての受信トレイ"
 
@@ -10499,7 +10499,7 @@ msgid "Mailboxes"
 msgstr "メールボックス"
 
 #: app/src/ui/sidebar.rs:494 app/src/ui/sidebar.rs:548
-#: app/src/ui/sidebar.rs:1903 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:1903 app/src/ui/thread_list.rs:376
 msgid "Mail"
 msgstr "メール"
 
@@ -10849,30 +10849,30 @@ msgstr "本文"
 msgid "New Template"
 msgstr "新しいテンプレート"
 
-#: app/src/ui/thread_list.rs:238
+#: app/src/ui/thread_list.rs:242
 msgid "No Mail"
 msgstr "メールがありません"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:256
+#: app/src/ui/thread_list.rs:260
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "メールを検索、例: from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:295 app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:299 app/src/ui/thread_list.rs:319
 msgid "Show Mailboxes"
 msgstr "メールボックスを表示"
 
-#: app/src/ui/thread_list.rs:300
+#: app/src/ui/thread_list.rs:304
 msgid "New Message (C)"
 msgstr "新規メッセージ（C）"
 
-#: app/src/ui/thread_list.rs:305
+#: app/src/ui/thread_list.rs:309
 msgid "Search (/)"
 msgstr "検索（/）"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:314
+#: app/src/ui/thread_list.rs:318
 msgid "Search mail"
 msgstr "メールを検索"
 

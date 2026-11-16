@@ -5107,7 +5107,7 @@ msgstr "Deschide Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:514
 msgid "New Message"
 msgstr "Mesaj nou"
 
@@ -6763,8 +6763,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Nu s-a putut atașa {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
-#: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:355 app/src/ui/thread_list.rs:361
+#: app/src/ui/thread_list.rs:1186
 msgid "More"
 msgstr "Mai multe"
 
@@ -10395,7 +10395,7 @@ msgstr "Ultimul cont de calendar folosit"
 msgid "Same as New Messages"
 msgstr "La fel ca la mesajele noi"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:275
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:279
 msgid "All Inboxes"
 msgstr "Toate mesajele primite"
 
@@ -10867,7 +10867,7 @@ msgid "Mailboxes"
 msgstr "Poșta"
 
 #: app/src/ui/sidebar.rs:494 app/src/ui/sidebar.rs:548
-#: app/src/ui/sidebar.rs:1903 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:1903 app/src/ui/thread_list.rs:376
 msgid "Mail"
 msgstr "Corespondență"
 
@@ -11227,30 +11227,30 @@ msgstr "Corpul mesajului"
 msgid "New Template"
 msgstr "Șablon nou"
 
-#: app/src/ui/thread_list.rs:238
+#: app/src/ui/thread_list.rs:242
 msgid "No Mail"
 msgstr "Nicio corespondență"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:256
+#: app/src/ui/thread_list.rs:260
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Căutați în corespondență, de ex. from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:295 app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:299 app/src/ui/thread_list.rs:319
 msgid "Show Mailboxes"
 msgstr "Arată căsuțele poștale"
 
-#: app/src/ui/thread_list.rs:300
+#: app/src/ui/thread_list.rs:304
 msgid "New Message (C)"
 msgstr "Mesaj nou (C)"
 
-#: app/src/ui/thread_list.rs:305
+#: app/src/ui/thread_list.rs:309
 msgid "Search (/)"
 msgstr "Caută (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:314
+#: app/src/ui/thread_list.rs:318
 msgid "Search mail"
 msgstr "Caută în corespondență"
 
