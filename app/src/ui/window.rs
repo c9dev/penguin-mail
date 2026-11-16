@@ -75,7 +75,7 @@ mod outbox;
 mod pgp;
 mod pictures;
 mod press;
-mod previews;
+pub(super) mod previews;
 mod reach;
 mod reminders;
 mod reveal;
