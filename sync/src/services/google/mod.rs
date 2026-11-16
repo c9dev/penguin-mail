@@ -774,6 +774,25 @@ fn calendar_write_error(err: GmailError) -> BackendError {
 }
 
 impl<G: GmailApi> ContactsService for Google<G> {
+    fn edits_details(&self) -> bool {
+        true
+    }
+
+    async fn address_books(&self) -> Result<Vec<(String, String)>, BackendError> {
+        Ok(vec![(
+            "people/me".into(),
+            mailrs_domain::translate::gettext("Contacts"),
+        )])
+    }
+
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        Ok(paced(self.gmail.delete_contact(resource, revision)).await?)
+    }
+
     async fn connections(
         &self,
         page_token: Option<&str>,

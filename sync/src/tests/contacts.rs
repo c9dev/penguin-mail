@@ -453,3 +453,36 @@ async fn save_without_the_permission_asks_for_it_and_writes_nothing() {
         .unwrap();
     assert_eq!(emails(&new), ["ana@example.pt"]);
 }
+
+#[tokio::test]
+async fn google_contacts_edit_extended_fields_and_delete_through_the_shared_book() {
+    let h = harness().await;
+    let b = book(&h);
+    assert!(b.book.edits_details(h.account_id));
+    assert_eq!(
+        b.book.address_books(h.account_id).await.unwrap()[0].0,
+        "people/me"
+    );
+    let fields = mailrs_gmail::ContactFields {
+        name: Some("Demo Contact".into()),
+        phones: Some(vec!["+1 202 555 0101".into(), "+1 202 555 0102".into()]),
+        details: mailrs_domain::contact::Changes {
+            birthday: Some("--04-23".into()),
+            notes: Some("Demo notes".into()),
+            groups: Some(vec!["Friends".into()]),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let Permitted::Done(made) = b.book.create(h.account_id, &fields, true).await.unwrap() else {
+        panic!("permission")
+    };
+    assert_eq!(made.details.phones.len(), 2);
+    assert_eq!(made.details.groups, ["Friends"]);
+    assert_eq!(made.details.birthday, "--04-23");
+    b.book
+        .delete(h.account_id, made.resource, None)
+        .await
+        .unwrap();
+    assert!(h.db.read(address_book::list).await.unwrap().is_empty());
+}

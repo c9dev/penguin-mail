@@ -238,3 +238,6 @@ app/src/ui/contacts/editor.rs
 app/src/ui/contacts/photo.rs
 dav/src/vcard.rs
 sync/src/services/carddav.rs
+
+gmail/src/people.rs
+sync/src/services/google/mod.rs

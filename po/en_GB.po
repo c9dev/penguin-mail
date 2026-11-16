@@ -2345,7 +2345,7 @@ msgstr "Mark as Read"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:357 app/src/ui/contacts/mod.rs:535
+#: app/src/ui/contacts/mod.rs:368 app/src/ui/contacts/mod.rs:546
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -3666,7 +3666,7 @@ msgstr "Possible phishing links"
 msgid "This message contains potentially deceptive links. Check the destination before opening them."
 msgstr "This message contains potentially deceptive links. Check the destination before opening them."
 
-#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:448
+#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:459
 msgid "Details"
 msgstr "Details"
 
@@ -3989,7 +3989,7 @@ msgid "Calendar"
 msgstr "Calendar"
 
 #: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:39
-#: app/src/ui/contacts/mod.rs:66 app/src/ui/contacts_prefs.rs:256
+#: app/src/ui/contacts/mod.rs:70 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/window.rs:3748
@@ -4414,7 +4414,7 @@ msgstr "Open Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:378
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:389
 #: app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "New Message"
@@ -4614,7 +4614,7 @@ msgstr "Copy Link"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
 #: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:534
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:545
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5874,7 +5874,7 @@ msgstr "Remove reminder"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:272 app/src/ui/contacts/editor.rs:378
-#: app/src/ui/contacts/editor.rs:379 app/src/ui/contacts/mod.rs:460
+#: app/src/ui/contacts/editor.rs:379 app/src/ui/contacts/mod.rs:471
 msgid "Notes"
 msgstr "Notes"
 
@@ -6213,7 +6213,7 @@ msgid "Working location"
 msgstr "Working location"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:456
+#: app/src/ui/contacts/mod.rs:467
 msgid "Birthday"
 msgstr "Birthday"
 
@@ -7464,7 +7464,7 @@ msgid "Ignore"
 msgstr "Ignore"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:307
-#: app/src/ui/contacts/mod.rs:370
+#: app/src/ui/contacts/mod.rs:381
 msgid "Email"
 msgstr "Email"
 
@@ -7473,7 +7473,7 @@ msgid "Other email"
 msgstr "Other email"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:313
-#: app/src/ui/contacts/mod.rs:405
+#: app/src/ui/contacts/mod.rs:416
 msgid "Phone"
 msgstr "Phone"
 
@@ -7509,8 +7509,8 @@ msgstr "Enable contacts for this account in Preferences first."
 msgid "Edit Contact"
 msgstr "Edit Contact"
 
-#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:112
-#: app/src/ui/contacts/mod.rs:114
+#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:116
+#: app/src/ui/contacts/mod.rs:118
 msgid "New Contact"
 msgstr "New Contact"
 
@@ -7526,7 +7526,7 @@ msgstr "Change Photo…"
 msgid "Remove Photo"
 msgstr "Remove Photo"
 
-#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:453
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:464
 msgid "Organization"
 msgstr "Organisation"
 
@@ -7534,15 +7534,15 @@ msgstr "Organisation"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 
-#: app/src/ui/contacts/editor.rs:332 app/src/ui/contacts/mod.rs:457
+#: app/src/ui/contacts/editor.rs:332 app/src/ui/contacts/mod.rs:468
 msgid "Groups"
 msgstr "Groups"
 
-#: app/src/ui/contacts/editor.rs:333 app/src/ui/contacts/mod.rs:459
+#: app/src/ui/contacts/editor.rs:333 app/src/ui/contacts/mod.rs:470
 msgid "Websites"
 msgstr "Websites"
 
-#: app/src/ui/contacts/editor.rs:335 app/src/ui/contacts/mod.rs:458
+#: app/src/ui/contacts/editor.rs:335 app/src/ui/contacts/mod.rs:469
 msgid "Postal Addresses"
 msgstr "Postal Addresses"
 
@@ -7591,14 +7591,14 @@ msgid "Custom Fields"
 msgstr "Custom Fields"
 
 #: app/src/ui/contacts/editor.rs:366
-msgid "Use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
-msgstr "Use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
+msgid "For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
+msgstr "For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
 
 #: app/src/ui/contacts/editor.rs:381
 msgid "This account supports editing names, email addresses, phone numbers, and organizations. Full contact editing requires CardDAV."
 msgstr "This account supports editing names, email addresses, phone numbers, and organisations. Full contact editing requires CardDAV."
 
-#: app/src/ui/contacts/editor.rs:462 app/src/ui/contacts/mod.rs:55
+#: app/src/ui/contacts/editor.rs:462 app/src/ui/contacts/mod.rs:59
 msgid "Address Book"
 msgstr "Address Book"
 
@@ -7642,82 +7642,82 @@ msgstr "Your changes have not been saved to the account."
 msgid "Keep Editing"
 msgstr "Keep Editing"
 
-#: app/src/ui/contacts/mod.rs:51 app/src/ui/smart_editor.rs:43
+#: app/src/ui/contacts/mod.rs:55 app/src/ui/smart_editor.rs:43
 #: app/src/ui/smart_editor.rs:203
 msgid "All Accounts"
 msgstr "All Accounts"
 
-#: app/src/ui/contacts/mod.rs:56 app/src/ui/contacts/mod.rs:210
+#: app/src/ui/contacts/mod.rs:60 app/src/ui/contacts/mod.rs:221
 msgid "All Groups"
 msgstr "All Groups"
 
-#: app/src/ui/contacts/mod.rs:57
+#: app/src/ui/contacts/mod.rs:61
 msgid "Group"
 msgstr "Group"
 
-#: app/src/ui/contacts/mod.rs:59 app/src/ui/contacts/mod.rs:61
+#: app/src/ui/contacts/mod.rs:63 app/src/ui/contacts/mod.rs:65
 msgid "Search Contacts"
 msgstr "Search Contacts"
 
-#: app/src/ui/contacts/mod.rs:67
+#: app/src/ui/contacts/mod.rs:71
 msgid "No Matching Contacts"
 msgstr "No Matching Contacts"
 
-#: app/src/ui/contacts/mod.rs:108
+#: app/src/ui/contacts/mod.rs:112
 msgid "Contact List Width"
 msgstr "Contact List Width"
 
-#: app/src/ui/contacts/mod.rs:117 app/src/ui/contacts/mod.rs:119
+#: app/src/ui/contacts/mod.rs:121 app/src/ui/contacts/mod.rs:123
 msgid "Refresh Contacts"
 msgstr "Refresh Contacts"
 
-#: app/src/ui/contacts/mod.rs:220
+#: app/src/ui/contacts/mod.rs:231
 msgid "Could not load contacts: {reason}"
 msgstr "Could not load contacts: {reason}"
 
-#: app/src/ui/contacts/mod.rs:293
+#: app/src/ui/contacts/mod.rs:304
 msgid "Select a Contact"
 msgstr "Select a Contact"
 
-#: app/src/ui/contacts/mod.rs:296
+#: app/src/ui/contacts/mod.rs:307
 msgid "Choose a contact or add someone to an address book."
 msgstr "Choose a contact or add someone to an address book."
 
-#: app/src/ui/contacts/mod.rs:317
+#: app/src/ui/contacts/mod.rs:328
 msgid "View Photo"
 msgstr "View Photo"
 
-#: app/src/ui/contacts/mod.rs:343 app/src/ui/contacts_prefs.rs:175
+#: app/src/ui/contacts/mod.rs:354 app/src/ui/contacts_prefs.rs:175
 #: app/src/ui/conversation.rs:609 app/src/ui/queued.rs:60
 #: app/src/ui/sidebar.rs:2010
 msgid "Edit…"
 msgstr "Edit…"
 
-#: app/src/ui/contacts/mod.rs:390
+#: app/src/ui/contacts/mod.rs:401
 msgid "Mail to or from This Address"
 msgstr "Mail to or from This Address"
 
-#: app/src/ui/contacts/mod.rs:419
+#: app/src/ui/contacts/mod.rs:430
 msgid "Call"
 msgstr "Call"
 
-#: app/src/ui/contacts/mod.rs:420
+#: app/src/ui/contacts/mod.rs:431
 msgid "Send SMS"
 msgstr "Send SMS"
 
-#: app/src/ui/contacts/mod.rs:509
+#: app/src/ui/contacts/mod.rs:520
 msgid "Allow contacts access in Preferences, then try again."
 msgstr "Allow contacts access in Preferences, then try again."
 
-#: app/src/ui/contacts/mod.rs:527
+#: app/src/ui/contacts/mod.rs:538
 msgid "Delete Contact?"
 msgstr "Delete Contact?"
 
-#: app/src/ui/contacts/mod.rs:529
+#: app/src/ui/contacts/mod.rs:540
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr "Delete {name} from its account? This cannot be undone."
 
-#: app/src/ui/contacts/mod.rs:600 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:611 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Copy"
@@ -12074,6 +12074,14 @@ msgstr "Is unread"
 #: domain/src/smart.rs:97
 msgid "Is flagged"
 msgstr "Is flagged"
+
+#: gmail/src/people.rs:620
+msgid "Enter a valid date as YYYY-MM-DD or --MM-DD."
+msgstr "Enter a valid date as YYYY-MM-DD or --MM-DD."
+
+#: gmail/src/people.rs:628
+msgid "Choose a PNG contact photo smaller than 512 KB."
+msgstr "Choose a PNG contact photo smaller than 512 KB."
 
 #: sync/src/account/outbox.rs:97
 msgid "The message was sent, but Penguin Mail could not keep a copy in Sent."

@@ -654,7 +654,12 @@ impl ContactsService for AnyContacts {
     }
 
     fn edits_details(&self) -> bool {
-        matches!(self, Self::Dav(_))
+        match self {
+            Self::Google(adapter) => adapter.edits_details(),
+            Self::Microsoft(adapter) => adapter.edits_details(),
+            Self::Dav(adapter) => adapter.edits_details(),
+            Self::Jmap(adapter) => adapter.edits_details(),
+        }
     }
     async fn delete_contact(
         &self,

@@ -363,7 +363,7 @@ pub(super) fn present(window: &Rc<Window>, contact: Option<Contact>) {
     let dates = fields(&gettext("Other Dates"), &original.details.dates);
     let custom = fields(&gettext("Custom Fields"), &original.details.custom);
     custom.group.set_description(Some(&gettext(
-        "Use a vCard field name beginning with X-, such as X-CUSTOMER-ID.",
+        "For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID.",
     )));
     for group in [&groups, &urls, &addresses, &dates, &custom] {
         rich_box.append(&group.group);

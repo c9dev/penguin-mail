@@ -667,7 +667,7 @@ async fn contacts_page_through_and_hand_back_a_sync_token() {
         .and(header("authorization", "Bearer at-1"))
         .and(query_param(
             "personFields",
-            "names,emailAddresses,photos,organizations,phoneNumbers",
+            mailrs_gmail::people::PERSON_FIELDS,
         ))
         .and(query_param("requestSyncToken", "true"))
         .and(query_param("pageToken", "page-2"))
@@ -778,7 +778,7 @@ async fn a_contact_change_hands_back_the_etag_and_names_its_fields() {
         .and(path("/v1/people/c9"))
         .respond_with(
             ResponseTemplate::new(200)
-                .set_body_json(json!({"resourceName": "people/c9", "etag": "%Ej4"})),
+                .set_body_json(json!({"resourceName": "people/c9", "etag": "%Ej4", "metadata":{"sources":[{"type":"CONTACT","id":"c9","etag":"source-v1"}]}})),
         )
         .mount(&server)
         .await;
@@ -787,6 +787,7 @@ async fn a_contact_change_hands_back_the_etag_and_names_its_fields() {
         .and(query_param("updatePersonFields", "phoneNumbers"))
         .and(body_json(json!({
             "etag": "%Ej4",
+            "metadata":{"sources":[{"type":"CONTACT","id":"c9","etag":"source-v1"}]},
             "phoneNumbers": [{"value": "+351 21 000 0000"}],
         })))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
@@ -956,4 +957,217 @@ async fn a_trash_listing_explicitly_includes_deleted_mail() {
         .collect();
     assert!(page.is_ok(), "{page:?}: {urls:?}");
     assert_eq!(page.unwrap().messages.len(), 1);
+}
+
+#[tokio::test]
+async fn expanded_google_contacts_keep_all_fields_and_resolve_group_names() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET")).and(path("/v1/contactGroups"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"contactGroups":[
+            {"resourceName":"contactGroups/g1","name":"Friends","groupType":"USER_CONTACT_GROUP"},
+            {"resourceName":"contactGroups/g2","name":"Work","groupType":"USER_CONTACT_GROUP"},
+            {"resourceName":"contactGroups/myContacts","name":"My Contacts","groupType":"SYSTEM_CONTACT_GROUP"}
+        ]}))).mount(&server).await;
+    Mock::given(method("GET")).and(path("/v1/people/me/connections"))
+        .and(query_param("personFields", mailrs_gmail::people::PERSON_FIELDS))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"connections":[{
+            "resourceName":"people/c1", "etag":"v1", "names":[{"displayName":"Demo Contact"}],
+            "phoneNumbers":[{"value":"+1 202 555 0101"},{"value":"+1 202 555 0102"}],
+            "birthdays":[{"date":{"month":4,"day":23}}],
+            "biographies":[{"value":"Demo notes"}],
+            "addresses":[{"streetAddress":"Example Street","city":"Example City"}],
+            "urls":[{"value":"https://example.org"}],
+            "events":[{"type":"anniversary","date":{"year":2020,"month":6,"day":8}}],
+            "userDefined":[{"key":"Customer ID","value":"demo"}],
+            "memberships":[{"contactGroupMembership":{"contactGroupResourceName":"contactGroups/g1"}},
+              {"contactGroupMembership":{"contactGroupResourceName":"contactGroups/g2"}},
+              {"contactGroupMembership":{"contactGroupResourceName":"contactGroups/myContacts"}}]
+        }]}))).mount(&server).await;
+    let p = client(&server)
+        .connections(None, None)
+        .await
+        .unwrap()
+        .people
+        .remove(0);
+    assert!(p.emails.is_empty());
+    assert_eq!(p.details.groups, ["Friends", "Work"]);
+    assert_eq!(p.details.phones.len(), 2);
+    assert_eq!(p.details.birthday, "--04-23");
+    assert_eq!(p.details.dates[0].value, "2020-06-08");
+    assert_eq!(p.details.custom[0].label, "Customer ID");
+    assert_eq!(p.details.revision, "v1");
+    assert_eq!(p.details.urls, ["https://example.org"]);
+    assert!(p.details.addresses[0].contains("Example City"));
+}
+
+#[tokio::test]
+async fn google_edits_keep_source_etags_and_phone_labels_and_reject_stale_writes() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET")).and(path("/v1/people/c1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"resourceName":"people/c1","etag":"v2",
+        "metadata":{"sources":[{"type":"CONTACT","id":"c1","etag":"source-v2"}]},
+        "phoneNumbers":[{"value":"+1 202 555 0101","type":"work"},{"value":"+1 202 555 0102","type":"home"}]})))
+        .mount(&server).await;
+    Mock::given(method("PATCH")).and(path("/v1/people/c1:updateContact"))
+        .and(body_json(json!({"etag":"v2","metadata":{"sources":[{"type":"CONTACT","id":"c1","etag":"source-v2"}]},
+        "phoneNumbers":[{"value":"+1 202 555 0102","type":"home"}],"birthdays":[{"date":{"year":0,"month":4,"day":23}}],
+        "biographies":[],"userDefined":[{"key":"Customer ID","value":"demo"}]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"resourceName":"people/c1","etag":"v3"})))
+        .expect(1).mount(&server).await;
+    let client = client(&server);
+    let mut fields = mailrs_gmail::ContactFields {
+        expected_revision: Some("v1".into()),
+        phones: Some(vec!["+1 202 555 0102".into()]),
+        details: mailrs_domain::contact::Changes {
+            birthday: Some("--04-23".into()),
+            notes: Some(String::new()),
+            custom: Some(vec![mailrs_domain::contact::Field {
+                label: "Customer ID".into(),
+                value: "demo".into(),
+            }]),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        client.update_contact("people/c1", &fields).await,
+        Err(GmailError::Changed)
+    ));
+    assert!(matches!(
+        client.delete_contact("people/c1", Some("v1")).await,
+        Err(GmailError::Changed)
+    ));
+    fields.expected_revision = Some("v2".into());
+    assert_eq!(
+        client
+            .update_contact("people/c1", &fields)
+            .await
+            .unwrap()
+            .details
+            .revision,
+        "v3"
+    );
+    Mock::given(method("DELETE"))
+        .and(path("/v1/people/c1:deleteContact"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    client
+        .delete_contact("people/c1", Some("v2"))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn google_group_edits_create_labels_and_preserve_system_memberships() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(
+            json!({"resourceName":"people/c1","etag":"v1",
+        "metadata":{"sources":[{"type":"CONTACT","etag":"s1"}]},
+        "memberships":[{"contactGroupMembership":{"contactGroupResourceName":"contactGroups/old"}},
+         {"contactGroupMembership":{"contactGroupResourceName":"contactGroups/starred"}}]}),
+        ))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET")).and(path("/v1/contactGroups"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"contactGroups":[
+        {"resourceName":"contactGroups/old","name":"Old","groupType":"USER_CONTACT_GROUP"},
+        {"resourceName":"contactGroups/starred","name":"Starred","groupType":"SYSTEM_CONTACT_GROUP"}]}))).mount(&server).await;
+    Mock::given(method("POST")).and(path("/v1/contactGroups"))
+        .and(body_json(json!({"contactGroup":{"name":"New"}})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"resourceName":"contactGroups/new","name":"New","groupType":"USER_CONTACT_GROUP"})))
+        .expect(1).mount(&server).await;
+    Mock::given(method("PATCH")).and(path("/v1/people/c1:updateContact"))
+        .and(query_param("updatePersonFields","memberships"))
+        .and(body_json(json!({"etag":"v1","metadata":{"sources":[{"type":"CONTACT","etag":"s1"}]},"memberships":[
+        {"contactGroupMembership":{"contactGroupResourceName":"contactGroups/starred"}},
+        {"contactGroupMembership":{"contactGroupResourceName":"contactGroups/new"}}]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"resourceName":"people/c1","etag":"v2"}))).expect(1).mount(&server).await;
+    let client = client(&server);
+    let mut fields = mailrs_gmail::ContactFields {
+        expected_groups: Some(vec!["Different".into()]),
+        details: mailrs_domain::contact::Changes {
+            groups: Some(vec!["New".into()]),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        client.update_contact("people/c1", &fields).await,
+        Err(GmailError::Changed)
+    ));
+    fields.expected_groups = Some(vec!["Old".into()]);
+    client.update_contact("people/c1", &fields).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_google_photo_retry_does_not_create_a_second_contact() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    let saved = json!({"resourceName":"people/c1","etag":"v1","names":[{"displayName":"Demo"}]});
+    Mock::given(method("POST"))
+        .and(path("/v1/people:createContact"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(saved.clone()))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(saved.clone()))
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContact"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(saved.clone()))
+        .mount(&server)
+        .await;
+    let failed = Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContactPhoto"))
+        .respond_with(ResponseTemplate::new(400))
+        .mount_as_scoped(&server)
+        .await;
+    let client = client(&server);
+    let fields = mailrs_gmail::ContactFields {
+        name: Some("Demo".into()),
+        creation_key: Some("editor-1".into()),
+        photo: Some(b"\x89PNG\r\n\x1a\n".to_vec()),
+        ..Default::default()
+    };
+    assert!(client.create_contact(&fields).await.is_err());
+    drop(failed);
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContactPhoto"))
+        .and(body_json(
+            json!({"photoBytes":"iVBORw0KGgo=","personFields":mailrs_gmail::people::PERSON_FIELDS}),
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"person":saved})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    assert_eq!(
+        client.create_contact(&fields).await.unwrap().resource,
+        "people/c1"
+    );
+    Mock::given(method("DELETE"))
+        .and(path("/v1/people/c1:deleteContactPhoto"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"person":saved})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    client
+        .update_contact(
+            "people/c1",
+            &mailrs_gmail::ContactFields {
+                photo: Some(vec![]),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
 }

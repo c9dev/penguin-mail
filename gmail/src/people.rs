@@ -26,7 +26,7 @@ pub const PEOPLE_API_BASE: &str = "https://people.googleapis.com/v1";
 
 /// The fields one page carries. Anything not named here comes back empty,
 /// so the request says exactly what the app stores and no more.
-pub const PERSON_FIELDS: &str = "names,emailAddresses,photos,organizations,phoneNumbers";
+pub const PERSON_FIELDS: &str = "names,emailAddresses,photos,organizations,phoneNumbers,metadata,birthdays,biographies,addresses,urls,events,userDefined,memberships";
 
 /// People per page. Google's ceiling is 1000; a smaller page costs one
 /// more call on a large address book and keeps each reply small.
@@ -105,6 +105,67 @@ impl ContactFields {
         if let Some(organization) = &self.organization {
             body.insert("organizations".into(), json!([{"name": organization}]));
         }
+        let d = &self.details;
+        if let Some(value) = &d.birthday {
+            body.insert(
+                "birthdays".into(),
+                if value.is_empty() {
+                    json!([])
+                } else {
+                    json!([{"date": date_value(value)}])
+                },
+            );
+        }
+        if let Some(value) = &d.notes {
+            body.insert(
+                "biographies".into(),
+                if value.is_empty() {
+                    json!([])
+                } else {
+                    json!([{"value": value, "contentType": "TEXT_PLAIN"}])
+                },
+            );
+        }
+        if let Some(values) = &d.urls {
+            body.insert(
+                "urls".into(),
+                json!(
+                    values
+                        .iter()
+                        .map(|v| json!({"value":v}))
+                        .collect::<Vec<_>>()
+                ),
+            );
+        }
+        if let Some(values) = &d.addresses {
+            body.insert("addresses".into(), json!(values.iter().map(|v| {
+                let parts: Vec<_> = v.split('\n').collect();
+                let get = |i| parts.get(i).copied().unwrap_or_default();
+                json!({"poBox":get(0),"extendedAddress":get(1),"streetAddress":get(2),"city":get(3),"region":get(4),"postalCode":get(5),"country":get(6)})
+            }).collect::<Vec<_>>()));
+        }
+        if let Some(values) = &d.dates {
+            body.insert(
+                "events".into(),
+                json!(
+                    values
+                        .iter()
+                        .map(|v| json!({"type":v.label,"date":date_value(&v.value)}))
+                        .collect::<Vec<_>>()
+                ),
+            );
+        }
+        if let Some(values) = &d.custom {
+            body.insert(
+                "userDefined".into(),
+                json!(
+                    values
+                        .iter()
+                        .map(|v| json!({"key":v.label,"value":v.value}))
+                        .collect::<Vec<_>>()
+                ),
+            );
+        }
         body.into()
     }
 
@@ -115,6 +176,13 @@ impl ContactFields {
             (self.emails.is_some(), "emailAddresses"),
             (self.phones.is_some(), "phoneNumbers"),
             (self.organization.is_some(), "organizations"),
+            (self.details.birthday.is_some(), "birthdays"),
+            (self.details.notes.is_some(), "biographies"),
+            (self.details.addresses.is_some(), "addresses"),
+            (self.details.urls.is_some(), "urls"),
+            (self.details.dates.is_some(), "events"),
+            (self.details.custom.is_some(), "userDefined"),
+            (self.details.groups.is_some(), "memberships"),
         ]
         .iter()
         .filter(|(set, _)| *set)
@@ -138,8 +206,7 @@ pub fn parse_person(body: &str) -> Result<(Person, String), GmailError> {
     Ok((flatten(reply), etag))
 }
 
-/// Reads one page. A person with no address is left out: there is nothing
-/// to suggest them by and nothing to match a message against.
+/// Reads one page, including contacts with no email address.
 pub fn parse_connections(body: &str) -> Result<ConnectionsPage, GmailError> {
     let reply: Connections =
         serde_json::from_str(body).map_err(|e| GmailError::Decode(e.to_string()))?;
@@ -181,6 +248,61 @@ fn flatten(person: Connection) -> Person {
                 .phone_numbers
                 .iter()
                 .filter_map(|p| p.value.clone())
+                .collect(),
+            revision: person.etag.clone().unwrap_or_default(),
+            birthday: person
+                .extra
+                .get("birthdays")
+                .and_then(|v| v.as_array())
+                .and_then(|v| v.first())
+                .map(|v| date_text(&v["date"]))
+                .unwrap_or_default(),
+            notes: values(&person.extra, "biographies")
+                .iter()
+                .filter_map(|v| v["value"].as_str())
+                .collect::<Vec<_>>()
+                .join("\n"),
+            urls: values(&person.extra, "urls")
+                .iter()
+                .filter_map(|v| v["value"].as_str().map(str::to_owned))
+                .collect(),
+            addresses: values(&person.extra, "addresses")
+                .iter()
+                .map(|v| {
+                    [
+                        "poBox",
+                        "extendedAddress",
+                        "streetAddress",
+                        "city",
+                        "region",
+                        "postalCode",
+                        "country",
+                    ]
+                    .map(|k| v[k].as_str().unwrap_or_default())
+                    .join("\n")
+                })
+                .collect(),
+            dates: values(&person.extra, "events")
+                .iter()
+                .map(|v| mailrs_domain::contact::Field {
+                    label: v["type"].as_str().unwrap_or("other").into(),
+                    value: date_text(&v["date"]),
+                })
+                .collect(),
+            custom: values(&person.extra, "userDefined")
+                .iter()
+                .map(|v| mailrs_domain::contact::Field {
+                    label: v["key"].as_str().unwrap_or_default().into(),
+                    value: v["value"].as_str().unwrap_or_default().into(),
+                })
+                .collect(),
+            groups: values(&person.extra, "memberships")
+                .iter()
+                .filter_map(|v| {
+                    v["contactGroupMembership"]["contactGroupResourceName"]
+                        .as_str()
+                        .map(str::to_owned)
+                })
                 .collect(),
             ..Default::default()
         },
@@ -266,6 +388,8 @@ struct Connection {
     organizations: Vec<Organization>,
     #[serde(default)]
     phone_numbers: Vec<Field>,
+    #[serde(flatten)]
+    extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -438,5 +562,148 @@ mod tests {
             photo_url("https://x.example/p=w200-h200", 64),
             "https://x.example/p=s64-c"
         );
+    }
+}
+
+fn values<'a>(
+    extra: &'a serde_json::Map<String, serde_json::Value>,
+    key: &str,
+) -> &'a [serde_json::Value] {
+    extra
+        .get(key)
+        .and_then(|v| v.as_array())
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+}
+
+fn date_text(date: &serde_json::Value) -> String {
+    let year = date["year"].as_u64().unwrap_or_default();
+    let month = date["month"].as_u64().unwrap_or_default();
+    let day = date["day"].as_u64().unwrap_or_default();
+    if month == 0 || day == 0 {
+        return String::new();
+    }
+    if year == 0 {
+        format!("--{month:02}-{day:02}")
+    } else {
+        format!("{year:04}-{month:02}-{day:02}")
+    }
+}
+
+fn date_value(text: &str) -> serde_json::Value {
+    let full = if text.starts_with("--") {
+        format!("2000{}", &text[1..])
+    } else {
+        text.to_owned()
+    };
+    let date = chrono::NaiveDate::parse_from_str(&full, "%Y-%m-%d")
+        .or_else(|_| chrono::NaiveDate::parse_from_str(&full.replace('-', ""), "%Y%m%d"));
+    match date {
+        Ok(date) => {
+            use chrono::Datelike;
+            json!({"year":if text.starts_with("--") {0} else {date.year()},"month":date.month(),"day":date.day()})
+        }
+        Err(_) => serde_json::Value::Null,
+    }
+}
+
+pub(crate) fn validate(fields: &ContactFields) -> Result<(), GmailError> {
+    use mailrs_domain::translate::gettext;
+    for date in fields
+        .details
+        .birthday
+        .iter()
+        .chain(fields.details.dates.iter().flatten().map(|v| &v.value))
+    {
+        if !date.is_empty() && date_value(date).is_null() {
+            return Err(GmailError::Decode(gettext(
+                "Enter a valid date as YYYY-MM-DD or --MM-DD.",
+            )));
+        }
+    }
+    if fields.photo.as_ref().is_some_and(|p| {
+        p.len() > 512 * 1024 || (!p.is_empty() && !p.starts_with(b"\x89PNG\r\n\x1a\n"))
+    }) {
+        return Err(GmailError::Decode(gettext(
+            "Choose a PNG contact photo smaller than 512 KB.",
+        )));
+    }
+    Ok(())
+}
+
+/// Retain labels and structured names when an edit changes only their values.
+pub(crate) fn preserve_fields(body: &mut serde_json::Value, current: &serde_json::Value) {
+    for key in [
+        "emailAddresses",
+        "phoneNumbers",
+        "organizations",
+        "addresses",
+        "urls",
+        "events",
+        "userDefined",
+    ] {
+        let Some(changed) = body.get_mut(key).and_then(|v| v.as_array_mut()) else {
+            continue;
+        };
+        let Some(old) = current[key].as_array() else {
+            continue;
+        };
+        let mut used = vec![false; old.len()];
+        for (i, value) in changed.iter_mut().enumerate() {
+            let matching = old.iter().enumerate().position(|(j, candidate)| {
+                !used[j]
+                    && value
+                        .as_object()
+                        .is_some_and(|v| v.iter().all(|(k, v)| candidate.get(k) == Some(v)))
+            });
+            let index = matching.or_else(|| (i < old.len() && !used[i]).then_some(i));
+            if let Some(index) = index {
+                used[index] = true;
+                let mut kept = old[index].clone();
+                if let Some(object) = kept.as_object_mut() {
+                    object.remove("metadata");
+                    if key == "addresses" && value.get("country") != object.get("country") {
+                        object.remove("countryCode");
+                    }
+                    object.extend(value.as_object().cloned().unwrap_or_default());
+                    *value = kept;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod expanded_tests {
+    use super::*;
+    #[test]
+    fn invalid_dates_and_photos_are_rejected_before_sending() {
+        for value in ["2023-02-29", "--13-01", "broken"] {
+            let mut fields = ContactFields::default();
+            fields.details.birthday = Some(value.into());
+            assert!(validate(&fields).is_err());
+        }
+        let fields = ContactFields {
+            photo: Some(vec![0; 32]),
+            ..Default::default()
+        };
+        assert!(validate(&fields).is_err());
+        assert_eq!(date_value("--0229"), json!({"year":0,"month":2,"day":29}));
+    }
+}
+
+#[cfg(test)]
+mod address_tests {
+    use super::*;
+    #[test]
+    fn changing_a_country_does_not_keep_the_old_country_code() {
+        let current = json!({"addresses":[{"country":"Portugal","countryCode":"PT","type":"work","city":"Lisbon"}]});
+        let mut body = json!({"addresses":[{"country":"Czechia","city":"Prague"}]});
+        preserve_fields(&mut body, &current);
+        assert_eq!(
+            body,
+            json!({"addresses":[{"country":"Czechia","city":"Prague","type":"work"}]})
+        );
+        assert!(body.get("phoneNumbers").is_none());
     }
 }

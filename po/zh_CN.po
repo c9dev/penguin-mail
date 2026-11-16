@@ -2513,7 +2513,7 @@ msgstr "标记为已读"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:357 app/src/ui/contacts/mod.rs:535
+#: app/src/ui/contacts/mod.rs:368 app/src/ui/contacts/mod.rs:546
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -3973,7 +3973,7 @@ msgid ""
 "before opening them."
 msgstr "这封邮件包含可能具有误导性的链接。打开前请先确认目标地址。"
 
-#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:448
+#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:459
 msgid "Details"
 msgstr "详细信息"
 
@@ -4300,7 +4300,7 @@ msgid "Calendar"
 msgstr "日历"
 
 #: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:39
-#: app/src/ui/contacts/mod.rs:66 app/src/ui/contacts_prefs.rs:256
+#: app/src/ui/contacts/mod.rs:70 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/window.rs:3748
@@ -4729,7 +4729,7 @@ msgstr "打开 Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:378
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:389
 #: app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "新建邮件"
@@ -4929,7 +4929,7 @@ msgstr "复制链接"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
 #: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:534
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:545
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -6281,7 +6281,7 @@ msgstr "移除提醒"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:272 app/src/ui/contacts/editor.rs:378
-#: app/src/ui/contacts/editor.rs:379 app/src/ui/contacts/mod.rs:460
+#: app/src/ui/contacts/editor.rs:379 app/src/ui/contacts/mod.rs:471
 msgid "Notes"
 msgstr "备注"
 
@@ -6616,7 +6616,7 @@ msgid "Working location"
 msgstr "工作地点"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:456
+#: app/src/ui/contacts/mod.rs:467
 msgid "Birthday"
 msgstr "生日"
 
@@ -7882,7 +7882,7 @@ msgid "Ignore"
 msgstr "忽略"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:307
-#: app/src/ui/contacts/mod.rs:370
+#: app/src/ui/contacts/mod.rs:381
 msgid "Email"
 msgstr "电子邮件"
 
@@ -7891,7 +7891,7 @@ msgid "Other email"
 msgstr "其他电子邮件"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:313
-#: app/src/ui/contacts/mod.rs:405
+#: app/src/ui/contacts/mod.rs:416
 msgid "Phone"
 msgstr "电话"
 
@@ -7933,8 +7933,8 @@ msgstr ""
 msgid "Edit Contact"
 msgstr "联系人"
 
-#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:112
-#: app/src/ui/contacts/mod.rs:114
+#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:116
+#: app/src/ui/contacts/mod.rs:118
 #, fuzzy
 #| msgid "Contact"
 msgid "New Contact"
@@ -7954,7 +7954,7 @@ msgstr ""
 msgid "Remove Photo"
 msgstr "移除条件"
 
-#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:453
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:464
 #, fuzzy
 #| msgid "Organizing"
 msgid "Organization"
@@ -7964,17 +7964,17 @@ msgstr "整理"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:332 app/src/ui/contacts/mod.rs:457
+#: app/src/ui/contacts/editor.rs:332 app/src/ui/contacts/mod.rs:468
 msgid "Groups"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:333 app/src/ui/contacts/mod.rs:459
+#: app/src/ui/contacts/editor.rs:333 app/src/ui/contacts/mod.rs:470
 #, fuzzy
 #| msgid "Website"
 msgid "Websites"
 msgstr "网站"
 
-#: app/src/ui/contacts/editor.rs:335 app/src/ui/contacts/mod.rs:458
+#: app/src/ui/contacts/editor.rs:335 app/src/ui/contacts/mod.rs:469
 #, fuzzy
 #| msgid "Email Address"
 msgid "Postal Addresses"
@@ -8033,7 +8033,8 @@ msgid "Custom Fields"
 msgstr "显示邮箱"
 
 #: app/src/ui/contacts/editor.rs:366
-msgid "Use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
+msgid ""
+"For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
 msgstr ""
 
 #: app/src/ui/contacts/editor.rs:381
@@ -8042,7 +8043,7 @@ msgid ""
 "organizations. Full contact editing requires CardDAV."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:462 app/src/ui/contacts/mod.rs:55
+#: app/src/ui/contacts/editor.rs:462 app/src/ui/contacts/mod.rs:59
 #, fuzzy
 #| msgid "Address copied"
 msgid "Address Book"
@@ -8102,102 +8103,102 @@ msgstr ""
 msgid "Keep Editing"
 msgstr "会议"
 
-#: app/src/ui/contacts/mod.rs:51 app/src/ui/smart_editor.rs:43
+#: app/src/ui/contacts/mod.rs:55 app/src/ui/smart_editor.rs:43
 #: app/src/ui/smart_editor.rs:203
 msgid "All Accounts"
 msgstr "所有账号"
 
-#: app/src/ui/contacts/mod.rs:56 app/src/ui/contacts/mod.rs:210
+#: app/src/ui/contacts/mod.rs:60 app/src/ui/contacts/mod.rs:221
 #, fuzzy
 #| msgid "All Accounts"
 msgid "All Groups"
 msgstr "所有账号"
 
-#: app/src/ui/contacts/mod.rs:57
+#: app/src/ui/contacts/mod.rs:61
 msgid "Group"
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:59 app/src/ui/contacts/mod.rs:61
+#: app/src/ui/contacts/mod.rs:63 app/src/ui/contacts/mod.rs:65
 #, fuzzy
 #| msgid "read contacts"
 msgid "Search Contacts"
 msgstr "读取联系人"
 
-#: app/src/ui/contacts/mod.rs:67
+#: app/src/ui/contacts/mod.rs:71
 #, fuzzy
 #| msgid "No Matching Mail"
 msgid "No Matching Contacts"
 msgstr "没有符合条件的邮件"
 
-#: app/src/ui/contacts/mod.rs:108
+#: app/src/ui/contacts/mod.rs:112
 #, fuzzy
 #| msgid "Connect With"
 msgid "Contact List Width"
 msgstr "连接方式"
 
-#: app/src/ui/contacts/mod.rs:117 app/src/ui/contacts/mod.rs:119
+#: app/src/ui/contacts/mod.rs:121 app/src/ui/contacts/mod.rs:123
 #, fuzzy
 #| msgid "read contacts"
 msgid "Refresh Contacts"
 msgstr "读取联系人"
 
-#: app/src/ui/contacts/mod.rs:220
+#: app/src/ui/contacts/mod.rs:231
 #, fuzzy
 #| msgid "Could not read accounts: {reason}"
 msgid "Could not load contacts: {reason}"
 msgstr "无法读取账号：{reason}"
 
-#: app/src/ui/contacts/mod.rs:293
+#: app/src/ui/contacts/mod.rs:304
 #, fuzzy
 #| msgid "read contacts"
 msgid "Select a Contact"
 msgstr "读取联系人"
 
-#: app/src/ui/contacts/mod.rs:296
+#: app/src/ui/contacts/mod.rs:307
 msgid "Choose a contact or add someone to an address book."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:317
+#: app/src/ui/contacts/mod.rs:328
 msgid "View Photo"
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:343 app/src/ui/contacts_prefs.rs:175
+#: app/src/ui/contacts/mod.rs:354 app/src/ui/contacts_prefs.rs:175
 #: app/src/ui/conversation.rs:609 app/src/ui/queued.rs:60
 #: app/src/ui/sidebar.rs:2010
 msgid "Edit…"
 msgstr "编辑…"
 
-#: app/src/ui/contacts/mod.rs:390
+#: app/src/ui/contacts/mod.rs:401
 msgid "Mail to or from This Address"
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:419
+#: app/src/ui/contacts/mod.rs:430
 #, fuzzy
 #| msgid "Join Call"
 msgid "Call"
 msgstr "加入通话"
 
-#: app/src/ui/contacts/mod.rs:420
+#: app/src/ui/contacts/mod.rs:431
 #, fuzzy
 #| msgid "Send"
 msgid "Send SMS"
 msgstr "发送"
 
-#: app/src/ui/contacts/mod.rs:509
+#: app/src/ui/contacts/mod.rs:520
 msgid "Allow contacts access in Preferences, then try again."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:527
+#: app/src/ui/contacts/mod.rs:538
 #, fuzzy
 #| msgid "Delete {name}?"
 msgid "Delete Contact?"
 msgstr "是否删除 {name}？"
 
-#: app/src/ui/contacts/mod.rs:529
+#: app/src/ui/contacts/mod.rs:540
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:600 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:611 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "复制"
@@ -12808,6 +12809,14 @@ msgstr "未读"
 #: domain/src/smart.rs:97
 msgid "Is flagged"
 msgstr "有标记"
+
+#: gmail/src/people.rs:620
+msgid "Enter a valid date as YYYY-MM-DD or --MM-DD."
+msgstr ""
+
+#: gmail/src/people.rs:628
+msgid "Choose a PNG contact photo smaller than 512 KB."
+msgstr ""
 
 #: sync/src/account/outbox.rs:97
 msgid "The message was sent, but Penguin Mail could not keep a copy in Sent."
