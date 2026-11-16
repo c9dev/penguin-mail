@@ -2273,6 +2273,7 @@ impl MainWindow {
     /// Draws the rows and open conversations again once the contact photos
     /// on disk are known, so they show faces instead of initials.
     fn contacts_loaded(self: &Rc<Self>) {
+        self.calendar.contacts_changed();
         self.list.photos_changed();
         self.reopen_for_photos();
     }
@@ -4440,6 +4441,10 @@ impl MainWindow {
                 }
             }
             Effect::Contacts => {
+                if let Some(app) = self.app.upgrade() {
+                    self.accounts_for_calendar(&app.accounts());
+                }
+                self.calendar.contacts_changed();
                 self.list.photos_changed();
                 self.reopen_for_photos();
             }

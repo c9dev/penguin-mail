@@ -52,6 +52,20 @@ fn contact_date(value: &str) -> Option<(chrono::NaiveDate, bool)> {
         .map(|date| (date, has_year))
 }
 
+/// The birthday in a displayed year and the age reached, if a year is known.
+/// February 29 has no occurrence in a non-leap year.
+pub fn birthday_in_year(value: &str, year: i32) -> Option<(chrono::NaiveDate, Option<u32>)> {
+    use chrono::Datelike;
+    let (birth, has_year) = contact_date(value)?;
+    let date = chrono::NaiveDate::from_ymd_opt(year, birth.month(), birth.day())?;
+    let age = if has_year {
+        Some(date.years_since(birth)?)
+    } else {
+        None
+    };
+    Some((date, age))
+}
+
 /// Use the same editable form for compact vCard and dashed service dates.
 pub fn date_for_edit(value: &str) -> String {
     match contact_date(value) {

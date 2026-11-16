@@ -85,7 +85,10 @@ fn list_edit_of(change: &ListChange) -> Option<AccountId> {
         | ListChange::Delete { account, .. }
         | ListChange::Unsubscribe { account, .. }
         | ListChange::Add { account, .. } => Some(*account),
-        ListChange::Listed { .. } | ListChange::Shown { .. } | ListChange::Folded { .. } => None,
+        ListChange::Birthdays(_)
+        | ListChange::Listed { .. }
+        | ListChange::Shown { .. }
+        | ListChange::Folded { .. } => None,
     }
 }
 
@@ -173,7 +176,7 @@ impl CalendarView {
                 AddKind::Subscribe => self.ask_subscribe(account),
                 AddKind::Holidays => self.show_holidays(account),
             },
-            ListChange::Shown { .. } | ListChange::Folded { .. } => {}
+            ListChange::Birthdays(_) | ListChange::Shown { .. } | ListChange::Folded { .. } => {}
         }
     }
 

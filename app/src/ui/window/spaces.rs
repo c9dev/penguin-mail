@@ -211,8 +211,11 @@ impl MainWindow {
         // With calendar accounts alone there is no mail to switch to: the
         // calendar shows, and the switch stays away.
         let only_calendars = crate::offered::only_calendars(accounts);
-        let visible =
-            !only_calendars && crate::offered::shows_space_switch(&started, waiting, remembered);
+        let contacts = accounts
+            .iter()
+            .any(|a| self.core.demo || self.settings().reads_contacts(&a.email));
+        let visible = !only_calendars
+            && (contacts || crate::offered::shows_space_switch(&started, waiting, remembered));
         self.sidebar.set_switch_visible(visible);
         if only_calendars {
             self.show_space(Space::Calendar);

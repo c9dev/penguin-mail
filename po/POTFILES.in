@@ -190,6 +190,7 @@ sync/src/account/outbox.rs
 sync/src/actions/labelling.rs
 sync/src/actions.rs
 sync/src/calendar_copy.rs
+sync/src/calendar_copy/birthdays.rs
 sync/src/error.rs
 sync/src/mailbox.rs
 sync/src/outbox.rs
