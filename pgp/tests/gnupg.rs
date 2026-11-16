@@ -318,7 +318,7 @@ fn encrypting_never_goes_looking_for_a_key() {
     );
 
     let asked = std::fs::read_to_string(asked).expect("gpg ran");
-    assert!(asked.contains("--auto-key-locate local"), "{asked}");
+    assert!(asked.contains("--auto-key-locate clear,local"), "{asked}");
 }
 
 /// The person's gpg.conf can say `auto-key-retrieve`, and then checking a

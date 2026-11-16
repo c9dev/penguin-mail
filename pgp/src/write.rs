@@ -68,8 +68,11 @@ impl Pgp {
             // sending stalls for up to half a minute, the reader's address
             // goes out, and a key the person never saw in `keys_for` could
             // be fetched and used. Only keys already held count, as when a
-            // message is read (`gpg::reading`).
-            command.args(["--auto-key-locate", "local"]);
+            // message is read (`gpg::reading`). `clear` comes first because
+            // the option adds to what gpg.conf already lists rather than
+            // replacing it: a person's `auto-key-locate keyserver` would
+            // still send the address out.
+            command.args(["--auto-key-locate", "clear,local"]);
             for address in &readers.named {
                 command.arg("--recipient").arg(user_id(address));
             }
