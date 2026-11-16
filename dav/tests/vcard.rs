@@ -157,7 +157,7 @@ fn extended_fields_and_photos_round_trip_in_both_versions() {
         let text = patch_card(&original, &fields).unwrap();
         let read = read_card(&text).unwrap();
         assert_eq!(read.details.notes, fields.details.notes.clone().unwrap());
-        assert_eq!(read.details.groups, fields.details.groups.clone().unwrap());
+        assert_eq!(read.details.groups, ["Work", "Friends", "family"]);
         assert_eq!(
             read.details.addresses,
             fields.details.addresses.clone().unwrap()
@@ -273,6 +273,72 @@ fn version_three_cards_keep_multiple_groups_phones_and_a_birthday() {
         phones.details.phones,
         ["+1 202 555 0101", "+1 202 555 0102"]
     );
-    assert_eq!(phones.details.birthday.replace('-', ""), "19850423");
+    assert_eq!(phones.details.birthday, "1985-04-23");
     assert!(matches!(phones.photo, Some(Photo::Inline(_))));
+}
+
+#[test]
+fn category_lists_split_escaped_commas_and_drop_empty_or_duplicate_groups() {
+    for version in ["3.0", "4.0"] {
+        let text = format!(
+            "BEGIN:VCARD\r\nVERSION:{version}\r\nFN:Demo\r\nCATEGORIES:Friends\\,Work\\,starred\r\nCATEGORIES:Work, ,Friends\r\nBDAY:--02-29\r\nEND:VCARD\r\n"
+        );
+        let card = read_card(&text).unwrap();
+        assert_eq!(card.details.groups, ["Friends", "Work", "starred"]);
+        assert_eq!(card.details.birthday, "--02-29");
+        let saved = patch_card(
+            &text,
+            &CardFields {
+                details: mailrs_domain::contact::Changes {
+                    groups: Some(card.details.groups.clone()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            read_card(&saved).unwrap().details.groups,
+            card.details.groups
+        );
+    }
+}
+
+#[test]
+fn editing_another_field_preserves_full_and_yearless_birthdays() {
+    for version in ["3.0", "4.0"] {
+        for (source, expected) in [
+            ("1985-04-23", "1985-04-23"),
+            ("19850423", "1985-04-23"),
+            ("--02-29", "--02-29"),
+            ("--0229", "--02-29"),
+            ("--02-\r\n 29", "--02-29"),
+        ] {
+            let text = format!(
+                "BEGIN:VCARD\r\nVERSION:{version}\r\nFN:Demo\r\nitem1.BDAY;VALUE=date:{source}\r\nEND:VCARD\r\n"
+            );
+            assert_eq!(read_card(&text).unwrap().details.birthday, expected);
+            let saved = patch_card(
+                &text,
+                &CardFields {
+                    name: Some("Changed".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(read_card(&saved).unwrap().details.birthday, expected);
+            let saved = patch_card(
+                &saved,
+                &CardFields {
+                    details: mailrs_domain::contact::Changes {
+                        birthday: Some(expected.into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(read_card(&saved).unwrap().details.birthday, expected);
+        }
+    }
 }

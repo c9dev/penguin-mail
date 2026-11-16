@@ -241,3 +241,4 @@ sync/src/services/carddav.rs
 
 gmail/src/people.rs
 sync/src/services/google/mod.rs
+domain/src/contact.rs

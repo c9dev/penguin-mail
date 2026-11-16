@@ -50,7 +50,39 @@ fn parse(text: &str) -> Result<VCard, DavError> {
     }
     let mut card =
         VCard::parse(text).map_err(|other| DavError::Parse(format!("not a vCard: {other:?}")))?;
+    // calcard truncates dashed dates without a year. Restore date-only values
+    // from the source so unrelated edits cannot lose a component.
+    let unfolded = text
+        .replace("\r\n ", "")
+        .replace("\r\n\t", "")
+        .replace("\n ", "")
+        .replace("\n\t", "");
+    let mut dates = unfolded.lines().filter_map(|line| {
+        let (head, value) = line.rsplit_once(':')?;
+        let name = head.split(';').next()?.rsplit('.').next()?;
+        let property = match name.to_ascii_uppercase().as_str() {
+            "BDAY" => VCardProperty::Bday,
+            "ANNIVERSARY" => VCardProperty::Anniversary,
+            _ => return None,
+        };
+        Some((property, value.trim()))
+    });
+    let v4 = card.version().is_some_and(|v| v as u8 >= 40);
     for entry in &mut card.entries {
+        if matches!(entry.name, VCardProperty::Bday | VCardProperty::Anniversary)
+            && let Some((property, value)) = dates.next()
+            && property == entry.name
+            && valid_date(value)
+        {
+            let mut value = mailrs_domain::contact::date_for_edit(value);
+            if v4 {
+                value = match value.strip_prefix("--") {
+                    Some(rest) => format!("--{}", rest.replace('-', "")),
+                    None => value.replace('-', ""),
+                };
+            }
+            entry.values = vec![VCardValue::Text(value)];
+        }
         if let VCardProperty::Other(name) = &mut entry.name {
             name.make_ascii_uppercase();
         }
@@ -401,7 +433,7 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
         phones: listed(card, VCardProperty::Tel),
         birthday: of(card, VCardProperty::Bday)
             .next()
-            .map(written_value)
+            .map(|entry| mailrs_domain::contact::date_for_edit(&written_value(entry)))
             .unwrap_or_default(),
         notes: listed(card, VCardProperty::Note).join("\n"),
         addresses: of(card, VCardProperty::Adr)
@@ -417,9 +449,23 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
             })
             .collect(),
         urls: listed(card, VCardProperty::Url),
+        // Some exporters escape a complete category list as one text value.
         groups: of(card, VCardProperty::Categories)
             .flat_map(texts)
-            .collect(),
+            .flat_map(|value| {
+                value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .fold(Vec::new(), |mut groups, group| {
+                if !groups.contains(&group) {
+                    groups.push(group);
+                }
+                groups
+            }),
         dates: card
             .entries
             .iter()
@@ -427,7 +473,7 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
                 if e.name == VCardProperty::Anniversary {
                     Some(Field {
                         label: "Anniversary".into(),
-                        value: written_value(e),
+                        value: mailrs_domain::contact::date_for_edit(&written_value(e)),
                     })
                 } else if e.name == VCardProperty::Other("X-ABDATE".into()) {
                     let label = card

@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Contact birthdays show the day, month and current age, and dates without a year stay yearless.
+- CardDAV contacts split comma-separated groups and refresh previously cached group lists.
+
 - Contacts hides accounts whose contacts are disabled.
 - Existing address books reload their full details, including groups, additional phone numbers and birthdays.
 - Google contacts load when the contact window opens and support editing groups, dates, custom fields and photos.

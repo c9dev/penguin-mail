@@ -2726,7 +2726,7 @@ msgstr "Σήμανση ως αναγνωσμένο"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:368 app/src/ui/contacts/mod.rs:546
+#: app/src/ui/contacts/mod.rs:368 app/src/ui/contacts/mod.rs:552
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -5349,7 +5349,7 @@ msgstr "Αντιγραφή συνδέσμου"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
 #: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:545
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:551
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -6046,7 +6046,7 @@ msgstr "Δοκιμή"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/contacts/editor.rs:424 app/src/ui/dav_edit.rs:48
+#: app/src/ui/contacts/editor.rs:443 app/src/ui/dav_edit.rs:48
 #: app/src/ui/rules.rs:528 app/src/ui/sender_prefs.rs:210
 #: app/src/ui/sender_prefs/signature.rs:78 app/src/ui/smart_editor.rs:320
 #: app/src/ui/templates.rs:234 app/src/ui/vacation.rs:42
@@ -6762,8 +6762,8 @@ msgid "Remove reminder"
 msgstr "Αφαίρεση υπενθύμισης"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:272 app/src/ui/contacts/editor.rs:378
-#: app/src/ui/contacts/editor.rs:379 app/src/ui/contacts/mod.rs:471
+#: app/src/ui/calendar/popover.rs:272 app/src/ui/contacts/editor.rs:397
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:477
 msgid "Notes"
 msgstr "Σημειώσεις"
 
@@ -7105,7 +7105,7 @@ msgid "Working location"
 msgstr "Τοποθεσία εργασίας"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:467
+#: app/src/ui/contacts/mod.rs:468
 msgid "Birthday"
 msgstr "Γενέθλια"
 
@@ -8194,7 +8194,7 @@ msgstr "Το πρόχειρο αποθηκεύτηκε"
 msgid "Save as Draft?"
 msgstr "Αποθήκευση ως πρόχειρο;"
 
-#: app/src/ui/composer/mod.rs:2116 app/src/ui/contacts/editor.rs:742
+#: app/src/ui/composer/mod.rs:2116 app/src/ui/contacts/editor.rs:761
 msgid "Discard"
 msgstr "Απόρριψη"
 
@@ -8501,120 +8501,120 @@ msgstr "Οργάνωση"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:332 app/src/ui/contacts/mod.rs:468
+#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:474
 msgid "Groups"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:333 app/src/ui/contacts/mod.rs:470
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:476
 #, fuzzy
 #| msgid "Website"
 msgid "Websites"
 msgstr "Ιστότοπος"
 
-#: app/src/ui/contacts/editor.rs:335 app/src/ui/contacts/mod.rs:469
+#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:475
 #, fuzzy
 #| msgid "Email Address"
 msgid "Postal Addresses"
 msgstr "Διεύθυνση email"
 
-#: app/src/ui/contacts/editor.rs:337
+#: app/src/ui/contacts/editor.rs:356
 msgid "PO Box"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:338
+#: app/src/ui/contacts/editor.rs:357
 #, fuzzy
 #| msgid "Sender Address"
 msgid "Extended Address"
 msgstr "Διεύθυνση αποστολέα"
 
-#: app/src/ui/contacts/editor.rs:339
+#: app/src/ui/contacts/editor.rs:358
 msgid "Street"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:340
+#: app/src/ui/contacts/editor.rs:359
 msgid "City"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:341
+#: app/src/ui/contacts/editor.rs:360
 msgid "Region"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:342
+#: app/src/ui/contacts/editor.rs:361
 msgid "Postal Code"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:343
+#: app/src/ui/contacts/editor.rs:362
 msgid "Country"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:356
+#: app/src/ui/contacts/editor.rs:375
 #, fuzzy
 #| msgid "Labels"
 msgid "Label"
 msgstr "Ετικέτες"
 
-#: app/src/ui/contacts/editor.rs:356
+#: app/src/ui/contacts/editor.rs:375
 msgid "Value"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:363
+#: app/src/ui/contacts/editor.rs:382
 #, fuzzy
 #| msgid "Other email"
 msgid "Other Dates"
 msgstr "Άλλο email"
 
-#: app/src/ui/contacts/editor.rs:364
+#: app/src/ui/contacts/editor.rs:383
 #, fuzzy
 #| msgid "Show Mailboxes"
 msgid "Custom Fields"
 msgstr "Εμφάνιση γραμματοκιβωτίων"
 
-#: app/src/ui/contacts/editor.rs:366
+#: app/src/ui/contacts/editor.rs:385
 msgid ""
 "For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:381
+#: app/src/ui/contacts/editor.rs:400
 msgid ""
 "This account supports editing names, email addresses, phone numbers, and "
 "organizations. Full contact editing requires CardDAV."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:462 app/src/ui/contacts/mod.rs:59
+#: app/src/ui/contacts/editor.rs:481 app/src/ui/contacts/mod.rs:59
 #, fuzzy
 #| msgid "Address copied"
 msgid "Address Book"
 msgstr "Η διεύθυνση αντιγράφηκε"
 
-#: app/src/ui/contacts/editor.rs:541
+#: app/src/ui/contacts/editor.rs:560
 #, fuzzy
 #| msgid "This account has no labels yet."
 msgid "This account has no address books."
 msgstr "Αυτός ο λογαριασμός δεν έχει ακόμη ετικέτες."
 
-#: app/src/ui/contacts/editor.rs:568
+#: app/src/ui/contacts/editor.rs:587
 #, fuzzy
 #| msgid "Use IMAP for this account instead."
 msgid "Contacts access for this account was turned off."
 msgstr "Χρησιμοποιήστε IMAP για αυτόν τον λογαριασμό."
 
-#: app/src/ui/contacts/editor.rs:584
+#: app/src/ui/contacts/editor.rs:603
 msgid "Choose an address book first."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:593
+#: app/src/ui/contacts/editor.rs:612
 #, fuzzy
 #| msgid "Enter a valid shared mailbox address."
 msgid "Enter a name or an email address."
 msgstr "Εισαγάγετε έγκυρη διεύθυνση κοινόχρηστου γραμματοκιβωτίου."
 
-#: app/src/ui/contacts/editor.rs:603
+#: app/src/ui/contacts/editor.rs:622
 #, fuzzy
 #| msgid "Enter a valid shared mailbox address."
 msgid "Enter a valid email address."
 msgstr "Εισαγάγετε έγκυρη διεύθυνση κοινόχρηστου γραμματοκιβωτίου."
 
-#: app/src/ui/contacts/editor.rs:687
+#: app/src/ui/contacts/editor.rs:706
 #, fuzzy
 #| msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgid "Grant contacts permission in Preferences, then try again."
@@ -8622,21 +8622,21 @@ msgstr ""
 "Η μετάφραση δεν έχει μοντέλο. Επιλέξτε ένα στις «Προτιμήσεις», στη σελίδα "
 "«Τεχνητή νοημοσύνη»."
 
-#: app/src/ui/contacts/editor.rs:707
+#: app/src/ui/contacts/editor.rs:726
 #, fuzzy
 #| msgid "Could not save: {reason}"
 msgid "Could not save contact: {reason}"
 msgstr "Δεν ήταν δυνατή η αποθήκευση: {reason}"
 
-#: app/src/ui/contacts/editor.rs:737
+#: app/src/ui/contacts/editor.rs:756
 msgid "Discard Contact Changes?"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:738
+#: app/src/ui/contacts/editor.rs:757
 msgid "Your changes have not been saved to the account."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:741
+#: app/src/ui/contacts/editor.rs:760
 #, fuzzy
 #| msgid "Meetings"
 msgid "Keep Editing"
@@ -8723,21 +8723,21 @@ msgstr "Συμμετοχή στην κλήση"
 msgid "Send SMS"
 msgstr "Αποστολή"
 
-#: app/src/ui/contacts/mod.rs:520
+#: app/src/ui/contacts/mod.rs:526
 msgid "Allow contacts access in Preferences, then try again."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:538
+#: app/src/ui/contacts/mod.rs:544
 #, fuzzy
 #| msgid "Delete {name}?"
 msgid "Delete Contact?"
 msgstr "Διαγραφή του {name};"
 
-#: app/src/ui/contacts/mod.rs:540
+#: app/src/ui/contacts/mod.rs:546
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr ""
 
-#: app/src/ui/contacts/mod.rs:611 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:617 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Αντιγραφή"
@@ -13355,25 +13355,25 @@ msgstr ""
 "Ο έλεγχος της υπογραφής της έκδοσης χρειάζεται το gpgv ή το gpg, και κανένα "
 "από τα δύο δεν είναι εγκατεστημένο."
 
-#: dav/src/vcard.rs:587
+#: dav/src/vcard.rs:633
 msgid ""
 "Custom field names must be unique uppercase X- names using letters, numbers, "
 "and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved"
 msgstr ""
 
-#: dav/src/vcard.rs:599
+#: dav/src/vcard.rs:645
 msgid "Use YYYY-MM-DD or --MM-DD for dates"
 msgstr ""
 
-#: dav/src/vcard.rs:607
+#: dav/src/vcard.rs:653
 msgid "A date needs a label and a value"
 msgstr ""
 
-#: dav/src/vcard.rs:613
+#: dav/src/vcard.rs:659
 msgid "Contact photos must be PNG images no larger than 512 KB"
 msgstr ""
 
-#: dav/src/vcard.rs:622
+#: dav/src/vcard.rs:668
 msgid "A postal address has seven components"
 msgstr ""
 
@@ -13398,6 +13398,22 @@ msgstr "Εστιασμένα"
 msgctxt "inbox"
 msgid "Other"
 msgstr "Άλλα"
+
+#: domain/src/contact.rs:71
+msgid "%-d %B"
+msgstr "%-d %B"
+
+#: domain/src/contact.rs:79
+#, fuzzy
+#| msgid "{date} {time}"
+msgid "{date} ({year})"
+msgstr "{date} {time}"
+
+#: domain/src/contact.rs:84
+msgid "{date} ({year}), {age} year old"
+msgid_plural "{date} ({year}), {age} years old"
+msgstr[0] ""
+msgstr[1] ""
 
 #: domain/src/invitation.rs:84
 msgid "Yes"
@@ -13545,10 +13561,6 @@ msgstr "την {day}η"
 #: domain/src/invitation/recurrence.rs:264
 msgid "the {day}rd"
 msgstr "την {day}η"
-
-#: domain/src/invitation/recurrence.rs:296
-msgid "%-d %B"
-msgstr "%-d %B"
 
 #: domain/src/sign_in_page.rs:36
 msgid "Signed in to Penguin Mail"

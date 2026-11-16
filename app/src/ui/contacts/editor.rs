@@ -326,8 +326,27 @@ pub(super) fn present(window: &Rc<Window>, contact: Option<Contact>) {
     let birthday = entry(
         &dates_group,
         &gettext("Birthday"),
-        &original.details.birthday,
+        &mailrs_domain::contact::date_for_edit(&original.details.birthday),
     );
+    let birthday_preview = gtk::Label::builder()
+        .label(mailrs_domain::contact::birthday_label(
+            &birthday.text(),
+            chrono::Local::now().date_naive(),
+        ))
+        .xalign(0.0)
+        .wrap(true)
+        .css_classes(["dim-label"])
+        .build();
+    birthday.connect_changed({
+        let preview = birthday_preview.clone();
+        move |entry| {
+            preview.set_label(&mailrs_domain::contact::birthday_label(
+                &entry.text(),
+                chrono::Local::now().date_naive(),
+            ))
+        }
+    });
+    dates_group.add(&birthday_preview);
     rich_box.append(&dates_group);
     let groups = strings(&gettext("Groups"), &original.details.groups);
     let urls = strings(&gettext("Websites"), &original.details.urls);

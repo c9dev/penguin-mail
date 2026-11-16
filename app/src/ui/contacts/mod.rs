@@ -464,7 +464,13 @@ impl Window {
                 gettext("Organization"),
                 contact.organization.clone().unwrap_or_default(),
             ),
-            (gettext("Birthday"), d.birthday.clone()),
+            (
+                gettext("Birthday"),
+                mailrs_domain::contact::birthday_label(
+                    &d.birthday,
+                    chrono::Local::now().date_naive(),
+                ),
+            ),
             (gettext("Groups"), d.groups.join(", ")),
             (gettext("Postal Addresses"), d.addresses.join("\n\n")),
             (gettext("Websites"), d.urls.join("\n")),
