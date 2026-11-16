@@ -310,6 +310,43 @@ impl Window {
             );
             return;
         };
+        if let Some(owner) = self.owners.iter().find(|a| a.id == contact.account_id) {
+            let account = gtk::Box::builder()
+                .spacing(8)
+                .halign(gtk::Align::End)
+                .css_classes(["card"])
+                .tooltip_text(&owner.email)
+                .build();
+            let icon = gtk::Image::builder()
+                .icon_name("x-office-address-book-symbolic")
+                .margin_start(10)
+                .build();
+            account.append(&icon);
+            let text = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .margin_top(6)
+                .margin_bottom(6)
+                .margin_end(10)
+                .build();
+            text.append(
+                &gtk::Label::builder()
+                    .label(gettext("Account"))
+                    .xalign(0.0)
+                    .css_classes(["caption", "dim-label"])
+                    .build(),
+            );
+            text.append(
+                &gtk::Label::builder()
+                    .label(&owner.email)
+                    .xalign(0.0)
+                    .selectable(true)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .max_width_chars(36)
+                    .build(),
+            );
+            account.append(&text);
+            self.detail.append(&account);
+        }
         let avatar = adw::Avatar::builder()
             .size(128)
             .text(contact.display())
@@ -344,9 +381,6 @@ impl Window {
                 .css_classes(["title-1"])
                 .build(),
         );
-        if let Some(owner) = self.owners.iter().find(|a| a.id == contact.account_id) {
-            self.detail.append(&gtk::Label::new(Some(&owner.email)));
-        }
         let actions = gtk::Box::builder()
             .spacing(8)
             .halign(gtk::Align::Center)

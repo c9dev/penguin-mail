@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Contact cards identify their account in the upper-right corner, separate from the person's email addresses.
+
 - Open a contact's websites by clicking their links.
 
 - Contact birthdays show the day, month and current age, and dates without a year stay yearless.
