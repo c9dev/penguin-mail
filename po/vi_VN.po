@@ -4861,7 +4861,7 @@ msgstr "Mở Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:514
 msgid "New Message"
 msgstr "Thư mới"
 
@@ -6489,8 +6489,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Không thể đính kèm {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
-#: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:355 app/src/ui/thread_list.rs:361
+#: app/src/ui/thread_list.rs:1186
 msgid "More"
 msgstr "Thêm"
 
@@ -9998,7 +9998,7 @@ msgstr "Tài khoản lịch dùng gần nhất"
 msgid "Same as New Messages"
 msgstr "Giống như thư mới"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:275
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:279
 msgid "All Inboxes"
 msgstr "Mọi hộp thư đến"
 
@@ -10460,7 +10460,7 @@ msgid "Mailboxes"
 msgstr "Hộp thư"
 
 #: app/src/ui/sidebar.rs:441 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1792 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:1792 app/src/ui/thread_list.rs:376
 msgid "Mail"
 msgstr "Thư"
 
@@ -10807,30 +10807,30 @@ msgstr "Nội dung"
 msgid "New Template"
 msgstr "Mẫu thư mới"
 
-#: app/src/ui/thread_list.rs:238
+#: app/src/ui/thread_list.rs:242
 msgid "No Mail"
 msgstr "Không có thư"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:256
+#: app/src/ui/thread_list.rs:260
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Tìm thư, ví dụ: from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:295 app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:299 app/src/ui/thread_list.rs:319
 msgid "Show Mailboxes"
 msgstr "Hiện hộp thư"
 
-#: app/src/ui/thread_list.rs:300
+#: app/src/ui/thread_list.rs:304
 msgid "New Message (C)"
 msgstr "Thư mới (C)"
 
-#: app/src/ui/thread_list.rs:305
+#: app/src/ui/thread_list.rs:309
 msgid "Search (/)"
 msgstr "Tìm kiếm (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:314
+#: app/src/ui/thread_list.rs:318
 msgid "Search mail"
 msgstr "Tìm thư"
 
