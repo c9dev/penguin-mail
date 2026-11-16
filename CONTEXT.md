@@ -511,3 +511,9 @@ The sidebar places nested folders under the server mailbox whose role it knows, 
 Mailbox placements report their committed old-to-new IDs and sibling order through `ChangeEvent::LabelsPlaced`. The app applies them to saved sidebar keys before refreshing folders, including placements made by the assistant.
 
 **Pull to check for mail**: an optional touchpad overscroll at the top of the message list. Reading preferences enable it, off by default. A pull must travel 140 logical pixels over at least 350 milliseconds at the top; reversing direction or leaving the top resets both. It runs the same Check for Mail action as the menu. `ui::thread_list::pull`.
+
+**Contact group**: a named set of contacts within an address book. CardDAV stores these as vCard categories, or as separate group cards with member UIDs on iCloud. The contacts window joins those memberships from the stored cards and writes changes back to the account. A group card is not a person and is never offered as a recipient. Google stores user groups as People API contact groups; system memberships such as Starred stay separate from editable labels.
+
+**Contact details**: a contact's phone numbers, postal addresses, websites, birthday, other dates, notes and custom vCard fields. `mailrs_domain::contact::Details` is the stored view; `Changes` names only edited fields. The CardDAV or Google revision belongs to that view so saving an old editor cannot overwrite a newer card. Google fields are written with their contact source metadata; untouched values and labels stay with the account.
+
+**Birthday calendar**: a local, read-only calendar derived from enabled accounts’ contact birthdays. Its switch is saved on this computer. A known birth year supplies the age reached in the displayed year; yearless dates stay yearless, and February 29 appears only in leap years. No events are written to a provider.

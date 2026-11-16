@@ -743,7 +743,9 @@ const MAIL_ONLY: &[&str] = &[
 pub(super) fn route(space: Space, name: &str) -> Route {
     match space {
         Space::Mail => Route::Run,
-        Space::Calendar if matches!(name, "customize-toolbar" | "customize-mailboxes") => Route::Run,
+        Space::Calendar if matches!(name, "customize-toolbar" | "customize-mailboxes") => {
+            Route::Run
+        }
         Space::Calendar if matches!(name, "find" | "search") => Route::Calendar,
         Space::Calendar
             if MAIL_ONLY.contains(&name) || VIEW_ACTIONS.iter().any(|(n, _)| *n == name) =>
@@ -879,6 +881,7 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
             |_| {},
         );
     }),
+    ("contacts", |win| win.show_contacts()),
     ("preferences", |win| win.show_preferences()),
     ("quit", |win| {
         if let Some(app) = win.app.upgrade() {

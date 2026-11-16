@@ -744,6 +744,7 @@ impl<'a> Run<'a> {
             emails: Some(vec!["ada@example.test".into()]),
             phones: None,
             organization: None,
+            ..Default::default()
         };
         let made = contacts.create_contact(&fields).await.expect("a contact");
         let page = contacts

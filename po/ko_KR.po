@@ -123,22 +123,6 @@ msgstr ""
 "다. GTK와 libadwaita로 만든 Penguin Mail은 GNOME에 잘 어울리며 모든 Linux 데"
 "스크톱에서 실행됩니다."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
-msgid "gmail"
-msgstr "gmail"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
-msgid "email"
-msgstr "이메일"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
-msgid "mail"
-msgstr "메일"
-
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:57
-msgid "inbox"
-msgstr "받은편지함"
-
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "모든 계정이 모인 받은편지함과 열린 답장"
@@ -1199,7 +1183,7 @@ msgstr "{account}에서 규칙을 삭제할까요?"
 msgid "Load remote images from every sender?"
 msgstr "모든 발신자의 외부 이미지를 불러올까요?"
 
-#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:653
+#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:654
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr "외부 이미지를 불러오면 발신자가 메일을 연 시간을 알 수 있습니다."
 
@@ -1638,7 +1622,7 @@ msgstr "전화: {phones}"
 msgid "Organization: {organisation}"
 msgstr "조직: {organisation}"
 
-#: app/src/assistant/run/manage.rs:233
+#: app/src/assistant/run/manage.rs:234
 msgid ""
 "Rename the label “{label}” in {account} to “{name}”? Labels nested under it "
 "move along."
@@ -1646,11 +1630,11 @@ msgstr ""
 "{account}의 \"{label}\" 라벨 이름을 \"{name}\"(으)로 변경할까요? 하위 라벨도 "
 "함께 이동합니다."
 
-#: app/src/assistant/run/manage.rs:268
+#: app/src/assistant/run/manage.rs:269
 msgid "Color the label “{label}” in {account} {color}?"
 msgstr "{account}의 \"{label}\" 라벨 색을 {color}(으)로 변경할까요?"
 
-#: app/src/assistant/run/manage.rs:308
+#: app/src/assistant/run/manage.rs:309
 msgid ""
 "Delete the label “{label}” from {account}? {count} conversation carries it. "
 "The mail stays in the account, without the label."
@@ -1661,7 +1645,7 @@ msgstr[0] ""
 "{account}에서 \"{label}\" 라벨을 삭제할까요? 대화 {count}개에 적용되어 있습니"
 "다. 메일은 라벨 없이 계정에 남습니다."
 
-#: app/src/assistant/run/manage.rs:319
+#: app/src/assistant/run/manage.rs:320
 msgid ""
 "Delete the label “{label}” from {account}? {count} conversation carries it. "
 "The mail stays in {provider}, without the label."
@@ -1672,7 +1656,7 @@ msgstr[0] ""
 "{account}에서 \"{label}\" 라벨을 삭제할까요? 대화 {count}개에 적용되어 있습니"
 "다. 메일은 라벨 없이 {provider}에 남습니다."
 
-#: app/src/assistant/run/manage.rs:332
+#: app/src/assistant/run/manage.rs:333
 msgid ""
 "Delete the folder “{label}” from {account}? {count} conversation is in it. "
 "The mail in the folder is deleted with it."
@@ -1683,57 +1667,57 @@ msgstr[0] ""
 "{account}에서 \"{label}\" 폴더를 삭제할까요? 대화 {count}개가 들어 있습니다. "
 "폴더 안의 메일도 함께 삭제합니다."
 
-#: app/src/assistant/run/manage.rs:406
+#: app/src/assistant/run/manage.rs:407
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr ""
 "\"{name}\" 스마트 메일함을 삭제할까요? 표시된 메일은 원래 위치에 남습니다."
 
-#: app/src/assistant/run/manage.rs:467
+#: app/src/assistant/run/manage.rs:468
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr ""
 "\"{name}\" 템플릿을 이 템플릿으로 바꿀까요? 저장된 템플릿이 사라집니다."
 
-#: app/src/assistant/run/manage.rs:471
+#: app/src/assistant/run/manage.rs:472
 msgid "Save a template called “{name}”?"
 msgstr "\"{name}\" 템플릿을 저장할까요?"
 
-#: app/src/assistant/run/manage.rs:509
+#: app/src/assistant/run/manage.rs:510
 msgid "Delete the template “{name}”?"
 msgstr "\"{name}\" 템플릿을 삭제할까요?"
 
-#: app/src/assistant/run/manage.rs:540
+#: app/src/assistant/run/manage.rs:541
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "{account}의 연락처에 {contact}을(를) 추가할까요?"
 
-#: app/src/assistant/run/manage.rs:584
+#: app/src/assistant/run/manage.rs:585
 msgid "this contact"
 msgstr "이 연락처"
 
-#: app/src/assistant/run/manage.rs:596
+#: app/src/assistant/run/manage.rs:597
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "{account}의 연락처에서 {contact}을(를) 변경할까요?"
 
-#: app/src/assistant/run/manage.rs:643
+#: app/src/assistant/run/manage.rs:644
 msgid "Always load images from anyone at {domain}?"
 msgstr "{domain}의 모든 발신자 이미지를 항상 불러올까요?"
 
-#: app/src/assistant/run/manage.rs:647
+#: app/src/assistant/run/manage.rs:648
 msgid "Always load images from {sender}?"
 msgstr "{sender}의 이미지를 항상 불러올까요?"
 
-#: app/src/assistant/run/manage.rs:678
+#: app/src/assistant/run/manage.rs:679
 msgid "Stop loading images from {sender}?"
 msgstr "{sender}의 이미지를 더 이상 불러오지 않을까요?"
 
-#: app/src/assistant/run/manage.rs:713
+#: app/src/assistant/run/manage.rs:714
 msgid "Export {what} to {file}?"
 msgstr "{what}을(를) {file}(으)로 내보낼까요?"
 
-#: app/src/assistant/run/manage.rs:719
+#: app/src/assistant/run/manage.rs:720
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "같은 이름의 파일이 이미 있습니다. 내보내면 덮어씁니다."
 
-#: app/src/assistant/run/manage.rs:799
+#: app/src/assistant/run/manage.rs:800
 msgid "the message “{subject}”"
 msgstr "\"{subject}\" 메시지"
 
@@ -2583,9 +2567,10 @@ msgstr "보관"
 msgid "Mark as Read"
 msgstr "읽음으로 표시"
 
-#: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
+#: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:340
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
-#: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
+#: app/src/ui/calendar/popover.rs:762 app/src/ui/calendar/scope.rs:151
+#: app/src/ui/contacts/mod.rs:402 app/src/ui/contacts/mod.rs:612
 #: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -4013,8 +3998,8 @@ msgstr "해당 계정이 연결되어 있지 않습니다."
 msgid "Could not save: {reason}"
 msgstr "저장할 수 없습니다: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2994
-#: app/src/ui/window.rs:3017
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2997
+#: app/src/ui/window.rs:3020
 msgid "Could not open the draft: {reason}"
 msgstr "임시보관 메일을 열 수 없습니다: {reason}"
 
@@ -4084,7 +4069,7 @@ msgid ""
 msgstr ""
 "이 메시지에 속임수로 의심되는 링크가 있습니다. 열기 전에 목적지를 확인하세요."
 
-#: app/src/render.rs:503
+#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:493
 msgid "Details"
 msgstr "세부 정보"
 
@@ -4274,7 +4259,7 @@ msgid "Set up a different project"
 msgstr "다른 프로젝트 설정"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3347
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3350
 msgid "Set up your own Google project"
 msgstr "나만의 Google 프로젝트 설정"
 
@@ -4338,7 +4323,7 @@ msgstr "{size} 미만"
 msgid "Larger than {size}"
 msgstr "{size} 초과"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:960
+#: app/src/rules.rs:251 app/src/settings/mod.rs:963
 msgid "All mail"
 msgstr "모든 메일"
 
@@ -4418,9 +4403,11 @@ msgstr "{host}에서 로그인을 거부했습니다: {reason}"
 msgid "Calendar"
 msgstr "캘린더"
 
-#: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:39
+#: app/src/ui/contacts/mod.rs:70 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
+#: app/src/ui/window.rs:3749
 msgid "Contacts"
 msgstr "연락처"
 
@@ -4436,229 +4423,229 @@ msgstr "Penguin Mail이 열려 있는 동안 이 컴퓨터에서"
 msgid "On the server"
 msgstr "서버에서"
 
-#: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
-#: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/settings/mod.rs:231 app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:875 app/src/ui/assistant_mcp_prefs.rs:202
 #: app/src/ui/preferences.rs:1154
 msgid "Off"
 msgstr "끄기"
 
-#: app/src/settings/mod.rs:230
+#: app/src/settings/mod.rs:232
 msgid "Local Server"
 msgstr "로컬 서버"
 
-#: app/src/settings/mod.rs:231
+#: app/src/settings/mod.rs:233
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:232
+#: app/src/settings/mod.rs:234
 msgid "Claude Subscription"
 msgstr "Claude 구독"
 
-#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3739
-#: app/src/ui/window.rs:3827
+#: app/src/settings/mod.rs:259 app/src/ui/window.rs:3742
+#: app/src/ui/window.rs:3831
 msgid "Assistant"
 msgstr "도우미"
 
-#: app/src/settings/mod.rs:258 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:260 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "번역"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:262
+#: app/src/settings/mod.rs:264
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "구독 해지"
 
-#: app/src/settings/mod.rs:268
+#: app/src/settings/mod.rs:270
 msgid "Answers questions and acts on your mail"
 msgstr "메일에 관한 질문에 답하고 작업 수행"
 
-#: app/src/settings/mod.rs:269
+#: app/src/settings/mod.rs:271
 msgid "Translates a message when you ask"
 msgstr "요청한 메시지 번역"
 
-#: app/src/settings/mod.rs:271
+#: app/src/settings/mod.rs:273
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "규칙으로 처리할 수 없는 뉴스레터 구독 해지 페이지 읽기"
 
-#: app/src/settings/mod.rs:309
+#: app/src/settings/mod.rs:311
 msgid "Same as the Assistant"
 msgstr "도우미와 동일"
 
-#: app/src/settings/mod.rs:439
+#: app/src/settings/mod.rs:441
 msgid "Claude's own only"
 msgstr "Claude 자체 검색만"
 
-#: app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:442
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:443
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:444
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:621
+#: app/src/settings/mod.rs:624
 msgid "Rich text"
 msgstr "서식 있는 텍스트"
 
-#: app/src/settings/mod.rs:622
+#: app/src/settings/mod.rs:625
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:644 app/src/settings/mod.rs:666
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "자동"
 
-#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:645 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "월요일"
 
-#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:646 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "일요일"
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:667
 msgid "12-hour (AM/PM)"
 msgstr "12시간제 (AM/PM)"
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:668
 msgid "24-hour"
 msgstr "24시간제"
 
-#: app/src/settings/mod.rs:703
+#: app/src/settings/mod.rs:706
 msgid "When opened"
 msgstr "열었을 때"
 
-#: app/src/settings/mod.rs:704
+#: app/src/settings/mod.rs:707
 msgid "After 2 seconds"
 msgstr "2초 후"
 
-#: app/src/settings/mod.rs:705
+#: app/src/settings/mod.rs:708
 msgid "Only when I choose"
 msgstr "직접 선택할 때만"
 
-#: app/src/settings/mod.rs:721 app/src/settings/mod.rs:739
+#: app/src/settings/mod.rs:724 app/src/settings/mod.rs:742
 msgid "Ask each time"
 msgstr "매번 묻기"
 
-#: app/src/settings/mod.rs:722
+#: app/src/settings/mod.rs:725
 msgid "Always load"
 msgstr "항상 불러오기"
 
-#: app/src/settings/mod.rs:740
+#: app/src/settings/mod.rs:743
 msgid "Never ask"
 msgstr "묻지 않기"
 
-#: app/src/settings/mod.rs:767
+#: app/src/settings/mod.rs:770
 msgid "No Preview"
 msgstr "미리 보기 없음"
 
-#: app/src/settings/mod.rs:768
+#: app/src/settings/mod.rs:771
 msgid "1 Line"
 msgstr "1줄"
 
-#: app/src/settings/mod.rs:769
+#: app/src/settings/mod.rs:772
 msgid "2 Lines"
 msgstr "2줄"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:799
 msgid "Short (80 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:800
 msgid "Medium (140 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:801
 msgid "Long (280 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:835
 msgid "Small"
 msgstr "작게"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:836
 msgid "Default"
 msgstr "기본값"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:837
 msgid "Large"
 msgstr "크게"
 
-#: app/src/settings/mod.rs:835
+#: app/src/settings/mod.rs:838
 msgid "Larger"
 msgstr "더 크게"
 
-#: app/src/settings/mod.rs:873
+#: app/src/settings/mod.rs:876
 msgid "5 seconds"
 msgstr "5초"
 
-#: app/src/settings/mod.rs:874
+#: app/src/settings/mod.rs:877
 msgid "10 seconds"
 msgstr "10초"
 
-#: app/src/settings/mod.rs:875
+#: app/src/settings/mod.rs:878
 msgid "20 seconds"
 msgstr "20초"
 
-#: app/src/settings/mod.rs:876
+#: app/src/settings/mod.rs:879
 msgid "30 seconds"
 msgstr "30초"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:896
 msgid "Follow system"
 msgstr "시스템 설정 따르기"
 
-#: app/src/settings/mod.rs:894
+#: app/src/settings/mod.rs:897
 msgid "Light"
 msgstr "밝게"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:898
 msgid "Dark"
 msgstr "어둡게"
 
-#: app/src/settings/mod.rs:929
+#: app/src/settings/mod.rs:932
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "{count}초마다"
 
-#: app/src/settings/mod.rs:937
+#: app/src/settings/mod.rs:940
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "{count}분마다"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:957
 msgid "2 weeks"
 msgstr "2주"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:958
 msgid "30 days"
 msgstr "30일"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:959
 msgid "90 days"
 msgstr "90일"
 
-#: app/src/settings/mod.rs:957
+#: app/src/settings/mod.rs:960
 msgid "1 year"
 msgstr "1년"
 
-#: app/src/settings/mod.rs:958
+#: app/src/settings/mod.rs:961
 msgid "2 years"
 msgstr "2년"
 
-#: app/src/settings/mod.rs:959
+#: app/src/settings/mod.rs:962
 msgid "5 years"
 msgstr "5년"
 
-#: app/src/settings/mod.rs:981
+#: app/src/settings/mod.rs:984
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4666,19 +4653,19 @@ msgstr ""
 "모든 메시지를 이 컴퓨터에 보관합니다. 큰 계정은 많은 디스크 공간과 메모리를 "
 "사용하며 이전 메일은 백그라운드에서 다운로드합니다."
 
-#: app/src/settings/mod.rs:983
+#: app/src/settings/mod.rs:986
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "받은편지함의 메일은 모두 유지하며 이전 메일도 검색할 수 있습니다"
 
-#: app/src/settings/mod.rs:990
+#: app/src/settings/mod.rs:993
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:991
+#: app/src/settings/mod.rs:994
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:992
+#: app/src/settings/mod.rs:995
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4851,11 +4838,12 @@ msgstr "Penguin Mail 열기"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:423
+#: app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "새 메시지"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2410 app/src/ui/window.rs:3745
+#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2410 app/src/ui/window.rs:3748
 msgid "Check for Mail"
 msgstr "메일 확인"
 
@@ -4873,7 +4861,7 @@ msgstr "{version}의 새로운 기능"
 msgid "Check for Updates"
 msgstr "업데이트 확인"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3766
+#: app/src/tray.rs:266 app/src/ui/window.rs:3770
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "종료"
@@ -4894,7 +4882,7 @@ msgstr "새로운 기능"
 msgid "Website"
 msgstr "웹사이트"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3765
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3769
 msgid "Donate"
 msgstr "기부"
 
@@ -4902,7 +4890,7 @@ msgstr "기부"
 msgid "License"
 msgstr "라이선스"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3764
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3768
 msgid "About Penguin Mail"
 msgstr "Penguin Mail 정보"
 
@@ -4951,12 +4939,12 @@ msgid "The update to {version} failed"
 msgstr "{version} 업데이트 실패"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1573
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1575
 msgid "Copy Command"
 msgstr "명령 복사"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1578
+#: app/src/ui/window.rs:1580
 msgid "Command copied"
 msgstr "명령을 복사했습니다"
 
@@ -5045,12 +5033,13 @@ msgstr "링크 복사"
 
 #: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4278
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
-#: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
-#: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
+#: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:290
+#: app/src/ui/calendar/manage.rs:440 app/src/ui/calendar/manage.rs:491
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
 #: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:611
+#: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
@@ -5066,7 +5055,7 @@ msgstr "취소"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1517
+#: app/src/ui/window.rs:1519
 msgid "Sign In"
 msgstr "로그인"
 
@@ -5187,9 +5176,9 @@ msgid "Not Now"
 msgstr "나중에"
 
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
-#: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
+#: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1650
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1652
 msgid "Grant Access"
 msgstr "접근 권한 부여"
 
@@ -5290,8 +5279,8 @@ msgstr ""
 "Nextcloud 등의 CalDAV 서버입니다. 2단계 로그인을 사용한다면 Penguin Mail용 "
 "앱 비밀번호를 만드세요."
 
-#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1460
-#: app/src/ui/calendar/sidebar.rs:1471
+#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1485
+#: app/src/ui/calendar/sidebar.rs:1496
 msgid "Add Calendar"
 msgstr "캘린더 추가"
 
@@ -5333,12 +5322,12 @@ msgstr "비밀번호를 전송하지 않았습니다."
 msgid "Looking Up…"
 msgstr "조회 중…"
 
-#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1304
 msgid "Sign In Again"
 msgstr "다시 로그인"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2254
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2256
 msgid "Open Google Cloud"
 msgstr "Google Cloud 열기"
 
@@ -5426,13 +5415,14 @@ msgstr "열린 대화에 답장 초안 작성"
 msgid "Choose a Model"
 msgstr "모델 선택"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3874
-#: app/src/ui/window.rs:3875
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3878
+#: app/src/ui/window.rs:3879
 msgid "Detach"
 msgstr "분리"
 
-#: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4554
+#: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:82
+#: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
+#: app/src/ui/window.rs:4589
 msgid "Close"
 msgstr "닫기"
 
@@ -5653,7 +5643,7 @@ msgstr "{server} 편집"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3506
 msgid "Remove"
 msgstr "제거"
 
@@ -5692,9 +5682,9 @@ msgstr ""
 "@modelcontextprotocol/server-filesystem ~/Documents. 환경 변수는 앞에 "
 "NAME=value로 지정하세요. URL은 HTTP를 통해 서버에 연결합니다."
 
-#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2892 app/src/ui/smart_editor.rs:41
-#: app/src/ui/templates.rs:191
+#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:407
+#: app/src/ui/composer/mod.rs:2892 app/src/ui/contacts/editor.rs:291
+#: app/src/ui/smart_editor.rs:41 app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "이름"
 
@@ -5730,15 +5720,15 @@ msgstr "테스트"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
-#: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
-#: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
-#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:169
-#: app/src/ui/window/save_contacts.rs:112
+#: app/src/ui/contacts/editor.rs:443 app/src/ui/dav_edit.rs:48
+#: app/src/ui/rules.rs:528 app/src/ui/sender_prefs.rs:210
+#: app/src/ui/sender_prefs/signature.rs:78 app/src/ui/smart_editor.rs:320
+#: app/src/ui/templates.rs:234 app/src/ui/vacation.rs:42
+#: app/src/ui/window/arrange.rs:169 app/src/ui/window/save_contacts.rs:112
 msgid "Save"
 msgstr "저장"
 
-#: app/src/ui/assistant_mcp_prefs.rs:361 app/src/ui/calendar/manage.rs:567
+#: app/src/ui/assistant_mcp_prefs.rs:361 app/src/ui/calendar/manage.rs:570
 msgid "Add"
 msgstr "추가"
 
@@ -6198,7 +6188,7 @@ msgstr "참석자에게 공유하지 않음"
 msgid "Open {file} in the browser"
 msgstr "브라우저에서 {file} 열기"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
 msgid "Open in Browser"
 msgstr "브라우저에서 열기"
 
@@ -6206,7 +6196,7 @@ msgstr "브라우저에서 열기"
 msgid "Waiting to be sent"
 msgstr "발송 대기 중"
 
-#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:819
+#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:825
 msgid "Not answered yet"
 msgstr "아직 응답하지 않음"
 
@@ -6425,7 +6415,8 @@ msgid "Remove reminder"
 msgstr "알림 제거"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:272
+#: app/src/ui/calendar/popover.rs:272 app/src/ui/contacts/editor.rs:397
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:510
 msgid "Notes"
 msgstr "메모"
 
@@ -6495,8 +6486,8 @@ msgstr "비공개"
 msgid "Only people who can change this calendar see the details"
 msgstr "이 캘린더를 변경할 수 있는 사람만 세부 정보를 봅니다"
 
-#: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2127
+#: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
+#: app/src/ui/calendar/sidebar.rs:1536 app/src/ui/sidebar.rs:2127
 #: app/src/ui/sidebar.rs:2428
 msgid "Color"
 msgstr "색"
@@ -6509,7 +6500,7 @@ msgstr "캘린더 색"
 msgid "Add Google Meet"
 msgstr "Google Meet 추가"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2439
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "일정"
@@ -6759,7 +6750,8 @@ msgstr "베트남"
 msgid "Working location"
 msgstr "근무 장소"
 
-#: app/src/ui/calendar/kinds.rs:62
+#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
+#: app/src/ui/contacts/mod.rs:502
 msgid "Birthday"
 msgstr "생일"
 
@@ -6820,47 +6812,47 @@ msgstr[0] ""
 msgid "A calendar of your own on {account}, on every device."
 msgstr "모든 기기에서 사용할 {account}의 내 캘린더입니다."
 
-#: app/src/ui/calendar/manage.rs:153
+#: app/src/ui/calendar/manage.rs:156
 msgid "Could not change the calendar list: {reason}"
 msgstr "캘린더 목록을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:163 app/src/ui/window/organize.rs:270
+#: app/src/ui/calendar/manage.rs:166 app/src/ui/window/organize.rs:270
 msgid "Could not change the color: {reason}"
 msgstr "색을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:279
+#: app/src/ui/calendar/manage.rs:282
 msgid "Rename Calendar"
 msgstr "캘린더 이름 변경"
 
-#: app/src/ui/calendar/manage.rs:284 app/src/ui/calendar/manage.rs:407
+#: app/src/ui/calendar/manage.rs:287 app/src/ui/calendar/manage.rs:410
 msgid "Calendar name"
 msgstr "캘린더 이름"
 
-#: app/src/ui/calendar/manage.rs:288 app/src/ui/window/organize.rs:128
+#: app/src/ui/calendar/manage.rs:291 app/src/ui/window/organize.rs:128
 msgid "Rename"
 msgstr "이름 변경"
 
-#: app/src/ui/calendar/manage.rs:309
+#: app/src/ui/calendar/manage.rs:312
 msgid "Could not rename the calendar: {reason}"
 msgstr "캘린더 이름을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:333
+#: app/src/ui/calendar/manage.rs:336
 msgid "Delete “{calendar}”?"
 msgstr "\"{calendar}\"을(를) 삭제할까요?"
 
-#: app/src/ui/calendar/manage.rs:345
+#: app/src/ui/calendar/manage.rs:348
 msgid "Deleted “{calendar}”"
 msgstr "\"{calendar}\" 삭제됨"
 
-#: app/src/ui/calendar/manage.rs:352
+#: app/src/ui/calendar/manage.rs:355
 msgid "Could not delete the calendar: {reason}"
 msgstr "캘린더를 삭제할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:370
+#: app/src/ui/calendar/manage.rs:373
 msgid "Unsubscribe from “{calendar}”?"
 msgstr "\"{calendar}\" 구독을 해지할까요?"
 
-#: app/src/ui/calendar/manage.rs:374
+#: app/src/ui/calendar/manage.rs:377
 msgid ""
 "It leaves your calendar list in Google Calendar on every device. You can "
 "subscribe to it again later."
@@ -6868,35 +6860,35 @@ msgstr ""
 "모든 기기의 Google Calendar 목록에서 제거합니다. 나중에 다시 구독할 수 있습니"
 "다."
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:456
+#: app/src/ui/calendar/manage.rs:380 app/src/ui/conversation.rs:456
 #: app/src/ui/unsubscribe.rs:143
 msgid "Unsubscribe"
 msgstr "구독 해지"
 
-#: app/src/ui/calendar/manage.rs:387
+#: app/src/ui/calendar/manage.rs:390
 msgid "Could not unsubscribe: {reason}"
 msgstr "구독을 해지할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:400
+#: app/src/ui/calendar/manage.rs:403
 msgid "New Calendar"
 msgstr "새 캘린더"
 
-#: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
+#: app/src/ui/calendar/manage.rs:441 app/src/ui/hide_my_email.rs:701
 #: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:322
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:363
 msgid "Create"
 msgstr "만들기"
 
-#: app/src/ui/calendar/manage.rs:462
+#: app/src/ui/calendar/manage.rs:465
 msgid "Could not make the calendar: {reason}"
 msgstr "캘린더를 만들 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:473
+#: app/src/ui/calendar/manage.rs:476
 msgid "Subscribe to Calendar"
 msgstr "캘린더 구독"
 
-#: app/src/ui/calendar/manage.rs:475
+#: app/src/ui/calendar/manage.rs:478
 msgid ""
 "Enter the address of a published calendar, starting with https or webcal. "
 "Google Calendar fetches it from then on and shows it on every device. You "
@@ -6905,39 +6897,39 @@ msgstr ""
 "https 또는 webcal로 시작하는 공개 캘린더 주소를 입력하세요. Google Calendar에"
 "서 내용을 가져와 모든 기기에 표시합니다. 읽을 수 있지만 변경할 수는 없습니다."
 
-#: app/src/ui/calendar/manage.rs:485
+#: app/src/ui/calendar/manage.rs:488
 msgid "Calendar address"
 msgstr "캘린더 주소"
 
-#: app/src/ui/calendar/manage.rs:489
+#: app/src/ui/calendar/manage.rs:492
 msgid "Subscribe"
 msgstr "구독"
 
-#: app/src/ui/calendar/manage.rs:512
+#: app/src/ui/calendar/manage.rs:515
 msgid "Subscribed. The events arrive once Google Calendar reads the address."
 msgstr "구독했습니다. Google Calendar에서 주소를 읽으면 일정이 표시됩니다."
 
-#: app/src/ui/calendar/manage.rs:514
+#: app/src/ui/calendar/manage.rs:517
 msgid "Could not subscribe: {reason}"
 msgstr "구독할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/manage.rs:527
+#: app/src/ui/calendar/manage.rs:530
 msgid "Public holidays from Google Calendar, added to {account}."
 msgstr "{account}에 추가하는 Google Calendar 공휴일입니다."
 
-#: app/src/ui/calendar/manage.rs:540
+#: app/src/ui/calendar/manage.rs:543
 msgid "Holiday Calendars"
 msgstr "공휴일 캘린더"
 
-#: app/src/ui/calendar/manage.rs:555
+#: app/src/ui/calendar/manage.rs:558
 msgid "Added"
 msgstr "추가됨"
 
-#: app/src/ui/calendar/manage.rs:573
+#: app/src/ui/calendar/manage.rs:576
 msgid "Add holidays in {region}"
 msgstr "{region} 공휴일 추가"
 
-#: app/src/ui/calendar/manage.rs:591
+#: app/src/ui/calendar/manage.rs:594
 msgid "Could not add the holidays: {reason}"
 msgstr "공휴일을 추가할 수 없습니다: {reason}"
 
@@ -6946,7 +6938,7 @@ msgid "View"
 msgstr "보기"
 
 #: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2421
+#: app/src/ui/calendar/mod.rs:2424
 msgid "New Event (N)"
 msgstr "새 일정(N)"
 
@@ -6971,71 +6963,71 @@ msgstr "도우미(Ctrl+J)"
 msgid "Search the Calendar"
 msgstr "캘린더 검색"
 
-#: app/src/ui/calendar/mod.rs:506 app/src/ui/calendar/ports.rs:470
+#: app/src/ui/calendar/mod.rs:506 app/src/ui/calendar/ports.rs:504
 msgid "Loading older events"
 msgstr "이전 일정 불러오는 중"
 
-#: app/src/ui/calendar/mod.rs:935 app/src/ui/window/shortcuts.rs:575
+#: app/src/ui/calendar/mod.rs:938 app/src/ui/window/shortcuts.rs:575
 msgid "Go to date"
 msgstr "날짜로 이동"
 
-#: app/src/ui/calendar/mod.rs:1377
+#: app/src/ui/calendar/mod.rs:1380
 msgid "Moved “{title}”"
 msgstr "\"{title}\" 이동됨"
 
-#: app/src/ui/calendar/mod.rs:1378
+#: app/src/ui/calendar/mod.rs:1381
 msgid "Could not move the event: {reason}"
 msgstr "일정을 이동할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1509
+#: app/src/ui/calendar/mod.rs:1512
 msgid "All-day events"
 msgstr "종일 일정"
 
-#: app/src/ui/calendar/mod.rs:1511
+#: app/src/ui/calendar/mod.rs:1514
 msgid "All-day"
 msgstr "종일"
 
-#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
+#: app/src/ui/calendar/mod.rs:1819 app/src/ui/calendar/mod.rs:3101
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2139
+#: app/src/ui/calendar/mod.rs:2142
 msgid "Removed “{title}” from your calendar"
 msgstr "캘린더에서 \"{title}\" 제거됨"
 
-#: app/src/ui/calendar/mod.rs:2140
+#: app/src/ui/calendar/mod.rs:2143
 msgid "Deleted “{title}”"
 msgstr "\"{title}\" 삭제됨"
 
-#: app/src/ui/calendar/mod.rs:2153
+#: app/src/ui/calendar/mod.rs:2156
 msgid "Could not delete the event: {reason}"
 msgstr "일정을 삭제할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1402
+#: app/src/ui/calendar/mod.rs:2209 app/src/ui/composer/mod.rs:1402
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "실행 취소"
 
-#: app/src/ui/calendar/mod.rs:2362
+#: app/src/ui/calendar/mod.rs:2365
 msgid "Could not send your answer: {reason}"
 msgstr "응답을 보낼 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2428
 msgid "None of your calendars take new events"
 msgstr "새 일정을 추가할 수 있는 캘린더가 없습니다"
 
-#: app/src/ui/calendar/mod.rs:2437 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2440 app/src/ui/calendar/quick.rs:55
 msgid "Focus Time"
 msgstr "집중 시간"
 
-#: app/src/ui/calendar/mod.rs:2438 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2441 app/src/ui/calendar/quick.rs:56
 msgid "Out of Office"
 msgstr "부재중"
 
-#: app/src/ui/calendar/mod.rs:2807
+#: app/src/ui/calendar/mod.rs:2810
 msgid "Could not save the event: {reason}"
 msgstr "일정을 저장할 수 없습니다: {reason}"
 
@@ -7084,11 +7076,11 @@ msgstr "메모 더 보기"
 msgid "Show all"
 msgstr "모두 표시"
 
-#: app/src/ui/calendar/popover.rs:299 app/src/ui/calendar/popover.rs:899
+#: app/src/ui/calendar/popover.rs:299 app/src/ui/calendar/popover.rs:905
 msgid "Show all guests"
 msgstr "모든 참석자 표시"
 
-#: app/src/ui/calendar/popover.rs:318 app/src/ui/calendar/popover.rs:821
+#: app/src/ui/calendar/popover.rs:318 app/src/ui/calendar/popover.rs:827
 #: app/src/ui/invitation.rs:323
 msgid "Answer"
 msgstr "응답"
@@ -7124,15 +7116,25 @@ msgstr "메일에서 초대 열기"
 msgid "{when}, {zone}"
 msgstr "{when}, {zone}"
 
-#: app/src/ui/calendar/popover.rs:757
+#: app/src/ui/calendar/popover.rs:747
+#, fuzzy
+#| msgid ""
+#| "Birthday. Google Calendar makes it from your contacts, so you can only "
+#| "change it there."
+msgid "Birthday from your contacts. Edit the contact to change it."
+msgstr ""
+"생일입니다. Google Calendar에서 연락처로 생성하므로 그곳에서만 변경할 수 있습"
+"니다."
+
+#: app/src/ui/calendar/popover.rs:763
 msgid "Remove from My Calendar"
 msgstr "내 캘린더에서 제거"
 
-#: app/src/ui/calendar/popover.rs:835
+#: app/src/ui/calendar/popover.rs:841
 msgid "Your answer"
 msgstr "내 응답"
 
-#: app/src/ui/calendar/ports.rs:469
+#: app/src/ui/calendar/ports.rs:503
 msgid "Older events can't load while offline"
 msgstr "오프라인에서는 이전 일정을 불러올 수 없습니다"
 
@@ -7156,7 +7158,7 @@ msgstr "캘린더: {name}"
 msgid "%A %-d"
 msgstr "%-d일 %A"
 
-#: app/src/ui/calendar/range.rs:115 app/src/ui/calendar/sidebar.rs:954
+#: app/src/ui/calendar/range.rs:115 app/src/ui/calendar/sidebar.rs:979
 msgid "%B %Y"
 msgstr "%Y년 %-m월"
 
@@ -7289,128 +7291,134 @@ msgstr "다음 주"
 msgid "Previous Week"
 msgstr "이전 주"
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:598
+#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:610
 msgid "Next Month"
 msgstr "다음 달"
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:597
+#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:609
 msgid "Previous Month"
 msgstr "이전 달"
 
-#: app/src/ui/calendar/sidebar.rs:690
+#: app/src/ui/calendar/sidebar.rs:692 app/src/ui/calendar/sidebar.rs:696
+#, fuzzy
+#| msgid "Birthday"
+msgid "Birthdays"
+msgstr "생일"
+
+#: app/src/ui/calendar/sidebar.rs:714
 msgid "Waiting for your answer"
 msgstr "응답 대기 중"
 
-#: app/src/ui/calendar/sidebar.rs:851
+#: app/src/ui/calendar/sidebar.rs:876
 msgid "Open mail"
 msgstr "메일 열기"
 
-#: app/src/ui/calendar/sidebar.rs:998
+#: app/src/ui/calendar/sidebar.rs:1023
 msgid "Grant Access to show shared calendars"
 msgstr "공유 캘린더를 표시하려면 접근 권한을 부여하세요"
 
-#: app/src/ui/calendar/sidebar.rs:1004
+#: app/src/ui/calendar/sidebar.rs:1029
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "이 계정의 캘린더를 볼 수 없습니다"
 
-#: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:384
+#: app/src/ui/calendar/sidebar.rs:1041 app/src/ui/contacts_prefs.rs:384
 #: app/src/ui/preferences/google_route.rs:287
 msgid "Not connected"
 msgstr "연결되지 않음"
 
-#: app/src/ui/calendar/sidebar.rs:1110
+#: app/src/ui/calendar/sidebar.rs:1135
 msgid "Show or hide this account's calendars"
 msgstr "이 계정의 캘린더 표시 또는 숨기기"
 
-#: app/src/ui/calendar/sidebar.rs:1190
+#: app/src/ui/calendar/sidebar.rs:1215
 msgid "Calendar options"
 msgstr "캘린더 옵션"
 
-#: app/src/ui/calendar/sidebar.rs:1195
+#: app/src/ui/calendar/sidebar.rs:1220
 msgid "Options for {calendar}"
 msgstr "{calendar} 옵션"
 
-#: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:387
+#: app/src/ui/calendar/sidebar.rs:1255 app/src/ui/contacts_prefs.rs:387
 #: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "연결"
 
-#: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:393
+#: app/src/ui/calendar/sidebar.rs:1262 app/src/ui/contacts_prefs.rs:393
 #: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "{account}의 캘린더 연결"
 
-#: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:503
+#: app/src/ui/calendar/sidebar.rs:1284 app/src/ui/contacts_prefs.rs:503
 msgid "Grant Access for {account}"
 msgstr "{account}에 접근 권한 부여"
 
-#: app/src/ui/calendar/sidebar.rs:1288
+#: app/src/ui/calendar/sidebar.rs:1313
 msgid "Sign in again to {account}"
 msgstr "{account}에 다시 로그인"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2433
+#: app/src/ui/calendar/sidebar.rs:1326 app/src/ui/sidebar.rs:2433
 msgid "Sign In Again…"
 msgstr "다시 로그인…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2441
+#: app/src/ui/calendar/sidebar.rs:1327 app/src/ui/sidebar.rs:2441
 msgid "Remove Account…"
 msgstr "계정 제거…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2448
+#: app/src/ui/calendar/sidebar.rs:1341 app/src/ui/sidebar.rs:2448
 msgid "Account options"
 msgstr "계정 옵션"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2453
+#: app/src/ui/calendar/sidebar.rs:1346 app/src/ui/sidebar.rs:2453
 msgid "Options for {account}"
 msgstr "{account} 옵션"
 
-#: app/src/ui/calendar/sidebar.rs:1416
+#: app/src/ui/calendar/sidebar.rs:1441
 msgid "{address}. You can only read this calendar"
 msgstr "{address}. 읽기 전용 캘린더입니다"
 
-#: app/src/ui/calendar/sidebar.rs:1440
+#: app/src/ui/calendar/sidebar.rs:1465
 msgid "New Calendar…"
 msgstr "새 캘린더…"
 
-#: app/src/ui/calendar/sidebar.rs:1441
+#: app/src/ui/calendar/sidebar.rs:1466
 msgid "Subscribe to Calendar…"
 msgstr "캘린더 구독…"
 
-#: app/src/ui/calendar/sidebar.rs:1442
+#: app/src/ui/calendar/sidebar.rs:1467
 msgid "Holiday Calendars…"
 msgstr "공휴일 캘린더…"
 
-#: app/src/ui/calendar/sidebar.rs:1490
+#: app/src/ui/calendar/sidebar.rs:1515
 msgid "Hide from the List"
 msgstr "목록에서 숨기기"
 
-#: app/src/ui/calendar/sidebar.rs:1503
+#: app/src/ui/calendar/sidebar.rs:1528
 msgid "Original Color"
 msgstr "원래 색"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2115
+#: app/src/ui/calendar/sidebar.rs:1540 app/src/ui/sidebar.rs:2115
 #: app/src/ui/sidebar.rs:2418
 msgid "Rename…"
 msgstr "이름 변경…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:2016
+#: app/src/ui/calendar/sidebar.rs:1541 app/src/ui/sidebar.rs:2016
 #: app/src/ui/sidebar.rs:2143
 msgid "Delete…"
 msgstr "삭제…"
 
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:661
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/conversation.rs:661
 msgid "Unsubscribe…"
 msgstr "구독 해지…"
 
-#: app/src/ui/calendar/sidebar.rs:1546
+#: app/src/ui/calendar/sidebar.rs:1571
 msgid "Show {calendar}"
 msgstr "{calendar} 표시"
 
-#: app/src/ui/calendar/sidebar.rs:1564
+#: app/src/ui/calendar/sidebar.rs:1589
 msgid "Hidden Calendars"
 msgstr "숨긴 캘린더"
 
-#: app/src/ui/calendar/sidebar.rs:1584
+#: app/src/ui/calendar/sidebar.rs:1609
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] "숨긴 캘린더 {count}개"
@@ -7480,7 +7488,7 @@ msgstr "Google Meet"
 msgid "Microsoft Teams"
 msgstr "Microsoft Teams"
 
-#: app/src/ui/calendar/words.rs:321
+#: app/src/ui/calendar/words.rs:321 app/src/ui/contacts/photo.rs:121
 msgid "Zoom"
 msgstr "Zoom"
 
@@ -7819,7 +7827,7 @@ msgstr "임시보관 메일 저장됨"
 msgid "Save as Draft?"
 msgstr "임시보관 메일로 저장할까요?"
 
-#: app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2116 app/src/ui/contacts/editor.rs:761
 msgid "Discard"
 msgstr "버리기"
 
@@ -8040,7 +8048,8 @@ msgstr "사전에 추가"
 msgid "Ignore"
 msgstr "무시"
 
-#: app/src/ui/contact_card.rs:115
+#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:307
+#: app/src/ui/contacts/mod.rs:415
 msgid "Email"
 msgstr "이메일"
 
@@ -8048,7 +8057,8 @@ msgstr "이메일"
 msgid "Other email"
 msgstr "다른 이메일"
 
-#: app/src/ui/contact_card.rs:138
+#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:313
+#: app/src/ui/contacts/mod.rs:450
 msgid "Phone"
 msgstr "전화"
 
@@ -8063,6 +8073,341 @@ msgstr "VIP에 추가"
 #: app/src/ui/contact_card.rs:191
 msgid "All Their Mail"
 msgstr "이 사람이 보낸 모든 메일"
+
+#: app/src/ui/contacts/editor.rs:26
+#, fuzzy
+#| msgid "Saved {file}"
+msgid "Add {field}"
+msgstr "{file}을(를) 저장했습니다"
+
+#: app/src/ui/contacts/editor.rs:73
+#, fuzzy
+#| msgid "Remove {file}"
+msgid "Remove Field"
+msgstr "{file} 제거"
+
+#: app/src/ui/contacts/editor.rs:203
+msgid "Enable contacts for an account in Preferences first."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:212
+msgid "Enable contacts for this account in Preferences first."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:219
+#, fuzzy
+#| msgid "Contact"
+msgid "Edit Contact"
+msgstr "연락처"
+
+#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:116
+#: app/src/ui/contacts/mod.rs:118
+#, fuzzy
+#| msgid "Contact"
+msgid "New Contact"
+msgstr "연락처"
+
+#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:333
+#: app/src/ui/hide_my_email.rs:657
+msgid "Account"
+msgstr "계정"
+
+#: app/src/ui/contacts/editor.rs:262
+msgid "Change Photo…"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:263
+#, fuzzy
+#| msgid "Remove Condition"
+msgid "Remove Photo"
+msgstr "조건 제거"
+
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:498
+#, fuzzy
+#| msgid "Organizing"
+msgid "Organization"
+msgstr "정리"
+
+#: app/src/ui/contacts/editor.rs:323
+msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:508
+msgid "Groups"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:534
+#, fuzzy
+#| msgid "Website"
+msgid "Websites"
+msgstr "웹사이트"
+
+#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:509
+#, fuzzy
+#| msgid "Email Address"
+msgid "Postal Addresses"
+msgstr "이메일 주소"
+
+#: app/src/ui/contacts/editor.rs:356
+msgid "PO Box"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:357
+#, fuzzy
+#| msgid "Sender Address"
+msgid "Extended Address"
+msgstr "발신자 주소"
+
+#: app/src/ui/contacts/editor.rs:358
+msgid "Street"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:359
+msgid "City"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:360
+msgid "Region"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:361
+msgid "Postal Code"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:362
+msgid "Country"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:375
+#, fuzzy
+#| msgid "Labels"
+msgid "Label"
+msgstr "라벨"
+
+#: app/src/ui/contacts/editor.rs:375
+msgid "Value"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:382
+#, fuzzy
+#| msgid "Other email"
+msgid "Other Dates"
+msgstr "다른 이메일"
+
+#: app/src/ui/contacts/editor.rs:383
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Custom Fields"
+msgstr "메일함 표시"
+
+#: app/src/ui/contacts/editor.rs:385
+msgid ""
+"For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:400
+msgid ""
+"This account supports editing names, email addresses, phone numbers, and "
+"organizations. Full contact editing requires CardDAV."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:481 app/src/ui/contacts/mod.rs:59
+#, fuzzy
+#| msgid "Address copied"
+msgid "Address Book"
+msgstr "주소를 복사했습니다"
+
+#: app/src/ui/contacts/editor.rs:560
+#, fuzzy
+#| msgid "This account has no labels yet."
+msgid "This account has no address books."
+msgstr "이 계정에는 아직 라벨이 없습니다."
+
+#: app/src/ui/contacts/editor.rs:587
+#, fuzzy
+#| msgid "Use IMAP for this account instead."
+msgid "Contacts access for this account was turned off."
+msgstr "이 계정에는 IMAP을 사용하세요."
+
+#: app/src/ui/contacts/editor.rs:603
+msgid "Choose an address book first."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:612
+#, fuzzy
+#| msgid "Enter a valid shared mailbox address."
+msgid "Enter a name or an email address."
+msgstr "올바른 공유 사서함 주소를 입력하세요."
+
+#: app/src/ui/contacts/editor.rs:622
+#, fuzzy
+#| msgid "Enter a valid shared mailbox address."
+msgid "Enter a valid email address."
+msgstr "올바른 공유 사서함 주소를 입력하세요."
+
+#: app/src/ui/contacts/editor.rs:706
+#, fuzzy
+#| msgid "Translation has no model. Choose one in Preferences, on the AI page."
+msgid "Grant contacts permission in Preferences, then try again."
+msgstr "번역 모델이 없습니다. 환경설정의 AI 페이지에서 모델을 선택하세요."
+
+#: app/src/ui/contacts/editor.rs:726
+#, fuzzy
+#| msgid "Could not save: {reason}"
+msgid "Could not save contact: {reason}"
+msgstr "저장할 수 없습니다: {reason}"
+
+#: app/src/ui/contacts/editor.rs:756
+msgid "Discard Contact Changes?"
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:757
+msgid "Your changes have not been saved to the account."
+msgstr ""
+
+#: app/src/ui/contacts/editor.rs:760
+#, fuzzy
+#| msgid "Meetings"
+msgid "Keep Editing"
+msgstr "회의"
+
+#: app/src/ui/contacts/mod.rs:55 app/src/ui/smart_editor.rs:43
+#: app/src/ui/smart_editor.rs:203
+msgid "All Accounts"
+msgstr "모든 계정"
+
+#: app/src/ui/contacts/mod.rs:60 app/src/ui/contacts/mod.rs:221
+#, fuzzy
+#| msgid "All Accounts"
+msgid "All Groups"
+msgstr "모든 계정"
+
+#: app/src/ui/contacts/mod.rs:61
+msgid "Group"
+msgstr ""
+
+#: app/src/ui/contacts/mod.rs:63 app/src/ui/contacts/mod.rs:65
+#, fuzzy
+#| msgid "read contacts"
+msgid "Search Contacts"
+msgstr "연락처 읽기"
+
+#: app/src/ui/contacts/mod.rs:71
+#, fuzzy
+#| msgid "No Matching Mail"
+msgid "No Matching Contacts"
+msgstr "일치하는 메일 없음"
+
+#: app/src/ui/contacts/mod.rs:112
+#, fuzzy
+#| msgid "Connect With"
+msgid "Contact List Width"
+msgstr "연결 방식"
+
+#: app/src/ui/contacts/mod.rs:121 app/src/ui/contacts/mod.rs:123
+#, fuzzy
+#| msgid "read contacts"
+msgid "Refresh Contacts"
+msgstr "연락처 읽기"
+
+#: app/src/ui/contacts/mod.rs:231
+#, fuzzy
+#| msgid "Could not read accounts: {reason}"
+msgid "Could not load contacts: {reason}"
+msgstr "계정을 읽을 수 없습니다: {reason}"
+
+#: app/src/ui/contacts/mod.rs:304
+#, fuzzy
+#| msgid "read contacts"
+msgid "Select a Contact"
+msgstr "연락처 읽기"
+
+#: app/src/ui/contacts/mod.rs:307
+msgid "Choose a contact or add someone to an address book."
+msgstr ""
+
+#: app/src/ui/contacts/mod.rs:365
+msgid "View Photo"
+msgstr ""
+
+#: app/src/ui/contacts/mod.rs:388 app/src/ui/contacts_prefs.rs:175
+#: app/src/ui/conversation.rs:609 app/src/ui/queued.rs:60
+#: app/src/ui/sidebar.rs:2010
+msgid "Edit…"
+msgstr "편집…"
+
+#: app/src/ui/contacts/mod.rs:435
+msgid "Mail to or from This Address"
+msgstr ""
+
+#: app/src/ui/contacts/mod.rs:464
+#, fuzzy
+#| msgid "Join Call"
+msgid "Call"
+msgstr "통화 참여"
+
+#: app/src/ui/contacts/mod.rs:465
+#, fuzzy
+#| msgid "Send"
+msgid "Send SMS"
+msgstr "보내기"
+
+#: app/src/ui/contacts/mod.rs:586
+msgid "Allow contacts access in Preferences, then try again."
+msgstr ""
+
+#: app/src/ui/contacts/mod.rs:604
+#, fuzzy
+#| msgid "Delete {name}?"
+msgid "Delete Contact?"
+msgstr "{name}을(를) 삭제할까요?"
+
+#: app/src/ui/contacts/mod.rs:606
+msgid "Delete {name} from its account? This cannot be undone."
+msgstr ""
+
+#: app/src/ui/contacts/mod.rs:677 app/src/ui/goa_page.rs:124
+#: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
+msgid "Copy"
+msgstr "복사"
+
+#: app/src/ui/contacts/photo.rs:55
+msgid "Choose Contact Photo"
+msgstr ""
+
+#: app/src/ui/contacts/photo.rs:77 app/src/ui/contacts/photo.rs:236
+#, fuzzy
+#| msgid "Could Not Open This File"
+msgid "Could Not Open Photo"
+msgstr "파일을 열 수 없습니다"
+
+#: app/src/ui/contacts/photo.rs:79
+msgid "Choose an image smaller than 16 MB with no more than 32 million pixels."
+msgstr ""
+
+#: app/src/ui/contacts/photo.rs:96
+msgid "Crop Photo"
+msgstr ""
+
+#: app/src/ui/contacts/photo.rs:122
+msgid "Horizontal Position"
+msgstr ""
+
+#: app/src/ui/contacts/photo.rs:123
+msgid "Vertical Position"
+msgstr ""
+
+#: app/src/ui/contacts/photo.rs:170
+#, fuzzy
+#| msgid "Use {host}"
+msgid "Use Photo"
+msgstr "{host} 사용"
+
+#: app/src/ui/contacts/photo.rs:224
+#, fuzzy
+#| msgid "Contact"
+msgid "Contact Photo"
+msgstr "연락처"
 
 #: app/src/ui/contacts_prefs.rs:57
 msgid "Calendar, Contacts and Rules Servers"
@@ -8087,11 +8432,6 @@ msgstr "{account}에 {host} 사용"
 #: app/src/ui/contacts_prefs.rs:171
 msgid "Find Again"
 msgstr "다시 찾기"
-
-#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2010
-msgid "Edit…"
-msgstr "편집…"
 
 #: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:567
 msgid "Shared mailboxes support mail only."
@@ -8171,7 +8511,7 @@ msgid "Export…"
 msgstr "내보내기…"
 
 #: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3755
+#: app/src/ui/window.rs:3759
 msgid "Customize Toolbar…"
 msgstr "도구 모음 사용자 지정…"
 
@@ -8526,11 +8866,6 @@ msgstr "직장 또는 학교 관리자가 앱 비밀번호를 꺼 두었습니�
 msgid "Use another way to sign in"
 msgstr "다른 방법으로 로그인하기"
 
-#: app/src/ui/goa_page.rs:124 app/src/ui/goa_page.rs:371
-#: app/src/ui/hide_my_email.rs:828
-msgid "Copy"
-msgstr "복사"
-
 #: app/src/ui/goa_page.rs:135
 msgid "Other ways to sign in"
 msgstr "다른 로그인 방법"
@@ -8730,13 +9065,9 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "이메일 가리기 허용"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3968
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3972
 msgid "Add an account first"
 msgstr "먼저 계정을 추가하세요"
-
-#: app/src/ui/hide_my_email.rs:657
-msgid "Account"
-msgstr "계정"
 
 #: app/src/ui/hide_my_email.rs:670
 msgid "Where Did You Use It?"
@@ -9195,7 +9526,7 @@ msgstr "이 계정은 아직 동기화 중이 아닙니다"
 msgid "Could not change the subscription: {reason}"
 msgstr "색을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "회색"
 
@@ -9988,7 +10319,7 @@ msgstr "{account} 아래로 이동"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3762 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3766 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "환경설정"
 
@@ -10522,7 +10853,7 @@ msgstr "자동 회신…"
 msgid "Rules…"
 msgstr "규칙…"
 
-#: app/src/ui/sidebar.rs:2321 app/src/ui/window.rs:3748
+#: app/src/ui/sidebar.rs:2321 app/src/ui/window.rs:3752
 msgid "Hide My Email…"
 msgstr "이메일 가리기…"
 
@@ -10593,10 +10924,6 @@ msgstr "즐겨찾기"
 #: app/src/ui/window/customize_mailboxes.rs:597
 msgid "Smart Mailboxes"
 msgstr "스마트 메일함"
-
-#: app/src/ui/smart_editor.rs:43 app/src/ui/smart_editor.rs:203
-msgid "All Accounts"
-msgstr "모든 계정"
 
 #: app/src/ui/smart_editor.rs:58
 msgid "Match"
@@ -10843,7 +11170,7 @@ msgstr "메시지 필터 (사용 중)"
 msgid "Pull to check for mail"
 msgstr "메일 확인"
 
-#: app/src/ui/thread_list/pull.rs:126 app/src/ui/window/shortcuts.rs:852
+#: app/src/ui/thread_list/pull.rs:126 app/src/ui/window/shortcuts.rs:854
 msgid "Checking for mail"
 msgstr "메일 확인 중"
 
@@ -10851,7 +11178,7 @@ msgstr "메일 확인 중"
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:414
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:415
 msgid "Muted"
 msgstr "알림 끔"
 
@@ -11113,228 +11440,228 @@ msgid ""
 msgstr ""
 "메일이 있는 곳을 선택하세요. 나중에 기본 메뉴에서 더 추가할 수 있습니다."
 
-#: app/src/ui/window.rs:295
+#: app/src/ui/window.rs:296
 msgid "Deleted forever"
 msgstr "영구 삭제했습니다"
 
-#: app/src/ui/window.rs:297
+#: app/src/ui/window.rs:298
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "대화 {count}개를 영구 삭제했습니다"
 
-#: app/src/ui/window.rs:303
+#: app/src/ui/window.rs:304
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "메시지 {count}개를 영구 삭제했습니다"
 
-#: app/src/ui/window.rs:316
+#: app/src/ui/window.rs:317
 msgid "{label}, on this mail"
 msgstr "{label}, 이 메일에 있음"
 
-#: app/src/ui/window.rs:345
+#: app/src/ui/window.rs:346
 msgid "Added {person} to VIPs"
 msgstr "{person}을(를) VIP에 추가했습니다"
 
-#: app/src/ui/window.rs:346
+#: app/src/ui/window.rs:347
 msgid "Removed {person} from VIPs"
 msgstr "{person}을(를) VIP에서 제거했습니다"
 
-#: app/src/ui/window.rs:352
+#: app/src/ui/window.rs:353
 msgid "Could not load mail: {reason}"
 msgstr "메일을 불러올 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:362
+#: app/src/ui/window.rs:363
 msgid "Added {account}. Downloading mail…"
 msgstr "{account}을(를) 추가했습니다. 메일 다운로드 중…"
 
-#: app/src/ui/window.rs:366 app/src/ui/window.rs:3109
+#: app/src/ui/window.rs:367 app/src/ui/window.rs:3112
 msgid "{account} is signed in again."
 msgstr "{account}에 다시 로그인했습니다."
 
-#: app/src/ui/window.rs:385
+#: app/src/ui/window.rs:386
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "{provider}에 보관한 메일을 위한 “{name}” 폴더를 만들었습니다"
 
-#: app/src/ui/window.rs:394
+#: app/src/ui/window.rs:395
 msgid "Flagged red"
 msgstr "빨간 깃발 표시함"
 
-#: app/src/ui/window.rs:395
+#: app/src/ui/window.rs:396
 msgid "Flagged orange"
 msgstr "주황 깃발 표시함"
 
-#: app/src/ui/window.rs:396
+#: app/src/ui/window.rs:397
 msgid "Flagged yellow"
 msgstr "노란 깃발 표시함"
 
-#: app/src/ui/window.rs:397
+#: app/src/ui/window.rs:398
 msgid "Flagged green"
 msgstr "초록 깃발 표시함"
 
-#: app/src/ui/window.rs:398
+#: app/src/ui/window.rs:399
 msgid "Flagged blue"
 msgstr "파란 깃발 표시함"
 
-#: app/src/ui/window.rs:399
+#: app/src/ui/window.rs:400
 msgid "Flagged purple"
 msgstr "보라 깃발 표시함"
 
-#: app/src/ui/window.rs:400
+#: app/src/ui/window.rs:401
 msgid "Flagged gray"
 msgstr "회색 깃발 표시함"
 
-#: app/src/ui/window.rs:411 app/src/ui/window.rs:509
+#: app/src/ui/window.rs:412 app/src/ui/window.rs:510
 msgid "Labels changed"
 msgstr "라벨을 변경했습니다"
 
-#: app/src/ui/window.rs:415
+#: app/src/ui/window.rs:416
 msgid "Unmuted"
 msgstr "알림을 켰습니다"
 
-#: app/src/ui/window.rs:417
+#: app/src/ui/window.rs:418
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "대화 {count}개의 알림을 껐습니다"
 
-#: app/src/ui/window.rs:423
+#: app/src/ui/window.rs:424
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "메시지 {count}개의 알림을 껐습니다"
 
-#: app/src/ui/window.rs:429
+#: app/src/ui/window.rs:430
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "대화 {count}개의 알림을 켰습니다"
 
-#: app/src/ui/window.rs:435
+#: app/src/ui/window.rs:436
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "메시지 {count}개의 알림을 켰습니다"
 
-#: app/src/ui/window.rs:445
+#: app/src/ui/window.rs:446
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "후속 조치 {count}개를 해제했습니다"
 
-#: app/src/ui/window.rs:454
+#: app/src/ui/window.rs:455
 msgid "Archived"
 msgstr "보관했습니다"
 
-#: app/src/ui/window.rs:456
+#: app/src/ui/window.rs:457
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "대화 {count}개를 보관했습니다"
 
-#: app/src/ui/window.rs:462
+#: app/src/ui/window.rs:463
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "메시지 {count}개를 보관했습니다"
 
-#: app/src/ui/window.rs:467
+#: app/src/ui/window.rs:468
 msgid "Moved to Trash"
 msgstr "휴지통으로 이동했습니다"
 
-#: app/src/ui/window.rs:469
+#: app/src/ui/window.rs:470
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "대화 {count}개를 휴지통으로 이동했습니다"
 
-#: app/src/ui/window.rs:475
+#: app/src/ui/window.rs:476
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "메시지 {count}개를 휴지통으로 이동했습니다"
 
-#: app/src/ui/window.rs:480
+#: app/src/ui/window.rs:481
 msgid "Marked as junk"
 msgstr "스팸으로 표시했습니다"
 
-#: app/src/ui/window.rs:482
+#: app/src/ui/window.rs:483
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "대화 {count}개를 스팸으로 표시했습니다"
 
-#: app/src/ui/window.rs:488
+#: app/src/ui/window.rs:489
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "메시지 {count}개를 스팸으로 표시했습니다"
 
-#: app/src/ui/window.rs:493
+#: app/src/ui/window.rs:494
 msgid "Moved to the Inbox"
 msgstr "받은편지함으로 이동했습니다"
 
-#: app/src/ui/window.rs:495
+#: app/src/ui/window.rs:496
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "대화 {count}개를 받은편지함으로 이동했습니다"
 
-#: app/src/ui/window.rs:501
+#: app/src/ui/window.rs:502
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "메시지 {count}개를 받은편지함으로 이동했습니다"
 
-#: app/src/ui/window.rs:949
+#: app/src/ui/window.rs:950
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (데모)"
 
-#: app/src/ui/window.rs:1393
+#: app/src/ui/window.rs:1395
 msgid "Could not read accounts: {reason}"
 msgstr "계정을 읽을 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2145
+#: app/src/ui/window.rs:2147
 msgid "Could not delete the mail: {reason}"
 msgstr "메일을 삭제할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2252
+#: app/src/ui/window.rs:2254
 msgid "Turn On the {service}"
 msgstr "{service} 켜기"
 
-#: app/src/ui/window.rs:2437 app/src/ui/window.rs:2440
+#: app/src/ui/window.rs:2440 app/src/ui/window.rs:2443
 msgid "Move to Inbox"
 msgstr "받은편지함으로 이동"
 
-#: app/src/ui/window.rs:2608 app/src/ui/window.rs:2613
+#: app/src/ui/window.rs:2611 app/src/ui/window.rs:2616
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "모델 검색"
 
-#: app/src/ui/window.rs:2682
+#: app/src/ui/window.rs:2685
 msgid "Select mail from one account to tag it."
 msgstr "태그를 지정하려면 한 계정의 메일을 선택하세요."
 
-#: app/src/ui/window.rs:2694
+#: app/src/ui/window.rs:2697
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "이 계정에는 아직 태그가 없습니다. Outlook에서 만드세요."
 
-#: app/src/ui/window.rs:2787
+#: app/src/ui/window.rs:2790
 msgid "Add an account to reply or forward"
 msgstr "답장하거나 전달하려면 계정을 추가하세요"
 
-#: app/src/ui/window.rs:2892
+#: app/src/ui/window.rs:2895
 msgid "Could not include {file}: {reason}"
 msgstr "{file}을(를) 포함할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2973
+#: app/src/ui/window.rs:2976
 msgid "The server had already sent this message."
 msgstr "서버가 이미 이 메시지를 보냈습니다."
 
-#: app/src/ui/window.rs:2978
+#: app/src/ui/window.rs:2981
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "다른 앱에서 이 메시지를 취소하여 더 이상 임시보관함에 없습니다."
 
-#: app/src/ui/window.rs:3294
+#: app/src/ui/window.rs:3297
 msgid "Continue in your browser"
 msgstr "브라우저에서 계속"
 
-#: app/src/ui/window.rs:3344
+#: app/src/ui/window.rs:3347
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "이 Penguin Mail 빌드에는 Google 로그인 기능이 없습니다."
 
-#: app/src/ui/window.rs:3366
+#: app/src/ui/window.rs:3369
 msgid "Get a Release"
 msgstr "출시 버전 받기"
 
-#: app/src/ui/window.rs:3489
+#: app/src/ui/window.rs:3492
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11342,86 +11669,86 @@ msgstr ""
 "서버가 나중에 보내려고 보관 중인 메시지를 확인할 수 없어 {account} 계정을 유"
 "지합니다: {reason}"
 
-#: app/src/ui/window.rs:3500
+#: app/src/ui/window.rs:3503
 msgid "Remove {account}?"
 msgstr "{account}을(를) 제거할까요?"
 
-#: app/src/ui/window.rs:3519
+#: app/src/ui/window.rs:3522
 msgid "Remove Anyway"
 msgstr "제거 진행"
 
-#: app/src/ui/window.rs:3532
+#: app/src/ui/window.rs:3535
 msgid "Removed {account}"
 msgstr "{account}을(를) 제거했습니다"
 
-#: app/src/ui/window.rs:3534
+#: app/src/ui/window.rs:3537
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}을(를) 제거할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:3726
+#: app/src/ui/window.rs:3729
 msgid "Refresh"
 msgstr "새로 고침"
 
-#: app/src/ui/window.rs:3730
+#: app/src/ui/window.rs:3733
 msgid "Show Declined Events"
 msgstr "거절한 일정 표시"
 
-#: app/src/ui/window.rs:3746
+#: app/src/ui/window.rs:3750
 msgid "Add Account…"
 msgstr "계정 추가…"
 
-#: app/src/ui/window.rs:3747
+#: app/src/ui/window.rs:3751
 msgid "New Smart Mailbox…"
 msgstr "새 스마트 메일함…"
 
-#: app/src/ui/window.rs:3759
+#: app/src/ui/window.rs:3763
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "도구 모음 사용자 지정…"
 
-#: app/src/ui/window.rs:3763 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3767 app/src/ui/window/shortcuts.rs:815
 msgid "Keyboard Shortcuts"
 msgstr "키보드 단축키"
 
-#: app/src/ui/window.rs:3772 app/src/ui/window.rs:3774
+#: app/src/ui/window.rs:3776 app/src/ui/window.rs:3778
 msgid "Main Menu"
 msgstr "기본 메뉴"
 
-#: app/src/ui/window.rs:3839 app/src/ui/window.rs:3840
+#: app/src/ui/window.rs:3843 app/src/ui/window.rs:3844
 msgid "Dock"
 msgstr "독"
 
-#: app/src/ui/window.rs:3969
+#: app/src/ui/window.rs:3973
 msgid "Add a mail account first"
 msgstr "먼저 메일 계정을 추가하세요"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4220
+#: app/src/ui/window.rs:4251
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account}의 캘린더와 연락처가 연결되었습니다."
 
-#: app/src/ui/window.rs:4336
+#: app/src/ui/window.rs:4367
 msgid "Open a message from the person first"
 msgstr "먼저 해당 사람의 메시지를 여세요"
 
-#: app/src/ui/window.rs:4437
+#: app/src/ui/window.rs:4472
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/window.rs:4439 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4474 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "다시 시작"
 
-#: app/src/ui/window.rs:4503
+#: app/src/ui/window.rs:4538
 msgid "Show Rules"
 msgstr "규칙 표시"
 
-#: app/src/ui/window.rs:4529
+#: app/src/ui/window.rs:4564
 msgid "Messages That Will Not Download"
 msgstr "다운로드할 수 없는 메시지"
 
-#: app/src/ui/window.rs:4531
+#: app/src/ui/window.rs:4566
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12317,7 +12644,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "“{title}”의 변경 사항을 저장하지 못했습니다: {reason}"
 
-#: app/src/ui/window/spaces.rs:282
+#: app/src/ui/window/spaces.rs:285
 msgid "Show Event"
 msgstr "일정 표시"
 
@@ -12458,6 +12785,28 @@ msgstr ""
 "버전의 서명을 확인하려면 gpgv 또는 gpg가 필요하지만 둘 다 설치되어 있지 않습"
 "니다."
 
+#: dav/src/vcard.rs:633
+msgid ""
+"Custom field names must be unique uppercase X- names using letters, numbers, "
+"and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved"
+msgstr ""
+
+#: dav/src/vcard.rs:645
+msgid "Use YYYY-MM-DD or --MM-DD for dates"
+msgstr ""
+
+#: dav/src/vcard.rs:653
+msgid "A date needs a label and a value"
+msgstr ""
+
+#: dav/src/vcard.rs:659
+msgid "Contact photos must be PNG images no larger than 512 KB"
+msgstr ""
+
+#: dav/src/vcard.rs:668
+msgid "A postal address has seven components"
+msgstr ""
+
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -12479,6 +12828,21 @@ msgstr "중요"
 msgctxt "inbox"
 msgid "Other"
 msgstr "기타"
+
+#: domain/src/contact.rs:85
+msgid "%-d %B"
+msgstr "%B %-d일"
+
+#: domain/src/contact.rs:93
+#, fuzzy
+#| msgid "{date} {time}"
+msgid "{date} ({year})"
+msgstr "{date} {time}"
+
+#: domain/src/contact.rs:98
+msgid "{date} ({year}), {age} year old"
+msgid_plural "{date} ({year}), {age} years old"
+msgstr[0] ""
 
 #: domain/src/invitation.rs:84
 msgid "Yes"
@@ -12620,10 +12984,6 @@ msgstr "{day}일"
 msgid "the {day}rd"
 msgstr "{day}일"
 
-#: domain/src/invitation/recurrence.rs:296
-msgid "%-d %B"
-msgstr "%B %-d일"
-
 #: domain/src/sign_in_page.rs:36
 msgid "Signed in to Penguin Mail"
 msgstr "Penguin Mail에 로그인했습니다"
@@ -12699,6 +13059,14 @@ msgstr "읽지 않음"
 #: domain/src/smart.rs:97
 msgid "Is flagged"
 msgstr "깃발 표시됨"
+
+#: gmail/src/people.rs:620
+msgid "Enter a valid date as YYYY-MM-DD or --MM-DD."
+msgstr ""
+
+#: gmail/src/people.rs:628
+msgid "Choose a PNG contact photo smaller than 512 KB."
+msgstr ""
 
 #: sync/src/account/outbox.rs:97
 msgid "The message was sent, but Penguin Mail could not keep a copy in Sent."
@@ -12797,28 +13165,42 @@ msgid "{accounts} will get a new label."
 msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts}에 새 라벨을 만듭니다."
 
-#: sync/src/calendar_copy.rs:1158
+#: sync/src/calendar_copy.rs:1159
 msgid ""
 "this account's calendars moved to another server, which does not have this "
 "event"
 msgstr "이 계정의 캘린더를 다른 서버로 옮겼으며 해당 서버에 이 일정이 없음"
 
-#: sync/src/calendar_copy.rs:1327 sync/src/calendar_copy.rs:1468
-#: sync/src/calendar_copy.rs:1525
+#: sync/src/calendar_copy.rs:1328 sync/src/calendar_copy.rs:1469
+#: sync/src/calendar_copy.rs:1526
 msgid "deleted elsewhere"
 msgstr "다른 곳에서 삭제함"
 
-#: sync/src/calendar_copy.rs:1335
+#: sync/src/calendar_copy.rs:1336
 msgid "the calendar is gone"
 msgstr "캘린더가 사라짐"
 
-#: sync/src/calendar_copy.rs:2360
+#: sync/src/calendar_copy.rs:2361
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"
 msgstr ""
 "Google Calendar는 일부 직장 및 학교 계정에서만 부재중 및 집중 시간을 제공합니"
 "다 ({reason})"
+
+#: sync/src/calendar_copy/birthdays.rs:31
+#, fuzzy
+#| msgid "Contact"
+msgid "Unnamed Contact"
+msgstr "연락처"
+
+#: sync/src/calendar_copy/birthdays.rs:37
+msgid "{name}'s birthday ({age})"
+msgstr ""
+
+#: sync/src/calendar_copy/birthdays.rs:40
+msgid "{name}'s birthday"
+msgstr ""
 
 #. A structure read left out required text. Background prefetch retries
 #. with backoff rather than keeping or abandoning the incomplete body.
@@ -13069,6 +13451,30 @@ msgstr "이 일정의 참석자가 아닙니다."
 #: sync/src/services/caldav.rs:770
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail은 CalDAV 서버의 캘린더 목록을 변경할 수 없습니다."
+
+#: sync/src/services/carddav.rs:163
+msgid ""
+"Contact groups changed on another device. Refresh contacts and reopen the "
+"editor."
+msgstr ""
+
+#: sync/src/services/carddav.rs:177
+msgid ""
+"Several groups have the same name. Rename them in the account before adding "
+"this contact."
+msgstr ""
+
+#: sync/src/services/carddav.rs:450
+msgid ""
+"The contact was created, but some groups could not be saved. Retry in this "
+"editor to finish without creating another contact: {reason}"
+msgstr ""
+
+#: sync/src/services/carddav.rs:477
+msgid ""
+"Some group changes could not be saved. Refresh contacts before trying again: "
+"{reason}"
+msgstr ""
 
 #: sync/src/services/finding.rs:374
 msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
@@ -13598,6 +14004,18 @@ msgstr "스팸 아님으로 표시"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}(으)로 이동"
+
+#~ msgid "gmail"
+#~ msgstr "gmail"
+
+#~ msgid "email"
+#~ msgstr "이메일"
+
+#~ msgid "mail"
+#~ msgstr "메일"
+
+#~ msgid "inbox"
+#~ msgstr "받은편지함"
 
 #~ msgid ""
 #~ "Added below new messages and above quoted text in replies. Markdown works."

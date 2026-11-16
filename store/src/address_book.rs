@@ -16,6 +16,7 @@ pub struct Contact {
     pub account_id: AccountId,
     /// What the People API calls this person, such as `people/c17`.
     pub resource: String,
+    pub details: mailrs_domain::contact::Details,
     pub name: Option<String>,
     /// Every address Google holds, the primary one first.
     pub emails: Vec<String>,
@@ -66,11 +67,11 @@ pub fn save(conn: &Connection, contacts: &[Contact]) -> Result<()> {
             _ => contact.photo_file.clone(),
         };
         conn.execute(
-            "INSERT INTO contacts (account_id, resource, name, organization, phone, photo_url, photo_file) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) \
+            "INSERT INTO contacts (account_id, resource, name, organization, phone, photo_url, photo_file, details) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) \
              ON CONFLICT (account_id, resource) DO UPDATE SET \
              name = excluded.name, organization = excluded.organization, phone = excluded.phone, \
-             photo_url = excluded.photo_url, photo_file = excluded.photo_file",
+             photo_url = excluded.photo_url, photo_file = excluded.photo_file, details = excluded.details",
             params![
                 contact.account_id,
                 contact.resource,
@@ -79,6 +80,7 @@ pub fn save(conn: &Connection, contacts: &[Contact]) -> Result<()> {
                 contact.phone,
                 contact.photo_url,
                 photo_file,
+                serde_json::to_string(&contact.details).expect("contact details serialize"),
             ],
         )?;
         conn.execute(
@@ -129,7 +131,56 @@ pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
 
 /// Every contact of every account, by name.
 pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
-    read(conn, "1 = 1", [])
+    let all = read(conn, "1 = 1", [])?;
+    let groups: Vec<_> = all.iter().filter(|c| c.details.members.is_some()).collect();
+    Ok(all
+        .iter()
+        .filter(|c| c.details.members.is_none())
+        .cloned()
+        .map(|mut contact| {
+            for group in &groups {
+                if group.account_id == contact.account_id
+                    && group.resource.rsplit_once('/').map(|(p, _)| p)
+                        == contact.resource.rsplit_once('/').map(|(p, _)| p)
+                    && group
+                        .details
+                        .members
+                        .as_ref()
+                        .is_some_and(|members| members.contains(&contact.details.uid))
+                {
+                    let name = group.display().to_string();
+                    if !contact.details.groups.contains(&name) {
+                        contact.details.groups.push(name);
+                    }
+                }
+            }
+            contact
+        })
+        .collect())
+}
+
+/// Keep native group cards in step with a successful edit until the next refresh.
+pub fn set_memberships(conn: &Connection, contact: &Contact, names: &[String]) -> Result<()> {
+    if contact.details.uid.is_empty() {
+        return Ok(());
+    }
+    let mut groups = read(conn, "1 = 1", [])?;
+    groups.retain(|g| {
+        g.account_id == contact.account_id
+            && g.details.members.is_some()
+            && g.resource.rsplit_once('/').map(|(p, _)| p)
+                == contact.resource.rsplit_once('/').map(|(p, _)| p)
+    });
+    for group in &mut groups {
+        let include = names.iter().any(|name| name == group.display());
+        if let Some(members) = &mut group.details.members {
+            members.retain(|uid| uid != &contact.details.uid);
+            if include {
+                members.push(contact.details.uid.clone());
+            }
+        }
+    }
+    save(conn, &groups)
 }
 
 /// The contacts every word of `query` finds in a name, an address or an
@@ -250,7 +301,7 @@ fn query(filter: &str) -> String {
         "SELECT c.account_id, c.resource, c.name, c.organization, c.phone, c.photo_url, NULLIF(c.photo_file, ''), \
          (SELECT group_concat(a.email, char(10)) FROM (SELECT email FROM contact_addresses \
           WHERE account_id = c.account_id AND resource = c.resource ORDER BY rank) a) \
-         FROM contacts c WHERE {filter} ORDER BY c.name IS NULL, c.name COLLATE NOCASE, c.resource"
+         , c.details FROM contacts c WHERE {filter} ORDER BY c.name IS NULL, c.name COLLATE NOCASE, c.resource"
     )
 }
 
@@ -259,6 +310,13 @@ fn read<P: rusqlite::Params>(conn: &Connection, filter: &str, params: P) -> Resu
     let rows = stmt.query_map(params, |row| {
         let emails: Option<String> = row.get(7)?;
         Ok(Contact {
+            details: serde_json::from_str(&row.get::<_, String>(8)?).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    8,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })?,
             account_id: row.get(0)?,
             resource: row.get(1)?,
             name: row.get(2)?,
@@ -290,6 +348,52 @@ mod tests {
             emails: emails.iter().map(|e| e.to_string()).collect(),
             ..Contact::default()
         }
+    }
+
+    #[test]
+    fn native_groups_are_joined_only_with_contacts_in_the_same_book() {
+        let conn = open_in_memory().unwrap();
+        let account = accounts::insert_account(&conn, "owner@example.org", 0).unwrap();
+        let mut person = contact(account, "/book/one.vcf", "Demo", &["demo@example.org"]);
+        person.details.uid = "person".into();
+        person.details.birthday = "2000-02-29".into();
+        let mut group = contact(account, "/book/group.vcf", "Friends", &[]);
+        group.details.members = Some(vec!["person".into()]);
+        let mut elsewhere = person.clone();
+        elsewhere.resource = "/other/one.vcf".into();
+        save(&conn, &[person, group.clone(), elsewhere]).unwrap();
+        let people = list(&conn).unwrap();
+        assert_eq!(people.len(), 2);
+        let one = people
+            .iter()
+            .find(|c| c.resource == "/book/one.vcf")
+            .unwrap();
+        assert_eq!(one.details.groups, ["Friends"]);
+        assert_eq!(one.details.birthday, "2000-02-29");
+        assert!(
+            people
+                .iter()
+                .find(|c| c.resource == "/other/one.vcf")
+                .unwrap()
+                .details
+                .groups
+                .is_empty()
+        );
+        set_memberships(&conn, one, &[]).unwrap();
+        assert!(
+            list(&conn)
+                .unwrap()
+                .iter()
+                .all(|c| c.details.groups.is_empty())
+        );
+        group.details.members = Some(vec![]);
+        save(&conn, &[group]).unwrap();
+        assert!(
+            list(&conn)
+                .unwrap()
+                .iter()
+                .all(|c| c.details.groups.is_empty())
+        );
     }
 
     #[test]

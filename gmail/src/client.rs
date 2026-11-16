@@ -129,6 +129,8 @@ pub struct GmailClient {
     base_url: String,
     /// The People API, which lives at a host of its own.
     people_url: String,
+    // Serializing writes also lets a failed photo upload retry a created card.
+    contact_writes: Mutex<std::collections::HashMap<String, Person>>,
     /// Answering an invitation goes to the Calendar API, which is another
     /// server behind the same access token. See `crate::calendar`.
     pub(crate) calendar_base_url: String,
@@ -180,6 +182,7 @@ impl GmailClient {
             access_from,
             base_url: GMAIL_API_BASE.to_string(),
             people_url: people::PEOPLE_API_BASE.to_string(),
+            contact_writes: Mutex::new(std::collections::HashMap::new()),
             calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
             drive_upload_base_url: crate::drive::DRIVE_UPLOAD_BASE.to_string(),
             drive_base_url: crate::drive::DRIVE_API_BASE.to_string(),
@@ -737,7 +740,14 @@ impl GmailClient {
             })
             .await?;
         let body = text_of(response, JSON_LIMIT).await?;
-        people::parse_connections(&body)
+        let mut page = people::parse_connections(&body)?;
+        if page.people.iter().any(|p| !p.details.groups.is_empty()) {
+            let groups = self.contact_groups().await?;
+            for person in &mut page.people {
+                Self::name_groups(person, &groups);
+            }
+        }
+        Ok(page)
     }
 
     /// Adds a contact to the account's Google contacts. Gmail answers
@@ -746,8 +756,22 @@ impl GmailClient {
     ///
     /// [`CONTACTS_WRITE_SCOPE`]: crate::people::CONTACTS_WRITE_SCOPE
     pub async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
+        people::validate(fields)?;
+        let mut pending = self.contact_writes.lock().await;
+        if let Some(key) = &fields.creation_key
+            && let Some(saved) = pending.get_mut(key)
+        {
+            let mut retry = fields.clone();
+            retry.expected_revision = Some(saved.details.revision.clone());
+            retry.expected_groups = Some(saved.details.groups.clone());
+            let resource = saved.resource.clone();
+            let result = self.change_contact(&resource, &retry, Some(saved)).await?;
+            pending.remove(key);
+            return Ok(result);
+        }
+        let mut body = fields.body();
+        self.write_groups(&mut body, fields, None).await?;
         let url = format!("{}/people:createContact", self.people_url);
-        let body = fields.body();
         let reply = self
             .send_request(cost::CONTACT_WRITE, || {
                 self.http()
@@ -756,46 +780,292 @@ impl GmailClient {
                     .json(&body)
             })
             .await?;
-        let reply = text_of(reply, JSON_LIMIT).await?;
-        Ok(people::parse_person(&reply)?.0)
+        let mut person = people::parse_person(&text_of(reply, JSON_LIMIT).await?)?.0;
+        // Keep the successful create before a later request can fail.
+        if let Some(key) = &fields.creation_key {
+            let mut checkpoint = person.clone();
+            checkpoint.details.groups = fields.details.groups.clone().unwrap_or_default();
+            pending.insert(key.clone(), checkpoint);
+        }
+        if let Some(photo) = &fields.photo {
+            person = self.write_contact_photo(&person.resource, photo).await?;
+        }
+        person.details.groups = fields.details.groups.clone().unwrap_or_default();
+        if let Some(key) = &fields.creation_key {
+            pending.remove(key);
+        }
+        Ok(person)
     }
 
-    /// Changes the fields `fields` names on the contact `resource`, such
-    /// as `people/c17`. Google refuses a change without the contact's
-    /// current etag, so this reads the contact first.
     pub async fn update_contact(
         &self,
         resource: &str,
         fields: &ContactFields,
     ) -> Result<Person, GmailError> {
-        if !resource.starts_with("people/") || resource.contains("..") {
+        people::validate(fields)?;
+        let _write = self.contact_writes.lock().await;
+        self.change_contact(resource, fields, None).await
+    }
+
+    fn contact_url(&self, resource: &str) -> Result<String, GmailError> {
+        let id = resource
+            .strip_prefix("people/")
+            .ok_or(GmailError::NotFound)?;
+        if id.is_empty()
+            || !id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
             return Err(GmailError::NotFound);
         }
-        let url = format!("{}/{resource}", self.people_url);
-        let current = self
+        Ok(format!("{}/{resource}", self.people_url))
+    }
+
+    async fn read_contact(&self, resource: &str) -> Result<serde_json::Value, GmailError> {
+        let url = self.contact_url(resource)?;
+        let reply = self
             .send_request(cost::CONNECTIONS, || {
-                self.http().get(&url).query(&[("personFields", "metadata")])
+                self.http()
+                    .get(&url)
+                    .query(&[("personFields", people::PERSON_FIELDS)])
             })
             .await?;
-        let current = text_of(current, JSON_LIMIT).await?;
-        let (_, etag) = people::parse_person(&current)?;
-        let mut body = fields.body();
-        body["etag"] = json!(etag);
+        serde_json::from_str(&text_of(reply, JSON_LIMIT).await?)
+            .map_err(|e| GmailError::Decode(e.to_string()))
+    }
+
+    async fn change_contact(
+        &self,
+        resource: &str,
+        fields: &ContactFields,
+        checkpoint: Option<&mut Person>,
+    ) -> Result<Person, GmailError> {
+        let current = self.read_contact(resource).await?;
+        let mut person = people::parse_person(&current.to_string())?.0;
+        if fields
+            .expected_revision
+            .as_ref()
+            .is_some_and(|r| !r.is_empty() && r != &person.details.revision)
+        {
+            return Err(GmailError::Changed);
+        }
+        self.enrich_contact(&mut person).await?;
+        let desired_groups = fields
+            .details
+            .groups
+            .clone()
+            .unwrap_or_else(|| person.details.groups.clone());
+        if let Some(expected) = &fields.expected_groups {
+            let mut expected = expected.clone();
+            expected.sort();
+            expected.dedup();
+            let mut actual = person.details.groups.clone();
+            actual.sort();
+            actual.dedup();
+            if expected != actual {
+                return Err(GmailError::Changed);
+            }
+        }
         let mask = fields.mask();
-        let url = format!("{url}:updateContact");
-        let reply = self
-            .send_request(cost::CONTACT_WRITE, || {
+        if !mask.is_empty() {
+            let mut body = fields.body();
+            body["etag"] = current["etag"].clone();
+            if !current["metadata"]["sources"].is_null() {
+                body["metadata"] = json!({"sources":current["metadata"]["sources"]});
+            }
+            people::preserve_fields(&mut body, &current);
+            self.write_groups(&mut body, fields, Some(&current)).await?;
+            let url = format!("{}:updateContact", self.contact_url(resource)?);
+            let reply = self
+                .send_request(cost::CONTACT_WRITE, || {
+                    self.http()
+                        .patch(&url)
+                        .query(&[
+                            ("updatePersonFields", mask.as_str()),
+                            ("personFields", people::PERSON_FIELDS),
+                        ])
+                        .json(&body)
+                })
+                .await?;
+            person = people::parse_person(&text_of(reply, JSON_LIMIT).await?)?.0;
+        }
+        if let Some(checkpoint) = checkpoint {
+            *checkpoint = person.clone();
+            checkpoint.details.groups = desired_groups.clone();
+        }
+        if let Some(photo) = &fields.photo {
+            person = self.write_contact_photo(resource, photo).await?;
+        }
+        person.details.groups = desired_groups;
+        Ok(person)
+    }
+
+    pub async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), GmailError> {
+        let _write = self.contact_writes.lock().await;
+        let current = self.read_contact(resource).await?;
+        if revision.is_some_and(|r| !r.is_empty() && current["etag"].as_str() != Some(r)) {
+            return Err(GmailError::Changed);
+        }
+        let url = format!("{}:deleteContact", self.contact_url(resource)?);
+        self.send_request(cost::CONTACT_WRITE, || self.http().delete(&url))
+            .await?;
+        Ok(())
+    }
+
+    async fn write_contact_photo(
+        &self,
+        resource: &str,
+        photo: &[u8],
+    ) -> Result<Person, GmailError> {
+        let base = self.contact_url(resource)?;
+        let reply = if photo.is_empty() {
+            self.send_request(cost::CONTACT_WRITE, || {
                 self.http()
-                    .patch(&url)
-                    .query(&[
-                        ("updatePersonFields", mask.as_str()),
-                        ("personFields", people::PERSON_FIELDS),
-                    ])
+                    .delete(format!("{base}:deleteContactPhoto"))
+                    .query(&[("personFields", people::PERSON_FIELDS)])
+            })
+            .await?
+        } else {
+            let body = json!({"photoBytes":base64::engine::general_purpose::STANDARD.encode(photo),"personFields":people::PERSON_FIELDS});
+            self.send_request(cost::CONTACT_WRITE, || {
+                self.http()
+                    .patch(format!("{base}:updateContactPhoto"))
                     .json(&body)
             })
-            .await?;
-        let reply = text_of(reply, JSON_LIMIT).await?;
-        Ok(people::parse_person(&reply)?.0)
+            .await?
+        };
+        let value: serde_json::Value = serde_json::from_str(&text_of(reply, JSON_LIMIT).await?)
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        Ok(people::parse_person(&value["person"].to_string())?.0)
+    }
+
+    async fn contact_groups(&self) -> Result<Vec<serde_json::Value>, GmailError> {
+        let url = format!("{}/contactGroups", self.people_url);
+        let mut page = String::new();
+        let mut groups = Vec::new();
+        for _ in 0..100 {
+            let reply = self
+                .send_request(cost::CONNECTIONS, || {
+                    let request = self
+                        .http()
+                        .get(&url)
+                        .query(&[("pageSize", "1000"), ("groupFields", "name,groupType")]);
+                    if page.is_empty() {
+                        request
+                    } else {
+                        request.query(&[("pageToken", page.as_str())])
+                    }
+                })
+                .await?;
+            let value: serde_json::Value = serde_json::from_str(&text_of(reply, JSON_LIMIT).await?)
+                .map_err(|e| GmailError::Decode(e.to_string()))?;
+            if let Some(found) = value["contactGroups"].as_array() {
+                groups.extend(found.iter().cloned());
+            }
+            match value["nextPageToken"].as_str().filter(|p| !p.is_empty()) {
+                Some(next) => page = next.to_owned(),
+                None => return Ok(groups),
+            }
+        }
+        Err(GmailError::Decode(
+            "contact group pagination did not end".into(),
+        ))
+    }
+
+    fn name_groups(person: &mut Person, groups: &[serde_json::Value]) {
+        person.details.groups = person
+            .details
+            .groups
+            .iter()
+            .filter_map(|id| {
+                groups
+                    .iter()
+                    .find(|g| {
+                        g["resourceName"].as_str() == Some(id)
+                            && g["groupType"] == "USER_CONTACT_GROUP"
+                    })
+                    .and_then(|g| g["name"].as_str())
+                    .map(str::to_owned)
+            })
+            .collect();
+    }
+
+    async fn enrich_contact(&self, person: &mut Person) -> Result<(), GmailError> {
+        if !person.details.groups.is_empty() {
+            let groups = self.contact_groups().await?;
+            Self::name_groups(person, &groups);
+        }
+        Ok(())
+    }
+
+    async fn write_groups(
+        &self,
+        body: &mut serde_json::Value,
+        fields: &ContactFields,
+        current: Option<&serde_json::Value>,
+    ) -> Result<(), GmailError> {
+        let Some(names) = &fields.details.groups else {
+            return Ok(());
+        };
+        let mut groups = self.contact_groups().await?;
+        let mut memberships = Vec::new();
+        // System memberships, such as Starred, are not editable group labels.
+        if let Some(existing) = current.and_then(|c| c["memberships"].as_array()) {
+            memberships.extend(
+                existing
+                    .iter()
+                    .filter(|m| {
+                        groups.iter().any(|g| {
+                            g["resourceName"]
+                                == m["contactGroupMembership"]["contactGroupResourceName"]
+                                && g["groupType"] == "SYSTEM_CONTACT_GROUP"
+                        })
+                    })
+                    .cloned(),
+            );
+        }
+        for name in names.iter().filter(|n| !n.trim().is_empty()) {
+            let found = groups
+                .iter()
+                .find(|g| {
+                    g["name"].as_str() == Some(name) && g["groupType"] == "USER_CONTACT_GROUP"
+                })
+                .cloned();
+            let group = match found {
+                Some(group) => group,
+                None => {
+                    let url = format!("{}/contactGroups", self.people_url);
+                    let reply = self
+                        .send_request(cost::CONTACT_WRITE, || {
+                            self.http()
+                                .post(&url)
+                                .json(&json!({"contactGroup":{"name":name}}))
+                        })
+                        .await?;
+                    let group: serde_json::Value =
+                        serde_json::from_str(&text_of(reply, JSON_LIMIT).await?)
+                            .map_err(|e| GmailError::Decode(e.to_string()))?;
+                    groups.push(group.clone());
+                    group
+                }
+            };
+            let id = group["resourceName"]
+                .as_str()
+                .ok_or_else(|| GmailError::Decode("contact group has no resource name".into()))?;
+            let member = json!({"contactGroupMembership":{"contactGroupResourceName":id}});
+            if !memberships.contains(&member) {
+                memberships.push(member);
+            }
+        }
+        if memberships.is_empty() {
+            memberships.push(json!({"contactGroupMembership":{"contactGroupResourceName":"contactGroups/myContacts"}}));
+        }
+        body["memberships"] = json!(memberships);
+        Ok(())
     }
 
     /// The bytes of one contact photo. Google serves these from a plain

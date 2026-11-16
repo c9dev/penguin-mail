@@ -41,10 +41,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 69);
+    assert_eq!(schema_version(&conn).unwrap(), 72);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 69);
+    assert_eq!(schema_version(&conn).unwrap(), 72);
 }
 
 #[test]
@@ -434,4 +434,28 @@ fn an_online_accounts_row_reads_its_mail_over_imap_whatever_its_route_column_say
     .unwrap();
     let sign_in = accounts::gmail_sign_in(&conn, id).unwrap();
     assert_eq!(sign_in.route(), MailRoute::Imap);
+}
+
+#[test]
+fn expanded_contacts_invalidate_old_cursors_without_dropping_cached_cards() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("contacts.db");
+    let c = mailrs_store::open_connection(&path).unwrap();
+    let account = accounts::insert_account(&c, "owner@example.org", 0).unwrap();
+    c.execute("INSERT INTO contacts (account_id, resource, name, photo_file) VALUES (?1, 'card', 'Demo', 'cached.png')", [account]).unwrap();
+    c.execute(
+        "INSERT INTO contact_books VALUES (?1, 'old-token', 123)",
+        [account],
+    )
+    .unwrap();
+    c.pragma_update(None, "user_version", 71).unwrap();
+    drop(c);
+    let c = mailrs_store::open_connection(&path).unwrap();
+    assert_eq!(
+        mailrs_store::address_book::book(&c, account).unwrap(),
+        Some((None, 0))
+    );
+    let contacts = mailrs_store::address_book::list(&c).unwrap();
+    assert_eq!(contacts.len(), 1);
+    assert_eq!(contacts[0].photo_file.as_deref(), Some("cached.png"));
 }

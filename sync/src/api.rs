@@ -216,6 +216,14 @@ pub trait GmailApi: Send + Sync + 'static {
         resource: &str,
         fields: &ContactFields,
     ) -> impl Future<Output = Result<Person, GmailError>> + Send;
+    fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> impl Future<Output = Result<(), GmailError>> + Send {
+        let _ = (resource, revision);
+        async { Err(GmailError::NotFound) }
+    }
     /// Every calendar on the account. Answers `GmailError::MissingScope`
     /// until the account grants the calendar list permission.
     fn calendars(&self)
@@ -682,6 +690,14 @@ impl GmailApi for AccountClient {
 
     async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
         self.client.create_contact(fields).await
+    }
+
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), GmailError> {
+        self.client.delete_contact(resource, revision).await
     }
 
     async fn update_contact(

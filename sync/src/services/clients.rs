@@ -158,6 +158,7 @@ either_client! {
         fn set_vacation(vacation: &Vacation) -> Gmail<()>;
         fn connections(page_token: Option<&str>, sync_token: Option<&str>) -> Gmail<ConnectionsPage>;
         fn contact_photo(url: &str) -> Gmail<Vec<u8>>;
+        fn delete_contact(resource: &str, revision: Option<&str>) -> Gmail<()>;
         fn create_contact(fields: &ContactFields) -> Gmail<Person>;
         fn update_contact(resource: &str, fields: &ContactFields) -> Gmail<Person>;
         fn calendars() -> Gmail<Vec<calendar::Calendar>>;

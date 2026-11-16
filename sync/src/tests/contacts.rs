@@ -29,6 +29,7 @@ fn book(h: &Harness) -> Book {
 
 fn person(resource: &str, name: &str, emails: &[&str], photo: Option<&str>) -> Person {
     Person {
+        details: Default::default(),
         resource: resource.into(),
         name: Some(name.into()),
         emails: emails.iter().map(|e| e.to_string()).collect(),
@@ -451,4 +452,67 @@ async fn save_without_the_permission_asks_for_it_and_writes_nothing() {
         .await
         .unwrap();
     assert_eq!(emails(&new), ["ana@example.pt"]);
+}
+
+#[tokio::test]
+async fn google_contacts_edit_extended_fields_and_delete_through_the_shared_book() {
+    let h = harness().await;
+    let b = book(&h);
+    assert!(b.book.edits_details(h.account_id));
+    assert_eq!(
+        b.book.address_books(h.account_id).await.unwrap()[0].0,
+        "people/me"
+    );
+    let fields = mailrs_gmail::ContactFields {
+        name: Some("Demo Contact".into()),
+        phones: Some(vec!["+1 202 555 0101".into(), "+1 202 555 0102".into()]),
+        details: mailrs_domain::contact::Changes {
+            birthday: Some("--04-23".into()),
+            notes: Some("Demo notes".into()),
+            groups: Some(vec!["Friends".into()]),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let Permitted::Done(made) = b.book.create(h.account_id, &fields, true).await.unwrap() else {
+        panic!("permission")
+    };
+    assert_eq!(made.details.phones.len(), 2);
+    assert_eq!(made.details.groups, ["Friends"]);
+    assert_eq!(made.details.birthday, "--04-23");
+    b.book
+        .delete(h.account_id, made.resource, None)
+        .await
+        .unwrap();
+    assert!(h.db.read(address_book::list).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn resetting_a_cursor_replaces_cached_groups_and_keeps_the_photo() {
+    let h = harness().await;
+    let b = book(&h);
+    h.fake.with(|s| {
+        let mut old = person("people/c1", "Demo", &["demo@example.org"], Some("p/demo"));
+        old.details.groups = vec!["Friends,Work".into()];
+        old.details.birthday = "19850423".into();
+        s.contacts = vec![old];
+        s.photos.insert("p/demo".into(), b"jpeg".to_vec());
+    });
+    b.book.refresh(h.account_id).await.unwrap();
+    let old = b.book.card("demo@example.org").await.unwrap().unwrap();
+    assert_eq!(old.contact.details.groups, ["Friends,Work"]);
+    let account = h.account_id;
+    h.db.write(move |c| address_book::set_book(c, account, None, 0))
+        .await
+        .unwrap();
+    h.fake.with(|s| {
+        s.contacts[0].details.groups = vec!["Friends".into(), "Work".into()];
+        s.contacts[0].details.birthday = "1985-04-23".into();
+    });
+    b.book.refresh(h.account_id).await.unwrap();
+    let updated = b.book.card("demo@example.org").await.unwrap().unwrap();
+    assert_eq!(updated.contact.details.groups, ["Friends", "Work"]);
+    assert_eq!(updated.contact.details.birthday, "1985-04-23");
+    assert_eq!(updated.photo, old.photo);
+    assert_eq!(std::fs::read(updated.photo.unwrap()).unwrap(), b"jpeg");
 }

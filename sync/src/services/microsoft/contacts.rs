@@ -55,6 +55,16 @@ fn person_of(c: &GraphContact) -> Person {
         .or_else(|| c.business_phones.first().cloned())
         .or_else(|| c.home_phones.first().cloned());
     Person {
+        details: mailrs_domain::contact::Details {
+            phones: c
+                .mobile_phone
+                .iter()
+                .chain(&c.business_phones)
+                .chain(&c.home_phones)
+                .cloned()
+                .collect(),
+            ..Default::default()
+        },
         resource: c.id.clone(),
         name,
         emails: c
@@ -81,6 +91,7 @@ fn body_of(fields: &ContactFields) -> Value {
     }
     if let Some(phones) = &fields.phones {
         body.insert("mobilePhone".into(), json!(phones.first()));
+        body.insert("homePhones".into(), json!([]));
         body.insert(
             "businessPhones".into(),
             json!(phones.iter().skip(1).collect::<Vec<_>>()),

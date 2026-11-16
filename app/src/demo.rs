@@ -2426,6 +2426,22 @@ pub fn seed_contacts(conn: &Connection, photo_dir: &std::path::Path) -> Result<(
         address_book::save(
             conn,
             &[address_book::Contact {
+                details: mailrs_domain::contact::Details {
+                    phones: contact.phone.map(str::to_string).into_iter().collect(),
+                    groups: vec!["Friends".into()],
+                    birthday: "1990-04-12".into(),
+                    notes: "A sample contact for the address book demo.".into(),
+                    urls: vec!["https://example.org".into()],
+                    dates: vec![mailrs_domain::contact::Field {
+                        label: "Anniversary".into(),
+                        value: "2015-06-20".into(),
+                    }],
+                    custom: vec![mailrs_domain::contact::Field {
+                        label: "X-CUSTOMER-ID".into(),
+                        value: "DEMO-42".into(),
+                    }],
+                    ..Default::default()
+                },
                 account_id,
                 resource: contact.resource.into(),
                 name: Some(contact.name.into()),

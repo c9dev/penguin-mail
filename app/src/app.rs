@@ -1206,6 +1206,7 @@ impl App {
                             );
                         }
                     }
+                    this.contacts_added();
                     if refreshed.contacts == 0 && refreshed.photos == 0 {
                         return;
                     }
@@ -1214,8 +1215,6 @@ impl App {
                         photos = refreshed.photos,
                         "read the address book"
                     );
-                    this.contacts_stale.set(true);
-                    this.reload_contacts();
                 }
                 Err(err) => {
                     // A People API switched off in the Google Cloud project

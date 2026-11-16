@@ -165,3 +165,88 @@ async fn a_calendar_counts_the_events_its_delete_would_take() {
     let (h, copy) = filled().await;
     assert_eq!(copy.event_count(h.account_id, "team").await.unwrap(), 1);
 }
+
+#[tokio::test]
+async fn birthday_reads_follow_contact_edits_and_deletions_without_storing_events() {
+    use mailrs_store::address_book::{self, Contact};
+    let h = harness().await;
+    let copy = copy(&h);
+    let account = h.account_id;
+    let from = chrono::NaiveDate::from_ymd_opt(2027, 7, 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc()
+        .timestamp_millis();
+    let to = from + 31 * 24 * HOUR;
+    h.db.write(move |c| {
+        address_book::save(
+            c,
+            &[Contact {
+                account_id: account,
+                resource: "people/sample".into(),
+                name: Some("Sample Person".into()),
+                details: mailrs_domain::contact::Details {
+                    birthday: "1982-07-27".into(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }],
+        )
+    })
+    .await
+    .unwrap();
+    assert!(copy.birthdays(&[], from, to).await.unwrap().is_empty());
+    let found = copy.birthdays(&[account], from, to).await.unwrap();
+    assert_eq!(found.len(), 1);
+    assert!(found[0].event.title.ends_with("(45)"));
+    let id = &found[0].event.id;
+    assert_eq!(
+        copy.birthday(account, id).await.unwrap().as_ref(),
+        Some(found[0].event.as_ref())
+    );
+    assert!(copy.birthday(account, "bad-id").await.unwrap().is_none());
+    assert!(
+        copy.occurrences(&[account], from, to, CalendarScope::All)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    h.db.write(move |c| {
+        let mut contact = address_book::list(c)?.remove(0);
+        contact.details.birthday = "--08-10".into();
+        address_book::save(c, &[contact])
+    })
+    .await
+    .unwrap();
+    assert!(
+        copy.birthdays(&[account], from, to)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        !copy
+            .birthday(account, id)
+            .await
+            .unwrap()
+            .unwrap()
+            .title
+            .contains('(')
+    );
+    h.db.write(move |c| address_book::forget(c, account, &["people/sample".into()]))
+        .await
+        .unwrap();
+    assert!(copy.birthday(account, id).await.unwrap().is_none());
+    assert!(
+        copy.birthdays(&[account], from, to)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        copy.listed(&[account]).await.unwrap()[0]
+            .calendars
+            .is_empty()
+    );
+}

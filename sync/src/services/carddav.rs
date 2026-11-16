@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use mailrs_dav::ids::join;
 use mailrs_dav::vcard::{self, CardFields, Photo};
 use mailrs_dav::{DavApi, Kind, MULTIGET_BATCH, Precondition};
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::{ConnectionsPage, ContactFields, Person};
 
 use super::ContactsService;
@@ -47,6 +48,8 @@ impl<D> Clone for CardDav<D> {
 
 fn fields(from: &ContactFields) -> CardFields {
     CardFields {
+        details: from.details.clone(),
+        photo: from.photo.clone(),
         name: from.name.clone(),
         emails: from.emails.clone(),
         phones: from.phones.clone(),
@@ -54,13 +57,17 @@ fn fields(from: &ContactFields) -> CardFields {
     }
 }
 
-fn person(href: &str, card: vcard::Card) -> Person {
+fn person(href: &str, mut card: vcard::Card, revision: &str) -> Person {
+    card.details.revision = revision.to_string();
     Person {
         resource: href.to_string(),
         photo_url: match card.photo {
-            Some(Photo::Inline(_)) => Some(format!("{PHOTO_SCHEME}{href}")),
+            Some(Photo::Inline(_)) if card.details.members.is_none() => {
+                Some(format!("{PHOTO_SCHEME}{href}\n{revision}"))
+            }
             _ => None,
         },
+        details: card.details,
         name: card.name,
         emails: card.emails,
         organization: card.organization,
@@ -103,6 +110,108 @@ impl<D: DavApi> CardDav<D> {
         books.sort();
         *self.refused.lock().unwrap_or_else(PoisonError::into_inner) = None;
         Ok(books)
+    }
+
+    async fn groups(
+        &self,
+        resource: &str,
+        uid: &str,
+        wanted: &[String],
+        expected: Option<&[String]>,
+        categories: &[String],
+    ) -> Result<(), BackendError> {
+        let book = resource
+            .rsplit_once('/')
+            .map(|(parent, _)| format!("{parent}/"))
+            .ok_or(BackendError::Unsupported)?;
+        let members = self
+            .api
+            .members(&book, Kind::AddressBook, None)
+            .await
+            .map_err(|e| self.err(e))?;
+        let mut groups = Vec::new();
+        for batch in members.chunks(MULTIGET_BATCH) {
+            let hrefs: Vec<_> = batch.iter().map(|m| m.href.clone()).collect();
+            let fetched = self
+                .api
+                .fetch(&book, Kind::AddressBook, &hrefs)
+                .await
+                .map_err(|e| self.err(e))?;
+            for resource in fetched {
+                let card = vcard::read_card(&resource.body)
+                    .map_err(|e| BackendError::Refused(e.to_string()))?;
+                if let Some(members) = card.details.members {
+                    groups.push((resource, card.name.unwrap_or_default(), members));
+                }
+            }
+        }
+        if let Some(expected) = expected {
+            let mut actual = categories.to_vec();
+            actual.extend(
+                groups
+                    .iter()
+                    .filter(|(_, _, members)| members.iter().any(|m| m == uid))
+                    .map(|(_, name, _)| name.clone()),
+            );
+            actual.sort();
+            actual.dedup();
+            let mut expected = expected.to_vec();
+            expected.sort();
+            expected.dedup();
+            if actual != expected {
+                return Err(BackendError::Refused(gettext(
+                    "Contact groups changed on another device. Refresh contacts and reopen the editor.",
+                )));
+            }
+        }
+        let held_memberships: std::collections::HashSet<_> = groups
+            .iter()
+            .filter(|(_, _, members)| members.iter().any(|m| m == uid))
+            .map(|(_, name, _)| name.clone())
+            .collect();
+        for name in wanted {
+            if !held_memberships.contains(name)
+                && groups.iter().filter(|(_, n, _)| n == name).count() > 1
+            {
+                return Err(BackendError::Refused(gettext(
+                    "Several groups have the same name. Rename them in the account before adding this contact.",
+                )));
+            }
+        }
+        let icloud = self.api.host() == "icloud.com" || self.api.host().ends_with(".icloud.com");
+        if groups.is_empty() && !icloud {
+            return Ok(());
+        }
+        let mut held = std::collections::HashSet::new();
+        for (resource, name, members) in groups {
+            let include = wanted.contains(&name)
+                && (!held_memberships.contains(&name) || members.iter().any(|m| m == uid));
+            held.insert(name);
+            if include == members.iter().any(|m| m == uid) {
+                continue;
+            }
+            let body = vcard::group_membership(&resource.body, uid, include)
+                .map_err(|e| BackendError::Refused(e.to_string()))?;
+            self.api
+                .put(
+                    &resource.href,
+                    &body,
+                    Kind::AddressBook,
+                    Precondition::Match(resource.etag),
+                )
+                .await
+                .map_err(|e| self.err(e))?;
+        }
+        for name in wanted.iter().filter(|name| !held.contains(*name)) {
+            let group_uid = format!("pm-{:032x}", rand::random::<u128>());
+            let href = join(&book, &format!("{group_uid}.vcf"));
+            let body = vcard::new_group(&group_uid, name, uid);
+            self.api
+                .put(&href, &body, Kind::AddressBook, Precondition::NoneMatch)
+                .await
+                .map_err(|e| self.err(e))?;
+        }
+        Ok(())
     }
 
     /// Lists every book's changes since `tokens`, or every member without.
@@ -176,6 +285,35 @@ impl<D: DavApi> CardDav<D> {
 }
 
 impl<D: DavApi> ContactsService for CardDav<D> {
+    async fn address_books(&self) -> Result<Vec<(String, String)>, BackendError> {
+        let homes = self.api.homes().await.map_err(|e| self.err(e))?;
+        let home = homes.addressbook.ok_or(BackendError::Unsupported)?;
+        let books = self
+            .api
+            .collections(&home, Kind::AddressBook)
+            .await
+            .map_err(|e| self.err(e))?;
+        Ok(books.into_iter().map(|b| (b.href, b.name)).collect())
+    }
+
+    fn edits_details(&self) -> bool {
+        true
+    }
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        let current = self.api.get(resource).await.map_err(|e| self.err(e))?;
+        if revision.is_some_and(|etag| etag != current.etag) {
+            return Err(self.err(mailrs_dav::DavError::Changed));
+        }
+        self.api
+            .delete(resource, Some(current.etag.as_str()))
+            .await
+            .map_err(|e| self.err(e))
+    }
+
     async fn connections(
         &self,
         page_token: Option<&str>,
@@ -237,7 +375,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         let people = fetched
             .into_iter()
             .filter_map(|f| match vcard::read_card(&f.body) {
-                Ok(card) => Some(person(&f.href, card)),
+                Ok(card) => Some(person(&f.href, card, &f.etag)),
                 Err(err) => {
                     tracing::warn!(href = %f.href, %err, "skipped a vCard Penguin Mail cannot read");
                     None
@@ -256,6 +394,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         let href = url
             .strip_prefix(PHOTO_SCHEME)
             .ok_or(BackendError::Unsupported)?;
+        let href = href.split_once('\n').map_or(href, |(href, _)| href);
         let card = self.api.get(href).await.map_err(|e| self.err(e))?;
         match vcard::read_card(&card.body)
             .map_err(|e| BackendError::Refused(e.to_string()))?
@@ -267,21 +406,53 @@ impl<D: DavApi> ContactsService for CardDav<D> {
     }
 
     async fn create_contact(&self, fields_in: &ContactFields) -> Result<Person, BackendError> {
-        let book = self
-            .books()
-            .await?
-            .into_iter()
-            .next()
-            .ok_or(BackendError::Unsupported)?;
-        let uid = format!("pm-{:032x}", rand::random::<u128>());
+        vcard::validate(&fields(fields_in)).map_err(|e| BackendError::Refused(e.to_string()))?;
+        let books = self.books().await?;
+        let book = match &fields_in.address_book {
+            Some(book) if books.contains(book) => book.clone(),
+            Some(_) => return Err(BackendError::NotFound),
+            None => books.into_iter().next().ok_or(BackendError::Unsupported)?,
+        };
+        let uid = match &fields_in.creation_key {
+            Some(key)
+                if key.len() == 36 && key.bytes().all(|c| c.is_ascii_hexdigit() || c == b'-') =>
+            {
+                format!("pm-{key}")
+            }
+            Some(_) => return Err(BackendError::Unsupported),
+            None => format!("pm-{:032x}", rand::random::<u128>()),
+        };
         let href = join(&book, &format!("{uid}.vcf"));
         let body = vcard::new_card(&uid, &fields(fields_in));
-        self.api
+        vcard::read_card(&body).map_err(|e| BackendError::Refused(e.to_string()))?;
+        match self
+            .api
             .put(&href, &body, Kind::AddressBook, Precondition::NoneMatch)
             .await
-            .map_err(|e| self.err(e))?;
-        let card = vcard::read_card(&body).map_err(|e| BackendError::Refused(e.to_string()))?;
-        Ok(person(&href, card))
+        {
+            Ok(_) => {}
+            Err(mailrs_dav::DavError::Changed) if fields_in.creation_key.is_some() => {
+                // A stable editor key addresses only this creation, including a retry after a lost reply.
+                let saved = self.api.get(&href).await.map_err(|e| self.err(e))?;
+                let changed = vcard::patch_card(&saved.body, &fields(fields_in))
+                    .map_err(|e| BackendError::Refused(e.to_string()))?;
+                let before = vcard::read_card(&saved.body)
+                    .map_err(|e| BackendError::Refused(e.to_string()))?;
+                let after =
+                    vcard::read_card(&changed).map_err(|e| BackendError::Refused(e.to_string()))?;
+                if before != after {
+                    return Err(self.err(mailrs_dav::DavError::Changed));
+                }
+            }
+            Err(err) => return Err(self.err(err)),
+        }
+        if let Some(groups) = &fields_in.details.groups {
+            self.groups(&href, &uid, groups, None, &[]).await.map_err(|err| BackendError::Refused(fill(&gettext("The contact was created, but some groups could not be saved. Retry in this editor to finish without creating another contact: {reason}"), &[("reason", &err.to_string())])))?;
+        }
+        let saved = self.api.get(&href).await.map_err(|e| self.err(e))?;
+        let card =
+            vcard::read_card(&saved.body).map_err(|e| BackendError::Refused(e.to_string()))?;
+        Ok(person(&href, card, &saved.etag))
     }
 
     async fn update_contact(
@@ -290,8 +461,21 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         fields_in: &ContactFields,
     ) -> Result<Person, BackendError> {
         let current = self.api.get(resource).await.map_err(|e| self.err(e))?;
+        if fields_in
+            .expected_revision
+            .as_ref()
+            .is_some_and(|etag| etag != &current.etag)
+        {
+            return Err(self.err(mailrs_dav::DavError::Changed));
+        }
         let body = vcard::patch_card(&current.body, &fields(fields_in))
             .map_err(|e| BackendError::Refused(e.to_string()))?;
+        if let Some(groups) = &fields_in.details.groups {
+            let card = vcard::read_card(&current.body)
+                .map_err(|e| BackendError::Refused(e.to_string()))?;
+            let uid = card.uid.ok_or(BackendError::Unsupported)?;
+            self.groups(resource, &uid, groups, fields_in.expected_groups.as_deref(), &card.details.groups).await.map_err(|err| BackendError::Refused(fill(&gettext("Some group changes could not be saved. Refresh contacts before trying again: {reason}"), &[("reason", &err.to_string())])))?;
+        }
         self.api
             .put(
                 resource,
@@ -301,7 +485,9 @@ impl<D: DavApi> ContactsService for CardDav<D> {
             )
             .await
             .map_err(|e| self.err(e))?;
-        let card = vcard::read_card(&body).map_err(|e| BackendError::Refused(e.to_string()))?;
-        Ok(person(resource, card))
+        let saved = self.api.get(resource).await.map_err(|e| self.err(e))?;
+        let card =
+            vcard::read_card(&saved.body).map_err(|e| BackendError::Refused(e.to_string()))?;
+        Ok(person(resource, card, &saved.etag))
     }
 }

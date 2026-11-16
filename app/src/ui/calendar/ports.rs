@@ -155,11 +155,16 @@ impl Effects for Ports {
         let Some(view) = self.view() else {
             return Box::pin(async { closed() });
         };
+        let birthdays = view.birthday_accounts();
         let (core, copy) = (Rc::clone(&view.core), view.core.calendar_copy());
         Box::pin(async move {
             core.call(async move {
-                copy.occurrences(&accounts, from, to, CalendarScope::Shown)
-                    .await
+                let mut found = copy
+                    .occurrences(&accounts, from, to, CalendarScope::Shown)
+                    .await?;
+                found.extend(copy.birthdays(&birthdays, from, to).await?);
+                found.sort_by_key(|o| o.start);
+                Ok::<_, mailrs_sync::SyncError>(found)
             })
             .await
             .map_err(|err| err.to_string())
@@ -175,13 +180,15 @@ impl Effects for Ports {
         let Some(view) = self.view() else {
             return Box::pin(async { closed() });
         };
+        let birthdays = view.birthday_accounts();
         let (core, copy) = (Rc::clone(&view.core), view.core.calendar_copy());
         Box::pin(async move {
             core.call(async move {
                 let listed = copy.listed(&accounts).await?;
-                let busy = copy
+                let mut busy = copy
                     .occurrences(&accounts, from, to, CalendarScope::Shown)
                     .await?;
+                busy.extend(copy.birthdays(&birthdays, from, to).await?);
                 Ok::<_, mailrs_sync::SyncError>((listed, busy))
             })
             .await
@@ -216,11 +223,27 @@ impl Effects for Ports {
         let Some(view) = self.view() else {
             return Box::pin(async { closed() });
         };
+        let birthdays = view.birthday_accounts();
         let (core, copy) = (Rc::clone(&view.core), view.core.calendar_copy());
         Box::pin(async move {
             core.call(async move {
-                copy.search(&accounts, &text, now, CalendarScope::Shown, SEARCH_LIMIT)
-                    .await
+                let mut found = copy
+                    .search(&accounts, &text, now, CalendarScope::Shown, SEARCH_LIMIT)
+                    .await?;
+                let words = text.to_lowercase();
+                found.extend(
+                    copy.birthdays(&birthdays, now, now.saturating_add(366 * 86_400_000))
+                        .await?
+                        .into_iter()
+                        .filter(|o| {
+                            words
+                                .split_whitespace()
+                                .all(|word| o.event.title.to_lowercase().contains(word))
+                        }),
+                );
+                found.sort_by_key(|o| o.start);
+                found.truncate(SEARCH_LIMIT);
+                Ok::<_, mailrs_sync::SyncError>(found)
             })
             .await
             .map_err(|err| err.to_string())
@@ -231,12 +254,23 @@ impl Effects for Ports {
         let Some(view) = self.view() else {
             return Box::pin(async { closed() });
         };
+        let birthdays = view.birthday_accounts();
         let (core, copy) = (Rc::clone(&view.core), view.core.calendar_copy());
         let (account_id, calendar, id) = key;
         Box::pin(async move {
-            core.call(async move { copy.event(account_id, &calendar, &id).await })
-                .await
-                .map_err(|err| err.to_string())
+            core.call(async move {
+                if calendar == mailrs_sync::calendar_copy::birthdays::ID {
+                    if birthdays.contains(&account_id) {
+                        copy.birthday(account_id, &id).await
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    copy.event(account_id, &calendar, &id).await
+                }
+            })
+            .await
+            .map_err(|err| err.to_string())
         })
     }
 

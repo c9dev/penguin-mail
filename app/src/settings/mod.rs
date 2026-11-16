@@ -164,6 +164,8 @@ pub struct Settings {
     /// Show events the person said No to, faded and struck through,
     /// rather than leaving them out.
     pub show_declined_events: bool,
+    /// Show a local calendar derived from contact birthdays.
+    pub show_contact_birthdays: bool,
     /// The hours meetings usually run in, and the days they run on: the
     /// Day and Week grid shades what falls outside them, Month shades a
     /// day that is not one of them, and the assistant's free-time tool
@@ -574,6 +576,7 @@ impl Default for Settings {
             message_list_width: None,
             calendar_view: CalendarView::Week,
             show_declined_events: false,
+            show_contact_birthdays: false,
             working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
             week_start: WeekStart::default(),
             calendar_clock: CalendarClock::default(),

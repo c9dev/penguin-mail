@@ -742,7 +742,13 @@ impl EventPopover {
         self.repeat_label
             .set_label(repeats.as_deref().unwrap_or_default());
         self.calendar_label.set_label(&calendar.name);
-        let kind = kinds::popover_words(&event.kind);
+        let kind = if event.calendar == mailrs_sync::calendar_copy::birthdays::ID {
+            Some(gettext(
+                "Birthday from your contacts. Edit the contact to change it.",
+            ))
+        } else {
+            kinds::popover_words(&event.kind)
+        };
         self.kind_label.set_visible(kind.is_some());
         self.kind_label
             .set_label(kind.as_deref().unwrap_or_default());

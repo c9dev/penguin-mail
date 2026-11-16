@@ -223,6 +223,21 @@ fn version_fourteen(path: &std::path::Path) {
             moved_from INTEGER,
             PRIMARY KEY (account_id, uid)
         );
+        CREATE TABLE contact_books (
+            account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+            sync_token TEXT,
+            synced_at INTEGER NOT NULL
+        );
+        CREATE TABLE contacts (
+    account_id   INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource     TEXT NOT NULL,
+    name         TEXT,
+    organization TEXT,
+    phone        TEXT,
+    photo_url    TEXT,
+    photo_file   TEXT,
+    PRIMARY KEY (account_id, resource)
+);
         INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
         INSERT INTO scheduled VALUES (1, 'r1', 'm1', 't1', 'Monday', 'Ann', 5000);
         PRAGMA user_version = 14;",

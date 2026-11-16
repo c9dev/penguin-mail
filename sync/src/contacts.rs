@@ -163,6 +163,36 @@ impl<A: Accounts> ContactBook<A> {
         Ok(())
     }
 
+    pub async fn address_books(
+        &self,
+        account_id: AccountId,
+    ) -> Result<Vec<(String, String)>, SyncError> {
+        Ok(self.contacts(account_id)?.address_books().await?)
+    }
+
+    /// Whether this service can edit the full vCard, including its photo.
+    pub fn edits_details(&self, account_id: AccountId) -> bool {
+        self.contacts(account_id)
+            .is_ok_and(|service| service.edits_details())
+    }
+
+    pub async fn delete(
+        &self,
+        account_id: AccountId,
+        resource: String,
+        revision: Option<String>,
+    ) -> Result<(), SyncError> {
+        self.contacts(account_id)?
+            .delete_contact(&resource, revision.as_deref())
+            .await?;
+        let photo = self.photos.join(photo_file(account_id, &resource));
+        self.db
+            .write(move |c| address_book::forget(c, account_id, &[resource]))
+            .await?;
+        let _ = std::fs::remove_file(photo);
+        Ok(())
+    }
+
     /// Adds a contact to the account's Google contacts. With `keep`, the
     /// account's address book on this computer takes the new contact too,
     /// so it shows before the next refresh; an account whose contacts are
@@ -173,8 +203,30 @@ impl<A: Accounts> ContactBook<A> {
         fields: &ContactFields,
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
-        let made = self.contacts(account_id)?.create_contact(fields).await;
-        self.stored(account_id, made, keep).await
+        let service = self.contacts(account_id)?;
+        if !service.edits_details()
+            && (fields.details != Default::default() || fields.photo.is_some())
+        {
+            return Err(BackendError::Unsupported.into());
+        }
+        let made = service.create_contact(fields).await;
+        let saved = self.stored(account_id, made, keep).await?;
+        if keep {
+            if let Some(groups) = &fields.details.groups {
+                if let Permitted::Done(contact) = &saved {
+                    let (contact, groups) = (contact.clone(), groups.clone());
+                    self.db
+                        .write(move |c| address_book::set_memberships(c, &contact, &groups))
+                        .await?;
+                }
+                if let Err(err) = self.refresh(account_id).await {
+                    tracing::warn!(%err, "saved contact but could not refresh address book");
+                }
+            } else {
+                let _ = self.fetch_photos(&service, account_id).await;
+            }
+        }
+        Ok(saved)
     }
 
     /// Changes the fields `fields` names on the contact `resource`, and
@@ -187,11 +239,30 @@ impl<A: Accounts> ContactBook<A> {
         fields: &ContactFields,
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
-        let changed = self
-            .contacts(account_id)?
-            .update_contact(resource, fields)
-            .await;
-        self.stored(account_id, changed, keep).await
+        let service = self.contacts(account_id)?;
+        if !service.edits_details()
+            && (fields.details != Default::default() || fields.photo.is_some())
+        {
+            return Err(BackendError::Unsupported.into());
+        }
+        let changed = service.update_contact(resource, fields).await;
+        let saved = self.stored(account_id, changed, keep).await?;
+        if keep {
+            if let Some(groups) = &fields.details.groups {
+                if let Permitted::Done(contact) = &saved {
+                    let (contact, groups) = (contact.clone(), groups.clone());
+                    self.db
+                        .write(move |c| address_book::set_memberships(c, &contact, &groups))
+                        .await?;
+                }
+                if let Err(err) = self.refresh(account_id).await {
+                    tracing::warn!(%err, "saved contact but could not refresh address book");
+                }
+            } else {
+                let _ = self.fetch_photos(&service, account_id).await;
+            }
+        }
+        Ok(saved)
     }
 
     /// The contact Google sent back, stored when `keep` says so. A missing
@@ -211,6 +282,7 @@ impl<A: Accounts> ContactBook<A> {
         };
         let contact = Contact {
             account_id,
+            details: person.details,
             resource: person.resource,
             name: person.name,
             emails: person.emails,
@@ -404,6 +476,7 @@ impl<A: Accounts> ContactBook<A> {
                 };
                 read.extend(page.people.iter().map(|person| Contact {
                     account_id,
+                    details: person.details.clone(),
                     resource: person.resource.clone(),
                     name: person.name.clone(),
                     emails: person.emails.clone(),

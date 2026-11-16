@@ -383,6 +383,7 @@ pub enum AddKind {
 /// What the person chose in the calendar list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ListChange {
+    Birthdays(bool),
     /// Ticked or unticked a calendar's check.
     Shown {
         account: AccountId,
@@ -402,7 +403,10 @@ pub enum ListChange {
         color: Option<String>,
     },
     /// Folded an account's calendars under its heading, or opened them.
-    Folded { address: String, folded: bool },
+    Folded {
+        address: String,
+        folded: bool,
+    },
     /// Asked to rename a calendar, which opens a dialog.
     Rename {
         account: AccountId,
@@ -419,7 +423,10 @@ pub enum ListChange {
         calendar: String,
     },
     /// Asked to add a calendar to an account, which opens a dialog.
-    Add { account: AccountId, kind: AddKind },
+    Add {
+        account: AccountId,
+        kind: AddKind,
+    },
 }
 
 type OnDate = dyn Fn(NaiveDate);
@@ -463,6 +470,7 @@ pub struct CalendarSidebar {
     /// whole sidebar.
     weekday_labels: Vec<gtk::Label>,
     calendar_list: gtk::Box,
+    birthdays: gtk::CheckButton,
     /// "Offline, last updated 14:32" under the mini month, hidden while
     /// nothing is wrong. Sits above `calendar_list`, not under it, so it
     /// stays on screen without scrolling whatever that list holds.
@@ -489,6 +497,10 @@ pub struct CalendarSidebar {
 }
 
 impl CalendarSidebar {
+    pub fn set_birthdays(&self, shown: bool) {
+        self.birthdays.set_active(shown);
+    }
+
     /// `on_date` runs for a day cell, and for the mini month's own
     /// Previous/Next Month arrows with the 1st of that month. The view
     /// goes to the date and calls `show` again, so the grid and the mini
@@ -676,6 +688,18 @@ impl CalendarSidebar {
         offline_line.set_visible(false);
         content.append(&offline_line);
 
+        let birthdays = gtk::CheckButton::builder()
+            .label(gettext("Birthdays"))
+            .margin_start(8)
+            .margin_top(8)
+            .build();
+        crate::ui::name(&birthdays, &gettext("Birthdays"));
+        birthdays.connect_toggled({
+            let on_change = Rc::clone(&on_change);
+            move |button| on_change(ListChange::Birthdays(button.is_active()))
+        });
+        content.append(&birthdays);
+
         let calendar_list = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(0)
@@ -736,6 +760,7 @@ impl CalendarSidebar {
             days,
             weekday_labels,
             calendar_list,
+            birthdays,
             offline_line,
             listed: RefCell::new(Vec::new()),
             waiting_section,

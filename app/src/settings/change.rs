@@ -94,6 +94,7 @@ pub enum Change {
     /// The grid the calendar shows.
     CalendarView(super::CalendarView),
     ShowDeclinedEvents(bool),
+    ShowContactBirthdays(bool),
     /// The hours and days meetings usually run in.
     WorkingHours(mailrs_domain::calendar::hours::WorkingHours),
     /// Which day the calendar's grids start the week on.
@@ -368,6 +369,7 @@ impl Change {
             Change::Space(space) => settings.space = space,
             Change::CalendarView(view) => settings.calendar_view = view,
             Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
+            Change::ShowContactBirthdays(on) => settings.show_contact_birthdays = on,
             Change::WorkingHours(hours) => settings.working_hours = hours,
             Change::WeekStart(week_start) => settings.week_start = week_start,
             Change::CalendarClock(clock) => settings.calendar_clock = clock,
@@ -745,6 +747,7 @@ settable! {
         // Hiding declined events is the person's own view of the calendar,
         // and so is which space the window opened on.
         show_declined_events,
+        show_contact_birthdays,
         sign_by_default,
         signatures,
         signature_modes,
@@ -973,6 +976,7 @@ impl Effects {
             message_list_width,
             calendar_view,
             show_declined_events,
+            show_contact_birthdays,
             working_hours,
             week_start,
             calendar_clock,
@@ -1099,7 +1103,9 @@ impl Effects {
                 Effect::Theme => *color_scheme != before.color_scheme,
                 Effect::Language => *language != before.language,
                 Effect::Calendar => {
-                    *week_start != before.week_start || *calendar_clock != before.calendar_clock
+                    *week_start != before.week_start
+                        || *calendar_clock != before.calendar_clock
+                        || *show_contact_birthdays != before.show_contact_birthdays
                 }
                 Effect::Translation => {
                     *never_translate != before.never_translate || ai.language != before.ai.language
@@ -1369,6 +1375,38 @@ mod tests {
             assert_eq!(
                 toml::from_str::<Settings>(&saved).unwrap().calendar_clock,
                 clock
+            );
+        }
+    }
+
+    #[test]
+    fn contact_birthdays_persist_and_redraw_only_when_changed() {
+        let mut settings = Settings::default();
+        assert!(!settings.show_contact_birthdays);
+        assert!(
+            !toml::from_str::<Settings>("")
+                .unwrap()
+                .show_contact_birthdays
+        );
+        for on in [true, false] {
+            assert_eq!(
+                Change::ShowContactBirthdays(on)
+                    .apply(&mut settings)
+                    .iter()
+                    .collect::<Vec<_>>(),
+                vec![Effect::Calendar]
+            );
+            assert!(
+                Change::ShowContactBirthdays(on)
+                    .apply(&mut settings)
+                    .is_empty()
+            );
+            let saved = toml::to_string(&settings).unwrap();
+            assert_eq!(
+                toml::from_str::<Settings>(&saved)
+                    .unwrap()
+                    .show_contact_birthdays,
+                on
             );
         }
     }

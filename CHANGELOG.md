@@ -7,6 +7,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Contact cards identify their account in the upper-right corner, separate from the person's email addresses.
+
+- Open a contact's websites by clicking their links.
+
+- Contact birthdays show the day, month and current age, and dates without a year stay yearless.
+- CardDAV contacts split comma-separated groups and refresh previously cached group lists.
+
+- Contacts hides accounts whose contacts are disabled.
+- Existing address books reload their full details, including groups, additional phone numbers and birthdays.
+- Google contacts load when the contact window opens and support editing groups, dates, custom fields and photos.
+
 - Closing Customize Mailboxes releases its folder lists.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
 - Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
@@ -17,6 +28,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Favorites stay visible when their account is collapsed, and folder moves respect the customized order.
 
 ### New
+
+- Show contact birthdays in the calendar with a Birthdays switch, including the age reached when the birth year is known.
+
+- Open Contacts from the menu to search and edit address books, manage CardDAV groups, dates and custom fields, crop photos, write mail, and open phone or SMS links.
 
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
 

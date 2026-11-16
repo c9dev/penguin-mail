@@ -45,6 +45,12 @@ pub(crate) fn person_of(card: &Value) -> Person {
             (!parts.is_empty()).then(|| parts.join(" "))
         });
     Person {
+        details: mailrs_domain::contact::Details {
+            phones: values(card, "phones")
+                .filter_map(|p| p["number"].as_str().map(str::to_string))
+                .collect(),
+            ..Default::default()
+        },
         resource: card["id"].as_str().unwrap_or_default().to_string(),
         name,
         emails: values(card, "emails")
