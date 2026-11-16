@@ -184,6 +184,7 @@ impl Window {
         });
         this.reload();
         this.window.present();
+        this.refresh();
         this
     }
 

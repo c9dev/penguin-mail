@@ -263,3 +263,16 @@ fn group_membership_preserves_other_members_and_unknown_fields() {
     );
     assert!(removed.contains("X-KEEP:yes"));
 }
+
+#[test]
+fn version_three_cards_keep_multiple_groups_phones_and_a_birthday() {
+    let groups = read_card("BEGIN:VCARD\r\nVERSION:3.0\r\nUID:demo-groups\r\nFN:Demo Groups\r\nEMAIL;TYPE=HOME:groups@example.org\r\nTEL;TYPE=CELL:+1 202 555 0100\r\nCATEGORIES:Friends,Colleagues\r\nX-ABLABEL:Personal\r\nPHOTO;TYPE=JPEG;ENCODING=BASE64:/9j/2Q==\r\nEND:VCARD\r\n").unwrap();
+    assert_eq!(groups.details.groups, ["Friends", "Colleagues"]);
+    let phones = read_card("BEGIN:VCARD\r\nVERSION:3.0\r\nUID:demo-phones\r\nFN:Demo Phones\r\nTEL;TYPE=cell,pref:+1 202 555 0101\r\nTEL;TYPE=cell:+1 202 555 0102\r\nBDAY:1985-04-23\r\nPHOTO;ENCODING=b;TYPE=jpeg:/9j/2Q==\r\nEND:VCARD\r\n").unwrap();
+    assert_eq!(
+        phones.details.phones,
+        ["+1 202 555 0101", "+1 202 555 0102"]
+    );
+    assert_eq!(phones.details.birthday.replace('-', ""), "19850423");
+    assert!(matches!(phones.photo, Some(Photo::Inline(_))));
+}

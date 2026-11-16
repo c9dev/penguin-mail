@@ -8,6 +8,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - Contacts hides accounts whose contacts are disabled.
+- Existing address books reload their full details, including groups, additional phone numbers and birthdays.
 
 - Closing Customize Mailboxes releases its folder lists.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.

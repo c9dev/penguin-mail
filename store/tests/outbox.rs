@@ -223,6 +223,11 @@ fn version_fourteen(path: &std::path::Path) {
             moved_from INTEGER,
             PRIMARY KEY (account_id, uid)
         );
+        CREATE TABLE contact_books (
+            account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+            sync_token TEXT,
+            synced_at INTEGER NOT NULL
+        );
         CREATE TABLE contacts (
     account_id   INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     resource     TEXT NOT NULL,
