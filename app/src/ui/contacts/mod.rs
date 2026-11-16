@@ -47,7 +47,11 @@ impl Window {
                 window.close();
             }
         });
-        let owners = app.accounts();
+        let owners = app
+            .accounts()
+            .into_iter()
+            .filter(|a| app.core.demo || app.settings().reads_contacts(&a.email))
+            .collect::<Vec<_>>();
         let mut names = vec![gettext("All Accounts")];
         names.extend(owners.iter().map(|a| a.email.clone()));
         let account =
@@ -200,7 +204,13 @@ impl Window {
                 return;
             };
             match result {
-                Ok(contacts) => {
+                Ok(mut contacts) => {
+                    contacts.retain(|c| {
+                        this.owners.iter().any(|a| {
+                            a.id == c.account_id
+                                && (app.core.demo || app.settings().reads_contacts(&a.email))
+                        })
+                    });
                     let mut groups: Vec<_> = contacts
                         .iter()
                         .flat_map(|c| c.details.groups.clone())
