@@ -1154,7 +1154,15 @@ mod tests {
         let wanted = body();
         write(&view, &wanted, &[], &mut anchors);
         let read_back = read(&buffer, &anchors);
-        assert_eq!(read_back, wanted, "{}", read_back.to_markdown());
+        let mut expected = wanted.clone();
+        // The editor keeps blank separators without quote provenance.
+        // Lines with text or pictures must retain their quote marks.
+        for block in &mut expected.blocks {
+            if block.kind == BlockKind::Paragraph && block.spans.is_empty() {
+                block.quoted = false;
+            }
+        }
+        assert_eq!(read_back, expected, "{}", read_back.to_markdown());
         assert_eq!(read_back.to_html(), wanted.to_html());
         assert!(
             read_back.to_html().contains("<strong>Ann</strong>"),

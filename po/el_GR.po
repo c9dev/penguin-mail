@@ -2317,40 +2317,40 @@ msgstr ""
 "Το Penguin Mail δεν μπόρεσε να ενημερώσει τον χώρο αποθήκευσης αλληλογραφίας "
 "και κράτησε τον παλιό."
 
-#: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
-#: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1669
+#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
+#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
+#: app/src/core.rs:1445 app/src/core.rs:1697
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 "Η λειτουργία επίδειξης δεν μπορεί να προσθέσει πραγματικούς λογαριασμούς."
 
-#: app/src/core.rs:982 app/src/core.rs:1693 app/src/core.rs:1734
-#: app/src/core.rs:1990
+#: app/src/core.rs:1010 app/src/core.rs:1721 app/src/core.rs:1762
+#: app/src/core.rs:2018
 msgid "Canceled."
 msgstr "Ακυρώθηκε."
 
-#: app/src/core.rs:1589 app/src/core.rs:1614
+#: app/src/core.rs:1617 app/src/core.rs:1642
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Αυτός ο λογαριασμός δεν διατηρεί κωδικό πρόσβασης που να δέχεται ένας "
 "διακομιστής ημερολογίου ή επαφών."
 
-#: app/src/core.rs:1738
+#: app/src/core.rs:1766
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Αφαιρέστε τα κοινόχρηστα γραμματοκιβώτια αυτού του λογαριασμού πριν "
 "αφαιρέσετε τον λογαριασμό σύνδεσής του."
 
-#: app/src/core.rs:1916 app/src/core.rs:2016
+#: app/src/core.rs:1944 app/src/core.rs:2044
 msgid "The demo cannot switch accounts."
 msgstr "Η επίδειξη δεν μπορεί να αλλάξει λογαριασμούς."
 
-#: app/src/core.rs:1970
+#: app/src/core.rs:1998
 msgid "The demo cannot connect a calendar."
 msgstr "Η επίδειξη δεν μπορεί να συνδέσει ημερολόγιο."
 
-#: app/src/core.rs:2036
+#: app/src/core.rs:2064
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 "Η αναμονή για το πρόγραμμα περιήγησης εγκαταλείφθηκε μετά από πέντε λεπτά."
