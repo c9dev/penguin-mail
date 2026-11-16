@@ -36,10 +36,6 @@ pub const MOST_EVENT_BYTES: usize = 1 << 20;
 
 const TYPES: &str = "Email,Mailbox,EmailDelivery";
 
-/// How long the echo sent beside a new stream may take before the server
-/// counts as one that holds calls while a stream is open.
-const PROBE_LIMIT: Duration = Duration::from_secs(10);
-
 /// The longest event name kept. Real names are `state` and `ping`.
 const MOST_NAME_BYTES: usize = 64;
 
@@ -368,7 +364,7 @@ impl JmapClient {
     async fn answers_beside_a_stream(&self) -> Result<bool, JmapError> {
         let mut request = Request::new();
         let call = request.call(CORE, "Core/echo", serde_json::json!({}));
-        match tokio::time::timeout(PROBE_LIMIT, self.send(&request)).await {
+        match tokio::time::timeout(self.push_limits().probe, self.send(&request)).await {
             Err(_) => Ok(false),
             Ok(answer) => {
                 answer?.take::<serde_json::Value>(&call, "Core/echo")?;

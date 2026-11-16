@@ -32,6 +32,26 @@ const LIMIT: Duration = Duration::from_secs(20);
 /// How long a page that has loaded gets before a script reads it. Many
 /// of these pages draw their form from JavaScript after the load ends.
 const SETTLE: Duration = Duration::from_millis(500);
+
+/// The pauses the run gives a page. [`Hidden::new`] uses the real ones;
+/// a check that reads pages off the disk passes shorter ones to
+/// [`Hidden::with_waits`], whose fixtures keep the same order of events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Waits {
+    /// See `SETTLE`.
+    pub settle: Duration,
+    /// See `AGAIN`.
+    pub again: Duration,
+}
+
+impl Default for Waits {
+    fn default() -> Self {
+        Waits {
+            settle: SETTLE,
+            again: AGAIN,
+        }
+    }
+}
 /// How long a press has to take the page somewhere. Past this the page
 /// answered where it stands, which is as common as posting a form.
 const AFTER: Duration = Duration::from_secs(5);
@@ -127,6 +147,7 @@ impl State {
 pub struct Hidden<E> {
     engine: E,
     state: Rc<State>,
+    waits: Waits,
 }
 
 impl<E: Engine> Default for Hidden<E> {
@@ -137,10 +158,15 @@ impl<E: Engine> Default for Hidden<E> {
 
 impl<E: Engine> Hidden<E> {
     pub fn new() -> Hidden<E> {
+        Hidden::with_waits(Waits::default())
+    }
+
+    pub fn with_waits(waits: Waits) -> Hidden<E> {
         let state = Rc::new(State::default());
         Hidden {
             engine: E::start(Rc::clone(&state)),
             state,
+            waits,
         }
     }
 
@@ -239,7 +265,7 @@ impl<E: Engine> Hidden<E> {
             // the same twenty seconds the first page had.
             self.arrive(landed, LIMIT).await?;
         }
-        glib::timeout_future(SETTLE).await;
+        glib::timeout_future(self.waits.settle).await;
         let mut page = self.read().await?;
         let alerts = self.state.alerts.take();
         if !alerts.is_empty() {
@@ -259,7 +285,7 @@ impl<E: Engine> Browser for Hidden<E> {
             let settled = self.watch();
             self.engine.load(&url);
             self.arrive(settled, LIMIT).await?;
-            glib::timeout_future(SETTLE).await;
+            glib::timeout_future(self.waits.settle).await;
             self.read().await
         })
     }
@@ -270,7 +296,7 @@ impl<E: Engine> Browser for Hidden<E> {
 
     fn reread(&self) -> Answer<'_, Result<PageForm, PageError>> {
         Box::pin(async move {
-            glib::timeout_future(AGAIN).await;
+            glib::timeout_future(self.waits.again).await;
             self.read().await
         })
     }
