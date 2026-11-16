@@ -618,7 +618,7 @@ fn samples() -> Vec<Sample> {
             // A notification in GitHub's shape: its font and line height
             // sit on <body>, and the annotation count beside its icon is
             // a table cell inside a link.
-            html: Some(include_str!("demo/github-ci.html")),
+            html: Some(include_str!("../../client/tests/fixtures/github-ci.html")),
             ..PLAIN
         },
         Sample {

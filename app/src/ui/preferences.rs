@@ -948,7 +948,7 @@ fn spelling_group(
     }
     // Each row is an account and its value the language, so the group
     // says what the rows choose.
-    let names = crate::language_names::IsoNames::load();
+    let names = mailrs_client::language_names::IsoNames::load();
     let named: Vec<String> = installed.iter().map(|code| names.name(code)).collect();
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Spelling"))

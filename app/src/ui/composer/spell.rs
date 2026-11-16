@@ -27,7 +27,7 @@ use gtk::prelude::*;
 use gtk::{gio, glib, pango};
 
 use super::richbuffer;
-use crate::richtext::BlockKind;
+use mailrs_client::richtext::BlockKind;
 use mailrs_domain::translate::gettext;
 
 /// The tag that draws the squiggle.

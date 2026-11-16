@@ -4594,7 +4594,7 @@ impl PressEffects for Pressing {
         &self,
         targets: Vec<Target>,
         from: MovedFrom,
-    ) -> crate::wanted::Answer<'_, Option<MovedFrom>> {
+    ) -> mailrs_client::wanted::Answer<'_, Option<MovedFrom>> {
         Box::pin(self.prepare_smart_trash(targets, from))
     }
 
@@ -4602,7 +4602,7 @@ impl PressEffects for Pressing {
         self.window.move_on(&self.view);
     }
 
-    fn confirm(&self, question: Question) -> crate::wanted::Answer<'_, bool> {
+    fn confirm(&self, question: Question) -> mailrs_client::wanted::Answer<'_, bool> {
         let asked = confirm(
             &question.heading,
             &question.body,
@@ -4657,7 +4657,7 @@ impl PressEffects for Pressing {
 /// The main window as a reply from a notification waits on it.
 struct Replying(Rc<MainWindow>);
 
-impl crate::wanted::Screen for Replying {
+impl mailrs_client::wanted::Screen for Replying {
     fn is_showing(&self, target: &Target) -> bool {
         self.0.conversation.is_showing(target)
     }
@@ -4675,7 +4675,7 @@ impl reveal::Waiting for Replying {
             .unwrap_or(false)
     }
 
-    fn sleep(&self, step: std::time::Duration) -> crate::wanted::Answer<'_, ()> {
+    fn sleep(&self, step: std::time::Duration) -> mailrs_client::wanted::Answer<'_, ()> {
         Box::pin(glib::timeout_future(step))
     }
 

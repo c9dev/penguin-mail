@@ -15,7 +15,7 @@
 //! rule above tests without a widget.
 
 use super::{Outcome, PageError, PageForm, Pick, Plan, Unsure, rules};
-pub use crate::wanted::Answer;
+pub use mailrs_client::wanted::Answer;
 
 /// The hidden view, as the run needs it.
 pub trait Browser {

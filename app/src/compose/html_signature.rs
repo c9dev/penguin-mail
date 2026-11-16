@@ -22,7 +22,7 @@ use super::{
     OutgoingAttachment, html_to_text, plain_as_markdown, quote_after_signature,
     rich_signature_change, signature_starts_at,
 };
-use crate::richtext::{self, Block, BlockKind, RichBody, Span};
+use mailrs_client::richtext::{self, Block, BlockKind, RichBody, Span};
 
 /// An HTML signature for one sending address, its tokens filled in.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

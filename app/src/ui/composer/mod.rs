@@ -32,7 +32,6 @@ use self::saving::{Landed, Saving};
 use self::work::Work;
 use super::autocomplete::Contacts;
 use super::{labelled_by, name, name_with_shortcut, roving};
-use crate::attachcheck::Promise;
 use crate::compose::{
     Asking, Built, Draft, Forwarded, Gate, OutgoingAttachment, SendWhen, build, format_recipients,
     gate, html_to_send, is_address, kept_mask, masked_site, new_message_id, off_thread,
@@ -41,11 +40,12 @@ use crate::compose::{
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
 use crate::protection::{self, Held, Standard};
-use crate::richtext::{BlockKind, RichBody};
 use crate::settings::ComposeFormat;
-use crate::stray_markdown;
-use crate::templates::{self, Filling};
 use crate::web::WebView;
+use mailrs_client::attachcheck::Promise;
+use mailrs_client::richtext::{BlockKind, RichBody};
+use mailrs_client::stray_markdown;
+use mailrs_client::templates::{self, Filling};
 use mailrs_domain::Address;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_sync::MailBackend;

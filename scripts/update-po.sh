@@ -68,7 +68,7 @@ cat "$work/header.pot" "$work/merged.pot" > "$work/penguin-mail.pot"
 
 # POTFILES.in is what the extraction reads, so a file left out of it may be
 # a file whose words nobody can translate. Say so loudly, and fail the check.
-grep -rlE '(gettext|fill_plural)\(' --include='*.rs' app/src domain/src sync/src |
+grep -rlE '(gettext|fill_plural)\(' --include='*.rs' app/src client/src domain/src sync/src |
     LC_ALL=C sort > "$work/rust.txt"
 forgotten=$(LC_ALL=C comm -13 <(echo "$listed") "$work/rust.txt")
 if [ -n "$forgotten" ]; then

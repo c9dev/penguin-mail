@@ -43,14 +43,14 @@ use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
 use crate::offered::Filing;
-use crate::open_thread::inline::{self, Address};
 use crate::open_thread::run::{Fetched, InlinePictures};
-use crate::open_thread::{Article, OpenThread, Page, Served, Unsent};
+use crate::open_thread::{Article, OpenThread, Page, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
 use crate::render::{FOLD_MS, Theme};
 use crate::translation::Translation;
 use crate::web::{self, WebView};
+use mailrs_client::inline::{self, Address, Served};
 
 pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the

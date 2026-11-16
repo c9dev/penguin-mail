@@ -10,7 +10,7 @@ use mailrs_store::{address_book, contacts, templates};
 use tokio::io::AsyncWriteExt;
 
 use super::*;
-use crate::templates::{Filling, expand, today};
+use mailrs_client::templates::{Filling, expand, today};
 
 /// The most text an attachment gives the model, in characters.
 const MOST_ATTACHMENT_CHARS: usize = 20_000;

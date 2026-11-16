@@ -621,7 +621,7 @@ fn filter_url<'u>(
     if let Some(cid) = lower.strip_prefix("cid:") {
         let key = &value.trim_start()[value.trim_start().len() - cid.len()..];
         let pictures = pictures.filter(|_| element == "img" && !key.is_empty())?;
-        let address = format!("{pictures}{}", crate::open_thread::inline::escape(key));
+        let address = format!("{pictures}{}", crate::inline::escape(key));
         return Some(Cow::Owned(address));
     }
     if lower.starts_with("data:") {
@@ -896,7 +896,7 @@ mod body_tests {
     /// dropped the tag and the page's own font showed instead.
     #[test]
     fn the_body_tag_s_styles_move_to_the_wrapper() {
-        let out = clean(include_str!("demo/github-ci.html"));
+        let out = clean(include_str!("../tests/fixtures/github-ci.html"));
         let body = style_of(&out, "mailrs-body");
         assert!(
             body.contains("font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica"),
