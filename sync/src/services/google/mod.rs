@@ -365,6 +365,17 @@ impl<G: GmailApi> MailBackend for Google<G> {
         self.every_id(None, "in:inbox").await
     }
 
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        let refs = self
+            .every_id(None, &mailrs_gmail::query::print(query))
+            .await?;
+        Ok(refs
+            .into_iter()
+            .map(|hit| hit.id)
+            .collect::<std::collections::HashSet<_>>()
+            .len() as i64)
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,

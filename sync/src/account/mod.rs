@@ -103,6 +103,9 @@ pub struct AccountSync {
     /// Set once this run has compared its window with the one the stored
     /// mail was loaded for; see `follow_window`.
     window_followed: std::sync::atomic::AtomicBool,
+    /// Set once this run has listed the account's mailboxes; see
+    /// `list_mailboxes_once`.
+    mailboxes_listed: std::sync::atomic::AtomicBool,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -136,6 +139,7 @@ impl AccountSync {
             raw: Arc::new(Mutex::new(RawCache::new(RAW_CACHE_BYTES))),
             mail_changes: tokio::sync::watch::Sender::new(0),
             window_followed: std::sync::atomic::AtomicBool::new(false),
+            mailboxes_listed: std::sync::atomic::AtomicBool::new(false),
         }
     }
 

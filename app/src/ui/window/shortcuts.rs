@@ -743,7 +743,7 @@ const MAIL_ONLY: &[&str] = &[
 pub(super) fn route(space: Space, name: &str) -> Route {
     match space {
         Space::Mail => Route::Run,
-        Space::Calendar if name == "customize-toolbar" => Route::Run,
+        Space::Calendar if matches!(name, "customize-toolbar" | "customize-mailboxes") => Route::Run,
         Space::Calendar if matches!(name, "find" | "search") => Route::Calendar,
         Space::Calendar
             if MAIL_ONLY.contains(&name) || VIEW_ACTIONS.iter().any(|(n, _)| *n == name) =>
@@ -898,6 +898,7 @@ pub(super) static VIEW_ACTIONS: &[(&str, ViewRun)] = &[
             crate::ui::toolbar::customize::present(&app, &view.page);
         }
     }),
+    ("customize-mailboxes", |win, _| win.customize_mailboxes()),
     ("reply", |win, view| win.reply(view, ReplyKind::Reply)),
     ("reply-all", |win, view| {
         win.reply(view, ReplyKind::ReplyAll)
@@ -1403,7 +1404,7 @@ mod tests {
         for (name, _) in VIEW_ACTIONS {
             let expected = match *name {
                 "find" => Route::Calendar,
-                "customize-toolbar" => Route::Run,
+                "customize-toolbar" | "customize-mailboxes" => Route::Run,
                 _ => Route::Skip,
             };
             assert_eq!(route(Space::Calendar, name), expected, "{name}");

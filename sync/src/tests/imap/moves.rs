@@ -276,3 +276,175 @@ async fn unmuting_brings_back_only_what_mute_set_aside() {
         "Travel keeps its message"
     );
 }
+
+#[tokio::test]
+async fn smart_trash_only_includes_matching_sent_messages_after_consent_and_undo_restores_them() {
+    use mailrs_domain::smart::{Condition, Field, SmartMailbox};
+    let (h, thread, ids) = work_and_travel().await;
+    let smart = SmartMailbox {
+        id: "combined".into(),
+        name: "Work and Sent".into(),
+        account: None,
+        match_all: true,
+        unread_count: Default::default(),
+        trash_sent_without_asking: false,
+        conditions: vec![Condition {
+            field: Field::InMailbox,
+            value: r#"["label:Work","role:sent"]"#.into(),
+        }],
+    };
+    let target = Target::thread(h.account_id, &thread);
+    let actions = actions(&h);
+    let sent = actions
+        .sent_in_smart(std::slice::from_ref(&target), &smart)
+        .await
+        .unwrap();
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].message_id.as_deref(), Some(ids["sent"].as_str()));
+    assert_eq!(
+        places(&h, &ids["sent"]).await,
+        ["Sent"],
+        "checking consent changes nothing"
+    );
+
+    let mut excludes_sent = smart.clone();
+    excludes_sent.conditions[0].value = "label:Work".into();
+    assert!(
+        actions
+            .sent_in_smart(std::slice::from_ref(&target), &excludes_sent)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    excludes_sent = smart.clone();
+    excludes_sent.conditions.push(Condition {
+        field: Field::Subject,
+        value: "not this conversation".into(),
+    });
+    assert!(
+        actions
+            .sent_in_smart(std::slice::from_ref(&target), &excludes_sent)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    excludes_sent = smart.clone();
+    excludes_sent.account = Some("someone-else@example.com".into());
+    assert!(
+        actions
+            .sent_in_smart(std::slice::from_ref(&target), &excludes_sent)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        actions
+            .sent_in_smart(&sent, &smart)
+            .await
+            .unwrap()
+            .is_empty(),
+        "an explicit message needs no extra consent"
+    );
+
+    let done = actions
+        .run_from(
+            std::slice::from_ref(&target),
+            MailAction::Triage(TriageAction::Trash),
+            History::Record,
+            &MovedFrom::nowhere(),
+        )
+        .await;
+    assert!(done.failed.is_empty());
+    assert_eq!(places(&h, &ids["sent"]).await, ["Sent"]);
+    assert_eq!(
+        actions
+            .sent_in_smart(std::slice::from_ref(&target), &smart)
+            .await
+            .unwrap(),
+        sent
+    );
+    actions.undo().await.unwrap();
+    assert_eq!(places(&h, &ids["work"]).await, ["Work"]);
+
+    let done = actions
+        .run_from(
+            &[target],
+            MailAction::Triage(TriageAction::Trash),
+            History::Record,
+            &MovedFrom::nowhere().including_sent(sent),
+        )
+        .await;
+    assert!(done.failed.is_empty());
+    assert_eq!(done.done.len(), 1, "one conversation and one undo entry");
+    for id in ids.values() {
+        assert_eq!(places(&h, id).await, ["Trash"]);
+        assert_eq!(on_server(&h, id).await, "Trash");
+    }
+    let query = smart.query().unwrap();
+    assert!(
+        h.sync
+            .search_ids(&crate::SearchQuery::Tree(query), 50)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    actions.undo().await.unwrap();
+    for (key, folder) in [("work", "Work"), ("travel", "Travel"), ("sent", "Sent")] {
+        assert_eq!(places(&h, &ids[key]).await, [folder]);
+        assert_eq!(on_server(&h, &ids[key]).await, folder);
+    }
+}
+
+#[tokio::test]
+async fn smart_trash_consent_does_not_include_a_sent_reply_that_arrived_later() {
+    use mailrs_domain::smart::{Condition, Field, SmartMailbox};
+    let (h, thread, ids) = work_and_travel().await;
+    let smart = SmartMailbox {
+        id: "combined".into(),
+        name: "Work and Sent".into(),
+        account: None,
+        match_all: true,
+        unread_count: Default::default(),
+        trash_sent_without_asking: false,
+        conditions: vec![Condition {
+            field: Field::InMailbox,
+            value: r#"["label:Work","role:sent"]"#.into(),
+        }],
+    };
+    let target = Target::thread(h.account_id, &thread);
+    let actions = actions(&h);
+    let sent = actions
+        .sent_in_smart(std::slice::from_ref(&target), &smart)
+        .await
+        .unwrap();
+    h.imap.deliver_flagged(
+        "Sent",
+        &raw_message("later", "Re: Kites", days_ago(0), Some("w")),
+        &["\\Seen"],
+        days_ago(0),
+    );
+    h.sync.incremental().await.unwrap();
+    let now = actions
+        .sent_in_smart(std::slice::from_ref(&target), &smart)
+        .await
+        .unwrap();
+    assert_eq!(now.len(), 2);
+    let later = now
+        .iter()
+        .find(|t| !sent.contains(t))
+        .unwrap()
+        .message_id
+        .clone()
+        .unwrap();
+    let done = actions
+        .run_from(
+            &[target],
+            MailAction::Triage(TriageAction::Trash),
+            History::Record,
+            &MovedFrom::nowhere().including_sent(sent),
+        )
+        .await;
+    assert!(done.failed.is_empty());
+    assert_eq!(places(&h, &ids["sent"]).await, ["Trash"]);
+    assert_eq!(places(&h, &later).await, ["Sent"]);
+}

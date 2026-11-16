@@ -144,6 +144,40 @@ fn unsayable(err: JmapError) -> BackendError {
 }
 
 impl<J: JmapApi> Jmap<J> {
+    pub(super) async fn count_matches(&self, query: &Query) -> Result<i64, BackendError> {
+        self.listed().await?;
+        let filter = {
+            let known = self.known();
+            let Compiled::Filter(filter) = compile(query, &known, Utc::now())? else {
+                return Ok(0);
+            };
+            let mut conditions: Vec<Value> = filter.into_iter().collect();
+            for role in [mailrs_domain::Role::Junk, mailrs_domain::Role::Trash] {
+                if !query.asks_for(&MailSet::Role(role))
+                    && let Some(id) = known.roles.get(&role)
+                {
+                    conditions
+                        .push(json!({ "operator": "NOT", "conditions": [{ "inMailbox": id }] }));
+                }
+            }
+            join("AND", conditions)
+        };
+        let answer = self
+            .api()
+            .query(&mailrs_jmap::EmailQuery {
+                filter,
+                position: 0,
+                limit: 0,
+                total: true,
+            })
+            .await
+            .map_err(unsayable)?;
+        answer
+            .total
+            .and_then(|n| i64::try_from(n).ok())
+            .ok_or(BackendError::Unsupported)
+    }
+
     pub(super) async fn find(
         &self,
         query: &SearchQuery,

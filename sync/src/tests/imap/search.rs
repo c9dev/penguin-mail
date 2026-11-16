@@ -395,3 +395,24 @@ async fn an_account_whose_listing_fails_is_asked_once() {
     assert!(listing.rows.is_empty());
     assert_eq!(listing.notices.len(), 1, "{:?}", listing.notices);
 }
+
+#[tokio::test]
+async fn exact_count_unions_folder_branches_without_a_page_limit() {
+    let h = imap_harness().await;
+    for n in 0..503 {
+        h.imap.deliver(
+            "INBOX",
+            message(&format!("c{n}"), "Unread", ""),
+            days_ago(400),
+        );
+    }
+    let inbox = Query::is_in(MailSet::Role(Role::Inbox));
+    let query = Query::And(vec![
+        Query::Or(vec![inbox.clone(), inbox]),
+        Query::term(Term::Unread),
+    ]);
+    assert_eq!(
+        h.sync.services().mail.count_query(&query).await.unwrap(),
+        503
+    );
+}

@@ -46,6 +46,8 @@ pub enum MailOp {
 pub struct MovedFrom {
     each: BTreeMap<AccountId, MailSet>,
     every: Option<MailSet>,
+    /// Matching Sent messages approved alongside a whole-thread trash action.
+    pub(crate) sent: Vec<mailrs_domain::Target>,
 }
 
 impl MovedFrom {
@@ -59,6 +61,7 @@ impl MovedFrom {
         MovedFrom {
             each: BTreeMap::from([(account_id, set)]),
             every: None,
+            sent: Vec::new(),
         }
     }
 
@@ -68,14 +71,25 @@ impl MovedFrom {
         MovedFrom {
             each: BTreeMap::new(),
             every: Some(set),
+            sent: Vec::new(),
         }
     }
 
     /// These places and `other`'s, a place named for one account winning
     /// over one named for every account.
     pub fn and(mut self, other: MovedFrom) -> MovedFrom {
+        self.sent.extend(other.sent);
         self.each.extend(other.each);
         self.every = self.every.or(other.every);
+        self
+    }
+
+    /// Includes only these explicitly approved messages when trashing a conversation.
+    pub fn including_sent(mut self, messages: Vec<mailrs_domain::Target>) -> Self {
+        self.sent = messages
+            .into_iter()
+            .filter(|t| t.message_id.is_some())
+            .collect();
         self
     }
 

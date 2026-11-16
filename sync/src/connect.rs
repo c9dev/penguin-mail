@@ -537,11 +537,11 @@ pub(crate) async fn connect_imap_within<P: PasswordStore + 'static>(
     wait: Duration,
 ) -> Result<AccountServices, SyncError> {
     let id = account.id;
-    let saved = bounded(
+    let (saved, all_folders) = bounded(
         id,
         "the mail store",
         wait,
-        db.read(move |c| servers::load(c, id)),
+        db.read(move |c| Ok((servers::load(c, id)?, accounts::all_folders(c, id)?))),
     )
     .await?;
     let (password, outgoing) = read_passwords(passwords, id, wait).await?;
@@ -580,6 +580,7 @@ pub(crate) async fn connect_imap_within<P: PasswordStore + 'static>(
             provider_name: provider_name.clone(),
             files_sent_mail,
             window_days,
+            all_folders,
         },
     );
     let found = confirmed(db, id, &secret, wait).await?;

@@ -36,14 +36,67 @@ pub fn matching<Tz: TimeZone>(
     now: &DateTime<Tz>,
     limit: usize,
 ) -> Result<Vec<Matched>> {
+    let mut sql = text("SELECT m.id, m.thread_id FROM messages m WHERE ");
+    append(&mut sql, matching_where(conn, account_id, query, now)?);
+    sql.push(" ORDER BY m.date DESC, m.id LIMIT ")
+        .bind(i64::try_from(limit).unwrap_or(i64::MAX));
+    let mut stmt = conn.prepare(&sql.text)?;
+    Ok(stmt
+        .query_map(params_from_iter(sql.params.iter()), |row| {
+            Ok(Matched {
+                message_id: row.get(0)?,
+                thread_id: row.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<Matched>>>()?)
+}
+
+/// The messages in one conversation that match a query, without a listing limit.
+pub fn matching_thread<Tz: TimeZone>(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+    query: &Query,
+    now: &DateTime<Tz>,
+) -> Result<Vec<Matched>> {
+    let mut sql = text("SELECT m.id, m.thread_id FROM messages m WHERE ");
+    append(&mut sql, matching_where(conn, account_id, query, now)?);
+    sql.push(" AND m.thread_id = ").bind(thread_id.to_string());
+    let mut stmt = conn.prepare(&sql.text)?;
+    Ok(stmt
+        .query_map(params_from_iter(sql.params.iter()), |row| {
+            Ok(Matched {
+                message_id: row.get(0)?,
+                thread_id: row.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<Matched>>>()?)
+}
+
+/// Unread messages in the local copy, counted once even when folders overlap.
+pub fn unread_count<Tz: TimeZone>(
+    conn: &Connection,
+    account_id: AccountId,
+    query: &Query,
+    now: &DateTime<Tz>,
+) -> Result<i64> {
+    let mut sql = text("SELECT COUNT(*) FROM messages m WHERE m.seen = 0 AND ");
+    append(&mut sql, matching_where(conn, account_id, query, now)?);
+    Ok(conn.query_row(&sql.text, params_from_iter(&sql.params), |row| row.get(0))?)
+}
+
+fn matching_where<Tz: TimeZone>(
+    conn: &Connection,
+    account_id: AccountId,
+    query: &Query,
+    now: &DateTime<Tz>,
+) -> Result<Sql> {
     let scope = Scope {
         now,
         mailboxes: spellings(conn, account_id)?,
     };
-    let mut sql = Sql::default();
-    sql.push("SELECT m.id, m.thread_id FROM messages m WHERE m.account_id = ")
-        .bind(account_id)
-        .push(" AND ");
+    let mut sql = text("m.account_id = ");
+    sql.bind(account_id).push(" AND ");
     // A tree with nothing left in it, like an empty search, holds for
     // every message.
     append(
@@ -57,18 +110,7 @@ pub fn matching<Tz: TimeZone>(
             append(&mut sql, in_set(&set));
         }
     }
-    sql.push(" ORDER BY m.date DESC, m.id LIMIT ")
-        .bind(i64::try_from(limit).unwrap_or(i64::MAX));
-    let mut stmt = conn.prepare(&sql.text)?;
-    let rows = stmt
-        .query_map(params_from_iter(sql.params.iter()), |row| {
-            Ok(Matched {
-                message_id: row.get(0)?,
-                thread_id: row.get(1)?,
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<Matched>>>()?;
-    Ok(rows)
+    Ok(sql)
 }
 
 /// Unread threads in each account's folder, including mail outside the inbox.

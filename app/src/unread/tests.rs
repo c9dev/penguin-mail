@@ -26,6 +26,7 @@ impl Counter for Rc<Fake> {
         Ok(Counts {
             mailboxes,
             categories: HashMap::new(),
+            smart: HashMap::new(),
         })
     }
 }

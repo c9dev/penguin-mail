@@ -698,7 +698,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "set_signature",
             label: || gettext("Setting a signature"),
-            description: "Sets the Markdown signature added to new mail from an account. Empty removes it. The user approves it first.",
+            description: "Sets the Markdown or HTML signature added to new mail from an account. Empty removes it. Pictures in an HTML signature must be data: or https: addresses. The user approves it first.",
             input: || json!({"account": account("The account."), "text": {"type": "string"}}),
             required: &["account", "text"],
             run: Run::AsksFirst(|t, input| Box::pin(ready(t.signature(input)))),

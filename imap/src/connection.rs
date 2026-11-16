@@ -19,7 +19,7 @@ use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SectionsReader, SelectReader,
-    StructureReader,
+    StructureReader, SubscribedReader,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::types::{check_label, label_text};
@@ -52,6 +52,14 @@ pub(crate) struct Conn<S: Stream> {
     /// When a command last went out, to tell a connection a router may
     /// have dropped in silence.
     last_used: Instant,
+    /// True from the pool handing the connection back until a SELECT or
+    /// a NOOP. IMAP lets a server report new mail to a connection when
+    /// it chooses (RFC 3501 section 5.2), and Dovecot does so only at the
+    /// end of a command on the selected mailbox. A connection that kept a
+    /// mailbox selected while it sat in the pool may not see mail that
+    /// another connection's later SELECT counted, so its next command on
+    /// that mailbox NOOPs first.
+    handed_back: bool,
 }
 
 /// SASL PLAIN (RFC 4616): no authorization identity, then the user and
@@ -191,6 +199,7 @@ impl<S: Stream> Conn<S> {
             selected: None,
             uidvalidity: 0,
             last_used: Instant::now(),
+            handed_back: false,
         };
         let mut after = CapabilityReader::default();
         conn.exec("CAPABILITY", Doing::Other, &mut after).await?;
@@ -212,10 +221,27 @@ impl<S: Stream> Conn<S> {
         self.last_used.elapsed()
     }
 
-    pub(crate) async fn noop(&mut self) -> Result<(), ImapError> {
-        self.exec("NOOP", Doing::Other, &mut ()).await
+    /// The pool took the connection back; its view of the selected mailbox
+    /// may fall behind until a SELECT or a NOOP.
+    pub(crate) fn handed_back(&mut self) {
+        self.handed_back = true;
     }
 
+    pub(crate) async fn noop(&mut self) -> Result<(), ImapError> {
+        self.exec("NOOP", Doing::Other, &mut ()).await?;
+        self.handed_back = false;
+        Ok(())
+    }
+
+    /// Every mailbox on the server, each marked with whether the person
+    /// subscribes to it, from an LSUB after the LIST.
+    ///
+    /// LIST-EXTENDED's `RETURN (SUBSCRIBED)` would say so in one command,
+    /// but a server may answer it with extended data after the name, such
+    /// as `INBOX ("CHILDINFO" ("SUBSCRIBED"))`, which imap-proto cannot
+    /// read, and the whole listing fails. LSUB answers in RFC 3501's shape
+    /// everywhere. A server that refuses LSUB has every mailbox counted as
+    /// subscribed, so nothing goes missing from the sidebar.
     pub(crate) async fn list(&mut self) -> Result<Vec<Listed>, ImapError> {
         let command = match self.capabilities.special_use {
             true => "LIST \"\" \"*\" RETURN (SPECIAL-USE)",
@@ -223,11 +249,45 @@ impl<S: Stream> Conn<S> {
         };
         let mut reader = ListReader::default();
         self.exec(command, Doing::Other, &mut reader).await?;
-        Ok(reader.listed)
+        let mut subscribed = SubscribedReader::default();
+        let known = match self
+            .exec("LSUB \"\" \"*\"", Doing::Other, &mut subscribed)
+            .await
+        {
+            Ok(()) => Some(subscribed.names),
+            Err(err) if err.drops_connection() => return Err(err),
+            Err(err) => {
+                tracing::debug!(%err, "LSUB refused; every mailbox counts as subscribed");
+                None
+            }
+        };
+        Ok(reader
+            .listed
+            .into_iter()
+            .map(|l| {
+                let on = known.as_ref().is_none_or(|names| names.contains(&l.name));
+                l.subscribed(on)
+            })
+            .collect())
+    }
+
+    pub(crate) async fn subscribe(&mut self, mailbox: &str) -> Result<(), ImapError> {
+        let command = format!("SUBSCRIBE {}", quoted(mailbox)?);
+        self.exec(&command, Doing::Other, &mut ()).await
+    }
+
+    pub(crate) async fn unsubscribe(&mut self, mailbox: &str) -> Result<(), ImapError> {
+        let command = format!("UNSUBSCRIBE {}", quoted(mailbox)?);
+        self.exec(&command, Doing::Other, &mut ()).await
     }
 
     pub(crate) async fn unread(&mut self, mailbox: &str) -> Result<u32, ImapError> {
         let command = format!("STATUS {} (UNSEEN)", quoted(mailbox)?);
+        // Dovecot answers a STATUS of the selected mailbox from this
+        // connection's view, which the NOOP brings up to date.
+        if self.selected.as_deref() == Some(mailbox) && self.handed_back {
+            self.noop().await?;
+        }
         let mut reader = crate::parse::UnreadReader {
             mailbox,
             unread: None,
@@ -284,6 +344,7 @@ impl<S: Stream> Conn<S> {
         };
         self.selected = Some(mailbox.to_string());
         self.uidvalidity = selected.uidvalidity;
+        self.handed_back = false;
         Ok(selected)
     }
 
@@ -306,6 +367,12 @@ impl<S: Stream> Conn<S> {
     pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
         if self.selected.as_deref() != Some(mailbox) {
             self.select(mailbox, None).await?;
+        } else if self.handed_back {
+            // The SELECT that would have brought the view up to date is
+            // skipped, so a NOOP does it: the server reports what arrived
+            // before answering, and the command after, a read or a write,
+            // sees it. A STATUS brings no view up to date (`unread`).
+            self.noop().await?;
         }
         Ok(())
     }
@@ -372,8 +439,8 @@ impl<S: Stream> Conn<S> {
         mailbox: &str,
         keys: &str,
     ) -> Result<Vec<u32>, ImapError> {
-        self.ensure_selected(mailbox).await?;
         let (head, literals) = search_command(keys)?;
+        self.ensure_selected(mailbox).await?;
         let literals: Vec<(&[u8], String)> = literals
             .iter()
             .map(|(bytes, after)| (bytes.as_slice(), after.clone()))
@@ -728,6 +795,9 @@ impl<S: Stream> Conn<S> {
                 selected,
                 uidvalidity,
                 last_used: Instant::now(),
+                // The IDLE connection never goes through the pool, and
+                // its view is as fresh as the DONE that ended the IDLE.
+                handed_back: false,
             },
             woke,
         ))
@@ -1770,6 +1840,126 @@ mod tests {
         assert_eq!(listed.len(), 2);
         assert_eq!(listed[1].special_use, Some(crate::SpecialUse::Sent));
         assert!(seen(&log).contains(&"LIST \"\" \"*\" RETURN (SPECIAL-USE)".to_string()));
+    }
+
+    /// The answer RETURN (SUBSCRIBED) drew from a real server, which
+    /// imap-proto cannot read. Asking with LSUB instead never brings it.
+    #[tokio::test]
+    async fn a_server_with_list_extended_is_still_asked_with_lsub() {
+        let log = log();
+        let caps = "IDLE QRESYNC CONDSTORE MOVE UIDPLUS SPECIAL-USE ENABLE LIST-EXTENDED";
+        let stream = pipe(
+            GREETING,
+            server(caps, log.clone(), |command| {
+                match command {
+                c if c.contains("SUBSCRIBED") => vec![
+                    "* LIST (\\Subscribed \\HasChildren) \"/\" INBOX (\"CHILDINFO\" (\"SUBSCRIBED\"))".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LIST") => vec![
+                    "* LIST (\\HasChildren) \"/\" INBOX".into(),
+                    "* LIST (\\HasNoChildren) \"/\" Archive/2019".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LSUB") => {
+                    vec!["* LSUB () \"/\" INBOX".into(), "{tag} OK".into()]
+                }
+                _ => vec!["{tag} OK".into()],
+            }
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        let listed = conn.list().await.unwrap();
+
+        let subscribed: Vec<_> = listed
+            .iter()
+            .map(|l| (l.name.as_str(), l.subscribed))
+            .collect();
+        assert_eq!(subscribed, [("INBOX", true), ("Archive/2019", false)]);
+    }
+
+    #[tokio::test]
+    async fn a_server_that_refuses_lsub_has_every_mailbox_subscribed() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("LIST") => vec![
+                    "* LIST () \"/\" INBOX".into(),
+                    "* LIST () \"/\" Old".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LSUB") => vec!["{tag} NO LSUB is not offered".into()],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        let listed = conn.list().await.unwrap();
+
+        assert!(listed.iter().all(|l| l.subscribed), "{listed:?}");
+    }
+
+    /// LSUB may name a mailbox that no longer exists (RFC 3501 6.3.9); it
+    /// adds nothing to the list.
+    #[tokio::test]
+    async fn without_list_extended_an_lsub_says_which_are_subscribed() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("LIST") => vec![
+                    "* LIST (\\HasNoChildren) \"/\" INBOX".into(),
+                    "* LIST (\\HasNoChildren) \"/\" \"Projekt/B&AOQ-r\"".into(),
+                    "* LIST (\\HasNoChildren) \"/\" Old".into(),
+                    "{tag} OK".into(),
+                ],
+                c if c.starts_with("LSUB") => vec![
+                    "* LSUB () \"/\" INBOX".into(),
+                    "* LSUB () \"/\" \"Projekt/B&AOQ-r\"".into(),
+                    "* LSUB () \"/\" Gone".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        let listed = conn.list().await.unwrap();
+
+        let subscribed: Vec<_> = listed
+            .iter()
+            .map(|l| (l.display.as_str(), l.subscribed))
+            .collect();
+        assert_eq!(
+            subscribed,
+            [("INBOX", true), ("Projekt/Bär", true), ("Old", false)]
+        );
+        assert!(seen(&log).contains(&"LSUB \"\" \"*\"".to_string()));
+    }
+
+    #[tokio::test]
+    async fn subscribing_names_the_mailbox_as_the_server_spells_it() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |_| vec!["{tag} OK".into()]),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+
+        conn.subscribe("Projekt/B&AOQ-r").await.unwrap();
+        conn.unsubscribe("Old Mail").await.unwrap();
+
+        let seen = seen(&log);
+        assert!(
+            seen.contains(&"SUBSCRIBE \"Projekt/B&AOQ-r\"".to_string()),
+            "{seen:?}"
+        );
+        assert!(
+            seen.contains(&"UNSUBSCRIBE \"Old Mail\"".to_string()),
+            "{seen:?}"
+        );
     }
 
     #[tokio::test]

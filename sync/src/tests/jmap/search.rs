@@ -180,3 +180,29 @@ async fn a_filter_the_server_cannot_take_leaves_the_search_to_the_store() {
         "{asked:?}"
     );
 }
+
+#[tokio::test]
+async fn exact_count_uses_the_total_without_the_search_limit() {
+    let h = over(FakeJmap::new().clamping_queries(2)).await;
+    for n in 0..503 {
+        h.fake.deliver(
+            "inbox",
+            &raw(&format!("count{n}@example.com"), "Unread"),
+            now(),
+        );
+    }
+    h.fake
+        .deliver("trash", &raw("trash@example.com", "Trash"), now());
+    assert_eq!(
+        h.mail()
+            .count_query(&Query::term(Term::Unread))
+            .await
+            .unwrap(),
+        503
+    );
+    let trash = Query::And(vec![
+        Query::term(Term::Unread),
+        Query::is_in(MailSet::Role(Role::Trash)),
+    ]);
+    assert_eq!(h.mail().count_query(&trash).await.unwrap(), 1);
+}

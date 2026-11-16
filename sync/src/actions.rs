@@ -22,6 +22,7 @@ use crate::{
 mod categorize;
 mod labelling;
 mod returning;
+mod smart_trash;
 
 pub use categorize::Categorized;
 pub use labelling::NewLabels;
@@ -500,8 +501,22 @@ impl<A: Accounts> MailActions<A> {
     ) -> Vec<Result<Vec<Applied>, String>> {
         let mut results: Vec<Result<Vec<Applied>, String>> = vec![Ok(Vec::new()); targets.len()];
         for (triage, members) in group_by_account(targets, resolved) {
-            let batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
+            let mut batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
             let account_id = batch[0].account_id;
+            if triage == TriageAction::Trash {
+                let approved: Vec<Target> = from
+                    .sent
+                    .iter()
+                    .filter(|sent| {
+                        sent.account_id == account_id
+                            && batch
+                                .iter()
+                                .any(|t| t.message_id.is_none() && t.thread_id == sent.thread_id)
+                    })
+                    .cloned()
+                    .collect();
+                batch.extend(approved);
+            }
             let done = match self.sync(account_id) {
                 Ok(sync) => sync.triage_all(&batch, &triage, from.of(account_id)).await,
                 Err(err) => Err(err),

@@ -403,3 +403,68 @@ fn focus_when_shown(entry: &gtk::Entry) {
         });
     });
 }
+
+/// The most folders a search in the move picker lists. An account can
+/// hold hundreds, and each is a row built as the popover opens.
+const MOST_FOUND: usize = 50;
+
+/// The labels the move picker lists. Without a `query`, those the sidebar
+/// shows; with one, any whose name holds it, hidden or not, so a folder
+/// nobody subscribes to can still take mail.
+pub(super) fn picked<'a>(
+    labels: &'a [Label],
+    hidden: &std::collections::BTreeSet<String>,
+    query: &str,
+) -> Vec<&'a Label> {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return labels.iter().filter(|l| !hidden.contains(&l.id)).collect();
+    }
+    labels
+        .iter()
+        .filter(|l| l.name.to_lowercase().contains(&query))
+        .take(MOST_FOUND)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use mailrs_domain::{Label, LabelKind};
+
+    use super::picked;
+
+    fn label(id: &str) -> Label {
+        Label {
+            role: None,
+            account_id: 1,
+            id: id.into(),
+            name: id.into(),
+            kind: LabelKind::User,
+            color: None,
+        }
+    }
+
+    #[test]
+    fn the_picker_lists_what_shows_until_a_search_reaches_the_rest() {
+        let labels = [label("Lists"), label("Old/Lists 2019"), label("Receipts")];
+        let hidden = BTreeSet::from(["Old/Lists 2019".to_string()]);
+
+        let ids = |found: Vec<&Label>| found.into_iter().map(|l| l.id.clone()).collect::<Vec<_>>();
+        assert_eq!(ids(picked(&labels, &hidden, "")), ["Lists", "Receipts"]);
+        assert_eq!(
+            ids(picked(&labels, &hidden, " LISTS")),
+            ["Lists", "Old/Lists 2019"]
+        );
+    }
+
+    #[test]
+    fn a_search_lists_a_bounded_number_of_folders() {
+        let labels: Vec<Label> = (0..200).map(|n| label(&format!("Archive/{n}"))).collect();
+        assert_eq!(
+            picked(&labels, &BTreeSet::new(), "archive").len(),
+            super::MOST_FOUND
+        );
+    }
+}

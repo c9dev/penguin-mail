@@ -13,11 +13,14 @@ mod accounts;
 mod change;
 mod file;
 pub mod mcp;
+mod sidebar;
 mod signatures;
 
 pub use accounts::{AccountChoice, AccountDefaults, AccountUse, accounts_for, preferred_calendar};
 pub use change::{AiChange, Change, Effect, Effects, Setting};
 pub use file::{Opened, Saver};
+pub(crate) use sidebar::reorder_siblings;
+pub use sidebar::{FavoriteMailbox, SidebarLayout};
 pub use signatures::SignatureMode;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,6 +39,8 @@ pub struct Settings {
     pub show_avatars: bool,
     /// None keeps the default toolbar; an empty list hides all optional buttons.
     pub toolbar: Option<Vec<crate::ui::toolbar::Slot>>,
+    /// Visible sidebar rows and favorites.
+    pub sidebar: SidebarLayout,
     /// Draw messages on the CPU rather than through the GPU, for a
     /// computer whose graphics driver leaves them blank. Read once at
     /// startup, before the web engine starts.
@@ -48,6 +53,10 @@ pub struct Settings {
     pub notifications: bool,
     /// Show sender and subject in notifications, not just a count.
     pub notification_previews: bool,
+    /// Include a short extract below the subject in mail notifications.
+    pub notification_message_preview: bool,
+    pub notification_bold_subject: bool,
+    pub notification_preview_length: NotificationPreviewLength,
     /// The general default account; each task can follow it or keep its context.
     pub default_account: Option<String>,
     /// Per-task choices, preserving context unless the person overrides it.
@@ -511,11 +520,15 @@ impl Default for Settings {
             bold_senders: false,
             show_avatars: true,
             toolbar: None,
+            sidebar: SidebarLayout::default(),
             software_rendering: false,
             color_scheme: ColorScheme::System,
             language: String::new(),
             notifications: true,
             notification_previews: true,
+            notification_message_preview: false,
+            notification_bold_subject: false,
+            notification_preview_length: NotificationPreviewLength::Medium,
             never_translate: Vec::new(),
             default_account: None,
             account_defaults: AccountDefaults::default(),
@@ -754,6 +767,35 @@ impl Choice for PreviewLines {
             Self::None => gettext("No Preview"),
             Self::One => gettext("1 Line"),
             Self::Two => gettext("2 Lines"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum NotificationPreviewLength {
+    Short,
+    Medium,
+    Long,
+}
+
+impl NotificationPreviewLength {
+    pub fn characters(self) -> usize {
+        match self {
+            Self::Short => 80,
+            Self::Medium => 140,
+            Self::Long => 280,
+        }
+    }
+}
+
+impl Choice for NotificationPreviewLength {
+    const ALL: &'static [Self] = &[Self::Short, Self::Medium, Self::Long];
+    fn label(self) -> String {
+        match self {
+            Self::Short => gettext("Short (80 Characters)"),
+            Self::Medium => gettext("Medium (140 Characters)"),
+            Self::Long => gettext("Long (280 Characters)"),
         }
     }
 }
@@ -1387,6 +1429,28 @@ mod tests {
         assert!(partial.follow_selection_direction);
         assert!(partial.notifications, "missing keys take their defaults");
         assert_eq!(partial.calendar_clock, CalendarClock::Automatic);
+    }
+
+    #[test]
+    fn notification_message_preview_is_opt_in_and_survives_restart() {
+        let mut settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(!settings.notification_message_preview);
+        assert!(!settings.notification_bold_subject);
+        assert_eq!(
+            settings.notification_preview_length,
+            NotificationPreviewLength::Medium
+        );
+        Change::NotificationMessagePreview(true).apply(&mut settings);
+        Change::NotificationBoldSubject(true).apply(&mut settings);
+        Change::NotificationPreviewLength(NotificationPreviewLength::Long).apply(&mut settings);
+        let saved = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&saved).unwrap();
+        assert!(restored.notification_message_preview);
+        assert!(restored.notification_bold_subject);
+        assert_eq!(
+            restored.notification_preview_length,
+            NotificationPreviewLength::Long
+        );
     }
 
     #[test]

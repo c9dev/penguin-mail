@@ -571,6 +571,24 @@ pub fn extend_backfill(conn: &Connection, id: AccountId) -> Result<()> {
     Ok(())
 }
 
+/// Whether an IMAP account lists every folder on the server rather than
+/// the ones the person subscribes to.
+pub fn all_folders(conn: &Connection, id: AccountId) -> Result<bool> {
+    Ok(conn.query_row(
+        "SELECT all_folders FROM accounts WHERE id = ?1",
+        params![id],
+        |row| row.get(0),
+    )?)
+}
+
+pub fn set_all_folders(conn: &Connection, id: AccountId, all: bool) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET all_folders = ?2 WHERE id = ?1",
+        params![id, all],
+    )?;
+    Ok(())
+}
+
 /// The sync window, in days, the account's stored mail was loaded for: 0
 /// for all mail, `None` before an account first ran under a version that
 /// records it.
@@ -744,5 +762,14 @@ mod tests {
         assert_eq!(every.len(), 2);
         assert_eq!(every[&a].granted.as_deref(), Some("gmail.modify"));
         assert_eq!(every[&b], Consent::default());
+    }
+
+    #[test]
+    fn an_account_lists_subscribed_folders_until_told_otherwise() {
+        let conn = open_in_memory().unwrap();
+        let id = insert_account(&conn, "me@example.com", 0).unwrap();
+        assert!(!all_folders(&conn, id).unwrap());
+        set_all_folders(&conn, id, true).unwrap();
+        assert!(all_folders(&conn, id).unwrap());
     }
 }

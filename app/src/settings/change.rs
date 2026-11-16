@@ -32,6 +32,7 @@ pub enum Change {
     BoldSenders(bool),
     ShowAvatars(bool),
     Toolbar(Option<Vec<crate::ui::toolbar::Slot>>),
+    Sidebar(super::SidebarLayout),
     SoftwareRendering(bool),
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
@@ -40,6 +41,9 @@ pub enum Change {
     Language(String),
     Notifications(bool),
     NotificationPreviews(bool),
+    NotificationMessagePreview(bool),
+    NotificationBoldSubject(bool),
+    NotificationPreviewLength(super::NotificationPreviewLength),
     NotifyVipsOnly(bool),
     /// Puts one button on new-mail notifications, or takes it off.
     NotificationButton {
@@ -301,6 +305,7 @@ impl Change {
             Change::Toolbar(slots) => {
                 settings.toolbar = slots.map(|s| crate::ui::toolbar::layout(Some(&s)))
             }
+            Change::Sidebar(layout) => settings.sidebar = layout,
             Change::SoftwareRendering(on) => settings.software_rendering = on,
             Change::StepTextSize(step) => {
                 settings.text_size = if step == 0 {
@@ -315,6 +320,11 @@ impl Change {
             Change::Language(code) => settings.language = code,
             Change::Notifications(on) => settings.notifications = on,
             Change::NotificationPreviews(on) => settings.notification_previews = on,
+            Change::NotificationMessagePreview(on) => settings.notification_message_preview = on,
+            Change::NotificationBoldSubject(on) => settings.notification_bold_subject = on,
+            Change::NotificationPreviewLength(length) => {
+                settings.notification_preview_length = length
+            }
             Change::NotifyVipsOnly(on) => settings.notify_vips_only = on,
             Change::NotificationButton { button, show } => {
                 settings.show_notification_button(button, show)
@@ -678,6 +688,7 @@ settable! {
         last_calendar_account,
         folded_calendar_accounts,
         toolbar,
+        sidebar,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -722,6 +733,10 @@ settable! {
         // Which buttons a notification carries is a list, and a setting the
         // assistant changes by name holds one value.
         notification_buttons,
+        // Exposing message text in desktop notifications is the person's choice.
+        notification_message_preview,
+        notification_bold_subject,
+        notification_preview_length,
         // A list too, of the languages the person reads as they are.
         never_translate,
         send_as,
@@ -904,6 +919,7 @@ impl Effects {
             bold_senders,
             show_avatars,
             toolbar,
+            sidebar,
             software_rendering,
             color_scheme,
             language,
@@ -918,6 +934,9 @@ impl Effects {
             vips,
             notify_vips_only,
             notification_buttons,
+            notification_message_preview,
+            notification_bold_subject,
+            notification_preview_length,
             event_reminders,
             never_translate,
             smart_mailboxes,
@@ -980,6 +999,9 @@ impl Effects {
             flag_color,
             notify_vips_only,
             notification_buttons,
+            notification_message_preview,
+            notification_bold_subject,
+            notification_preview_length,
             // The reminder scheduler reads this on each check, at most a
             // minute away.
             event_reminders,
@@ -1043,6 +1065,7 @@ impl Effects {
                     smart_changed
                         || colors_changed
                         || vips_changed
+                        || *sidebar != before.sidebar
                         || *account_order != before.account_order
                         || *account_names != before.account_names
                 }
@@ -1271,6 +1294,8 @@ mod tests {
 
     fn smart(id: &str, name: &str) -> SmartMailbox {
         SmartMailbox {
+            trash_sent_without_asking: false,
+            unread_count: Default::default(),
             id: id.into(),
             name: name.into(),
             account: None,
@@ -1505,6 +1530,9 @@ mod tests {
             Change::RemoteImages(RemoteImages::Always),
             Change::Notifications(false),
             Change::NotificationPreviews(false),
+            Change::NotificationMessagePreview(true),
+            Change::NotificationBoldSubject(true),
+            Change::NotificationPreviewLength(super::super::NotificationPreviewLength::Long),
             Change::NotifyVipsOnly(true),
             Change::UndoSend(UndoSend::Thirty),
             Change::DefaultAccount(Some("ann@example.com".into())),

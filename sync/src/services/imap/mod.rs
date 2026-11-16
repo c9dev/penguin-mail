@@ -22,6 +22,7 @@ mod writes;
 
 pub use api::{ImapApi, Submit};
 pub use gmail::GmailImap;
+pub use mailboxes::FolderSubscription;
 pub(crate) use outgoing::{envelope_of, submit_over, without_bcc};
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -57,6 +58,8 @@ pub struct ImapSettings {
     pub files_sent_mail: bool,
     /// Days of mail the account keeps besides the whole Inbox.
     pub window_days: i64,
+    /// List every folder on the server, not only the subscribed ones.
+    pub all_folders: bool,
 }
 
 /// The keywords every server stores: its system flags.
@@ -406,7 +409,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             .known()
             .folders
             .iter()
-            .filter(|f| !f.parent_only)
+            // A hidden folder has no row to count for, and on an account
+            // with hundreds of folders asking each one costs a round trip
+            // apiece.
+            .filter(|f| !f.parent_only && !f.hidden)
             .map(|f| (f.id.clone(), f.role))
             .collect();
         let mut counts = HashMap::new();
@@ -553,6 +559,17 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
         self.inbox_refs().await
+    }
+
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        let refs = self
+            .search_server(&SearchQuery::Tree(query.clone()), usize::MAX)
+            .await?;
+        Ok(refs
+            .into_iter()
+            .map(|hit| hit.id)
+            .collect::<std::collections::HashSet<_>>()
+            .len() as i64)
     }
 
     async fn search(

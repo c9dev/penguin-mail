@@ -2,7 +2,7 @@
 //! content filter, identities, and the engine event loop.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -12,11 +12,11 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, Provider, Role};
+use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, Provider};
 use mailrs_store::{accounts, labels, messages};
 use mailrs_sync::{History, MovedFrom};
 
-use crate::app::announce::{announced, in_view, still_news};
+use crate::app::announce::announced;
 use crate::compose::Identity;
 use crate::core::Core;
 use crate::notify;
@@ -76,6 +76,9 @@ pub struct App {
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     /// Where the person put each account's labels among their siblings.
     label_order: RefCell<HashMap<AccountId, HashMap<String, i64>>>,
+    /// The labels each account keeps out of the sidebar, by id, as
+    /// `reload_accounts` last read them.
+    hidden_labels: RefCell<HashMap<AccountId, BTreeSet<String>>>,
     /// Each account's consent, read in the same pass as `accounts` so the
     /// Grant Access banner never waits on a round trip of its own.
     consent: RefCell<HashMap<AccountId, accounts::Consent>>,
@@ -193,6 +196,7 @@ impl App {
             account_waiters: RefCell::new(Vec::new()),
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
+            hidden_labels: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
             google_sign_ins: RefCell::default(),
             through_browser: RefCell::default(),
@@ -849,6 +853,15 @@ impl App {
         self.labels.borrow().clone()
     }
 
+    /// The labels of `account_id` the sidebar leaves out, by id.
+    pub fn hidden_labels(&self, account_id: AccountId) -> BTreeSet<String> {
+        self.hidden_labels
+            .borrow()
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
     /// One account's labels, system labels included.
     pub fn labels_of(&self, account_id: AccountId) -> Vec<Label> {
         self.labels
@@ -876,11 +889,19 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (mut loaded, order, consent, google_sign_ins, through_browser, microsoft_owners) = self
+        let (
+            mut loaded,
+            (order, hidden),
+            consent,
+            google_sign_ins,
+            through_browser,
+            microsoft_owners,
+        ) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
                 let mut order = HashMap::new();
+                let mut hidden = HashMap::new();
                 let mut through_browser = HashSet::new();
                 let mut microsoft_owners = HashMap::new();
                 for account in accounts::list_accounts(c)? {
@@ -889,6 +910,7 @@ impl App {
                     }
                     let account_labels = labels::list_labels(c, account.id)?;
                     order.insert(account.id, labels::positions(c, account.id)?);
+                    hidden.insert(account.id, labels::hidden_ids(c, account.id)?);
                     if account.provider == Provider::Jmap
                         && mailrs_store::jmap::load(c, account.id)?
                             .is_some_and(|saved| saved.auth == mailrs_store::jmap::JmapAuth::OAuth)
@@ -901,7 +923,7 @@ impl App {
                 let google_sign_ins = accounts::google_sign_ins(c)?;
                 Ok((
                     out,
-                    order,
+                    (order, hidden),
                     consent,
                     google_sign_ins,
                     through_browser,
@@ -911,6 +933,7 @@ impl App {
             .await?;
         loaded.sort_by_key(|(account, _)| self.settings.borrow().account_rank(&account.email));
         *self.label_order.borrow_mut() = order;
+        *self.hidden_labels.borrow_mut() = hidden;
         *self.through_browser.borrow_mut() = through_browser;
         *self.microsoft_owners.borrow_mut() = microsoft_owners;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
@@ -1469,6 +1492,30 @@ impl App {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             while let Ok(event) = this.core.events.recv().await {
+                if let ChangeEvent::LabelsPlaced {
+                    account_id,
+                    moved,
+                    order,
+                } = &event
+                {
+                    let id = *account_id;
+                    match this
+                        .core
+                        .db
+                        .read(move |c| mailrs_store::accounts::account(c, id))
+                        .await
+                    {
+                        Ok(Some(account)) => {
+                            let mut layout = this.settings().sidebar;
+                            layout.placed(&account.email, moved, order);
+                            this.change_settings(Change::Sidebar(layout));
+                        }
+                        Ok(None) => {}
+                        Err(error) => {
+                            tracing::error!(%error, "could not update mailbox customization after a folder move")
+                        }
+                    }
+                }
                 this.unread.heard(&event);
                 this.storage.heard(&event);
                 this.tell_window(Notice::Engine(&event));
@@ -1517,11 +1564,17 @@ impl App {
     pub(crate) fn announce_mail(
         &self,
         messages: Vec<mailrs_domain::MessageMeta>,
-        previews: bool,
-        buttons: Vec<notify::Button>,
+        settings: &Settings,
     ) {
         use rand::distr::{Alphanumeric, SampleString};
-        for notice in notify::notices(messages, previews, buttons) {
+        for notice in notify::notices(
+            messages,
+            settings.notification_previews,
+            settings.notification_message_preview,
+            settings.notification_bold_subject,
+            settings.notification_preview_length,
+            settings.notification_buttons.clone(),
+        ) {
             let token = Alphanumeric.sample_string(&mut rand::rng(), 24);
             let evicted = if let Some(target) = &notice.target {
                 self.issued.borrow_mut().issue(
@@ -1784,12 +1837,66 @@ impl App {
         });
     }
 
+    fn announce_found(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        mut found: Vec<mailrs_domain::MessageMeta>,
+    ) {
+        let settings = self.settings();
+        if self.core.demo || !settings.notifications {
+            return;
+        }
+        let viewed = self.window().and_then(|w| w.viewed());
+        found.retain(|m| announce::eligible(m, &settings, viewed.as_ref()));
+        let targets = announce::preview_targets(&found, &settings);
+        if targets.is_empty() {
+            self.announce_ready(account_id, found);
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let lists = this.core.lists();
+            let length = settings.notification_preview_length.characters();
+            let mut previews = this
+                .core
+                .call(async move {
+                    Ok::<_, anyhow::Error>(
+                        announce::fill_previews(targets, |target| {
+                            lists.preview_up_to(target, length)
+                        })
+                        .await,
+                    )
+                })
+                .await
+                .unwrap_or_default();
+            // Re-read after fetching: mail may have been read, moved or deleted.
+            let ids: Vec<_> = found.into_iter().map(|m| m.id).collect();
+            match this
+                .core
+                .read(move |c| announced(c, account_id, &ids))
+                .await
+            {
+                Ok(mut found) => {
+                    for message in &mut found {
+                        if let Some(preview) = previews.remove(&message.id) {
+                            message.snippet = preview;
+                        }
+                    }
+                    this.announce_ready(account_id, found);
+                }
+                Err(err) => {
+                    tracing::warn!(account = account_id, %err, "could not refresh mail for notification")
+                }
+            }
+        });
+    }
+
     /// Announces the new mail among `found`, as the store held it when
     /// read, then asks the store again for the threads announced. Mail
     /// read elsewhere between that read and the notifications
     /// registering had its change event arrive with nothing to settle,
     /// and this second look is what withdraws its notification.
-    fn announce_found(
+    fn announce_ready(
         self: &Rc<Self>,
         account_id: AccountId,
         mut found: Vec<mailrs_domain::MessageMeta>,
@@ -1805,12 +1912,7 @@ impl App {
         // the mail that came while the app was closed arrives right after
         // it opens.
         let viewed = self.window().and_then(|w| w.viewed());
-        found.retain(|m| {
-            still_news(m.in_role(Role::Inbox), m.is_unread())
-                && (!settings.notify_vips_only
-                    || m.from.as_ref().is_some_and(|a| settings.is_vip(&a.email)))
-                && !in_view(m, viewed.as_ref())
-        });
+        found.retain(|m| announce::eligible(m, &settings, viewed.as_ref()));
         if found.is_empty() {
             return;
         }
@@ -1820,11 +1922,7 @@ impl App {
             .collect::<HashSet<_>>()
             .into_iter()
             .collect();
-        self.announce_mail(
-            found,
-            settings.notification_previews,
-            settings.notification_buttons.clone(),
-        );
+        self.announce_mail(found, &settings);
         self.settle_notifications(account_id, &threads);
     }
 
