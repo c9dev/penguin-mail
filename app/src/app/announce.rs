@@ -27,9 +27,147 @@ pub(crate) fn announced(
     mailrs_store::messages::by_ids(c, account_id, message_ids)
 }
 
+pub(super) fn eligible(
+    message: &MessageMeta,
+    settings: &crate::settings::Settings,
+    viewed: Option<&Target>,
+) -> bool {
+    still_news(
+        message.in_role(mailrs_domain::Role::Inbox),
+        message.is_unread(),
+    ) && (!settings.notify_vips_only
+        || message
+            .from
+            .as_ref()
+            .is_some_and(|a| settings.is_vip(&a.email)))
+        && !in_view(message, viewed)
+}
+
+pub(super) fn preview_targets(
+    messages: &[MessageMeta],
+    settings: &crate::settings::Settings,
+) -> Vec<Target> {
+    if !settings.notification_previews
+        || !settings.notification_message_preview
+        || messages.len() > 3
+    {
+        return Vec::new();
+    }
+    messages
+        .iter()
+        .filter(|m| {
+            m.snippet.trim().is_empty()
+                || settings.notification_preview_length.characters() > 140
+                    && m.snippet.chars().count() < settings.notification_preview_length.characters()
+        })
+        .map(|m| Target {
+            account_id: m.account_id,
+            thread_id: m.thread_id.clone(),
+            message_id: Some(m.id.clone()),
+        })
+        .collect()
+}
+
+/// A slow server must not hold up the notification beyond this batch's deadline.
+pub(super) async fn fill_previews<F, Fut>(
+    targets: Vec<Target>,
+    mut fetch: F,
+) -> std::collections::HashMap<String, String>
+where
+    F: FnMut(Target) -> Fut,
+    Fut: std::future::Future<Output = Result<Option<String>, mailrs_sync::SyncError>>,
+{
+    let mut previews = std::collections::HashMap::new();
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+        for target in targets {
+            let id = target.message_id.clone();
+            match fetch(target).await {
+                Ok(Some(text)) => {
+                    if let Some(id) = id {
+                        previews.insert(id, text);
+                    }
+                }
+                Ok(None) => {}
+                Err(err) => tracing::debug!(%err, "notification preview unavailable"),
+            }
+        }
+    })
+    .await;
+    previews
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_individual_notifications_with_consent_fetch_missing_previews() {
+        use mailrs_sync::fake::meta;
+        let mut settings = crate::settings::Settings::default();
+        let mut messages = vec![meta("first", "t", 0, &["INBOX", "UNREAD"])];
+        messages[0].snippet.clear();
+        assert!(preview_targets(&messages, &settings).is_empty());
+        settings.notification_message_preview = true;
+        let targets = preview_targets(&messages, &settings);
+        assert_eq!(targets.len(), 1);
+        assert_eq!(targets[0].message_id.as_deref(), Some("first"));
+        settings.notification_previews = false;
+        assert!(preview_targets(&messages, &settings).is_empty());
+        settings.notification_previews = true;
+        messages[0].snippet = "Cached text".into();
+        assert!(preview_targets(&messages, &settings).is_empty());
+        settings.notification_preview_length = crate::settings::NotificationPreviewLength::Long;
+        assert_eq!(preview_targets(&messages, &settings).len(), 1);
+        messages[0].snippet = "x".repeat(280);
+        assert!(preview_targets(&messages, &settings).is_empty());
+        messages[0].snippet.clear();
+        messages = (0..4).map(|_| messages[0].clone()).collect();
+        assert!(preview_targets(&messages, &settings).is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn preview_failures_continue_but_the_whole_batch_has_one_deadline() {
+        use std::time::Duration;
+        let start = tokio::time::Instant::now();
+        let mut called = Vec::new();
+        fill_previews(
+            (0..3).map(|n| Target::thread(1, n.to_string())).collect(),
+            |target| {
+                called.push(target.thread_id.clone());
+                async move {
+                    if target.thread_id == "0" {
+                        return Err(mailrs_sync::SyncError::UnknownAccount(1));
+                    }
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    Ok(Some("Preview".into()))
+                }
+            },
+        )
+        .await;
+        assert_eq!(called, ["0", "1", "2"]);
+        assert_eq!(start.elapsed(), Duration::from_secs(3));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn previews_ready_before_the_deadline_survive_a_later_timeout() {
+        let targets = ["first", "slow"]
+            .into_iter()
+            .map(|id| Target {
+                account_id: 1,
+                thread_id: id.into(),
+                message_id: Some(id.into()),
+            })
+            .collect();
+        let ready = fill_previews(targets, |target| async move {
+            if target.thread_id == "slow" {
+                tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+            }
+            Ok(Some("Ready text".into()))
+        })
+        .await;
+        assert_eq!(ready.len(), 1);
+        assert_eq!(ready["first"], "Ready text");
+    }
 
     #[tokio::test]
     async fn the_announced_mail_is_the_new_messages_and_not_their_threads() {
@@ -135,7 +273,14 @@ mod tests {
             "the change event arrives before the notification registers"
         );
 
-        for notice in notify::notices(snapshot, true, vec![]) {
+        for notice in notify::notices(
+            snapshot,
+            true,
+            false,
+            false,
+            crate::settings::NotificationPreviewLength::Medium,
+            vec![],
+        ) {
             issued.issue("token".into(), notice.target.unwrap(), notice.buttons);
         }
         let asked = issued.in_threads(account_id, &["t".to_string()]);

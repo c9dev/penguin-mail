@@ -126,6 +126,7 @@ pub fn settled_among(asked: &[String], still: &HashSet<String>) -> Vec<String> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Notice {
     pub title: String,
+    pub subtitle: String,
     pub body: String,
     pub target: Option<Target>,
     pub buttons: Vec<Button>,
@@ -137,9 +138,17 @@ pub struct Notice {
 
 /// The notifications for `messages`: one each for up to three, one summary
 /// beyond that. With `previews` off, they say only how much mail arrived.
-pub fn notices(messages: Vec<MessageMeta>, previews: bool, buttons: Vec<Button>) -> Vec<Notice> {
+pub fn notices(
+    messages: Vec<MessageMeta>,
+    previews: bool,
+    message_preview: bool,
+    bold_subject: bool,
+    preview_length: crate::settings::NotificationPreviewLength,
+    buttons: Vec<Button>,
+) -> Vec<Notice> {
     let notice = |title, body, target: Option<Target>| Notice {
         title,
+        subtitle: String::new(),
         body,
         buttons: if target.is_some() {
             buttons.clone()
@@ -179,7 +188,21 @@ pub fn notices(messages: Vec<MessageMeta>, previews: bool, buttons: Vec<Button>)
                 } else {
                     message.subject.clone()
                 };
-                let body = format!("{subject}\n{}", message.snippet);
+                let snippet = if message_preview {
+                    mailrs_mime::preview_up_to(Some(&message.snippet), preview_length.characters())
+                } else {
+                    String::new()
+                };
+                if bold_subject {
+                    let mut notice = notice(sender, snippet, Some(target_of(message)));
+                    notice.subtitle = subject;
+                    return notice;
+                }
+                let body = if snippet.is_empty() {
+                    subject
+                } else {
+                    format!("{subject}\n{snippet}")
+                };
                 notice(sender, body, Some(target_of(message)))
             })
             .collect();
@@ -384,6 +407,53 @@ fn choice_of(key: &str, buttons: &[Button]) -> Option<Choice> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_text_requires_both_switches_and_is_bounded_plain_text() {
+        let mut message = mailrs_sync::fake::meta("m", "t", 0, &["INBOX"]);
+        message.subject = "Kites".into();
+        message.snippet = "Hello\n\tthere".into();
+        let show = |message: MessageMeta, previews, text| {
+            notices(
+                vec![message],
+                previews,
+                text,
+                false,
+                crate::settings::NotificationPreviewLength::Medium,
+                vec![],
+            )
+            .remove(0)
+        };
+        assert_eq!(show(message.clone(), true, false).body, "Kites");
+        assert_eq!(show(message.clone(), false, true).body, "");
+        assert_eq!(show(message.clone(), true, true).body, "Kites\nHello there");
+        message.snippet = "  \n".into();
+        assert_eq!(show(message.clone(), true, true).body, "Kites");
+        message.subject.clear();
+        assert_eq!(show(message.clone(), true, true).body, "(no subject)");
+        message.snippet = "é".repeat(1000);
+        let body = show(message.clone(), true, true).body;
+        assert!(body.chars().count() < 1000);
+        assert!(body.ends_with('é'));
+    }
+
+    #[test]
+    fn bold_subject_has_its_own_line_and_preview_length_respects_consent() {
+        use crate::settings::NotificationPreviewLength::{Long, Medium, Short};
+        let mut message = mailrs_sync::fake::meta("m", "t", 0, &["INBOX"]);
+        message.subject = "Kites".into();
+        message.snippet = "é".repeat(500);
+        for (length, count) in [(Short, 80), (Medium, 140), (Long, 280)] {
+            let notice = notices(vec![message.clone()], true, true, true, length, vec![]).remove(0);
+            assert_eq!(notice.subtitle, "Kites");
+            assert_eq!(notice.body, "é".repeat(count));
+        }
+        let hidden = notices(vec![message.clone()], false, true, true, Long, vec![]).remove(0);
+        assert!(hidden.subtitle.is_empty() && hidden.body.is_empty());
+        let subject_only = notices(vec![message], true, false, true, Long, vec![]).remove(0);
+        assert_eq!(subject_only.subtitle, "Kites");
+        assert!(subject_only.body.is_empty());
+    }
 
     #[test]
     fn every_button_routes_back_from_its_action_key() {
@@ -629,9 +699,17 @@ mod tests {
         let four: Vec<_> = (0..4)
             .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX", "UNREAD"]))
             .collect();
-        let shown = notices(four, true, Button::ALL.to_vec());
+        let shown = notices(
+            four,
+            true,
+            true,
+            true,
+            crate::settings::NotificationPreviewLength::Long,
+            Button::ALL.to_vec(),
+        );
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].target, None);
+        assert!(shown[0].subtitle.is_empty());
         assert!(shown[0].buttons.is_empty());
         let counted: Vec<_> = shown[0]
             .counted
@@ -647,7 +725,14 @@ mod tests {
         let two: Vec<_> = (0..2)
             .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX"]))
             .collect();
-        let shown = notices(two, true, vec![Button::Archive]);
+        let shown = notices(
+            two,
+            true,
+            true,
+            true,
+            crate::settings::NotificationPreviewLength::Long,
+            vec![Button::Archive],
+        );
         assert_eq!(shown.len(), 2);
         assert!(
             shown
@@ -665,7 +750,14 @@ mod tests {
     fn without_previews_one_message_still_gets_its_buttons() {
         use mailrs_sync::fake::meta;
         let one = vec![meta("m1", "t1", 0, &["INBOX"])];
-        let shown = notices(one, false, vec![Button::Reply]);
+        let shown = notices(
+            one,
+            false,
+            true,
+            true,
+            crate::settings::NotificationPreviewLength::Long,
+            vec![Button::Reply],
+        );
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].body, "");
         assert_eq!(shown[0].buttons, [Button::Reply]);
@@ -681,9 +773,17 @@ mod tests {
         let two: Vec<_> = (0..2)
             .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX", "UNREAD"]))
             .collect();
-        let shown = notices(two, false, Button::ALL.to_vec());
+        let shown = notices(
+            two,
+            false,
+            true,
+            true,
+            crate::settings::NotificationPreviewLength::Long,
+            Button::ALL.to_vec(),
+        );
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].target, None);
+        assert!(shown[0].subtitle.is_empty());
         assert!(shown[0].buttons.is_empty());
         let counted: Vec<_> = shown[0]
             .counted
