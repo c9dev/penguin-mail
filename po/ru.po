@@ -4194,8 +4194,8 @@ msgstr ""
 "зашифрованное вашим собственным ключом, а на этом компьютере нет ключа или "
 "сертификата для {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2100
-#: app/src/ui/composer/mod.rs:2103
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2124
+#: app/src/ui/composer/mod.rs:2127
 msgid "That account is not connected."
 msgstr "Эта учётная запись не подключена."
 
@@ -4325,7 +4325,7 @@ msgstr "Стандартное шифрование (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Не зашифровано при передаче"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2200
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2224
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} вложение"
@@ -4376,8 +4376,8 @@ msgstr[2] "{named} и ещё {count}"
 msgid "me"
 msgstr "я"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:619
-#: app/src/ui/composer/mod.rs:623
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:626
+#: app/src/ui/composer/mod.rs:630
 msgid "Show trimmed content"
 msgstr "Показать скрытое содержимое"
 
@@ -5063,7 +5063,7 @@ msgid "Open Penguin Mail"
 msgstr "Открыть Penguin Mail"
 
 #: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
-#: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
+#: app/src/ui/composer/mod.rs:699 app/src/ui/composer/mod.rs:1589
 #: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
 msgid "New Message"
 msgstr "Новое сообщение"
@@ -5262,8 +5262,8 @@ msgstr "Скопировать ссылку"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
-#: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/mod.rs:2019 app/src/ui/composer/mod.rs:2141
+#: app/src/ui/composer/mod.rs:2502 app/src/ui/composer/mod.rs:2921
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5668,7 +5668,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1930
+#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1954
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Отправить"
@@ -5831,7 +5831,7 @@ msgid "No models found."
 msgstr "Модели не найдены."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2257
+#: app/src/ui/composer/mod.rs:2281
 msgid "Remove {file}"
 msgstr "Убрать {file}"
 
@@ -5874,7 +5874,7 @@ msgid "Edit {server}"
 msgstr "Изменить {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
+#: app/src/ui/composer/mod.rs:2277 app/src/ui/composer/recipients.rs:486
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3503
 msgid "Remove"
 msgstr "Убрать"
@@ -5918,7 +5918,7 @@ msgstr ""
 "серверу по HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2892 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:2916 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Название"
@@ -5954,7 +5954,7 @@ msgstr "Проверить"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2921
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6382,7 +6382,7 @@ msgid "Keenable API Key (Optional)"
 msgstr "Ключ API Keenable (необязательно)"
 
 #: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2412
-#: app/src/ui/composer/recipients.rs:50
+#: app/src/ui/composer/recipients.rs:158
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
 
@@ -6539,7 +6539,7 @@ msgstr "Только новые"
 msgid "New and existing"
 msgstr "Новые и существующие"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:592
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:599
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -7275,7 +7275,7 @@ msgstr "Событие «{title}» удалено"
 msgid "Could not delete the event: {reason}"
 msgstr "Не удалось удалить событие: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1402
+#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1426
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7903,7 +7903,7 @@ msgstr "Прикрепить файлы…"
 msgid "Templates"
 msgstr "Шаблоны"
 
-#: app/src/ui/composer/mod.rs:154 app/src/ui/composer/mod.rs:1034
+#: app/src/ui/composer/mod.rs:154 app/src/ui/composer/mod.rs:1058
 msgid "Preview"
 msgstr "Предпросмотр"
 
@@ -7923,12 +7923,12 @@ msgstr "Запросить уведомление о прочтении"
 msgid "Choose a Time…"
 msgstr "Выбрать время…"
 
-#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2010
+#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2034
 #: app/src/ui/sidebar.rs:1366 app/src/ui/sidebar.rs:1896
 msgid "Send Later"
 msgstr "Отправить позже"
 
-#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1609
+#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1633
 msgid "Send (Ctrl+Enter)"
 msgstr "Отправить (Ctrl+Enter)"
 
@@ -7958,361 +7958,361 @@ msgstr "Копия"
 msgid "Blind carbon copy"
 msgstr "Скрытая копия"
 
-#: app/src/ui/composer/mod.rs:481
+#: app/src/ui/composer/mod.rs:488
 msgid "Cc/Bcc"
 msgstr "Копия/скрытая"
 
-#: app/src/ui/composer/mod.rs:482 app/src/ui/composer/mod.rs:1203
+#: app/src/ui/composer/mod.rs:489 app/src/ui/composer/mod.rs:1227
 msgid "Show Cc and Bcc"
 msgstr "Показать копию и скрытую копию"
 
-#: app/src/ui/composer/mod.rs:493
+#: app/src/ui/composer/mod.rs:500
 msgid "+suffix or .suffix"
 msgstr "+суффикс или .суффикс"
 
-#: app/src/ui/composer/mod.rs:496
+#: app/src/ui/composer/mod.rs:503
 msgid "Address Suffix"
 msgstr "Суффикс адреса"
 
-#: app/src/ui/composer/mod.rs:508 app/src/ui/composer/mod.rs:513
+#: app/src/ui/composer/mod.rs:515 app/src/ui/composer/mod.rs:520
 msgid "New Masked Address"
 msgstr "Новый маскированный адрес"
 
-#: app/src/ui/composer/mod.rs:530
+#: app/src/ui/composer/mod.rs:537
 msgid "Masked"
 msgstr "Маскированный"
 
-#: app/src/ui/composer/mod.rs:558 app/src/ui/composer/mod.rs:559
+#: app/src/ui/composer/mod.rs:565 app/src/ui/composer/mod.rs:566
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "От"
 
-#: app/src/ui/composer/mod.rs:564 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:571 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "Кому"
 
-#: app/src/ui/composer/mod.rs:568
+#: app/src/ui/composer/mod.rs:575
 msgid "Cc"
 msgstr "Копия"
 
-#: app/src/ui/composer/mod.rs:570
+#: app/src/ui/composer/mod.rs:577
 msgid "Bcc"
 msgstr "Скрытая копия"
 
-#: app/src/ui/composer/mod.rs:580 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:587 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "Тема"
 
-#: app/src/ui/composer/mod.rs:644
+#: app/src/ui/composer/mod.rs:651
 msgid "Formatting"
 msgstr "Форматирование"
 
-#: app/src/ui/composer/mod.rs:663 app/src/ui/composer/mod.rs:1368
+#: app/src/ui/composer/mod.rs:670 app/src/ui/composer/mod.rs:1392
 msgid "Forwarded Message"
 msgstr "Пересланное сообщение"
 
-#: app/src/ui/composer/mod.rs:1201
+#: app/src/ui/composer/mod.rs:1225
 msgid "Hide Cc and Bcc"
 msgstr "Скрыть копию и скрытую копию"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1310
 msgid "Remove Quoted Text"
 msgstr "Убрать цитату"
 
-#: app/src/ui/composer/mod.rs:1287
+#: app/src/ui/composer/mod.rs:1311
 msgid "Do Not Forward the Original"
 msgstr "Не пересылать оригинал"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1421
 msgid "Quoted text removed"
 msgstr "Цитата убрана"
 
-#: app/src/ui/composer/mod.rs:1398
+#: app/src/ui/composer/mod.rs:1422
 msgid "Forwarded message removed"
 msgstr "Пересланное сообщение убрано"
 
-#: app/src/ui/composer/mod.rs:1503
+#: app/src/ui/composer/mod.rs:1527
 msgid "Sending from {address}"
 msgstr "Отправка с адреса {address}"
 
-#: app/src/ui/composer/mod.rs:1509
+#: app/src/ui/composer/mod.rs:1533
 msgid "Could not make a masked address: {reason}"
 msgstr "Не удалось создать маскированный адрес: {reason}"
 
-#: app/src/ui/composer/mod.rs:1573
+#: app/src/ui/composer/mod.rs:1597
 msgid "Scheduled to send {when}"
 msgstr "Отправка запланирована на {when}"
 
-#: app/src/ui/composer/mod.rs:1597 app/src/ui/composer/mod.rs:2032
+#: app/src/ui/composer/mod.rs:1621 app/src/ui/composer/mod.rs:2056
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Выберите отправителя и введите допустимый суффикс адреса."
 
-#: app/src/ui/composer/mod.rs:1769 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1793 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:461
 msgid "Cancel Send"
 msgstr "Отменить отправку"
 
-#: app/src/ui/composer/mod.rs:1922 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1946 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Отправка…"
 
-#: app/src/ui/composer/mod.rs:1962
+#: app/src/ui/composer/mod.rs:1986
 msgid "Attachment Missing?"
 msgstr "Забыли вложение?"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1988
 msgid "The message says “{sentence}” and carries no file."
 msgstr "В письме сказано «{sentence}», но файл не прикреплён."
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:1993
 msgid "Add Attachment"
 msgstr "Добавить вложение"
 
-#: app/src/ui/composer/mod.rs:1970
+#: app/src/ui/composer/mod.rs:1994
 msgid "Send Anyway"
 msgstr "Всё равно отправить"
 
-#: app/src/ui/composer/mod.rs:1988
+#: app/src/ui/composer/mod.rs:2012
 msgid "Send Without Encryption?"
 msgstr "Отправить без шифрования?"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:2014
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Это сообщение должно было уйти зашифрованным, но зашифровать его нельзя. "
 "{reason}"
 
-#: app/src/ui/composer/mod.rs:1996
+#: app/src/ui/composer/mod.rs:2020
 msgid "Send Readable"
 msgstr "Отправить незашифрованным"
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2035
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail отправит его в это время, если будет запущен, даже в системном "
 "лотке."
 
-#: app/src/ui/composer/mod.rs:2012
+#: app/src/ui/composer/mod.rs:2036
 msgid "Schedule"
 msgstr "Запланировать"
 
-#: app/src/ui/composer/mod.rs:2074
+#: app/src/ui/composer/mod.rs:2098
 msgid "Draft saved, encrypted to your own key"
 msgstr "Черновик сохранён и зашифрован вашим ключом"
 
-#: app/src/ui/composer/mod.rs:2076
+#: app/src/ui/composer/mod.rs:2100
 msgid "Draft saved"
 msgstr "Черновик сохранён"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2136
 msgid "Save as Draft?"
 msgstr "Сохранить как черновик?"
 
-#: app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2140
 msgid "Discard"
 msgstr "Не сохранять"
 
-#: app/src/ui/composer/mod.rs:2118
+#: app/src/ui/composer/mod.rs:2142
 msgid "Save Draft"
 msgstr "Сохранить черновик"
 
-#: app/src/ui/composer/mod.rs:2159
+#: app/src/ui/composer/mod.rs:2183
 msgid "Attach Files"
 msgstr "Прикрепить файлы"
 
-#: app/src/ui/composer/mod.rs:2195
+#: app/src/ui/composer/mod.rs:2219
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2241
+#: app/src/ui/composer/mod.rs:2265
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "Открыть {file}, {size}"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2318
 msgid "Bold (Ctrl+B)"
 msgstr "Полужирный (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2319
 msgid "Italic (Ctrl+I)"
 msgstr "Курсив (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2322
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Зачёркнутый (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2301
+#: app/src/ui/composer/mod.rs:2325
 msgid "Code (Ctrl+E)"
 msgstr "Код (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2338
+#: app/src/ui/composer/mod.rs:2362
 msgid "Link (Ctrl+K)"
 msgstr "Ссылка (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2348
+#: app/src/ui/composer/mod.rs:2372
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Маркированный список (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2377
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Нумерованный список (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2358
+#: app/src/ui/composer/mod.rs:2382
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Цитата (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2375
+#: app/src/ui/composer/mod.rs:2399
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Вставить изображение (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2409
 msgid "Paragraph"
 msgstr "Абзац"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2410
 msgid "Heading 1"
 msgstr "Заголовок 1"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2411
 msgid "Heading 2"
 msgstr "Заголовок 2"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2412
 msgid "Heading 3"
 msgstr "Заголовок 3"
 
-#: app/src/ui/composer/mod.rs:2389
+#: app/src/ui/composer/mod.rs:2413
 msgid "Code Block"
 msgstr "Блок кода"
 
-#: app/src/ui/composer/mod.rs:2403
+#: app/src/ui/composer/mod.rs:2427
 msgid "Turn Markdown into Formatting"
 msgstr "Преобразовать Markdown в форматирование"
 
-#: app/src/ui/composer/mod.rs:2407
+#: app/src/ui/composer/mod.rs:2431
 msgid "Clear Formatting"
 msgstr "Очистить форматирование"
 
-#: app/src/ui/composer/mod.rs:2413
+#: app/src/ui/composer/mod.rs:2437
 msgid "Write in Markdown"
 msgstr "Писать в Markdown"
 
-#: app/src/ui/composer/mod.rs:2420 app/src/ui/composer/mod.rs:2424
+#: app/src/ui/composer/mod.rs:2444 app/src/ui/composer/mod.rs:2448
 msgid "More Formatting"
 msgstr "Другое форматирование"
 
-#: app/src/ui/composer/mod.rs:2461
+#: app/src/ui/composer/mod.rs:2485
 msgid "Add a Link"
 msgstr "Добавить ссылку"
 
-#: app/src/ui/composer/mod.rs:2467
+#: app/src/ui/composer/mod.rs:2491
 msgid "Text"
 msgstr "Текст"
 
-#: app/src/ui/composer/mod.rs:2479
+#: app/src/ui/composer/mod.rs:2503
 msgid "Add Link"
 msgstr "Добавить ссылку"
 
-#: app/src/ui/composer/mod.rs:2515
+#: app/src/ui/composer/mod.rs:2539
 msgid "Markdown formatted"
 msgstr "Markdown отформатирован"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2658
 msgid "Pasted as rich text"
 msgstr "Вставлено с форматированием"
 
-#: app/src/ui/composer/mod.rs:2635
+#: app/src/ui/composer/mod.rs:2659
 msgid "Paste as Plain Text"
 msgstr "Вставить как простой текст"
 
-#: app/src/ui/composer/mod.rs:2669
+#: app/src/ui/composer/mod.rs:2693
 msgid "Editing as Markdown"
 msgstr "Редактирование в Markdown"
 
-#: app/src/ui/composer/mod.rs:2705
+#: app/src/ui/composer/mod.rs:2729
 msgid "Images"
 msgstr "Изображения"
 
-#: app/src/ui/composer/mod.rs:2710
+#: app/src/ui/composer/mod.rs:2734
 msgid "Insert Image"
 msgstr "Вставить изображение"
 
-#: app/src/ui/composer/mod.rs:2754
+#: app/src/ui/composer/mod.rs:2778
 msgid "Could not read the file: {reason}"
 msgstr "Не удалось прочитать файл: {reason}"
 
-#: app/src/ui/composer/mod.rs:2836
+#: app/src/ui/composer/mod.rs:2860
 msgid "No Templates Yet"
 msgstr "Шаблонов пока нет"
 
-#: app/src/ui/composer/mod.rs:2886
+#: app/src/ui/composer/mod.rs:2910
 msgid "Save as Template"
 msgstr "Сохранить как шаблон"
 
-#: app/src/ui/composer/mod.rs:2888
+#: app/src/ui/composer/mod.rs:2912
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 "Заполнители, например {{first_name}}, подставляются при каждом использовании "
 "шаблона."
 
-#: app/src/ui/composer/mod.rs:2911 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2935 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Дайте шаблону название"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2943
 msgid "Template saved"
 msgstr "Шаблон сохранён"
 
-#: app/src/ui/composer/mod.rs:2922
+#: app/src/ui/composer/mod.rs:2946
 msgid "Template not saved: {reason}"
 msgstr "Шаблон не сохранён: {reason}"
 
-#: app/src/ui/composer/mod.rs:3045
+#: app/src/ui/composer/mod.rs:3069
 msgid "This looks like Markdown"
 msgstr "Похоже на Markdown"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3075
 msgid "Format"
 msgstr "Форматировать"
 
-#: app/src/ui/composer/mod.rs:3052
+#: app/src/ui/composer/mod.rs:3076
 msgid "Turn the Markdown into rich text"
 msgstr "Преобразовать Markdown в форматированный текст"
 
-#: app/src/ui/composer/mod.rs:3058 app/src/ui/composer/mod.rs:3062
+#: app/src/ui/composer/mod.rs:3082 app/src/ui/composer/mod.rs:3086
 msgid "Dismiss"
 msgstr "Скрыть"
 
-#: app/src/ui/composer/mod.rs:3145
+#: app/src/ui/composer/mod.rs:3169
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Черновик хранится на этом компьютере, и вы сможете закончить его здесь позже."
 
-#: app/src/ui/composer/mod.rs:3149
+#: app/src/ui/composer/mod.rs:3173
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Черновик хранится в {provider}, и вы сможете закончить его позже на любом "
 "устройстве."
 
-#: app/src/ui/composer/mod.rs:3153
+#: app/src/ui/composer/mod.rs:3177
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
 "Черновик хранится в вашей учётной записи, и вы сможете закончить его позже "
 "на любом устройстве."
 
-#: app/src/ui/composer/recipients.rs:57
+#: app/src/ui/composer/recipients.rs:165
 msgid "{recipient}, not an address"
 msgstr "{recipient}, не адрес"
 
-#: app/src/ui/composer/recipients.rs:323
+#: app/src/ui/composer/recipients.rs:491
 msgid "Remove {recipient}"
 msgstr "Убрать {recipient}"
 
-#: app/src/ui/composer/recipients.rs:337
+#: app/src/ui/composer/recipients.rs:505
 msgid "Press Delete to remove"
 msgstr "Нажмите Delete, чтобы убрать"
 
