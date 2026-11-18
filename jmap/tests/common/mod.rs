@@ -32,6 +32,10 @@ pub fn session_on(base: &str, limits: Value) -> Value {
     })
 }
 
+#[allow(
+    dead_code,
+    reason = "push.rs builds its clients with short push limits instead"
+)]
 pub fn client(server: &MockServer) -> JmapClient {
     JmapClient::new(
         &format!("{}/jmap/session", server.uri()),
