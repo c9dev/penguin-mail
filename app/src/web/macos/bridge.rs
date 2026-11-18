@@ -10,7 +10,9 @@ use block2::DynBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send};
-use objc2_app_kit::{NSEvent, NSMenu, NSUserInterfaceItemIdentification, NSView};
+use objc2_app_kit::{
+    NSEvent, NSEventModifierFlags, NSMenu, NSUserInterfaceItemIdentification, NSView,
+};
 use objc2_foundation::{NSNumber, NSObjectProtocol, NSRect, NSString};
 use objc2_web_kit::{
     WKNavigation, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate,
@@ -185,6 +187,9 @@ define_class!(
                     .is_some_and(|id| KEPT.contains(&id.to_string().as_str()));
                 if !kept {
                     menu.removeItem(&item);
+                } else if item.identifier().is_some_and(|id| id.to_string() == KEPT[0]) {
+                    item.setKeyEquivalent(&NSString::from_str("c"));
+                    item.setKeyEquivalentModifierMask(NSEventModifierFlags::Command);
                 }
             }
             unsafe { msg_send![super(self), willOpenMenu: menu, withEvent: event] }
