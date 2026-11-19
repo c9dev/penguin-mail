@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, gio, glib, pango};
+use gtk::{Align, gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, FlagColor, Folder, Label, MailSet, Provider, Role,
@@ -458,7 +458,7 @@ impl Sidebar {
                 .valign(gtk::Align::Center)
                 .visible(false)
                 .build();
-            let child = gtk::Box::builder().spacing(6).build();
+            let child = gtk::Box::builder().spacing(6).halign(Align::Center).build();
             child.append(&content);
             child.append(&badge);
             labels.push(content);
