@@ -12,6 +12,7 @@ use gtk::glib;
 use gtk::subclass::prelude::*;
 
 use super::chip::{GAP, Names, lines, names_for, spread};
+use crate::ui::count_badge::CountBadge;
 
 mod imp {
     use super::*;
@@ -23,7 +24,7 @@ mod imp {
         pub names: RefCell<Vec<gtk::Revealer>>,
         /// Each chip's corner badge, shown while its name is folded.
         /// Worded tabs have none.
-        pub corners: RefCell<Vec<Option<gtk::Label>>>,
+        pub corners: RefCell<Vec<Option<CountBadge>>>,
         /// The chosen chip, an index into `chips`.
         pub chosen: Cell<usize>,
         /// The names the last width handed over held.
@@ -227,7 +228,7 @@ impl CategoryStrip {
     pub fn new(
         chips: Vec<gtk::ToggleButton>,
         names: Vec<gtk::Revealer>,
-        corners: Vec<Option<gtk::Label>>,
+        corners: Vec<Option<CountBadge>>,
         worded: bool,
     ) -> CategoryStrip {
         let strip: CategoryStrip = glib::Object::new();

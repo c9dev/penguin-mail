@@ -9027,7 +9027,7 @@ msgstr "此账号尚未开始同步"
 msgid "Could not change the subscription: {reason}"
 msgstr "无法更改颜色：{reason}"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "灰色"
 
@@ -11294,19 +11294,19 @@ msgstr "打开"
 msgid "Open in Another Program"
 msgstr "以其他程序打开"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "请先打开此发件人的邮件"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "{sender} 的邮件现在会移至 {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "已将 {sender} 的邮件移至 {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr "已将 {sender} 的邮件移至 {category}，但无法为新邮件分类：{reason}"

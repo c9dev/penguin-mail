@@ -15,6 +15,7 @@ use crate::offered::InboxBar;
 use crate::permission::{Occasion, Permission};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
+use crate::ui::count_badge::CountBadge;
 use mailrs_domain::translate::{fill, gettext, with_reason};
 
 mod chip;
@@ -72,16 +73,19 @@ pub(super) struct CategoryBar {
 /// A chip's unread count, drawn in two places: after its name while the
 /// name shows, and on the pill's corner while only the icon does.
 struct Badges {
-    inline: gtk::Label,
-    corner: Option<gtk::Label>,
+    inline: CountBadge,
+    corner: Option<CountBadge>,
 }
 
 /// A badge, faded out until there is mail to count.
-fn badge_label(place: &str, valign: gtk::Align) -> gtk::Label {
-    gtk::Label::builder()
-        .css_classes(["category-count", place, "no-mail"])
-        .halign(gtk::Align::End)
-        .valign(valign)
+fn badge(place: &str, valign: gtk::Align) -> CountBadge {
+    glib::Object::builder()
+        .property(
+            "css-classes",
+            ["category-count", place, "no-mail"].as_slice(),
+        )
+        .property("halign", gtk::Align::End)
+        .property("valign", valign)
         .build()
 }
 
@@ -117,14 +121,7 @@ impl CategoryBar {
                     .css_classes(["category-name"])
                     .build(),
             );
-            let inline = badge_label(
-                "inline",
-                if worded {
-                    gtk::Align::Start
-                } else {
-                    gtk::Align::Center
-                },
-            );
+            let inline = badge("inline", gtk::Align::Center);
             named.append(&inline);
             let name = slider(&named);
             content.append(&name);
@@ -133,7 +130,7 @@ impl CategoryBar {
             // clear of the 16 px icon, so a count arriving never moves the
             // icons. A worded tab always shows its name and needs none.
             let corner = (!worded).then(|| {
-                let corner = badge_label("corner", gtk::Align::Start);
+                let corner = badge("corner", gtk::Align::Start);
                 face.add_overlay(&corner);
                 corner
             });
@@ -215,7 +212,7 @@ impl CategoryBar {
             let count = unread.get(category).copied().unwrap_or(0);
             let badge = chip::badge(count);
             for label in std::iter::once(&badges.inline).chain(badges.corner.as_ref()) {
-                label.set_label(&badge);
+                label.set_label(badge.as_str());
                 // Nothing unread fades the badge out and leaves its place
                 // empty.
                 if count > 0 {
