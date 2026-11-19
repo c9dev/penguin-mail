@@ -9644,7 +9644,7 @@ msgstr "Αυτός ο λογαριασμός δεν συγχρονίζεται �
 msgid "Could not change the subscription: {reason}"
 msgstr "Αδυναμία αλλαγής του χρώματος: {reason}"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "Γκρι"
 
@@ -12029,19 +12029,19 @@ msgstr "Άνοιγμα"
 msgid "Open in Another Program"
 msgstr "Άνοιγμα με άλλο πρόγραμμα"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Ανοίξτε πρώτα ένα μήνυμα από τον αποστολέα"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Η αλληλογραφία από {sender} πηγαίνει πλέον στην κατηγορία {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Η αλληλογραφία από {sender} μετακινήθηκε στην κατηγορία {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

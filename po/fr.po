@@ -9545,7 +9545,7 @@ msgstr "Ce compte n’est pas encore synchronisé"
 msgid "Could not change the subscription: {reason}"
 msgstr "Impossible de changer la couleur : {reason}"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "Gris"
 
@@ -11917,19 +11917,19 @@ msgstr "Ouvrir"
 msgid "Open in Another Program"
 msgstr "Ouvrir avec un autre programme"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Ouvrez d’abord un message de l’expéditeur"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Le courrier de {sender} va désormais dans {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Courrier de {sender} déplacé vers {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
