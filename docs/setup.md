@@ -415,7 +415,7 @@ instead of Linux's WebKitGTK and tray.
 
 | | .deb | rpm | Arch | Flatpak | Snap | macOS app |
 |---|---|---|---|---|---|---|
-| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | the Flatpak remote | Snap Store | replace the app from a release zip |
+| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | the Flatpak remote | Snap Store | `brew upgrade`, or replace the app from a release zip |
 | GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on a keyring inside the snap | install separately |
 | Assistant skills | yes | yes | yes | no | no | no |
 | Claude Code, MCP servers run as a command | yes | yes | yes | no | no | if available on the app's PATH |
@@ -430,9 +430,11 @@ instead of Linux's WebKitGTK and tray.
   repository yet, so that means downloading and installing the new
   `.pkg.tar.zst` by hand; see `packaging/aur/PKGBUILD` for what an AUR
   package would add. The Flatpak gets updates from its remote, and the
-  snap from the Snap Store. On macOS, download the next zip from the
+  snap from the Snap Store. On macOS, a copy from the Homebrew tap
+  updates with `brew upgrade penguin-mail`, and a copy from a zip updates
+  by downloading the next zip from the
   [releases page](https://github.com/c9dev/penguin-mail/releases/latest)
-  and replace `Penguin Mail.app`. Preferences and the About window say
+  and replacing `Penguin Mail.app`. Preferences and the About window say
   which update method applies to the Linux packages.
 - **GnuPG.** The Flatpak reaches two places for signing and encryption:
   `~/.gnupg`, read and written, and the gpg-agent socket folder under
