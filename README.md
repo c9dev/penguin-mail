@@ -269,7 +269,36 @@ Those sandboxes also keep the app from starting programs installed on your
 system, such as Claude Code. [docs/setup.md](docs/setup.md#which-package)
 has the details.
 
-### On macOS
+### With Homebrew, on macOS
+
+Penguin Mail has a Homebrew tap in its own repository:
+
+```sh
+brew tap c9dev/penguin-mail
+brew install c9dev/penguin-mail/penguin-mail
+```
+
+That puts `penguin-mail` on the PATH and keeps the app at
+`$(brew --prefix)/libexec/Penguin Mail.app`.
+
+The build is not notarized, so macOS blocks the first launch. Clear
+its quarantine attribute once and it opens normally:
+
+```sh
+xattr -cr "$(brew --prefix)/libexec/Penguin Mail.app"
+```
+
+To put the app in Applications:
+
+```sh
+cp -R "$(brew --prefix)/libexec/Penguin Mail.app" /Applications/
+```
+
+`brew upgrade penguin-mail` brings each new version, and
+`brew uninstall penguin-mail` removes the copy Homebrew owns. The app
+includes its GTK libraries, so it needs no other packages.
+
+### From a zip, on macOS
 
 Download the macOS zip for your computer from the
 [latest release](https://github.com/c9dev/penguin-mail/releases/latest):
@@ -438,8 +467,10 @@ The rpm leaves updates to dnf, and the snap to the Snap Store. Those
 copies never check GitHub and offer no Install of their own; Preferences
 and the About window say who brings updates.
 
-The macOS app has no in-app installer. Download the next macOS zip from the
-releases page and replace `Penguin Mail.app` in Applications.
+The macOS app has no in-app installer. A copy from the Homebrew tap updates
+with `brew upgrade penguin-mail`. A copy from a zip updates by downloading
+the next macOS zip from the releases page and replacing `Penguin Mail.app`
+in Applications.
 
 To update by hand, download the new release and install it the same way as
 the first time. For a copy built from source, pull and run
