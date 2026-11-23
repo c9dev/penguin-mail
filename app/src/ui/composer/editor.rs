@@ -2130,11 +2130,17 @@ pub(super) mod checks {
                         unfolded_markdown(&before.markdown, quoted),
                         "{typed:?}"
                     ),
-                    ComposeFormat::Rich => assert_eq!(
-                        after.rich,
-                        Some(unfolded_rich(before.rich.as_ref().unwrap(), &history.rich)),
-                        "{typed:?}"
-                    ),
+                    ComposeFormat::Rich => {
+                        let mut expected =
+                            unfolded_rich(before.rich.as_ref().unwrap(), &history.rich);
+                        // Blank separator lines have no quote tag in the buffer.
+                        for block in &mut expected.blocks {
+                            if block.kind == BlockKind::Paragraph && block.spans.is_empty() {
+                                block.quoted = false;
+                            }
+                        }
+                        assert_eq!(after.rich, Some(expected), "{typed:?}");
+                    }
                 }
                 // The cursor stays among the words. In a body of blank lines
                 // it sat in what the trim took, and goes to the top.

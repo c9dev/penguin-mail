@@ -1127,6 +1127,33 @@ impl GmailApi for FakeGmail {
         })
     }
 
+    async fn insert(
+        &self,
+        raw: &[u8],
+        label_ids: &[String],
+        at: Option<i64>,
+    ) -> Result<String, GmailError> {
+        self.call("users.messages.insert", cost::INSERT).await?;
+        self.with(|s| {
+            let id = format!("moved{}", s.messages.len() + 1);
+            let thread_id = format!("{id}-t");
+            let mut meta = meta(
+                &id,
+                &thread_id,
+                at.unwrap_or_else(|| s.now()),
+                &label_ids.iter().map(String::as_str).collect::<Vec<_>>(),
+            );
+            meta.subject = header(raw, "Subject").unwrap_or_default();
+            s.messages.insert(id.clone(), meta);
+            s.raws.insert(id.clone(), raw.to_vec());
+            s.record(HistoryChange::MessageAdded {
+                id: id.clone(),
+                thread_id,
+            });
+            Ok(id)
+        })
+    }
+
     async fn save_draft(
         &self,
         draft_id: Option<&str>,

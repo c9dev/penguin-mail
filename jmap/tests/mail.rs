@@ -381,13 +381,53 @@ fn a_submission() -> Submission {
 }
 
 #[tokio::test]
+async fn an_import_names_the_hour_the_message_arrived() {
+    let server = MockServer::start().await;
+    answering(&server, created_import()).await;
+    let client = client(&server);
+    client
+        .import(
+            "G1",
+            &["travel".into()],
+            &["$seen"],
+            None,
+            Some("2026-01-02T03:04:05Z"),
+        )
+        .await
+        .unwrap();
+    // A draft import names no hour of its own: what was saved today
+    // arrived today, and the server's stamp stands.
+    client
+        .import("G1", &["drafts".into()], &["$draft"], None, None)
+        .await
+        .unwrap();
+    let imports: Vec<Value> = posts(&server)
+        .await
+        .into_iter()
+        .filter(|body| body["methodCalls"][0][0] == json!("Email/import"))
+        .collect();
+    assert_eq!(imports.len(), 2, "both imports went out");
+    assert_eq!(
+        imports[0]["methodCalls"][0][1]["emails"]["m"]["receivedAt"],
+        json!("2026-01-02T03:04:05Z"),
+        "the carried message's own hour rides along, per RFC 8621 section 4.8"
+    );
+    assert!(
+        imports[1]["methodCalls"][0][1]["emails"]["m"]
+            .get("receivedAt")
+            .is_none(),
+        "an import without an hour asks for none"
+    );
+}
+
+#[tokio::test]
 async fn a_refused_import_leaves_the_old_draft_alone() {
     let server = MockServer::start().await;
     answering_in_turn(&server, vec![json!({"sessionState": "s1", "methodResponses": [
         ["Email/import", {"accountId": "A1", "notCreated": {"m": {"type": "overQuota", "description": "full"}}}, "c0"]
     ]})]).await;
     let refused = client(&server)
-        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"))
+        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"), None)
         .await
         .unwrap_err();
     assert_eq!(
@@ -412,7 +452,7 @@ async fn a_saved_draft_destroys_the_old_one_after_the_import() {
         json!({"sessionState": "s1", "methodResponses": [["Email/set", {"accountId": "A1", "destroyed": ["OLD"]}, "c0"]]}),
     ]).await;
     let saved = client(&server)
-        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"))
+        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"), None)
         .await
         .unwrap();
     assert_eq!(saved.email.id, "M9");
@@ -431,7 +471,7 @@ async fn a_refused_destroy_is_reported_beside_the_new_message() {
             ["Email/set", {"accountId": "A1", "notDestroyed": {"OLD": {"type": "notFound"}}}, "c0"]]}),
     ]).await;
     let saved = client(&server)
-        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"))
+        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"), None)
         .await
         .unwrap();
     assert_eq!(saved.email.id, "M9");
@@ -625,7 +665,7 @@ async fn saving_an_unchanged_draft_keeps_the_copy_the_server_has() {
         json!({"sessionState": "s1", "methodResponses": [["Email/set", {"accountId": "A1", "updated": {"OLD": null}}, "c0"]]}),
     ]).await;
     let saved = client(&server)
-        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"))
+        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"), None)
         .await
         .unwrap();
     assert_eq!(
@@ -840,7 +880,7 @@ async fn saving_bytes_another_message_holds_is_refused_and_leaves_it_alone() {
             ["Email/get", {"accountId": "A1", "state": "e", "notFound": [], "list": [{"id": "INBOX1", "threadId": "T1", "keywords": {"$seen": true}}]}, "c0"]]}),
     ]).await;
     let refused = client(&server)
-        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"))
+        .import("G1", &["drafts".into()], &["$draft"], Some("OLD"), None)
         .await
         .unwrap_err();
     assert!(
