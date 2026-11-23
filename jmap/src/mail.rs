@@ -713,13 +713,17 @@ impl JmapClient {
     /// only after the import is known to have created the new message, so a
     /// refused import never costs the old draft. A destroy the server
     /// refuses leaves the old draft in place; the new message is still
-    /// returned and the refusal is in `Saved::leftover`.
+    /// returned and the refusal is in `Saved::leftover`. `received_at` is
+    /// an RFC 3339 hour the server records as the arrival, per RFC 8621
+    /// section 4.8; without one, a message imported into a new account
+    /// would look freshly received.
     pub async fn import(
         &self,
         blob_id: &str,
         mailbox_ids: &[String],
         keywords: &[&str],
         destroy: Option<&str>,
+        received_at: Option<&str>,
     ) -> Result<Saved, JmapError> {
         let account = self.mail_account().await?;
         let mailboxes: Map<String, Value> = mailbox_ids
@@ -730,9 +734,13 @@ impl JmapClient {
             .iter()
             .map(|k| (k.to_string(), json!(true)))
             .collect();
+        let mut message = json!({ "blobId": blob_id, "mailboxIds": mailboxes, "keywords": marks });
+        if let Some(hour) = received_at {
+            message["receivedAt"] = json!(hour);
+        }
         let mut request = Request::new();
         let import = request.call(MAIL, "Email/import", json!({
-            "accountId": account, "emails": { "m": { "blobId": blob_id, "mailboxIds": mailboxes, "keywords": marks } }
+            "accountId": account, "emails": { "m": message }
         }));
         let email = match self
             .send(&request)

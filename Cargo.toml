@@ -63,7 +63,7 @@ icalendar = "0.17.14"
 keyring = "4.2.0"
 # SMTP submission. Only the protocol: this crate dials and runs TLS itself,
 # so lettre brings no TLS stack, and without `hostname` no host name.
-lettre = { version = "0.11.23", default-features = false, features = ["smtp-transport", "tokio1"] }
+lettre = { version = "0.11.24", default-features = false, features = ["smtp-transport", "tokio1"] }
 libc = "0.2.190"
 ksni = "0.3.6"
 mail-builder = "2.0.1"
@@ -100,7 +100,7 @@ tokio-rustls = "0.26.6"
 toml = "1.1.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-url = "2.5.8"
+url = "2.5.9"
 webkit = { package = "webkit6", version = "0.6.1", features = ["v2_50"] }
 # AppKit and WebKit's own API, for the web view on macOS.
 block2 = "0.6.2"
