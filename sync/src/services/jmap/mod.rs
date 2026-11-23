@@ -496,6 +496,11 @@ impl<J: JmapApi> MailBackend for Jmap<J> {
         result
     }
 
+    /// A read, so it moves nothing and counts as no write.
+    async fn still_in(&self, message: &str, mailbox: &str) -> Result<bool, BackendError> {
+        self.still_in_mailbox(message, mailbox).await
+    }
+
     async fn send(&self, raw: &[u8], _thread_id: Option<&str>) -> Result<String, BackendError> {
         self.send_raw(raw).await
     }

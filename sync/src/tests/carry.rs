@@ -208,31 +208,38 @@ async fn an_undo_leaves_a_carried_copy_alone_once_it_has_moved_elsewhere() {
         )
         .await;
     assert!(outcome.done.len() == 1, "{:?}", outcome.failed);
-    // In another client the copy goes to the bin: it no longer sits in
-    // Travel, and Undo has no claim on it from here on.
+    // In another client the copy goes to the bin. Gmail adds the bin
+    // label and keeps the label the move gave, so wearing the landing
+    // label alone does not mean the copy stayed put: Undo must leave
+    // a binned copy alone all the same.
     other.fake.with(|s| {
         s.messages
             .get_mut("moved1")
             .expect("the copy arrived")
             .held
-            .mailboxes = vec!["TRASH".into()]
+            .mailboxes = vec!["Travel".into(), "TRASH".into()]
     });
     let undone = actions.undo().await.expect("the carry was recorded");
     let error = &undone.outcome.failed[0].error;
     assert!(
-        error.contains("Back where it started, but the copy in Travel stayed behind"),
+        error.contains("Nothing was brought back: the copy in Travel has moved on"),
         "{error}"
     );
-    // The original is home again...
-    assert_eq!(stored(&h, 1).await, [("moved1".to_string(), at)]);
-    // ...and the bin keeps the copy: an Undo that follows mail out of
-    // the folder it put it in would delete what the person filed.
+    // The original stays gone: restoring it would meet the moved copy
+    // as a duplicate, so the undo leaves the pair exactly as the
+    // person left it in the other client.
+    h.fake.with(|s| {
+        assert!(!s.messages.contains_key("a"), "the original was restored");
+    });
+    // And the bin keeps the copy, with both labels it held: an Undo
+    // that follows mail out of the folder it put it in would delete
+    // what the person filed.
     other.fake.with(|s| {
         assert!(
             s.messages.contains_key("moved1"),
             "the moved copy was destroyed"
         );
-        assert_eq!(s.messages["moved1"].held.mailboxes, ["TRASH"]);
+        assert_eq!(s.messages["moved1"].held.mailboxes, ["Travel", "TRASH"]);
     });
 }
 

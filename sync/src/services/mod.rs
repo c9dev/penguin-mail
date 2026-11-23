@@ -1472,6 +1472,37 @@ pub trait MailBackend: Send + Sync + 'static {
         }
     }
 
+    /// Destroys a copy a carry landed here, and only while it still
+    /// sits in `mailbox`, the mailbox it landed in. This is Undo's way
+    /// of erasing, and it keeps its guard to itself: an Empty Trash
+    /// works off a listing and answers by batch, and must not be
+    /// rerouted through a per-copy read because an Undo needs one.
+    /// Adapters without a conditional write take the shortcut their
+    /// checked destroy already takes.
+    fn destroy_landing(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> impl Future<Output = Vec<Result<(), BackendError>>> + Send {
+        self.destroy_checked(messages, mailbox)
+    }
+
+    /// Whether the message a carry landed is still filed in
+    /// `mailbox`, the mailbox it landed in. Undo asks before restoring
+    /// the erased original: a copy the person has moved on is left
+    /// alone where they put it, and its original stays gone rather
+    /// than meeting it as a duplicate. Adapters without a cheap read
+    /// answer true here and leave the word to their checked destroy.
+    fn still_in(        &self,
+        _message: &str,
+        _mailbox: &str,
+    ) -> impl Future<Output = Result<bool, BackendError>> + Send {
+        // shortcut: Without a cheap read the copy's new home cannot be
+        // seen; the checked destroy still refuses to delete mail that
+        // has moved.
+        async { Ok(true) }
+    }
+
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(
         &self,

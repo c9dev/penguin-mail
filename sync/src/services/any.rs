@@ -302,6 +302,18 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, destroy_checked(messages, mailbox))
     }
 
+    async fn destroy_landing(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> Vec<Result<(), BackendError>> {
+        forward_all!(AnyMail, self, destroy_landing(messages, mailbox))
+    }
+
+    async fn still_in(&self, message: &str, mailbox: &str) -> Result<bool, BackendError> {
+        forward_all!(AnyMail, self, still_in(message, mailbox))
+    }
+
     fn person_waiting(&self) -> bool {
         forward_all_now!(AnyMail, self, person_waiting())
     }

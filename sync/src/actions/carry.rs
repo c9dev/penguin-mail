@@ -326,11 +326,14 @@ impl<A: Accounts> MailActions<A> {
     }
 }
 
-/// One message's way back: fetched from the account it was carried to,
-/// filed again where it started, and taken back once it is home. A
-/// failure after the filing leaves the message in both accounts, with
-/// the destination named, because the copy over there is the one the
-/// person has to delete by hand.
+/// One message's way back: the destination is asked first whether the
+/// copy still sits where the move left it, and only then is it fetched
+/// from the account it was carried to, filed again where it started,
+/// and taken back once it is home. A copy that has moved on is left
+/// alone, original staying gone rather than meeting it as a duplicate.
+/// A failure after the filing leaves the message in both accounts,
+/// with the destination named, because the copy over there is the one
+/// the person has to delete by hand.
 async fn bring_home(
     home: &AccountSync,
     dest: &AccountSync,
@@ -339,6 +342,22 @@ async fn bring_home(
     at: &Mailbox,
     place: &str,
 ) -> Result<(), String> {
+    // Ask the destination first whether the copy is still where the
+    // move left it. A copy the person has moved on, or deleted, in
+    // another client is left alone: undoing the move would restore
+    // its original beside it as a duplicate, so the mail stays put
+    // and nothing is erased or restored at all.
+    if !dest
+        .still_holds(landed, place)
+        .await
+        .map_err(|err| err.to_string())?
+    {
+        let mailbox = at.title();
+        return Err(fill(
+            &gettext("Nothing was brought back: the copy in {mailbox} has moved on"),
+            &[("mailbox", &mailbox)],
+        ));
+    }
     let bytes = dest
         .landed_bytes(landed)
         .await

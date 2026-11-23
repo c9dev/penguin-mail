@@ -304,11 +304,12 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
 
     /// Destroys a carried copy only while it still wears the label it
-    /// landed under. A message the person has moved since — to the bin
-    /// in another client, say — is left exactly where they put it, and
-    /// the refusal says so: an Undo may not follow mail out of the
-    /// folder it put it in.
-    async fn destroy_checked(
+    /// landed under and sits in no system folder. Trashing a message
+    /// in Gmail adds the bin label and keeps the labels the move left
+    /// on, so wearing the bin or the spam folder means the person put
+    /// the copy somewhere the move did not, and an Undo may not
+    /// follow mail out of the folder it put it in.
+    async fn destroy_landing(
         &self,
         messages: &[String],
         mailbox: &str,
@@ -319,7 +320,7 @@ impl<G: GmailApi> MailBackend for Google<G> {
                 let held = paced(self.gmail.message_metadata(id))
                     .await
                     .map_err(BackendError::from)?;
-                if !held.held.mailboxes.iter().any(|m| m == mailbox) {
+                if !stays_where_landed(mailbox, &held.held.mailboxes) {
                     return Err(BackendError::Changed);
                 }
                 paced(self.gmail.delete_messages(std::slice::from_ref(id)))
@@ -330,6 +331,16 @@ impl<G: GmailApi> MailBackend for Google<G> {
             answers.push(answer);
         }
         answers
+    }
+
+    /// Asks the same metadata the landing destroy reads, without
+    /// deleting: the copy is where Undo put it only while it still
+    /// wears the landing label and has been filed in no system folder.
+    async fn still_in(&self, message: &str, mailbox: &str) -> Result<bool, BackendError> {
+        let held = paced(self.gmail.message_metadata(message))
+            .await
+            .map_err(BackendError::from)?;
+        Ok(stays_where_landed(mailbox, &held.held.mailboxes))
     }
 
     fn person_waiting(&self) -> bool {
@@ -701,6 +712,16 @@ fn remote_mailbox(label: RemoteLabel) -> RemoteMailbox {
         id: label.id,
         name: label.name,
     }
+}
+
+/// Whether a Gmail copy still sits where a landing put it: it wears
+/// the label the landing gave, and it has been filed in no system
+/// folder. Trashing or reporting spam adds that label and keeps the
+/// others, so a copy wearing either has been put somewhere the move
+/// did not, even with the landing label still on it.
+fn stays_where_landed(mailbox: &str, worn: &[String]) -> bool {
+    let filed_away = |folder: &str| folder != mailbox && worn.iter().any(|m| m == folder);
+    worn.iter().any(|m| m == mailbox) && !filed_away("TRASH") && !filed_away("SPAM")
 }
 
 impl<G: GmailApi> CalendarService for Google<G> {

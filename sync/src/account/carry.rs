@@ -105,6 +105,14 @@ impl AccountSync {
             .ok_or(BackendError::NotFound)?)
     }
 
+    /// Whether a copy this account landed still sits in `mailbox`, the
+    /// mailbox it landed in. Undo asks before restoring the erased
+    /// original: a copy the person has moved on is left alone in its
+    /// new place, and its original is not brought back beside it.
+    pub(crate) async fn still_holds(&self, name: &str, mailbox: &str) -> Result<bool, SyncError> {
+        Ok(self.mail.untranslated().still_in(name, mailbox).await?)
+    }
+
     /// Takes back a copy this account landed, by its landing name, and
     /// only while it still sits in `mailbox`, the mailbox it landed in.
     /// A copy the person has moved elsewhere since is left alone: the
@@ -113,7 +121,7 @@ impl AccountSync {
         Ok(self
             .mail
             .untranslated()
-            .destroy_checked(&[name.to_string()], mailbox)
+            .destroy_landing(&[name.to_string()], mailbox)
             .await
             .into_iter()
             .next()
