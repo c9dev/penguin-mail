@@ -32,7 +32,12 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .ok_or(BackendError::Unsupported)?;
         let appended = self
             .api
-            .append(&drafts, &[DRAFT.to_string(), SEEN.to_string()], raw)
+            .append(
+                &drafts,
+                &[DRAFT.to_string(), SEEN.to_string()],
+                None,
+                raw,
+            )
             .await?
             .ok_or_else(|| BackendError::Refused("Gmail gave no place for the draft".into()))?;
         // The draft is on the server from here on: a failure to name it
