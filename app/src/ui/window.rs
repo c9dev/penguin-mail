@@ -440,6 +440,8 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
             });
         }
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
+        // The drop's own words name the mailbox it carried the mail to.
+        MailAction::MoveTo { .. } => return None,
         MailAction::DismissFollowUp => {
             return Some(fill_plural(
                 "Dismissed {count} follow-up",
@@ -2029,6 +2031,12 @@ impl MainWindow {
     ) -> bool {
         let mailbox = reach.mailbox.clone();
         let accounts = press::reached(&reach.targets, |id| self.account(id), |id| self.offers(id));
+        // A drop onto another account's mailbox needs that account's
+        // server to take a copy of a message it never received.
+        let lands = match &press {
+            press::Press::Drop(to) => to.account().is_some_and(|id| self.offers(id).lands_mail),
+            _ => false,
+        };
         let plan = press::plan(Pressed {
             press,
             reach,
@@ -2036,6 +2044,7 @@ impl MainWindow {
             flag_color: self.settings_with(|s| s.flag_color),
             threaded: self.settings_with(|s| s.threading),
             accounts,
+            lands,
         });
         let taken = plan.taken();
         let pressing = Pressing {
