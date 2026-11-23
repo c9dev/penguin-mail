@@ -23,12 +23,20 @@ cd "$(dirname "$0")/.."
 prefix=${PENGUIN_MAIL_GTK_PREFIX:-}
 busybox=
 package_args=()
-for arg in "$@"; do case $arg in
-    --prefix=*) prefix=${arg#*=} ;;
-    --busybox=*) busybox=${arg#*=} ;;
-    --stage-only) package_args+=(--stage-only) ;;
-    *) echo "unknown argument: $arg" >&2; exit 2 ;;
-esac; done
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --prefix)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--prefix needs a value" >&2; exit 2; }
+            prefix=$2; shift 2 ;;
+        --prefix=*) prefix=${1#*=}; shift ;;
+        --busybox)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--busybox needs a value" >&2; exit 2; }
+            busybox=$2; shift 2 ;;
+        --busybox=*) busybox=${1#*=}; shift ;;
+        --stage-only) package_args+=(--stage-only); shift ;;
+        *) echo "unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
 
 [ -d "$prefix/bin" ] || {
     echo "--prefix needs a GTK prefix holding bin/ (the gvsbuild zip unpacked)" >&2

@@ -21,6 +21,42 @@ impl AccountSync {
         self.store_listing(remote).await
     }
 
+    /// Lists the mailboxes once a run. The hourly relisting resumes from
+    /// the last run's hour, so without this a start would show the old
+    /// list for up to an hour: a folder made or subscribed to elsewhere,
+    /// or a change to which folders the account shows, which restarts it.
+    pub async fn list_mailboxes_once(&self) -> Result<(), SyncError> {
+        use std::sync::atomic::Ordering;
+        if self.mailboxes_listed.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+        if let Err(err) = self.refresh_labels().await {
+            self.mailboxes_listed.store(false, Ordering::SeqCst);
+            return Err(err);
+        }
+        Ok(())
+    }
+
+    /// Every folder on an IMAP account's server, for Manage Folders.
+    pub async fn folder_subscriptions(
+        &self,
+    ) -> Result<Vec<crate::services::imap::FolderSubscription>, SyncError> {
+        Ok(self.services().mail.folder_subscriptions().await?)
+    }
+
+    /// Subscribes to an IMAP folder or lets it go, then lists the folders
+    /// again so the sidebar follows. The answer is the server's to the
+    /// subscription alone: once it took the change, a listing that fails
+    /// after leaves the sidebar a listing behind, not the change undone,
+    /// and the next listing catches it up.
+    pub async fn set_folder_subscribed(&self, id: &str, on: bool) -> Result<(), SyncError> {
+        self.services().mail.set_folder_subscribed(id, on).await?;
+        if let Err(err) = self.refresh_labels().await {
+            tracing::warn!(%err, "the sidebar waits for the next listing");
+        }
+        Ok(())
+    }
+
     /// Brings the stored mailboxes in line with `remote`, the server's
     /// listing.
     pub(crate) async fn store_listing(
@@ -148,10 +184,16 @@ impl AccountSync {
             if order.is_empty() {
                 return Ok(());
             }
-            let order = order.to_vec();
+            let placed_order = order.to_vec();
+            let order = placed_order.clone();
             self.db
                 .write(move |c| mailboxes::set_positions(c, account_id, &order))
                 .await?;
+            self.emit(ChangeEvent::LabelsPlaced {
+                account_id,
+                moved: Vec::new(),
+                order: placed_order,
+            });
             self.emit(ChangeEvent::LabelsChanged { account_id });
             return Ok(());
         }
@@ -200,6 +242,7 @@ impl AccountSync {
                 },
             )
             .collect();
+        let placed_order = order.clone();
         self.db
             .write(move |c| {
                 for ((from, to), mailbox) in pairs.iter().zip(&renamed) {
@@ -214,6 +257,11 @@ impl AccountSync {
                 mailboxes::set_positions(c, account_id, &order)
             })
             .await?;
+        self.emit(ChangeEvent::LabelsPlaced {
+            account_id,
+            moved: moved.clone(),
+            order: placed_order,
+        });
         self.emit(ChangeEvent::LabelsChanged { account_id });
         self.follow_folders(&moved).await;
         if renames {

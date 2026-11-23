@@ -592,6 +592,8 @@ async fn a_smart_mailbox_asks_gmail_and_says_when_it_has_no_conditions() {
     let h = seeded().await;
     let smart = |conditions| {
         Mailbox::Smart(SmartMailbox {
+            trash_sent_without_asking: false,
+            unread_count: Default::default(),
             id: "s1".into(),
             name: "From Ann".into(),
             account: None,
@@ -618,6 +620,143 @@ async fn a_smart_mailbox_asks_gmail_and_says_when_it_has_no_conditions() {
     assert!(bare.rows.is_empty());
 }
 
+#[tokio::test]
+async fn smart_folders_search_only_the_selected_account_and_cache_its_query() {
+    let h = seeded().await;
+    let lists = lists(&h);
+    let make = |account: &str, folder: &str| {
+        Mailbox::Smart(SmartMailbox {
+            trash_sent_without_asking: false,
+            unread_count: Default::default(),
+            id: "scoped".into(),
+            name: "Selected folders".into(),
+            account: None,
+            match_all: true,
+            conditions: vec![Condition {
+                field: Field::InMailbox,
+                value: serde_json::json!([{"account": account, "mailbox": folder}]).to_string(),
+            }],
+        })
+    };
+    h.fake.with(|s| s.searched.clear());
+    let missing = lists
+        .list(
+            &make("other@example.com", "role:inbox"),
+            &scope(&h),
+            &view(),
+            Loaded::nothing(),
+        )
+        .await
+        .unwrap();
+    assert!(missing.rows.is_empty());
+    assert!(!missing.more);
+    assert!(h.fake.with(|s| s.searched.is_empty()));
+    let inbox = make("me@example.com", "role:inbox");
+    let found = lists
+        .list(&inbox, &scope(&h), &view(), Loaded::nothing())
+        .await
+        .unwrap();
+    assert_eq!(found.rows.len(), 3);
+    lists
+        .list(&inbox, &scope(&h), &view(), Loaded::nothing())
+        .await
+        .unwrap();
+    assert_eq!(h.fake.with(|s| s.searched.clone()), ["in:inbox"]);
+    let changed = lists
+        .list(
+            &make("me@example.com", "role:junk"),
+            &scope(&h),
+            &view(),
+            Loaded::nothing(),
+        )
+        .await
+        .unwrap();
+    assert!(changed.rows.is_empty());
+    assert_eq!(h.fake.with(|s| s.searched.clone()), ["in:inbox", "in:spam"]);
+}
+
+#[tokio::test]
+async fn smart_folders_keep_each_accounts_selected_mailbox() {
+    use crate::fake::FakeGmail;
+    use crate::{AccountServices, AccountSync};
+
+    let h = seeded().await;
+    let second_id =
+        h.db.write(|c| mailrs_store::accounts::insert_account(c, "second@example.com", 0))
+            .await
+            .unwrap();
+    let second_fake = Arc::new(FakeGmail::new());
+    for (id, labels) in [("second-inbox", ["INBOX"]), ("second-sent", ["SENT"])] {
+        let mut message = meta(id, id, now_millis(), &labels);
+        message.account_id = second_id;
+        second_fake.seed(message);
+    }
+    second_fake.with(|s| s.page_size = 1000);
+    let (events, _) = async_channel::unbounded();
+    let second = Arc::new(AccountSync::new(
+        second_id,
+        AccountServices::google(Arc::clone(&second_fake)),
+        h.db.clone(),
+        events,
+    ));
+    second.bootstrap().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([
+            (h.account_id, Arc::clone(&h.sync)),
+            (second_id, second),
+        ]))),
+        h.db.clone(),
+    );
+    let accounts = [
+        (h.account_id, "me@example.com"),
+        (second_id, "second@example.com"),
+    ]
+    .map(|(id, email)| Account {
+        id,
+        email: email.into(),
+        state: AccountState::Ok,
+        provider: mailrs_domain::Provider::Gmail,
+        provider_name: None,
+    });
+    let smart = Mailbox::Smart(SmartMailbox {
+        trash_sent_without_asking: false,
+        unread_count: Default::default(),
+        id: "two-accounts".into(),
+        name: "Selected folders".into(),
+        account: None,
+        match_all: true,
+        conditions: vec![Condition {
+            field: Field::InMailbox,
+            value: serde_json::json!([
+                {"account": "me@example.com", "mailbox": "role:inbox"},
+                {"account": "second@example.com", "mailbox": "role:sent"}
+            ])
+            .to_string(),
+        }],
+    });
+    h.fake.with(|s| s.searched.clear());
+    second_fake.with(|s| s.searched.clear());
+    let found = service
+        .list(
+            &smart,
+            &Scope::of_mail_accounts(&accounts),
+            &view(),
+            Loaded::nothing(),
+        )
+        .await
+        .unwrap();
+    assert!(found.notices.is_empty(), "{:?}", found.notices);
+    assert_eq!(ids(&found), ["second-sent", "t3", "t2", "t1"]);
+    assert_eq!(found.rows[0].account_id, second_id);
+    assert!(
+        found.rows[1..]
+            .iter()
+            .all(|row| row.account_id == h.account_id)
+    );
+    assert_eq!(h.fake.with(|s| s.searched.clone()), ["in:inbox"]);
+    assert_eq!(second_fake.with(|s| s.searched.clone()), ["in:sent"]);
+}
+
 /// Folders and smart mailboxes list through query trees, and Gmail must
 /// receive the search text it received before they did.
 #[tokio::test]
@@ -632,6 +771,8 @@ async fn folders_and_smart_mailboxes_send_gmail_the_text_they_sent_before() {
         list(&h, &mailbox, &view()).await;
     }
     let smart = Mailbox::Smart(SmartMailbox {
+        trash_sent_without_asking: false,
+        unread_count: Default::default(),
         id: "s1".into(),
         name: "Ann, unread".into(),
         account: None,

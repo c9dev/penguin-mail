@@ -6,6 +6,7 @@
 use chrono::NaiveDate;
 use mailrs_domain::query::{Query, Term, plain};
 use mailrs_domain::{Location, MailSet, Role};
+use std::collections::{HashSet, VecDeque};
 
 use super::keywords::flag_of;
 use super::mailboxes::display_name;
@@ -68,6 +69,39 @@ pub(super) fn print(query: &Query, today: NaiveDate) -> Result<Printed, Unsayabl
         false => keys.join(" "),
     };
     Ok(Printed { within, keys })
+}
+
+fn print_parts(query: &Query, today: NaiveDate) -> Result<Vec<Printed>, Unsayable> {
+    match print(query, today) {
+        Ok(one) => Ok(vec![one]),
+        Err(_) => match query {
+            Query::Or(parts) => {
+                let mut printed = Vec::new();
+                for part in parts {
+                    printed.extend(print_parts(part, today)?);
+                }
+                Ok(printed)
+            }
+            Query::And(parts) => {
+                let Some((at, choices)) =
+                    parts.iter().enumerate().find_map(|(at, part)| match part {
+                        Query::Or(choices) => Some((at, choices)),
+                        _ => None,
+                    })
+                else {
+                    return Err(Unsayable);
+                };
+                let mut printed = Vec::new();
+                for choice in choices {
+                    let mut branch = parts.clone();
+                    branch[at] = choice.clone();
+                    printed.extend(print_parts(&Query::And(branch), today)?);
+                }
+                Ok(printed)
+            }
+            _ => Err(Unsayable),
+        },
+    }
 }
 
 /// `query` as one SEARCH key, or `None` when it drops out: a text term
@@ -241,35 +275,66 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             return Err(BackendError::Unsupported);
         };
         let today = chrono::Local::now().date_naive();
-        let printed = print(tree, today).map_err(|Unsayable| BackendError::Unsupported)?;
-        let mailboxes = match &printed.within {
-            // A name no mailbox goes by finds nothing, as Gmail finds
-            // nothing for a label nobody made.
-            Some(place) => self.mailbox_of(place).await?.into_iter().collect(),
-            None => self.searched().await?,
-        };
-        let keys = format!("{} UNDELETED", printed.keys);
-        let mut found = Vec::new();
-        for mailbox in mailboxes {
-            if found.len() >= limit {
-                break;
+        let printed = print_parts(tree, today).map_err(|_| BackendError::Unsupported)?;
+        let split = printed.len() > 1;
+        let mut gathered = 0;
+        let mut pages: Vec<VecDeque<RemoteRef>> = Vec::new();
+        for part in printed {
+            let mailboxes: Vec<String> = match &part.within {
+                // A name no mailbox goes by finds nothing.
+                Some(place) => self.mailbox_of(place).await?.into_iter().collect(),
+                None => self.searched().await?,
+            };
+            let keys = format!("{} UNDELETED", part.keys);
+            for mailbox in mailboxes {
+                if !split && gathered >= limit {
+                    break;
+                }
+                let selected = self.select(&mailbox, None).await?;
+                let top = self.top_uid(&mailbox, &selected).await?;
+                let uids = self
+                    .newest_matching(
+                        &mailbox,
+                        &keys,
+                        top,
+                        if split { limit } else { limit - gathered },
+                    )
+                    .await?;
+                gathered += uids.len();
+                pages.push(
+                    uids.into_iter()
+                        .map(|uid| {
+                            let id = Location {
+                                mailbox: mailbox.clone(),
+                                uidvalidity: selected.uidvalidity,
+                                uid,
+                            }
+                            .to_string();
+                            RemoteRef {
+                                thread_id: id.clone(),
+                                id,
+                            }
+                        })
+                        .collect(),
+                );
             }
-            let selected = self.select(&mailbox, None).await?;
-            let top = self.top_uid(&mailbox, &selected).await?;
-            let room = limit - found.len();
-            let uids = self.newest_matching(&mailbox, &keys, top, room).await?;
-            found.extend(uids.into_iter().map(|uid| {
-                let id = Location {
-                    mailbox: mailbox.clone(),
-                    uidvalidity: selected.uidvalidity,
-                    uid,
+        }
+        if !split {
+            return Ok(pages.into_iter().flatten().collect());
+        }
+        let mut found = Vec::new();
+        let mut seen = HashSet::new();
+        while found.len() < limit && pages.iter().any(|page| !page.is_empty()) {
+            for page in &mut pages {
+                if let Some(hit) = page.pop_front()
+                    && seen.insert(hit.id.clone())
+                {
+                    found.push(hit);
                 }
-                .to_string();
-                RemoteRef {
-                    thread_id: id.clone(),
-                    id,
+                if found.len() == limit {
+                    break;
                 }
-            }));
+            }
         }
         Ok(found)
     }
@@ -364,7 +429,7 @@ mod tests {
     use mailrs_domain::query::{Query, Term};
     use mailrs_domain::{MailSet, Role};
 
-    use super::{Place, Printed, Unsayable, print};
+    use super::{Place, Printed, Unsayable, print, print_parts};
 
     fn term(term: Term) -> Query {
         Query::Term(term)
@@ -431,6 +496,29 @@ mod tests {
         );
         let alone = term(Term::In(MailSet::Mailbox("Receipts".into())));
         assert_eq!(print(&alone, today()).unwrap().keys, "ALL");
+    }
+
+    #[test]
+    fn inbox_or_sent_searches_both_mailboxes() {
+        let query = Query::And(vec![
+            Query::Or(vec![
+                Query::is_in(MailSet::Role(Role::Inbox)),
+                Query::is_in(MailSet::Role(Role::Sent)),
+            ]),
+            Query::term(Term::Unread),
+        ]);
+        let parts = print_parts(&query, today()).unwrap();
+        assert_eq!(
+            parts
+                .iter()
+                .map(|part| part.within.clone())
+                .collect::<Vec<_>>(),
+            vec![
+                Some(Place::Set(MailSet::Role(Role::Inbox))),
+                Some(Place::Set(MailSet::Role(Role::Sent))),
+            ]
+        );
+        assert!(parts.iter().all(|part| part.keys == "UNSEEN"));
     }
 
     #[test]

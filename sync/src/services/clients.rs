@@ -139,6 +139,7 @@ either_client! {
         fn batch_modify(ids: &[String], add: &[String], remove: &[String]) -> Gmail<()>;
         fn delete_messages(ids: &[String]) -> Gmail<()>;
         fn send(raw: &[u8], thread_id: Option<&str>) -> Gmail<String>;
+        fn insert(raw: &[u8], label_ids: &[String], at: Option<i64>) -> Gmail<String>;
         fn save_draft(draft_id: Option<&str>, raw: &[u8], thread_id: Option<&str>) -> Gmail<SavedDraft>;
         fn send_draft(draft_id: &str) -> Gmail<String>;
         fn delete_draft(draft_id: &str) -> Gmail<()>;
@@ -265,10 +266,12 @@ either_client! {
         fn move_to(mailbox: &str, uids: &UidSet, to: &str) -> Imapped<Option<CopyUid>>;
         fn copy_to(mailbox: &str, uids: &UidSet, to: &str) -> Imapped<Option<CopyUid>>;
         fn expunge(mailbox: &str, uids: &UidSet) -> Imapped<()>;
-        fn append(mailbox: &str, flags: &[String], raw: &[u8]) -> Imapped<Option<AppendUid>>;
+        fn append(mailbox: &str, flags: &[String], at: Option<i64>, raw: &[u8]) -> Imapped<Option<AppendUid>>;
         fn create(mailbox: &str) -> Imapped<()>;
         fn rename(from: &str, to: &str) -> Imapped<()>;
         fn delete(mailbox: &str) -> Imapped<()>;
+        fn subscribe(mailbox: &str) -> Imapped<()>;
+        fn unsubscribe(mailbox: &str) -> Imapped<()>;
         fn idle(mailbox: &str, limit: Duration) -> Imapped<Woke>;
     }
 }
@@ -358,7 +361,7 @@ either_client! {
         fn set_mailbox(write: &MailboxWrite) -> Jmapped<String>;
         fn download(blob_id: &str, limit: usize) -> Jmapped<Vec<u8>>;
         fn upload(bytes: Vec<u8>) -> Jmapped<String>;
-        fn import(blob_id: &str, mailbox_ids: &[String], keywords: &[&str], destroy: Option<&str>) -> Jmapped<Saved>;
+        fn import(blob_id: &str, mailbox_ids: &[String], keywords: &[&str], destroy: Option<&str>, received_at: Option<&str>) -> Jmapped<Saved>;
         fn submit(submission: &Submission) -> Jmapped<Imported>;
         fn identities() -> Jmapped<Vec<Identity>>;
         fn vacation() -> Jmapped<mailrs_jmap::VacationResponse>;

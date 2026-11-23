@@ -390,6 +390,18 @@ pub struct RawMessage {
     pub bytes: Vec<u8>,
 }
 
+/// Where a message carried in from another account lands: the mailboxes
+/// it belongs in on this account, the keywords it keeps, and the hour it
+/// first arrived. A move files one mailbox; Undo restores every mailbox
+/// the message sat in at home. A server that stores no arrival hour
+/// stamps the copy with the present instead.
+#[derive(Debug)]
+pub struct Landing<'a> {
+    pub mailboxes: &'a [String],
+    pub keywords: &'a [String],
+    pub at: Option<EpochMillis>,
+}
+
 /// A search. A backend that speaks the syntax takes what the person typed
 /// as they typed it, which is how every Gmail operator keeps working.
 /// Folders and smart mailboxes search with a tree, which each backend
@@ -431,6 +443,7 @@ pub fn gmail_over_imap(
             provider_name: "Gmail".to_string(),
             files_sent_mail: true,
             window_days,
+            all_folders: false,
         },
     ));
     (
@@ -656,6 +669,7 @@ impl AccountServices {
             provider_name: "Fastmail".into(),
             files_sent_mail: false,
             window_days: crate::DEFAULT_WINDOW_DAYS,
+            all_folders: false,
         };
         AccountServices::imap(imap, smtp, settings)
     }
@@ -735,6 +749,7 @@ impl AccountServices {
             // A calendar account has no mail to search at all.
             search: self.serves_mail() && !caps.local_mailboxes,
             tags: caps.tags,
+            lands_mail: self.mail.lands_copies(),
             focused: caps.focus,
             event_files: features.event_files,
             moves_events: features.moves_events,
@@ -955,6 +970,11 @@ pub struct Offers {
     /// The account keeps tags beside its folders, so the window offers
     /// Tags… beside Move to Folder.
     pub tags: bool,
+    /// The server takes a copy of a message carried in from another
+    /// account, so the window may let one land on this account's
+    /// mailboxes. Microsoft does not: Graph has no call that files a
+    /// message in a chosen folder, and its arrival date is read-only.
+    pub lands_mail: bool,
     /// The inbox splits into Focused and Other.
     pub focused: bool,
     /// An event can carry files the person attaches from this computer.
@@ -1000,6 +1020,7 @@ impl Offers {
         auto_reply_contacts_only: true,
         search: true,
         tags: false,
+        lands_mail: true,
         focused: false,
         event_files: true,
         moves_events: true,
@@ -1297,6 +1318,15 @@ pub trait MailBackend: Send + Sync + 'static {
     /// leaves nothing to compare.
     fn inbox_ids(&self) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
 
+    /// The complete number of matching messages, without fetching their bodies.
+    /// A capped or unsupported search must fail rather than return a partial count.
+    fn count_query(
+        &self,
+        _query: &mailrs_domain::query::Query,
+    ) -> impl Future<Output = Result<i64, BackendError>> + Send {
+        async { Err(BackendError::Unsupported) }
+    }
+
     /// At most `limit` messages `query` matches, newest first.
     fn search(
         &self,
@@ -1360,6 +1390,30 @@ pub trait MailBackend: Send + Sync + 'static {
         mailbox: &str,
     ) -> impl Future<Output = Result<String, BackendError>> + Send;
 
+    /// Files `raw`, a message carried in from another account, so it
+    /// reads at home: filed in `at.mailboxes`, keeping `at.keywords` and
+    /// the hour it arrived. Answers the copy's name on this server, the
+    /// name that destroys it again. A server that cannot take a copy of
+    /// another account's mail says so; the person then hears it before
+    /// anything moves.
+    fn land_copy(
+        &self,
+        raw: &[u8],
+        at: &Landing<'_>,
+    ) -> impl Future<Output = Result<String, BackendError>> + Send {
+        // No default server can do this. Each protocol that can says so
+        // over it, and `lands_copies` tells the window beforehand.
+        let _ = (raw, at);
+        async { Err(BackendError::Unsupported) }
+    }
+
+    /// Whether this server takes another account's mail through
+    /// [`Self::land_copy`], so the window can refuse an impossible drop
+    /// before it moves anything.
+    fn lands_copies(&self) -> bool {
+        false
+    }
+
     /// The message's parts with the bytes of the text parts its body
     /// needs, and without its files: for a message too large to fetch
     /// raw.
@@ -1416,6 +1470,37 @@ pub trait MailBackend: Send + Sync + 'static {
                     .collect(),
             }
         }
+    }
+
+    /// Destroys a copy a carry landed here, and only while it still
+    /// sits in `mailbox`, the mailbox it landed in. This is Undo's way
+    /// of erasing, and it keeps its guard to itself: an Empty Trash
+    /// works off a listing and answers by batch, and must not be
+    /// rerouted through a per-copy read because an Undo needs one.
+    /// Adapters without a conditional write take the shortcut their
+    /// checked destroy already takes.
+    fn destroy_landing(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> impl Future<Output = Vec<Result<(), BackendError>>> + Send {
+        self.destroy_checked(messages, mailbox)
+    }
+
+    /// Whether the message a carry landed is still filed in
+    /// `mailbox`, the mailbox it landed in. Undo asks before restoring
+    /// the erased original: a copy the person has moved on is left
+    /// alone where they put it, and its original stays gone rather
+    /// than meeting it as a duplicate. Adapters without a cheap read
+    /// answer true here and leave the word to their checked destroy.
+    fn still_in(        &self,
+        _message: &str,
+        _mailbox: &str,
+    ) -> impl Future<Output = Result<bool, BackendError>> + Send {
+        // shortcut: Without a cheap read the copy's new home cannot be
+        // seen; the checked destroy still refuses to delete mail that
+        // has moved.
+        async { Ok(true) }
     }
 
     /// Sends raw RFC 822 bytes. Returns the new message id.

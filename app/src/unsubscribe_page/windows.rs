@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::web::owned_text::OwnedText;
 use futures::channel::oneshot;
 use futures::future::LocalBoxFuture;
 use gtk::glib;
@@ -28,7 +29,7 @@ use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DestroyWindow, HWND_MESSAGE, WINDOW_EX_STYLE, WINDOW_STYLE,
 };
-use windows::core::{HSTRING, PWSTR};
+use windows::core::HSTRING;
 
 use super::hidden::{Engine, State};
 
@@ -138,12 +139,12 @@ impl Inner {
                 ) else {
                     return Ok(());
                 };
-                let mut raw = PWSTR::null();
-                let _ = request.Uri(&mut raw);
+                let mut raw = OwnedText::default();
+                let _ = request.Uri(raw.out());
                 let uri = if raw.is_null() {
                     String::new()
                 } else {
-                    raw.to_string().unwrap_or_default()
+                    raw.read().unwrap_or_default()
                 };
                 let mut context = COREWEBVIEW2_WEB_RESOURCE_CONTEXT::default();
                 let _ = args.ResourceContext(&mut context);
@@ -222,10 +223,10 @@ impl Inner {
                 let mut kind = COREWEBVIEW2_SCRIPT_DIALOG_KIND::default();
                 let _ = args.Kind(&mut kind);
                 if kind == COREWEBVIEW2_SCRIPT_DIALOG_KIND_ALERT {
-                    let mut raw = PWSTR::null();
-                    let _ = args.Message(&mut raw);
+                    let mut raw = OwnedText::default();
+                    let _ = args.Message(raw.out());
                     if !raw.is_null() {
-                        inner.state.alerted(raw.to_string().unwrap_or_default());
+                        inner.state.alerted(raw.read().unwrap_or_default());
                     }
                     let _ = args.Accept();
                 } else if kind == COREWEBVIEW2_SCRIPT_DIALOG_KIND_CONFIRM && inner.state.confirms()
@@ -380,13 +381,9 @@ impl Engine for WvEngine {
             .borrow()
             .as_ref()
             .and_then(|core| unsafe {
-                let mut raw = PWSTR::null();
-                core.web.Source(&mut raw).ok()?;
-                if raw.is_null() {
-                    None
-                } else {
-                    raw.to_string().ok()
-                }
+                let mut raw = OwnedText::default();
+                core.web.Source(raw.out()).ok()?;
+                if raw.is_null() { None } else { raw.read().ok() }
             })
             .unwrap_or_default()
     }

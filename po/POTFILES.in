@@ -27,6 +27,7 @@ app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
 app/src/autostart.rs
 app/src/compose.rs
+app/src/compose/html_signature.rs
 app/src/contacts.rs
 app/src/core.rs
 app/src/core/goa.rs
@@ -89,6 +90,8 @@ app/src/ui/calendar/time_grid.rs
 app/src/ui/calendar/words.rs
 app/src/ui/composer/editor.rs
 app/src/ui/composer/mod.rs
+app/src/ui/composer/clipboard.rs
+app/src/ui/composer/files.rs
 app/src/ui/composer/recipients.rs
 app/src/ui/composer/richbuffer.rs
 app/src/ui/composer/spell.rs
@@ -99,6 +102,7 @@ app/src/ui/copied.rs
 app/src/ui/conversation.rs
 app/src/ui/eml_file.rs
 app/src/ui/link_preview.rs
+app/src/ui/manage_folders.rs
 app/src/ui/find.rs
 app/src/ui/gmail_password_page.rs
 app/src/ui/goa_page.rs
@@ -129,6 +133,7 @@ app/src/ui/smart_editor.rs
 app/src/ui/switch_jmap.rs
 app/src/ui/templates.rs
 app/src/ui/thread_list.rs
+app/src/ui/thread_list/pull.rs
 app/src/ui/thread_row.rs
 app/src/ui/translation.rs
 app/src/ui/unsubscribe.rs
@@ -142,6 +147,7 @@ app/src/ui/window/attachments.rs
 app/src/ui/window/categories/chip.rs
 app/src/ui/window/categories.rs
 app/src/ui/window/column_width.rs
+app/src/ui/window/customize_mailboxes.rs
 app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs
@@ -155,6 +161,7 @@ app/src/ui/window/on_screen.rs
 app/src/ui/window/organize.rs
 app/src/ui/window/outbox.rs
 app/src/ui/window/press.rs
+app/src/ui/window/smart_trash.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/reveal.rs
 app/src/ui/window/save_contacts.rs
@@ -185,6 +192,7 @@ sync/src/account/receipts.rs
 sync/src/account/writes.rs
 sync/src/account/outbox.rs
 sync/src/actions/labelling.rs
+sync/src/actions/carry.rs
 sync/src/actions.rs
 sync/src/calendar_copy.rs
 sync/src/error.rs

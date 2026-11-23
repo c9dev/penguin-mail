@@ -13,6 +13,7 @@ mod calendar_read;
 mod calendar_series;
 mod calendar_switch;
 mod carddav;
+mod carry;
 mod connect;
 mod connector;
 mod contacts;
@@ -357,6 +358,7 @@ pub(crate) fn fake_settings() -> ImapSettings {
         provider_name: "Fastmail".into(),
         files_sent_mail: false,
         window_days: crate::DEFAULT_WINDOW_DAYS,
+        all_folders: false,
     }
 }
 
@@ -538,3 +540,5 @@ impl ImapHarness {
         }
     }
 }
+
+mod smart_counts;

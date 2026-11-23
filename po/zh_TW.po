@@ -983,11 +983,11 @@ msgstr "{provider} 透過瀏覽器登入"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "選擇 [繼續] 會在瀏覽器中開啟 {provider} 的登入頁面。"
 
-#: app/src/app.rs:436
+#: app/src/app.rs:440
 msgid "Could not mark all mail as read: {reason}"
 msgstr "無法將所有郵件標示為已讀：{reason}"
 
-#: app/src/app.rs:483
+#: app/src/app.rs:487
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1050,11 +1050,11 @@ msgstr "已傳送 {message}"
 msgid "Still in the Outbox: {message}"
 msgstr "仍在 [寄件匣] 中：{message}"
 
-#: app/src/app/sending.rs:513
+#: app/src/app/sending.rs:509
 msgid "your message"
 msgstr "郵件"
 
-#: app/src/app/sending.rs:515
+#: app/src/app/sending.rs:511
 msgid "“{subject}”"
 msgstr "「{subject}」"
 
@@ -1169,7 +1169,7 @@ msgstr "是否從 {account} 刪除規則？"
 msgid "Load remote images from every sender?"
 msgstr "是否載入所有寄件者的遠端圖片？"
 
-#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:644
+#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:653
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr "載入遠端圖片會讓寄件者知道何時開啟郵件。"
 
@@ -1177,11 +1177,11 @@ msgstr "載入遠端圖片會讓寄件者知道何時開啟郵件。"
 msgid "Change the setting {name} to {value}?"
 msgstr "是否將設定 {name} 改為 {value}？"
 
-#: app/src/assistant/run.rs:1644
+#: app/src/assistant/run.rs:1651
 msgid "Remove your signature for {account}?"
 msgstr "是否移除 {account} 的簽名？"
 
-#: app/src/assistant/run.rs:1648
+#: app/src/assistant/run.rs:1655
 msgid ""
 "Change your signature for {account} to:\n"
 "\n"
@@ -1191,22 +1191,22 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src/assistant/run.rs:1793
+#: app/src/assistant/run.rs:1802
 msgid ""
 "Hide My Email needs masked addresses or labels, and {provider} offers "
 "neither on this account."
 msgstr ""
 "隱藏電子郵件地址需要遮罩地址或標籤，而 {provider} 在這個帳號上兩者皆未提供。"
 
-#: app/src/assistant/run.rs:1861
+#: app/src/assistant/run.rs:1870
 msgid "Turn off {address}? Mail sent to it will go to the Trash."
 msgstr "是否停用 {address}？寄至該地址的郵件會移至 [垃圾桶]。"
 
-#: app/src/assistant/run.rs:1865
+#: app/src/assistant/run.rs:1874
 msgid "Turn {address} back on? Mail sent to it will arrive again."
 msgstr "是否重新啟用 {address}？寄至該地址的郵件會再次送達。"
 
-#: app/src/assistant/run.rs:1974
+#: app/src/assistant/run.rs:1983
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -1214,7 +1214,7 @@ msgstr ""
 "是否將 {sender} 的郵件移至 {category}（帳號：{account}），並將該寄件者日後寄"
 "來的郵件也移至此處？"
 
-#: app/src/assistant/run.rs:1986
+#: app/src/assistant/run.rs:1995
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -1651,55 +1651,55 @@ msgstr[0] ""
 "是否刪除「{label}」資料夾（帳號：{account}）？有 {count} 個對話在其中。資料夾"
 "中的郵件也會一併刪除。"
 
-#: app/src/assistant/run/manage.rs:397
+#: app/src/assistant/run/manage.rs:406
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr "是否刪除「{name}」智慧信箱？列出的郵件會留在原處。"
 
-#: app/src/assistant/run/manage.rs:458
+#: app/src/assistant/run/manage.rs:467
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr "是否以此範本取代「{name}」範本？原先儲存的範本會消失。"
 
-#: app/src/assistant/run/manage.rs:462
+#: app/src/assistant/run/manage.rs:471
 msgid "Save a template called “{name}”?"
 msgstr "是否儲存名稱為「{name}」的範本？"
 
-#: app/src/assistant/run/manage.rs:500
+#: app/src/assistant/run/manage.rs:509
 msgid "Delete the template “{name}”?"
 msgstr "是否刪除「{name}」範本？"
 
-#: app/src/assistant/run/manage.rs:531
+#: app/src/assistant/run/manage.rs:540
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "是否將 {contact} 加入 {account} 的聯絡人？"
 
-#: app/src/assistant/run/manage.rs:575
+#: app/src/assistant/run/manage.rs:584
 msgid "this contact"
 msgstr "此聯絡人"
 
-#: app/src/assistant/run/manage.rs:587
+#: app/src/assistant/run/manage.rs:596
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "是否變更 {contact}（{account} 的聯絡人）？"
 
-#: app/src/assistant/run/manage.rs:634
+#: app/src/assistant/run/manage.rs:643
 msgid "Always load images from anyone at {domain}?"
 msgstr "是否一律載入來自 {domain} 網域的圖片？"
 
-#: app/src/assistant/run/manage.rs:638
+#: app/src/assistant/run/manage.rs:647
 msgid "Always load images from {sender}?"
 msgstr "是否一律載入 {sender} 的圖片？"
 
-#: app/src/assistant/run/manage.rs:669
+#: app/src/assistant/run/manage.rs:678
 msgid "Stop loading images from {sender}?"
 msgstr "是否停止載入 {sender} 的圖片？"
 
-#: app/src/assistant/run/manage.rs:704
+#: app/src/assistant/run/manage.rs:713
 msgid "Export {what} to {file}?"
 msgstr "是否將 {what} 匯出至 {file}？"
 
-#: app/src/assistant/run/manage.rs:710
+#: app/src/assistant/run/manage.rs:719
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "已有同名檔案，匯出會取代原檔案。"
 
-#: app/src/assistant/run/manage.rs:790
+#: app/src/assistant/run/manage.rs:799
 msgid "the message “{subject}”"
 msgstr "「{subject}」郵件"
 
@@ -1883,7 +1883,7 @@ msgid ""
 "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr "無法執行技能指令稿：bubblewrap 無法啟動沙箱（{reason}）。"
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:500
+#: app/src/assistant/sources/skills/sandbox/windows.rs:576
 #, fuzzy
 #| msgid ""
 #| "Skill scripts need bubblewrap, which is not installed. Install the "
@@ -1893,9 +1893,9 @@ msgid ""
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr "技能指令稿需要 bubblewrap，但尚未安裝。請安裝 bubblewrap 套件以執行。"
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:510
-#: app/src/assistant/sources/skills/sandbox/windows.rs:525
-#: app/src/assistant/sources/skills/sandbox/windows.rs:529
+#: app/src/assistant/sources/skills/sandbox/windows.rs:586
+#: app/src/assistant/sources/skills/sandbox/windows.rs:601
+#: app/src/assistant/sources/skills/sandbox/windows.rs:605
 #, fuzzy
 #| msgid ""
 #| "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
@@ -2072,33 +2072,39 @@ msgstr "焦點"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "即使未開啟視窗，Penguin Mail 也會持續同步"
 
-#: app/src/compose.rs:669 app/src/compose.rs:3512
+#: app/src/compose.rs:697 app/src/compose.rs:3565
 msgid "Add at least one recipient."
 msgstr "請至少新增一位收件者。"
 
-#: app/src/compose.rs:678
+#: app/src/compose.rs:706
 msgid "“{address}” is not an email address."
 msgstr "「{address}」不是電子郵件地址。"
 
-#: app/src/compose.rs:904 app/src/compose.rs:3518
+#: app/src/compose.rs:932 app/src/compose.rs:3571
 msgid "Choose a time in the future"
 msgstr "請選擇未來的時間"
 
-#: app/src/compose.rs:1230
+#: app/src/compose.rs:1261
 msgid "On {date}, {sender} wrote:"
 msgstr "{date}，{sender} 寫道："
 
-#: app/src/compose.rs:1236
+#: app/src/compose.rs:1267
 msgid "{sender} wrote:"
 msgstr "{sender} 寫道："
 
-#: app/src/compose.rs:1515
+#: app/src/compose.rs:1546
 msgid "Penguin Mail could not put the message together."
 msgstr "Penguin Mail 無法組成這封郵件。"
 
-#: app/src/compose.rs:1539
+#: app/src/compose.rs:1570
 msgid "The list did not give one address to write to."
 msgstr "此郵件群組未提供可寄信的單一地址。"
+
+#: app/src/compose/html_signature.rs:168
+#, fuzzy
+#| msgid "Signature"
+msgid "[Signature picture]"
+msgstr "簽名"
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -2152,35 +2158,35 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail 無法更新郵件資料庫，已保留舊資料庫。"
 
-#: app/src/core.rs:964 app/src/core.rs:1037 app/src/core.rs:1113
-#: app/src/core.rs:1242 app/src/core.rs:1256 app/src/core.rs:1321
-#: app/src/core.rs:1417 app/src/core.rs:1639
+#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
+#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
+#: app/src/core.rs:1445 app/src/core.rs:1697
 msgid "Demo mode cannot add real accounts."
 msgstr "示範模式無法新增真實帳號。"
 
-#: app/src/core.rs:982 app/src/core.rs:1663 app/src/core.rs:1704
-#: app/src/core.rs:1960
+#: app/src/core.rs:1010 app/src/core.rs:1721 app/src/core.rs:1762
+#: app/src/core.rs:2018
 msgid "Canceled."
 msgstr "已取消。"
 
-#: app/src/core.rs:1589 app/src/core.rs:1614
+#: app/src/core.rs:1617 app/src/core.rs:1642
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr "此帳號沒有保存行事曆或聯絡人伺服器接受的密碼。"
 
-#: app/src/core.rs:1708
+#: app/src/core.rs:1766
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr "請先移除此帳號的共用信箱，再移除用於登入的帳號。"
 
-#: app/src/core.rs:1886 app/src/core.rs:1986
+#: app/src/core.rs:1944 app/src/core.rs:2044
 msgid "The demo cannot switch accounts."
 msgstr "示範模式無法切換帳號。"
 
-#: app/src/core.rs:1940
+#: app/src/core.rs:1998
 msgid "The demo cannot connect a calendar."
 msgstr "示範模式下無法連接行事曆。"
 
-#: app/src/core.rs:2006
+#: app/src/core.rs:2064
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "已等候瀏覽器五分鐘，停止等候。"
 
@@ -2535,13 +2541,13 @@ msgstr "回報問題"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:468
 #: app/src/ui/conversation.rs:626 app/src/ui/conversation.rs:1128
-#: app/src/ui/toolbar/customize.rs:20 app/src/ui/window/message_menu.rs:132
-#: app/src/ui/window/shortcuts.rs:396
+#: app/src/ui/smart_editor.rs:119 app/src/ui/toolbar/customize.rs:20
+#: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "封存"
 
 #: app/src/notify.rs:62 app/src/ui/conversation.rs:469
-#: app/src/ui/conversation.rs:1172 app/src/ui/preferences.rs:185
+#: app/src/ui/conversation.rs:1172 app/src/ui/preferences.rs:194
 #: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "標示為已讀"
@@ -2551,7 +2557,7 @@ msgstr "標示為已讀"
 #: app/src/ui/calendar/popover.rs:757 app/src/ui/calendar/scope.rs:151
 #: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
-#: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:108
+#: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "刪除"
@@ -2562,16 +2568,16 @@ msgstr "刪除"
 msgid "Reply"
 msgstr "回覆"
 
-#: app/src/notify.rs:158
+#: app/src/notify.rs:167
 msgid "{count} new message"
 msgid_plural "{count} new messages"
 msgstr[0] "{count} 封新郵件"
 
-#: app/src/notify.rs:176 app/src/ui/window/shortcuts.rs:467
+#: app/src/notify.rs:185 app/src/ui/window/shortcuts.rs:467
 msgid "New message"
 msgstr "新郵件"
 
-#: app/src/notify.rs:193
+#: app/src/notify.rs:216
 msgid "From {senders}"
 msgstr "寄件者：{senders}"
 
@@ -3933,8 +3939,8 @@ msgstr ""
 "未儲存草稿。加密郵件會以自己的金鑰加密後存放在 [草稿] 中，但此電腦沒有 "
 "{address} 的金鑰或憑證。"
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2096
-#: app/src/ui/composer/mod.rs:2099
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2102
+#: app/src/ui/composer/mod.rs:2105
 msgid "That account is not connected."
 msgstr "此帳號尚未連線。"
 
@@ -3942,8 +3948,8 @@ msgstr "此帳號尚未連線。"
 msgid "Could not save: {reason}"
 msgstr "無法儲存：{reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2929
-#: app/src/ui/window.rs:2952
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3003
+#: app/src/ui/window.rs:3026
 msgid "Could not open the draft: {reason}"
 msgstr "無法開啟草稿：{reason}"
 
@@ -4060,7 +4066,7 @@ msgstr "標準加密（TLS）"
 msgid "Not encrypted in transit"
 msgstr "傳輸過程未加密"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2196
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2202
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 個附件"
@@ -4105,8 +4111,8 @@ msgstr[0] "{named} 與其他 {count} 位"
 msgid "me"
 msgstr "我"
 
-#: app/src/render.rs:761 app/src/ui/composer/mod.rs:616
-#: app/src/ui/composer/mod.rs:620
+#: app/src/render.rs:761 app/src/ui/composer/mod.rs:619
+#: app/src/ui/composer/mod.rs:623
 msgid "Show trimmed content"
 msgstr "顯示省略的內容"
 
@@ -4201,7 +4207,7 @@ msgid "Set up a different project"
 msgstr "設定另一個專案"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3282
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3356
 msgid "Set up your own Google project"
 msgstr "設定您自己的 Google 專案"
 
@@ -4260,7 +4266,7 @@ msgstr "小於 {size}"
 msgid "Larger than {size}"
 msgstr "大於 {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:916
+#: app/src/rules.rs:251 app/src/settings/mod.rs:960
 msgid "All mail"
 msgstr "所有郵件"
 
@@ -4335,8 +4341,8 @@ msgstr "{host} 拒絕登入：{reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:445 app/src/ui/sidebar.rs:496
-#: app/src/ui/sidebar.rs:1649 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:499 app/src/ui/sidebar.rs:550
+#: app/src/ui/sidebar.rs:1907 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "行事曆"
 
@@ -4358,217 +4364,229 @@ msgstr "在此電腦上，Penguin Mail 開啟時"
 msgid "On the server"
 msgstr "在伺服器上"
 
-#: app/src/settings/mod.rs:219 app/src/settings/mod.rs:428
-#: app/src/settings/mod.rs:828 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1077
+#: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
+#: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1154
 msgid "Off"
 msgstr "關閉"
 
-#: app/src/settings/mod.rs:220
+#: app/src/settings/mod.rs:230
 msgid "Local Server"
 msgstr "本機伺服器"
 
-#: app/src/settings/mod.rs:221
+#: app/src/settings/mod.rs:231
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:222
+#: app/src/settings/mod.rs:232
 msgid "Claude Subscription"
 msgstr "Claude 訂閱"
 
-#: app/src/settings/mod.rs:247 app/src/ui/window.rs:3655
-#: app/src/ui/window.rs:3739
+#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3748
+#: app/src/ui/window.rs:3836
 msgid "Assistant"
 msgstr "助理"
 
-#: app/src/settings/mod.rs:248 app/src/ui/preferences.rs:224
+#: app/src/settings/mod.rs:258 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "翻譯"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:252
+#: app/src/settings/mod.rs:262
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "取消訂閱"
 
-#: app/src/settings/mod.rs:258
+#: app/src/settings/mod.rs:268
 msgid "Answers questions and acts on your mail"
 msgstr "回答問題並處理郵件"
 
-#: app/src/settings/mod.rs:259
+#: app/src/settings/mod.rs:269
 msgid "Translates a message when you ask"
 msgstr "依要求翻譯郵件"
 
-#: app/src/settings/mod.rs:261
+#: app/src/settings/mod.rs:271
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "規則無法處理時，讀取電子報的取消訂閱頁面"
 
-#: app/src/settings/mod.rs:299
+#: app/src/settings/mod.rs:309
 msgid "Same as the Assistant"
 msgstr "與助理相同"
 
-#: app/src/settings/mod.rs:429
+#: app/src/settings/mod.rs:439
 msgid "Claude's own only"
 msgstr "僅限 Claude 內建搜尋"
 
-#: app/src/settings/mod.rs:430
+#: app/src/settings/mod.rs:440
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:431
+#: app/src/settings/mod.rs:441
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:442
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:606
+#: app/src/settings/mod.rs:621
 msgid "Rich text"
 msgstr "富文字"
 
-#: app/src/settings/mod.rs:607
+#: app/src/settings/mod.rs:622
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:626 app/src/settings/mod.rs:648
+#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:663
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "自動"
 
-#: app/src/settings/mod.rs:627 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "星期一"
 
-#: app/src/settings/mod.rs:628 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "星期日"
 
-#: app/src/settings/mod.rs:649
+#: app/src/settings/mod.rs:664
 msgid "12-hour (AM/PM)"
 msgstr "12 小時制（AM/PM）"
 
-#: app/src/settings/mod.rs:650
+#: app/src/settings/mod.rs:665
 msgid "24-hour"
 msgstr "24 小時制"
 
-#: app/src/settings/mod.rs:688
+#: app/src/settings/mod.rs:703
 msgid "When opened"
 msgstr "開啟時"
 
-#: app/src/settings/mod.rs:689
+#: app/src/settings/mod.rs:704
 msgid "After 2 seconds"
 msgstr "2 秒後"
 
-#: app/src/settings/mod.rs:690
+#: app/src/settings/mod.rs:705
 msgid "Only when I choose"
 msgstr "僅在手動選擇時"
 
-#: app/src/settings/mod.rs:706 app/src/settings/mod.rs:724
+#: app/src/settings/mod.rs:721 app/src/settings/mod.rs:739
 msgid "Ask each time"
 msgstr "每次詢問"
 
-#: app/src/settings/mod.rs:707
+#: app/src/settings/mod.rs:722
 msgid "Always load"
 msgstr "一律載入"
 
-#: app/src/settings/mod.rs:725
+#: app/src/settings/mod.rs:740
 msgid "Never ask"
 msgstr "永不詢問"
 
-#: app/src/settings/mod.rs:752
+#: app/src/settings/mod.rs:767
 msgid "No Preview"
 msgstr "不顯示預覽"
 
-#: app/src/settings/mod.rs:753
+#: app/src/settings/mod.rs:768
 msgid "1 Line"
 msgstr "1 行"
 
-#: app/src/settings/mod.rs:754
+#: app/src/settings/mod.rs:769
 msgid "2 Lines"
 msgstr "2 行"
 
-#: app/src/settings/mod.rs:788
+#: app/src/settings/mod.rs:796
+msgid "Short (80 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:797
+msgid "Medium (140 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:798
+msgid "Long (280 Characters)"
+msgstr ""
+
+#: app/src/settings/mod.rs:832
 msgid "Small"
 msgstr "小"
 
-#: app/src/settings/mod.rs:789
+#: app/src/settings/mod.rs:833
 msgid "Default"
 msgstr "預設"
 
-#: app/src/settings/mod.rs:790
+#: app/src/settings/mod.rs:834
 msgid "Large"
 msgstr "大"
 
-#: app/src/settings/mod.rs:791
+#: app/src/settings/mod.rs:835
 msgid "Larger"
 msgstr "更大"
 
-#: app/src/settings/mod.rs:829
+#: app/src/settings/mod.rs:873
 msgid "5 seconds"
 msgstr "5 秒"
 
-#: app/src/settings/mod.rs:830
+#: app/src/settings/mod.rs:874
 msgid "10 seconds"
 msgstr "10 秒"
 
-#: app/src/settings/mod.rs:831
+#: app/src/settings/mod.rs:875
 msgid "20 seconds"
 msgstr "20 秒"
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:876
 msgid "30 seconds"
 msgstr "30 秒"
 
-#: app/src/settings/mod.rs:849
+#: app/src/settings/mod.rs:893
 msgid "Follow system"
 msgstr "跟隨系統"
 
-#: app/src/settings/mod.rs:850
+#: app/src/settings/mod.rs:894
 msgid "Light"
 msgstr "淺色"
 
-#: app/src/settings/mod.rs:851
+#: app/src/settings/mod.rs:895
 msgid "Dark"
 msgstr "深色"
 
-#: app/src/settings/mod.rs:885
+#: app/src/settings/mod.rs:929
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "每 {count} 秒"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:937
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "每 {count} 分鐘"
 
-#: app/src/settings/mod.rs:910
+#: app/src/settings/mod.rs:954
 msgid "2 weeks"
 msgstr "2 週"
 
-#: app/src/settings/mod.rs:911
+#: app/src/settings/mod.rs:955
 msgid "30 days"
 msgstr "30 天"
 
-#: app/src/settings/mod.rs:912
+#: app/src/settings/mod.rs:956
 msgid "90 days"
 msgstr "90 天"
 
-#: app/src/settings/mod.rs:913
+#: app/src/settings/mod.rs:957
 msgid "1 year"
 msgstr "1 年"
 
-#: app/src/settings/mod.rs:914
+#: app/src/settings/mod.rs:958
 msgid "2 years"
 msgstr "2 年"
 
-#: app/src/settings/mod.rs:915
+#: app/src/settings/mod.rs:959
 msgid "5 years"
 msgstr "5 年"
 
-#: app/src/settings/mod.rs:937
+#: app/src/settings/mod.rs:981
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4576,19 +4594,19 @@ msgstr ""
 "每封郵件都會保留在此電腦上。大型帳號會占用大量磁碟空間和記憶體，較舊的郵件會"
 "在背景下載。"
 
-#: app/src/settings/mod.rs:939
+#: app/src/settings/mod.rs:983
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "收件匣中的所有郵件也會保留，較舊的郵件仍可搜尋"
 
-#: app/src/settings/mod.rs:946
+#: app/src/settings/mod.rs:990
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:947
+#: app/src/settings/mod.rs:991
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:948
+#: app/src/settings/mod.rs:992
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4732,7 +4750,7 @@ msgstr "郵件會傳送至 Anthropic，透過 Claude 訂閱供 Claude 讀取。"
 msgid "No unread mail"
 msgstr "沒有未讀郵件"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1673
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1931
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}，{count} 封未讀郵件"
@@ -4745,13 +4763,13 @@ msgstr "全部標示為已讀"
 msgid "Open Penguin Mail"
 msgstr "開啟 Penguin Mail"
 
-#: app/src/tray.rs:194 app/src/ui/composer/mod.rs:369
-#: app/src/ui/composer/mod.rs:672 app/src/ui/composer/mod.rs:1563
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:486
+#: app/src/tray.rs:194 app/src/ui/composer/mod.rs:372
+#: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1567
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:495
 msgid "New Message"
 msgstr "新增郵件"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2128 app/src/ui/window.rs:3661
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2524 app/src/ui/window.rs:3754
 msgid "Check for Mail"
 msgstr "檢查郵件"
 
@@ -4765,11 +4783,11 @@ msgstr "{version} 的新功能"
 
 #: app/src/tray.rs:211 app/src/ui/about.rs:130 app/src/ui/about.rs:238
 #: app/src/ui/about.rs:246 app/src/ui/about.rs:253
-#: app/src/ui/preferences.rs:1137 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "檢查更新"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3678
+#: app/src/tray.rs:216 app/src/ui/window.rs:3775
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "結束"
@@ -4796,7 +4814,7 @@ msgstr "新功能"
 msgid "Website"
 msgstr "網站"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3677
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3774
 msgid "Donate"
 msgstr "捐款"
 
@@ -4804,7 +4822,7 @@ msgstr "捐款"
 msgid "License"
 msgstr "授權條款"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3676
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3773
 msgid "About Penguin Mail"
 msgstr "關於 Penguin Mail"
 
@@ -4853,12 +4871,12 @@ msgid "The update to {version} failed"
 msgstr "更新至 {version} 失敗"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1557
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1575
 msgid "Copy Command"
 msgstr "複製指令"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1562
+#: app/src/ui/window.rs:1580
 msgid "Command copied"
 msgstr "已複製指令"
 
@@ -4950,17 +4968,17 @@ msgstr "複製連結"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:349
-#: app/src/ui/composer/mod.rs:1991 app/src/ui/composer/mod.rs:2113
-#: app/src/ui/composer/mod.rs:2457 app/src/ui/composer/mod.rs:2911
+#: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
+#: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:150 app/src/ui/switch_jmap.rs:174
+#: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
 #: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
 #: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
-#: app/src/ui/window/arrange.rs:148 app/src/ui/window/images.rs:87
+#: app/src/ui/window/arrange.rs:169 app/src/ui/window/images.rs:87
 #: app/src/ui/window/images.rs:157 app/src/ui/window/organize.rs:78
-#: app/src/ui/window/organize.rs:127
+#: app/src/ui/window/organize.rs:127 app/src/ui/window/smart_trash.rs:81
 msgid "Cancel"
 msgstr "取消"
 
@@ -4968,7 +4986,7 @@ msgstr "取消"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1501
+#: app/src/ui/window.rs:1519
 msgid "Sign In"
 msgstr "登入"
 
@@ -5087,7 +5105,7 @@ msgstr "暫時不要"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1634
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1652
 msgid "Grant Access"
 msgstr "授予存取權"
 
@@ -5108,7 +5126,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail 會在此電腦上保留下載的每封郵件。"
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1498
+#: app/src/ui/preferences.rs:1575
 msgid "Days"
 msgstr "天數"
 
@@ -5236,7 +5254,7 @@ msgid "Sign In Again"
 msgstr "重新登入"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2236
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2263
 msgid "Open Google Cloud"
 msgstr "開啟 Google Cloud"
 
@@ -5322,13 +5340,13 @@ msgstr "為開啟的對話撰寫回覆草稿"
 msgid "Choose a Model"
 msgstr "選擇模型"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3786
-#: app/src/ui/window.rs:3787
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3883
+#: app/src/ui/window.rs:3884
 msgid "Detach"
 msgstr "分離視窗"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4470
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4568
 msgid "Close"
 msgstr "關閉"
 
@@ -5346,7 +5364,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:384 app/src/ui/composer/mod.rs:1926
+#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1932
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "傳送"
@@ -5504,7 +5522,7 @@ msgid "No models found."
 msgstr "找不到模型。"
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2236
+#: app/src/ui/composer/mod.rs:2259
 msgid "Remove {file}"
 msgstr "移除 {file}"
 
@@ -5544,8 +5562,8 @@ msgid "Edit {server}"
 msgstr "編輯 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2232 app/src/ui/composer/recipients.rs:319
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3425
+#: app/src/ui/composer/mod.rs:2255 app/src/ui/composer/recipients.rs:319
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3512
 msgid "Remove"
 msgstr "移除"
 
@@ -5585,7 +5603,7 @@ msgstr ""
 "設定環境變數。URL 則透過 HTTP 連線至伺服器。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2906 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2894 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "名稱"
@@ -5621,11 +5639,11 @@ msgstr "測試"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:349 app/src/ui/composer/mod.rs:2911
+#: app/src/ui/composer/editor.rs:349 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
-#: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:234
-#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:148
+#: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
+#: app/src/ui/vacation.rs:42 app/src/ui/window/arrange.rs:169
 #: app/src/ui/window/save_contacts.rs:112
 msgid "Save"
 msgstr "儲存"
@@ -5911,7 +5929,7 @@ msgstr ""
 "各技能必須手動啟用。技能中的指令稿會在沙箱中執行，無法存取郵件、金鑰或家目"
 "錄，且助理會在每次執行指令前詢問。"
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:505
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:582
 msgid "Not Available"
 msgstr "無法使用"
 
@@ -6093,7 +6111,7 @@ msgid "Declined"
 msgstr "已婉拒"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1381
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6177,7 +6195,7 @@ msgstr "僅新會議"
 msgid "New and existing"
 msgstr "新舊會議"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:589
+#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:592
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
@@ -6205,11 +6223,11 @@ msgstr "結束日期"
 msgid "End time"
 msgstr "結束時間"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1450
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
 msgid "Starts"
 msgstr "開始"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1452
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
 msgid "Ends"
 msgstr "結束"
 
@@ -6349,9 +6367,9 @@ msgstr "正在上傳 {file}"
 msgid "Could not attach {file}: {reason}"
 msgstr "無法附加 {file}：{reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:413
-#: app/src/ui/thread_list.rs:350 app/src/ui/thread_list.rs:356
-#: app/src/ui/thread_list.rs:1143
+#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
+#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
+#: app/src/ui/thread_list.rs:1154
 msgid "More"
 msgstr "更多"
 
@@ -6372,8 +6390,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "僅有可變更此行事曆的人能檢視詳細資料"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/sidebar.rs:1845
-#: app/src/ui/sidebar.rs:2145
+#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/sidebar.rs:2241
+#: app/src/ui/sidebar.rs:2542
 msgid "Color"
 msgstr "顏色"
 
@@ -6751,7 +6769,7 @@ msgid "New Calendar"
 msgstr "新增行事曆"
 
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
-#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:322
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:363
 msgid "Create"
@@ -6866,7 +6884,7 @@ msgstr "全天"
 
 #: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3072
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1318 app/src/ui/preferences.rs:1506
+#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
 msgstr "%a"
 
@@ -6882,7 +6900,7 @@ msgstr "已刪除「{title}」"
 msgid "Could not delete the event: {reason}"
 msgstr "無法刪除活動：{reason}"
 
-#: app/src/ui/calendar/mod.rs:2210 app/src/ui/composer/mod.rs:1400
+#: app/src/ui/calendar/mod.rs:2210 app/src/ui/composer/mod.rs:1404
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7216,19 +7234,19 @@ msgstr "授予 {account} 存取權"
 msgid "Sign in again to {account}"
 msgstr "重新登入 {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1309 app/src/ui/sidebar.rs:2150
+#: app/src/ui/calendar/sidebar.rs:1309 app/src/ui/sidebar.rs:2547
 msgid "Sign In Again…"
 msgstr "重新登入…"
 
-#: app/src/ui/calendar/sidebar.rs:1310 app/src/ui/sidebar.rs:2158
+#: app/src/ui/calendar/sidebar.rs:1310 app/src/ui/sidebar.rs:2555
 msgid "Remove Account…"
 msgstr "移除帳號…"
 
-#: app/src/ui/calendar/sidebar.rs:1324 app/src/ui/sidebar.rs:2165
+#: app/src/ui/calendar/sidebar.rs:1324 app/src/ui/sidebar.rs:2562
 msgid "Account options"
 msgstr "帳號選項"
 
-#: app/src/ui/calendar/sidebar.rs:1329 app/src/ui/sidebar.rs:2170
+#: app/src/ui/calendar/sidebar.rs:1329 app/src/ui/sidebar.rs:2567
 msgid "Options for {account}"
 msgstr "{account} 的選項"
 
@@ -7256,13 +7274,13 @@ msgstr "從清單隱藏"
 msgid "Original Color"
 msgstr "原始顏色"
 
-#: app/src/ui/calendar/sidebar.rs:1523 app/src/ui/sidebar.rs:1833
-#: app/src/ui/sidebar.rs:2135
+#: app/src/ui/calendar/sidebar.rs:1523 app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2532
 msgid "Rename…"
 msgstr "重新命名…"
 
-#: app/src/ui/calendar/sidebar.rs:1524 app/src/ui/sidebar.rs:1734
-#: app/src/ui/sidebar.rs:1861
+#: app/src/ui/calendar/sidebar.rs:1524 app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2257
 msgid "Delete…"
 msgstr "刪除…"
 
@@ -7378,7 +7396,7 @@ msgstr "{date}，有活動"
 msgid "Offline, last updated {time}"
 msgstr "離線，上次更新於 {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2228
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2627
 msgid "Offline"
 msgstr "離線"
 
@@ -7438,6 +7456,10 @@ msgstr "尚未回覆"
 msgid "{time} {city}"
 msgstr "{time} {city}"
 
+#: app/src/ui/composer/clipboard.rs:50
+msgid "Could not paste the image"
+msgstr "無法貼上圖片"
+
 #: app/src/ui/composer/editor.rs:302
 msgid "Describe Picture…"
 msgstr "描述圖片…"
@@ -7456,399 +7478,414 @@ msgstr "螢幕閱讀器會讀出這些文字以代替圖片；圖片未載入時
 msgid "Description"
 msgstr "說明"
 
+#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:461
+msgid "{file}, preview"
+msgstr "{file}，預覽"
+
+#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:398
+msgid "Could not open {file}"
+msgstr "無法開啟 {file}"
+
+#: app/src/ui/composer/files.rs:81 app/src/ui/window/attachments.rs:79
+#: app/src/ui/window/attachments.rs:355
+msgid "Could not open {file}: {reason}"
+msgstr "無法開啟 {file}：{reason}"
+
 #. Attach Files moves here on a narrow window, where its button goes
 #. so Send keeps its word; the action is off, and the item hidden,
 #. while the button shows.
-#: app/src/ui/composer/mod.rs:147
+#: app/src/ui/composer/mod.rs:150
 msgid "Attach Files…"
 msgstr "附加檔案…"
 
-#: app/src/ui/composer/mod.rs:150 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:153 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "範本"
 
-#: app/src/ui/composer/mod.rs:151 app/src/ui/composer/mod.rs:1030
+#: app/src/ui/composer/mod.rs:154 app/src/ui/composer/mod.rs:1034
 msgid "Preview"
 msgstr "預覽"
 
-#: app/src/ui/composer/mod.rs:155
+#: app/src/ui/composer/mod.rs:158
 msgid "Sign"
 msgstr "簽署"
 
-#: app/src/ui/composer/mod.rs:156
+#: app/src/ui/composer/mod.rs:159
 msgid "Encrypt"
 msgstr "加密"
 
-#: app/src/ui/composer/mod.rs:164
+#: app/src/ui/composer/mod.rs:167
 msgid "Request Read Receipt"
 msgstr "要求讀取回條"
 
-#: app/src/ui/composer/mod.rs:378 app/src/ui/conversation.rs:1808
+#: app/src/ui/composer/mod.rs:381 app/src/ui/conversation.rs:1808
 msgid "Choose a Time…"
 msgstr "選擇時間…"
 
-#: app/src/ui/composer/mod.rs:389 app/src/ui/composer/mod.rs:2006
-#: app/src/ui/sidebar.rs:1259
+#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2012
+#: app/src/ui/sidebar.rs:1480 app/src/ui/sidebar.rs:2010
 msgid "Send Later"
 msgstr "排程傳送"
 
-#: app/src/ui/composer/mod.rs:391 app/src/ui/composer/mod.rs:1607
+#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1611
 msgid "Send (Ctrl+Enter)"
 msgstr "傳送（Ctrl+Enter）"
 
-#: app/src/ui/composer/mod.rs:395
+#: app/src/ui/composer/mod.rs:398
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "附加檔案（Ctrl+Shift+A）"
 
-#: app/src/ui/composer/mod.rs:402
+#: app/src/ui/composer/mod.rs:405
 msgid "Save as Template…"
 msgstr "儲存為範本…"
 
-#: app/src/ui/composer/mod.rs:419
+#: app/src/ui/composer/mod.rs:422
 msgid "Add a recipient this computer can encrypt to."
 msgstr "請新增此電腦可為其加密的收件者。"
 
-#: app/src/ui/composer/mod.rs:464
+#: app/src/ui/composer/mod.rs:467
 msgid "Recipients"
 msgstr "收件者"
 
-#: app/src/ui/composer/mod.rs:465
+#: app/src/ui/composer/mod.rs:468
 msgid "Carbon copy"
 msgstr "副本"
 
-#: app/src/ui/composer/mod.rs:466
+#: app/src/ui/composer/mod.rs:469
 msgid "Blind carbon copy"
 msgstr "密件副本"
 
-#: app/src/ui/composer/mod.rs:478
+#: app/src/ui/composer/mod.rs:481
 msgid "Cc/Bcc"
 msgstr "副本／密件副本"
 
-#: app/src/ui/composer/mod.rs:479 app/src/ui/composer/mod.rs:1201
+#: app/src/ui/composer/mod.rs:482 app/src/ui/composer/mod.rs:1205
 msgid "Show Cc and Bcc"
 msgstr "顯示副本與密件副本"
 
-#: app/src/ui/composer/mod.rs:490
+#: app/src/ui/composer/mod.rs:493
 msgid "+suffix or .suffix"
 msgstr "+字尾或 .字尾"
 
-#: app/src/ui/composer/mod.rs:493
+#: app/src/ui/composer/mod.rs:496
 msgid "Address Suffix"
 msgstr "地址字尾"
 
-#: app/src/ui/composer/mod.rs:505 app/src/ui/composer/mod.rs:510
+#: app/src/ui/composer/mod.rs:508 app/src/ui/composer/mod.rs:513
 msgid "New Masked Address"
 msgstr "新增遮罩地址"
 
-#: app/src/ui/composer/mod.rs:527
+#: app/src/ui/composer/mod.rs:530
 msgid "Masked"
 msgstr "遮罩"
 
-#: app/src/ui/composer/mod.rs:555 app/src/ui/composer/mod.rs:556
+#: app/src/ui/composer/mod.rs:558 app/src/ui/composer/mod.rs:559
 #: app/src/ui/rules.rs:443
 msgid "From"
 msgstr "寄件者"
 
-#: app/src/ui/composer/mod.rs:561 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:564 app/src/ui/rules.rs:444
 msgid "To"
 msgstr "收件者"
 
-#: app/src/ui/composer/mod.rs:565
+#: app/src/ui/composer/mod.rs:568
 msgid "Cc"
 msgstr "副本"
 
-#: app/src/ui/composer/mod.rs:567
+#: app/src/ui/composer/mod.rs:570
 msgid "Bcc"
 msgstr "密件副本"
 
-#: app/src/ui/composer/mod.rs:577 app/src/ui/rules.rs:445
+#: app/src/ui/composer/mod.rs:580 app/src/ui/rules.rs:445
 #: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:278
 msgid "Subject"
 msgstr "主旨"
 
-#: app/src/ui/composer/mod.rs:641
+#: app/src/ui/composer/mod.rs:644
 msgid "Formatting"
 msgstr "格式"
 
-#: app/src/ui/composer/mod.rs:660 app/src/ui/composer/mod.rs:1366
+#: app/src/ui/composer/mod.rs:663 app/src/ui/composer/mod.rs:1370
 msgid "Forwarded Message"
 msgstr "轉寄的郵件"
 
-#: app/src/ui/composer/mod.rs:1199
+#: app/src/ui/composer/mod.rs:1203
 msgid "Hide Cc and Bcc"
 msgstr "隱藏副本與密件副本"
 
-#: app/src/ui/composer/mod.rs:1284
+#: app/src/ui/composer/mod.rs:1288
 msgid "Remove Quoted Text"
 msgstr "移除引用文字"
 
-#: app/src/ui/composer/mod.rs:1285
+#: app/src/ui/composer/mod.rs:1289
 msgid "Do Not Forward the Original"
 msgstr "不轉寄原始郵件"
 
-#: app/src/ui/composer/mod.rs:1395
+#: app/src/ui/composer/mod.rs:1399
 msgid "Quoted text removed"
 msgstr "已移除引用文字"
 
-#: app/src/ui/composer/mod.rs:1396
+#: app/src/ui/composer/mod.rs:1400
 msgid "Forwarded message removed"
 msgstr "已移除轉寄的郵件"
 
-#: app/src/ui/composer/mod.rs:1501
+#: app/src/ui/composer/mod.rs:1505
 msgid "Sending from {address}"
 msgstr "將從 {address} 寄出"
 
-#: app/src/ui/composer/mod.rs:1507
+#: app/src/ui/composer/mod.rs:1511
 msgid "Could not make a masked address: {reason}"
 msgstr "無法建立遮罩地址：{reason}"
 
-#: app/src/ui/composer/mod.rs:1571
+#: app/src/ui/composer/mod.rs:1575
 msgid "Scheduled to send {when}"
 msgstr "已排程於 {when} 傳送"
 
-#: app/src/ui/composer/mod.rs:1595 app/src/ui/composer/mod.rs:2028
+#: app/src/ui/composer/mod.rs:1599 app/src/ui/composer/mod.rs:2034
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "請選擇寄件者，並輸入允許使用的地址字尾。"
 
-#: app/src/ui/composer/mod.rs:1765 app/src/ui/queued.rs:65
-#: app/src/ui/window/press.rs:461
+#: app/src/ui/composer/mod.rs:1771 app/src/ui/queued.rs:65
+#: app/src/ui/window/press.rs:489
 msgid "Cancel Send"
 msgstr "取消傳送"
 
-#: app/src/ui/composer/mod.rs:1918 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1924 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "正在傳送…"
 
-#: app/src/ui/composer/mod.rs:1958
+#: app/src/ui/composer/mod.rs:1964
 msgid "Attachment Missing?"
 msgstr "忘記附件了嗎？"
 
-#: app/src/ui/composer/mod.rs:1960
+#: app/src/ui/composer/mod.rs:1966
 msgid "The message says “{sentence}” and carries no file."
 msgstr "郵件提到「{sentence}」，但沒有附上檔案。"
 
-#: app/src/ui/composer/mod.rs:1965
+#: app/src/ui/composer/mod.rs:1971
 msgid "Add Attachment"
 msgstr "新增附件"
 
-#: app/src/ui/composer/mod.rs:1966
+#: app/src/ui/composer/mod.rs:1972
 msgid "Send Anyway"
 msgstr "仍要傳送"
 
-#: app/src/ui/composer/mod.rs:1984
+#: app/src/ui/composer/mod.rs:1990
 msgid "Send Without Encryption?"
 msgstr "是否不加密傳送？"
 
-#: app/src/ui/composer/mod.rs:1986
+#: app/src/ui/composer/mod.rs:1992
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "此郵件原定加密傳送，但無法加密。{reason}"
 
-#: app/src/ui/composer/mod.rs:1992
+#: app/src/ui/composer/mod.rs:1998
 msgid "Send Readable"
 msgstr "以明文傳送"
 
-#: app/src/ui/composer/mod.rs:2007
+#: app/src/ui/composer/mod.rs:2013
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "Penguin Mail 執行時會在此時間傳送，即使只在系統匣中執行也一樣。"
 
-#: app/src/ui/composer/mod.rs:2008
+#: app/src/ui/composer/mod.rs:2014
 msgid "Schedule"
 msgstr "排程"
 
-#: app/src/ui/composer/mod.rs:2070
+#: app/src/ui/composer/mod.rs:2076
 msgid "Draft saved, encrypted to your own key"
 msgstr "已儲存草稿，並以自己的金鑰加密"
 
-#: app/src/ui/composer/mod.rs:2072
+#: app/src/ui/composer/mod.rs:2078
 msgid "Draft saved"
 msgstr "已儲存草稿"
 
-#: app/src/ui/composer/mod.rs:2108
+#: app/src/ui/composer/mod.rs:2114
 msgid "Save as Draft?"
 msgstr "是否儲存為草稿？"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2118
 msgid "Discard"
 msgstr "捨棄"
 
-#: app/src/ui/composer/mod.rs:2114
+#: app/src/ui/composer/mod.rs:2120
 msgid "Save Draft"
 msgstr "儲存草稿"
 
-#: app/src/ui/composer/mod.rs:2155
+#: app/src/ui/composer/mod.rs:2161
 msgid "Attach Files"
 msgstr "附加檔案"
 
-#: app/src/ui/composer/mod.rs:2191
+#: app/src/ui/composer/mod.rs:2197
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2273
+#: app/src/ui/composer/mod.rs:2243
+#, fuzzy
+#| msgid "Open {file}, {size}"
+msgid "Open {file}"
+msgstr "開啟 {file}，{size}"
+
+#: app/src/ui/composer/mod.rs:2296
 msgid "Bold (Ctrl+B)"
 msgstr "粗體（Ctrl+B）"
 
-#: app/src/ui/composer/mod.rs:2274
+#: app/src/ui/composer/mod.rs:2297
 msgid "Italic (Ctrl+I)"
 msgstr "斜體（Ctrl+I）"
 
-#: app/src/ui/composer/mod.rs:2277
+#: app/src/ui/composer/mod.rs:2300
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "刪除線（Ctrl+Shift+X）"
 
-#: app/src/ui/composer/mod.rs:2280
+#: app/src/ui/composer/mod.rs:2303
 msgid "Code (Ctrl+E)"
 msgstr "程式碼（Ctrl+E）"
 
-#: app/src/ui/composer/mod.rs:2317
+#: app/src/ui/composer/mod.rs:2340
 msgid "Link (Ctrl+K)"
 msgstr "連結（Ctrl+K）"
 
-#: app/src/ui/composer/mod.rs:2327
+#: app/src/ui/composer/mod.rs:2350
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "符號清單（Ctrl+Shift+8）"
 
-#: app/src/ui/composer/mod.rs:2332
+#: app/src/ui/composer/mod.rs:2355
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "編號清單（Ctrl+Shift+7）"
 
-#: app/src/ui/composer/mod.rs:2337
+#: app/src/ui/composer/mod.rs:2360
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "引用（Ctrl+Shift+9）"
 
-#: app/src/ui/composer/mod.rs:2354
+#: app/src/ui/composer/mod.rs:2377
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "插入圖片（Ctrl+Shift+P）"
 
-#: app/src/ui/composer/mod.rs:2364
+#: app/src/ui/composer/mod.rs:2387
 msgid "Paragraph"
 msgstr "段落"
 
-#: app/src/ui/composer/mod.rs:2365
+#: app/src/ui/composer/mod.rs:2388
 msgid "Heading 1"
 msgstr "標題 1"
 
-#: app/src/ui/composer/mod.rs:2366
+#: app/src/ui/composer/mod.rs:2389
 msgid "Heading 2"
 msgstr "標題 2"
 
-#: app/src/ui/composer/mod.rs:2367
+#: app/src/ui/composer/mod.rs:2390
 msgid "Heading 3"
 msgstr "標題 3"
 
-#: app/src/ui/composer/mod.rs:2368
+#: app/src/ui/composer/mod.rs:2391
 msgid "Code Block"
 msgstr "程式碼區塊"
 
-#: app/src/ui/composer/mod.rs:2382
+#: app/src/ui/composer/mod.rs:2405
 msgid "Turn Markdown into Formatting"
 msgstr "將 Markdown 轉為格式"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2409
 msgid "Clear Formatting"
 msgstr "清除格式"
 
-#: app/src/ui/composer/mod.rs:2392
+#: app/src/ui/composer/mod.rs:2415
 msgid "Write in Markdown"
 msgstr "以 Markdown 撰寫"
 
-#: app/src/ui/composer/mod.rs:2399 app/src/ui/composer/mod.rs:2403
+#: app/src/ui/composer/mod.rs:2422 app/src/ui/composer/mod.rs:2426
 msgid "More Formatting"
 msgstr "更多格式"
 
-#: app/src/ui/composer/mod.rs:2440
+#: app/src/ui/composer/mod.rs:2463
 msgid "Add a Link"
 msgstr "新增連結"
 
-#: app/src/ui/composer/mod.rs:2446
+#: app/src/ui/composer/mod.rs:2469
 msgid "Text"
 msgstr "文字"
 
-#: app/src/ui/composer/mod.rs:2458
+#: app/src/ui/composer/mod.rs:2481
 msgid "Add Link"
 msgstr "新增連結"
 
-#: app/src/ui/composer/mod.rs:2494
+#: app/src/ui/composer/mod.rs:2517
 msgid "Markdown formatted"
 msgstr "已套用 Markdown 格式"
 
-#: app/src/ui/composer/mod.rs:2610
+#: app/src/ui/composer/mod.rs:2636
 msgid "Pasted as rich text"
 msgstr "已貼上為富文字"
 
-#: app/src/ui/composer/mod.rs:2611
+#: app/src/ui/composer/mod.rs:2637
 msgid "Paste as Plain Text"
 msgstr "貼上為純文字"
 
-#: app/src/ui/composer/mod.rs:2645
+#: app/src/ui/composer/mod.rs:2671
 msgid "Editing as Markdown"
 msgstr "以 Markdown 編輯"
 
-#: app/src/ui/composer/mod.rs:2681
+#: app/src/ui/composer/mod.rs:2707
 msgid "Images"
 msgstr "圖片"
 
-#: app/src/ui/composer/mod.rs:2686
+#: app/src/ui/composer/mod.rs:2712
 msgid "Insert Image"
 msgstr "插入圖片"
 
-#: app/src/ui/composer/mod.rs:2730
+#: app/src/ui/composer/mod.rs:2756
 msgid "Could not read the file: {reason}"
 msgstr "無法讀取檔案：{reason}"
 
-#: app/src/ui/composer/mod.rs:2805
-msgid "Could not paste the image"
-msgstr "無法貼上圖片"
-
-#: app/src/ui/composer/mod.rs:2850
+#: app/src/ui/composer/mod.rs:2838
 msgid "No Templates Yet"
 msgstr "尚無範本"
 
-#: app/src/ui/composer/mod.rs:2900
+#: app/src/ui/composer/mod.rs:2888
 msgid "Save as Template"
 msgstr "儲存為範本"
 
-#: app/src/ui/composer/mod.rs:2902
+#: app/src/ui/composer/mod.rs:2890
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "每次使用時，會填入 {{first_name}} 等預留位置。"
 
-#: app/src/ui/composer/mod.rs:2925 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2913 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "請為範本命名"
 
-#: app/src/ui/composer/mod.rs:2933
+#: app/src/ui/composer/mod.rs:2921
 msgid "Template saved"
 msgstr "已儲存範本"
 
-#: app/src/ui/composer/mod.rs:2936
+#: app/src/ui/composer/mod.rs:2924
 msgid "Template not saved: {reason}"
 msgstr "未儲存範本：{reason}"
 
-#: app/src/ui/composer/mod.rs:3008
+#: app/src/ui/composer/mod.rs:3047
 msgid "This looks like Markdown"
 msgstr "內容看起來像 Markdown"
 
-#: app/src/ui/composer/mod.rs:3014
+#: app/src/ui/composer/mod.rs:3053
 msgid "Format"
 msgstr "套用格式"
 
-#: app/src/ui/composer/mod.rs:3015
+#: app/src/ui/composer/mod.rs:3054
 msgid "Turn the Markdown into rich text"
 msgstr "將 Markdown 轉為富文字"
 
-#: app/src/ui/composer/mod.rs:3021 app/src/ui/composer/mod.rs:3025
+#: app/src/ui/composer/mod.rs:3060 app/src/ui/composer/mod.rs:3064
 msgid "Dismiss"
 msgstr "關閉"
 
-#: app/src/ui/composer/mod.rs:3108
+#: app/src/ui/composer/mod.rs:3147
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "草稿會留在此電腦上，稍後可在這裡繼續撰寫。"
 
-#: app/src/ui/composer/mod.rs:3112
+#: app/src/ui/composer/mod.rs:3151
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr "草稿會保留在 {provider} 中，稍後可在任何裝置上繼續撰寫。"
 
-#: app/src/ui/composer/mod.rs:3116
+#: app/src/ui/composer/mod.rs:3155
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr "草稿會保存在您的帳號中，方便您稍後在任何裝置上完成。"
@@ -7865,7 +7902,7 @@ msgstr "移除 {recipient}"
 msgid "Press Delete to remove"
 msgstr "按 Delete 移除"
 
-#: app/src/ui/composer/richbuffer.rs:42
+#: app/src/ui/composer/richbuffer.rs:45
 msgid "Picture"
 msgstr "圖片"
 
@@ -7893,7 +7930,7 @@ msgstr "其他電子郵件"
 msgid "Phone"
 msgstr "電話"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1222
+#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1443
 msgid "Remove from VIPs"
 msgstr "從 VIP 移除"
 
@@ -7930,11 +7967,11 @@ msgid "Find Again"
 msgstr "再次尋找"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1728
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2124
 msgid "Edit…"
 msgstr "編輯…"
 
-#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:490
+#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:567
 msgid "Shared mailboxes support mail only."
 msgstr "共用信箱僅支援郵件功能。"
 
@@ -8009,7 +8046,7 @@ msgid "Export…"
 msgstr "匯出…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3671
+#: app/src/ui/window.rs:3764
 msgid "Customize Toolbar…"
 msgstr "自訂工具列…"
 
@@ -8045,7 +8082,7 @@ msgstr "靜音"
 
 #: app/src/ui/conversation.rs:473 app/src/ui/conversation.rs:627
 #: app/src/ui/conversation.rs:1116 app/src/ui/toolbar/customize.rs:21
-#: app/src/ui/window/message_menu.rs:133
+#: app/src/ui/window/message_menu.rs:133 app/src/ui/window/smart_trash.rs:82
 msgid "Move to Trash"
 msgstr "移至垃圾桶"
 
@@ -8122,8 +8159,9 @@ msgstr "標示為已讀或未讀"
 msgid "Tags…"
 msgstr "標記…"
 
-#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1267
-#: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
+#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1488
+#: app/src/ui/sidebar.rs:2016 app/src/ui/window/reminders.rs:25
+#: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "提醒我"
 
@@ -8167,7 +8205,7 @@ msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "非垃圾郵件（Ctrl+Shift+J）"
 
 #: app/src/ui/conversation.rs:1115 app/src/ui/window/message_menu.rs:134
-#: app/src/ui/window/press.rs:447
+#: app/src/ui/window/press.rs:475
 msgid "Delete Forever"
 msgstr "永久刪除"
 
@@ -8556,7 +8594,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "允許隱藏電子郵件地址"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3880
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3977
 msgid "Add an account first"
 msgstr "請先新增帳號"
 
@@ -8698,7 +8736,7 @@ msgid "Events to add"
 msgstr "要新增的活動"
 
 #: app/src/ui/invitation.rs:433 app/src/ui/invitation.rs:439
-#: app/src/ui/sidebar.rs:142
+#: app/src/ui/sidebar.rs:144
 msgid "Show in Calendar"
 msgstr "在行事曆中顯示"
 
@@ -8961,7 +8999,62 @@ msgstr "這個網址包含可能掩飾目的地的使用者名稱。"
 msgid "This link contains hidden or direction-changing characters."
 msgstr "這個連結包含隱藏字元或變更文字方向的字元。"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/manage_folders.rs:188 app/src/ui/manage_folders.rs:191
+#, fuzzy
+#| msgid "Search models"
+msgid "Search folders"
+msgstr "搜尋模型"
+
+#: app/src/ui/manage_folders.rs:207
+#, fuzzy
+#| msgid "Could Not Load the Rules"
+msgid "Could Not List the Folders"
+msgstr "無法載入規則"
+
+#: app/src/ui/manage_folders.rs:211
+#, fuzzy
+#| msgid "No Matching Mail"
+msgid "No Matching Folders"
+msgstr "沒有符合條件的郵件"
+
+#: app/src/ui/manage_folders.rs:225
+msgid ""
+"The sidebar shows the folders you subscribe to. Inbox and the folders mail "
+"is filed into always show."
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:242
+#, fuzzy
+#| msgid "Rules for {account}"
+msgid "Folders of {account}"
+msgstr "{account} 的規則"
+
+#: app/src/ui/manage_folders.rs:347
+msgid "Hide the folders in {folder}"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:348
+#, fuzzy
+#| msgid "Show the calendar"
+msgid "Show the folders in {folder}"
+msgstr "顯示行事曆"
+
+#: app/src/ui/manage_folders.rs:366
+msgid "{folder}, always shown"
+msgstr ""
+
+#: app/src/ui/manage_folders.rs:402 app/src/ui/manage_folders.rs:508
+#: app/src/ui/preferences.rs:696
+msgid "This account is not syncing yet"
+msgstr "此帳號尚未開始同步"
+
+#: app/src/ui/manage_folders.rs:514
+#, fuzzy
+#| msgid "Could not change the color: {reason}"
+msgid "Could not change the subscription: {reason}"
+msgstr "無法變更顏色：{reason}"
+
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "灰色"
 
@@ -8970,7 +9063,7 @@ msgid "The mail is already there"
 msgstr "郵件已在該處"
 
 #: app/src/ui/moving.rs:64 app/src/ui/moving.rs:106
-#: app/src/ui/window/press.rs:348
+#: app/src/ui/window/press.rs:357 app/src/ui/window/press.rs:376
 msgid "Mail cannot go there"
 msgstr "郵件無法移至該處"
 
@@ -9081,311 +9174,351 @@ msgid ""
 msgstr "依 Gmail 的方式將收件匣分成主要、更新、促銷及社交"
 
 #: app/src/ui/preferences.rs:169
+#, fuzzy
+#| msgid "Check for mail"
+msgid "Pull to Check for Mail"
+msgstr "檢查郵件"
+
+#: app/src/ui/preferences.rs:171
+msgid "Slowly pull past the top of the message list with a touchpad"
+msgstr ""
+
+#: app/src/ui/preferences.rs:178
 msgid "Open the Inbox On"
 msgstr "開啟收件匣時顯示"
 
-#: app/src/ui/preferences.rs:170
+#: app/src/ui/preferences.rs:179
 msgid "Which category the window starts on"
 msgstr "視窗啟動時顯示的分類"
 
-#: app/src/ui/preferences.rs:176
+#: app/src/ui/preferences.rs:185
 msgid "Suggest Follow-Ups"
 msgstr "建議追蹤"
 
-#: app/src/ui/preferences.rs:178
+#: app/src/ui/preferences.rs:187
 msgid "List mail you sent that has had no reply for three days"
 msgstr "列出傳送後三天仍未收到回覆的郵件"
 
-#: app/src/ui/preferences.rs:192
+#: app/src/ui/preferences.rs:201
 msgid "Follow Navigation After Removing Mail"
 msgstr "移除郵件後跟隨導覽方向"
 
-#: app/src/ui/preferences.rs:194
+#: app/src/ui/preferences.rs:203
 msgid ""
 "After deleting, archiving, or moving mail, select the neighbor in the "
 "direction you last moved"
 msgstr "刪除、封存或移動郵件後，依上次導覽方向選取相鄰郵件"
 
-#: app/src/ui/preferences.rs:201
+#: app/src/ui/preferences.rs:210
 msgid "Images and Receipts"
 msgstr "圖片與讀取回條"
 
-#: app/src/ui/preferences.rs:205
+#: app/src/ui/preferences.rs:214
 msgid "Remote Images"
 msgstr "遠端圖片"
 
-#: app/src/ui/preferences.rs:207
+#: app/src/ui/preferences.rs:216
 msgid "Loading them can tell senders when you read their mail"
 msgstr "載入圖片可能讓寄件者知道何時閱讀郵件"
 
-#: app/src/ui/preferences.rs:215
+#: app/src/ui/preferences.rs:224
 msgid "Read Receipts"
 msgstr "讀取回條"
 
-#: app/src/ui/preferences.rs:217
+#: app/src/ui/preferences.rs:226
 msgid "When a sender asks to know you read their message"
 msgstr "當寄件者想知道您是否已讀其郵件時"
 
-#: app/src/ui/preferences.rs:233
+#: app/src/ui/preferences.rs:242
 msgid "Appearance"
 msgstr "外觀"
 
-#: app/src/ui/preferences.rs:240
+#: app/src/ui/preferences.rs:249
 msgid "Style"
 msgstr "樣式"
 
-#: app/src/ui/preferences.rs:247
+#: app/src/ui/preferences.rs:256
 msgid "Text Size"
 msgstr "文字大小"
 
-#: app/src/ui/preferences.rs:254
+#: app/src/ui/preferences.rs:263
 msgid "Message Preview"
 msgstr "郵件預覽"
 
-#: app/src/ui/preferences.rs:255
+#: app/src/ui/preferences.rs:264
 msgid "Lines of message text below the subject"
 msgstr "主旨下方顯示的郵件內文行數"
 
-#: app/src/ui/preferences.rs:261
+#: app/src/ui/preferences.rs:270
 msgid "Bold Unread Messages"
 msgstr "未讀郵件使用粗體"
 
-#: app/src/ui/preferences.rs:263
+#: app/src/ui/preferences.rs:272
 msgid "Use heavier text for unread senders, subjects, and dates"
 msgstr "未讀郵件的寄件者、主旨與日期使用粗體"
 
-#: app/src/ui/preferences.rs:270
+#: app/src/ui/preferences.rs:279
 msgid "Always Bold Senders"
 msgstr "寄件者一律使用粗體"
 
-#: app/src/ui/preferences.rs:272
+#: app/src/ui/preferences.rs:281
 msgid "Use heavier sender text for both read and unread messages"
 msgstr "已讀與未讀郵件的寄件者皆使用粗體"
 
-#: app/src/ui/preferences.rs:279
+#: app/src/ui/preferences.rs:288
 msgid "Show Avatars"
 msgstr "顯示大頭貼"
 
-#: app/src/ui/preferences.rs:281
+#: app/src/ui/preferences.rs:290
 msgid "Show contact pictures or initials in the message list"
 msgstr "在郵件列表中顯示聯絡人照片或姓名縮寫"
 
-#: app/src/ui/preferences.rs:292
+#: app/src/ui/preferences.rs:301
 msgid "Draw Messages Without the GPU"
 msgstr "不使用 GPU 繪製郵件"
 
-#: app/src/ui/preferences.rs:294
+#: app/src/ui/preferences.rs:303
 msgid ""
 "Turn on when messages show blank or garbled. Takes effect after a restart"
 msgstr "郵件顯示空白或錯亂時啟用。重新啟動後生效"
 
-#: app/src/ui/preferences.rs:306 app/src/ui/preferences.rs:311
+#: app/src/ui/preferences.rs:315 app/src/ui/preferences.rs:320
 msgid "Notifications"
 msgstr "通知"
 
-#: app/src/ui/preferences.rs:315
+#: app/src/ui/preferences.rs:324
 msgid "Notify About New Mail"
 msgstr "通知新郵件"
 
-#: app/src/ui/preferences.rs:322
+#: app/src/ui/preferences.rs:331
 msgid "Show Sender and Subject"
 msgstr "顯示寄件者與主旨"
 
-#: app/src/ui/preferences.rs:323
+#: app/src/ui/preferences.rs:332
 msgid "Turn off to see only how much mail arrived"
 msgstr "關閉後僅顯示收到的郵件數量"
 
-#: app/src/ui/preferences.rs:333
+#: app/src/ui/preferences.rs:342
+#, fuzzy
+#| msgid "Message Preview"
+msgid "Show Message Preview"
+msgstr "郵件預覽"
+
+#: app/src/ui/preferences.rs:344
+#, fuzzy
+#| msgid "Lines of message text below the subject"
+msgid "Include a short extract of the message below the subject"
+msgstr "主旨下方顯示的郵件內文行數"
+
+#: app/src/ui/preferences.rs:365
+#, fuzzy
+#| msgid "Subject"
+msgid "Bold Subject"
+msgstr "主旨"
+
+#: app/src/ui/preferences.rs:382
+#, fuzzy
+#| msgid "Message Preview"
+msgid "Message Preview Length"
+msgstr "郵件預覽"
+
+#: app/src/ui/preferences.rs:384
+msgid "The desktop may show fewer characters to fit the notification"
+msgstr ""
+
+#: app/src/ui/preferences.rs:402
 msgid "Only for VIPs"
 msgstr "僅限 VIP"
 
-#: app/src/ui/preferences.rs:334
+#: app/src/ui/preferences.rs:403
 msgid "Stay quiet about mail from everyone else"
 msgstr "不通知其他寄件者的郵件"
 
-#: app/src/ui/preferences.rs:344
+#: app/src/ui/preferences.rs:413
 msgid "Buttons"
 msgstr "按鈕"
 
-#: app/src/ui/preferences.rs:346
+#: app/src/ui/preferences.rs:415
 msgid "What a notification offers besides opening the conversation"
 msgstr "通知除了開啟對話外，還提供哪些操作"
 
-#: app/src/ui/preferences.rs:377
+#: app/src/ui/preferences.rs:451
 msgid "Event Reminders"
 msgstr "活動提醒"
 
-#: app/src/ui/preferences.rs:379
+#: app/src/ui/preferences.rs:453
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr "依活動或行事曆設定的時間，在每個活動開始前通知"
 
-#: app/src/ui/preferences.rs:402 app/src/ui/preferences.rs:409
-#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
+#: app/src/ui/preferences.rs:476 app/src/ui/preferences.rs:483
+#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:47
+#: app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
 msgstr "帳號"
 
-#: app/src/ui/preferences.rs:410
+#: app/src/ui/preferences.rs:484
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
 msgstr "簽名、寄件地址、伺服器、聯絡人，以及伺服器回報的儲存空間。"
 
-#: app/src/ui/preferences.rs:415 app/src/ui/preferences.rs:682
+#: app/src/ui/preferences.rs:489 app/src/ui/preferences.rs:759
 msgid "No Accounts Yet"
 msgstr "尚無帳號"
 
-#: app/src/ui/preferences.rs:417 app/src/ui/preferences.rs:684
+#: app/src/ui/preferences.rs:491 app/src/ui/preferences.rs:761
 msgid "Add an account to choose a sender and write signatures."
 msgstr "請新增帳號以選擇寄件者及撰寫簽名。"
 
-#: app/src/ui/preferences.rs:467
+#: app/src/ui/preferences.rs:541
 msgid "Mailbox storage is not available through this connection."
 msgstr "此連線無法提供信箱儲存空間資訊。"
 
-#: app/src/ui/preferences.rs:469
+#: app/src/ui/preferences.rs:543
 msgid "The server has not reported its storage usage."
 msgstr "伺服器尚未回報儲存空間用量。"
 
-#: app/src/ui/preferences.rs:472
+#: app/src/ui/preferences.rs:546
 msgid "Space on the Server"
 msgstr "伺服器上的空間"
 
-#: app/src/ui/preferences.rs:483
+#: app/src/ui/preferences.rs:560
 msgid "Shared Mailbox"
 msgstr "共用信箱"
 
-#: app/src/ui/preferences.rs:487
+#: app/src/ui/preferences.rs:564
 msgid "Signed in through {account}"
 msgstr "透過 {account} 登入"
 
-#: app/src/ui/preferences.rs:563 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:640 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "簽名"
 
-#: app/src/ui/preferences.rs:577
+#: app/src/ui/preferences.rs:654
+#, fuzzy
+#| msgid ""
+#| "Used by this account and addresses without their own signature. Markdown "
+#| "works. <email> becomes the sending address, including its suffix; "
+#| "<domain> becomes its domain."
 msgid ""
-"Used by this account and addresses without their own signature. Markdown "
-"works. <email> becomes the sending address, including its suffix; <domain> "
-"becomes its domain."
+"Used by this account and addresses without their own signature. Markdown or "
+"HTML works. <email> becomes the sending address, including its suffix; "
+"<domain> becomes its domain."
 msgstr ""
 "此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含字尾"
 "的寄件地址；<domain> 則替換為該地址的網域。"
 
-#: app/src/ui/preferences.rs:585 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:662 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "{account} 的簽名"
 
-#: app/src/ui/preferences.rs:599
+#: app/src/ui/preferences.rs:676
 msgid "Import from Gmail"
 msgstr "從 Gmail 匯入"
 
-#: app/src/ui/preferences.rs:619
-msgid "This account is not syncing yet"
-msgstr "此帳號尚未開始同步"
-
-#: app/src/ui/preferences.rs:635
+#: app/src/ui/preferences.rs:712
 msgid "Imported the signature from Gmail"
 msgstr "已從 Gmail 匯入簽名"
 
-#: app/src/ui/preferences.rs:639
+#: app/src/ui/preferences.rs:716
 msgid "Gmail has no signature for this account"
 msgstr "此帳號在 Gmail 中沒有簽名"
 
-#: app/src/ui/preferences.rs:642
+#: app/src/ui/preferences.rs:719
 msgid "Could not import: {reason}"
 msgstr "無法匯入：{reason}"
 
-#: app/src/ui/preferences.rs:677 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:754 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "撰寫"
 
-#: app/src/ui/preferences.rs:693 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:770 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "新郵件"
 
-#: app/src/ui/preferences.rs:697
+#: app/src/ui/preferences.rs:774
 msgid "New Messages Start As"
 msgstr "新郵件初始格式"
 
-#: app/src/ui/preferences.rs:699
+#: app/src/ui/preferences.rs:776
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr "富文字直接呈現文字樣式；Markdown 則顯示標記"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:706 app/src/ui/sidebar.rs:65
-#: app/src/ui/sidebar.rs:78
+#: app/src/ui/preferences.rs:783 app/src/ui/sidebar.rs:67
+#: app/src/ui/sidebar.rs:80
 msgid "Undo Send"
 msgstr "取消傳送"
 
-#: app/src/ui/preferences.rs:708
+#: app/src/ui/preferences.rs:785
 msgid "How long you can take a message back after sending it"
 msgstr "傳送後可取消的時間"
 
-#: app/src/ui/preferences.rs:715
+#: app/src/ui/preferences.rs:792
 msgid "Check for Missing Attachments"
 msgstr "檢查遺漏的附件"
 
-#: app/src/ui/preferences.rs:717
+#: app/src/ui/preferences.rs:794
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr "郵件提到檔案卻沒有附件時，傳送前詢問"
 
-#: app/src/ui/preferences.rs:751
+#: app/src/ui/preferences.rs:828
 msgid "Signing and Encryption"
 msgstr "簽署與加密"
 
-#: app/src/ui/preferences.rs:753
+#: app/src/ui/preferences.rs:830
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
 msgstr ""
 "Penguin Mail 透過 GnuPG 簽署與加密。GnuPG 會保管金鑰，並自行要求輸入密語。"
 
-#: app/src/ui/preferences.rs:758
+#: app/src/ui/preferences.rs:835
 msgid "Your OpenPGP Keys"
 msgstr "OpenPGP 金鑰"
 
-#: app/src/ui/preferences.rs:759
+#: app/src/ui/preferences.rs:836
 msgid "Asking gpg…"
 msgstr "正在查詢 gpg…"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:840
 msgid "Your S/MIME Certificates"
 msgstr "S/MIME 憑證"
 
-#: app/src/ui/preferences.rs:764
+#: app/src/ui/preferences.rs:841
 msgid "Asking gpgsm…"
 msgstr "正在查詢 gpgsm…"
 
-#: app/src/ui/preferences.rs:771
+#: app/src/ui/preferences.rs:848
 msgid "Sign My Messages by Default"
 msgstr "預設簽署郵件"
 
-#: app/src/ui/preferences.rs:772
+#: app/src/ui/preferences.rs:849
 msgid "New messages open with Sign turned on"
 msgstr "開啟新郵件時，自動啟用 [簽署]"
 
-#: app/src/ui/preferences.rs:778
+#: app/src/ui/preferences.rs:855
 msgid "Encrypt When I Can"
 msgstr "可加密時加密"
 
-#: app/src/ui/preferences.rs:780
+#: app/src/ui/preferences.rs:857
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "每位收件者都有金鑰或憑證時，立即啟用 [加密]"
 
-#: app/src/ui/preferences.rs:869
+#: app/src/ui/preferences.rs:946
 msgid "gpg could not be asked: {reason}"
 msgstr "無法查詢 gpg：{reason}"
 
-#: app/src/ui/preferences.rs:888
+#: app/src/ui/preferences.rs:965
 msgid "gpgsm could not be asked: {reason}"
 msgstr "無法查詢 gpgsm：{reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:897
+#: app/src/ui/preferences.rs:974
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9396,11 +9529,11 @@ msgstr[0] ""
 "Penguin Mail 透過 {programs} 簽署與加密。這些程式會保管金鑰，並自行要求輸入密"
 "語。"
 
-#: app/src/ui/preferences.rs:929 app/src/ui/preferences.rs:942
+#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
 msgid "Spelling"
 msgstr "拼字"
 
-#: app/src/ui/preferences.rs:931
+#: app/src/ui/preferences.rs:1008
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9409,197 +9542,213 @@ msgstr ""
 "尚未安裝字典，因此 Penguin Mail 不會檢查拼字。請安裝 hunspell-en-us 或 "
 "hunspell-pt-pt 等 Hunspell 字典，再重新開啟郵件編輯器。"
 
-#: app/src/ui/preferences.rs:944
+#: app/src/ui/preferences.rs:1021
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "各帳號的拼字檢查語言。已安裝的字典：{languages}。"
 
-#: app/src/ui/preferences.rs:956
+#: app/src/ui/preferences.rs:1033
 msgid "System: {language}"
 msgstr "系統：{language}"
 
-#: app/src/ui/preferences.rs:971
+#: app/src/ui/preferences.rs:1048
 msgid "All Installed Languages"
 msgstr "所有已安裝的語言"
 
-#: app/src/ui/preferences.rs:1014
+#: app/src/ui/preferences.rs:1091
 msgid "Sync"
 msgstr "同步"
 
-#: app/src/ui/preferences.rs:1022
+#: app/src/ui/preferences.rs:1099
 msgid "Checking"
 msgstr "檢查"
 
-#: app/src/ui/preferences.rs:1028
+#: app/src/ui/preferences.rs:1105
 msgid "Check for New Mail"
 msgstr "檢查新郵件"
 
-#: app/src/ui/preferences.rs:1037
+#: app/src/ui/preferences.rs:1114
 msgid "Storage"
 msgstr "儲存空間"
 
-#: app/src/ui/preferences.rs:1045
+#: app/src/ui/preferences.rs:1122
 msgid "Keep Mail on This Computer For"
 msgstr "此電腦上的郵件保留期間"
 
-#: app/src/ui/preferences.rs:1066
+#: app/src/ui/preferences.rs:1143
 msgid "Message text kept for opening offline"
 msgstr "為離線開啟而保存的郵件內文"
 
-#: app/src/ui/preferences.rs:1069
+#: app/src/ui/preferences.rs:1146
 msgid "Message Cache"
 msgstr "郵件快取"
 
-#: app/src/ui/preferences.rs:1078
+#: app/src/ui/preferences.rs:1155
 msgid "100 messages"
 msgstr "100 封郵件"
 
-#: app/src/ui/preferences.rs:1079
+#: app/src/ui/preferences.rs:1156
 msgid "300 messages"
 msgstr "300 封郵件"
 
-#: app/src/ui/preferences.rs:1080
+#: app/src/ui/preferences.rs:1157
 msgid "1,000 messages"
 msgstr "1,000 封郵件"
 
-#: app/src/ui/preferences.rs:1084
+#: app/src/ui/preferences.rs:1161
 msgid "Download Recent Inbox Messages"
 msgstr "下載收件匣中的近期郵件"
 
-#: app/src/ui/preferences.rs:1085
+#: app/src/ui/preferences.rs:1162
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
 msgstr ""
 "下載每個帳號的郵件內文，以便更快開啟並離線閱讀。不會下載附件和遠端圖片。"
 
-#: app/src/ui/preferences.rs:1112
+#: app/src/ui/preferences.rs:1189
 msgid "Startup"
 msgstr "啟動"
 
-#: app/src/ui/preferences.rs:1115
+#: app/src/ui/preferences.rs:1192
 msgid "Start in the Tray at Login"
 msgstr "登入時在系統匣中啟動"
 
-#: app/src/ui/preferences.rs:1130
+#: app/src/ui/preferences.rs:1207
 msgid "Not available in demo mode"
 msgstr "示範模式無法使用"
 
-#: app/src/ui/preferences.rs:1138
+#: app/src/ui/preferences.rs:1215
 msgid "Look for a new release once a day"
 msgstr "每天檢查一次新版本"
 
-#: app/src/ui/preferences.rs:1179
+#: app/src/ui/preferences.rs:1256
 msgid "{used} of {limit}"
 msgstr "{used} / {limit}"
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1268
 msgid "{amount} · Full"
 msgstr "{amount} · 已滿"
 
-#: app/src/ui/preferences.rs:1193
+#: app/src/ui/preferences.rs:1270
 msgid "{amount} · Nearly full"
 msgstr "{amount} · 快滿了"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1282
 msgid "Senders Who May Load Images"
 msgstr "允許載入圖片的寄件者"
 
-#: app/src/ui/preferences.rs:1206 app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
 msgid "Nobody yet"
 msgstr "尚無寄件者"
 
-#: app/src/ui/preferences.rs:1217
+#: app/src/ui/preferences.rs:1294
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} 位寄件者"
 
-#: app/src/ui/preferences.rs:1227
+#: app/src/ui/preferences.rs:1304
 msgid "Anyone at this domain"
 msgstr "此網域的所有人"
 
-#: app/src/ui/preferences.rs:1229
+#: app/src/ui/preferences.rs:1306
 msgid "This address"
 msgstr "此地址"
 
-#: app/src/ui/preferences.rs:1234
+#: app/src/ui/preferences.rs:1311
 msgid "Stop Loading Images from This Sender"
 msgstr "停止載入此寄件者的圖片"
 
-#: app/src/ui/preferences.rs:1241
+#: app/src/ui/preferences.rs:1318
 msgid "Stop loading images from {sender}"
 msgstr "停止載入 {sender} 的圖片"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1388
 msgid "Monday to Friday"
 msgstr "星期一至星期五"
 
-#: app/src/ui/preferences.rs:1312
+#: app/src/ui/preferences.rs:1389
 msgid "Every day of the week"
 msgstr "每一天"
 
-#: app/src/ui/preferences.rs:1313
+#: app/src/ui/preferences.rs:1390
 msgid "No days"
 msgstr "未選擇工作日"
 
-#: app/src/ui/preferences.rs:1320
+#: app/src/ui/preferences.rs:1397
 msgid ", "
 msgstr "、"
 
-#: app/src/ui/preferences.rs:1323
+#: app/src/ui/preferences.rs:1400
 msgid "{time}, {days}"
 msgstr "{time}，{days}"
 
-#: app/src/ui/preferences.rs:1386
+#: app/src/ui/preferences.rs:1463
 msgid "Time Format"
 msgstr "時間格式"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1467
 msgid "Automatic follows the system clock format"
 msgstr "自動使用系統時鐘格式"
 
-#: app/src/ui/preferences.rs:1404
+#: app/src/ui/preferences.rs:1481
 msgid "Week Starts On"
 msgstr "每週起始日"
 
-#: app/src/ui/preferences.rs:1409
+#: app/src/ui/preferences.rs:1486
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "[自動] 會使用語系的每週起始日"
 
-#: app/src/ui/preferences.rs:1423
+#: app/src/ui/preferences.rs:1500
 msgid "Working Hours"
 msgstr "工作時間"
 
-#: app/src/ui/preferences.rs:1442
+#: app/src/ui/preferences.rs:1519
 msgid "Hours"
 msgstr "時段"
 
-#: app/src/ui/preferences.rs:1493
+#: app/src/ui/preferences.rs:1570
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1576
+#: app/src/ui/preferences.rs:1628
+msgid "Show Only Subscribed Folders"
+msgstr ""
+
+#: app/src/ui/preferences.rs:1630
+msgid ""
+"Folders you do not subscribe to stay out of the sidebar. Choose them in "
+"Manage Folders, in the account's menu."
+msgstr ""
+
+#: app/src/ui/preferences.rs:1674
+#, fuzzy
+#| msgid "Could not change the color: {reason}"
+msgid "Could not change the folders: {reason}"
+msgstr "無法變更顏色：{reason}"
+
+#: app/src/ui/preferences.rs:1718
 msgid "Never Translate"
 msgstr "不翻譯"
 
-#: app/src/ui/preferences.rs:1578
+#: app/src/ui/preferences.rs:1720
 msgid "Messages in these languages get no offer to translate them"
 msgstr "不提供翻譯這些語言郵件的選項"
 
-#: app/src/ui/preferences.rs:1607
+#: app/src/ui/preferences.rs:1749
 msgid "Follow System"
 msgstr "跟隨系統"
 
-#: app/src/ui/preferences.rs:1611
+#: app/src/ui/preferences.rs:1753
 msgid "Language"
 msgstr "語言"
 
-#: app/src/ui/preferences.rs:1612
+#: app/src/ui/preferences.rs:1754
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "重新啟動後，Penguin Mail 會顯示新的語言"
 
-#: app/src/ui/preferences.rs:1689 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "無簽名"
 
@@ -9673,7 +9822,7 @@ msgstr "上次使用的行事曆帳號"
 msgid "Same as New Messages"
 msgstr "與新郵件相同"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:274
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
 msgid "All Inboxes"
 msgstr "所有收件匣"
 
@@ -9692,7 +9841,7 @@ msgstr "將 {account} 下移"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3674 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3771 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "偏好設定"
 
@@ -10059,7 +10208,7 @@ msgstr "新增地址"
 msgid "Default sender"
 msgstr "預設寄件者"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2037
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2433
 msgid "Signature…"
 msgstr "簽名…"
 
@@ -10106,199 +10255,290 @@ msgid "Custom Signature"
 msgstr "自訂簽名"
 
 #: app/src/ui/sender_prefs/signature.rs:49
+#, fuzzy
+#| msgid ""
+#| "Markdown works. <email> becomes the sending address, including its "
+#| "suffix; <domain> becomes its domain."
 msgid ""
-"Markdown works. <email> becomes the sending address, including its suffix; "
-"<domain> becomes its domain."
+"Markdown or HTML works. <email> becomes the sending address, including its "
+"suffix; <domain> becomes its domain."
 msgstr ""
 "支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址的"
 "網域。"
 
-#: app/src/ui/sidebar.rs:74
+#: app/src/ui/sidebar.rs:76
 msgid "Stop the message from going out"
 msgstr "停止傳送郵件"
 
-#: app/src/ui/sidebar.rs:429 app/src/ui/sidebar.rs:856
+#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:911
 #: app/src/ui/sidebar/sections.rs:26
+#: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "信箱"
 
-#: app/src/ui/sidebar.rs:441 app/src/ui/sidebar.rs:495
-#: app/src/ui/sidebar.rs:1648 app/src/ui/thread_list.rs:370
+#: app/src/ui/sidebar.rs:495 app/src/ui/sidebar.rs:549
+#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:373
 msgid "Mail"
 msgstr "郵件"
 
-#: app/src/ui/sidebar.rs:484 app/src/ui/sidebar.rs:1639
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:538 app/src/ui/sidebar.rs:1897
+#: app/src/ui/sidebar.rs:3125
 msgid "99+"
 msgstr "99+"
 
-#: app/src/ui/sidebar.rs:847
+#: app/src/ui/sidebar.rs:902
 msgid "Calendars"
 msgstr "行事曆"
 
-#: app/src/ui/sidebar.rs:1209 app/src/ui/sidebar.rs:1211
+#: app/src/ui/sidebar.rs:1430 app/src/ui/sidebar.rs:1432
+#: app/src/ui/sidebar.rs:2033 app/src/ui/sidebar.rs:2035
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/sidebar.rs:1251
+#: app/src/ui/sidebar.rs:1472 app/src/ui/sidebar.rs:2004
 msgid "Outbox"
 msgstr "寄件匣"
 
-#: app/src/ui/sidebar.rs:1314
+#: app/src/ui/sidebar.rs:1535
 msgid "Holds folders, not mail"
 msgstr "存放資料夾，不存放郵件"
 
-#: app/src/ui/sidebar.rs:1598
+#: app/src/ui/sidebar.rs:1764
+msgid "Approximate unread message count from downloaded mail"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1767
+#, fuzzy
+#| msgid "The message is larger than the server sends."
+msgid "Unread messages counted on the server"
+msgstr "郵件超過伺服器的寄送大小上限。"
+
+#: app/src/ui/sidebar.rs:1770
+#, fuzzy
+#| msgid "{count} unread message"
+#| msgid_plural "{count} unread messages"
+msgid "Counting unread messages on the server…"
+msgstr "{count} 封未讀郵件"
+
+#: app/src/ui/sidebar.rs:1773
+msgid ""
+"Unread count unavailable. The account may be offline or the server may not "
+"support these conditions."
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1856
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}，{count} 封未讀郵件"
 
-#: app/src/ui/sidebar.rs:1604
+#: app/src/ui/sidebar.rs:1862
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}，{count} 封郵件"
 
-#: app/src/ui/sidebar.rs:1651
+#: app/src/ui/sidebar.rs:1909
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "郵件，{count} 封未讀"
 
-#: app/src/ui/sidebar.rs:1657
+#: app/src/ui/sidebar.rs:1915
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "行事曆，{count} 個邀請等候回覆"
 
-#: app/src/ui/sidebar.rs:1730 app/src/ui/sidebar.rs:1852
-#: app/src/ui/sidebar.rs:2146
+#: app/src/ui/sidebar.rs:2126 app/src/ui/sidebar.rs:2248
+#: app/src/ui/sidebar.rs:2543
 msgid "Move Up"
 msgstr "上移"
 
-#: app/src/ui/sidebar.rs:1731 app/src/ui/sidebar.rs:1855
-#: app/src/ui/sidebar.rs:2147
+#: app/src/ui/sidebar.rs:2127 app/src/ui/sidebar.rs:2251
+#: app/src/ui/sidebar.rs:2544
 msgid "Move Down"
 msgstr "下移"
 
-#: app/src/ui/sidebar.rs:1883
+#: app/src/ui/sidebar.rs:2279
 msgid "Empty Trash…"
 msgstr "清空垃圾桶…"
 
-#: app/src/ui/sidebar.rs:2036
+#: app/src/ui/sidebar.rs:2432
 msgid "Automatic Reply…"
 msgstr "自動回覆…"
 
-#: app/src/ui/sidebar.rs:2038
+#: app/src/ui/sidebar.rs:2434
 msgid "Rules…"
 msgstr "規則…"
 
-#: app/src/ui/sidebar.rs:2039 app/src/ui/window.rs:3664
+#: app/src/ui/sidebar.rs:2435 app/src/ui/window.rs:3757
 msgid "Hide My Email…"
 msgstr "隱藏電子郵件地址…"
 
-#: app/src/ui/sidebar.rs:2048
+#: app/src/ui/sidebar.rs:2444
 msgid "On this computer"
 msgstr "在此電腦上"
 
-#: app/src/ui/sidebar.rs:2056
+#: app/src/ui/sidebar.rs:2452
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "在此電腦上。顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2057
+#: app/src/ui/sidebar.rs:2453
 msgid "Show or hide this account's mailboxes"
 msgstr "顯示或隱藏此帳號的信箱"
 
-#: app/src/ui/sidebar.rs:2151
+#: app/src/ui/sidebar.rs:2529
+#, fuzzy
+#| msgid "New Folder…"
+msgid "Manage Folders…"
+msgstr "新增資料夾…"
+
+#: app/src/ui/sidebar.rs:2548
 msgid "Switch to JMAP…"
 msgstr "切換至 JMAP…"
 
-#: app/src/ui/sidebar.rs:2153
+#: app/src/ui/sidebar.rs:2550
 msgid "Messages That Will Not Download…"
 msgstr "無法下載的郵件…"
 
-#: app/src/ui/sidebar.rs:2226
+#: app/src/ui/sidebar.rs:2625
 msgid "Sign in again to keep syncing"
 msgstr "請重新登入以繼續同步"
 
-#: app/src/ui/sidebar.rs:2232
+#: app/src/ui/sidebar.rs:2631
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} 未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2243
+#: app/src/ui/sidebar.rs:2642
 msgid "The keyring is not responding; retrying"
 msgstr "鑰匙圈未回應，正在重試"
 
-#: app/src/ui/sidebar.rs:2246
+#: app/src/ui/sidebar.rs:2645
 msgid "Downloading mail"
 msgstr "正在下載郵件"
 
-#: app/src/ui/sidebar.rs:2250
+#: app/src/ui/sidebar.rs:2649
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "因錯誤而停止同步；請重新啟動 Penguin Mail 以重試"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2257
+#: app/src/ui/sidebar.rs:2656
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
 msgstr "Gmail 限制應用程式每天可下載的郵件量。Penguin Mail 稍後會再試一次。"
 
 #: app/src/ui/sidebar/sections.rs:25
+#: app/src/ui/window/customize_mailboxes.rs:288
+#: app/src/ui/window/customize_mailboxes.rs:298
 msgid "Favorites"
 msgstr "我的最愛"
 
 #: app/src/ui/sidebar/sections.rs:27
+#: app/src/ui/window/customize_mailboxes.rs:597
 msgid "Smart Mailboxes"
 msgstr "智慧信箱"
 
-#: app/src/ui/smart_editor.rs:39
+#: app/src/ui/smart_editor.rs:43 app/src/ui/smart_editor.rs:203
 msgid "All Accounts"
 msgstr "所有帳號"
 
-#: app/src/ui/smart_editor.rs:54
+#: app/src/ui/smart_editor.rs:58
 msgid "Match"
 msgstr "符合"
 
-#: app/src/ui/smart_editor.rs:56
+#: app/src/ui/smart_editor.rs:60
 msgid "All of the conditions"
 msgstr "所有條件"
 
-#: app/src/ui/smart_editor.rs:57
+#: app/src/ui/smart_editor.rs:61
 msgid "Any of the conditions"
 msgstr "任一條件"
 
-#: app/src/ui/smart_editor.rs:67
+#: app/src/ui/smart_editor.rs:66
+#, fuzzy
+#| msgid "read contacts"
+msgid "Unread count"
+msgstr "讀取聯絡人"
+
+#: app/src/ui/smart_editor.rs:68
+msgid "Do not show"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:69
+msgid "Fast, approximate"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:70
+msgid "Slow, exact"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:80
+msgid "Counts downloaded unread messages. Older mail may be missing."
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:81
+msgid ""
+"Counts unread messages on the server in the background. Some servers or "
+"conditions are unsupported."
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:82
+#, fuzzy
+#| msgid "Creating a smart mailbox"
+msgid "No unread count beside this smart mailbox."
+msgstr "正在建立智慧信箱"
+
+#: app/src/ui/smart_editor.rs:88
+msgid "Delete Sent Messages Without Asking"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:90
+msgid ""
+"When deleting a conversation here, also move matching sent messages to Trash"
+msgstr ""
+
+#: app/src/ui/smart_editor.rs:102
 msgid "Conditions"
 msgstr "條件"
 
-#: app/src/ui/smart_editor.rs:73
+#: app/src/ui/smart_editor.rs:108
 msgid "Add Condition"
 msgstr "新增條件"
 
-#: app/src/ui/smart_editor.rs:106 app/src/ui/smart_editor.rs:112
+#: app/src/ui/smart_editor.rs:122
+msgid "All Mail"
+msgstr "所有郵件"
+
+#: app/src/ui/smart_editor.rs:237 app/src/ui/smart_editor.rs:241
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Choose Mailboxes"
+msgstr "顯示信箱"
+
+#: app/src/ui/smart_editor.rs:276 app/src/ui/smart_editor.rs:282
 msgid "Remove Condition"
 msgstr "移除條件"
 
-#: app/src/ui/smart_editor.rs:110
+#: app/src/ui/smart_editor.rs:280
 msgid "Condition"
 msgstr "條件"
 
-#: app/src/ui/smart_editor.rs:111
+#: app/src/ui/smart_editor.rs:281
 msgid "Matches"
 msgstr "符合"
 
-#: app/src/ui/smart_editor.rs:162
+#: app/src/ui/smart_editor.rs:338
 msgid "Edit Smart Mailbox"
 msgstr "編輯智慧信箱"
 
-#: app/src/ui/smart_editor.rs:164
+#: app/src/ui/smart_editor.rs:340
 msgid "New Smart Mailbox"
 msgstr "新增智慧信箱"
 
-#: app/src/ui/smart_editor.rs:193
+#: app/src/ui/smart_editor.rs:375
 msgid "Give the mailbox a name"
 msgstr "請為信箱命名"
 
-#: app/src/ui/smart_editor.rs:197
+#: app/src/ui/smart_editor.rs:379
 msgid "Add a condition with a value"
 msgstr "請新增條件並填入值"
 
@@ -10381,30 +10621,30 @@ msgstr "內文"
 msgid "New Template"
 msgstr "新增範本"
 
-#: app/src/ui/thread_list.rs:237
+#: app/src/ui/thread_list.rs:239
 msgid "No Mail"
 msgstr "沒有郵件"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:255
+#: app/src/ui/thread_list.rs:257
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "搜尋郵件，例如 from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:294 app/src/ui/thread_list.rs:314
+#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
 msgid "Show Mailboxes"
 msgstr "顯示信箱"
 
-#: app/src/ui/thread_list.rs:299
+#: app/src/ui/thread_list.rs:301
 msgid "New Message (C)"
 msgstr "新增郵件（C）"
 
-#: app/src/ui/thread_list.rs:304
+#: app/src/ui/thread_list.rs:306
 msgid "Search (/)"
 msgstr "搜尋（/）"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:313
+#: app/src/ui/thread_list.rs:315
 msgid "Search mail"
 msgstr "搜尋郵件"
 
@@ -10437,11 +10677,21 @@ msgstr "篩選郵件"
 msgid "Filter Messages (Active)"
 msgstr "篩選郵件（已啟用）"
 
+#: app/src/ui/thread_list/pull.rs:76 app/src/ui/thread_list/pull.rs:128
+#, fuzzy
+#| msgid "Check for mail"
+msgid "Pull to check for mail"
+msgstr "檢查郵件"
+
+#: app/src/ui/thread_list/pull.rs:126 app/src/ui/window/shortcuts.rs:852
+msgid "Checking for mail"
+msgstr "正在檢查郵件"
+
 #: app/src/ui/thread_row.rs:102
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:410
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:414
 msgid "Muted"
 msgstr "已靜音"
 
@@ -10470,10 +10720,14 @@ msgid "Labels or Move to Folder"
 msgstr "標籤或移至資料夾"
 
 #: app/src/ui/toolbar/customize.rs:116
+#: app/src/ui/window/customize_mailboxes.rs:111
+#: app/src/ui/window/customize_mailboxes.rs:334
 msgid "Move {button} Up"
 msgstr "上移 {button}"
 
 #: app/src/ui/toolbar/customize.rs:120
+#: app/src/ui/window/customize_mailboxes.rs:115
+#: app/src/ui/window/customize_mailboxes.rs:338
 msgid "Move {button} Down"
 msgstr "下移 {button}"
 
@@ -10486,6 +10740,7 @@ msgid "Choose buttons, then drag them or use the arrows to change their order."
 msgstr "選擇按鈕，然後拖曳或使用箭頭變更順序。"
 
 #: app/src/ui/toolbar/customize.rs:238
+#: app/src/ui/window/customize_mailboxes.rs:847
 msgid "Restore Defaults"
 msgstr "還原預設值"
 
@@ -10695,301 +10950,313 @@ msgid ""
 "Choose where your mail lives. You can add more later from the main menu."
 msgstr "請選擇郵件服務。之後可從主選單新增其他帳號。"
 
-#: app/src/ui/window.rs:291
+#: app/src/ui/window.rs:295
 msgid "Deleted forever"
 msgstr "已永久刪除"
 
-#: app/src/ui/window.rs:293
+#: app/src/ui/window.rs:297
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "已永久刪除 {count} 個對話"
 
-#: app/src/ui/window.rs:299
+#: app/src/ui/window.rs:303
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "已永久刪除 {count} 封郵件"
 
-#: app/src/ui/window.rs:312
+#: app/src/ui/window.rs:316
 msgid "{label}, on this mail"
 msgstr "{label}，此郵件已套用"
 
-#: app/src/ui/window.rs:341
+#: app/src/ui/window.rs:345
 msgid "Added {person} to VIPs"
 msgstr "已將 {person} 加入 VIP"
 
-#: app/src/ui/window.rs:342
+#: app/src/ui/window.rs:346
 msgid "Removed {person} from VIPs"
 msgstr "已將 {person} 從 VIP 移除"
 
-#: app/src/ui/window.rs:348
+#: app/src/ui/window.rs:352
 msgid "Could not load mail: {reason}"
 msgstr "無法載入郵件：{reason}"
 
-#: app/src/ui/window.rs:358
+#: app/src/ui/window.rs:362
 msgid "Added {account}. Downloading mail…"
 msgstr "已新增 {account}。正在下載郵件…"
 
-#: app/src/ui/window.rs:362 app/src/ui/window.rs:3044
+#: app/src/ui/window.rs:366 app/src/ui/window.rs:3118
 msgid "{account} is signed in again."
 msgstr "{account} 已重新登入。"
 
-#: app/src/ui/window.rs:381
+#: app/src/ui/window.rs:385
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "已建立「{name}」資料夾，位於 {provider}，用於封存郵件"
 
-#: app/src/ui/window.rs:390
+#: app/src/ui/window.rs:394
 msgid "Flagged red"
 msgstr "已加上紅色旗標"
 
-#: app/src/ui/window.rs:391
+#: app/src/ui/window.rs:395
 msgid "Flagged orange"
 msgstr "已加上橙色旗標"
 
-#: app/src/ui/window.rs:392
+#: app/src/ui/window.rs:396
 msgid "Flagged yellow"
 msgstr "已加上黃色旗標"
 
-#: app/src/ui/window.rs:393
+#: app/src/ui/window.rs:397
 msgid "Flagged green"
 msgstr "已加上綠色旗標"
 
-#: app/src/ui/window.rs:394
+#: app/src/ui/window.rs:398
 msgid "Flagged blue"
 msgstr "已加上藍色旗標"
 
-#: app/src/ui/window.rs:395
+#: app/src/ui/window.rs:399
 msgid "Flagged purple"
 msgstr "已加上紫色旗標"
 
-#: app/src/ui/window.rs:396
+#: app/src/ui/window.rs:400
 msgid "Flagged gray"
 msgstr "已加上灰色旗標"
 
-#: app/src/ui/window.rs:407 app/src/ui/window.rs:505
+#: app/src/ui/window.rs:411 app/src/ui/window.rs:511
 msgid "Labels changed"
 msgstr "已變更標籤"
 
-#: app/src/ui/window.rs:411
+#: app/src/ui/window.rs:415
 msgid "Unmuted"
 msgstr "已取消靜音"
 
-#: app/src/ui/window.rs:413
+#: app/src/ui/window.rs:417
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "已將 {count} 個對話靜音"
 
-#: app/src/ui/window.rs:419
+#: app/src/ui/window.rs:423
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "已將 {count} 封郵件靜音"
 
-#: app/src/ui/window.rs:425
+#: app/src/ui/window.rs:429
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "已取消 {count} 個對話的靜音"
 
-#: app/src/ui/window.rs:431
+#: app/src/ui/window.rs:435
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "已取消 {count} 封郵件的靜音"
 
-#: app/src/ui/window.rs:441
+#: app/src/ui/window.rs:447
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "已解除 {count} 個追蹤"
 
-#: app/src/ui/window.rs:450
+#: app/src/ui/window.rs:456
 msgid "Archived"
 msgstr "已封存"
 
-#: app/src/ui/window.rs:452
+#: app/src/ui/window.rs:458
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "已封存 {count} 個對話"
 
-#: app/src/ui/window.rs:458
+#: app/src/ui/window.rs:464
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "已封存 {count} 封郵件"
 
-#: app/src/ui/window.rs:463
+#: app/src/ui/window.rs:469
 msgid "Moved to Trash"
 msgstr "已移至垃圾桶"
 
-#: app/src/ui/window.rs:465
+#: app/src/ui/window.rs:471
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "已將 {count} 個對話移至垃圾桶"
 
-#: app/src/ui/window.rs:471
+#: app/src/ui/window.rs:477
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "已將 {count} 封郵件移至垃圾桶"
 
-#: app/src/ui/window.rs:476
+#: app/src/ui/window.rs:482
 msgid "Marked as junk"
 msgstr "已標示為垃圾郵件"
 
-#: app/src/ui/window.rs:478
+#: app/src/ui/window.rs:484
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "已將 {count} 個對話標示為垃圾郵件"
 
-#: app/src/ui/window.rs:484
+#: app/src/ui/window.rs:490
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "已將 {count} 封郵件標示為垃圾郵件"
 
-#: app/src/ui/window.rs:489
+#: app/src/ui/window.rs:495
 msgid "Moved to the Inbox"
 msgstr "已移至收件匣"
 
-#: app/src/ui/window.rs:491
+#: app/src/ui/window.rs:497
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "已將 {count} 個對話移至收件匣"
 
-#: app/src/ui/window.rs:497
+#: app/src/ui/window.rs:503
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "已將 {count} 封郵件移至收件匣"
 
-#: app/src/ui/window.rs:945
+#: app/src/ui/window.rs:951
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail（示範）"
 
-#: app/src/ui/window.rs:1387
+#: app/src/ui/window.rs:1395
 msgid "Could not read accounts: {reason}"
 msgstr "無法讀取帳號：{reason}"
 
-#: app/src/ui/window.rs:2127
+#: app/src/ui/window.rs:2154
 msgid "Could not delete the mail: {reason}"
 msgstr "無法刪除郵件：{reason}"
 
-#: app/src/ui/window.rs:2234
+#: app/src/ui/window.rs:2261
 msgid "Turn On the {service}"
 msgstr "啟用 {service}"
 
-#: app/src/ui/window.rs:2419 app/src/ui/window.rs:2422
+#: app/src/ui/window.rs:2446 app/src/ui/window.rs:2449
 msgid "Move to Inbox"
 msgstr "移至收件匣"
 
-#: app/src/ui/window.rs:2617
+#: app/src/ui/window.rs:2617 app/src/ui/window.rs:2622
+#, fuzzy
+#| msgid "Search models"
+msgid "Search all folders"
+msgstr "搜尋模型"
+
+#: app/src/ui/window.rs:2691
 msgid "Select mail from one account to tag it."
 msgstr "請選取同一帳號中的郵件以加上標記。"
 
-#: app/src/ui/window.rs:2629
+#: app/src/ui/window.rs:2703
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "此帳號尚無標記。請在 Outlook 中建立。"
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2796
 msgid "Add an account to reply or forward"
 msgstr "新增帳號後即可回覆或轉寄"
 
-#: app/src/ui/window.rs:2827
+#: app/src/ui/window.rs:2901
 msgid "Could not include {file}: {reason}"
 msgstr "無法加入 {file}：{reason}"
 
-#: app/src/ui/window.rs:2908
+#: app/src/ui/window.rs:2982
 msgid "The server had already sent this message."
 msgstr "伺服器已經寄出這封郵件。"
 
-#: app/src/ui/window.rs:2913
+#: app/src/ui/window.rs:2987
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "這封郵件已在其他應用程式中取消，且已不在草稿中。"
 
-#: app/src/ui/window.rs:3229
+#: app/src/ui/window.rs:3303
 msgid "Continue in your browser"
 msgstr "請在瀏覽器中繼續"
 
-#: app/src/ui/window.rs:3279
+#: app/src/ui/window.rs:3353
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "此版本的 Penguin Mail 未包含 Google 登入功能。"
 
-#: app/src/ui/window.rs:3301
+#: app/src/ui/window.rs:3375
 msgid "Get a Release"
 msgstr "取得發行版本"
 
-#: app/src/ui/window.rs:3411
+#: app/src/ui/window.rs:3498
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
 msgstr "無法檢查伺服器保留待稍後寄出的郵件，因此保留 {account}：{reason}"
 
-#: app/src/ui/window.rs:3422
+#: app/src/ui/window.rs:3509
 msgid "Remove {account}?"
 msgstr "是否移除 {account}？"
 
-#: app/src/ui/window.rs:3441
+#: app/src/ui/window.rs:3528
 msgid "Remove Anyway"
 msgstr "仍要移除"
 
-#: app/src/ui/window.rs:3454
+#: app/src/ui/window.rs:3541
 msgid "Removed {account}"
 msgstr "已移除 {account}"
 
-#: app/src/ui/window.rs:3456
+#: app/src/ui/window.rs:3543
 msgid "Could not remove {account}: {reason}"
 msgstr "無法移除 {account}：{reason}"
 
-#: app/src/ui/window.rs:3642
+#: app/src/ui/window.rs:3735
 msgid "Refresh"
 msgstr "重新整理"
 
-#: app/src/ui/window.rs:3646
+#: app/src/ui/window.rs:3739
 msgid "Show Declined Events"
 msgstr "顯示已婉拒的活動"
 
-#: app/src/ui/window.rs:3662
+#: app/src/ui/window.rs:3755
 msgid "Add Account…"
 msgstr "新增帳號…"
 
-#: app/src/ui/window.rs:3663
+#: app/src/ui/window.rs:3756
 msgid "New Smart Mailbox…"
 msgstr "新增智慧信箱…"
 
-#: app/src/ui/window.rs:3675 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3768
+#, fuzzy
+#| msgid "Customize Toolbar…"
+msgid "Customize Mailboxes…"
+msgstr "自訂工具列…"
+
+#: app/src/ui/window.rs:3772 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "鍵盤快速鍵"
 
-#: app/src/ui/window.rs:3684 app/src/ui/window.rs:3686
+#: app/src/ui/window.rs:3781 app/src/ui/window.rs:3783
 msgid "Main Menu"
 msgstr "主選單"
 
-#: app/src/ui/window.rs:3751 app/src/ui/window.rs:3752
+#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3849
 msgid "Dock"
 msgstr "停駐"
 
-#: app/src/ui/window.rs:3881
+#: app/src/ui/window.rs:3978
 msgid "Add a mail account first"
 msgstr "請先新增郵件帳號"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4137
+#: app/src/ui/window.rs:4234
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} 的行事曆和聯絡人已連接。"
 
-#: app/src/ui/window.rs:4253
+#: app/src/ui/window.rs:4350
 msgid "Open a message from the person first"
 msgstr "請先開啟此人的郵件"
 
-#: app/src/ui/window.rs:4353
+#: app/src/ui/window.rs:4451
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "重新啟動後，Penguin Mail 會顯示新的語言"
 
-#: app/src/ui/window.rs:4355 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4453 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "重新啟動"
 
-#: app/src/ui/window.rs:4419
+#: app/src/ui/window.rs:4517
 msgid "Show Rules"
 msgstr "顯示規則"
 
-#: app/src/ui/window.rs:4445
+#: app/src/ui/window.rs:4543
 msgid "Messages That Will Not Download"
 msgstr "無法下載的郵件"
 
-#: app/src/ui/window.rs:4447
+#: app/src/ui/window.rs:4545
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -10997,27 +11264,23 @@ msgstr ""
 "Penguin Mail 無法從 {address} 的伺服器下載這些郵件。除了超過下載大小上限的郵"
 "件外，每次檢查時都會重試。"
 
-#: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:215
+#: app/src/ui/window/arrange.rs:127 app/src/ui/window/organize.rs:215
 msgid "Delete “{name}”?"
 msgstr "是否刪除「{name}」？"
 
-#: app/src/ui/window/arrange.rs:107
+#: app/src/ui/window/arrange.rs:128
 msgid "Only the smart mailbox goes. The mail it shows stays where it is."
 msgstr "只會刪除智慧信箱，其中顯示的郵件會留在原處。"
 
-#: app/src/ui/window/arrange.rs:141
+#: app/src/ui/window/arrange.rs:162
 msgid "Name This Account"
 msgstr "為此帳號命名"
 
-#: app/src/ui/window/arrange.rs:143
+#: app/src/ui/window/arrange.rs:164
 msgid ""
 "The sidebar shows the name instead of the address. Leave it empty for the "
 "address."
 msgstr "側邊欄會顯示名稱而非地址。留空即可顯示地址。"
-
-#: app/src/ui/window/attachments.rs:79 app/src/ui/window/attachments.rs:355
-msgid "Could not open {file}: {reason}"
-msgstr "無法開啟 {file}：{reason}"
 
 #: app/src/ui/window/attachments.rs:126
 msgid "Save Attachments"
@@ -11055,17 +11318,9 @@ msgstr "已儲存 {file}"
 msgid "Open"
 msgstr "開啟"
 
-#: app/src/ui/window/attachments.rs:398
-msgid "Could not open {file}"
-msgstr "無法開啟 {file}"
-
 #: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
 msgid "Open in Another Program"
 msgstr "以其他程式開啟"
-
-#: app/src/ui/window/attachments.rs:461
-msgid "{file}, preview"
-msgstr "{file}，預覽"
 
 #: app/src/ui/window/categories.rs:345
 msgid "Open a message from the sender first"
@@ -11104,6 +11359,46 @@ msgid ""
 msgstr ""
 "拖曳以調整大小，或使用向左鍵和向右鍵。Home 鍵和 End 鍵分別選擇最小寬度和最大"
 "寬度。"
+
+#: app/src/ui/window/customize_mailboxes.rs:106
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Show {mailbox}"
+msgstr "顯示信箱"
+
+#: app/src/ui/window/customize_mailboxes.rs:297
+#, fuzzy
+#| msgid "Smart Mailboxes"
+msgid "Available Mailboxes"
+msgstr "智慧信箱"
+
+#: app/src/ui/window/customize_mailboxes.rs:327
+#, fuzzy
+#| msgid "Favorites"
+msgid "Add to Favorites"
+msgstr "我的最愛"
+
+#: app/src/ui/window/customize_mailboxes.rs:330
+#, fuzzy
+#| msgid "Remove from VIPs"
+msgid "Remove from Favorites"
+msgstr "從 VIP 移除"
+
+#: app/src/ui/window/customize_mailboxes.rs:351
+#, fuzzy
+#| msgid "Favorites"
+msgid "Favorite name"
+msgstr "我的最愛"
+
+#: app/src/ui/window/customize_mailboxes.rs:359
+msgid "Name for {mailbox} in Favorites"
+msgstr ""
+
+#: app/src/ui/window/customize_mailboxes.rs:862
+#, fuzzy
+#| msgid "Show Mailboxes"
+msgid "Customize Mailboxes"
+msgstr "顯示信箱"
 
 #: app/src/ui/window/detached.rs:41 app/src/ui/window/export.rs:79
 #: app/src/ui/window/export.rs:136 app/src/ui/window/export.rs:177
@@ -11383,59 +11678,55 @@ msgstr "已刪除。郵件將不會傳送。"
 msgid "Deleted. They will not be sent."
 msgstr "已刪除。這些郵件將不會傳送。"
 
-#: app/src/ui/window/press.rs:287
+#: app/src/ui/window/press.rs:292
 msgid "Back in the Inbox"
 msgstr "已移回收件匣"
 
-#: app/src/ui/window/press.rs:306
+#: app/src/ui/window/press.rs:311
 msgid "Will remind you {when}"
 msgstr "將於 {when} 提醒"
 
-#: app/src/ui/window/press.rs:337
-msgid "Drop mail on its own account's mailboxes"
-msgstr "請將郵件拖放至其所屬帳號的信箱"
-
-#: app/src/ui/window/press.rs:389
+#: app/src/ui/window/press.rs:417
 msgid "Moved to {mailbox}"
 msgstr "已移至 {mailbox}"
 
-#: app/src/ui/window/press.rs:402
+#: app/src/ui/window/press.rs:430
 msgid "Delete This Conversation Forever?"
 msgstr "是否永久刪除此對話？"
 
-#: app/src/ui/window/press.rs:404
+#: app/src/ui/window/press.rs:432
 msgid "Delete {count} Conversation Forever?"
 msgid_plural "Delete {count} Conversations Forever?"
 msgstr[0] "是否永久刪除 {count} 個對話？"
 
-#: app/src/ui/window/press.rs:409
+#: app/src/ui/window/press.rs:437
 msgid "Delete This Message Forever?"
 msgstr "是否永久刪除此郵件？"
 
-#: app/src/ui/window/press.rs:411
+#: app/src/ui/window/press.rs:439
 msgid "Delete {count} Message Forever?"
 msgid_plural "Delete {count} Messages Forever?"
 msgstr[0] "是否永久刪除 {count} 封郵件？"
 
-#: app/src/ui/window/press.rs:419
+#: app/src/ui/window/press.rs:447
 msgid "{provider} deletes it from every device and cannot bring it back."
 msgstr "{provider} 會從所有裝置刪除郵件，且無法還原。"
 
-#: app/src/ui/window/press.rs:423
+#: app/src/ui/window/press.rs:451
 msgid "{provider} deletes them from every device and cannot bring them back."
 msgstr "{provider} 會從所有裝置刪除這些郵件，且無法還原。"
 
-#: app/src/ui/window/press.rs:426
+#: app/src/ui/window/press.rs:454
 msgid "The server deletes it from every device and cannot bring it back."
 msgstr "伺服器會從所有裝置刪除郵件，且無法還原。"
 
-#: app/src/ui/window/press.rs:428
+#: app/src/ui/window/press.rs:456
 msgid ""
 "Each account's server deletes them from every device and cannot bring them "
 "back."
 msgstr "各帳號的伺服器會從所有裝置刪除這些郵件，且無法還原。"
 
-#: app/src/ui/window/press.rs:436
+#: app/src/ui/window/press.rs:464
 msgid ""
 "Mail in {accounts} stays in the Trash, since its server cannot delete mail "
 "for good."
@@ -11444,31 +11735,31 @@ msgid_plural ""
 "mail for good."
 msgstr[0] "{accounts} 的郵件會留在垃圾桶中，因為伺服器無法永久刪除郵件。"
 
-#: app/src/ui/window/press.rs:461
+#: app/src/ui/window/press.rs:489
 msgid "Cancel Send (Delete)"
 msgstr "取消傳送（Delete）"
 
-#: app/src/ui/window/press.rs:463
+#: app/src/ui/window/press.rs:491
 msgid "Delete from Outbox"
 msgstr "從寄件匣刪除"
 
-#: app/src/ui/window/press.rs:464
+#: app/src/ui/window/press.rs:492
 msgid "Delete from Outbox (Delete)"
 msgstr "從寄件匣刪除（Delete）"
 
-#: app/src/ui/window/press.rs:467
+#: app/src/ui/window/press.rs:495
 msgid "Cancel Reminder"
 msgstr "取消提醒"
 
-#: app/src/ui/window/press.rs:468
+#: app/src/ui/window/press.rs:496
 msgid "Cancel Reminder (Delete)"
 msgstr "取消提醒（Delete）"
 
-#: app/src/ui/window/press.rs:471
+#: app/src/ui/window/press.rs:499
 msgid "Dismiss Follow-Up"
 msgstr "解除追蹤"
 
-#: app/src/ui/window/press.rs:472
+#: app/src/ui/window/press.rs:500
 msgid "Dismiss Follow-Up (Delete)"
 msgstr "解除追蹤（Delete）"
 
@@ -11790,9 +12081,28 @@ msgstr "顯示或隱藏助理"
 msgid "Close window"
 msgstr "關閉視窗"
 
-#: app/src/ui/window/shortcuts.rs:852
-msgid "Checking for mail"
-msgstr "正在檢查郵件"
+#: app/src/ui/window/smart_trash.rs:56
+#, fuzzy
+#| msgid "Could not build the message: {reason}"
+msgid "Could not check sent messages: {reason}"
+msgstr "無法組成郵件：{reason}"
+
+#: app/src/ui/window/smart_trash.rs:69
+msgid "Don't Ask Again for This Smart Mailbox"
+msgstr ""
+
+#: app/src/ui/window/smart_trash.rs:71
+#, fuzzy
+#| msgid "Moved {count} message to Trash"
+#| msgid_plural "Moved {count} messages to Trash"
+msgid "Also Move Sent Messages to Trash?"
+msgstr "已將 {count} 封郵件移至垃圾桶"
+
+#: app/src/ui/window/smart_trash.rs:74
+msgid ""
+"Sent messages keep these conversations in “{mailbox}”. Move the matching "
+"sent messages to Trash too? You can undo this action."
+msgstr ""
 
 #: app/src/ui/window/spaces.rs:24
 msgid ""
@@ -11878,27 +12188,27 @@ msgid "Deleted {count} message from Trash for {account}"
 msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "已從 [垃圾桶] 刪除 {count} 封郵件（帳號：{account}）"
 
-#: app/src/unsubscribe_page.rs:186
+#: app/src/unsubscribe_page.rs:188
 msgid "the page took longer than 20 seconds"
 msgstr "載入頁面超過 20 秒"
 
-#: app/src/unsubscribe_page.rs:188
+#: app/src/unsubscribe_page.rs:190
 msgid "the page did not load: {reason}"
 msgstr "頁面未載入：{reason}"
 
-#: app/src/unsubscribe_page.rs:192
+#: app/src/unsubscribe_page.rs:194
 msgid "the page could not be read: {reason}"
 msgstr "無法讀取頁面：{reason}"
 
-#: app/src/unsubscribe_page.rs:195
+#: app/src/unsubscribe_page.rs:197
 msgid "the page changed while it was waiting to be asked"
 msgstr "等候詢問期間，頁面已變更"
 
-#: app/src/unsubscribe_page/hidden.rs:211
+#: app/src/unsubscribe_page/hidden.rs:237
 msgid "the view went away"
 msgstr "檢視已關閉"
 
-#: app/src/unsubscribe_page/hidden.rs:303
+#: app/src/unsubscribe_page/hidden.rs:329
 msgid "the plan would type something other than the address"
 msgstr "此計畫會輸入地址以外的內容"
 
@@ -12151,39 +12461,45 @@ msgstr "請回到 Penguin Mail 查看原因並重試。可以關閉此分頁。"
 msgid "Nothing here"
 msgstr "此處沒有內容"
 
-#: domain/src/smart.rs:69
+#: domain/src/smart.rs:87
 msgid "From contains"
 msgstr "寄件者包含"
 
-#: domain/src/smart.rs:70
+#: domain/src/smart.rs:88
 msgid "To contains"
 msgstr "收件者包含"
 
-#: domain/src/smart.rs:71
+#: domain/src/smart.rs:89
 msgid "Subject contains"
 msgstr "主旨包含"
 
-#: domain/src/smart.rs:72
+#: domain/src/smart.rs:90
 msgid "Message contains"
 msgstr "郵件包含"
 
-#: domain/src/smart.rs:73
+#: domain/src/smart.rs:91
 msgid "Has label"
 msgstr "帶有標籤"
 
-#: domain/src/smart.rs:74
+#: domain/src/smart.rs:92
+#, fuzzy
+#| msgid "Reading a mailbox"
+msgid "In mailbox"
+msgstr "正在讀取信箱"
+
+#: domain/src/smart.rs:93
 msgid "Received in the last (days)"
 msgstr "最近幾天收到（天數）"
 
-#: domain/src/smart.rs:75
+#: domain/src/smart.rs:94
 msgid "Larger than (MB)"
 msgstr "大於（MB）"
 
-#: domain/src/smart.rs:77
+#: domain/src/smart.rs:96
 msgid "Is unread"
 msgstr "未讀"
 
-#: domain/src/smart.rs:78
+#: domain/src/smart.rs:97
 msgid "Is flagged"
 msgstr "有旗標"
 
@@ -12215,56 +12531,98 @@ msgstr "此郵件未要求已讀回條。"
 msgid "The server refused this request."
 msgstr "伺服器拒絕了此請求。"
 
-#: sync/src/account/writes.rs:791
+#: sync/src/account/writes.rs:801
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} 忙碌中。仍在處理 {conversations}。"
 
-#: sync/src/account/writes.rs:814
+#: sync/src/account/writes.rs:824
 msgid ""
 "{provider} is busy, so “{action}” did not go through for {conversations}. "
 "Try again in a moment."
 msgstr ""
 "{provider} 忙碌中，因此「{action}」未能套用至 {conversations}。請稍後重試。"
 
-#: sync/src/account/writes.rs:823
+#: sync/src/account/writes.rs:833
 msgid ""
 "{provider} stayed busy for {waited}, so “{action}” did not go through for "
 "{conversations}."
 msgstr ""
 "{provider} 持續忙碌了 {waited}，因此「{action}」未能套用至 {conversations}。"
 
-#: sync/src/account/writes.rs:830
+#: sync/src/account/writes.rs:840
 msgid "{action} failed: {reason}"
 msgstr "{action} 失敗：{reason}"
 
-#: sync/src/account/writes.rs:848
+#: sync/src/account/writes.rs:858
 msgid "a moment"
 msgstr "片刻"
 
-#: sync/src/account/writes.rs:850
+#: sync/src/account/writes.rs:860
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} 秒"
 
-#: sync/src/account/writes.rs:855
+#: sync/src/account/writes.rs:865
 msgid "a minute"
 msgstr "一分鐘"
 
-#: sync/src/actions.rs:125 sync/src/actions.rs:804 sync/src/actions.rs:905
+#: sync/src/actions.rs:136 sync/src/actions.rs:879 sync/src/actions.rs:981
 msgid "Change labels"
 msgstr "變更標籤"
 
-#: sync/src/actions.rs:403
+#: sync/src/actions.rs:139
+#, fuzzy
+#| msgid "Moved to {mailbox}"
+msgid "Move to {mailbox}"
+msgstr "已移至 {mailbox}"
+
+#: sync/src/actions.rs:454
 msgid "Delete Forever failed: {reason}"
 msgstr "[永久刪除] 失敗：{reason}"
 
-#: sync/src/actions.rs:671 sync/src/actions.rs:795
+#: sync/src/actions.rs:740 sync/src/actions.rs:870
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr "此郵件之後已移動，因此 [復原] 將郵件留在原處。"
 
-#: sync/src/actions.rs:735 sync/src/actions.rs:762 sync/src/actions.rs:912
+#: sync/src/actions.rs:810 sync/src/actions.rs:837 sync/src/actions.rs:988
+#: sync/src/actions/carry.rs:288
 msgid "Could not undo: {reason}"
 msgstr "無法復原：{reason}"
+
+#: sync/src/actions/carry.rs:80
+#, fuzzy
+#| msgid "That account is not connected."
+msgid "That account has no Inbox."
+msgstr "此帳號尚未連線。"
+
+#: sync/src/actions/carry.rs:204
+msgid "That account cannot take its mail back, so this move cannot be undone."
+msgstr ""
+
+#: sync/src/actions/carry.rs:224
+#, fuzzy
+#| msgid "The server has not sent this message yet."
+msgid "The server did not send the message."
+msgstr "伺服器尚未寄出這封郵件。"
+
+#: sync/src/actions/carry.rs:251
+msgid "Moved to {mailbox}, but a copy stayed behind: {reason}"
+msgstr ""
+
+#: sync/src/actions/carry.rs:297
+#, fuzzy
+#| msgid "Only the smart mailbox goes. The mail it shows stays where it is."
+msgid "One of the accounts is gone, so this mail stayed where it is."
+msgstr "只會刪除智慧信箱，其中顯示的郵件會留在原處。"
+
+#: sync/src/actions/carry.rs:357
+msgid "Nothing was brought back: the copy in {mailbox} has moved on"
+msgstr ""
+
+#: sync/src/actions/carry.rs:377
+msgid ""
+"Back where it started, but the copy in {mailbox} stayed behind: {reason}"
+msgstr ""
 
 #: sync/src/actions/labelling.rs:101
 msgid "Create the label {names}?"
@@ -12329,174 +12687,170 @@ msgstr "{host} 拒絕取消訂閱請求（HTTP {status}）"
 msgid "could not reach {host}"
 msgstr "無法連線至 {host}"
 
-#: sync/src/mailbox.rs:195
+#: sync/src/mailbox.rs:196
 msgid "{color} Flag"
 msgstr "{color}旗標"
 
-#: sync/src/mailbox.rs:325
+#: sync/src/mailbox.rs:329
 msgid "No Results"
 msgstr "沒有結果"
 
-#: sync/src/mailbox.rs:327
+#: sync/src/mailbox.rs:331
 msgid "Try other words, or fewer of them."
 msgstr "請嘗試其他字詞，或減少字詞數量。"
 
-#: sync/src/mailbox.rs:331
+#: sync/src/mailbox.rs:335
 msgid "Nothing Scheduled"
 msgstr "沒有排程郵件"
 
-#: sync/src/mailbox.rs:334
+#: sync/src/mailbox.rs:338
 msgid "Outbox Is Empty"
 msgstr "寄件匣是空的"
 
-#: sync/src/mailbox.rs:338
+#: sync/src/mailbox.rs:342
 msgid "No Reminders"
 msgstr "沒有提醒"
 
-#: sync/src/mailbox.rs:340
+#: sync/src/mailbox.rs:344
 msgid "Choose Remind Me on a conversation to bring it back here later."
 msgstr "請在對話中選擇 [提醒我]，稍後就會將對話移回此處。"
 
-#: sync/src/mailbox.rs:344
+#: sync/src/mailbox.rs:348
 msgid "No Follow-Ups"
 msgstr "沒有追蹤郵件"
 
-#: sync/src/mailbox.rs:347
+#: sync/src/mailbox.rs:351
 msgid "No Flagged Mail"
 msgstr "沒有加上旗標的郵件"
 
-#: sync/src/mailbox.rs:349
+#: sync/src/mailbox.rs:353
 msgid "No Mail from VIPs"
 msgstr "沒有 VIP 寄件者的郵件"
 
-#: sync/src/mailbox.rs:351 sync/src/mailbox.rs:520
+#: sync/src/mailbox.rs:355 sync/src/mailbox.rs:524
 msgid "No Matching Mail"
 msgstr "沒有符合條件的郵件"
 
-#: sync/src/mailbox.rs:356
+#: sync/src/mailbox.rs:360
 msgid "No Archived Mail"
 msgstr "沒有封存郵件"
 
-#: sync/src/mailbox.rs:357
+#: sync/src/mailbox.rs:361
 msgid "No Junk"
 msgstr "沒有垃圾郵件"
 
-#: sync/src/mailbox.rs:358
+#: sync/src/mailbox.rs:362
 msgid "Trash Is Empty"
 msgstr "垃圾桶是空的"
 
-#: sync/src/mailbox.rs:364
+#: sync/src/mailbox.rs:368
 msgid "Inbox Zero"
 msgstr "收件匣已清空"
 
-#: sync/src/mailbox.rs:365
+#: sync/src/mailbox.rs:369
 msgid "No Starred Mail"
 msgstr "沒有加上星號的郵件"
 
-#: sync/src/mailbox.rs:366
+#: sync/src/mailbox.rs:370
 msgid "No Sent Mail"
 msgstr "沒有寄件備份"
 
-#: sync/src/mailbox.rs:368
+#: sync/src/mailbox.rs:372
 msgid "No Drafts"
 msgstr "沒有草稿"
 
-#: sync/src/mailbox.rs:370
+#: sync/src/mailbox.rs:374
 msgid "Close a message without sending it and Penguin Mail keeps it here."
 msgstr "關閉尚未傳送的郵件時，Penguin Mail 會將郵件保留在此處。"
 
-#: sync/src/mailbox.rs:372
+#: sync/src/mailbox.rs:376
 msgid "No Muted Mail"
 msgstr "沒有靜音郵件"
 
-#: sync/src/mailbox.rs:413
+#: sync/src/mailbox.rs:417
 msgid "Could not load mail for {account}: {reason}"
 msgstr "無法載入 {account} 的郵件：{reason}"
 
-#: sync/src/mailbox.rs:423
-msgid "All Mail"
-msgstr "所有郵件"
-
-#: sync/src/mailbox.rs:521
+#: sync/src/mailbox.rs:525
 msgid "Change the filters or load more messages if available."
 msgstr "請變更篩選條件，或在有更多郵件時繼續載入。"
 
-#: sync/src/mailbox.rs:1031
+#: sync/src/mailbox.rs:1074
 msgid "This smart mailbox has no conditions"
 msgstr "此智慧信箱沒有條件"
 
-#: sync/src/mailbox.rs:1605
+#: sync/src/mailbox.rs:1675
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "{account} 的結果僅來自此電腦上的郵件"
 
-#: sync/src/mailbox.rs:1813
+#: sync/src/mailbox.rs:1883
 msgid "Returns {when}"
 msgstr "於 {when} 移回"
 
-#: sync/src/mailbox.rs:1856 sync/src/mailbox.rs:1959
+#: sync/src/mailbox.rs:1926 sync/src/mailbox.rs:2029
 msgid "No recipients"
 msgstr "沒有收件者"
 
-#: sync/src/mailbox.rs:1859 sync/src/mailbox.rs:1962
+#: sync/src/mailbox.rs:1929 sync/src/mailbox.rs:2032
 msgid "To {recipients}"
 msgstr "收件者：{recipients}"
 
-#: sync/src/mailbox.rs:1902
+#: sync/src/mailbox.rs:1972
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} 封未讀 · {category}"
 
-#: sync/src/mailbox.rs:1907
+#: sync/src/mailbox.rs:1977
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} 封未讀"
 
-#: sync/src/mailbox.rs:1914
+#: sync/src/mailbox.rs:1984
 msgid "Sent yesterday, no reply yet"
 msgstr "昨天傳送，尚未收到回覆"
 
-#: sync/src/mailbox.rs:1916
+#: sync/src/mailbox.rs:1986
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "{days} 天前傳送，尚未收到回覆"
 
-#: sync/src/mailbox.rs:2000
+#: sync/src/mailbox.rs:2070
 msgid "The server has not sent this message yet."
 msgstr "伺服器尚未寄出這封郵件。"
 
-#: sync/src/mailbox.rs:2001
+#: sync/src/mailbox.rs:2071
 msgid "Penguin Mail has not confirmed that the server took this message."
 msgstr "Penguin Mail 尚未確認伺服器已收下這封郵件。"
 
-#: sync/src/mailbox.rs:2011
+#: sync/src/mailbox.rs:2081
 msgid "Sends {when}."
 msgstr "於 {when} 傳送。"
 
-#: sync/src/mailbox.rs:2012
+#: sync/src/mailbox.rs:2082
 msgid "The server sends it even if Penguin Mail is closed."
 msgstr "即使 Penguin Mail 已關閉，伺服器仍會寄出。"
 
-#: sync/src/mailbox.rs:2014
+#: sync/src/mailbox.rs:2084
 msgid "Sends {when}"
 msgstr "於 {when} 傳送"
 
-#: sync/src/mailbox.rs:2021
+#: sync/src/mailbox.rs:2091
 msgid "Check Sent. Penguin Mail could not confirm it went out."
 msgstr "請查看寄件備份。Penguin Mail 無法確認是否已寄出。"
 
-#: sync/src/mailbox.rs:2024
+#: sync/src/mailbox.rs:2094
 msgid "Canceled in another app."
 msgstr "已在其他應用程式中取消。"
 
-#: sync/src/mailbox.rs:2026
+#: sync/src/mailbox.rs:2096
 msgid "Not sent"
 msgstr "未傳送"
 
-#: sync/src/mailbox.rs:2033
+#: sync/src/mailbox.rs:2103
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}。將於 {when} 重試"
 
-#: sync/src/mailbox.rs:2040
+#: sync/src/mailbox.rs:2110
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}。Penguin Mail 已停止重試"
 
@@ -12548,7 +12902,7 @@ msgstr "Penguin Mail 無法變更 CalDAV 伺服器的行事曆清單。"
 msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgstr "Penguin Mail 僅透過 HTTPS 連線至行事曆及聯絡人伺服器。"
 
-#: sync/src/services/imap/outgoing.rs:51
+#: sync/src/services/imap/outgoing.rs:52
 msgid "The message names nobody to send it to."
 msgstr "郵件未指定收件者。"
 
@@ -12644,11 +12998,11 @@ msgstr "Penguin Mail 無法將此重複設定儲存到 JMAP 行事曆。"
 msgid "This server keeps no colors for its mailboxes."
 msgstr "此伺服器不會儲存信箱的顏色。"
 
-#: sync/src/services/jmap/mod.rs:421
+#: sync/src/services/jmap/mod.rs:425
 msgid "This server files sent mail itself."
 msgstr "此伺服器會自行歸檔寄出的郵件。"
 
-#: sync/src/services/jmap/mod.rs:604
+#: sync/src/services/jmap/mod.rs:636
 msgid "The server made an address Penguin Mail cannot read."
 msgstr "伺服器建立的地址無法由 Penguin Mail 讀取。"
 
@@ -13041,6 +13395,112 @@ msgstr "標示為非垃圾郵件"
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
 
+#~ msgid "Mail and calendar for Linux. Your mail stays on your computer."
+#~ msgstr "Linux 郵件與行事曆。郵件儲存在自己的電腦上。"
+
+#~ msgid "Drop mail on its own account's mailboxes"
+#~ msgstr "請將郵件拖放至其所屬帳號的信箱"
+
+#~ msgid "Accounts whose server does not report its space are not listed."
+#~ msgstr "伺服器未回報空間的帳號不會列在這裡。"
+
+#~ msgid ""
+#~ "Added below new messages and above quoted text in replies. Markdown works."
+#~ msgstr "新增至新郵件底部及回覆的引用文字上方。支援 Markdown。"
+
+#~ msgid "Bodies of mail you have read, kept for opening offline"
+#~ msgstr "保留已閱讀郵件的內文，供離線開啟"
+
+#~ msgid "Choose Now"
+#~ msgstr "立即選擇"
+
+#~ msgid "Choose how this account signs in to get new mail"
+#~ msgstr "請選擇這個帳號的登入方式，以取得新郵件"
+
+#~ msgid "Choose how {address} signs in to keep your mail arriving."
+#~ msgstr "請選擇 {address} 的登入方式，以便繼續收到郵件。"
+
+#~ msgid "Choose…"
+#~ msgstr "選擇…"
+
+#~ msgid "Contacts & Calendar"
+#~ msgstr "聯絡人與行事曆"
+
+#~ msgid "Could not send the receipt: {reason}"
+#~ msgstr "無法傳送回條：{reason}"
+
+#~ msgid ""
+#~ "Every control named for screen readers and reachable from the keyboard, "
+#~ "in American English, British English, French, German, Indonesian, "
+#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
+#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
+#~ msgstr ""
+#~ "所有控制項都有螢幕閱讀器可讀取的名稱，也能以鍵盤操作；介面提供美式英文、英"
+#~ "式英文、法文、德文、印尼文、義大利文、日文、韓文、波蘭文、俄文、西班牙文、"
+#~ "歐洲葡萄牙文、簡體中文、正體中文（台灣）、土耳其文與越南文。"
+
+#~ msgid "Get Every Feature"
+#~ msgstr "取得全部功能"
+
+#~ msgid "Hide My Email works with Gmail accounts."
+#~ msgstr "[隱藏電子郵件地址] 可用於 Gmail 帳號。"
+
+#~ msgid "How much of its space each server says your mail takes"
+#~ msgstr "各伺服器回報您的郵件佔用了多少空間"
+
+#~ msgid "Install Bubblewrap"
+#~ msgstr "安裝 Bubblewrap"
+
+#~ msgid "Later"
+#~ msgstr "稍後"
+
+#, fuzzy
+#~| msgid "Mailboxes"
+#~ msgid "Mailbox"
+#~ msgstr "信箱"
+
+#~ msgid ""
+#~ "Markdown works. <email> becomes the sending address, including its "
+#~ "suffix; <domain> becomes its domain."
+#~ msgstr ""
+#~ "支援 Markdown。<email> 會替換為包含字尾的寄件地址；<domain> 則替換為該地址"
+#~ "的網域。"
+
+#~ msgid "Move it from the Trash to the Inbox first"
+#~ msgstr "請先將郵件從垃圾桶移至收件匣"
+
+#~ msgid ""
+#~ "Moving the account is taking too long. It goes on after you close this "
+#~ "window."
+#~ msgstr "移動帳號花費的時間過長。關閉此視窗後，移動仍會繼續。"
+
+#~ msgid "Moving your account. This takes a moment."
+#~ msgstr "正在轉移您的帳號。這需要一點時間。"
+
+#~ msgid "No accounts yet"
+#~ msgstr "尚無帳號"
+
+#~ msgid ""
+#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
+#~ "get your mail back. Nothing on this computer was lost."
+#~ msgstr ""
+#~ "Penguin Mail 無法取得 {address} 的新郵件。請選擇登入方式以找回郵件。這台電"
+#~ "腦上的內容沒有遺失。"
+
+#~ msgid ""
+#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+#~ "account below to keep your mail arriving. Your mail and settings stay as "
+#~ "they are."
+#~ msgstr ""
+#~ "Penguin Mail 提供了登入 Google 的新方式。請為下方每個 Gmail 帳號選擇一種，"
+#~ "以便繼續收到郵件。您的郵件和設定維持不變。"
+
+#~ msgid ""
+#~ "Penguin Mail looks for these when you add an account. The login is the "
+#~ "account's own."
+#~ msgstr ""
+#~ "新增帳號時，Penguin Mail 會尋找這些伺服器。登入時使用帳號本身的資料。"
+
 #~ msgid ""
 #~ "Run this command for the skill {skill}?\n"
 #~ "\n"
@@ -13056,9 +13516,6 @@ msgstr "移至 {folder}"
 #~ "指令會在沙箱中執行，無法存取郵件或家目錄。{network} [一律允許] 僅適用於此"
 #~ "確切指令。"
 
-#~ msgid "Move it from the Trash to the Inbox first"
-#~ msgstr "請先將郵件從垃圾桶移至收件匣"
-
 #~ msgid "Save to Downloads"
 #~ msgstr "儲存至下載資料夾"
 
@@ -13068,23 +13525,39 @@ msgstr "移至 {folder}"
 #~ msgid "Saved {file} to Downloads"
 #~ msgstr "已將 {file} 儲存至下載資料夾"
 
-#~ msgid "Bodies of mail you have read, kept for opening offline"
-#~ msgstr "保留已閱讀郵件的內文，供離線開啟"
+#~ msgid "Send New Messages From"
+#~ msgstr "新郵件的寄件帳號"
+
+#~ msgid "Sender Addresses"
+#~ msgstr "寄件地址"
+
+#~ msgid "Signed in with this computer's sign-in."
+#~ msgstr "已透過這台電腦的登入方式登入。"
+
+#~ msgid "Stop using your own Google project"
+#~ msgstr "停止使用您自己的 Google 專案"
+
+#~ msgid "Switch {address} to this computer's sign-in?"
+#~ msgstr "要將 {address} 切換到這台電腦的登入嗎？"
+
+#~ msgid "This account is already moving to its new sign-in."
+#~ msgstr "這個帳號已在轉移到新的登入方式。"
+
+#~ msgid ""
+#~ "Used by this account and addresses without their own signature. Markdown "
+#~ "works. <email> becomes the sending address, including its suffix; "
+#~ "<domain> becomes its domain."
+#~ msgstr ""
+#~ "此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含"
+#~ "字尾的寄件地址；<domain> 則替換為該地址的網域。"
+
+#~ msgid "Waiting for the account to switch to JMAP"
+#~ msgstr "正在等候帳號切換至 JMAP"
 
 #~ msgid ""
 #~ "Your organization may not allow this. Ask your administrator, or sign in "
 #~ "another way."
 #~ msgstr "你的組織可能不允許這麼做。請詢問管理員，或以其他方式登入。"
-
-#~ msgid ""
-#~ "Penguin Mail can't get new mail for {address}. Choose how it signs in to "
-#~ "get your mail back. Nothing on this computer was lost."
-#~ msgstr ""
-#~ "Penguin Mail 無法取得 {address} 的新郵件。請選擇登入方式以找回郵件。這台電"
-#~ "腦上的內容沒有遺失。"
-
-#~ msgid "Choose how {address} signs in to keep your mail arriving."
-#~ msgstr "請選擇 {address} 的登入方式，以便繼續收到郵件。"
 
 #~ msgid ""
 #~ "{count} Gmail account can't get new mail. Choose how each signs in to get "
@@ -13100,101 +13573,8 @@ msgstr "移至 {folder}"
 #~ msgid_plural "{count} Gmail accounts need a new way to sign in"
 #~ msgstr[0] "有 {count} 個 Gmail 帳號需要新的登入方式"
 
-#~ msgid "Choose…"
-#~ msgstr "選擇…"
-
-#~ msgid "Moving your account. This takes a moment."
-#~ msgstr "正在轉移您的帳號。這需要一點時間。"
-
-#~ msgid ""
-#~ "Moving the account is taking too long. It goes on after you close this "
-#~ "window."
-#~ msgstr "移動帳號花費的時間過長。關閉此視窗後，移動仍會繼續。"
-
-#~ msgid ""
-#~ "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
-#~ "account below to keep your mail arriving. Your mail and settings stay as "
-#~ "they are."
-#~ msgstr ""
-#~ "Penguin Mail 提供了登入 Google 的新方式。請為下方每個 Gmail 帳號選擇一種，"
-#~ "以便繼續收到郵件。您的郵件和設定維持不變。"
-
-#~ msgid "Later"
-#~ msgstr "稍後"
-
-#~ msgid "Choose Now"
-#~ msgstr "立即選擇"
-
-#~ msgid ""
-#~ "Added below new messages and above quoted text in replies. Markdown works."
-#~ msgstr "新增至新郵件底部及回覆的引用文字上方。支援 Markdown。"
-
-#~ msgid "Switch {address} to this computer's sign-in?"
-#~ msgstr "要將 {address} 切換到這台電腦的登入嗎？"
-
-#~ msgid "Stop using your own Google project"
-#~ msgstr "停止使用您自己的 Google 專案"
-
-#~ msgid "Get Every Feature"
-#~ msgstr "取得全部功能"
-
-#~ msgid "Choose how this account signs in to get new mail"
-#~ msgstr "請選擇這個帳號的登入方式，以取得新郵件"
-
-#~ msgid ""
-#~ "Every control named for screen readers and reachable from the keyboard, "
-#~ "in American English, British English, French, German, Indonesian, "
-#~ "Italian, Japanese, Korean, Polish, Russian, Spanish, European Portuguese, "
-#~ "Simplified Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
-#~ msgstr ""
-#~ "所有控制項都有螢幕閱讀器可讀取的名稱，也能以鍵盤操作；介面提供美式英文、英"
-#~ "式英文、法文、德文、印尼文、義大利文、日文、韓文、波蘭文、俄文、西班牙文、"
-#~ "歐洲葡萄牙文、簡體中文、正體中文（台灣）、土耳其文與越南文。"
-
-#~ msgid "Install Bubblewrap"
-#~ msgstr "安裝 Bubblewrap"
-
-#~ msgid "Send New Messages From"
-#~ msgstr "新郵件的寄件帳號"
-
-#~ msgid "Contacts & Calendar"
-#~ msgstr "聯絡人與行事曆"
-
-#~ msgid "No accounts yet"
-#~ msgstr "尚無帳號"
-
-#~ msgid "How much of its space each server says your mail takes"
-#~ msgstr "各伺服器回報您的郵件佔用了多少空間"
-
-#~ msgid "Accounts whose server does not report its space are not listed."
-#~ msgstr "伺服器未回報空間的帳號不會列在這裡。"
-
-#~ msgid "Could not send the receipt: {reason}"
-#~ msgstr "無法傳送回條：{reason}"
-
-#~ msgid "Sender Addresses"
-#~ msgstr "寄件地址"
-
-#~ msgid "Waiting for the account to switch to JMAP"
-#~ msgstr "正在等候帳號切換至 JMAP"
-
-#~ msgid "Hide My Email works with Gmail accounts."
-#~ msgstr "[隱藏電子郵件地址] 可用於 Gmail 帳號。"
-
 #~ msgid ""
 #~ "{provider} does not let an API token change the automatic reply. Change "
 #~ "it on {provider}'s website."
 #~ msgstr ""
 #~ "{provider} 不允許 API 權杖變更自動回覆。請到 {provider} 的網站上變更。"
-
-#~ msgid ""
-#~ "Penguin Mail looks for these when you add an account. The login is the "
-#~ "account's own."
-#~ msgstr ""
-#~ "新增帳號時，Penguin Mail 會尋找這些伺服器。登入時使用帳號本身的資料。"
-
-#~ msgid "This account is already moving to its new sign-in."
-#~ msgstr "這個帳號已在轉移到新的登入方式。"
-
-#~ msgid "Signed in with this computer's sign-in."
-#~ msgstr "已透過這台電腦的登入方式登入。"

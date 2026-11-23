@@ -23,8 +23,8 @@ use super::local::LocalRules;
 use super::{
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, Claimed,
     ContactsService, Found, GmailImap, Google, Held, IdentityService, Imap, Jmap, JmapSieve,
-    KeywordsPage, Look, MailBackend, MailCapabilities, Microsoft, NoMail, Pop3, RawMessage,
-    ReceiptOut, Refused, Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery,
+    KeywordsPage, Landing, Look, MailBackend, MailCapabilities, Microsoft, NoMail, Pop3,
+    RawMessage, ReceiptOut, Refused, Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery,
     SendAsAddress, Settled, SieveRules, Storage, SyncState, Unapplied, Unheld, Want, Withheld,
 };
 use crate::api::{DraftRef, SavedDraft};
@@ -236,6 +236,29 @@ impl AnyMail {
         }
     }
 
+    /// Every folder on the server with whether the person subscribes to
+    /// it. Only an IMAP account keeps subscriptions; any other answers
+    /// that it cannot.
+    pub async fn folder_subscriptions(
+        &self,
+    ) -> Result<Vec<super::imap::FolderSubscription>, BackendError> {
+        match self {
+            AnyMail::Imap(adapter) => adapter.subscriptions().await,
+            _ => Err(BackendError::Refused(
+                "this account keeps no folder subscriptions".into(),
+            )),
+        }
+    }
+
+    pub async fn set_folder_subscribed(&self, id: &str, on: bool) -> Result<(), BackendError> {
+        match self {
+            AnyMail::Imap(adapter) => adapter.set_subscribed(id, on).await,
+            _ => Err(BackendError::Refused(
+                "this account keeps no folder subscriptions".into(),
+            )),
+        }
+    }
+
     /// The services an organization refused a Microsoft account this run.
     /// No other provider learns of such a refusal.
     pub fn refused(&self) -> Refused {
@@ -279,6 +302,18 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, destroy_checked(messages, mailbox))
     }
 
+    async fn destroy_landing(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> Vec<Result<(), BackendError>> {
+        forward_all!(AnyMail, self, destroy_landing(messages, mailbox))
+    }
+
+    async fn still_in(&self, message: &str, mailbox: &str) -> Result<bool, BackendError> {
+        forward_all!(AnyMail, self, still_in(message, mailbox))
+    }
+
     fn person_waiting(&self) -> bool {
         forward_all_now!(AnyMail, self, person_waiting())
     }
@@ -301,6 +336,10 @@ impl MailBackend for AnyMail {
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
         forward_all!(AnyMail, self, inbox_ids())
+    }
+
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        forward_all!(AnyMail, self, count_query(query))
     }
 
     async fn search(
@@ -347,6 +386,14 @@ impl MailBackend for AnyMail {
 
     async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
         forward_all!(AnyMail, self, append(raw, mailbox))
+    }
+
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        forward_all!(AnyMail, self, land_copy(raw, at))
+    }
+
+    fn lands_copies(&self) -> bool {
+        forward_all_now!(AnyMail, self, lands_copies())
     }
 
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {

@@ -18,22 +18,19 @@ use std::io::Write;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::io::AsRawHandle;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use windows::Win32::Foundation::{
-    CloseHandle, ERROR_ALREADY_EXISTS, ERROR_SUCCESS, GENERIC_ALL, GENERIC_EXECUTE, GENERIC_READ,
-    HANDLE, HANDLE_FLAG_INHERIT, HLOCAL, LocalFree, SetHandleInformation, WAIT_OBJECT_0,
+    CloseHandle, ERROR_SUCCESS, GENERIC_ALL, GENERIC_EXECUTE, GENERIC_READ, HANDLE,
+    HANDLE_FLAG_INHERIT, HLOCAL, LocalFree, SetHandleInformation, WAIT_ABANDONED, WAIT_OBJECT_0,
 };
 use windows::Win32::Security::Authorization::{
-    ConvertStringSidToSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW,
-    NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW, TRUSTEE_IS_SID,
-    TRUSTEE_IS_UNKNOWN, TRUSTEE_W,
+    ACCESS_MODE, ConvertStringSidToSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW,
+    NO_MULTIPLE_TRUSTEE, REVOKE_ACCESS, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW,
+    TRUSTEE_IS_SID, TRUSTEE_IS_UNKNOWN, TRUSTEE_W,
 };
-use windows::Win32::Security::Isolation::{
-    CreateAppContainerProfile, DeriveAppContainerSidFromAppContainerName,
-};
+use windows::Win32::Security::Isolation::{CreateAppContainerProfile, DeleteAppContainerProfile};
 use windows::Win32::Security::{
     ACL, DACL_SECURITY_INFORMATION, FreeSid, PSECURITY_DESCRIPTOR, PSID, SECURITY_CAPABILITIES,
     SID_AND_ATTRIBUTES, SUB_CONTAINERS_AND_OBJECTS_INHERIT,
@@ -44,19 +41,16 @@ use windows::Win32::System::JobObjects::{
     SetInformationJobObject, TerminateJobObject,
 };
 use windows::Win32::System::Threading::{
-    CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT, CreateProcessW, DeleteProcThreadAttributeList,
-    EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, InitializeProcThreadAttributeList,
-    LPPROC_THREAD_ATTRIBUTE_LIST, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
-    PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, PROCESS_INFORMATION, STARTF_USESTDHANDLES,
-    STARTUPINFOEXW, STARTUPINFOW, TerminateProcess, UpdateProcThreadAttribute, WaitForSingleObject,
+    CREATE_NO_WINDOW, CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateMutexW, CreateProcessW,
+    DeleteProcThreadAttributeList, EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess,
+    InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST,
+    PROC_THREAD_ATTRIBUTE_HANDLE_LIST, PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
+    PROCESS_INFORMATION, ReleaseMutex, ResumeThread, STARTF_USESTDHANDLES, STARTUPINFOEXW,
+    STARTUPINFOW, TerminateProcess, UpdateProcThreadAttribute, WaitForSingleObject,
 };
-use windows::core::{HRESULT, PCWSTR, PWSTR};
+use windows::core::{PCWSTR, PWSTR};
 
 use super::{Jail, Limits, Run, collect};
-
-/// The profile the package SID derives from. Deriving is pure math, so the
-/// same name always gives the same SID.
-const PROFILE: &str = "io.github.c9dev.PenguinMail.Skills";
 
 /// internetClient: the capability a networked skill gets.
 const INTERNET_CLIENT: &str = "S-1-15-3-1";
@@ -96,17 +90,16 @@ fn run_sync(
     stdin: Option<&str>,
     limits: Limits,
 ) -> std::io::Result<Run> {
-    ensure_profile()?;
-    let package = package_sid()?;
-    grant(&package, &jail.skill, GENERIC_READ.0 | GENERIC_EXECUTE.0)?;
-    grant(&package, &jail.work, GENERIC_ALL.0)?;
+    let mut profile = Profile::new()?;
+    profile.allow(&jail.skill, GENERIC_READ.0 | GENERIC_EXECUTE.0)?;
+    profile.allow(&jail.work, GENERIC_ALL.0)?;
     let folder = jail
         .program
         .parent()
         .ok_or_else(|| std::io::Error::other("the shell has no folder"))?;
     // The program itself, not its folder: an inheritable grant on a build
     // tree would rewrite every file's ACL in it.
-    grant(&package, &jail.program, GENERIC_READ.0 | GENERIC_EXECUTE.0)?;
+    profile.allow(&jail.program, GENERIC_READ.0 | GENERIC_EXECUTE.0)?;
 
     static COUNT: AtomicU64 = AtomicU64::new(0);
     let script = jail.work.join(format!(
@@ -114,7 +107,15 @@ fn run_sync(
         std::process::id(),
         COUNT.fetch_add(1, Ordering::Relaxed)
     ));
-    std::fs::write(&script, command.as_bytes())?;
+    // A previous command can leave files in this writable directory.
+    // Never follow a file or link it placed at the next script's name.
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&script)?;
+    let _script = ScriptFile(script.clone());
+    file.write_all(command.as_bytes())?;
+    drop(file);
 
     let (out_reader, out_writer) = std::io::pipe()?;
     let (in_reader, in_writer) = std::io::pipe()?;
@@ -133,7 +134,7 @@ fn run_sync(
     let environment = environment(jail, folder);
     let spawned = spawn(
         jail,
-        &package,
+        &profile.sid,
         &script,
         &environment,
         HANDLE(in_reader.as_raw_handle().cast()),
@@ -162,11 +163,7 @@ fn run_sync(
     let timed_out = match unsafe { WaitForSingleObject(process.0, millis) } {
         WAIT_OBJECT_0 => false,
         _ => {
-            if let Some(job) = &job {
-                let _ = unsafe { TerminateJobObject(job.0, 1) };
-            } else {
-                let _ = unsafe { TerminateProcess(process.0, 1) };
-            }
+            let _ = unsafe { TerminateJobObject(job.0, 1) };
             let _ = unsafe { WaitForSingleObject(process.0, 5000) };
             true
         }
@@ -179,12 +176,14 @@ fn run_sync(
             .ok()
             .map(|_| code as i32)
     };
+    // The shell may exit before a child. Stop those children before
+    // waiting for their inherited output handles to close.
+    unsafe { TerminateJobObject(job.0, 1) }.map_err(std::io::Error::other)?;
     // The collector sees the end once every writer is gone, which a
     // detached process could delay past the timeout, so bound the wait.
     let (bytes, truncated) = received
         .recv_timeout(Duration::from_secs(10))
         .unwrap_or_default();
-    let _ = std::fs::remove_file(&script);
     Ok(Run {
         output: String::from_utf8_lossy(&bytes).into_owned(),
         truncated,
@@ -193,41 +192,91 @@ fn run_sync(
     })
 }
 
-/// Creates the AppContainer profile once; the SID derives from the name,
-/// so a profile from an earlier run is fine.
-fn ensure_profile() -> std::io::Result<()> {
-    static ANSWER: OnceLock<Result<(), String>> = OnceLock::new();
-    match ANSWER.get_or_init(|| {
-        let name = wide(PROFILE);
-        let display = wide("Penguin Mail skills");
-        let description = wide("Skill scripts run by Penguin Mail");
-        match unsafe {
+/// Each invocation owns its profile and grants. Concurrent invocations never
+/// share a SID, even when they use the same skill or work directory.
+struct Profile {
+    name: Vec<u16>,
+    sid: Sid,
+    paths: Vec<PathBuf>,
+}
+
+impl Profile {
+    fn new() -> std::io::Result<Self> {
+        let name = wide(&format!(
+            "PenguinMail.Skill.{:032x}",
+            rand::random::<u128>()
+        ));
+        let display = wide("Penguin Mail skill");
+        let description = wide("One skill invocation");
+        let sid = unsafe {
             CreateAppContainerProfile(
                 PCWSTR(name.as_ptr()),
                 PCWSTR(display.as_ptr()),
                 PCWSTR(description.as_ptr()),
                 None,
             )
-        } {
-            Ok(sid) => {
-                unsafe { FreeSid(sid) };
-                Ok(())
-            }
-            Err(err) if err.code() == HRESULT::from_win32(ERROR_ALREADY_EXISTS.0) => Ok(()),
-            Err(err) => Err(err.to_string()),
         }
-    }) {
-        Ok(()) => Ok(()),
-        Err(reason) => Err(std::io::Error::other(reason.clone())),
+        .map_err(std::io::Error::other)?;
+        Ok(Self {
+            name,
+            sid: Sid(sid, false),
+            paths: Vec::new(),
+        })
+    }
+
+    fn allow(&mut self, path: &Path, access: u32) -> std::io::Result<()> {
+        // Remember the path before changing it: a partially applied grant
+        // must be revoked when a later setup step fails.
+        if !self.paths.iter().any(|held| held == path) {
+            self.paths.push(path.to_path_buf());
+        }
+        change_access(&self.sid, path, access, GRANT_ACCESS)
     }
 }
 
-/// The package SID for this app's profile.
-fn package_sid() -> std::io::Result<Sid> {
-    let name = wide(PROFILE);
-    let sid = unsafe { DeriveAppContainerSidFromAppContainerName(PCWSTR(name.as_ptr())) }
-        .map_err(std::io::Error::other)?;
-    Ok(Sid(sid))
+impl Drop for Profile {
+    fn drop(&mut self) {
+        for path in self.paths.iter().rev() {
+            if let Err(error) = change_access(&self.sid, path, 0, REVOKE_ACCESS) {
+                tracing::warn!(%error, "could not revoke a finished skill's folder grant");
+            }
+        }
+        if let Err(error) = unsafe { DeleteAppContainerProfile(PCWSTR(self.name.as_ptr())) } {
+            tracing::warn!(%error, "could not delete a finished skill's profile");
+        }
+    }
+}
+
+struct ScriptFile(PathBuf);
+
+impl Drop for ScriptFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+/// ACL updates read and replace the whole DACL. Serialize this desktop's
+/// runner processes so one invocation cannot overwrite another's grants.
+struct AclLock(KernelHandle);
+
+impl AclLock {
+    fn acquire() -> std::io::Result<Self> {
+        let name = wide(r"Local\io.github.c9dev.PenguinMail.SkillAcl");
+        let handle = KernelHandle(
+            unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) }
+                .map_err(std::io::Error::other)?,
+        );
+        match unsafe { WaitForSingleObject(handle.0, 10_000) } {
+            WAIT_OBJECT_0 | WAIT_ABANDONED => Ok(Self(handle)),
+            _ => Err(std::io::Error::other("could not lock skill permissions")),
+        }
+    }
+}
+
+impl Drop for AclLock {
+    fn drop(&mut self) {
+        let _ = unsafe { ReleaseMutex(self.0.0) };
+    }
 }
 
 /// A SID text form, such as `S-1-15-3-1` for internetClient.
@@ -236,13 +285,17 @@ fn sid_from_name(name: &str) -> std::io::Result<Sid> {
     let mut sid = PSID::default();
     unsafe { ConvertStringSidToSidW(PCWSTR(name.as_ptr()), &mut sid) }
         .map_err(std::io::Error::other)?;
-    Ok(Sid(sid))
+    Ok(Sid(sid, true))
 }
 
-/// Gives the package SID `access` to `path`, inherited by everything
-/// below it. The grant persists: the SID is stable and another run will
-/// want it again.
-fn grant(package: &Sid, path: &Path, access: u32) -> std::io::Result<()> {
+/// Adds or removes only this invocation's entry, preserving other grants.
+fn change_access(
+    package: &Sid,
+    path: &Path,
+    access: u32,
+    mode: ACCESS_MODE,
+) -> std::io::Result<()> {
+    let _lock = AclLock::acquire()?;
     let name = wide_path(path);
     let mut dacl = std::ptr::null_mut::<ACL>();
     let mut descriptor = PSECURITY_DESCRIPTOR::default();
@@ -264,7 +317,7 @@ fn grant(package: &Sid, path: &Path, access: u32) -> std::io::Result<()> {
     let _descriptor = Local(descriptor.0);
     let entry = [EXPLICIT_ACCESS_W {
         grfAccessPermissions: access,
-        grfAccessMode: GRANT_ACCESS,
+        grfAccessMode: mode,
         grfInheritance: SUB_CONTAINERS_AND_OBJECTS_INHERIT,
         Trustee: TRUSTEE_W {
             pMultipleTrustee: std::ptr::null_mut(),
@@ -336,8 +389,7 @@ fn environment(jail: &Owned, folder: &Path) -> Vec<u16> {
 }
 
 /// Starts busybox inside the AppContainer, its handles restricted to the
-/// pipes it is handed. Returns the process, its thread, and the job that
-/// kills the tree; `None` for the job means process-only cleanup.
+/// pipes it is handed. Its job owns the process before any script runs.
 fn spawn(
     jail: &Owned,
     package: &Sid,
@@ -345,7 +397,7 @@ fn spawn(
     environment: &[u16],
     child_in: HANDLE,
     child_out: HANDLE,
-) -> std::io::Result<(KernelHandle, KernelHandle, Option<KernelHandle>)> {
+) -> std::io::Result<(KernelHandle, KernelHandle, KernelHandle)> {
     let mut capabilities = Vec::new();
     let mut sids = Vec::new();
     if jail.network {
@@ -427,7 +479,10 @@ fn spawn(
             None,
             None,
             true,
-            EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+            EXTENDED_STARTUPINFO_PRESENT
+                | CREATE_NO_WINDOW
+                | CREATE_UNICODE_ENVIRONMENT
+                | CREATE_SUSPENDED,
             Some(environment.as_ptr().cast()),
             PCWSTR(cwd.as_ptr()),
             &startup.StartupInfo,
@@ -436,8 +491,29 @@ fn spawn(
     }
     .map_err(|err| std::io::Error::other(format!("CreateProcessW: {err}")))?;
     let process = KernelHandle(info.hProcess);
-    let job = job_for(process.0).ok();
-    Ok((process, KernelHandle(info.hThread), job))
+    let thread = KernelHandle(info.hThread);
+    let job = start_in_job(&process, &thread, job_for)?;
+    Ok((process, thread, job))
+}
+
+/// Setup failure must kill the still-suspended process. Running without a
+/// job would let a child outlive the command's deadline.
+fn start_in_job(
+    process: &KernelHandle,
+    thread: &KernelHandle,
+    assign: impl FnOnce(HANDLE) -> std::io::Result<KernelHandle>,
+) -> std::io::Result<KernelHandle> {
+    let result = assign(process.0).and_then(|job| {
+        if unsafe { ResumeThread(thread.0) } == u32::MAX {
+            return Err(std::io::Error::last_os_error());
+        }
+        Ok(job)
+    });
+    if result.is_err() {
+        let _ = unsafe { TerminateProcess(process.0, 1) };
+        let _ = unsafe { WaitForSingleObject(process.0, 5000) };
+    }
+    result
 }
 
 /// A job object whose last handle's closing kills every process in it.
@@ -554,12 +630,16 @@ impl Drop for KernelHandle {
     }
 }
 
-/// A process-owned SID, freed when it leaves scope.
-struct Sid(PSID);
+/// Profile SIDs use FreeSid; parsed capability SIDs use LocalFree.
+struct Sid(PSID, bool);
 
 impl Drop for Sid {
     fn drop(&mut self) {
-        unsafe { FreeSid(self.0) };
+        if self.1 {
+            unsafe { LocalFree(Some(HLOCAL(self.0.0))) };
+        } else {
+            unsafe { FreeSid(self.0) };
+        }
     }
 }
 
@@ -580,5 +660,65 @@ struct AttributeList(LPPROC_THREAD_ATTRIBUTE_LIST);
 impl Drop for AttributeList {
     fn drop(&mut self) {
         unsafe { DeleteProcThreadAttributeList(self.0) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn failed_job_setup_never_resumes_the_script() {
+        let Some(shell) = find_busybox() else {
+            assert!(std::env::var_os("PENGUIN_MAIL_REQUIRE_SANDBOX").is_none());
+            return;
+        };
+        let root = tempfile::tempdir().unwrap();
+        let marker = root.path().join("escaped");
+        let script = root.path().join("script.sh");
+        std::fs::write(
+            &script,
+            format!(
+                "printf escaped > '{}'",
+                marker.to_string_lossy().replace('\\', "/")
+            ),
+        )
+        .unwrap();
+        let mut command = wide(&format!(
+            "\"{}\" sh \"{}\"",
+            shell.display(),
+            script.display()
+        ));
+        let startup = STARTUPINFOW {
+            cb: size_of::<STARTUPINFOW>() as u32,
+            ..Default::default()
+        };
+        let mut info = PROCESS_INFORMATION::default();
+        unsafe {
+            CreateProcessW(
+                PCWSTR::null(),
+                Some(PWSTR(command.as_mut_ptr())),
+                None,
+                None,
+                false,
+                CREATE_SUSPENDED | CREATE_NO_WINDOW,
+                None,
+                PCWSTR::null(),
+                &startup,
+                &mut info,
+            )
+        }
+        .unwrap();
+        let process = KernelHandle(info.hProcess);
+        let thread = KernelHandle(info.hThread);
+        let answer = start_in_job(&process, &thread, |_| {
+            Err(std::io::Error::other("injected job failure"))
+        });
+        assert!(answer.is_err());
+        assert_eq!(
+            unsafe { WaitForSingleObject(process.0, 5000) },
+            WAIT_OBJECT_0
+        );
+        assert!(!marker.exists());
     }
 }

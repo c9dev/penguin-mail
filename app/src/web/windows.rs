@@ -30,9 +30,10 @@ use webview2_com::{
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::System::Com::StructuredStorage::CreateStreamOnHGlobal;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetFocus, SetFocus};
-use windows::core::{BOOL, HSTRING, Interface, PWSTR};
+use windows::core::{BOOL, HSTRING, Interface};
 
 use super::frame;
+use super::owned_text::OwnedText;
 
 /// The CSS class on every anchor, so [`holds_focus`] can tell one.
 const ANCHOR_CLASS: &str = "web-view";
@@ -343,11 +344,11 @@ impl Inner {
         let Ok(request) = (unsafe { args.Request() }) else {
             return;
         };
-        let mut raw = PWSTR::null();
+        let mut raw = OwnedText::default();
         unsafe {
-            let _ = request.Uri(&mut raw);
+            let _ = request.Uri(raw.out());
         }
-        let uri = text(raw);
+        let uri = raw.read().unwrap_or_default();
         let scheme = self.scheme.borrow().clone();
         if !scheme.is_empty() && uri.starts_with(&format!("{scheme}:")) {
             let (Some(serve), Some(env)) = (
@@ -383,14 +384,6 @@ impl Inner {
             }
         }
     }
-}
-
-/// Answers `raw`'s text, or nothing for a null out-param.
-fn text(raw: PWSTR) -> String {
-    if raw.is_null() {
-        return String::new();
-    }
-    unsafe { raw.to_string() }.unwrap_or_default()
 }
 
 /// Where the engine keeps its working files for this run. The store is
@@ -693,9 +686,9 @@ fn wire(inner: &Rc<Inner>, core: &Rc<Core>) {
             let (Some(inner), Some(args)) = (page.upgrade(), args) else {
                 return Ok(());
             };
-            let mut raw = PWSTR::null();
-            let _ = args.Uri(&mut raw);
-            let uri = text(raw);
+            let mut raw = OwnedText::default();
+            let _ = args.Uri(raw.out());
+            let uri = raw.read().unwrap_or_default();
             let own = ["about:blank", "data:", "blob:"]
                 .iter()
                 .any(|start| uri.starts_with(start))
@@ -760,9 +753,11 @@ fn wire(inner: &Rc<Inner>, core: &Rc<Core>) {
             let (Some(inner), Some(args)) = (page.upgrade(), args) else {
                 return Ok(());
             };
-            let mut raw = PWSTR::null();
-            let _ = args.WebMessageAsJson(&mut raw);
-            let Ok(body) = serde_json::from_str::<serde_json::Value>(&text(raw)) else {
+            let mut raw = OwnedText::default();
+            let _ = args.WebMessageAsJson(raw.out());
+            let Ok(body) =
+                serde_json::from_str::<serde_json::Value>(&raw.read().unwrap_or_default())
+            else {
                 return Ok(());
             };
             let Some(name) = body.get("__mailrs").and_then(|name| name.as_str()) else {

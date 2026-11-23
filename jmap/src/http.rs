@@ -36,6 +36,27 @@ const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 /// answers no other request of the account while a stream is open.
 const STALL_LIMIT: Duration = Duration::from_secs(20);
 
+/// The waits push judges a server by. [`JmapClient::new`] uses the real
+/// ones; tests that play a server which never answers pass shorter ones
+/// to [`JmapClient::with_push_limits`], rather than wait them out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PushLimits {
+    /// See `STALL_LIMIT`.
+    pub stall: Duration,
+    /// How long the echo sent beside a new stream may take before the
+    /// server counts as one that holds calls while a stream is open.
+    pub probe: Duration,
+}
+
+impl Default for PushLimits {
+    fn default() -> Self {
+        PushLimits {
+            stall: STALL_LIMIT,
+            probe: Duration::from_secs(10),
+        }
+    }
+}
+
 /// How long push stays off after an API call stalled behind the stream.
 /// The account polls meanwhile, and the next stream is probed again.
 const PUSH_PAUSE: Duration = Duration::from_secs(30 * 60);
@@ -73,6 +94,7 @@ struct Inner {
     paused_until: Mutex<Option<tokio::time::Instant>>,
     /// The task that holds the open stream's connection.
     reader: Mutex<Option<tokio::task::AbortHandle>>,
+    limits: PushLimits,
 }
 
 #[derive(Default)]
@@ -129,6 +151,15 @@ impl JmapClient {
     /// A client for the session at `session_url`, which must be HTTPS, or
     /// HTTP on this computer. Nothing goes out until the first call.
     pub fn new(session_url: &str, auth: Auth) -> Result<JmapClient, JmapError> {
+        JmapClient::with_push_limits(session_url, auth, PushLimits::default())
+    }
+
+    /// As [`JmapClient::new`], judging push by `limits`.
+    pub fn with_push_limits(
+        session_url: &str,
+        auth: Auth,
+        limits: PushLimits,
+    ) -> Result<JmapClient, JmapError> {
         // A URL that does not parse could still hold a password or an
         // address, so the error names which URL it was and none of it.
         let url =
@@ -160,8 +191,13 @@ impl JmapClient {
                 push_off: AtomicBool::new(false),
                 paused_until: Mutex::new(None),
                 reader: Mutex::new(None),
+                limits,
             }),
         })
+    }
+
+    pub(crate) fn push_limits(&self) -> PushLimits {
+        self.inner.limits
     }
 
     pub fn session_url(&self) -> &str {
@@ -444,7 +480,7 @@ impl JmapClient {
         if self.inner.streaming.load(Ordering::SeqCst) && !self.push_off() {
             tokio::select! {
                 got = &mut answer => return got.map_err(network),
-                _ = tokio::time::sleep(STALL_LIMIT) => {
+                _ = tokio::time::sleep(self.inner.limits.stall) => {
                     match self.inner.probing.load(Ordering::SeqCst) {
                         true => {
                             tracing::info!("a call stalled before the push stream's probe passed; polling instead");

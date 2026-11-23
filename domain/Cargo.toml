@@ -14,10 +14,8 @@ gettext-rs.workspace = true
 icalendar.workspace = true
 rrule.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 iana-time-zone = "0.1.65"
-
-[dev-dependencies]
-serde_json.workspace = true

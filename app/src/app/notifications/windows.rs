@@ -90,10 +90,15 @@ impl Desktop {
         }
     }
 
-    pub fn post(&self, id: &str, title: &str, body: &str, actions: Actions) {
+    pub fn post(&self, id: &str, title: &str, subtitle: &str, body: &str, actions: Actions) {
         let Some(native) = &self.native else { return };
+        let body = [subtitle, body]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n");
         let Ok(xml) = XmlDocument::new().and_then(|doc| {
-            doc.LoadXml(&HSTRING::from(toast_xml(title, body, &actions)))?;
+            doc.LoadXml(&HSTRING::from(toast_xml(title, &body, &actions)))?;
             Ok(doc)
         }) else {
             return;
@@ -226,8 +231,8 @@ fn escaped(text: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// Writes the Start Menu shortcut that carries the AppUserModelID to
-///asts need, or updates it for the exe this run started from. A toast
+/// Writes the Start Menu shortcut with the AppUserModelID that
+/// toasts need, or updates it for the exe this run started from. A toast
 /// with no AUMI shows under nothing and draws no buttons.
 fn ensure_shortcut() {
     unsafe {
@@ -240,7 +245,11 @@ fn ensure_shortcut() {
         if programs.is_empty() {
             return;
         }
-        let lnk = std::path::Path::new(&programs).join("Penguin Mail.lnk");
+        let folder = std::path::Path::new(&programs).join("Penguin Mail");
+        if std::fs::create_dir_all(&folder).is_err() {
+            return;
+        }
+        let lnk = folder.join("Penguin Mail.lnk");
         let Ok(exe) = crate::exe::path() else {
             return;
         };

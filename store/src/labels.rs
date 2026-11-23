@@ -8,6 +8,17 @@ use rusqlite::{Connection, params};
 
 use crate::{Result, StoreError};
 
+/// The mailboxes the server listed that the sidebar leaves out: an IMAP
+/// folder nobody subscribes to, a folder Microsoft marks hidden. Search,
+/// mail actions and the move picker still know them.
+pub fn hidden_ids(conn: &Connection, account_id: AccountId) -> Result<BTreeSet<String>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT id FROM mailboxes WHERE account_id = ?1 AND named = 1 AND hidden = 1",
+    )?;
+    let ids = stmt.query_map(params![account_id], |row| row.get::<_, String>(0))?;
+    Ok(ids.collect::<rusqlite::Result<_>>()?)
+}
+
 /// System labels first, then user labels, each by name. Only mailboxes a
 /// listing named count.
 pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label>> {
@@ -130,5 +141,25 @@ mod tests {
             None,
             "a label never moved has no position"
         );
+    }
+
+    #[test]
+    fn a_hidden_mailbox_stays_a_label_and_is_named_hidden() {
+        let conn = crate::open_in_memory().unwrap();
+        let me = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+        mailboxes::upsert(&conn, me, &folder("Lists")).unwrap();
+        let mut old = folder("Old");
+        old.hidden = true;
+        mailboxes::upsert(&conn, me, &old).unwrap();
+
+        assert_eq!(super::list_labels(&conn, me).unwrap().len(), 2);
+        assert_eq!(
+            super::hidden_ids(&conn, me).unwrap(),
+            std::collections::BTreeSet::from(["Old".to_string()])
+        );
+
+        old.hidden = false;
+        mailboxes::upsert(&conn, me, &old).unwrap();
+        assert!(super::hidden_ids(&conn, me).unwrap().is_empty());
     }
 }

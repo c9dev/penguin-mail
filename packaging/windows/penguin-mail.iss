@@ -42,9 +42,11 @@ Source: "{#WebView2Bootstrapper}"; DestDir: "{tmp}"; DestName: "MicrosoftEdgeWeb
 #endif
 
 [Icons]
-Name: "{group}\Penguin Mail"; Filename: "{app}\bin\penguin-mail.exe"; AppUserModelID: "io.github.c9dev.PenguinMail"
+Name: "{userprograms}\Penguin Mail\Penguin Mail"; Filename: "{app}\bin\penguin-mail.exe"; AppUserModelID: "io.github.c9dev.PenguinMail"
 
 [Registry]
+; Preferences creates this value only when start at sign-in is enabled.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "Penguin Mail"; Flags: uninsdeletevalue
 ; The capabilities record Windows reads for Default Apps. Choosing the
 ; actual default stays the person's, as it must since Windows 8. Setup
 ; leaves registry entries behind at uninstall unless told otherwise;
@@ -72,6 +74,13 @@ Root: HKCU; Subkey: "Software\Classes\PenguinMail.ics"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\PenguinMail.ics"; ValueType: string; ValueData: "iCalendar file"
 Root: HKCU; Subkey: "Software\Classes\PenguinMail.ics\DefaultIcon"; ValueType: string; ValueData: "{app}\bin\penguin-mail.exe,0"
 Root: HKCU; Subkey: "Software\Classes\PenguinMail.ics\shell\open\command"; ValueType: string; ValueData: """{app}\bin\penguin-mail.exe"" ""%1"""
+
+[UninstallDelete]
+; Also remove launchers written by the app before this path was shared.
+Type: files; Name: "{userprograms}\Penguin Mail.lnk"
+Type: files; Name: "{userprograms}\Penguin Mail\Penguin Mail.lnk"
+Type: dirifempty; Name: "{userprograms}\Penguin Mail"
+
 
 [Run]
 Filename: "{app}\bin\penguin-mail.exe"; Description: "Open Penguin Mail"; Flags: nowait postinstall skipifsilent

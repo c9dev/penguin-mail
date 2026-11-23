@@ -1,12 +1,13 @@
 //! Mailboxes: the unified views, then one section per account.
 
 mod keys;
-mod sections;
+pub(crate) mod sections;
 pub(crate) mod tree;
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::time::Duration;
 
 use crate::ui::safe_popover::{may_present, safe_popup_at};
 use adw::prelude::*;
@@ -20,6 +21,7 @@ use mailrs_sync::Offers;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
+use crate::settings::SidebarLayout;
 use crate::settings::Space;
 use keys::ListKey;
 use sections::{Place, Section};
@@ -340,6 +342,58 @@ pub struct Sidebar {
     /// The label being dragged, while one is, so the rows it passes over
     /// can tell it from dragged mail.
     dragging: Rc<RefCell<Option<Dragged>>>,
+    /// Drags resting on account headings, waiting to open them.
+    holds: Rc<RefCell<Holds>>,
+}
+
+/// How long a drag rests on a closed account's heading before it opens.
+const HOLD: Duration = Duration::from_millis(2000);
+
+/// Drags resting on account headings, each with the beat after which its
+/// account opens, the way Mac's Mail lets a held drop reach a folder that
+/// is out of sight. Moving on cancels the beat, a beat that rang takes
+/// itself away, and only one can wait because only one pointer exists.
+#[derive(Default)]
+struct Holds {
+    pending: HashMap<AccountId, glib::JoinHandle<()>>,
+}
+
+impl Holds {
+    /// A drag has come to rest on `account`'s heading: `open` runs after
+    /// `after`, unless a `left` says the drag moved on first.
+    fn arrived(
+        holds: &Rc<RefCell<Self>>,
+        context: &glib::MainContext,
+        account: AccountId,
+        after: Duration,
+        open: impl FnOnce() + 'static,
+    ) {
+        let mut pending = holds.borrow_mut();
+        pending.left_all();
+        let rang = Rc::clone(holds);
+        let handle = context.spawn_local(async move {
+            glib::timeout_future(after).await;
+            open();
+            rang.borrow_mut().left(account);
+        });
+        pending.pending.insert(account, handle);
+    }
+
+    /// The drag left `account`'s heading before its beat was up, or the
+    /// beat rang and is over.
+    fn left(&mut self, account: AccountId) {
+        if let Some(handle) = self.pending.remove(&account) {
+            handle.abort();
+        }
+    }
+
+    /// Only one drag rests anywhere at a time, and no beat outlives the
+    /// rows it waited on: `rebuild` tears those down without a goodbye.
+    fn left_all(&mut self) {
+        for (_, handle) in self.pending.drain() {
+            handle.abort();
+        }
+    }
 }
 
 /// A label on the move, by account and id.
@@ -621,6 +675,7 @@ impl Sidebar {
             on_drop: Rc::new(on_drop),
             on_label_drop: Rc::new(on_label_drop),
             dragging: Rc::default(),
+            holds: Rc::default(),
         });
         let weak = Rc::downgrade(&sidebar);
         sidebar.list.connect_row_selected(move |_, row| {
@@ -975,6 +1030,16 @@ impl Sidebar {
             .unwrap_or(default)
     }
 
+    /// Opens one account because a drag rested on its heading for a beat.
+    /// An account that is open already keeps its peace.
+    fn open_under_hold(&self, account_id: AccountId) {
+        if self.is_expanded(account_id) {
+            return;
+        }
+        self.expanded.borrow_mut().insert(account_id, true);
+        self.apply_expansion();
+    }
+
     /// Shows or hides each account's rows. The selected row always stays visible.
     fn apply_expansion(&self) {
         let selected = self.list.selected_row();
@@ -997,7 +1062,9 @@ impl Sidebar {
                 .count
                 .set_visible(!open && heading.count.label() != "0");
             for row in self.rows.borrow().iter() {
-                if row.mailbox.account() == Some(heading.account_id) {
+                if row.mailbox.account() == Some(heading.account_id)
+                    && row.row.index() > heading.row.index()
+                {
                     row.row
                         .set_visible(open || selected.as_ref() == Some(&row.row));
                 }
@@ -1029,7 +1096,7 @@ impl Sidebar {
     /// Rebuilds every row. `vips` lists VIPs by address and name. `offers`
     /// says what each account offers, which words its menu.
     pub fn rebuild(
-        &self,
+        self: &Rc<Self>,
         accounts: &[(Account, Vec<Label>)],
         extras: &Extras,
         selected: &Mailbox,
@@ -1037,33 +1104,100 @@ impl Sidebar {
     ) {
         let vips = &extras.vips;
         let mut label_rules = String::new();
+        // A beat waits on a heading row, and every one of those is about
+        // to be torn down; a drag still resting on one gets no `leave`
+        // from its own corpse, so its beat is cancelled here.
+        self.holds.borrow_mut().left_all();
         // Keep the scroll position; label changes rebuild every row.
         let scrolled = self.scroller.vadjustment().value();
         self.muted.set(true);
         self.list.remove_all();
         self.rows.borrow_mut().clear();
         self.headings.borrow_mut().clear();
-        for (section, places) in sections::LAYOUT {
-            self.list.append(&section_title(&section.title()));
-            for &place in places {
-                self.add_place(place, vips);
+        if extras.sidebar.visible("section:favorites", true) {
+            self.list
+                .append(&section_title(&Section::Favorites.title()));
+            if let Some(favorites) = &extras.sidebar.favorites {
+                let choices = mailbox_choices(accounts, &extras.smart, vips);
+                for favorite in favorites {
+                    if favorite.key == "vips" && favorite.name.is_empty() {
+                        self.add_place(Place::Vips, vips);
+                    } else if let Some(choice) =
+                        choices.iter().find(|choice| choice.key == favorite.key)
+                    {
+                        let name = if favorite.name.is_empty() {
+                            &choice.name
+                        } else {
+                            &favorite.name
+                        };
+                        self.add_mailbox(choice.mailbox.clone(), name, choice.icon, 0);
+                        if favorite.key == "all:flagged" {
+                            self.add_place(Place::FlagColors, vips);
+                        }
+                    }
+                }
+            } else {
+                for &place in sections::LAYOUT[0].1 {
+                    self.add_place(place, vips);
+                }
             }
         }
-        if !extras.smart.is_empty() {
+        if extras.sidebar.visible("section:mailboxes", true) {
+            self.list
+                .append(&section_title(&Section::Mailboxes.title()));
+            let mut places: Vec<Place> = [
+                Place::Unified(Standard::Inbox),
+                Place::Unified(Standard::Flagged),
+                Place::FollowUp,
+            ]
+            .into_iter()
+            .chain(sections::LAYOUT[1].1.iter().copied())
+            .collect();
+            places.sort_by_key(|place| {
+                extras
+                    .sidebar
+                    .mailboxes
+                    .iter()
+                    .position(|key| key == &place.key())
+            });
+            for place in places {
+                let by_default = !matches!(
+                    place,
+                    Place::Unified(Standard::Inbox | Standard::Flagged) | Place::FollowUp
+                );
+                if extras.sidebar.visible(&place.key(), by_default) {
+                    self.add_place(place, vips);
+                    if place == Place::Unified(Standard::Flagged) {
+                        self.add_place(Place::FlagColors, vips);
+                    }
+                }
+            }
+        }
+        if !extras.smart.is_empty() && extras.sidebar.visible("section:smart", true) {
             self.list.append(&section_title(&Section::Smart.title()));
             for smart in &extras.smart {
                 let mailbox = Mailbox::Smart(smart.clone());
-                let row = self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
-                smart_menu(&row, &smart.id);
+                if extras.sidebar.visible(&format!("smart:{}", smart.id), true) {
+                    let row =
+                        self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
+                    smart_menu(&row, &smart.id);
+                }
             }
         }
-        if !accounts.is_empty() {
+        if !accounts.is_empty() && extras.sidebar.visible("section:accounts", true) {
             // The rows above list every account at once. This says what
             // the ones below are, rather than leaving a reader to work it
             // out from the addresses.
             self.list.append(&section_title(&Section::Accounts.title()));
         }
-        for (account, labels) in accounts {
+        for (account, labels) in accounts
+            .iter()
+            .filter(|_| extras.sidebar.visible("section:accounts", true))
+        {
+            let root = format!("account:{}", account.email.to_ascii_lowercase());
+            if !extras.sidebar.visible(&root, true) {
+                continue;
+            }
             let shown = extras.names.get(&account.id);
             let account_offers = offers(account.id);
             let (row, count, actions) = heading(
@@ -1073,6 +1207,49 @@ impl Sidebar {
                 extras.not_downloading.contains(&account.id),
                 extras.switchable.contains(&account.id),
             );
+            // A drag held on a closed heading opens the account after a
+            // beat. The heading itself is not a mailbox, so releasing on
+            // it never drops anything: the drop is left to the rows the
+            // opening reveals, as in Mac's Mail. The target still says
+            // MOVE on entry because refusing there would blind it to the
+            // resting drag; the always-false drop below is the truer word.
+            let (dragging, weak) = (Rc::clone(&self.dragging), Rc::downgrade(self));
+            let account_id = account.id;
+            let heading_drop = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
+            let holds = Rc::clone(&self.holds);
+            let enter_holds = Rc::clone(&holds);
+            heading_drop.connect_enter(move |target, _, _| {
+                if dragging.borrow().is_some()
+                    || !weak
+                        .upgrade()
+                        .is_some_and(|sidebar| !sidebar.is_expanded(account_id))
+                {
+                    target.reject();
+                    return gdk::DragAction::empty();
+                }
+                let opener = weak.clone();
+                Holds::arrived(
+                    &enter_holds,
+                    &glib::MainContext::default(),
+                    account_id,
+                    HOLD,
+                    move || {
+                        if let Some(sidebar) = opener.upgrade() {
+                            sidebar.open_under_hold(account_id);
+                        }
+                    },
+                );
+                gdk::DragAction::MOVE
+            });
+            let (leave_holds, drop_holds) = (Rc::clone(&holds), holds);
+            heading_drop.connect_leave(move |_| {
+                leave_holds.borrow_mut().left(account_id);
+            });
+            heading_drop.connect_drop(move |_, _, _, _| {
+                drop_holds.borrow_mut().left(account_id);
+                false
+            });
+            row.add_controller(heading_drop);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -1082,15 +1259,28 @@ impl Sidebar {
                 count,
                 actions,
             });
-            let order = extras
+            let mut order = extras
                 .label_order
                 .get(&account.id)
                 .cloned()
                 .unwrap_or_default();
+            if let Some(ids) = extras.sidebar.label_order.get(&root) {
+                order = ids
+                    .iter()
+                    .enumerate()
+                    .map(|(position, id)| (id.clone(), position as i64))
+                    .collect();
+            }
             let rows = label_rows(labels, &order);
             let mut add_labels = |under| {
                 for entry in rows.iter().filter(|row| row.under == under) {
                     let label = entry.label;
+                    if !extras
+                        .sidebar
+                        .visible(&format!("{root}:label:{}", label.id), true)
+                    {
+                        continue;
+                    }
                     let mailbox = Mailbox::Label {
                         account_id: account.id,
                         label_id: label.id.clone(),
@@ -1125,35 +1315,66 @@ impl Sidebar {
                     self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
                 }
             };
-            for which in Standard::ALL {
-                let mailbox = Mailbox::Standard {
-                    account_id: account.id,
-                    which,
-                };
-                self.add_mailbox(mailbox, &which.name(), which.icon(), 1);
-                if let MailSet::Role(role) = which.set() {
+            let mut roots: Vec<(String, Mailbox, String, &'static str, Option<Role>)> =
+                Standard::ALL
+                    .into_iter()
+                    .map(|which| {
+                        let role = match which.set() {
+                            MailSet::Role(role) => Some(role),
+                            _ => None,
+                        };
+                        (
+                            format!("{root}:{}", which.key()),
+                            Mailbox::Standard {
+                                account_id: account.id,
+                                which,
+                            },
+                            which.name(),
+                            which.icon(),
+                            role,
+                        )
+                    })
+                    .chain(Folder::ALL.into_iter().map(|folder| {
+                        let role = match folder {
+                            Folder::Archive => Role::Archive,
+                            Folder::Junk => Role::Junk,
+                            Folder::Trash => Role::Trash,
+                            Folder::AllMail => Role::All,
+                        };
+                        (
+                            format!("{root}:{folder:?}"),
+                            Mailbox::Folder {
+                                account_id: Some(account.id),
+                                folder,
+                            },
+                            folder.name(),
+                            folder.icon(),
+                            Some(role),
+                        )
+                    }))
+                    .collect();
+            if let Some(order) = extras.sidebar.account_roots.get(&root) {
+                roots.sort_by_key(|(key, _, _, _, _)| order.iter().position(|item| item == key));
+            }
+            for (key, mailbox, name, icon, role) in roots {
+                if extras.sidebar.visible(&key, true) {
+                    self.add_mailbox(mailbox, &name, icon, 1);
+                }
+                if let Some(role) = role {
                     add_labels(Some(role));
                 }
-            }
-            for folder in Folder::ALL {
-                let mailbox = Mailbox::Folder {
-                    account_id: Some(account.id),
-                    folder,
-                };
-                self.add_mailbox(mailbox, &folder.name(), folder.icon(), 1);
-                let role = match folder {
-                    Folder::Archive => Role::Archive,
-                    Folder::Junk => Role::Junk,
-                    Folder::Trash => Role::Trash,
-                    Folder::AllMail => Role::All,
-                };
-                add_labels(Some(role));
             }
             add_labels(None);
             // Tags follow the folders, flat, with no menu and no drag: they
             // cannot nest or move, and the person makes and renames them in
             // Outlook.
             for tag in tree::tag_rows(labels) {
+                if !extras
+                    .sidebar
+                    .visible(&format!("{root}:label:{}", tag.id), true)
+                {
+                    continue;
+                }
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
                     label_id: tag.id.clone(),
@@ -1314,6 +1535,10 @@ impl Sidebar {
         row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
         // The keys stop on it and Enter opens its menu (`row_keys`).
         row.add_css_class(GROUP_CLASS);
+        // Grayed, as Thunderbird draws a folder that holds no mail.
+        if let Some(content) = row.child() {
+            content.add_css_class("dim-label");
+        }
         row
     }
 
@@ -1500,7 +1725,9 @@ impl Sidebar {
     }
 
     /// Unread counts for mailboxes, totals for drafts and queued mail.
-    pub fn set_counts(&self, counts: &HashMap<Mailbox, i64>) {
+    pub fn set_counts(&self, result: &mailrs_sync::mailbox::Counts) {
+        use mailrs_sync::mailbox::SmartCountState;
+        let counts = &result.mailboxes;
         let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
@@ -1530,6 +1757,37 @@ impl Sidebar {
             }
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
+            if matches!(row.mailbox, Mailbox::Smart(_)) {
+                let state = result.smart.get(&row.mailbox);
+                let description = match state {
+                    Some(SmartCountState::Local) => {
+                        gettext("Approximate unread message count from downloaded mail")
+                    }
+                    Some(SmartCountState::Server) => {
+                        gettext("Unread messages counted on the server")
+                    }
+                    Some(SmartCountState::Pending) => {
+                        gettext("Counting unread messages on the server…")
+                    }
+                    Some(SmartCountState::Unavailable) => gettext(
+                        "Unread count unavailable. The account may be offline or the server may not support these conditions.",
+                    ),
+                    None => String::new(),
+                };
+                row.count.set_tooltip_text(Some(&description));
+                super::describe(&row.row, &row.name, &description);
+                match state {
+                    Some(SmartCountState::Pending) => {
+                        row.count.set_label("…");
+                        row.count.set_visible(true);
+                    }
+                    Some(SmartCountState::Unavailable) => {
+                        row.count.set_label("?");
+                        row.count.set_visible(true);
+                    }
+                    _ => {}
+                }
+            }
             super::name(
                 &row.row,
                 &mailbox_row_name(
@@ -1680,6 +1938,7 @@ fn heading_row_name(account: &str, unread: i64) -> String {
 /// What the sidebar shows besides accounts and their labels.
 #[derive(Debug, Clone, Default)]
 pub struct Extras {
+    pub sidebar: SidebarLayout,
     /// VIPs as address and name.
     pub vips: Vec<(String, String)>,
     /// Smart mailboxes in the user's order.
@@ -1693,6 +1952,143 @@ pub struct Extras {
     pub not_downloading: HashSet<AccountId>,
     /// IMAP accounts whose server also speaks JMAP.
     pub switchable: HashSet<AccountId>,
+}
+
+#[derive(Clone)]
+pub struct MailboxChoice {
+    pub key: String,
+    pub mailbox: Mailbox,
+    pub name: String,
+    pub icon: &'static str,
+}
+
+/// Every mailbox a person may put in Favorites. Account addresses make
+/// keys stable even if the local numeric account ids change.
+pub fn mailbox_choices(
+    accounts: &[(Account, Vec<Label>)],
+    smart: &[mailrs_domain::SmartMailbox],
+    vips: &[(String, String)],
+) -> Vec<MailboxChoice> {
+    let mut choices = Vec::new();
+    let mut add = |key: String, mailbox: Mailbox, name: String, icon: &'static str| {
+        choices.push(MailboxChoice {
+            key,
+            mailbox,
+            name,
+            icon,
+        });
+    };
+    for which in Standard::ALL {
+        add(
+            format!("all:{}", which.key()),
+            Mailbox::Unified(which),
+            which.unified_name(),
+            which.icon(),
+        );
+    }
+    for folder in Folder::ALL {
+        add(
+            format!("all:{folder:?}"),
+            Mailbox::Folder {
+                account_id: None,
+                folder,
+            },
+            folder.name(),
+            folder.icon(),
+        );
+    }
+    for (key, mailbox, name, icon) in [
+        (
+            "outbox",
+            Mailbox::Outbox,
+            gettext("Outbox"),
+            "penguin-mail-outgoing-symbolic",
+        ),
+        (
+            "scheduled",
+            Mailbox::Scheduled,
+            gettext("Send Later"),
+            "penguin-mail-outbox-symbolic",
+        ),
+        (
+            "reminders",
+            Mailbox::Reminders,
+            gettext("Remind Me"),
+            "alarm-symbolic",
+        ),
+        (
+            "follow-up",
+            Mailbox::FollowUp,
+            gettext("Follow Up"),
+            "appointment-soon-symbolic",
+        ),
+    ] {
+        add(key.into(), mailbox, name, icon);
+    }
+    if !vips.is_empty() {
+        add(
+            "vips".into(),
+            Mailbox::Vips {
+                emails: vips.iter().map(|(email, _)| email.clone()).collect(),
+                name: gettext("VIPs"),
+            },
+            gettext("VIPs"),
+            "starred-symbolic",
+        );
+    }
+    for folder in smart {
+        add(
+            format!("smart:{}", folder.id),
+            Mailbox::Smart(folder.clone()),
+            folder.name.clone(),
+            "folder-saved-search-symbolic",
+        );
+    }
+    for (account, labels) in accounts {
+        let root = format!("account:{}", account.email.to_ascii_lowercase());
+        for which in Standard::ALL {
+            add(
+                format!("{root}:{}", which.key()),
+                Mailbox::Standard {
+                    account_id: account.id,
+                    which,
+                },
+                which.name(),
+                which.icon(),
+            );
+        }
+        for folder in Folder::ALL {
+            add(
+                format!("{root}:{folder:?}"),
+                Mailbox::Folder {
+                    account_id: Some(account.id),
+                    folder,
+                },
+                folder.name(),
+                folder.icon(),
+            );
+        }
+        for label in labels.iter().filter(|label| {
+            matches!(
+                label.kind,
+                mailrs_domain::LabelKind::User
+                    | mailrs_domain::LabelKind::Group
+                    | mailrs_domain::LabelKind::Tag
+            )
+        }) {
+            add(
+                format!("{root}:label:{}", label.id),
+                Mailbox::Label {
+                    account_id: account.id,
+                    label_id: label.id.clone(),
+                    name: label.name.replace('/', " › "),
+                },
+                label.name.clone(),
+                "folder-symbolic",
+            );
+        }
+    }
+    choices
 }
 
 /// A small heading between sections. It cannot be selected.
@@ -2130,6 +2526,7 @@ fn heading(
     for (label, action) in account_settings(offers) {
         settings.append_item(&item(&label, action));
     }
+    settings.append_item(&item(&gettext("Manage Folders…"), "account.manage-folders"));
     menu.append_section(None, &settings);
     let look = gio::Menu::new();
     look.append_item(&item(&gettext("Rename…"), "win.account-rename"));
@@ -2208,6 +2605,8 @@ fn heading(
     add_own("not-downloading", not_downloading);
     // On while a look found a JMAP session for this IMAP account.
     add_own("switch-jmap", switchable);
+    // Only an IMAP server keeps folder subscriptions.
+    add_own("manage-folders", account.provider == Provider::Imap);
     row.insert_action_group("account", Some(&own));
     describe(
         &row,
@@ -2520,6 +2919,106 @@ mod tests {
 }
 
 #[cfg(test)]
+mod hold_tests {
+    use gtk::glib;
+
+    use super::Holds;
+    use std::cell::{Cell, RefCell};
+    use std::rc::Rc;
+    use std::time::{Duration, Instant};
+
+    /// Drives `context` for the given time. The spawned beat arms its
+    /// timeout the first time the context runs it; the loop keeps asking
+    /// and never blocks, so a cancelled beat that leaves nothing ready
+    /// ends the rest by the clock rather than hanging it. The context
+    /// must be this thread's default for the arming to land here.
+    fn rest_for(context: &glib::MainContext, millis: u64) {
+        context
+            .with_thread_default(|| {
+                let end = Instant::now() + Duration::from_millis(millis);
+                while Instant::now() < end {
+                    if context.pending() {
+                        context.iteration(false);
+                    } else {
+                        std::thread::sleep(Duration::from_millis(2));
+                    }
+                }
+            })
+            .expect("the private context can be this thread's default");
+    }
+
+    #[test]
+    fn a_drag_held_on_a_heading_opens_it_after_a_beat() {
+        let context = glib::MainContext::new();
+        let opened = Rc::new(Cell::new(false));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(10), move || {
+            fired.set(true)
+        });
+        assert!(!opened.get(), "the account opened before its beat was up");
+        rest_for(&context, 100);
+        assert!(opened.get(), "the account never opened after a beat");
+        assert!(
+            holds.borrow().pending.is_empty(),
+            "a rung beat stayed in the book"
+        );
+    }
+
+    #[test]
+    fn a_drag_moving_on_before_the_beat_cancels_it() {
+        let context = glib::MainContext::new();
+        let opened = Rc::new(Cell::new(false));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(10), move || {
+            fired.set(true)
+        });
+        holds.borrow_mut().left(1);
+        rest_for(&context, 100);
+        assert!(!opened.get(), "the account opened after the drag moved on");
+    }
+
+    #[test]
+    fn resting_on_the_next_heading_cancels_the_first_beat() {
+        let context = glib::MainContext::new();
+        let first = Rc::new(Cell::new(false));
+        let second = Rc::new(Cell::new(false));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&first);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(300), move || {
+            fired.set(true)
+        });
+        let fired = Rc::clone(&second);
+        Holds::arrived(&holds, &context, 2, Duration::from_millis(10), move || {
+            fired.set(true)
+        });
+        rest_for(&context, 100);
+        assert!(!first.get(), "the heading the drag left opened anyway");
+        assert!(second.get(), "the heading the drag reached never opened");
+    }
+
+    #[test]
+    fn one_beat_waits_even_across_accounts() {
+        // Leaving a heading always runs `left`, but a beat must not pile
+        // up if a drag jumps between windows without one.
+        let context = glib::MainContext::new();
+        let opened = Rc::new(RefCell::new(Vec::new()));
+        let holds = Rc::new(RefCell::new(Holds::default()));
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 1, Duration::from_millis(300), move || {
+            fired.borrow_mut().push(1)
+        });
+        let fired = Rc::clone(&opened);
+        Holds::arrived(&holds, &context, 2, Duration::from_millis(10), move || {
+            fired.borrow_mut().push(2)
+        });
+        rest_for(&context, 100);
+        assert_eq!(opened.borrow().as_slice(), &[2]);
+    }
+}
+
+#[cfg(test)]
 mod badge_tests {
     use super::{badge_text, space_badges, toggle_name};
     use crate::settings::Space;
@@ -2571,6 +3070,37 @@ pub(crate) mod checks {
 
     pub fn run() {
         let sidebar = Sidebar::new(|_| {}, |_| false, |_| {});
+        // A held drag opens a closed account: every heading row carries
+        // the drop target that starts the beat, and the beat's opener
+        // reaches the rows the opening reveals.
+        let account = Account {
+            id: 7,
+            email: "held@example.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+            provider_name: None,
+        };
+        sidebar.start_expanded.set(Some(false));
+        sidebar.rebuild(
+            &[(account, vec![])],
+            &Extras::default(),
+            &Mailbox::Unified(Standard::Inbox),
+            |_| Offers::EVERYTHING,
+        );
+        let heading = &sidebar.headings.borrow()[0];
+        let controllers = heading.row.observe_controllers();
+        assert!(
+            (0..controllers.n_items())
+                .filter_map(|i| controllers.item(i))
+                .any(|c| c.is::<gtk::DropTarget>()),
+            "a heading row lost its hold target"
+        );
+        assert!(!sidebar.is_expanded(7), "the account starts open");
+        sidebar.open_under_hold(7);
+        assert!(
+            sidebar.is_expanded(7),
+            "a held beat did not open the account"
+        );
         sidebar.set_switch_visible(true);
         let bin = sidebar
             .switch

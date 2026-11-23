@@ -5,25 +5,73 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Closing Customize Mailboxes releases its folder lists.
+- Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
+- Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
+
+- The smart mailbox folder picker groups folders by account and searches only the accounts chosen for each folder.
+
+- The smart mailbox folder picker shows readable folder names in a wider list.
+- Favorites stay visible when their account is collapsed, and folder moves respect the customized order.
+
 ### New
 
 - Penguin Mail runs on Windows 10 and later: mail pages draw with WebView2, a tray icon keeps it working in the background, toast notifications carry their action buttons, the taskbar button shows the unread count, Preferences can start it at sign-in, and PGP and S/MIME work with Gpg4win installed.
 - On Windows, a per-user installer sets up the app, its Start Menu entry and its mail and calendar file associations, and removes all of it on uninstall.
 - On Windows, assistant skills run their scripts inside a sandbox that opens only the skill's folder and a scratch folder to them, not your files.
+- On Windows, Preferences and other dialogs draw over an open message instead of breaking apart around it.
+- On Windows, the message pane no longer overlaps neighboring panes or leaves a gap at the window's edge after a resize.
+- On Windows, toasts and other overlays drawn over an open message show above the page instead of staying behind it, and the page fills its pane again once they close.
+- On Windows, the background copy that takes over after the last window closes starts reliably instead of dying on a session-bus timeout.
+- On Windows, the unread badge no longer panics in a background run that has no windows to badge.
+- On Windows, emoji and other color glyphs draw through the fontconfig backend, ending the "All font fallbacks failed" warnings the win32 font map logged for them.
+- On Windows, opening the app from the Start Menu or a mailto link no longer brings a console window with it.
+
+- Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
+
+- Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
+
+- Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
+- Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
+- Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
+- Drag mail onto another account's folder, label or Inbox to carry it there. It arrives with its read and flagged marks and its original arrival date, and Undo brings it back. Outlook folders and POP3 accounts refuse the drop, since their servers cannot take the copy.
+- Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
+- IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
+- Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
+- Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
+- Drag a message onto a collapsed account and hold it there: the account opens so the message can be dropped on a folder that was out of sight.
 
 ### Improved
 
+- Paste clipboard images into a draft with Paste or Cmd/Ctrl+V, and open attached files from their rows before sending.
+
+- Deleting a conversation from a smart mailbox asks before also moving matching sent messages to Trash, with a separate remember choice for each smart mailbox.
+
+- Customize Mailboxes separates sections into tabs and places available mailboxes beside editable, draggable Favorites.
+
 - On IMAP accounts, the messages of a conversation opened for the first time load faster.
+- An IMAP account counts unread mail only in the folders it shows, which takes far fewer trips to a server with hundreds of folders.
 - An account with hundreds of folders uses far less memory: on one with 800 folders, about 230 MB less.
 
 ### Fixed
 
+- On IMAP accounts, a check for new mail no longer skips a message for good when the app was also reading or changing mail on that account at the time, which left the Inbox badge counting unread mail the list did not show.
+- A picture a signature or Markdown body names by an address, such as a logo, now shows while you write and goes out with the message instead of vanishing.
+- Encrypting to someone whose key you do not have fails at once instead of waiting up to half a minute while gpg looks for a key online.
+- The pull-to-check indicator stays readable over message rows in light and dark themes.
+- Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
+- Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
+- Microsoft accounts no longer list the folders Outlook keeps hidden.
+- `nix build` and `nix flake check` build the app again: the Nix package now links the aws-lc and SQLite libraries the bundled Rust crates build against.
 
 ## 1.0.12 (2026-11-05)
 
 ### New
+
 
 - Message details show delivery addresses missing from To/Cc, and replies use a matching sender address for mailing lists and blind copies.
 - Choose and reorder conversation toolbar buttons, including Read or Unread, Print and View Source, from Customize Toolbar.
@@ -57,16 +105,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The message view scrolls at once with the wheel instead of animating each tick, which stuttered on some graphics drivers.
 - Microsoft 365 calendars keep syncing when Outlook leaves fields unset or schedules a reminder after an event starts.
 - Mail pages release cached resources sooner, and signed messages share a fixed memory budget for bodies and attachments.
-- Menus and popovers no longer crash the app in a disconnected remote-desktop session, where GTK reports no monitors.
-- On Windows, Preferences and other dialogs draw over an open message instead of breaking apart around it.
-- On Windows, the message pane no longer overlaps neighboring panes or leaves a gap at the window's edge after a resize.
-- On Windows, toasts and other overlays drawn over an open message show above the page instead of staying behind it, and the page fills its pane again once they close.
-- On Windows, the background copy that takes over after the last window closes starts reliably instead of dying on a session-bus timeout.
-- On Windows, the unread badge no longer panics in a background run that has no windows to badge.
-- On Windows, emoji and other color glyphs draw through the fontconfig backend, ending the "All font fallbacks failed" warnings the win32 font map logged for them.
-- On Windows, opening the app from the Start Menu or a mailto link no longer brings a console window with it.
-- The About window names the system the copy was built for — Windows, macOS or Linux.
-- The Bcc field's placeholder is no longer cut short in a new message.
 - Marking mail read clears the unread mark in the list and open conversation while keeping expanded message details and quoted text open.
 - Mail belonging to one account no longer turns up as a row in the mailbox you are looking at in another account, whether it arrived or was read, starred or moved elsewhere.
 

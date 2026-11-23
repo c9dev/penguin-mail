@@ -70,12 +70,12 @@ impl Home {
 
 impl Drop for Home {
     fn drop(&mut self) {
-        // The agent gpg started holds sockets open under the temp directory.
-        // Killing it leaves nothing running once the directory goes.
+        // The agent and dirmngr gpg started hold sockets open under the temp
+        // directory. Killing them leaves nothing running once it goes.
         let _ = Command::new(gpgconf(self.pgp.program()))
             .arg("--homedir")
             .arg(self.dir.path())
-            .args(["--kill", "gpg-agent"])
+            .args(["--kill", "all"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
@@ -508,6 +508,64 @@ fn encrypting_to_somebody_with_no_key_names_them() {
         matches!(err, mailrs_pgp::PgpError::NoKeyFor(ref who) if who.contains("stranger")),
         "expected NoKeyFor, got {err}"
     );
+}
+
+/// gpg.conf can name ways to look a missing key up, and
+/// `--auto-key-locate` adds to them rather than replacing them. A person's
+/// `auto-key-locate keyserver` must not send a reader's address out when
+/// encrypting, so this points one at a key server on this computer and
+/// checks that nothing asked it.
+#[test]
+fn encrypting_asks_no_key_server_that_gpg_conf_names() {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::{Arc, Mutex};
+
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let server = TcpListener::bind("127.0.0.1:0").expect("a loopback port");
+    let port = server.local_addr().expect("its address").port();
+    let asked = Arc::new(Mutex::new(Vec::<String>::new()));
+    let heard = Arc::clone(&asked);
+    std::thread::spawn(move || {
+        for stream in server.incoming() {
+            let Ok(mut stream) = stream else { break };
+            let mut request = [0; 4096];
+            let read = stream.read(&mut request).unwrap_or(0);
+            heard
+                .lock()
+                .expect("lock")
+                .push(String::from_utf8_lossy(&request[..read]).into_owned());
+            let _ = stream.write_all(b"HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n");
+        }
+    });
+    std::fs::write(
+        home.dir.path().join("gpg.conf"),
+        "auto-key-locate keyserver\n",
+    )
+    .expect("write");
+    std::fs::write(
+        home.dir.path().join("dirmngr.conf"),
+        format!("keyserver hkp://127.0.0.1:{port}\n"),
+    )
+    .expect("write");
+
+    let err = home
+        .pgp
+        .encrypt(
+            b"Content-Type: text/plain\r\n\r\nHello.\r\n",
+            &Readers::named(["stranger@example.test"]),
+            Some(&home.address),
+        )
+        .expect_err("no key for the stranger");
+
+    assert!(
+        matches!(err, mailrs_pgp::PgpError::NoKeyFor(_)),
+        "expected NoKeyFor, got {err}"
+    );
+    let asked = asked.lock().expect("lock");
+    assert!(asked.is_empty(), "the key server was asked: {asked:?}");
 }
 
 #[test]

@@ -17,7 +17,7 @@ mod unix;
 #[cfg(windows)]
 mod windows;
 
-#[cfg(unix)]
+#[cfg(all(unix, test))]
 pub use unix::{arguments, find_bwrap};
 
 #[cfg(unix)]
@@ -99,3 +99,6 @@ pub fn check() -> Result<PathBuf, String> {
         ANSWER.get_or_init(windows::probe).clone()
     }
 }
+
+#[cfg(all(test, windows))]
+mod windows_tests;

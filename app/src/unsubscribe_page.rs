@@ -53,6 +53,8 @@ pub type PageBrowser = hidden::Hidden<wkwebview::WkEngine>;
 #[cfg(target_os = "windows")]
 pub type PageBrowser = hidden::Hidden<windows::WvEngine>;
 pub use adviser::model_adviser;
+#[cfg(test)]
+pub use hidden::Waits;
 pub use run::{Adviser, Answer, Browser, Prepared, Step, finish, prepare};
 // The run is what the window and the assistant use, and the rules under
 // it answer to nobody else. The tests reach past the run on purpose: the

@@ -664,6 +664,17 @@ pub(crate) fn internal_date(text: &str) -> Option<EpochMillis> {
         .map(|date| date.timestamp_millis())
 }
 
+/// `at` in the one shape APPEND takes an INTERNALDATE: quoted, with the
+/// zone as an offset. The time rides in UTC so a moved message says the
+/// hour its server received it, whatever machine copies it.
+pub(crate) fn internal_date_text(at: EpochMillis) -> String {
+    DateTime::from_timestamp_millis(at)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Utc)
+        .format("%d-%b-%Y %H:%M:%S %z")
+        .to_string()
+}
+
 /// One section of one message: the bytes of `BODY[<section>]` for `uid`.
 pub(crate) struct SectionReader {
     uid: u32,
@@ -845,6 +856,7 @@ impl Reads for ListReader {
         };
         let mut special_use = None;
         let mut no_select = false;
+        let mut subscribed = false;
         for attribute in name_attributes {
             match attribute {
                 NameAttribute::NoSelect => no_select = true,
@@ -859,16 +871,37 @@ impl Reads for ListReader {
                 NameAttribute::Extension(other) if other.eq_ignore_ascii_case("\\NonExistent") => {
                     no_select = true;
                 }
+                // RFC 5258, in answer to `RETURN (SUBSCRIBED)`.
+                NameAttribute::Extension(other) if other.eq_ignore_ascii_case("\\Subscribed") => {
+                    subscribed = true;
+                }
                 _ => {}
             }
         }
         let delimiter = delimiter.as_deref().and_then(|d| d.chars().next());
-        self.listed.push(Listed::new(
-            name.to_string(),
-            delimiter,
-            special_use,
-            no_select,
-        ));
+        self.listed.push(
+            Listed::new(name.to_string(), delimiter, special_use, no_select).subscribed(subscribed),
+        );
+    }
+}
+
+/// LSUB's answer: the names of the mailboxes the person subscribes to.
+/// imap-proto reads an LSUB line as a LIST one, which is why this reader
+/// is only ever handed the answer to an LSUB.
+#[derive(Default)]
+pub(crate) struct SubscribedReader {
+    pub(crate) names: std::collections::HashSet<String>,
+}
+
+impl Reads for SubscribedReader {
+    fn kept(&self) -> usize {
+        self.names.len()
+    }
+
+    fn read(&mut self, response: &Response<'_>) {
+        if let Response::MailboxData(MailboxDatum::List(MailboxListData { name, .. })) = response {
+            self.names.insert(name.to_string());
+        }
     }
 }
 

@@ -18,6 +18,7 @@
 //! resize 900 600        the window's size, in points
 //! click 528 350         also rclick, for the right button
 //! scroll 700 400 -300   pixels, negative to go down
+//! touch-scroll 700 400 20 begin  also change or end, for a touchpad gesture
 //! key f cmd             a key by name, with cmd, ctrl, alt or shift
 //! type Lisbon           text, one key each
 //! shot open-thread      saves open-thread.png
@@ -61,6 +62,7 @@ enum Step {
         x: f64,
         y: f64,
         dy: i32,
+        phase: Option<i64>,
     },
     Key {
         name: String,
@@ -119,9 +121,33 @@ fn parse(script: &str) -> Result<Vec<Step>, String> {
                         x,
                         y,
                         dy: dy as i32,
+                        phase: None,
                     },
                     _ => return Err(format!("line {}: scroll takes x, y and dy", number + 1)),
                 },
+                "touch-scroll" => {
+                    let parts: Vec<_> = rest.split_whitespace().collect();
+                    if parts.len() != 4 {
+                        return Err("touch-scroll takes x, y, dy and begin/change/end".into());
+                    }
+                    let number = |n: usize| {
+                        parts[n]
+                            .parse::<f64>()
+                            .map_err(|_| "touch-scroll needs numbers".to_string())
+                    };
+                    let phase = match parts[3] {
+                        "begin" => 1,
+                        "change" => 2,
+                        "end" => 4,
+                        _ => return Err("touch-scroll phase must be begin, change or end".into()),
+                    };
+                    Step::Scroll {
+                        x: number(0)?,
+                        y: number(1)?,
+                        dy: number(2)? as i32,
+                        phase: Some(phase),
+                    }
+                }
                 "key" => {
                     let mut words = rest.split_whitespace().map(str::to_string);
                     let Some(name) = words.next() else {
@@ -322,12 +348,16 @@ impl Driver {
                 self.mouse(up, x, y);
                 glib::timeout_future(pause).await;
             }
-            Step::Scroll { x, y, dy } => {
+            Step::Scroll { x, y, dy, phase } => {
                 self.mouse(NSEventType::MouseMoved, x, y);
-                // Ten small steps, as a wheel sends them.
-                for _ in 0..10 {
-                    self.scroll(x, y, dy / 10);
-                    glib::timeout_future(Duration::from_millis(16)).await;
+                if phase.is_some() {
+                    self.scroll(x, y, dy, phase);
+                } else {
+                    // Ten small steps, as a wheel sends them.
+                    for _ in 0..10 {
+                        self.scroll(x, y, dy / 10, None);
+                        glib::timeout_future(Duration::from_millis(16)).await;
+                    }
                 }
                 glib::timeout_future(pause).await;
             }
@@ -452,13 +482,25 @@ impl Driver {
         post(event);
     }
 
-    fn scroll(&mut self, x: f64, y: f64, dy: i32) {
+    fn scroll(&mut self, x: f64, y: f64, dy: i32, phase: Option<i64>) {
         let Some(window) = self.target() else { return };
         let Some(event) =
             CGEvent::new_scroll_wheel_event2(None, CGScrollEventUnit::Pixel, 1, dy, 0, 0)
         else {
             return;
         };
+        if let Some(phase) = phase {
+            CGEvent::set_integer_value_field(
+                Some(&event),
+                CGEventField::ScrollWheelEventIsContinuous,
+                1,
+            );
+            CGEvent::set_integer_value_field(
+                Some(&event),
+                CGEventField::ScrollWheelEventScrollPhase,
+                phase,
+            );
+        }
         // CGEvent places points from the top left of the main screen.
         let on_screen = window.convertPointToScreen(Driver::at(&window, x, y));
         let top = window.screen().map_or(0.0, |screen| {
@@ -540,6 +582,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn touchpad_steps_keep_their_native_phase() {
+        assert_eq!(
+            parse("touch-scroll 700 400 20 begin").unwrap(),
+            vec![Step::Scroll {
+                x: 700.0,
+                y: 400.0,
+                dy: 20,
+                phase: Some(1),
+            }]
+        );
+        assert!(parse("touch-scroll 700 400 20 typo").is_err());
+        assert!(parse("touch-scroll 700 400").is_err());
+    }
+
+    #[test]
     fn a_script_reads_as_its_steps() {
         let steps = parse(
             "# open the first thread\nwait 500\nclick 528 350\nrclick 10 20\n\
@@ -563,7 +620,8 @@ mod tests {
                 Step::Scroll {
                     x: 700.0,
                     y: 400.0,
-                    dy: -300
+                    dy: -300,
+                    phase: None
                 },
                 Step::Key {
                     name: "f".into(),

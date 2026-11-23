@@ -263,12 +263,14 @@ Windows.
 ### Skill scripts
 
 ~~bwrap does not exist on Windows.~~ Done — `sandbox/windows.rs` runs
-each command in an AppContainer: the package SID opens only the skill
+each command in its own AppContainer: its SID opens only the skill
 folder (read-only) and the conversation's scratch folder (read-write)
 through ACL grants, home/mail/keys are denied by default, and the
 `internetClient` capability is added only for skills allowed the
-network. A Job Object with `KILL_ON_JOB_CLOSE` takes the whole tree
-down on timeout, and `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` keeps the
+network. The invocation revokes its grants and deletes its profile when
+it finishes. The shell starts suspended and must join a Job Object before
+it can run. `KILL_ON_JOB_CLOSE` takes the whole tree down on timeout or
+when the shell exits, and `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` keeps the
 child's inherited handles to its three stdio pipes. Cygwin and MSYS2
 shells cannot start inside an AppContainer (their shared-memory object
 needs the global namespace), so the shell is a native busybox build,
@@ -422,3 +424,11 @@ does too is unchecked.
   `--compose`-style CLI handoff when a click lands on a toast after the
   process exited.
 - ARM64 support is out of scope for v1.
+
+## Native regression checks
+
+The Windows workflow builds the app test binary with MSYS2 UCRT64 and runs
+the AppContainer, WebView2 string and locale regressions. BusyBox is checked
+against a pinned SHA-256 hash. It also compiles the installer and verifies
+that uninstall removes both Start Menu shortcut locations and the sign-in
+entry. These tests run on Windows, separately from the Linux gate.

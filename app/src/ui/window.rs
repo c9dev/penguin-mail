@@ -53,6 +53,9 @@ mod assistant;
 mod attachments;
 mod categories;
 mod column_width;
+mod customize_mailboxes;
+#[cfg(test)]
+pub(crate) use customize_mailboxes::check_released;
 mod detached;
 mod export;
 mod flags;
@@ -72,7 +75,7 @@ mod outbox;
 mod pgp;
 mod pictures;
 mod press;
-mod previews;
+pub(super) mod previews;
 mod reach;
 mod reminders;
 mod reveal;
@@ -82,6 +85,7 @@ mod scheduled;
 mod searching;
 mod senders;
 mod shortcuts;
+mod smart_trash;
 mod spaces;
 mod storage;
 mod thread;
@@ -436,6 +440,8 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
             });
         }
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
+        // The drop's own words name the mailbox it carried the mail to.
+        MailAction::MoveTo { .. } => return None,
         MailAction::DismissFollowUp => {
             return Some(fill_plural(
                 "Dismissed {count} follow-up",
@@ -1133,6 +1139,7 @@ impl MainWindow {
         window.list.set_photos(Rc::clone(&photos));
         let settings = window.settings();
         window.conversation.set_toolbar(settings.toolbar.as_deref());
+        window.list.set_pull_to_refresh(settings.pull_to_refresh);
         window.list.set_appearance(
             settings.preview_lines,
             settings.bold_unread,
@@ -1319,6 +1326,7 @@ impl MainWindow {
                 }
             }
             ChangeEvent::LabelsChanged { .. } => self.refresh_accounts(Reload::Yes),
+            ChangeEvent::LabelsPlaced { .. } => {}
             ChangeEvent::ThreadsChanged {
                 account_id,
                 thread_ids,
@@ -1438,6 +1446,16 @@ impl MainWindow {
             .await
             .map(|ids| ids.into_iter().collect())
             .unwrap_or_default();
+        // The sidebar leaves out what the account hides, such as an IMAP
+        // folder nobody subscribes to; everything else here still knows it.
+        let data = data
+            .into_iter()
+            .map(|(account, labels)| {
+                let hidden = app.hidden_labels(account.id);
+                let shown = labels.into_iter().filter(|l| !hidden.contains(&l.id));
+                (account, shown.collect())
+            })
+            .collect();
         let (data, extras) = self.arrange(data, &settings, not_downloading, self.core.switchable());
         // Each IMAP account is looked at once a run; finding a JMAP
         // session for one rebuilds its row with Switch to JMAP.
@@ -1707,7 +1725,7 @@ impl MainWindow {
 
     /// What the sidebar, the space badge and the category switcher show.
     fn show_counts(&self, counted: &Counted) {
-        self.sidebar.set_counts(&counted.counts.mailboxes);
+        self.sidebar.set_counts(&counted.counts);
         self.sidebar.set_unread(counted.all_inboxes());
         self.set_follow_up_count(counted.of(&Mailbox::FollowUp) as usize);
         self.set_category_counts(&counted.counts.categories);
@@ -2011,7 +2029,14 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
+        let mailbox = reach.mailbox.clone();
         let accounts = press::reached(&reach.targets, |id| self.account(id), |id| self.offers(id));
+        // A drop onto another account's mailbox needs that account's
+        // server to take a copy of a message it never received.
+        let lands = match &press {
+            press::Press::Drop(to) => to.account().is_some_and(|id| self.offers(id).lands_mail),
+            _ => false,
+        };
         let plan = press::plan(Pressed {
             press,
             reach,
@@ -2019,9 +2044,11 @@ impl MainWindow {
             flag_color: self.settings_with(|s| s.flag_color),
             threaded: self.settings_with(|s| s.threading),
             accounts,
+            lands,
         });
         let taken = plan.taken();
         let pressing = Pressing {
+            mailbox,
             window: Rc::clone(self),
             view: Rc::clone(view),
         };
@@ -2502,46 +2529,75 @@ impl MainWindow {
                 }
                 _ => None,
             });
-        for label in &labels {
-            let row = gtk::Box::builder().spacing(10).build();
-            let check = gtk::Image::from_icon_name("object-select-symbolic");
-            check.set_opacity(if applied.contains(&label.id) {
-                1.0
-            } else {
-                0.0
-            });
-            row.append(&check);
-            row.append(
-                &gtk::Label::builder()
-                    .label(shown_name(&label.name))
-                    .xalign(0.0)
-                    .build(),
-            );
-            let row = gtk::ListBoxRow::builder()
-                .child(&row)
-                .activatable(true)
-                .build();
-            if filing == Filing::Folders
-                && source.as_ref().is_some_and(|source| match source {
-                    mailrs_domain::MailSet::Mailbox(id) => *id == label.id,
-                    mailrs_domain::MailSet::Role(role) => label.role == Some(*role),
-                    _ => false,
-                })
-            {
-                row.set_sensitive(false);
+        let applied = Rc::new(applied);
+        let row_of = {
+            let applied = Rc::clone(&applied);
+            move |label: &Label| {
+                let row = gtk::Box::builder().spacing(10).build();
+                let check = gtk::Image::from_icon_name("object-select-symbolic");
+                check.set_opacity(if applied.contains(&label.id) {
+                    1.0
+                } else {
+                    0.0
+                });
+                row.append(&check);
+                row.append(
+                    &gtk::Label::builder()
+                        .label(shown_name(&label.name))
+                        .xalign(0.0)
+                        .build(),
+                );
+                let row = gtk::ListBoxRow::builder()
+                    .child(&row)
+                    .activatable(true)
+                    .build();
+                if filing == Filing::Folders
+                    && source.as_ref().is_some_and(|source| match source {
+                        mailrs_domain::MailSet::Mailbox(id) => *id == label.id,
+                        mailrs_domain::MailSet::Role(role) => label.role == Some(*role),
+                        _ => false,
+                    })
+                {
+                    row.set_sensitive(false);
+                }
+                // The tick beside the name is drawn at zero opacity when the
+                // label is off, which says nothing out loud.
+                crate::ui::name(
+                    &row,
+                    &label_row_name(&label.name, applied.contains(&label.id)),
+                );
+                row
             }
-            // The tick beside the name is drawn at zero opacity when the
-            // label is off, which says nothing out loud.
-            crate::ui::name(
-                &row,
-                &label_row_name(&label.name, applied.contains(&label.id)),
-            );
-            list.append(&row);
-        }
+        };
+        // The sidebar's hidden folders, such as IMAP folders nobody
+        // subscribes to, stay out of the list until a search names them.
+        let hidden = self
+            .app
+            .upgrade()
+            .map(|app| app.hidden_labels(account_id))
+            .unwrap_or_default();
+        let searchable = !hidden.is_empty();
+        let labels = Rc::new(labels);
+        let rows: Rc<RefCell<Vec<Label>>> = Rc::default();
+        let fill = {
+            let (list, labels, rows) = (list.clone(), Rc::clone(&labels), Rc::clone(&rows));
+            move |query: &str| {
+                list.remove_all();
+                let found: Vec<Label> = organize::picked(&labels, &hidden, query)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                for label in &found {
+                    list.append(&row_of(label));
+                }
+                *rows.borrow_mut() = found;
+            }
+        };
+        fill("");
         let (weak, pop) = (Rc::downgrade(self), popover.clone());
         list.connect_row_activated(move |_, row| {
-            let (Some(win), Some(label)) = (weak.upgrade(), labels.get(row.index() as usize))
-            else {
+            let Some(win) = weak.upgrade() else { return };
+            let Some(label) = rows.borrow().get(row.index() as usize).cloned() else {
                 return;
             };
             pop.popdown();
@@ -2556,6 +2612,24 @@ impl MainWindow {
                 follow.as_ref(),
             );
         });
+        if searchable {
+            let search = gtk::SearchEntry::builder()
+                .placeholder_text(gettext("Search all folders"))
+                .margin_top(6)
+                .margin_start(6)
+                .margin_end(6)
+                .build();
+            crate::ui::name(&search, &gettext("Search all folders"));
+            search.connect_search_changed(move |search| fill(&search.text()));
+            // Enter takes the first folder found.
+            let first = list.clone();
+            search.connect_activate(move |_| {
+                if let Some(row) = first.row_at_index(0) {
+                    row.emit_activate();
+                }
+            });
+            content.append(&search);
+        }
         let scroller = gtk::ScrolledWindow::builder()
             .child(&list)
             .hscrollbar_policy(gtk::PolicyType::Never)
@@ -3375,6 +3449,19 @@ impl MainWindow {
     }
 
     fn label_order(&self, account_id: AccountId) -> HashMap<String, i64> {
+        if let Some(account) = self.account(account_id)
+            && let Some(ids) = self
+                .settings()
+                .sidebar
+                .label_order
+                .get(&format!("account:{}", account.email.to_ascii_lowercase()))
+        {
+            return ids
+                .iter()
+                .enumerate()
+                .map(|(position, id)| (id.clone(), position as i64))
+                .collect();
+        }
         self.app
             .upgrade()
             .map(|app| app.label_order(account_id))
@@ -3544,6 +3631,12 @@ impl MainWindow {
             Box::new(|win, account| win.switch_to_jmap(account)),
         );
         with_account(
+            "account-manage-folders",
+            Box::new(|win, account| {
+                crate::ui::manage_folders::present(&win.core, &win.window, account)
+            }),
+        );
+        with_account(
             "account-not-downloading",
             Box::new(|win, account| win.show_not_downloading(account)),
         );
@@ -3670,6 +3763,10 @@ impl MainWindow {
         second.append(
             Some(&gettext("Customize Toolbar…")),
             Some("win.customize-toolbar"),
+        );
+        second.append(
+            Some(&gettext("Customize Mailboxes…")),
+            Some("win.customize-mailboxes"),
         );
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
@@ -4268,6 +4365,7 @@ impl MainWindow {
         let settings = self.settings();
         match effect {
             Effect::ListShape => self.listing.change(|screen| Some(screen.list_shape())),
+            Effect::PullToRefresh => self.list.set_pull_to_refresh(settings.pull_to_refresh),
             Effect::Accounts => self.refresh_accounts(Reload::Yes),
             Effect::RowAppearance => {
                 self.list.set_appearance(
@@ -4500,11 +4598,20 @@ impl MainWindow {
 
 /// The main window and one conversation view, as a press changes them.
 struct Pressing {
+    mailbox: Mailbox,
     window: Rc<MainWindow>,
     view: Rc<ConversationView>,
 }
 
 impl PressEffects for Pressing {
+    fn prepare_trash(
+        &self,
+        targets: Vec<Target>,
+        from: MovedFrom,
+    ) -> crate::wanted::Answer<'_, Option<MovedFrom>> {
+        Box::pin(self.prepare_smart_trash(targets, from))
+    }
+
     fn move_on(&self) {
         self.window.move_on(&self.view);
     }
@@ -4780,6 +4887,8 @@ mod tests {
         };
         let unified = Mailbox::Unified(super::super::Standard::Inbox);
         let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            trash_sent_without_asking: false,
+            unread_count: Default::default(),
             id: "smart-1".into(),
             name: "Big mail".into(),
             account: None,

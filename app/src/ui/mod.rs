@@ -31,6 +31,7 @@ pub mod invitation;
 pub mod key_import;
 pub mod link_preview;
 pub mod list_feed;
+pub mod manage_folders;
 pub mod moving;
 pub mod narrow_header;
 pub mod own_project;

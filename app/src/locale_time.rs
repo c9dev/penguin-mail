@@ -55,7 +55,7 @@ const T_FMT: c_int = 3;
 /// `LOCALE_IFIRSTDAYOFWEEK` and `LOCALE_STIMEFORMAT`, the same two facts
 /// the Unix branch asks `nl_langinfo` for, as Windows names them.
 #[cfg(windows)]
-const LOCALE_IFIRSTDAYOFWEEK: u32 = 0x000C;
+use windows::Win32::Globalization::LOCALE_IFIRSTDAYOFWEEK;
 #[cfg(windows)]
 const LOCALE_STIMEFORMAT: u32 = 0x1003;
 
@@ -187,4 +187,30 @@ pub fn prefers_12_hour() -> bool {
 #[cfg(test)]
 pub fn set_prefers_12_hour_for_test(prefers: bool) {
     PREFERS_12_HOUR.with(|cell| cell.set(Some(prefers)));
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn windows_first_weekday_reads_a_weekday_instead_of_a_list_separator() {
+        for (locale, expected) in [("en-US", "6"), ("fr-FR", "0")] {
+            let name: Vec<u16> = locale.encode_utf16().chain(Some(0)).collect();
+            let mut result = [0u16; 32];
+            let len = unsafe {
+                GetLocaleInfoEx(
+                    name.as_ptr(),
+                    LOCALE_IFIRSTDAYOFWEEK | windows::Win32::Globalization::LOCALE_NOUSEROVERRIDE,
+                    result.as_mut_ptr(),
+                    result.len() as c_int,
+                )
+            };
+            assert!(len > 0);
+            assert_eq!(
+                String::from_utf16_lossy(&result[..len as usize - 1]),
+                expected
+            );
+        }
+    }
 }

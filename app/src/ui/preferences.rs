@@ -164,6 +164,15 @@ fn reading_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.inbox_categories,
         Change::InboxCategories,
     ));
+    reading.add(&switch(
+        app,
+        &gettext("Pull to Check for Mail"),
+        Some(&gettext(
+            "Slowly pull past the top of the message list with a touchpad",
+        )),
+        settings.pull_to_refresh,
+        Change::PullToRefresh,
+    ));
     reading.add(&combo(
         app,
         &gettext("Open the Inbox On"),
@@ -328,6 +337,66 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
         .bind_property("active", &previews, "sensitive")
         .sync_create()
         .build();
+    let message_preview = switch(
+        app,
+        &gettext("Show Message Preview"),
+        Some(&gettext(
+            "Include a short extract of the message below the subject",
+        )),
+        settings.notification_message_preview,
+        Change::NotificationMessagePreview,
+    );
+    message_preview.set_sensitive(enabled.is_active() && previews.is_active());
+    for source in [&enabled, &previews] {
+        let enabled = enabled.downgrade();
+        let previews = previews.downgrade();
+        let row = message_preview.downgrade();
+        source.connect_active_notify(move |_| {
+            if let (Some(enabled), Some(previews), Some(row)) =
+                (enabled.upgrade(), previews.upgrade(), row.upgrade())
+            {
+                row.set_sensitive(enabled.is_active() && previews.is_active());
+            }
+        });
+    }
+    let bold_subject = {
+        let row = switch(
+            app,
+            &gettext("Bold Subject"),
+            None,
+            settings.notification_bold_subject,
+            Change::NotificationBoldSubject,
+        );
+        gtk::ClosureExpression::new::<bool>(
+            [
+                enabled.property_expression("active"),
+                previews.property_expression("active"),
+            ],
+            glib::closure!(|_: Option<glib::Object>, on: bool, show: bool| on && show),
+        )
+        .bind(&row, "sensitive", gtk::Widget::NONE);
+        row
+    };
+    let preview_length = combo(
+        app,
+        &gettext("Message Preview Length"),
+        Some(&gettext(
+            "The desktop may show fewer characters to fit the notification",
+        )),
+        settings.notification_preview_length,
+        Change::NotificationPreviewLength,
+    );
+    gtk::ClosureExpression::new::<bool>(
+        [
+            enabled.property_expression("active"),
+            previews.property_expression("active"),
+            message_preview.property_expression("active"),
+        ],
+        glib::closure!(
+            |_: Option<glib::Object>, on: bool, show: bool, text: bool| on && show && text
+        ),
+    )
+    .bind(&preview_length, "sensitive", gtk::Widget::NONE);
     let vips_only = switch(
         app,
         &gettext("Only for VIPs"),
@@ -364,6 +433,11 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
     notifications.add(&enabled);
     notifications.add(&vips_only);
     notifications.add(&previews);
+    if cfg!(target_os = "macos") {
+        notifications.add(&bold_subject);
+    }
+    notifications.add(&message_preview);
+    notifications.add(&preview_length);
     notifications.add(&actions);
     page.add(&notifications);
     page
@@ -476,6 +550,9 @@ fn accounts_page(
         );
         row.add_row(&space_row);
         space_rows.push((account.id, update));
+        if account.provider == mailrs_domain::Provider::Imap {
+            row.add_row(&subscribed_row(app, account, dialog));
+        }
         google_route::rows(app, account, *offers, &row, &connect, contacts);
         if let Some(owner) = app.microsoft_owner(account.id) {
             row.add_row(
@@ -574,7 +651,7 @@ fn signature_row(
         .accepts_tab(false)
         .build();
     let help = gettext(
-        "Used by this account and addresses without their own signature. Markdown works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
+        "Used by this account and addresses without their own signature. Markdown or HTML works. <email> becomes the sending address, including its suffix; <domain> becomes its domain.",
     );
     dialog::explain(&row, &help);
     dialog::explain(&view, &help);
@@ -1542,6 +1619,71 @@ fn switch(
     })
 }
 
+/// Whether an IMAP account's sidebar lists only the folders the person
+/// subscribes to. The store holds the answer, so the switch waits,
+/// insensitive, until it is read; a change starts the account again, and
+/// a failure puts the switch back.
+fn subscribed_row(app: &Rc<App>, account: &Account, toasts: &adw::ToastOverlay) -> adw::SwitchRow {
+    let row = adw::SwitchRow::builder()
+        .title(gettext("Show Only Subscribed Folders"))
+        .subtitle(gettext(
+            "Folders you do not subscribe to stay out of the sidebar. Choose them in Manage Folders, in the account's menu.",
+        ))
+        .active(true)
+        .sensitive(false)
+        .build();
+    // Set while the switch shows what the store says, so that showing it
+    // is not taken for a change.
+    let settling = Rc::new(Cell::new(true));
+    let (weak, id, shown, quiet) = (
+        Rc::downgrade(app),
+        account.id,
+        row.downgrade(),
+        Rc::clone(&settling),
+    );
+    glib::spawn_future_local(async move {
+        let Some(app) = weak.upgrade() else { return };
+        let all = app.core.all_folders(id).await;
+        if let Some(row) = shown.upgrade() {
+            row.set_active(!all);
+            row.set_sensitive(true);
+        }
+        quiet.set(false);
+    });
+    let (weak, account, toasts) = (Rc::downgrade(app), account.clone(), toasts.downgrade());
+    row.connect_active_notify(move |row| {
+        if settling.get() {
+            return;
+        }
+        let Some(app) = weak.upgrade() else { return };
+        let only = row.is_active();
+        row.set_sensitive(false);
+        let (row, account, toasts, settling) = (
+            row.clone(),
+            account.clone(),
+            toasts.clone(),
+            Rc::clone(&settling),
+        );
+        glib::spawn_future_local(async move {
+            if let Err(err) = app.core.set_all_folders(account, !only).await {
+                settling.set(true);
+                row.set_active(!only);
+                settling.set(false);
+                if let Some(toasts) = toasts.upgrade() {
+                    let said = with_reason(
+                        &gettext("Could not change the folders: {reason}"),
+                        &err,
+                        &[],
+                    );
+                    toasts.add_toast(crate::ui::toast(&said));
+                }
+            }
+            row.set_sensitive(true);
+        });
+    });
+    row
+}
+
 /// A switch whose change the app has to do more about than save it.
 fn switch_with(
     app: &Rc<App>,
@@ -1683,8 +1825,12 @@ fn sync_combo<T: Copy + 'static>(
 
 /// The first line of a signature, for the row's subtitle.
 fn preview(signature: &str) -> String {
-    signature
-        .lines()
+    // An HTML signature shows its first line of text, not its first tag.
+    let text = match crate::compose::is_html_signature(signature) {
+        true => crate::compose::html_to_text(signature),
+        false => signature.to_string(),
+    };
+    text.lines()
         .find(|l| !l.trim().is_empty())
         .map_or_else(|| gettext("No signature"), |l| l.trim().to_string())
 }

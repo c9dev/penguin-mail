@@ -276,3 +276,58 @@ fn a_flatpak_tree_installs_under_flathubs_id() {
         assert!(!text.contains(ID), "{text}");
     }
 }
+
+/// Both Windows scripts accept the separate values used in their examples.
+#[cfg(unix)]
+#[test]
+fn windows_build_options_accept_separate_values_and_reject_missing_ones() {
+    for (script, args, message) in [
+        (
+            "build-windows.sh",
+            vec![
+                "--prefix",
+                "/nonexistent/gtk",
+                "--busybox",
+                "/nonexistent/busybox",
+            ],
+            "--prefix needs a GTK prefix",
+        ),
+        (
+            "package-windows.sh",
+            vec![
+                "--exe",
+                "/nonexistent/mail.exe",
+                "--prefix",
+                "/nonexistent/gtk",
+                "--busybox",
+                "/nonexistent/busybox",
+                "--out",
+                "/nonexistent/output",
+                "--stage-only",
+            ],
+            "--exe needs the built",
+        ),
+        (
+            "build-windows.sh",
+            vec!["--prefix"],
+            "--prefix needs a value",
+        ),
+        (
+            "package-windows.sh",
+            vec!["--busybox", "--stage-only"],
+            "--busybox needs a value",
+        ),
+    ] {
+        let output = Command::new("bash")
+            .arg(scripts().join(script))
+            .args(args)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(message),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

@@ -8,13 +8,16 @@
 //! the other.
 
 mod body_view;
+mod clipboard;
 mod editor;
+mod files;
 mod pictures;
 mod recipients;
 mod removals;
 mod richbuffer;
 mod saving;
 pub mod spell;
+mod web_picture;
 mod work;
 
 use std::cell::{Cell, RefCell};
@@ -789,6 +792,7 @@ impl Composer {
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach);
+        release_content_on_close(&composer.window);
         composer.wire_history();
         composer.wire_markdown();
         composer.refresh_history();
@@ -1735,6 +1739,8 @@ impl Composer {
         draft.sign = self.sign.is_active();
         draft.encrypt = self.encrypt.is_active() && self.encrypt.is_sensitive();
         draft.receipt = self.receipt.is_active();
+        draft.html_signature =
+            crate::compose::expand_html_signature(&identity.signature, &draft.from.email);
         // A signature on an encrypted message goes inside the encryption,
         // so the recipients' standard carries both.
         draft.standard = match draft.encrypt {
@@ -2211,8 +2217,9 @@ impl Composer {
                 .spacing(8)
                 .css_classes(["attachment-row"])
                 .build();
-            row.append(&gtk::Image::from_icon_name("mail-attachment-symbolic"));
-            row.append(
+            let details = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            details.append(&gtk::Image::from_icon_name("mail-attachment-symbolic"));
+            details.append(
                 &gtk::Label::builder()
                     .label(&attachment.filename)
                     .xalign(0.0)
@@ -2220,12 +2227,28 @@ impl Composer {
                     .ellipsize(gtk::pango::EllipsizeMode::Middle)
                     .build(),
             );
-            row.append(
+            details.append(
                 &gtk::Label::builder()
                     .label(human_size(attachment.data.len() as i64))
                     .css_classes(["dim-label", "caption"])
                     .build(),
             );
+            let open = gtk::Button::builder()
+                .child(&details)
+                .hexpand(true)
+                .css_classes(["flat"])
+                .build();
+            name(
+                &open,
+                &fill(&gettext("Open {file}"), &[("file", &attachment.filename)]),
+            );
+            let weak = Rc::downgrade(self);
+            open.connect_clicked(move |_| {
+                if let Some(c) = weak.upgrade() {
+                    c.preview_file(index);
+                }
+            });
+            row.append(&open);
             let remove = gtk::Button::builder()
                 .icon_name("window-close-symbolic")
                 .css_classes(["flat", "circular"])
@@ -2521,6 +2544,9 @@ impl Composer {
         let weak = Rc::downgrade(self);
         self.body.connect_paste_clipboard(move |view| {
             let Some(c) = weak.upgrade() else { return };
+            if c.paste_image(view) {
+                return;
+            }
             if c.editor.format() != ComposeFormat::Rich {
                 return;
             }
@@ -2771,44 +2797,6 @@ impl Composer {
 
     /// Pasted images go into the text; dropped files go in or attach.
     fn accept_images(self: &Rc<Self>) {
-        let keys = gtk::EventControllerKey::new();
-        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
-        let weak = Rc::downgrade(self);
-        keys.connect_key_pressed(move |_, key, _, modifiers| {
-            let Some(c) = weak.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            let paste =
-                modifiers.contains(crate::ui::PRIMARY) && matches!(key, gdk::Key::v | gdk::Key::V);
-            let clipboard = c.body.clipboard();
-            let formats = clipboard.formats();
-            if !paste
-                || !formats.contains_type(gdk::Texture::static_type())
-                || formats.contain_mime_type("text/plain")
-            {
-                return glib::Propagation::Proceed;
-            }
-            glib::spawn_future_local(async move {
-                match clipboard.read_texture_future().await {
-                    Ok(Some(texture)) => {
-                        let png = texture.save_to_png_bytes();
-                        // The file name is made up, so it says nothing of
-                        // the picture. The writer can describe it from its
-                        // menu.
-                        c.add_inline_image(
-                            "pasted-image.png".into(),
-                            "",
-                            "image/png".into(),
-                            png.to_vec(),
-                        );
-                    }
-                    _ => c.toast(&gettext("Could not paste the image")),
-                }
-            });
-            glib::Propagation::Stop
-        });
-        self.body.add_controller(keys);
-
         let drop = gtk::DropTarget::new(gdk::FileList::static_type(), gdk::DragAction::COPY);
         let weak = Rc::downgrade(self);
         drop.connect_drop(move |_, value, _, _| {
@@ -2936,6 +2924,57 @@ impl Composer {
                 Err(err) => this.failed(&gettext("Template not saved: {reason}"), &err),
             }
         });
+    }
+}
+
+fn release_content_on_close(window: &adw::Window) {
+    // Connect after the composer's save prompt, which stops a cancelled close.
+    // IBus can update the cursor after the native surface has closed, so its
+    // widgets must have no root even while a composer task still holds them.
+    window.connect_close_request(|window| {
+        window.set_content(None::<&gtk::Widget>);
+        glib::Propagation::Proceed
+    });
+}
+
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+
+    pub async fn closing_releases_the_body() {
+        let body = gtk::TextView::new();
+        let content = adw::ToastOverlay::new();
+        content.set_child(Some(&body));
+        let window = adw::Window::builder().content(&content).build();
+        let cancel = Rc::new(Cell::new(true));
+        let cancelling = Rc::clone(&cancel);
+        window.connect_close_request(move |_| match cancelling.get() {
+            true => glib::Propagation::Stop,
+            false => glib::Propagation::Proceed,
+        });
+        release_content_on_close(&window);
+        window.present();
+        for _ in 0..100 {
+            if window.is_mapped() {
+                break;
+            }
+            glib::timeout_future(std::time::Duration::from_millis(10)).await;
+        }
+        assert!(window.is_mapped(), "the composer window mapped");
+        body.grab_focus();
+        body.buffer().set_text("A draft ready to close");
+        window.close();
+        assert!(window.is_realized(), "Cancel keeps the native surface");
+        assert!(body.root().is_some(), "Cancel keeps the draft attached");
+        cancel.set(false);
+        window.close();
+        assert!(!window.is_realized(), "closing released the native surface");
+        assert!(
+            body.root().is_none(),
+            "a retained body cannot point input methods at the closed window"
+        );
+        assert!(window.content().is_none());
+        glib::timeout_future(std::time::Duration::from_millis(30)).await;
     }
 }
 

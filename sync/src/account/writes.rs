@@ -330,6 +330,14 @@ impl AccountSync {
         }
         let account_id = self.account_id;
         let wanted = messages_wanted(targets);
+        let explicit: HashSet<(String, String)> = targets
+            .iter()
+            .filter_map(|t| {
+                t.message_id
+                    .as_ref()
+                    .map(|id| (t.thread_id.clone(), id.clone()))
+            })
+            .collect();
         let threads: BTreeSet<String> = wanted.keys().cloned().collect();
 
         // Search results and the Trash or Spam lists show threads the store
@@ -355,7 +363,9 @@ impl AccountSync {
                                 .as_ref()
                                 .is_none_or(|named| named.contains(&message.id))
                             {
-                                if only.is_none() {
+                                if only.is_none()
+                                    && !explicit.contains(&(thread.clone(), message.id.clone()))
+                                {
                                     whole_thread.insert(message.id.clone(), thread.clone());
                                 }
                                 ids.push(message.id);

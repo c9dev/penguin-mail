@@ -19,14 +19,28 @@ prefix=${PENGUIN_MAIL_GTK_PREFIX:-}
 busybox=
 out=dist
 installer=yes
-for arg in "$@"; do case $arg in
-    --exe=*) exe=${arg#*=} ;;
-    --prefix=*) prefix=${arg#*=} ;;
-    --busybox=*) busybox=${arg#*=} ;;
-    --out=*) out=${arg#*=} ;;
-    --stage-only) installer= ;;
-    *) echo "unknown argument: $arg" >&2; exit 2 ;;
-esac; done
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --exe)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--exe needs a value" >&2; exit 2; }
+            exe=$2; shift 2 ;;
+        --exe=*) exe=${1#*=}; shift ;;
+        --prefix)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--prefix needs a value" >&2; exit 2; }
+            prefix=$2; shift 2 ;;
+        --prefix=*) prefix=${1#*=}; shift ;;
+        --busybox)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--busybox needs a value" >&2; exit 2; }
+            busybox=$2; shift 2 ;;
+        --busybox=*) busybox=${1#*=}; shift ;;
+        --out)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--out needs a value" >&2; exit 2; }
+            out=$2; shift 2 ;;
+        --out=*) out=${1#*=}; shift ;;
+        --stage-only) installer=; shift ;;
+        *) echo "unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
 
 [ -f "$exe" ] || { echo "--exe needs the built penguin-mail.exe" >&2; exit 2; }
 [ -d "$prefix/bin" ] || { echo "--prefix needs a GTK prefix holding bin/" >&2; exit 2; }

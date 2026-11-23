@@ -31,6 +31,7 @@ impl Notifications {
         self.0.post(
             id,
             &notice.title,
+            &notice.subtitle,
             &notice.body,
             Actions {
                 open: notice.target.as_ref().map(|_| Action::OpenMail),
@@ -48,6 +49,7 @@ impl Notifications {
         self.0.post(
             &notice.id,
             &notice.title,
+            "",
             &notice.body,
             Actions {
                 open: Some(Action::OpenEvent),

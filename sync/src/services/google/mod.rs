@@ -17,6 +17,7 @@ use std::time::Duration;
 use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::mailbox::keyword;
+use mailrs_domain::mailbox::Membership;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
@@ -30,9 +31,9 @@ use mailrs_mime::html::html_to_text;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
-    KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, Relocated, RemoteRef,
-    RulesService, SearchQuery, SendAsAddress, Storage, SyncState, Unapplied, Want, Withheld,
-    priority,
+    KeywordsPage, Landing, MailBackend, MailCapabilities, Priority, RawMessage, Relocated,
+    RemoteRef, RulesService, SearchQuery, SendAsAddress, Storage, SyncState, Unapplied, Want,
+    Withheld, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -301,6 +302,47 @@ impl<G: GmailApi> MailBackend for Google<G> {
         self.write(messages, ops).await.map(|()| Vec::new())
     }
 
+
+    /// Destroys a carried copy only while it still wears the label it
+    /// landed under and sits in no system folder. Trashing a message
+    /// in Gmail adds the bin label and keeps the labels the move left
+    /// on, so wearing the bin or the spam folder means the person put
+    /// the copy somewhere the move did not, and an Undo may not
+    /// follow mail out of the folder it put it in.
+    async fn destroy_landing(
+        &self,
+        messages: &[String],
+        mailbox: &str,
+    ) -> Vec<Result<(), BackendError>> {
+        let mut answers = Vec::with_capacity(messages.len());
+        for id in messages {
+            let answer = async {
+                let held = paced(self.gmail.message_metadata(id))
+                    .await
+                    .map_err(BackendError::from)?;
+                if !stays_where_landed(mailbox, &held.held.mailboxes) {
+                    return Err(BackendError::Changed);
+                }
+                paced(self.gmail.delete_messages(std::slice::from_ref(id)))
+                    .await
+                    .map_err(BackendError::from)
+            }
+            .await;
+            answers.push(answer);
+        }
+        answers
+    }
+
+    /// Asks the same metadata the landing destroy reads, without
+    /// deleting: the copy is where Undo put it only while it still
+    /// wears the landing label and has been filed in no system folder.
+    async fn still_in(&self, message: &str, mailbox: &str) -> Result<bool, BackendError> {
+        let held = paced(self.gmail.message_metadata(message))
+            .await
+            .map_err(BackendError::from)?;
+        Ok(stays_where_landed(mailbox, &held.held.mailboxes))
+    }
+
     fn person_waiting(&self) -> bool {
         self.gmail
             .quota()
@@ -365,6 +407,17 @@ impl<G: GmailApi> MailBackend for Google<G> {
         self.every_id(None, "in:inbox").await
     }
 
+    async fn count_query(&self, query: &mailrs_domain::query::Query) -> Result<i64, BackendError> {
+        let refs = self
+            .every_id(None, &mailrs_gmail::query::print(query))
+            .await?;
+        Ok(refs
+            .into_iter()
+            .map(|hit| hit.id)
+            .collect::<std::collections::HashSet<_>>()
+            .len() as i64)
+    }
+
     async fn search(
         &self,
         query: &SearchQuery,
@@ -419,6 +472,40 @@ impl<G: GmailApi> MailBackend for Google<G> {
     /// asks it to file one.
     async fn append(&self, _raw: &[u8], _mailbox: &str) -> Result<String, BackendError> {
         Err(BackendError::Unsupported)
+    }
+
+    fn lands_copies(&self) -> bool {
+        true
+    }
+
+    /// `messages.insert`: the copy arrives under the labels it belongs
+    /// in, marked as the source had it, and Gmail keeps the arrival hour
+    /// it is given, so the list shows the date the message first came.
+    /// The marks are spelled Gmail's own way: starred is STARRED, muted
+    /// is MUTE, and being unread is the one label a new message has to
+    /// carry, since being read is the absence of UNREAD.
+    async fn land_copy(&self, raw: &[u8], at: &Landing<'_>) -> Result<String, BackendError> {
+        let mut labels = at.mailboxes.to_vec();
+        let mut seen = false;
+        for keyword in at.keywords {
+            let Some((label, on)) = gmail::label_of(&Membership::Keyword(keyword.clone()), true)
+            else {
+                continue;
+            };
+            if keyword == keyword::SEEN {
+                // Gmail answers that being seen means lacking UNREAD,
+                // which a message fresh off the wire lacks anyway.
+                seen = true;
+                continue;
+            }
+            if on {
+                labels.push(label);
+            }
+        }
+        if !seen {
+            labels.push(gmail::UNREAD.to_string());
+        }
+        Ok(paced(self.gmail.insert(raw, &labels, at.at)).await?)
     }
 
     /// Gmail sends a text part by reference when it carries a file name,
@@ -625,6 +712,16 @@ fn remote_mailbox(label: RemoteLabel) -> RemoteMailbox {
         id: label.id,
         name: label.name,
     }
+}
+
+/// Whether a Gmail copy still sits where a landing put it: it wears
+/// the label the landing gave, and it has been filed in no system
+/// folder. Trashing or reporting spam adds that label and keeps the
+/// others, so a copy wearing either has been put somewhere the move
+/// did not, even with the landing label still on it.
+fn stays_where_landed(mailbox: &str, worn: &[String]) -> bool {
+    let filed_away = |folder: &str| folder != mailbox && worn.iter().any(|m| m == folder);
+    worn.iter().any(|m| m == mailbox) && !filed_away("TRASH") && !filed_away("SPAM")
 }
 
 impl<G: GmailApi> CalendarService for Google<G> {

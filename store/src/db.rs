@@ -12,6 +12,10 @@ use crate::{Result, StoreError};
 
 type Job = Box<dyn FnOnce(&mut Connection) + Send>;
 
+/// A caller's read or write, boxed so the code around it is built once per
+/// answer type rather than once per caller.
+type Boxed<R> = Box<dyn FnOnce(&Connection) -> Result<R> + Send>;
+
 /// Rows the writer changes between refreshes of the planner's statistics.
 /// A bootstrap passes it many times over; a day of history replay may not.
 const OPTIMIZE_AFTER: u64 = 10_000;
@@ -101,11 +105,19 @@ impl Db {
     }
 
     /// Runs `f` in a transaction on the writer thread. An `Err` rolls it back.
-    pub async fn write<F, R>(&self, f: F) -> Result<R>
+    ///
+    /// `f` is boxed at once and the work happens in `write_boxed`, which is
+    /// generic over the answer alone, so each caller's closure costs a box
+    /// rather than a copy of the whole write; see `read`.
+    pub fn write<F, R>(&self, f: F) -> impl Future<Output = Result<R>> + Send + use<'_, F, R>
     where
         F: FnOnce(&Connection) -> Result<R> + Send + 'static,
         R: Send + 'static,
     {
+        self.write_boxed(Box::new(f))
+    }
+
+    async fn write_boxed<R: Send + 'static>(&self, f: Boxed<R>) -> Result<R> {
         let (done, result) = tokio::sync::oneshot::channel();
         let job: Job = Box::new(move |conn| {
             let outcome = (|| -> Result<R> {
@@ -157,18 +169,32 @@ impl Db {
     }
 
     /// Runs `f` on a read-only connection.
-    pub async fn read<F, R>(&self, f: F) -> Result<R>
+    ///
+    /// The blocking task gets one boxed type, as a write's job does, and
+    /// the answer comes back on a channel. Handing `spawn_blocking` each
+    /// caller's closure made tokio's task code once per call site, several
+    /// hundred times over in the app, where every store read is one. For
+    /// the same reason `f` is boxed at once and the rest happens in
+    /// `read_boxed`, generic over the answer alone.
+    pub fn read<F, R>(&self, f: F) -> impl Future<Output = Result<R>> + Send + use<'_, F, R>
     where
         F: FnOnce(&Connection) -> Result<R> + Send + 'static,
         R: Send + 'static,
     {
+        self.read_boxed(Box::new(f))
+    }
+
+    async fn read_boxed<R: Send + 'static>(&self, f: Boxed<R>) -> Result<R> {
         let inner = Arc::clone(&self.inner);
-        tokio::task::spawn_blocking(move || {
-            let lease = inner.checkout()?;
-            f(&lease)
-        })
-        .await
-        .map_err(|_| StoreError::Closed)?
+        let (done, result) = tokio::sync::oneshot::channel();
+        let job: Box<dyn FnOnce() + Send> = Box::new(move || {
+            let outcome = inner.checkout().and_then(|lease| f(&lease));
+            let _ = done.send(outcome);
+        });
+        // The task's own result says nothing the channel does not: a read
+        // that panicked drops its sender, and the receiver says Closed.
+        drop(tokio::task::spawn_blocking(job));
+        result.await.map_err(|_| StoreError::Closed)?
     }
 }
 

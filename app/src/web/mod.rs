@@ -30,3 +30,6 @@ pub use windows::*;
 
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod frame;
+
+#[cfg(windows)]
+pub(crate) mod owned_text;
