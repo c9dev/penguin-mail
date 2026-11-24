@@ -1014,11 +1014,11 @@ msgstr "{provider}에는 브라우저에서 로그인합니다"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "계속을 선택하면 브라우저에서 {provider} 로그인 페이지가 열립니다."
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "모든 메일을 읽음으로 표시할 수 없습니다: {reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."

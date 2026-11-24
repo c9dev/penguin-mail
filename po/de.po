@@ -1077,11 +1077,11 @@ msgstr "{provider} meldet Sie über Ihren Browser an"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "„Weiter“ öffnet die Anmeldeseite von {provider} in Ihrem Browser."
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nicht alle E-Mails konnten als gelesen markiert werden: {reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."

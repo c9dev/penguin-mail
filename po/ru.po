@@ -1070,11 +1070,11 @@ msgstr "{provider} использует вход через браузер"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Кнопка «Продолжить» откроет страницу входа {provider} в браузере."
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Не удалось отметить всю почту как прочитанную: {reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."

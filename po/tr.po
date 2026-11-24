@@ -1052,11 +1052,11 @@ msgstr "{provider}, tarayıcınız üzerinden oturum açar"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Devam, tarayıcınızda {provider} oturum açma sayfasını açar."
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Tüm postalar okundu olarak işaretlenemedi: {reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."

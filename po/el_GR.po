@@ -1087,11 +1087,11 @@ msgstr ""
 "Η «Συνέχεια» ανοίγει τη σελίδα σύνδεσης του {provider} στο πρόγραμμα "
 "περιήγησης."
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Δεν ήταν δυνατή η σήμανση όλων των μηνυμάτων ως αναγνωσμένων: {reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."

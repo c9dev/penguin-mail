@@ -1076,11 +1076,11 @@ msgstr "{provider} se conectează prin navigator"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "„Continuă” deschide pagina de conectare {provider} în navigator."
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nu s-a putut marca toată corespondența ca citită: {reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."

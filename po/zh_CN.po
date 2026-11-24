@@ -982,11 +982,11 @@ msgstr "{provider} 通过浏览器登录"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "选择 [继续] 会在浏览器中打开 {provider} 的登录页面。"
 
-#: app/src/app.rs:440
+#: app/src/app.rs:442
 msgid "Could not mark all mail as read: {reason}"
 msgstr "无法将所有邮件标记为已读：{reason}"
 
-#: app/src/app.rs:487
+#: app/src/app.rs:489
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
