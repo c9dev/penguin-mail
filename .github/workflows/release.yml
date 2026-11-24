@@ -520,3 +520,35 @@ jobs:
         with:
           snap: ${{ steps.file.outputs.snap }}
           release: edge
+
+  # The tap lives in this repository, so once the release is public its
+  # formula must name the new assets and their checksums. This runs after
+  # publish and pushes the rewritten formula to main. A run that finds the
+  # formula already current commits nothing.
+  homebrew-formula:
+    name: Update the Homebrew formula
+    needs: [version, publish]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - name: Regenerate the formula
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/brew-formula.sh "${{ needs.version.outputs.version }}"
+      - name: Commit the formula
+        run: |
+          set -eu
+          if git diff --quiet Formula/penguin-mail.rb; then
+            echo "The formula already names ${{ needs.version.outputs.version }}."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/penguin-mail.rb
+          git commit -m "Update the Homebrew formula to ${{ needs.version.outputs.version }}"
+          git push
