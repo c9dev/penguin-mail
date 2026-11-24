@@ -15,11 +15,13 @@ use async_imap::{Authenticator, Client, Session};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::time::Instant;
 
+use mailrs_domain::EpochMillis;
+
 use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     MAX_ANSWERS, QuotaReader, Reads, SearchReader, SectionReader, SectionsReader, SelectReader,
-    StructureReader, SubscribedReader,
+    StructureReader, SubscribedReader, internal_date_text,
 };
 use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::types::{check_label, label_text};
@@ -52,6 +54,14 @@ pub(crate) struct Conn<S: Stream> {
     /// When a command last went out, to tell a connection a router may
     /// have dropped in silence.
     last_used: Instant,
+    /// True from the pool handing the connection back until a SELECT or
+    /// a NOOP. IMAP lets a server report new mail to a connection when
+    /// it chooses (RFC 3501 section 5.2), and Dovecot does so only at the
+    /// end of a command on the selected mailbox. A connection that kept a
+    /// mailbox selected while it sat in the pool may not see mail that
+    /// another connection's later SELECT counted, so its next command on
+    /// that mailbox NOOPs first.
+    handed_back: bool,
 }
 
 /// SASL PLAIN (RFC 4616): no authorization identity, then the user and
@@ -191,6 +201,7 @@ impl<S: Stream> Conn<S> {
             selected: None,
             uidvalidity: 0,
             last_used: Instant::now(),
+            handed_back: false,
         };
         let mut after = CapabilityReader::default();
         conn.exec("CAPABILITY", Doing::Other, &mut after).await?;
@@ -212,8 +223,16 @@ impl<S: Stream> Conn<S> {
         self.last_used.elapsed()
     }
 
+    /// The pool took the connection back; its view of the selected mailbox
+    /// may fall behind until a SELECT or a NOOP.
+    pub(crate) fn handed_back(&mut self) {
+        self.handed_back = true;
+    }
+
     pub(crate) async fn noop(&mut self) -> Result<(), ImapError> {
-        self.exec("NOOP", Doing::Other, &mut ()).await
+        self.exec("NOOP", Doing::Other, &mut ()).await?;
+        self.handed_back = false;
+        Ok(())
     }
 
     /// Every mailbox on the server, each marked with whether the person
@@ -266,6 +285,11 @@ impl<S: Stream> Conn<S> {
 
     pub(crate) async fn unread(&mut self, mailbox: &str) -> Result<u32, ImapError> {
         let command = format!("STATUS {} (UNSEEN)", quoted(mailbox)?);
+        // Dovecot answers a STATUS of the selected mailbox from this
+        // connection's view, which the NOOP brings up to date.
+        if self.selected.as_deref() == Some(mailbox) && self.handed_back {
+            self.noop().await?;
+        }
         let mut reader = crate::parse::UnreadReader {
             mailbox,
             unread: None,
@@ -322,6 +346,7 @@ impl<S: Stream> Conn<S> {
         };
         self.selected = Some(mailbox.to_string());
         self.uidvalidity = selected.uidvalidity;
+        self.handed_back = false;
         Ok(selected)
     }
 
@@ -344,6 +369,12 @@ impl<S: Stream> Conn<S> {
     pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
         if self.selected.as_deref() != Some(mailbox) {
             self.select(mailbox, None).await?;
+        } else if self.handed_back {
+            // The SELECT that would have brought the view up to date is
+            // skipped, so a NOOP does it: the server reports what arrived
+            // before answering, and the command after, a read or a write,
+            // sees it. A STATUS brings no view up to date (`unread`).
+            self.noop().await?;
         }
         Ok(())
     }
@@ -410,8 +441,8 @@ impl<S: Stream> Conn<S> {
         mailbox: &str,
         keys: &str,
     ) -> Result<Vec<u32>, ImapError> {
-        self.ensure_selected(mailbox).await?;
         let (head, literals) = search_command(keys)?;
+        self.ensure_selected(mailbox).await?;
         let literals: Vec<(&[u8], String)> = literals
             .iter()
             .map(|(bytes, after)| (bytes.as_slice(), after.clone()))
@@ -656,13 +687,25 @@ impl<S: Stream> Conn<S> {
         .await
     }
 
+    /// Appends `raw` to `mailbox`. `at` becomes the copy's INTERNALDATE,
+    /// so a message carried in from another account keeps the hour it
+    /// arrived.
     pub(crate) async fn append(
         &mut self,
         mailbox: &str,
         flags: &[String],
+        at: Option<EpochMillis>,
         raw: &[u8],
     ) -> Result<Option<AppendUid>, ImapError> {
-        let head = format!("APPEND {} ({}) ", quoted(mailbox)?, flag_list(flags)?);
+        let head = match at {
+            Some(at) => format!(
+                "APPEND {} ({}) \"{}\" ",
+                quoted(mailbox)?,
+                flag_list(flags)?,
+                internal_date_text(at)
+            ),
+            None => format!("APPEND {} ({}) ", quoted(mailbox)?, flag_list(flags)?),
+        };
         let mut reader = AppendUidReader::default();
         self.exec_with_literals(
             &head,
@@ -766,6 +809,9 @@ impl<S: Stream> Conn<S> {
                 selected,
                 uidvalidity,
                 last_used: Instant::now(),
+                // The IDLE connection never goes through the pool, and
+                // its view is as fresh as the DONE that ended the IDLE.
+                handed_back: false,
             },
             woke,
         ))
@@ -1615,7 +1661,7 @@ mod tests {
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
         let raw = b"Subject: sent\r\n\r\nhello\r\n";
         let uid = conn
-            .append("Sent", &["\\Seen".to_string()], raw)
+            .append("Sent", &["\\Seen".to_string()], None, raw)
             .await
             .unwrap();
         assert_eq!(
@@ -1629,6 +1675,31 @@ mod tests {
             seen(&log).contains(
                 &"APPEND \"Sent\" (\\Seen) {24}Subject: sent\r\n\r\nhello\r\n".to_string()
             )
+        );
+    }
+
+    #[tokio::test]
+    async fn append_files_a_carried_copy_under_the_date_it_arrived_at_home() {
+        let log = log();
+        let stream = pipe(GREETING, server(ALL, log.clone(), |_| vec!["{tag} OK".into()]));
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        // Noon on New Year's Day 2025, in UTC.
+        let at = 1_735_732_800_000;
+        conn.append(
+            "Work",
+            &["\\Seen".to_string(), "\\Flagged".to_string()],
+            Some(at),
+            b"hi\r\n",
+        )
+        .await
+        .unwrap();
+        assert!(
+            seen(&log).contains(
+                &"APPEND \"Work\" (\\Seen \\Flagged) \"01-Jan-2025 12:00:00 +0000\" {4}hi\r\n"
+                    .to_string()
+            ),
+            "{:?}",
+            seen(&log)
         );
     }
 

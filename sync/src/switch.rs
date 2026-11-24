@@ -729,7 +729,7 @@ async fn carry_drafts<J: JmapApi>(
             .ok_or_else(|| BackendError::Refused(gettext("The server has no Drafts mailbox.")))?;
         let blob = api.upload(raw).await.map_err(backend)?;
         let made = api
-            .import(&blob, &[mailbox], &["$draft", "$seen"], None)
+            .import(&blob, &[mailbox], &["$draft", "$seen"], None, None)
             .await
             .map_err(backend)?
             .email;

@@ -80,6 +80,7 @@ pub trait JmapApi: Send + Sync + 'static {
         mailbox_ids: &[String],
         keywords: &[&str],
         destroy: Option<&str>,
+        received_at: Option<&str>,
     ) -> impl Future<Output = Answer<Saved>> + Send;
     fn submit(&self, submission: &Submission) -> impl Future<Output = Answer<Imported>> + Send;
     fn identities(&self) -> impl Future<Output = Answer<Vec<Identity>>> + Send;
@@ -226,8 +227,9 @@ impl JmapApi for JmapClient {
         mailbox_ids: &[String],
         keywords: &[&str],
         destroy: Option<&str>,
+        received_at: Option<&str>,
     ) -> Answer<Saved> {
-        JmapClient::import(self, blob_id, mailbox_ids, keywords, destroy).await
+        JmapClient::import(self, blob_id, mailbox_ids, keywords, destroy, received_at).await
     }
     async fn submit(&self, submission: &Submission) -> Answer<Imported> {
         JmapClient::submit(self, submission).await

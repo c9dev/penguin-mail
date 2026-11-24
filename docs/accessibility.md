@@ -311,3 +311,15 @@ Paste in the composer body accepts clipboard images through the text menu and Cm
 Deleting a conversation from a smart mailbox asks before moving matching Sent messages to Trash. Cancel and closing the question leave the mail unchanged. The labeled Don't Ask Again for This Smart Mailbox checkbox saves consent only when Move to Trash is chosen. The smart mailbox editor has a Delete Sent Messages Without Asking switch to turn that choice off again.
 
 Pull to Check for Mail is a named switch in Reading preferences, off by default. When enabled, a touchpad pull past the top of the message list shows progress and requires both distance and time before running Check for Mail. Turning the switch off cancels a pull in progress. The menu item and its keyboard shortcut remain available without the gesture.
+
+## Mail notification previews
+
+Show Message Preview is a named switch on the Notifications page. It is
+available when Notify About New Mail and Show Sender and Subject are on.
+Turning either off keeps the preview choice for later and disables the switch.
+
+Message Preview Length chooses 80, 140 or 280 characters and is available only
+when Show Message Preview is on. The desktop controls the displayed line count.
+On macOS, Bold Subject puts the subject on a separate native subtitle line. It
+requires Notify About New Mail and Show Sender and Subject. Disabling either
+keeps both choices for later. Linux notifications keep the subject in plain text.

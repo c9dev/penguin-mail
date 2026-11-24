@@ -18,16 +18,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
+
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
 
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
 - Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
-
 - Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
+- Drag mail onto another account's folder, label or Inbox to carry it there. It arrives with its read and flagged marks and its original arrival date, and Undo brings it back. Outlook folders and POP3 accounts refuse the drop, since their servers cannot take the copy.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
 - Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
 - Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
+- Drag a message onto a collapsed account and hold it there: the account opens so the message can be dropped on a folder that was out of sight.
 
 ### Improved
 
@@ -43,12 +46,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- On IMAP accounts, a check for new mail no longer skips a message for good when the app was also reading or changing mail on that account at the time, which left the Inbox badge counting unread mail the list did not show.
+- A picture a signature or Markdown body names by an address, such as a logo, now shows while you write and goes out with the message instead of vanishing.
+- Encrypting to someone whose key you do not have fails at once instead of waiting up to half a minute while gpg looks for a key online.
 - The pull-to-check indicator stays readable over message rows in light and dark themes.
 - Horizontal touchpad swipes no longer trigger Check for Mail at the top of the message list.
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
 - Microsoft accounts no longer list the folders Outlook keeps hidden.
+- `nix build` and `nix flake check` build the app again: the Nix package now links the aws-lc and SQLite libraries the bundled Rust crates build against.
 
 ## 1.0.12 (2026-11-05)
 
