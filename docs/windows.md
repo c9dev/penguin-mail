@@ -428,7 +428,7 @@ does too is unchecked.
 ## Native regression checks
 
 The Windows workflow builds the app test binary with MSYS2 UCRT64 and runs
-the AppContainer, WebView2 string and locale regressions. BusyBox is checked
-against a pinned SHA-256 hash. It also compiles the installer and verifies
+the AppContainer, WebView2 string and locale regressions. BusyBox is built
+from a pinned upstream release commit. It also compiles the installer and verifies
 that uninstall removes both Start Menu shortcut locations and the sign-in
 entry. These tests run on Windows, separately from the Linux gate.

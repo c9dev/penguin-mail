@@ -22,12 +22,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The same release as the prebuilt helper, built without its download host.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rmyorston/busybox-w32
+          ref: 5f09fb446adf81d005f0aad9dc47eca19ac3b74c # FRP-6354-g5f09fb446
+          path: .ci-busybox
+          persist-credentials: false
       - uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2
         with:
           msystem: UCRT64
           update: true
           path-type: inherit
           install: >-
+            make
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-gtk4
             mingw-w64-ucrt-x86_64-libadwaita
@@ -36,13 +44,19 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
-      - name: Install the GNU Rust toolchain and BusyBox
+      - name: Install the GNU Rust toolchain
         shell: msys2 {0}
         run: |
           set -euo pipefail
           rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal
-          curl --fail --location --retry 3 https://frippery.org/files/busybox/busybox64u.exe -o busybox64u.exe
-          echo '36b266923fc5765b42f5f981319f39568498fba60b53ccf26e8fc1e575e2a9a9  busybox64u.exe' | sha256sum --check
+      - name: Build the pinned BusyBox helper
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          make -C .ci-busybox CROSS_COMPILE= mingw64u_defconfig
+          make -C .ci-busybox CROSS_COMPILE= -j2 busybox.exe
+          cp .ci-busybox/busybox.exe busybox64u.exe
+          ./busybox64u.exe sh -c 'printf "BusyBox shell ready\n"'
       - name: Exercise native Windows isolation, ownership and locale behavior
         shell: msys2 {0}
         env:
