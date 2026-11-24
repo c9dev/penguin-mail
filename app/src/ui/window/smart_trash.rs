@@ -7,7 +7,7 @@ use mailrs_sync::MovedFrom;
 use super::Pressing;
 use crate::settings::Change;
 use crate::ui::Mailbox;
-use crate::wanted::{Screen, Wanted};
+use mailrs_client::wanted::{Screen, Wanted};
 
 impl Screen<Vec<Target>> for Pressing {
     fn is_showing(&self, targets: &Vec<Target>) -> bool {

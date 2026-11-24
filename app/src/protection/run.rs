@@ -26,8 +26,8 @@ use std::sync::Arc;
 use mailrs_domain::{AccountId, MessageBody, Target};
 
 use super::{Engine, Read};
-pub use crate::wanted::Answer;
-use crate::wanted::{Screen, Wanted};
+pub use mailrs_client::wanted::Answer;
+use mailrs_client::wanted::{Screen, Wanted};
 
 #[cfg(test)]
 mod fake;

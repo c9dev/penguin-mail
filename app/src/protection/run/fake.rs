@@ -16,7 +16,7 @@ use super::{Answer, Claimed, Desk, Effects, Engines, Installed};
 use crate::open_thread::OpenThread;
 use crate::protection::remembered::Verdicts;
 use crate::protection::{Engine, Mark, Read, Tone};
-use crate::wanted::Screen as OnScreen;
+use mailrs_client::wanted::Screen as OnScreen;
 
 /// The account and thread every fixture belongs to.
 pub const ACCOUNT: AccountId = 1;

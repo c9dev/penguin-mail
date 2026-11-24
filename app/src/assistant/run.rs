@@ -67,7 +67,7 @@ type ToolResult = Result<Value, String>;
 /// An account a tool named, with the loop that syncs it.
 type Syncing = (Account, Arc<AccountSync>);
 
-pub use crate::wanted::Answer;
+pub use mailrs_client::wanted::Answer;
 
 /// The conversation the window shows, if any.
 #[derive(Debug, Clone, PartialEq, Eq)]

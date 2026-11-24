@@ -3,8 +3,8 @@
 use mailrs_domain::translate::gettext;
 use serde::Deserialize;
 
-use crate::link_safety::{self, Concern};
 use crate::web::WebView;
+use mailrs_client::link_safety::{self, Concern};
 
 #[derive(Deserialize)]
 struct Hover {

@@ -17,8 +17,8 @@ use mailrs_domain::{AccountId, ThreadSummary};
 use super::list_feed::order;
 use super::sidebar::DRAG_MAIL;
 use super::thread_row::{Avatar, OpenMenu, ThreadRow};
-use crate::diff::splice;
 use crate::photos::ContactPhotos;
+use mailrs_client::diff::splice;
 use mailrs_domain::translate::gettext;
 
 /// The keys that open the menu of the row with the focus, in GTK's
