@@ -9,16 +9,26 @@
 use mailrs_pgp::gnupg::{Pinentry, Program, seen};
 use mailrs_pgp::{Trust, Verdict};
 
-/// A directory holding one executable called `gpg`: a copy of the
-/// stand-in binary, so `find_on` discovers it the way it would the real
+/// A directory holding one executable called `gpg`: a link on Unix and
+/// a copy on Windows, so `find_on` discovers it the way it would the real
 /// one. A test that wants it to do something on every run, the way a
 /// shell script carried its body, writes `gnupg-stand-in.conf` beside
 /// it; a test driving `Program::run` can hand it flags in the arguments.
 fn stand_in() -> (tempfile::TempDir, Program) {
+    let binary = std::path::Path::new(env!("CARGO_BIN_EXE_gnupg-stand-in"));
+    #[cfg(unix)]
+    let dir = tempfile::tempdir_in(binary.parent().expect("the binary's directory"))
+        .expect("a directory on the binary's filesystem");
+    #[cfg(windows)]
     let dir = tempfile::tempdir().expect("a temp directory");
     let name = if cfg!(windows) { "gpg.exe" } else { "gpg" };
-    std::fs::copy(env!("CARGO_BIN_EXE_gnupg-stand-in"), dir.path().join(name))
-        .expect("the stand-in copies");
+    // Another test can fork while a copy is open for writing. The inherited
+    // descriptor prevents exec until that child closes it. A hard link to
+    // the finished binary opens no writer and keeps each test's own config.
+    #[cfg(unix)]
+    std::fs::hard_link(binary, dir.path().join(name)).expect("the stand-in links");
+    #[cfg(windows)]
+    std::fs::copy(binary, dir.path().join(name)).expect("the stand-in copies");
     let program = Program::find_on(&dir.path().to_string_lossy(), &["gpg"]).expect("found");
     (dir, program)
 }
