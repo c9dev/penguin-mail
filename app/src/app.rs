@@ -271,8 +271,10 @@ impl App {
         // session bus, and GIO answers a watch on it with a vanished
         // callback that holds no connection. Windows always has a
         // notification area, so the icon goes up at once there.
-        #[cfg(target_os = "linux")]
-        if !app.core.demo {
+        // cfg! over #[cfg] keeps the tray code referenced on macOS,
+        // where nothing else calls it.
+        #[cfg(not(windows))]
+        if !app.core.demo && cfg!(target_os = "linux") {
             app.watch_for_tray_host();
         }
         #[cfg(windows)]
