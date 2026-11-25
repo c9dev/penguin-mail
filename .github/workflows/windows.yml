@@ -67,9 +67,19 @@ jobs:
           export PENGUIN_MAIL_BUSYBOX="$(cygpath -m "$PWD/busybox64u.exe")"
           export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
           export GETTEXT_SYSTEM=1
-          for filter in sandbox::windows_tests sandbox::windows::tests locale_time::windows_tests web::owned_text::tests; do
+          for filter in sandbox::windows_tests sandbox::windows::tests locale_time::windows_tests web::owned_text::tests update::install::tests; do
             cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail "$filter" -- --test-threads=1
           done
+      - name: Lint the Windows build
+        shell: msys2 {0}
+        env:
+          CARGO_BUILD_JOBS: '2'
+        run: |
+          set -euo pipefail
+          export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
+          export GETTEXT_SYSTEM=1
+          rustup component add clippy --toolchain stable-x86_64-pc-windows-gnu
+          cargo +stable-x86_64-pc-windows-gnu clippy -p mailrs --all-targets -- -D warnings
       - name: Compile the installer and verify uninstall cleanup
         shell: pwsh
         run: scripts/test-windows-installer.ps1

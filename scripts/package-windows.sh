@@ -74,6 +74,12 @@ collect() {
 }
 collect "$stage/bin/penguin-mail.exe"
 
+# GLib starts the session bus through gdbus.exe, which single-instance
+# needs; nothing imports it, so the walk above never finds it.
+[ -f "$prefix/bin/gdbus.exe" ] || { echo "no gdbus.exe in $prefix/bin" >&2; exit 1; }
+cp "$prefix/bin/gdbus.exe" "$stage/bin/"
+collect "$stage/bin/gdbus.exe"
+
 # Pieces the import walk cannot see: WebView2Loader is delay-loaded on
 # MSVC, and the VC++ runtime DLLs ride along so a machine without the
 # redistributable still starts. Each may sit beside the exe, in the

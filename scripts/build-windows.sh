@@ -104,6 +104,9 @@ fi
 # BusyBox gives the skill sandbox its shell. Kept in the cache so a
 # rebuild does not fetch it again; Windows' curl verifies against the
 # system certificate store, which an MSYS2 curl may not have populated.
+# The URL is frippery's rolling "latest" file, so the pinned hash must be
+# updated when upstream publishes a new build.
+busybox_sha256=36b266923fc5765b42f5f981319f39568498fba60b53ccf26e8fc1e575e2a9a9
 if [ -z "$busybox" ]; then
     busybox=${XDG_CACHE_HOME:-$HOME/.cache}/penguin-mail/busybox64u.exe
     if [ ! -f "$busybox" ]; then
@@ -111,6 +114,10 @@ if [ -z "$busybox" ]; then
         curl=/c/Windows/System32/curl.exe
         [ -x "$curl" ] || curl=curl
         "$curl" -fsSL -o "$busybox" "https://frippery.org/files/busybox/busybox64u.exe"
+    fi
+    if ! echo "$busybox_sha256  $busybox" | sha256sum -c - >/dev/null 2>&1; then
+        echo "$busybox does not match the pinned SHA-256; delete it or pass --busybox" >&2
+        exit 1
     fi
 fi
 "$busybox" true >/dev/null 2>&1 || { echo "$busybox does not run" >&2; exit 1; }

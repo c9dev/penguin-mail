@@ -15,6 +15,8 @@
 
 [Setup]
 AppId={{8B5C2E1A-4D3F-4A6B-9E7C-2F1D5A8B3C6E}
+; The app holds this mutex while it runs; setup and uninstall wait for it.
+AppMutex=PenguinMailRunning
 AppName=Penguin Mail
 AppVersion={#AppVersion}
 AppPublisher=Pivotd
@@ -86,12 +88,13 @@ Type: dirifempty; Name: "{userprograms}\Penguin Mail"
 Filename: "{app}\bin\penguin-mail.exe"; Description: "Open Penguin Mail"; Flags: nowait postinstall skipifsilent
 
 [Code]
-{ WebView2's evergreen runtime registers its version here when present. }
+{ WebView2's evergreen runtime registers its version here when present. A
+  per-machine install lands in the 32-bit view (WOW6432Node). }
 function WebView2Installed(): Boolean;
 var
   Version: String;
 begin
-  Result := RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version)
+  Result := RegQueryStringValue(HKLM32, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version)
     or RegQueryStringValue(HKCU, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version);
 end;
 

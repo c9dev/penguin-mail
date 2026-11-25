@@ -34,8 +34,9 @@ What a machine needs:
   `packaging/windows/gtk4-zero-monitor-popup.patch`.
 - **MSYS2 or Git Bash**, for bash and cygpath.
 - **Inno Setup 6**, for the installer step; `--stage-only` skips it.
-- **BusyBox** for the skills sandbox: downloaded to the cache once,
-  or named with `--busybox`.
+- **BusyBox** for the skills sandbox: downloaded to the cache once and
+  checked against a pinned SHA-256 (update the pin in `build-windows.sh`
+  when upstream publishes a new build), or named with `--busybox`.
 - The WebView2 evergreen bootstrapper is fetched at packaging time
   and embedded in the installer.
 
@@ -202,13 +203,21 @@ name as a token.
 `main.rs` hands `--compose`, `mailto:` and `.ics`/`.eml` opens to the
 running copy through `gio::Application` registration. Verify
 `is_remote()`/`activate_action` work on Windows builds of GIO (it has a
-win32 backend that should cover this). If it does not, a named mutex
-plus a named pipe carries the same handoff.
+win32 backend that should cover this). GLib autolaunches the session
+bus through `gdbus.exe`, so `package-windows.sh` stages it beside the
+exe; without it the second copy would not find the first. This has not
+run on Windows yet and still needs a live check. If it fails, a named
+mutex plus a named pipe carries the same handoff.
+
+The app also creates the named mutex `PenguinMailRunning` at start. The
+installer's `AppMutex` names it, so an upgrade or uninstall waits for
+the running copy instead of replacing files it holds.
 
 ### Updates
 
-`install.rs` gains a method that downloads the release's installer and
-launches it, then exits. `signature.rs` cannot lean on `gpgv`/`gpg` on
+`method_for` in `install.rs` returns no method on Windows, so the
+updater stays off. Enabling it means adding a method that downloads
+the release's installer and launches it, then exits. `signature.rs` cannot lean on `gpgv`/`gpg` on
 Windows; sign the installer with Authenticode and verify it with
 `WinVerifyTrust` against the embedded certificate, which also covers
 the tarball checksum's job for that channel. Until signing secrets
