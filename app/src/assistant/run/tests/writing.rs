@@ -279,7 +279,9 @@ fn a_file() -> (tempfile::TempDir, PathBuf) {
     #[cfg(unix)]
     let dir = builder.tempdir_in("/tmp").expect("a folder in /tmp");
     #[cfg(windows)]
-    let dir = builder.tempdir().expect("a folder in the temporary directory");
+    let dir = builder
+        .tempdir()
+        .expect("a folder in the temporary directory");
     let path = dir.path().join("plan.txt");
     std::fs::write(&path, "Meet at the hill.").expect("the file");
     (dir, path)
