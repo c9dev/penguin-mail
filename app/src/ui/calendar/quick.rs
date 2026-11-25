@@ -21,7 +21,7 @@ use mailrs_domain::translate::{fill, gettext};
 use super::draft::{self, TypeChoice};
 use super::tint;
 use crate::ui::name;
-use crate::ui::safe_popover::{PopoverResult, safe_popup_at};
+use crate::ui::safe_popover::{PopoverResult, safe_popup};
 
 /// Runs with the title, the index of the calendar picked among the
 /// choices `show` was given, and the type picked.
@@ -416,12 +416,12 @@ impl Quick {
                 rect.width(),
                 rect.height(),
             );
-            if safe_popup_at(&self.popover, &translated) == PopoverResult::NoMonitors {
-                return;
-            }
+            self.popover.set_pointing_to(Some(&translated));
         }
         self.popover.set_position(side);
-        self.title.grab_focus();
+        if safe_popup(&self.popover) == PopoverResult::Shown {
+            self.title.grab_focus();
+        }
     }
 
     /// Shows the calendar at `index` among the choices as the one picked.

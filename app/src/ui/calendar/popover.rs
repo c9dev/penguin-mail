@@ -30,7 +30,7 @@ use super::kinds;
 use super::shown::{self, Refocus};
 use super::tint;
 use super::words;
-use crate::ui::safe_popover::{PopoverResult, safe_popup_at};
+use crate::ui::safe_popover::{PopoverResult, safe_popup};
 
 /// Guests past this many collapse behind "Show all", so a meeting of
 /// forty does not fill the popover.
@@ -857,11 +857,9 @@ impl EventPopover {
                 bounds.width().round().max(1.0) as i32,
                 bounds.height().round().max(1.0) as i32,
             );
-            if safe_popup_at(&self.popover, &rect) == PopoverResult::NoMonitors {
-                self.give_tooltip_back();
-                return;
-            }
-        } else {
+            self.popover.set_pointing_to(Some(&rect));
+        }
+        if safe_popup(&self.popover) == PopoverResult::NoMonitors {
             self.give_tooltip_back();
             return;
         }

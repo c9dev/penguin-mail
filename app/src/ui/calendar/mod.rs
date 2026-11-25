@@ -15,7 +15,7 @@
 // windows-gnu's clippy misses that the initializer is already const.
 #![allow(clippy::missing_const_for_thread_local)]
 
-use crate::ui::safe_popover::{safe_popup, safe_popup_at};
+use crate::ui::safe_popover::safe_popup;
 pub mod agenda;
 pub mod attachments;
 pub mod block;
@@ -2323,8 +2323,9 @@ impl CalendarView {
                 bounds.width().round().max(1.0) as i32,
                 bounds.height().round().max(1.0) as i32,
             );
-            let _ = safe_popup_at(&self.more, &rect);
+            self.more.set_pointing_to(Some(&rect));
         }
+        let _ = safe_popup(&self.more);
     }
 
     /// Sends a guest's answer, with `note` for the organizer. An

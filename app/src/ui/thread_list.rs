@@ -997,7 +997,6 @@ fn context_menu(
                 return;
             };
             let point = gdk::Rectangle::new(point.x() as i32, point.y() as i32, 1, 1);
-            popover.set_pointing_to(Some(&point));
             let _ = safe_popup_at(&popover, &point);
         })
     };

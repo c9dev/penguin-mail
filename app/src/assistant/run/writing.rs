@@ -54,11 +54,6 @@ struct Edits {
     encrypt: Option<bool>,
 }
 
-/// The file a tool names at `given`, once it is a file a message may
-/// carry: an absolute path, or one under `~/`, to a readable file of at
-/// most 25 MB that [`off_limits`] allows, or the user picked for this request.
-/// `home` is the user's home folder, and `private` the folders Penguin Mail
-/// keeps its own data in.
 /// `canonicalize` on Windows answers the `\\?\` verbatim form, which no
 /// person, home folder or comparison path ever spells. Give the plain
 /// path back, and a verbatim `UNC` path its `\\server\share` form.
@@ -73,6 +68,11 @@ pub(super) fn plain(path: &Path) -> PathBuf {
     path.to_path_buf()
 }
 
+/// The file a tool names at `given`, once it is a file a message may
+/// carry: an absolute path, or one under `~/`, to a readable file of at
+/// most 25 MB that [`off_limits`] allows, or the user picked for this request.
+/// `home` is the user's home folder, and `private` the folders Penguin Mail
+/// keeps its own data in.
 pub(super) fn local_file(
     given: &str,
     home: &Path,

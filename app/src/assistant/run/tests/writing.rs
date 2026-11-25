@@ -273,10 +273,13 @@ async fn an_encrypted_message_is_never_sent_on() {
 
 /// A folder in the temporary directory holding one text file, `plan.txt`.
 fn a_file() -> (tempfile::TempDir, PathBuf) {
-    let dir = tempfile::Builder::new()
-        .prefix("writing")
-        .tempdir()
-        .expect("a folder in the temporary directory");
+    // On Unix the folder sits in /tmp whatever TMPDIR says.
+    let mut builder = tempfile::Builder::new();
+    builder.prefix("writing");
+    #[cfg(unix)]
+    let dir = builder.tempdir_in("/tmp").expect("a folder in /tmp");
+    #[cfg(windows)]
+    let dir = builder.tempdir().expect("a folder in the temporary directory");
     let path = dir.path().join("plan.txt");
     std::fs::write(&path, "Meet at the hill.").expect("the file");
     (dir, path)
