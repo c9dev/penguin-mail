@@ -21,13 +21,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Penguin Mail runs on Windows 10 and later: mail pages draw with WebView2, a tray icon keeps it working in the background, toast notifications carry their action buttons, the taskbar button shows the unread count, Preferences can start it at sign-in, and PGP and S/MIME work with Gpg4win installed.
 - On Windows, a per-user installer sets up the app, its Start Menu entry and its mail and calendar file associations, and removes all of it on uninstall.
 - On Windows, assistant skills run their scripts inside a sandbox that opens only the skill's folder and a scratch folder to them, not your files.
-- On Windows, Preferences and other dialogs draw over an open message instead of breaking apart around it.
-- On Windows, the message pane no longer overlaps neighboring panes or leaves a gap at the window's edge after a resize.
-- On Windows, toasts and other overlays drawn over an open message show above the page instead of staying behind it, and the page fills its pane again once they close.
-- On Windows, the background copy that takes over after the last window closes starts reliably instead of dying on a session-bus timeout.
-- On Windows, the unread badge no longer panics in a background run that has no windows to badge.
-- On Windows, emoji and other color glyphs draw through the fontconfig backend, ending the "All font fallbacks failed" warnings the win32 font map logged for them.
-- On Windows, opening the app from the Start Menu or a mailto link no longer brings a console window with it.
 
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
 
