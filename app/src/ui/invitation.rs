@@ -681,6 +681,17 @@ impl EventCard {
         still_showing(on_screen, uid)
     }
 
+    /// The same question a calendar's result asks: whether the card still
+    /// shows the invitation `uid` names, counting the events of a calendar
+    /// file, which often name no id, as naming themselves: the file's
+    /// window holds one card for one file, so a result the card still
+    /// shows can only be its own.
+    fn shows_target(&self, uid: &str) -> bool {
+        let held = self.showing.borrow();
+        let on_screen = held.as_ref().map(|showing| showing.invitation.uid.as_str());
+        still_shows_target(on_screen, uid)
+    }
+
     /// Says what else the user has on while this event runs.
     pub fn set_busy(&self, uid: &str, busy: &[String]) {
         if self.shows(uid) {
@@ -798,7 +809,7 @@ impl EventCard {
     /// the invitation the card holds, so a redraw after an answer keeps
     /// the button.
     pub fn set_on_calendar(&self, uid: &str, spot: Spot) {
-        if !self.shows(uid) {
+        if !self.shows_target(uid) {
             return;
         }
         let updated = {
@@ -865,6 +876,22 @@ impl EventCard {
         }
     }
 
+    /// Takes a press off Add to Calendar while the window finds the
+    /// calendars the events can go on, since a press before then has
+    /// nowhere to put them and would hand the file back to the desktop
+    /// instead. `release_add` puts pressing back.
+    pub fn hold_add(&self) {
+        self.add.set_sensitive(false);
+    }
+
+    /// Puts pressing back on Add to Calendar once the calendars it can add
+    /// to are known, where `hold_add` took it off. A list of events left
+    /// with nothing ticked keeps the button grey, as the ticks decide.
+    pub fn release_add(&self) {
+        let free = self.picks.borrow().is_empty() || any_checked(&self.events);
+        self.add.set_sensitive(free);
+    }
+
     /// Takes Add to Calendar off the card, for a window that has no
     /// calendar to add the events to.
     pub fn cannot_add(&self) {
@@ -878,7 +905,7 @@ impl EventCard {
     /// invitation `uid` names. With none, Add to Calendar goes on handing
     /// the file to the desktop.
     pub fn set_targets(&self, uid: &str, targets: Vec<AddTo>) {
-        if !self.shows(uid) {
+        if !self.shows_target(uid) {
             return;
         }
         let labels: Vec<&str> = targets.iter().map(|t| t.label.as_str()).collect();
@@ -896,7 +923,7 @@ impl EventCard {
     /// Show in Calendar, which opens the first of them. `calendar` is
     /// empty when the account never named it.
     pub fn set_added(&self, uid: &str, calendar: &str, spots: &[Spot]) {
-        if !self.shows(uid) {
+        if !self.shows_target(uid) {
             return;
         }
         let Some(first) = spots.first() else {
@@ -1143,6 +1170,18 @@ impl EventCard {
 /// nothing, since there is no telling it from the next one.
 fn still_showing(on_screen: Option<&str>, uid: &str) -> bool {
     !uid.trim().is_empty() && on_screen == Some(uid)
+}
+
+/// Whether the calendars of one invitation belong to the one on screen,
+/// `on_screen` being the UID the card holds and `None` meaning no
+/// invitation is up. Unlike `still_showing` above, a nameless invitation
+/// matches: a calendar file's events often name no id, and one window
+/// holds one file, so the emptiness itself is how that file's results
+/// are told from another's, and a named one never lands on it. Nothing
+/// but a file's calendars and where its events went ever ask this; an
+/// answer keeps the stricter `still_showing`.
+fn still_shows_target(on_screen: Option<&str>, uid: &str) -> bool {
+    on_screen == Some(uid)
 }
 
 /// Whether the card holds a file that only describes events, which Add
@@ -1543,6 +1582,28 @@ mod tests {
         assert!(!still_showing(Some(""), ""));
         assert!(!still_showing(Some("   "), "   "));
         assert!(!still_showing(Some("design@example.com"), ""));
+    }
+
+    #[test]
+    fn calendars_land_only_on_the_invitation_they_went_for() {
+        assert!(still_shows_target(
+            Some("design@example.com"),
+            "design@example.com"
+        ));
+        assert!(!still_shows_target(
+            Some("budget@example.com"),
+            "design@example.com"
+        ));
+        assert!(!still_shows_target(None, "design@example.com"));
+        assert!(!still_shows_target(Some("design@example.com"), ""));
+        assert!(!still_shows_target(Some(""), "design@example.com"));
+    }
+
+    #[test]
+    fn a_file_with_no_ids_still_receives_its_calendars() {
+        assert!(still_shows_target(Some(""), ""));
+        assert!(still_shows_target(Some("   "), "   "));
+        assert!(!still_shows_target(None, ""));
     }
 
     #[test]

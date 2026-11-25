@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Opening a calendar file that is already open brings its window forward instead of opening another.
+- Add to Calendar on a calendar file whose events have no id now says they cannot be added, instead of handing the file back to the desktop and opening another copy of the same window.
 - Closing Customize Mailboxes releases its folder lists.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
 - Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.

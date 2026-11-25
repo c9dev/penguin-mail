@@ -113,6 +113,10 @@ pub struct App {
     /// A calendar file requested on the command line, opened on first
     /// activation.
     pending_file: RefCell<Option<crate::NamedFile>>,
+    /// The Calendar File window each open calendar file has, by its path,
+    /// so a file the desktop hands over twice comes up in the window it
+    /// already has instead of opening another.
+    calendar_files: RefCell<Vec<(PathBuf, glib::WeakRef<adw::Window>)>>,
     tray_started: Cell<bool>,
     /// The unread counts the sidebar, the tray and the Dock badge share.
     unread: Rc<Unread<CoreCounts>>,
@@ -214,6 +218,7 @@ impl App {
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             pending_file: RefCell::new(file),
+            calendar_files: RefCell::new(Vec::new()),
             tray_started: Cell::new(false),
             unread: Unread::new(CoreCounts(counted_by)),
             dock_badge: dock_badge::Badge::new(&app_id),

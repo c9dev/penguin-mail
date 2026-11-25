@@ -160,6 +160,10 @@ fn show_events(
         me: accounts.iter().map(|(_, email)| email.clone()).collect(),
         on_calendar: None,
     });
+    // A press before the account's calendars are on the card has nowhere
+    // to put the events: it would hand the file back to the desktop,
+    // which hands a calendar file to this very app.
+    card.hold_add();
 
     let page = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -219,7 +223,10 @@ fn offer_calendars(
         if let Some(card) = card.upgrade() {
             match targets.is_empty() {
                 true => card.cannot_add(),
-                false => card.set_targets(&uid, targets),
+                false => {
+                    card.set_targets(&uid, targets);
+                    card.release_add();
+                }
             }
         }
     });
@@ -290,10 +297,24 @@ mod tests {
     const REQUEST: &str = "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:a@x\r\n\
         DTSTART:20261105T083000Z\r\nSUMMARY:Review\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
 
+    /// A booking tool's itinerary: no METHOD, and no UID on its events,
+    /// which is what stops the import from adding them twice.
+    const BOOKING: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n\
+        SUMMARY:PLANE to London\r\nDTSTART:20261130T161000Z\r\n\
+        DTEND:20261130T174500Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+
     #[test]
     fn a_saved_invitation_reads_as_an_event_to_keep() {
         let events = events_of(REQUEST);
         assert_eq!(events.len(), 1);
+        assert_eq!(events[0].card(), invitation::Card::Add);
+    }
+
+    #[test]
+    fn a_booking_with_no_ids_still_reads_as_events_to_add() {
+        let events = events_of(BOOKING);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].uid, "");
         assert_eq!(events[0].card(), invitation::Card::Add);
     }
 
