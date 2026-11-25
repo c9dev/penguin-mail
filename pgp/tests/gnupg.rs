@@ -133,6 +133,12 @@ fn a_program_that_writes_past_the_cap_is_stopped() {
         }
     });
     assert!(gone, "the stand-in was left behind");
+    // Reaped rather than left a zombie: its entry is gone altogether.
+    #[cfg(target_os = "linux")]
+    assert!(
+        !std::path::Path::new(&format!("/proc/{}", pid.trim())).exists(),
+        "the stand-in was left behind"
+    );
 }
 
 #[cfg(any(target_os = "linux", windows))]
@@ -232,7 +238,6 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     );
     let pid = std::fs::read_to_string(&pid).expect("the stand-in wrote its pid");
     let pid = pid.trim();
-    // Reaped rather than left a zombie: its entry is gone altogether.
     let gone = (0..100).any(|_| {
         if running(pid) {
             std::thread::sleep(std::time::Duration::from_millis(20));
@@ -242,6 +247,11 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
         }
     });
     assert!(gone, "the stand-in {pid} was left behind");
+    #[cfg(target_os = "linux")]
+    assert!(
+        !std::path::Path::new(&format!("/proc/{pid}")).exists(),
+        "the stand-in {pid} was left behind"
+    );
     let child = std::fs::read_to_string(&child).expect("the stand-in wrote its child's pid");
     let child = child.trim();
     // The child's new parent reaps it, which takes a moment.
