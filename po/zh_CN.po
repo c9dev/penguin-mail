@@ -1883,23 +1883,18 @@ msgid ""
 msgstr "无法运行技能脚本：bubblewrap 无法启动沙箱（{reason}）。"
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:576
-#, fuzzy
-#| msgid ""
-#| "Skill scripts need bubblewrap, which is not installed. Install the "
-#| "bubblewrap package to run them."
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
-msgstr "技能脚本需要 bubblewrap，但尚未安装。请安装 bubblewrap 软件包以运行。"
+msgstr ""
+"技能脚本需要 Windows 版 busybox，但尚未安装。请将它放在应用旁边，或将环境变量 PENGUIN_MAIL_BUSYBOX "
+"设为它的路径。"
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:586
 #: app/src/assistant/sources/skills/sandbox/windows.rs:601
 #: app/src/assistant/sources/skills/sandbox/windows.rs:605
-#, fuzzy
-#| msgid ""
-#| "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
-msgstr "无法运行技能脚本：bubblewrap 无法启动沙箱（{reason}）。"
+msgstr "无法运行技能脚本：无法启动沙箱（{reason}）。"
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -4794,10 +4789,8 @@ msgid "Version {version}"
 msgstr "版本 {version}"
 
 #: app/src/ui/about.rs:88
-#, fuzzy
-#| msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgid "Mail and calendar for {os}. Your mail stays on your computer."
-msgstr "Linux 邮件与日历。邮件保存在自己的电脑上。"
+msgstr "{os} 邮件与日历。邮件保存在自己的电脑上。"
 
 #: app/src/ui/about.rs:185
 msgid "What's New"

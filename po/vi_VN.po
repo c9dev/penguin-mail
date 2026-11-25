@@ -1932,27 +1932,20 @@ msgstr ""
 "cách ly ({reason})."
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:576
-#, fuzzy
-#| msgid ""
-#| "Skill scripts need bubblewrap, which is not installed. Install the "
-#| "bubblewrap package to run them."
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"Kịch bản kỹ năng cần bubblewrap nhưng chưa được cài đặt. Cài gói bubblewrap "
-"để chạy chúng."
+"Kịch bản kỹ năng cần busybox cho Windows nhưng chưa được cài đặt. Đặt nó"
+" cạnh ứng dụng hoặc đặt biến PENGUIN_MAIL_BUSYBOX trỏ tới nó."
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:586
 #: app/src/assistant/sources/skills/sandbox/windows.rs:601
 #: app/src/assistant/sources/skills/sandbox/windows.rs:605
-#, fuzzy
-#| msgid ""
-#| "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
 msgstr ""
-"Không thể chạy kịch bản kỹ năng: bubblewrap không khởi động được môi trường "
-"cách ly ({reason})."
+"Không thể chạy kịch bản kỹ năng: không khởi động được môi trường cách ly"
+" ({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -4917,10 +4910,8 @@ msgid "Version {version}"
 msgstr "Phiên bản {version}"
 
 #: app/src/ui/about.rs:88
-#, fuzzy
-#| msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgid "Mail and calendar for {os}. Your mail stays on your computer."
-msgstr "Thư và lịch cho Linux. Thư của bạn được giữ trên máy tính."
+msgstr "Thư và lịch cho {os}. Thư của bạn được giữ trên máy tính."
 
 #: app/src/ui/about.rs:185
 msgid "What's New"

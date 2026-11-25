@@ -2039,27 +2039,21 @@ msgstr ""
 "pu démarrer de bac à sable ({reason})."
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:576
-#, fuzzy
-#| msgid ""
-#| "Skill scripts need bubblewrap, which is not installed. Install the "
-#| "bubblewrap package to run them."
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"Les scripts des compétences ont besoin de bubblewrap, qui n’est pas "
-"installé. Installez le paquet bubblewrap pour les exécuter."
+"Les scripts des compétences ont besoin de busybox pour Windows, qui "
+"n’est pas installé. Placez-le à côté de l’application ou faites pointer "
+"la variable PENGUIN_MAIL_BUSYBOX vers lui."
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:586
 #: app/src/assistant/sources/skills/sandbox/windows.rs:601
 #: app/src/assistant/sources/skills/sandbox/windows.rs:605
-#, fuzzy
-#| msgid ""
-#| "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
 msgstr ""
-"Les scripts des compétences ne peuvent pas s’exécuter : bubblewrap n’a pas "
-"pu démarrer de bac à sable ({reason})."
+"Les scripts des compétences ne peuvent pas s’exécuter : le bac à sable "
+"n’a pas pu démarrer ({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -5144,11 +5138,9 @@ msgid "Version {version}"
 msgstr "Version {version}"
 
 #: app/src/ui/about.rs:88
-#, fuzzy
-#| msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgid "Mail and calendar for {os}. Your mail stays on your computer."
 msgstr ""
-"Courrier et agenda pour Linux. Votre courrier reste sur votre ordinateur."
+"Courrier et agenda pour {os}. Votre courrier reste sur votre ordinateur."
 
 #: app/src/ui/about.rs:185
 msgid "What's New"

@@ -2053,27 +2053,21 @@ msgstr ""
 "ξεκινήσει περιβάλλον απομόνωσης ({reason})."
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:576
-#, fuzzy
-#| msgid ""
-#| "Skill scripts need bubblewrap, which is not installed. Install the "
-#| "bubblewrap package to run them."
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"Τα σενάρια δεξιοτήτων χρειάζονται το bubblewrap, το οποίο δεν είναι "
-"εγκατεστημένο. Εγκαταστήστε το πακέτο bubblewrap για να εκτελούνται."
+"Τα σενάρια δεξιοτήτων χρειάζονται το busybox για Windows, το οποίο δεν "
+"είναι εγκατεστημένο. Τοποθετήστε το δίπλα στην εφαρμογή ή ορίστε τη "
+"μεταβλητή PENGUIN_MAIL_BUSYBOX σε αυτό."
 
 #: app/src/assistant/sources/skills/sandbox/windows.rs:586
 #: app/src/assistant/sources/skills/sandbox/windows.rs:601
 #: app/src/assistant/sources/skills/sandbox/windows.rs:605
-#, fuzzy
-#| msgid ""
-#| "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
 msgstr ""
-"Τα σενάρια δεξιοτήτων δεν μπορούν να εκτελεστούν: το bubblewrap απέτυχε να "
-"ξεκινήσει περιβάλλον απομόνωσης ({reason})."
+"Τα σενάρια δεξιοτήτων δεν μπορούν να εκτελεστούν: το περιβάλλον "
+"απομόνωσης απέτυχε να ξεκινήσει ({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -5213,11 +5207,9 @@ msgid "Version {version}"
 msgstr "Έκδοση {version}"
 
 #: app/src/ui/about.rs:88
-#, fuzzy
-#| msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgid "Mail and calendar for {os}. Your mail stays on your computer."
 msgstr ""
-"Αλληλογραφία και ημερολόγιο για Linux. Η αλληλογραφία σας μένει στον "
+"Αλληλογραφία και ημερολόγιο για {os}. Η αλληλογραφία σας μένει στον "
 "υπολογιστή σας."
 
 #: app/src/ui/about.rs:185
