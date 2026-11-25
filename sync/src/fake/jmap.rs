@@ -1063,6 +1063,7 @@ impl FakeJmap {
         blob_id: &str,
         mailboxes: &[String],
         keywords: &[&str],
+        received_at: Option<chrono::DateTime<chrono::FixedOffset>>,
     ) -> Answer<Imported> {
         let raw = s.blobs.get(blob_id).cloned().ok_or(JmapError::NotFound)?;
         if let Some((id, email)) = s
@@ -1096,7 +1097,9 @@ impl FakeJmap {
                 thread_id: thread.clone(),
                 mailbox_ids: mailboxes.iter().cloned().collect(),
                 keywords: keywords.iter().map(|k| k.to_string()).collect(),
-                received_at: chrono::Utc::now().timestamp_millis(),
+                received_at: received_at
+                    .map(|hour| hour.timestamp_millis())
+                    .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()),
             },
         );
         s.record("Email", &id, Op::Created);
@@ -1493,8 +1496,11 @@ impl JmapApi for FakeJmap {
         mailbox_ids: &[String],
         keywords: &[&str],
         destroy: Option<&str>,
+        received_at: Option<&str>,
     ) -> Answer<Saved> {
         self.called("Email/import");
+        let hour =
+            received_at.and_then(|hour| chrono::DateTime::parse_from_rfc3339(hour).ok());
         self.with(|s| {
             // As the client does: the same bytes held by a message that is
             // no draft, and not the one being replaced, are not taken over.
@@ -1512,7 +1518,7 @@ impl JmapApi for FakeJmap {
                     description: String::new(),
                 });
             }
-            let made = FakeJmap::import_now(s, blob_id, mailbox_ids, keywords)?;
+            let made = FakeJmap::import_now(s, blob_id, mailbox_ids, keywords, hour)?;
             // As the client does: the old draft goes in a second request,
             // and a refusal there comes back beside the new message.
             let leftover = destroy.filter(|old| *old != made.id).and_then(|old| {
@@ -1590,7 +1596,7 @@ impl JmapApi for FakeJmap {
                 let thread_id = s.emails[&id].thread_id.clone();
                 return Ok(Imported { id, thread_id });
             }
-            let made = FakeJmap::import_now(s, &submission.blob_id, &[home], keywords)?;
+            let made = FakeJmap::import_now(s, &submission.blob_id, &[home], keywords, None)?;
             if let Some(kind) = s.submission_refusal.clone() {
                 // The client destroys the copy when the submission fails,
                 // unless the server had it before.
@@ -1933,6 +1939,7 @@ impl JmapApi for FakeJmap {
                 &hold.blob_id,
                 std::slice::from_ref(&hold.drafts),
                 &["$draft", "$seen", HELD],
+                None,
             )?;
             let id = s.id("S");
             let wait = i64::try_from(hold.hold_for.saturating_mul(1000)).unwrap_or(i64::MAX / 2);
@@ -2402,7 +2409,7 @@ mod tests {
         assert_eq!(step(&fake, &mut since), [fake.mailbox("archive")]);
         let blob = fake.upload(RAW.to_vec()).await.unwrap();
         let made = fake
-            .import(&blob, std::slice::from_ref(&inbox), &[], None)
+            .import(&blob, std::slice::from_ref(&inbox), &[], None, None)
             .await
             .unwrap()
             .email;
@@ -2453,12 +2460,12 @@ mod tests {
             other => panic!("{other:?}"),
         };
         assert_eq!(
-            kind(fake.import(&blob, &[], &[], None).await.unwrap_err()),
+            kind(fake.import(&blob, &[], &[], None, None).await.unwrap_err()),
             "invalidProperties"
         );
         assert_eq!(
             kind(
-                fake.import(&blob, &["nowhere".into()], &[], None)
+                fake.import(&blob, &["nowhere".into()], &[], None, None)
                     .await
                     .unwrap_err()
             ),

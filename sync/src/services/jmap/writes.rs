@@ -249,6 +249,28 @@ impl<J: JmapApi> Jmap<J> {
         results
     }
 
+    /// Whether the server still files this message in `mailbox`. A
+    /// landed copy has no row until the account's next look, so the
+    /// server is the only one who knows whether the person has moved
+    /// it since in another client. A copy that is gone counts as
+    /// moved: an Undo that cannot put the pair back together leaves
+    /// the mail alone rather than restoring one half of it.
+    pub(super) async fn still_in_mailbox(
+        &self,
+        message: &str,
+        mailbox: &str,
+    ) -> Result<bool, BackendError> {
+        let got = self
+            .api()
+            .emails(&[message.to_string()], &["id", "mailboxIds"])
+            .await
+            .map_err(backend)?;
+        Ok(got
+            .list
+            .first()
+            .is_some_and(|email| email.mailbox_ids.get(mailbox) == Some(&true)))
+    }
+
     pub(super) async fn write(
         &self,
         messages: &[String],

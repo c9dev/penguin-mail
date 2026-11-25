@@ -27,10 +27,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.
 - Smart mailboxes can combine any chosen folders, such as Inbox and Sent from one account.
 - Paste an HTML signature, such as one with a table, a logo and colored lines, into Preferences: messages go out with it as designed, and its pictures travel inside the message.
+- Drag mail onto another account's folder, label or Inbox to carry it there. It arrives with its read and flagged marks and its original arrival date, and Undo brings it back. Outlook folders and POP3 accounts refuse the drop, since their servers cannot take the copy.
 - Optionally check for mail by slowly pulling past the top of the message list with a touchpad. Enable Pull to Check for Mail in Reading preferences; quick flicks do not start a check.
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
 - Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
 - Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
+- Drag a message onto a collapsed account and hold it there: the account opens so the message can be dropped on a folder that was out of sight.
 
 ### Improved
 
