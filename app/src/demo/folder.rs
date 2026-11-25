@@ -77,14 +77,14 @@ fn sweep(base: &Path) {
 
 /// Whether a process with `pid` is running now.
 #[cfg(unix)]
-fn alive(pid: u32) -> bool {
+pub(crate) fn alive(pid: u32) -> bool {
     Path::new("/proc").join(pid.to_string()).exists()
 }
 
 /// Whether a process with `pid` is running now: `OpenProcess` fails for
 /// one that is gone.
 #[cfg(windows)]
-fn alive(pid: u32) -> bool {
+pub(crate) fn alive(pid: u32) -> bool {
     unsafe extern "system" {
         fn OpenProcess(access: u32, inherit: i32, pid: u32) -> *mut std::ffi::c_void;
         fn CloseHandle(handle: *mut std::ffi::c_void) -> i32;

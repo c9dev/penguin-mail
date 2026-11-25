@@ -84,7 +84,24 @@ const UNSELECT: &str = "window.getSelection().removeAllRanges()";
 
 /// WebView2 needs nothing before GTK starts; its environment is made when
 /// the first page asks for it.
-pub fn prepare() {}
+pub fn prepare() {
+    // A crashed run leaves its working folder behind; its pid names it.
+    let Ok(entries) = std::fs::read_dir(std::env::temp_dir()) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let pid = name
+            .to_str()
+            .and_then(|name| name.strip_prefix("penguin-mail-webview2-"))
+            .and_then(|rest| rest.trim_start_matches("unsub-").split('-').next())
+            .and_then(|digits| digits.parse::<u32>().ok());
+        if pid.is_some_and(|pid| pid != std::process::id() && !crate::demo::folder::alive(pid)) {
+            // A folder a live browser still holds stays; the next start retries.
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+}
 
 /// One page, and the handle every clone of it shares.
 #[derive(Clone)]
@@ -98,6 +115,11 @@ impl WeakWebView {
         self.0.upgrade().map(WebView)
     }
 }
+
+/// `NavigateToString` refuses documents over 2 MB (`2 * 1024 * 1024` bytes).
+const NAVIGATE_TO_STRING_CAP: usize = 2 * 1024 * 1024;
+/// The address a page over that cap is served from, through `resource`.
+const PAGE_URL: &str = "https://penguin-mail.invalid/page";
 
 type Navigate = Rc<dyn Fn(&str)>;
 type Serve = Rc<dyn Fn(Request)>;
@@ -126,6 +148,8 @@ struct Inner {
     /// `AddScriptToExecuteOnDocumentCreated` cannot be relied on to put
     /// them where WebKit's document-end scripts go.
     scripts: RefCell<Vec<Rc<str>>>,
+    /// A page too large for `NavigateToString`, which [`PAGE_URL`] serves.
+    big_page: RefCell<Option<Rc<str>>>,
     /// Whether the page's script engine runs, which a reader's scripts
     /// need; the rendered CSP keeps the mail's own markup silent anyway.
     /// A sealed page keeps the engine off entirely.
@@ -349,6 +373,19 @@ impl Inner {
             let _ = request.Uri(raw.out());
         }
         let uri = raw.read().unwrap_or_default();
+        if uri == PAGE_URL {
+            let page = self.big_page.borrow().clone();
+            let env = self.core.borrow().as_ref().map(|core| core.env.clone());
+            if let (Some(page), Some(env)) = (page, env) {
+                let headers = "Content-Type: text/html; charset=utf-8\r\n";
+                if let Ok(response) = respond(&env, page.as_bytes(), 200, "OK", headers) {
+                    unsafe {
+                        let _ = args.SetResponse(&response);
+                    }
+                }
+            }
+            return;
+        }
         let scheme = self.scheme.borrow().clone();
         if !scheme.is_empty() && uri.starts_with(&format!("{scheme}:")) {
             let (Some(serve), Some(env)) = (
@@ -689,9 +726,10 @@ fn wire(inner: &Rc<Inner>, core: &Rc<Core>) {
             let mut raw = OwnedText::default();
             let _ = args.Uri(raw.out());
             let uri = raw.read().unwrap_or_default();
-            let own = ["about:blank", "data:", "blob:"]
-                .iter()
-                .any(|start| uri.starts_with(start))
+            let own = uri == PAGE_URL
+                || ["about:blank", "data:", "blob:"]
+                    .iter()
+                    .any(|start| uri.starts_with(start))
                 || (!inner.scheme.borrow().is_empty()
                     && uri.starts_with(&format!("{}:", inner.scheme.borrow())));
             if own {
@@ -868,6 +906,7 @@ impl WebView {
             core: RefCell::new(None),
             queued: RefCell::new(Vec::new()),
             scripts: RefCell::new(Vec::new()),
+            big_page: RefCell::new(None),
             scripting: Cell::new(false),
             scheme: RefCell::new(String::new()),
             serve: RefCell::new(None),
@@ -906,12 +945,14 @@ impl WebView {
             let focus = gtk::EventControllerFocus::new();
             focus.connect_enter(move |_| {
                 if let Some(inner) = weak.upgrade() {
-                    let page = Rc::clone(&inner);
+                    // Weak: a queued op sitting in `inner` must not own it.
+                    let page = Rc::downgrade(&inner);
                     inner.with_core(move |core| unsafe {
                         if core
                             .controller
                             .MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC)
                             .is_ok()
+                            && let Some(page) = page.upgrade()
                         {
                             page.focused.set(GetFocus());
                         }
@@ -1000,8 +1041,24 @@ impl WebView {
 
     pub fn load_html(&self, html: &str) {
         let html = html.to_string();
+        let inner = Rc::downgrade(&self.0);
         self.0.with_core(move |core| unsafe {
-            let _ = core.web.NavigateToString(&HSTRING::from(&html));
+            let Some(inner) = inner.upgrade() else {
+                return;
+            };
+            // shortcut: an oversized page loads from an https origin, not
+            // about:blank, so its CSP is all that limits it; move to a
+            // virtual host mapping if that origin ever matters.
+            let big = html.len() > NAVIGATE_TO_STRING_CAP;
+            *inner.big_page.borrow_mut() = big.then(|| Rc::from(html.as_str()));
+            let result = if big {
+                core.web.Navigate(&HSTRING::from(PAGE_URL))
+            } else {
+                core.web.NavigateToString(&HSTRING::from(&html))
+            };
+            if let Err(err) = result {
+                tracing::warn!("WebView2 could not load the page: {err}");
+            }
         });
     }
 

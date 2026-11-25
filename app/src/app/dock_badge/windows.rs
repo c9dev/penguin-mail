@@ -152,7 +152,7 @@ unsafe fn count_icon(unread: i64) -> HICON {
         let screen = GetDC(None);
         let dc = CreateCompatibleDC(Some(screen));
         let color = CreateCompatibleBitmap(screen, size, size);
-        SelectObject(dc, color.into());
+        let old_bitmap = SelectObject(dc, color.into());
         let brush = CreateSolidBrush(ORANGE);
         let square = RECT {
             left: 0,
@@ -194,6 +194,8 @@ unsafe fn count_icon(unread: i64) -> HICON {
             DT_CENTER | DT_VCENTER | DT_SINGLELINE,
         );
         SelectObject(dc, old_font);
+        // A bitmap still selected into a DC is not freed by DeleteObject.
+        SelectObject(dc, old_bitmap);
         // The AND mask is all zeros: the square draws opaque everywhere.
         let row = ((size + 15) / 16) as usize * 2;
         let zeros = vec![0u8; row * size_y];

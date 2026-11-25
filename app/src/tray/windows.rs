@@ -2,13 +2,13 @@
 //! window whose messages the GTK main loop pumps, so the icon, its
 //! tooltip and its muda context menu all live on the GTK thread. A
 //! `watch` flag marks the state dirty; the loop redraws once no matter
-//! how many updates came between wakes.
+//! how many updates came between wakes. Clicks arrive by event handler,
+//! so nothing polls.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use gtk::glib;
 use mailrs_domain::translate::{fill, gettext};
@@ -21,6 +21,12 @@ use super::{MailTray, MenuRow, TrayCommand};
 /// envelope, 2 the envelope with the unread dot.
 const PLAIN_ICON: u16 = 1;
 const UNREAD_ICON: u16 = 2;
+
+/// What the tray's event handlers pass to the GTK loop.
+enum Heard {
+    Menu(MenuId),
+    Toggle,
+}
 
 /// The state the shell reads; `changed` wakes the GTK-side drawer.
 struct Shared {
@@ -96,12 +102,34 @@ pub fn spawn(tray: MailTray) -> Option<Handle> {
             }
         }
     });
-    glib::timeout_add_local(Duration::from_millis(40), {
+    // The handlers run on the GTK thread, inside the window's message
+    // pump, but they must be `Send`; they hand the events to the loop.
+    let (heard, events) = async_channel::unbounded::<Heard>();
+    MenuEvent::set_event_handler(Some({
+        let heard = heard.clone();
+        move |event: MenuEvent| {
+            let _ = heard.try_send(Heard::Menu(event.id));
+        }
+    }));
+    TrayIconEvent::set_event_handler(Some(move |event: TrayIconEvent| {
+        if let TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Up,
+            ..
+        } = event
+        {
+            let _ = heard.try_send(Heard::Toggle);
+        }
+    }));
+    glib::spawn_future_local({
         let shared = shared.clone();
-        let screen = screen.clone();
-        move || {
-            while let Ok(event) = MenuEvent::receiver().try_recv() {
-                if let Some(command) = screen.rows.borrow().get(&event.id).cloned() {
+        async move {
+            while let Ok(heard) = events.recv().await {
+                let command = match heard {
+                    Heard::Toggle => Some(TrayCommand::Toggle),
+                    Heard::Menu(id) => screen.rows.borrow().get(&id).cloned(),
+                };
+                if let Some(command) = command {
                     shared
                         .tray
                         .lock()
@@ -109,21 +137,6 @@ pub fn spawn(tray: MailTray) -> Option<Handle> {
                         .send(command);
                 }
             }
-            while let Ok(event) = TrayIconEvent::receiver().try_recv() {
-                if let TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                    ..
-                } = event
-                {
-                    shared
-                        .tray
-                        .lock()
-                        .expect("the tray state is poisoned")
-                        .send(TrayCommand::Toggle);
-                }
-            }
-            glib::ControlFlow::Continue
         }
     });
     Some(Handle { shared })

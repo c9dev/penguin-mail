@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use windows::Data::Xml::Dom::XmlDocument;
 use windows::Foundation::TypedEventHandler;
 use windows::UI::Notifications::{
-    ToastActivatedEventArgs, ToastDismissedEventArgs, ToastNotification, ToastNotificationManager,
-    ToastNotifier,
+    ToastActivatedEventArgs, ToastDismissalReason, ToastDismissedEventArgs, ToastNotification,
+    ToastNotificationManager, ToastNotifier,
 };
 use windows::Win32::Storage::EnhancedStorage::PKEY_AppUserModel_ID;
 use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
@@ -34,6 +34,9 @@ use super::{Action, Actions};
 pub(super) struct Desktop {
     native: Option<Native>,
 }
+
+/// Every toast's group, which Action Center needs to find one again.
+const GROUP: &str = "mail";
 
 struct Native {
     notifier: ToastNotifier,
@@ -105,6 +108,7 @@ impl Desktop {
         };
         let toast = match ToastNotification::CreateToastNotification(&xml).and_then(|toast| {
             toast.SetTag(&HSTRING::from(id))?;
+            toast.SetGroup(&HSTRING::from(GROUP))?;
             Ok(toast)
         }) {
             Ok(toast) => toast,
@@ -116,19 +120,33 @@ impl Desktop {
         let shown = native.shown.clone();
         let id_owned = id.to_string();
         let _ = toast.Dismissed(&TypedEventHandler::new(
-            move |_toast: Ref<ToastNotification>, _args: Ref<ToastDismissedEventArgs>| {
-                shown
-                    .lock()
-                    .expect("the toast map is poisoned")
-                    .remove(&id_owned);
+            move |_toast: Ref<ToastNotification>, args: Ref<ToastDismissedEventArgs>| {
+                // A toast that timed out moves to Action Center, where
+                // `withdraw` can still remove it.
+                let timed_out = args
+                    .ok()
+                    .and_then(|args| args.Reason())
+                    .is_ok_and(|reason| reason == ToastDismissalReason::TimedOut);
+                if !timed_out {
+                    shown
+                        .lock()
+                        .expect("the toast map is poisoned")
+                        .remove(&id_owned);
+                }
                 Ok(())
             },
         ));
         let Some(sender) = clicks_channel().get().cloned() else {
             return;
         };
+        let shown = native.shown.clone();
+        let id_owned = id.to_string();
         let _ = toast.Activated(&TypedEventHandler::new(
             move |_toast: Ref<ToastNotification>, args: Ref<windows::core::IInspectable>| {
+                shown
+                    .lock()
+                    .expect("the toast map is poisoned")
+                    .remove(&id_owned);
                 let Ok(click) = serde_json::from_str::<Click>(
                     &args
                         .ok()?
@@ -163,6 +181,17 @@ impl Desktop {
             && let Err(err) = native.notifier.Hide(&toast)
         {
             tracing::warn!(error = %err, "a toast would not hide");
+        }
+        // Hide only covers a toast still on screen; one that moved to
+        // Action Center goes through the history.
+        if let Err(err) = ToastNotificationManager::History().and_then(|history| {
+            history.RemoveGroupedTagWithId(
+                &HSTRING::from(id),
+                &HSTRING::from(GROUP),
+                &HSTRING::from(crate::APP_ID),
+            )
+        }) {
+            tracing::debug!(error = %err, "no toast in Action Center to remove");
         }
     }
 }
