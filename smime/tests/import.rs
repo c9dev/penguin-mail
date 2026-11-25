@@ -13,6 +13,9 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_pgp::gnupg::Change;
 use mailrs_smime::{Smime, SmimeError};
 
@@ -74,25 +77,13 @@ impl Drop for Home {
     fn drop(&mut self) {
         // The agent gpgsm started holds sockets open under the temp
         // directory.
-        let _ = Command::new(gpgconf(self.smime.program()))
+        let _ = Command::new(gpgconf::gpgconf(self.smime.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "gpg-agent"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
-    }
-}
-
-/// gpgconf beside the program these tests found, or the bare name for
-/// PATH to resolve: Gpg4win keeps itself off PATH but puts the whole
-/// family in one directory.
-fn gpgconf(program: &Path) -> std::path::PathBuf {
-    let beside = program.with_file_name("gpgconf");
-    if beside.exists() || beside.with_extension("exe").exists() {
-        beside
-    } else {
-        "gpgconf".into()
     }
 }
 

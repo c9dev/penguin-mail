@@ -7,6 +7,9 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_pgp::inline::{Armor, armor};
 use mailrs_pgp::{Pgp, Readers, Verdict};
 
@@ -72,25 +75,13 @@ impl Drop for Home {
     fn drop(&mut self) {
         // The agent and dirmngr gpg started hold sockets open under the temp
         // directory. Killing them leaves nothing running once it goes.
-        let _ = Command::new(gpgconf(self.pgp.program()))
+        let _ = Command::new(gpgconf::gpgconf(self.pgp.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "all"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
-    }
-}
-
-/// gpgconf beside the program these tests found, or the bare name for
-/// PATH to resolve: Gpg4win keeps itself off PATH but puts the whole
-/// family in one directory.
-fn gpgconf(program: &Path) -> std::path::PathBuf {
-    let beside = program.with_file_name("gpgconf");
-    if beside.exists() || beside.with_extension("exe").exists() {
-        beside
-    } else {
-        "gpgconf".into()
     }
 }
 

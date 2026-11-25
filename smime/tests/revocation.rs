@@ -34,6 +34,9 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_smime::{Chain, Smime, Verdict};
 
 /// How long these tests let gpgsm wait on a CRL. The app waits ten
@@ -368,25 +371,13 @@ impl Drop for Home {
     fn drop(&mut self) {
         // gpgsm started gpg-agent and dirmngr for this home, and a dirmngr
         // still waiting on the silent port would otherwise outlive the test.
-        let _ = Command::new(gpgconf(self.smime.program()))
+        let _ = Command::new(gpgconf::gpgconf(self.smime.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "all"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
-    }
-}
-
-/// gpgconf beside the program these tests found, or the bare name for
-/// PATH to resolve: Gpg4win keeps itself off PATH but puts the whole
-/// family in one directory.
-fn gpgconf(program: &Path) -> std::path::PathBuf {
-    let beside = program.with_file_name("gpgconf");
-    if beside.exists() || beside.with_extension("exe").exists() {
-        beside
-    } else {
-        "gpgconf".into()
     }
 }
 
@@ -589,7 +580,7 @@ fn a_root_nobody_trusts_stays_untrusted_when_the_crl_is_out_of_reach() {
     std::fs::write(home.dir.path().join("trustlist.txt"), "").expect("write");
     // gpg-agent read the trust list when the test signed, and keeps what
     // it read until it starts again.
-    let _ = Command::new(gpgconf(home.smime.program()))
+    let _ = Command::new(gpgconf::gpgconf(home.smime.program()))
         .arg("--homedir")
         .arg(home.dir.path())
         .args(["--kill", "gpg-agent"])
