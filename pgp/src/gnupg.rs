@@ -106,12 +106,16 @@ impl Program {
         pinentry: Pinentry,
         args: impl FnOnce(&mut Command),
     ) -> std::io::Result<Run> {
+        #[cfg(windows)]
+        let inheriting = inheritable_handles();
         let (mut command, mut status_reader, status_writer) = self.command(pinentry, args)?;
         let spawned = command.spawn();
         // The child holds its own copy now. Keeping this one open would
         // leave the status pipe without an end, and the read below would
         // wait for ever.
         uninherit(&status_writer);
+        #[cfg(windows)]
+        drop(inheriting);
         drop(status_writer);
         drop(command);
         let mut child = spawned?;
@@ -183,10 +187,14 @@ impl Program {
         args: impl FnOnce(&mut Command),
     ) -> std::io::Result<Run> {
         let deadline = Instant::now() + limit;
+        #[cfg(windows)]
+        let inheriting = inheritable_handles();
         let (mut command, status_reader, status_writer) = self.command(pinentry, args)?;
         own_group(&mut command);
         let spawned = command.spawn();
         uninherit(&status_writer);
+        #[cfg(windows)]
+        drop(inheriting);
         drop(status_writer);
         drop(command);
         let mut child = spawned?;
@@ -371,6 +379,9 @@ fn group_of(child: &std::process::Child) -> Group {
     child.id()
 }
 
+// shortcut: the Job is assigned after the spawn, so a child that starts
+// its own children first can escape it; create the process suspended and
+// resume it after the assignment if that ever shows.
 /// Puts the child into a Job of its own, so stopping the Job stops the
 /// processes the program started too, the way killing its process group
 /// does on Unix. `None` when the Job could not be made or joined; the
@@ -490,6 +501,19 @@ fn status_fd(command: &mut Command, writer: &std::io::PipeWriter) -> std::io::Re
         });
     }
     Ok(())
+}
+
+/// Held from the moment a handle is flagged inheritable until it is
+/// cleared again, because a flagged handle leaks into any other process
+/// spawned in between. The sandbox runner takes it too.
+///
+/// shortcut: only these two spawn paths take it, so a std spawn anywhere
+/// else can still inherit a flagged handle; wrap those spawns too if one
+/// ever runs beside them.
+#[cfg(windows)]
+pub fn inheritable_handles() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Hands the write end of the status pipe to the child as an inherited

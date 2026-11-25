@@ -165,3 +165,28 @@ async fn a_timed_out_command_cannot_leave_a_child_running() {
     tokio::time::sleep(Duration::from_millis(1200)).await;
     assert!(!work.join("late").exists());
 }
+
+#[tokio::test]
+async fn a_skill_without_network_cannot_open_a_connection() {
+    let Some(shell) = shell() else { return };
+    let root = tempfile::tempdir().unwrap();
+    let (skill, work) = folders(root.path(), "one");
+    let sh = quote(&shell);
+    let text = format!(
+        "{sh} --list > \"$WORK/applets\"; {sh} wget -T 3 -q -O - http://1.1.1.1/ > /dev/null 2>&1; printf $? > \"$WORK/status\""
+    );
+    let answer = command(&shell, &skill, &work, &text, Duration::from_secs(15)).await;
+    assert_eq!(answer.exit_code, Some(0), "{}", answer.output);
+    let applets = std::fs::read_to_string(work.join("applets")).unwrap();
+    assert!(
+        applets.lines().any(|name| name.trim() == "wget"),
+        "this BusyBox has no wget, so the check proves nothing"
+    );
+    // 0 is a fetched page and 127 a missing program; anything else is a
+    // refused connection.
+    let status = std::fs::read_to_string(work.join("status")).unwrap();
+    assert!(
+        !matches!(status.trim(), "0" | "127"),
+        "wget finished with status {status}"
+    );
+}

@@ -119,6 +119,9 @@ fn run_sync(
 
     let (out_reader, out_writer) = std::io::pipe()?;
     let (in_reader, in_writer) = std::io::pipe()?;
+    // Held until the child has its copies and ours are closed, so no other
+    // spawn inherits these handles.
+    let inheriting = mailrs_pgp::gnupg::inheritable_handles();
     // std's pipe ends are not inheritable, and a handle the child is
     // handed must be, or process creation rejects the allowlist.
     for handle in [in_reader.as_raw_handle(), out_writer.as_raw_handle()] {
@@ -144,6 +147,7 @@ fn run_sync(
     // open forever.
     drop(in_reader);
     drop(out_writer);
+    drop(inheriting);
     let (process, _thread, job) = spawned?;
 
     let (answered, received) = std::sync::mpsc::channel();
@@ -358,13 +362,15 @@ fn environment(jail: &Owned, folder: &Path) -> Vec<u16> {
     let win = |path: &Path| path.to_string_lossy().replace('/', "\\");
     let unix = |path: &Path| path.to_string_lossy().replace('\\', "/");
     let work = unix(&jail.work);
+    // Windows may sit on another drive; the environment itself is not passed on.
+    let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
     let mut vars = [
-        ("SystemRoot", "C:\\Windows".to_string()),
-        ("WINDIR", "C:\\Windows".into()),
+        ("SystemRoot", root.clone()),
+        ("WINDIR", root.clone()),
         ("OS", "Windows_NT".into()),
-        ("ComSpec", "C:\\Windows\\System32\\cmd.exe".into()),
+        ("ComSpec", format!("{root}\\System32\\cmd.exe")),
         ("PATHEXT", ".COM;.EXE;.BAT;.CMD".into()),
-        ("PATH", format!("{};C:\\Windows\\System32", win(folder))),
+        ("PATH", format!("{};{root}\\System32", win(folder))),
         ("HOME", work.clone()),
         ("USERPROFILE", work.clone()),
         ("APPDATA", work.clone()),

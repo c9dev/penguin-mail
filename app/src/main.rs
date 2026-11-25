@@ -179,6 +179,15 @@ fn attach_parent_console() {
 fn main() -> glib::ExitCode {
     #[cfg(target_os = "windows")]
     attach_parent_console();
+    // The installer's AppMutex names this; the handle lives until exit.
+    #[cfg(target_os = "windows")]
+    let _running = unsafe {
+        windows::Win32::System::Threading::CreateMutexW(
+            None,
+            false,
+            windows::core::w!("PenguinMailRunning"),
+        )
+    };
     #[cfg(feature = "packaging-appimage")]
     appimage::prepare().expect("could not prepare the AppImage");
     #[cfg(target_os = "macos")]

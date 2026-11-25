@@ -18,6 +18,10 @@ pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
     if packaging.updated_by().is_some() {
         return None;
     }
+    // The Windows installer replaces the app; the Linux tarball never fits.
+    if cfg!(windows) {
+        return None;
+    }
     // A macOS app is replaced as a signed bundle, never by the Linux installer.
     if exe.parent().is_some_and(|folder| {
         folder.ends_with("Contents/MacOS") || folder.ends_with("Contents/Resources")
@@ -153,6 +157,14 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_install_has_no_method() {
+        let exe = Path::new(r"C:\Program Files\Penguin Mail\bin\penguin-mail.exe");
+        assert_eq!(method_for(Packaging::Native, exe), None);
+    }
+
+    #[cfg(not(windows))]
     #[test]
     fn the_binary_path_says_how_this_copy_was_installed() {
         let native = |exe: &str| method_for(Packaging::Native, Path::new(exe));
