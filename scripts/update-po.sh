@@ -41,7 +41,7 @@ while read -r file; do
     xtr "${keywords[@]}" -o "$out" "$file"
     # xtr joins a file's directory and name with a backslash on Windows;
     # the refs a person reads use a slash.
-    sed -i '/^#:/s|\\|/|g' "$out"
+    sed '/^#:/s|\\|/|g' "$out" > "$out.tmp" && mv "$out.tmp" "$out"
 done <<< "$listed"
 # The desktop entry and the AppStream metainfo are not Rust at all. xgettext
 # reads the metainfo through the ITS rules AppStream installs, which leave
