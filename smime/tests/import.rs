@@ -162,7 +162,9 @@ fn make() -> Option<Files> {
         .expect("gpgsm runs");
     if !(p12.status.success() && !p12.stdout.is_empty()) {
         // The script needs a shell, so only off Unix is a failed export a skip.
-        assert!(!cfg!(unix), "gpgsm could not export a PKCS#12 file");
+        if cfg!(unix) {
+            panic!("gpgsm could not export a PKCS#12 file");
+        }
         eprintln!("skipping: the pinentry script cannot answer, so no PKCS#12 file");
         return None;
     }

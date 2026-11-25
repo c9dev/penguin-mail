@@ -203,7 +203,9 @@ mod tests {
                 .status
                 .success()
             {
-                assert!(!cfg!(unix), "gpg could not generate a test key");
+                if cfg!(unix) {
+                    panic!("gpg could not generate a test key");
+                }
                 eprintln!("skipping: gpg cannot make a test key on this system");
                 require_crypto();
                 return None;
@@ -360,7 +362,9 @@ mod tests {
             .output()
             .unwrap();
         if !out.status.success() {
-            assert!(!cfg!(unix), "gpg could not read the keyring");
+            if cfg!(unix) {
+                panic!("gpg could not read the keyring");
+            }
             eprintln!("skipping: gpg cannot read a keyring on this system");
             require_crypto();
             return;
