@@ -6,7 +6,7 @@
 //! No and Maybe links there.
 
 // windows-gnu's clippy misses that the initializer is already const.
-#![allow(clippy::missing_const_for_thread_local)]
+#![cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
 
 mod outline;
 pub mod strip;

@@ -13,7 +13,7 @@
 //! under a running process either.
 
 // windows-gnu's clippy misses that the initializer is already const.
-#![allow(clippy::missing_const_for_thread_local)]
+#![cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
 
 use std::cell::Cell;
 use std::ffi::c_int;

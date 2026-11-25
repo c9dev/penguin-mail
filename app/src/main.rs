@@ -517,7 +517,7 @@ fn mailto_recipient(rest: &str) -> String {
 /// Starts GTK and libadwaita and loads the app's icons and stylesheet.
 /// Safe to call more than once.
 // windows-gnu's clippy misses that the initializer is already const.
-#[allow(clippy::missing_const_for_thread_local)]
+#[cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
 pub fn ensure_gtk() {
     // GtkApplication may have started GTK before our resources were
     // registered, so GTK being initialized does not mean our style is.

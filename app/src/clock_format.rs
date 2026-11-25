@@ -8,7 +8,7 @@
 //! Flatpak or on a desktop that is not GNOME.
 
 // windows-gnu's clippy misses that the initializer is already const.
-#![allow(clippy::missing_const_for_thread_local)]
+#![cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
 
 use std::cell::Cell;
 

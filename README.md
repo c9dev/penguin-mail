@@ -538,7 +538,8 @@ a window: `account add`, `sync`, `threads`, `show`, `triage` and `export`.
 
 - Penguin Mail talks to Google's APIs straight from your computer. No
   Penguin Mail server sits in between.
-- Refresh tokens live in Keychain on macOS or the desktop keyring on Linux.
+- Refresh tokens live in Keychain on macOS, Credential Manager on Windows or
+  the desktop keyring on Linux.
   The config file holds sync settings and, for accounts added through the
   old setup page, their Google client ID and secret, readable by you alone.
 - Mail is cached in `~/.local/share/penguin-mail` on Linux,
