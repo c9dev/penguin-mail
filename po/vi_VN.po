@@ -1931,21 +1931,21 @@ msgstr ""
 "Không thể chạy kịch bản kỹ năng: bubblewrap không khởi động được môi trường "
 "cách ly ({reason})."
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:576
+#: app/src/assistant/sources/skills/sandbox/windows.rs:582
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"Kịch bản kỹ năng cần busybox cho Windows nhưng chưa được cài đặt. Đặt nó"
-" cạnh ứng dụng hoặc đặt biến PENGUIN_MAIL_BUSYBOX trỏ tới nó."
+"Kịch bản kỹ năng cần busybox cho Windows nhưng chưa được cài đặt. Đặt nó "
+"cạnh ứng dụng hoặc đặt biến PENGUIN_MAIL_BUSYBOX trỏ tới nó."
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:586
-#: app/src/assistant/sources/skills/sandbox/windows.rs:601
-#: app/src/assistant/sources/skills/sandbox/windows.rs:605
+#: app/src/assistant/sources/skills/sandbox/windows.rs:592
+#: app/src/assistant/sources/skills/sandbox/windows.rs:607
+#: app/src/assistant/sources/skills/sandbox/windows.rs:611
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
 msgstr ""
-"Không thể chạy kịch bản kỹ năng: không khởi động được môi trường cách ly"
-" ({reason})."
+"Không thể chạy kịch bản kỹ năng: không khởi động được môi trường cách ly "
+"({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -2586,15 +2586,15 @@ msgstr ""
 "  mailto:...     giống --compose mailto:...\n"
 "  FILE.ics       mở tệp lịch để thêm các sự kiện vào lịch"
 
-#: app/src/main.rs:303
+#: app/src/main.rs:312
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: tùy chọn không xác định {option}"
 
-#: app/src/main.rs:583
+#: app/src/main.rs:592
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail không thể khởi động"
 
-#: app/src/main.rs:588 app/src/ui/about.rs:192
+#: app/src/main.rs:597 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Báo cáo sự cố"
 
@@ -4901,7 +4901,7 @@ msgstr "Kiểm tra bản cập nhật"
 msgid "Quit"
 msgstr "Thoát"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:144
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
@@ -6230,7 +6230,7 @@ msgstr "Chưa chia sẻ với khách"
 msgid "Open {file} in the browser"
 msgstr "Mở {file} trong trình duyệt"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
 msgid "Open in Browser"
 msgstr "Mở trong trình duyệt"
 
@@ -6507,7 +6507,7 @@ msgstr "Không thể đính kèm {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1154
+#: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "Thêm"
 
@@ -6541,7 +6541,7 @@ msgstr "Màu lịch"
 msgid "Add Google Meet"
 msgstr "Thêm Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2440
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
 #: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "Sự kiện"
@@ -6976,7 +6976,7 @@ msgid "View"
 msgstr "Chế độ xem"
 
 #: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2426
 msgid "New Event (N)"
 msgstr "Sự kiện mới (N)"
 
@@ -7025,7 +7025,7 @@ msgstr "Sự kiện cả ngày"
 msgid "All-day"
 msgstr "Cả ngày"
 
-#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3072
+#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
@@ -7049,23 +7049,23 @@ msgstr "Không thể xóa sự kiện: {reason}"
 msgid "Undo"
 msgstr "Hoàn tác"
 
-#: app/src/ui/calendar/mod.rs:2366
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not send your answer: {reason}"
 msgstr "Không thể gửi câu trả lời: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2429
+#: app/src/ui/calendar/mod.rs:2430
 msgid "None of your calendars take new events"
 msgstr "Không có lịch nào của bạn nhận sự kiện mới"
 
-#: app/src/ui/calendar/mod.rs:2441 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "Thời gian tập trung"
 
-#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:57
+#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "Vắng mặt"
 
-#: app/src/ui/calendar/mod.rs:2811
+#: app/src/ui/calendar/mod.rs:2812
 msgid "Could not save the event: {reason}"
 msgstr "Không thể lưu sự kiện: {reason}"
 
@@ -7114,7 +7114,7 @@ msgstr "Hiện thêm ghi chú"
 msgid "Show all"
 msgstr "Hiện tất cả"
 
-#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:905
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
 msgid "Show all guests"
 msgstr "Hiện tất cả khách"
 

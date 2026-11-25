@@ -1929,19 +1929,20 @@ msgstr ""
 "스킬 스크립트를 실행할 수 없습니다. bubblewrap에서 샌드박스를 시작하지 못했습"
 "니다({reason})."
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:576
+#: app/src/assistant/sources/skills/sandbox/windows.rs:582
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"스킬 스크립트에는 Windows용 busybox가 필요하지만 설치되어 있지 않습니다. 앱 옆에 두거나 "
-"PENGUIN_MAIL_BUSYBOX 변수에 busybox 경로를 설정하세요."
+"스킬 스크립트에는 Windows용 busybox가 필요하지만 설치되어 있지 않습니다. 앱 "
+"옆에 두거나 PENGUIN_MAIL_BUSYBOX 변수에 busybox 경로를 설정하세요."
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:586
-#: app/src/assistant/sources/skills/sandbox/windows.rs:601
-#: app/src/assistant/sources/skills/sandbox/windows.rs:605
+#: app/src/assistant/sources/skills/sandbox/windows.rs:592
+#: app/src/assistant/sources/skills/sandbox/windows.rs:607
+#: app/src/assistant/sources/skills/sandbox/windows.rs:611
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
-msgstr "스킬 스크립트를 실행할 수 없습니다. 샌드박스를 시작하지 못했습니다({reason})."
+msgstr ""
+"스킬 스크립트를 실행할 수 없습니다. 샌드박스를 시작하지 못했습니다({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -2578,15 +2579,15 @@ msgstr ""
 "  mailto:...     --compose mailto:...와 같음\n"
 "  FILE.ics       캘린더 파일을 열어 일정을 캘린더에 추가"
 
-#: app/src/main.rs:303
+#: app/src/main.rs:312
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 알 수 없는 옵션 {option}"
 
-#: app/src/main.rs:583
+#: app/src/main.rs:592
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail을 시작할 수 없습니다"
 
-#: app/src/main.rs:588 app/src/ui/about.rs:192
+#: app/src/main.rs:597 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "문제 보고"
 
@@ -4889,7 +4890,7 @@ msgstr "업데이트 확인"
 msgid "Quit"
 msgstr "종료"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:144
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
@@ -6213,7 +6214,7 @@ msgstr "참석자에게 공유하지 않음"
 msgid "Open {file} in the browser"
 msgstr "브라우저에서 {file} 열기"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
 msgid "Open in Browser"
 msgstr "브라우저에서 열기"
 
@@ -6490,7 +6491,7 @@ msgstr "{file}을(를) 첨부할 수 없습니다: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1154
+#: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "더 보기"
 
@@ -6524,7 +6525,7 @@ msgstr "캘린더 색"
 msgid "Add Google Meet"
 msgstr "Google Meet 추가"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2440
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
 #: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "일정"
@@ -6961,7 +6962,7 @@ msgid "View"
 msgstr "보기"
 
 #: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2426
 msgid "New Event (N)"
 msgstr "새 일정(N)"
 
@@ -7010,7 +7011,7 @@ msgstr "종일 일정"
 msgid "All-day"
 msgstr "종일"
 
-#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3072
+#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
@@ -7034,23 +7035,23 @@ msgstr "일정을 삭제할 수 없습니다: {reason}"
 msgid "Undo"
 msgstr "실행 취소"
 
-#: app/src/ui/calendar/mod.rs:2366
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not send your answer: {reason}"
 msgstr "응답을 보낼 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2429
+#: app/src/ui/calendar/mod.rs:2430
 msgid "None of your calendars take new events"
 msgstr "새 일정을 추가할 수 있는 캘린더가 없습니다"
 
-#: app/src/ui/calendar/mod.rs:2441 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "집중 시간"
 
-#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:57
+#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "부재중"
 
-#: app/src/ui/calendar/mod.rs:2811
+#: app/src/ui/calendar/mod.rs:2812
 msgid "Could not save the event: {reason}"
 msgstr "일정을 저장할 수 없습니다: {reason}"
 
@@ -7099,7 +7100,7 @@ msgstr "메모 더 보기"
 msgid "Show all"
 msgstr "모두 표시"
 
-#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:905
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
 msgid "Show all guests"
 msgstr "모든 참석자 표시"
 

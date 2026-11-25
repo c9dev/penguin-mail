@@ -1948,19 +1948,22 @@ msgstr ""
 "スキルスクリプトを実行できません。bubblewrap がサンドボックスを起動できません"
 "でした（{reason}）。"
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:576
+#: app/src/assistant/sources/skills/sandbox/windows.rs:582
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"スキルスクリプトには Windows 用の busybox が必要ですが、インストールされていません。アプリと同じ場所に置くか、環境変数 "
-"PENGUIN_MAIL_BUSYBOX にそのパスを設定してください。"
+"スキルスクリプトには Windows 用の busybox が必要ですが、インストールされてい"
+"ません。アプリと同じ場所に置くか、環境変数 PENGUIN_MAIL_BUSYBOX にそのパスを"
+"設定してください。"
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:586
-#: app/src/assistant/sources/skills/sandbox/windows.rs:601
-#: app/src/assistant/sources/skills/sandbox/windows.rs:605
+#: app/src/assistant/sources/skills/sandbox/windows.rs:592
+#: app/src/assistant/sources/skills/sandbox/windows.rs:607
+#: app/src/assistant/sources/skills/sandbox/windows.rs:611
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
-msgstr "スキルスクリプトを実行できません。サンドボックスを起動できませんでした（{reason}）。"
+msgstr ""
+"スキルスクリプトを実行できません。サンドボックスを起動できませんでした"
+"（{reason}）。"
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -2603,15 +2606,15 @@ msgstr ""
 "  mailto:...     --compose mailto:... と同じ\n"
 "  FILE.ics       カレンダーファイルを開いて予定をカレンダーに追加"
 
-#: app/src/main.rs:303
+#: app/src/main.rs:312
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 不明なオプション {option}"
 
-#: app/src/main.rs:583
+#: app/src/main.rs:592
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail を起動できませんでした"
 
-#: app/src/main.rs:588 app/src/ui/about.rs:192
+#: app/src/main.rs:597 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "問題を報告"
 
@@ -4937,7 +4940,7 @@ msgstr "更新を確認"
 msgid "Quit"
 msgstr "終了"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:144
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
@@ -4947,7 +4950,8 @@ msgstr "バージョン {version}"
 
 #: app/src/ui/about.rs:88
 msgid "Mail and calendar for {os}. Your mail stays on your computer."
-msgstr "{os} 用のメールとカレンダー。メールはお使いのコンピューターに保存します。"
+msgstr ""
+"{os} 用のメールとカレンダー。メールはお使いのコンピューターに保存します。"
 
 #: app/src/ui/about.rs:185
 msgid "What's New"
@@ -6266,7 +6270,7 @@ msgstr "ゲストと共有していません"
 msgid "Open {file} in the browser"
 msgstr "ブラウザーで {file} を開く"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
 msgid "Open in Browser"
 msgstr "ブラウザーで開く"
 
@@ -6543,7 +6547,7 @@ msgstr "{file} を添付できませんでした: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1154
+#: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "その他"
 
@@ -6577,7 +6581,7 @@ msgstr "カレンダーの色"
 msgid "Add Google Meet"
 msgstr "Google Meet を追加"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2440
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
 #: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "予定"
@@ -7014,7 +7018,7 @@ msgid "View"
 msgstr "表示"
 
 #: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2426
 msgid "New Event (N)"
 msgstr "新しい予定（N）"
 
@@ -7063,7 +7067,7 @@ msgstr "終日の予定"
 msgid "All-day"
 msgstr "終日"
 
-#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3072
+#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
@@ -7087,23 +7091,23 @@ msgstr "予定を削除できませんでした: {reason}"
 msgid "Undo"
 msgstr "元に戻す"
 
-#: app/src/ui/calendar/mod.rs:2366
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not send your answer: {reason}"
 msgstr "回答を送信できませんでした: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2429
+#: app/src/ui/calendar/mod.rs:2430
 msgid "None of your calendars take new events"
 msgstr "新しい予定を追加できるカレンダーがありません"
 
-#: app/src/ui/calendar/mod.rs:2441 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "集中時間"
 
-#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:57
+#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "不在"
 
-#: app/src/ui/calendar/mod.rs:2811
+#: app/src/ui/calendar/mod.rs:2812
 msgid "Could not save the event: {reason}"
 msgstr "予定を保存できませんでした: {reason}"
 
@@ -7152,7 +7156,7 @@ msgstr "メモをもっと表示"
 msgid "Show all"
 msgstr "すべて表示"
 
-#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:905
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
 msgid "Show all guests"
 msgstr "すべてのゲストを表示"
 

@@ -2038,22 +2038,22 @@ msgstr ""
 "Les scripts des compétences ne peuvent pas s’exécuter : bubblewrap n’a pas "
 "pu démarrer de bac à sable ({reason})."
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:576
+#: app/src/assistant/sources/skills/sandbox/windows.rs:582
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"Les scripts des compétences ont besoin de busybox pour Windows, qui "
-"n’est pas installé. Placez-le à côté de l’application ou faites pointer "
-"la variable PENGUIN_MAIL_BUSYBOX vers lui."
+"Les scripts des compétences ont besoin de busybox pour Windows, qui n’est "
+"pas installé. Placez-le à côté de l’application ou faites pointer la "
+"variable PENGUIN_MAIL_BUSYBOX vers lui."
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:586
-#: app/src/assistant/sources/skills/sandbox/windows.rs:601
-#: app/src/assistant/sources/skills/sandbox/windows.rs:605
+#: app/src/assistant/sources/skills/sandbox/windows.rs:592
+#: app/src/assistant/sources/skills/sandbox/windows.rs:607
+#: app/src/assistant/sources/skills/sandbox/windows.rs:611
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
 msgstr ""
-"Les scripts des compétences ne peuvent pas s’exécuter : le bac à sable "
-"n’a pas pu démarrer ({reason})."
+"Les scripts des compétences ne peuvent pas s’exécuter : le bac à sable n’a "
+"pas pu démarrer ({reason})."
 
 #: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
@@ -2715,15 +2715,15 @@ msgstr ""
 "  FICHIER.ics    ouvrir un fichier d’agenda pour ajouter ses événements à un "
 "agenda"
 
-#: app/src/main.rs:303
+#: app/src/main.rs:312
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail : option inconnue {option}"
 
-#: app/src/main.rs:583
+#: app/src/main.rs:592
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail n’a pas pu démarrer"
 
-#: app/src/main.rs:588 app/src/ui/about.rs:192
+#: app/src/main.rs:597 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Signaler un problème"
 
@@ -5129,7 +5129,7 @@ msgstr "Rechercher des mises à jour"
 msgid "Quit"
 msgstr "Quitter"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:144
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail : {summary}"
 
@@ -6487,7 +6487,7 @@ msgstr "Non partagé avec les invités"
 msgid "Open {file} in the browser"
 msgstr "Ouvrir {file} dans le navigateur"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
 msgid "Open in Browser"
 msgstr "Ouvrir dans le navigateur"
 
@@ -6767,7 +6767,7 @@ msgstr "Impossible de joindre {file} : {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1154
+#: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "Plus"
 
@@ -6801,7 +6801,7 @@ msgstr "Couleur de l’agenda"
 msgid "Add Google Meet"
 msgstr "Ajouter Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2440
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
 #: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "Événement"
@@ -7250,7 +7250,7 @@ msgid "View"
 msgstr "Vue"
 
 #: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2426
 msgid "New Event (N)"
 msgstr "Nouvel événement (N)"
 
@@ -7299,7 +7299,7 @@ msgstr "Événements sur toute la journée"
 msgid "All-day"
 msgstr "Journée"
 
-#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3072
+#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
@@ -7323,23 +7323,23 @@ msgstr "Impossible de supprimer l’événement : {reason}"
 msgid "Undo"
 msgstr "Annuler"
 
-#: app/src/ui/calendar/mod.rs:2366
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not send your answer: {reason}"
 msgstr "Impossible d’envoyer votre réponse : {reason}"
 
-#: app/src/ui/calendar/mod.rs:2429
+#: app/src/ui/calendar/mod.rs:2430
 msgid "None of your calendars take new events"
 msgstr "Aucun de vos agendas n’accepte de nouveaux événements"
 
-#: app/src/ui/calendar/mod.rs:2441 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "Temps de concentration"
 
-#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:57
+#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "Absent du bureau"
 
-#: app/src/ui/calendar/mod.rs:2811
+#: app/src/ui/calendar/mod.rs:2812
 msgid "Could not save the event: {reason}"
 msgstr "Impossible d’enregistrer l’événement : {reason}"
 
@@ -7388,7 +7388,7 @@ msgstr "Afficher la suite des notes"
 msgid "Show all"
 msgstr "Tout afficher"
 
-#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:905
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
 msgid "Show all guests"
 msgstr "Afficher tous les invités"
 

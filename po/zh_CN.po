@@ -1882,17 +1882,17 @@ msgid ""
 "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr "无法运行技能脚本：bubblewrap 无法启动沙箱（{reason}）。"
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:576
+#: app/src/assistant/sources/skills/sandbox/windows.rs:582
 msgid ""
 "Skill scripts need busybox for Windows, which is not installed. Install it "
 "next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
 msgstr ""
-"技能脚本需要 Windows 版 busybox，但尚未安装。请将它放在应用旁边，或将环境变量 PENGUIN_MAIL_BUSYBOX "
-"设为它的路径。"
+"技能脚本需要 Windows 版 busybox，但尚未安装。请将它放在应用旁边，或将环境变"
+"量 PENGUIN_MAIL_BUSYBOX 设为它的路径。"
 
-#: app/src/assistant/sources/skills/sandbox/windows.rs:586
-#: app/src/assistant/sources/skills/sandbox/windows.rs:601
-#: app/src/assistant/sources/skills/sandbox/windows.rs:605
+#: app/src/assistant/sources/skills/sandbox/windows.rs:592
+#: app/src/assistant/sources/skills/sandbox/windows.rs:607
+#: app/src/assistant/sources/skills/sandbox/windows.rs:611
 msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
 msgstr "无法运行技能脚本：无法启动沙箱（{reason}）。"
 
@@ -2521,15 +2521,15 @@ msgstr ""
 "  mailto:...     等同于 --compose mailto:...\n"
 "  FILE.ics       打开日历文件，将其中活动加入日历"
 
-#: app/src/main.rs:303
+#: app/src/main.rs:312
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知选项 {option}"
 
-#: app/src/main.rs:583
+#: app/src/main.rs:592
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 无法启动"
 
-#: app/src/main.rs:588 app/src/ui/about.rs:192
+#: app/src/main.rs:597 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "报告问题"
 
@@ -4780,7 +4780,7 @@ msgstr "检查更新"
 msgid "Quit"
 msgstr "退出"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:144
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail：{summary}"
 
@@ -6080,7 +6080,7 @@ msgstr "未与参与者共享"
 msgid "Open {file} in the browser"
 msgstr "在浏览器中打开 {file}"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:936
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
 msgid "Open in Browser"
 msgstr "在浏览器中打开"
 
@@ -6355,7 +6355,7 @@ msgstr "无法附加 {file}：{reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1154
+#: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "更多"
 
@@ -6389,7 +6389,7 @@ msgstr "日历颜色"
 msgid "Add Google Meet"
 msgstr "添加 Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2440
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
 #: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "活动"
@@ -6819,7 +6819,7 @@ msgid "View"
 msgstr "视图"
 
 #: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2426
 msgid "New Event (N)"
 msgstr "新建活动（N）"
 
@@ -6868,7 +6868,7 @@ msgstr "全天活动"
 msgid "All-day"
 msgstr "全天"
 
-#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3072
+#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
 msgid "%a"
@@ -6892,23 +6892,23 @@ msgstr "无法删除活动：{reason}"
 msgid "Undo"
 msgstr "撤销"
 
-#: app/src/ui/calendar/mod.rs:2366
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not send your answer: {reason}"
 msgstr "无法发送回复：{reason}"
 
-#: app/src/ui/calendar/mod.rs:2429
+#: app/src/ui/calendar/mod.rs:2430
 msgid "None of your calendars take new events"
 msgstr "所有日历都无法添加活动"
 
-#: app/src/ui/calendar/mod.rs:2441 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "专注时间"
 
-#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:57
+#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "外出"
 
-#: app/src/ui/calendar/mod.rs:2811
+#: app/src/ui/calendar/mod.rs:2812
 msgid "Could not save the event: {reason}"
 msgstr "无法保存活动：{reason}"
 
@@ -6957,7 +6957,7 @@ msgstr "显示更多备注"
 msgid "Show all"
 msgstr "显示全部"
 
-#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:905
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
 msgid "Show all guests"
 msgstr "显示所有参与者"
 
