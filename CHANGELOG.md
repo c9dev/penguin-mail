@@ -16,6 +16,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The smart mailbox folder picker shows readable folder names in a wider list.
 - Favorites stay visible when their account is collapsed, and folder moves respect the customized order.
 
+### Improved
+
+- The event editor shows its Time zone beside the times it reads, instead of under More, so a calendar set to another zone is seen before it surprises.
+
 ### New
 
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.

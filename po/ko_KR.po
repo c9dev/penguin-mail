@@ -4410,8 +4410,8 @@ msgstr "{host}에서 찾았습니다. 사용할까요?"
 msgid "{host} refused the login: {reason}"
 msgstr "{host}에서 로그인을 거부했습니다: {reason}"
 
-#: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
-#: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
+#: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1225
+#: app/src/ui/calendar/editor.rs:1301 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:549
 #: app/src/ui/sidebar.rs:1904 app/src/ui/window/shortcuts.rs:240
@@ -4516,11 +4516,11 @@ msgstr "Markdown"
 msgid "Automatic"
 msgstr "자동"
 
-#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2163
 msgid "Monday"
 msgstr "월요일"
 
-#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2169
 msgid "Sunday"
 msgstr "일요일"
 
@@ -5045,7 +5045,7 @@ msgstr "링크 복사"
 
 #: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4278
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
-#: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
+#: app/src/ui/calendar/editor.rs:189 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
@@ -5186,7 +5186,7 @@ msgstr "다른 계정 추가"
 msgid "Not Now"
 msgstr "나중에"
 
-#: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
+#: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1688
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1652
@@ -5546,7 +5546,7 @@ msgid "Running"
 msgstr "실행 중"
 
 #: app/src/ui/assistant.rs:1099 app/src/ui/assistant.rs:1262
-#: app/src/ui/calendar/editor.rs:268 app/src/ui/hide_my_email.rs:851
+#: app/src/ui/calendar/editor.rs:269 app/src/ui/hide_my_email.rs:851
 msgid "Done"
 msgstr "완료"
 
@@ -5611,7 +5611,7 @@ msgstr "현재 모델"
 msgid "No models found."
 msgstr "모델을 찾지 못했습니다."
 
-#: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
+#: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1738
 #: app/src/ui/composer/mod.rs:2257
 msgid "Remove {file}"
 msgstr "{file} 제거"
@@ -5651,7 +5651,7 @@ msgstr "편집"
 msgid "Edit {server}"
 msgstr "{server} 편집"
 
-#: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
+#: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1733
 #: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3512
 msgid "Remove"
@@ -5727,7 +5727,7 @@ msgstr "서버 테스트"
 msgid "Test"
 msgstr "테스트"
 
-#: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
+#: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:185
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
@@ -6145,7 +6145,7 @@ msgstr "Keenable API 키(저장됨)"
 msgid "Keenable API Key (Optional)"
 msgstr "Keenable API 키(선택 사항)"
 
-#: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2412
+#: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2409
 #: app/src/ui/composer/recipients.rs:50
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
@@ -6231,12 +6231,12 @@ msgstr "{title}, 종일, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start}부터 {end}까지, {calendar}"
 
-#: app/src/ui/calendar/draft.rs:121 app/src/ui/calendar/editor.rs:2129
+#: app/src/ui/calendar/draft.rs:121 app/src/ui/calendar/editor.rs:2126
 #: app/src/ui/calendar/kinds.rs:59
 msgid "Out of office"
 msgstr "부재중"
 
-#: app/src/ui/calendar/draft.rs:122 app/src/ui/calendar/editor.rs:2128
+#: app/src/ui/calendar/draft.rs:122 app/src/ui/calendar/editor.rs:2125
 #: app/src/ui/calendar/kinds.rs:60
 msgid "Focus time"
 msgstr "집중 시간"
@@ -6245,19 +6245,19 @@ msgstr "집중 시간"
 msgid "Declined because I am out of office"
 msgstr "부재중이므로 거절했습니다"
 
-#: app/src/ui/calendar/editor.rs:179
+#: app/src/ui/calendar/editor.rs:180
 msgid "New Event"
 msgstr "새 일정"
 
-#: app/src/ui/calendar/editor.rs:181
+#: app/src/ui/calendar/editor.rs:182
 msgid "Edit Event"
 msgstr "일정 편집"
 
-#: app/src/ui/calendar/editor.rs:277
+#: app/src/ui/calendar/editor.rs:278
 msgid "Custom Repeat"
 msgstr "사용자 지정 반복"
 
-#: app/src/ui/calendar/editor.rs:403
+#: app/src/ui/calendar/editor.rs:404
 msgid ""
 "{organizer} organizes this event, so its time, place and guests stay as they "
 "set them."
@@ -6265,349 +6265,349 @@ msgstr ""
 "{organizer}님이 주최하는 일정이므로 시간, 장소, 참석자는 주최자가 설정한 상태"
 "로 유지합니다."
 
-#: app/src/ui/calendar/editor.rs:429 app/src/ui/calendar/quick.rs:190
+#: app/src/ui/calendar/editor.rs:430 app/src/ui/calendar/quick.rs:190
 msgid "Title"
 msgstr "제목"
 
-#: app/src/ui/calendar/editor.rs:464 app/src/ui/calendar/quick.rs:196
+#: app/src/ui/calendar/editor.rs:465 app/src/ui/calendar/quick.rs:196
 msgid "Type"
 msgstr "유형"
 
-#: app/src/ui/calendar/editor.rs:566
+#: app/src/ui/calendar/editor.rs:567
 msgid "Out of office and focus time go on a primary calendar"
 msgstr "부재중과 집중 시간은 기본 캘린더에 추가합니다"
 
-#: app/src/ui/calendar/editor.rs:568
+#: app/src/ui/calendar/editor.rs:569
 msgid "Out of office goes on a primary calendar"
 msgstr "부재중은 기본 캘린더에 추가합니다"
 
-#: app/src/ui/calendar/editor.rs:613
+#: app/src/ui/calendar/editor.rs:614
 msgid "Meetings"
 msgstr "회의"
 
-#: app/src/ui/calendar/editor.rs:622
+#: app/src/ui/calendar/editor.rs:623
 msgid "Decline"
 msgstr "거절"
 
-#: app/src/ui/calendar/editor.rs:627
+#: app/src/ui/calendar/editor.rs:628
 msgid "None"
 msgstr "없음"
 
-#: app/src/ui/calendar/editor.rs:628
+#: app/src/ui/calendar/editor.rs:629
 msgid "New only"
 msgstr "새 회의만"
 
-#: app/src/ui/calendar/editor.rs:629
+#: app/src/ui/calendar/editor.rs:630
 msgid "New and existing"
 msgstr "새 회의 및 기존 회의"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:592
+#: app/src/ui/calendar/editor.rs:635 app/src/ui/composer/mod.rs:592
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
 msgid "Message"
 msgstr "메시지"
 
-#: app/src/ui/calendar/editor.rs:664 app/src/ui/calendar/words.rs:71
+#: app/src/ui/calendar/editor.rs:665 app/src/ui/calendar/words.rs:71
 #: app/src/ui/calendar/words.rs:187
 msgid "All day"
 msgstr "종일"
 
-#: app/src/ui/calendar/editor.rs:678
+#: app/src/ui/calendar/editor.rs:679
 msgid "Start date"
 msgstr "시작 날짜"
 
-#: app/src/ui/calendar/editor.rs:696
+#: app/src/ui/calendar/editor.rs:697
 msgid "Start time"
 msgstr "시작 시간"
 
-#: app/src/ui/calendar/editor.rs:716
+#: app/src/ui/calendar/editor.rs:717
 msgid "End date"
 msgstr "종료 날짜"
 
-#: app/src/ui/calendar/editor.rs:738
+#: app/src/ui/calendar/editor.rs:739
 msgid "End time"
 msgstr "종료 시간"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1527
 msgid "Starts"
 msgstr "시작"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:757 app/src/ui/preferences.rs:1529
 msgid "Ends"
 msgstr "종료"
 
-#: app/src/ui/calendar/editor.rs:898
+#: app/src/ui/calendar/editor.rs:902
 msgid "Repeats"
 msgstr "반복"
 
-#: app/src/ui/calendar/editor.rs:941
+#: app/src/ui/calendar/editor.rs:945
 msgid "Custom…"
 msgstr "사용자 지정…"
 
-#: app/src/ui/calendar/editor.rs:1001
+#: app/src/ui/calendar/editor.rs:1005
 msgid "Every"
 msgstr "반복 간격"
 
-#: app/src/ui/calendar/editor.rs:1005
+#: app/src/ui/calendar/editor.rs:1009
 msgid "Unit"
 msgstr "단위"
 
-#: app/src/ui/calendar/editor.rs:1009
+#: app/src/ui/calendar/editor.rs:1013
 msgid "On"
 msgstr "반복 요일"
 
-#: app/src/ui/calendar/editor.rs:1061
+#: app/src/ui/calendar/editor.rs:1065
 msgid "Stops"
 msgstr "반복 종료"
 
-#: app/src/ui/calendar/editor.rs:1068 app/src/ui/calendar/editor.rs:1073
+#: app/src/ui/calendar/editor.rs:1072 app/src/ui/calendar/editor.rs:1077
 #: app/src/ui/calendar/words.rs:510
 msgid "Never"
 msgstr "없음"
 
-#: app/src/ui/calendar/editor.rs:1069 app/src/ui/calendar/editor.rs:1092
+#: app/src/ui/calendar/editor.rs:1073 app/src/ui/calendar/editor.rs:1096
 msgid "On a date"
 msgstr "지정 날짜"
 
-#: app/src/ui/calendar/editor.rs:1070 app/src/ui/calendar/editor.rs:1118
+#: app/src/ui/calendar/editor.rs:1074 app/src/ui/calendar/editor.rs:1122
 msgid "After"
 msgstr "횟수 지정"
 
-#: app/src/ui/calendar/editor.rs:1082
+#: app/src/ui/calendar/editor.rs:1086
 msgid "End date of the repeat"
 msgstr "반복 종료 날짜"
 
-#: app/src/ui/calendar/editor.rs:1105 app/src/ui/calendar/editor.rs:1114
+#: app/src/ui/calendar/editor.rs:1109 app/src/ui/calendar/editor.rs:1118
 msgid "time"
 msgid_plural "times"
 msgstr[0] "회"
 
-#: app/src/ui/calendar/editor.rs:1106
+#: app/src/ui/calendar/editor.rs:1110
 msgid "Number of times"
 msgstr "반복 횟수"
 
-#: app/src/ui/calendar/editor.rs:1309
+#: app/src/ui/calendar/editor.rs:1313
 msgid "Place"
 msgstr "장소"
 
 #. Named for the moment Show all hands it the focus.
-#: app/src/ui/calendar/editor.rs:1324 app/src/ui/calendar/popover.rs:291
+#: app/src/ui/calendar/editor.rs:1328 app/src/ui/calendar/popover.rs:291
 msgid "Guests"
 msgstr "참석자"
 
-#: app/src/ui/calendar/editor.rs:1327 app/src/ui/calendar/editor.rs:1332
+#: app/src/ui/calendar/editor.rs:1331 app/src/ui/calendar/editor.rs:1336
 msgid "Add guests"
 msgstr "참석자 추가"
 
-#: app/src/ui/calendar/editor.rs:1394
+#: app/src/ui/calendar/editor.rs:1398
 msgid "Not an address: {text}"
 msgstr "이메일 주소가 아닙니다: {text}"
 
-#: app/src/ui/calendar/editor.rs:1419
+#: app/src/ui/calendar/editor.rs:1423
 msgid "{address} · {answer}"
 msgstr "{address} · {answer}"
 
-#: app/src/ui/calendar/editor.rs:1437
+#: app/src/ui/calendar/editor.rs:1441
 msgid "Remove {guest}"
 msgstr "{guest} 제거"
 
-#: app/src/ui/calendar/editor.rs:1464
+#: app/src/ui/calendar/editor.rs:1468
 msgid "Reminders"
 msgstr "알림"
 
-#: app/src/ui/calendar/editor.rs:1514
+#: app/src/ui/calendar/editor.rs:1518
 msgid "Add Reminder"
 msgstr "알림 추가"
 
-#: app/src/ui/calendar/editor.rs:1557
+#: app/src/ui/calendar/editor.rs:1561
 msgid "Remove reminder"
 msgstr "알림 제거"
 
-#: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
+#: app/src/ui/calendar/editor.rs:1605 app/src/ui/calendar/editor.rs:1616
 #: app/src/ui/calendar/popover.rs:272
 msgid "Notes"
 msgstr "메모"
 
-#: app/src/ui/calendar/editor.rs:1628
+#: app/src/ui/calendar/editor.rs:1632
 msgid "Attachments"
 msgstr "첨부 파일"
 
-#: app/src/ui/calendar/editor.rs:1634 app/src/ui/calendar/editor.rs:1640
+#: app/src/ui/calendar/editor.rs:1638 app/src/ui/calendar/editor.rs:1644
 msgid "Attach File…"
 msgstr "파일 첨부…"
 
-#: app/src/ui/calendar/editor.rs:1691
+#: app/src/ui/calendar/editor.rs:1695
 msgid "Grant access to upload {file}"
 msgstr "{file} 업로드 권한 부여"
 
-#: app/src/ui/calendar/editor.rs:1707
+#: app/src/ui/calendar/editor.rs:1711
 msgid "Share with guests"
 msgstr "참석자에게 공유"
 
-#: app/src/ui/calendar/editor.rs:1712
+#: app/src/ui/calendar/editor.rs:1716
 msgid "Share {file} with the guests"
 msgstr "{file}을(를) 참석자에게 공유"
 
-#: app/src/ui/calendar/editor.rs:1771
+#: app/src/ui/calendar/editor.rs:1775
 msgid "Cancel Upload"
 msgstr "업로드 취소"
 
-#: app/src/ui/calendar/editor.rs:1775
+#: app/src/ui/calendar/editor.rs:1779
 msgid "Cancel upload of {file}"
 msgstr "{file} 업로드 취소"
 
-#: app/src/ui/calendar/editor.rs:1802
+#: app/src/ui/calendar/editor.rs:1806
 msgid "Attach File"
 msgstr "파일 첨부"
 
-#: app/src/ui/calendar/editor.rs:1821
+#: app/src/ui/calendar/editor.rs:1825
 msgid "Penguin Mail can attach only a file saved on this computer."
 msgstr "이 컴퓨터에 저장된 파일만 첨부할 수 있습니다."
 
-#: app/src/ui/calendar/editor.rs:1856
+#: app/src/ui/calendar/editor.rs:1860
 msgid "Uploading {file}"
 msgstr "{file} 업로드 중"
 
-#: app/src/ui/calendar/editor.rs:1903
+#: app/src/ui/calendar/editor.rs:1907
 msgid "Could not attach {file}: {reason}"
 msgstr "{file}을(를) 첨부할 수 없습니다: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
+#: app/src/ui/calendar/editor.rs:1956
+msgid "Time zone"
+msgstr "시간대"
+
+#: app/src/ui/calendar/editor.rs:1993 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "더 보기"
 
-#: app/src/ui/calendar/editor.rs:1954
-msgid "Time zone"
-msgstr "시간대"
-
-#: app/src/ui/calendar/editor.rs:1998
+#: app/src/ui/calendar/editor.rs:1995
 msgid "Show as busy"
 msgstr "바쁨으로 표시"
 
-#: app/src/ui/calendar/editor.rs:2012
+#: app/src/ui/calendar/editor.rs:2009
 msgid "Private"
 msgstr "비공개"
 
-#: app/src/ui/calendar/editor.rs:2014
+#: app/src/ui/calendar/editor.rs:2011
 msgid "Only people who can change this calendar see the details"
 msgstr "이 캘린더를 변경할 수 있는 사람만 세부 정보를 봅니다"
 
-#: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
+#: app/src/ui/calendar/editor.rs:2025 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2238
 #: app/src/ui/sidebar.rs:2539
 msgid "Color"
 msgstr "색"
 
-#: app/src/ui/calendar/editor.rs:2032
+#: app/src/ui/calendar/editor.rs:2029
 msgid "Calendar color"
 msgstr "캘린더 색"
 
-#: app/src/ui/calendar/editor.rs:2076
+#: app/src/ui/calendar/editor.rs:2073
 msgid "Add Google Meet"
 msgstr "Google Meet 추가"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
+#: app/src/ui/calendar/editor.rs:2124 app/src/ui/calendar/mod.rs:2436
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "일정"
 
-#: app/src/ui/calendar/editor.rs:2151
+#: app/src/ui/calendar/editor.rs:2148
 msgid "day"
 msgid_plural "days"
 msgstr[0] "일"
 
-#: app/src/ui/calendar/editor.rs:2152
+#: app/src/ui/calendar/editor.rs:2149
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "주"
 
-#: app/src/ui/calendar/editor.rs:2153
+#: app/src/ui/calendar/editor.rs:2150
 msgid "month"
 msgid_plural "months"
 msgstr[0] "개월"
 
-#: app/src/ui/calendar/editor.rs:2154
+#: app/src/ui/calendar/editor.rs:2151
 msgid "year"
 msgid_plural "years"
 msgstr[0] "년"
 
-#: app/src/ui/calendar/editor.rs:2167
+#: app/src/ui/calendar/editor.rs:2164
 msgid "Tuesday"
 msgstr "화요일"
 
-#: app/src/ui/calendar/editor.rs:2168
+#: app/src/ui/calendar/editor.rs:2165
 msgid "Wednesday"
 msgstr "수요일"
 
-#: app/src/ui/calendar/editor.rs:2169
+#: app/src/ui/calendar/editor.rs:2166
 msgid "Thursday"
 msgstr "목요일"
 
-#: app/src/ui/calendar/editor.rs:2170
+#: app/src/ui/calendar/editor.rs:2167
 msgid "Friday"
 msgstr "금요일"
 
-#: app/src/ui/calendar/editor.rs:2171
+#: app/src/ui/calendar/editor.rs:2168
 msgid "Saturday"
 msgstr "토요일"
 
-#: app/src/ui/calendar/editor.rs:2183
+#: app/src/ui/calendar/editor.rs:2180
 msgid "Lavender"
 msgstr "라벤더"
 
-#: app/src/ui/calendar/editor.rs:2184
+#: app/src/ui/calendar/editor.rs:2181
 msgid "Sage"
 msgstr "세이지"
 
-#: app/src/ui/calendar/editor.rs:2185
+#: app/src/ui/calendar/editor.rs:2182
 msgid "Grape"
 msgstr "포도"
 
-#: app/src/ui/calendar/editor.rs:2186
+#: app/src/ui/calendar/editor.rs:2183
 msgid "Flamingo"
 msgstr "플라밍고"
 
-#: app/src/ui/calendar/editor.rs:2187
+#: app/src/ui/calendar/editor.rs:2184
 msgid "Banana"
 msgstr "바나나"
 
-#: app/src/ui/calendar/editor.rs:2188
+#: app/src/ui/calendar/editor.rs:2185
 msgid "Tangerine"
 msgstr "귤"
 
-#: app/src/ui/calendar/editor.rs:2189
+#: app/src/ui/calendar/editor.rs:2186
 msgid "Peacock"
 msgstr "공작"
 
-#: app/src/ui/calendar/editor.rs:2190
+#: app/src/ui/calendar/editor.rs:2187
 msgid "Graphite"
 msgstr "흑연"
 
-#: app/src/ui/calendar/editor.rs:2191
+#: app/src/ui/calendar/editor.rs:2188
 msgid "Blueberry"
 msgstr "블루베리"
 
-#: app/src/ui/calendar/editor.rs:2192
+#: app/src/ui/calendar/editor.rs:2189
 msgid "Basil"
 msgstr "바질"
 
-#: app/src/ui/calendar/editor.rs:2193
+#: app/src/ui/calendar/editor.rs:2190
 msgid "Tomato"
 msgstr "토마토"
 
-#: app/src/ui/calendar/editor.rs:2201 app/src/ui/calendar/editor.rs:2452
+#: app/src/ui/calendar/editor.rs:2198 app/src/ui/calendar/editor.rs:2449
 msgid "By email"
 msgstr "이메일로"
 
-#: app/src/ui/calendar/editor.rs:2202 app/src/ui/calendar/editor.rs:2448
-#: app/src/ui/calendar/editor.rs:2452
+#: app/src/ui/calendar/editor.rs:2199 app/src/ui/calendar/editor.rs:2445
+#: app/src/ui/calendar/editor.rs:2449
 msgid "Reminder"
 msgstr "알림"
 
-#: app/src/ui/calendar/editor.rs:2208
+#: app/src/ui/calendar/editor.rs:2205
 msgid "Uses the calendar's default"
 msgstr "캘린더 기본값 사용"
 
