@@ -6209,11 +6209,11 @@ msgstr "Khách có thể mở tệp này"
 msgid "Not shared with the guests"
 msgstr "Chưa chia sẻ với khách"
 
-#: app/src/ui/calendar/attachments.rs:135
+#: app/src/ui/calendar/attachments.rs:153
 msgid "Open {file} in the browser"
 msgstr "Mở {file} trong trình duyệt"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:171 app/src/ui/calendar/popover.rs:930
 msgid "Open in Browser"
 msgstr "Mở trong trình duyệt"
 

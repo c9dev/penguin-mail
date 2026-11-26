@@ -127,6 +127,24 @@ pub fn open(file: &Attachment, from: &impl IsA<gtk::Widget>) {
     let Some(link) = file.link() else { return };
     let window = from.as_ref().root().and_downcast::<gtk::Window>();
     gtk::UriLauncher::new(link).launch(window.as_ref(), gio::Cancellable::NONE, |_| {});
+    close_popover_around(from);
+}
+
+/// Takes the popover the widget sits in down, when there is one. A link
+/// that left for the browser or the meeting app has played the
+/// popover's part out, and the popover, built without autohide so its
+/// rows answer while they are used, never closes on its own: it would
+/// stay over the view after the browser took the screen and the window
+/// fell behind it. The editor's rows find no popover and stay put,
+/// their work waits for the person.
+pub(crate) fn close_popover_around(from: &impl IsA<gtk::Widget>) {
+    if let Some(popover) = from
+        .as_ref()
+        .ancestor(gtk::Popover::static_type())
+        .and_downcast::<gtk::Popover>()
+    {
+        popover.popdown();
+    }
 }
 
 /// The words a screen reader hears for a row that opens `file`.

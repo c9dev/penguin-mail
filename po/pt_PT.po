@@ -6398,11 +6398,11 @@ msgstr "Os convidados podem abrir este ficheiro"
 msgid "Not shared with the guests"
 msgstr "Não partilhado com os convidados"
 
-#: app/src/ui/calendar/attachments.rs:135
+#: app/src/ui/calendar/attachments.rs:153
 msgid "Open {file} in the browser"
 msgstr "Abrir {file} no navegador"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:171 app/src/ui/calendar/popover.rs:930
 msgid "Open in Browser"
 msgstr "Abrir no navegador"
 

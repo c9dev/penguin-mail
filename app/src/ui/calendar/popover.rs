@@ -959,13 +959,15 @@ impl EventPopover {
 
 /// Opens `link` in the browser, only when it is `https:`: a calendar
 /// event's link is whatever the organizer typed, and a `file:` or
-/// custom scheme must not open from a click on a meeting.
+/// custom scheme must not open from a click on a meeting. The popover
+/// the link left from goes down with it, its part played out.
 fn open(link: &str, from: &impl IsA<gtk::Widget>) {
     if !link.starts_with("https://") {
         return;
     }
     let window = from.as_ref().root().and_downcast::<gtk::Window>();
     gtk::UriLauncher::new(link).launch(window.as_ref(), gio::Cancellable::NONE, |_| {});
+    attachments::close_popover_around(from);
 }
 
 fn icon_row(icon: &str, label: &gtk::Label) -> gtk::Box {
