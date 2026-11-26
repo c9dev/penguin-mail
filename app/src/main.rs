@@ -179,6 +179,15 @@ fn attach_parent_console() {
 fn main() -> glib::ExitCode {
     #[cfg(target_os = "windows")]
     attach_parent_console();
+    // GLib's cache folder on Windows is Internet Explorer's INetCache, which
+    // Disk Cleanup and "delete browsing data" empty, downloaded updates
+    // included. The app's caches live in its own folder instead.
+    #[cfg(target_os = "windows")]
+    if std::env::var_os("XDG_CACHE_HOME").is_none()
+        && let Some(local) = exe::local_data()
+    {
+        putenv("XDG_CACHE_HOME", local.join("cache"));
+    }
     // The installer's AppMutex names this; the handle lives until exit.
     #[cfg(target_os = "windows")]
     let _running = unsafe {
