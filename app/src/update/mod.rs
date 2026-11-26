@@ -211,6 +211,9 @@ pub fn announce(version: Version, install: async_channel::Sender<()>) {
             .action("install", &gettext("Install"));
         #[cfg(target_os = "linux")]
         notification.hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
+        // Without it Windows files the toast under PowerShell.
+        #[cfg(windows)]
+        notification.app_id(APP_ID);
         match notification.show() {
             Ok(handle) => handle.wait_for_action(|key| {
                 if key == "install" {
@@ -233,6 +236,8 @@ pub fn tell(summary: String) {
             .icon(APP_ID);
         #[cfg(target_os = "linux")]
         notification.hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
+        #[cfg(windows)]
+        notification.app_id(APP_ID);
         let shown = notification.show();
         if let Err(err) = shown {
             tracing::warn!(error = %err, "could not show a notification");

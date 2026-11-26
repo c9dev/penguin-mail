@@ -611,6 +611,7 @@ fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
     toolbar.add_top_bar(&adw::HeaderBar::new());
     toolbar.set_content(Some(&page));
     let window = adw::Window::builder()
+        .title(gettext("Penguin Mail"))
         .default_width(560)
         .default_height(420)
         .content(&toolbar)
