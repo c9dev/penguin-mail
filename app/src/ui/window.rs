@@ -991,6 +991,23 @@ impl MainWindow {
             {
                 window.set_default_size(width, height);
             }
+            // A Linux window manager fits a new window to the screen; on
+            // Windows nothing does, so a 1280x800 laptop would lose the
+            // window's right edge and its buttons under the taskbar.
+            #[cfg(windows)]
+            if let Some(monitor) = gtk::gdk::Display::default()
+                .and_then(|display| display.monitors().item(0))
+                .and_downcast::<gtk::gdk::Monitor>()
+            {
+                // Windows lists the primary monitor first, and places a new
+                // window a little in from the corner, so a tenth is kept free.
+                let area = gdk4_win32::Win32Monitor::workarea(&monitor);
+                let (width, height) = window.default_size();
+                window.set_default_size(
+                    width.min(area.width() * 9 / 10),
+                    height.min(area.height() * 9 / 10),
+                );
+            }
 
             let actions = gio::SimpleActionGroup::new();
             window.insert_action_group("win", Some(&actions));
