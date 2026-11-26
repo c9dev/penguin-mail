@@ -16,7 +16,7 @@ use windows::UI::Notifications::{
     ToastActivatedEventArgs, ToastDismissalReason, ToastDismissedEventArgs, ToastNotification,
     ToastNotificationManager, ToastNotifier,
 };
-use windows::Win32::Foundation::{CLASS_E_NOAGGREGATION, ERROR_SUCCESS, HKEY_CURRENT_USER};
+use windows::Win32::Foundation::{CLASS_E_NOAGGREGATION, ERROR_SUCCESS};
 use windows::Win32::Storage::EnhancedStorage::{
     PKEY_AppUserModel_ID, PKEY_AppUserModel_ToastActivatorCLSID,
 };
@@ -27,7 +27,7 @@ use windows::Win32::System::Com::{
     REGCLS_MULTIPLEUSE,
 };
 use windows::Win32::System::Registry::{
-    REG_SZ, RRF_RT_REG_SZ, RegGetValueW, RegSetKeyValueW,
+    HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegGetValueW, RegSetKeyValueW,
 };
 use windows::Win32::UI::Notifications::{
     INotificationActivationCallback, INotificationActivationCallback_Impl,
