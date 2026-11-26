@@ -1089,7 +1089,7 @@ msgstr ""
 "implicite. Fișierul vechi a fost păstrat ca {file}."
 
 #. The description is the overlay's alt text, read aloud.
-#: app/src/app/dock_badge/windows.rs:54
+#: app/src/app/dock_badge/windows.rs:50
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] "{count} mesaj necitit"
@@ -4262,8 +4262,8 @@ msgstr "Acel cont nu este conectat."
 msgid "Could not save: {reason}"
 msgstr "Nu s-a putut salva: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3003
-#: app/src/ui/window.rs:3026
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3020
+#: app/src/ui/window.rs:3043
 msgid "Could not open the draft: {reason}"
 msgstr "Nu s-a putut deschide ciorna: {reason}"
 
@@ -4532,7 +4532,7 @@ msgid "Set up a different project"
 msgstr "Configurați un alt proiect"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3356
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3373
 msgid "Set up your own Google project"
 msgstr "Configurați propriul proiect Google"
 
@@ -4715,8 +4715,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Abonament Claude"
 
-#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3748
-#: app/src/ui/window.rs:3836
+#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3765
+#: app/src/ui/window.rs:3853
 msgid "Assistant"
 msgstr "Asistent"
 
@@ -5125,7 +5125,7 @@ msgstr "Deschide Penguin Mail"
 msgid "New Message"
 msgstr "Mesaj nou"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2524 app/src/ui/window.rs:3754
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2524 app/src/ui/window.rs:3771
 msgid "Check for Mail"
 msgstr "Verifică corespondența"
 
@@ -5143,7 +5143,7 @@ msgstr "Noutăți în {version}"
 msgid "Check for Updates"
 msgstr "Caută actualizări"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3775
+#: app/src/tray.rs:216 app/src/ui/window.rs:3792
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Ieșire"
@@ -5170,7 +5170,7 @@ msgstr "Noutăți"
 msgid "Website"
 msgstr "Site web"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3774
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3791
 msgid "Donate"
 msgstr "Donează"
 
@@ -5178,7 +5178,7 @@ msgstr "Donează"
 msgid "License"
 msgstr "Licență"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3773
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3790
 msgid "About Penguin Mail"
 msgstr "Despre Penguin Mail"
 
@@ -5228,12 +5228,12 @@ msgid "The update to {version} failed"
 msgstr "Actualizarea la {version} a eșuat"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1575
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1592
 msgid "Copy Command"
 msgstr "Copiază comanda"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1580
+#: app/src/ui/window.rs:1597
 msgid "Command copied"
 msgstr "Comandă copiată"
 
@@ -5343,7 +5343,7 @@ msgstr "Anulează"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1519
+#: app/src/ui/window.rs:1536
 msgid "Sign In"
 msgstr "Conectare"
 
@@ -5467,7 +5467,7 @@ msgstr "Nu acum"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1652
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1669
 msgid "Grant Access"
 msgstr "Acordă acces"
 
@@ -5620,7 +5620,7 @@ msgid "Sign In Again"
 msgstr "Conectare din nou"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2263
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2280
 msgid "Open Google Cloud"
 msgstr "Deschide Google Cloud"
 
@@ -5711,13 +5711,13 @@ msgstr "Scrie o ciornă de răspuns la conversația deschisă"
 msgid "Choose a Model"
 msgstr "Alege un model"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3883
-#: app/src/ui/window.rs:3884
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3900
+#: app/src/ui/window.rs:3901
 msgid "Detach"
 msgstr "Detașează"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4568
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4585
 msgid "Close"
 msgstr "Închide"
 
@@ -5943,7 +5943,7 @@ msgstr "Editează {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2255 app/src/ui/composer/recipients.rs:319
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3512
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3529
 msgid "Remove"
 msgstr "Elimină"
 
@@ -8526,7 +8526,7 @@ msgid "Export…"
 msgstr "Exportă…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3764
+#: app/src/ui/window.rs:3781
 msgid "Customize Toolbar…"
 msgstr "Personalizează bara de instrumente…"
 
@@ -9100,7 +9100,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Permite Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3977
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3994
 msgid "Add an account first"
 msgstr "Adăugați mai întâi un cont"
 
@@ -10441,7 +10441,7 @@ msgstr "Mută {account} în jos"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3771 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3788 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferințe"
 
@@ -10993,7 +10993,7 @@ msgstr "Răspuns automat…"
 msgid "Rules…"
 msgstr "Reguli…"
 
-#: app/src/ui/sidebar.rs:2435 app/src/ui/window.rs:3757
+#: app/src/ui/sidebar.rs:2435 app/src/ui/window.rs:3774
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
@@ -11634,7 +11634,7 @@ msgstr "Corespondența nu a putut fi încărcată: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "S-a adăugat {account}. Se descarcă corespondența…"
 
-#: app/src/ui/window.rs:366 app/src/ui/window.rs:3118
+#: app/src/ui/window.rs:366 app/src/ui/window.rs:3135
 msgid "{account} is signed in again."
 msgstr "{account} este din nou conectat."
 
@@ -11790,65 +11790,65 @@ msgstr[2] "{count} de mesaje mutate în Mesaje primite"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (demonstrație)"
 
-#: app/src/ui/window.rs:1395
+#: app/src/ui/window.rs:1412
 msgid "Could not read accounts: {reason}"
 msgstr "Conturile nu au putut fi citite: {reason}"
 
-#: app/src/ui/window.rs:2154
+#: app/src/ui/window.rs:2171
 msgid "Could not delete the mail: {reason}"
 msgstr "Corespondența nu a putut fi ștearsă: {reason}"
 
-#: app/src/ui/window.rs:2261
+#: app/src/ui/window.rs:2278
 msgid "Turn On the {service}"
 msgstr "Activați {service}"
 
-#: app/src/ui/window.rs:2446 app/src/ui/window.rs:2449
+#: app/src/ui/window.rs:2463 app/src/ui/window.rs:2466
 msgid "Move to Inbox"
 msgstr "Mută în Mesaje primite"
 
-#: app/src/ui/window.rs:2617 app/src/ui/window.rs:2622
+#: app/src/ui/window.rs:2634 app/src/ui/window.rs:2639
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Caută modele"
 
-#: app/src/ui/window.rs:2691
+#: app/src/ui/window.rs:2708
 msgid "Select mail from one account to tag it."
 msgstr "Selectați mesaje dintr-un singur cont pentru a le eticheta."
 
-#: app/src/ui/window.rs:2703
+#: app/src/ui/window.rs:2720
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Acest cont nu are încă etichete. Creați una în Outlook."
 
-#: app/src/ui/window.rs:2796
+#: app/src/ui/window.rs:2813
 msgid "Add an account to reply or forward"
 msgstr "Adăugați un cont pentru a răspunde sau a redirecționa"
 
-#: app/src/ui/window.rs:2901
+#: app/src/ui/window.rs:2918
 msgid "Could not include {file}: {reason}"
 msgstr "{file} nu a putut fi inclus: {reason}"
 
-#: app/src/ui/window.rs:2982
+#: app/src/ui/window.rs:2999
 msgid "The server had already sent this message."
 msgstr "Serverul trimisese deja acest mesaj."
 
-#: app/src/ui/window.rs:2987
+#: app/src/ui/window.rs:3004
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Acest mesaj a fost anulat în altă aplicație și nu mai este în Ciorne."
 
-#: app/src/ui/window.rs:3303
+#: app/src/ui/window.rs:3320
 msgid "Continue in your browser"
 msgstr "Continuați în navigator"
 
-#: app/src/ui/window.rs:3353
+#: app/src/ui/window.rs:3370
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Această copie a Penguin Mail a fost compilată fără conectare Google."
 
-#: app/src/ui/window.rs:3375
+#: app/src/ui/window.rs:3392
 msgid "Get a Release"
 msgstr "Obține o versiune oficială"
 
-#: app/src/ui/window.rs:3498
+#: app/src/ui/window.rs:3515
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11856,86 +11856,86 @@ msgstr ""
 "Nu s-a putut verifica dacă serverul păstrează mesaje de trimis mai târziu, "
 "așa că {account} rămâne: {reason}"
 
-#: app/src/ui/window.rs:3509
+#: app/src/ui/window.rs:3526
 msgid "Remove {account}?"
 msgstr "Eliminați {account}?"
 
-#: app/src/ui/window.rs:3528
+#: app/src/ui/window.rs:3545
 msgid "Remove Anyway"
 msgstr "Elimină oricum"
 
-#: app/src/ui/window.rs:3541
+#: app/src/ui/window.rs:3558
 msgid "Removed {account}"
 msgstr "{account} a fost eliminat"
 
-#: app/src/ui/window.rs:3543
+#: app/src/ui/window.rs:3560
 msgid "Could not remove {account}: {reason}"
 msgstr "{account} nu a putut fi eliminat: {reason}"
 
-#: app/src/ui/window.rs:3735
+#: app/src/ui/window.rs:3752
 msgid "Refresh"
 msgstr "Reîmprospătează"
 
-#: app/src/ui/window.rs:3739
+#: app/src/ui/window.rs:3756
 msgid "Show Declined Events"
 msgstr "Arată evenimentele refuzate"
 
-#: app/src/ui/window.rs:3755
+#: app/src/ui/window.rs:3772
 msgid "Add Account…"
 msgstr "Adaugă un cont…"
 
-#: app/src/ui/window.rs:3756
+#: app/src/ui/window.rs:3773
 msgid "New Smart Mailbox…"
 msgstr "Căsuță inteligentă nouă…"
 
-#: app/src/ui/window.rs:3768
+#: app/src/ui/window.rs:3785
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Personalizează bara de instrumente…"
 
-#: app/src/ui/window.rs:3772 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3789 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Scurtături de tastatură"
 
-#: app/src/ui/window.rs:3781 app/src/ui/window.rs:3783
+#: app/src/ui/window.rs:3798 app/src/ui/window.rs:3800
 msgid "Main Menu"
 msgstr "Meniu principal"
 
-#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3849
+#: app/src/ui/window.rs:3865 app/src/ui/window.rs:3866
 msgid "Dock"
 msgstr "Andochează"
 
-#: app/src/ui/window.rs:3978
+#: app/src/ui/window.rs:3995
 msgid "Add a mail account first"
 msgstr "Adăugați mai întâi un cont de e-mail"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4234
+#: app/src/ui/window.rs:4251
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Calendarul și contactele pentru {account} sunt conectate."
 
-#: app/src/ui/window.rs:4350
+#: app/src/ui/window.rs:4367
 msgid "Open a message from the person first"
 msgstr "Deschideți mai întâi un mesaj de la persoana respectivă"
 
-#: app/src/ui/window.rs:4451
+#: app/src/ui/window.rs:4468
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail afișează noua limbă după o repornire"
 
-#: app/src/ui/window.rs:4453 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4470 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Repornește"
 
-#: app/src/ui/window.rs:4517
+#: app/src/ui/window.rs:4534
 msgid "Show Rules"
 msgstr "Arată regulile"
 
-#: app/src/ui/window.rs:4543
+#: app/src/ui/window.rs:4560
 msgid "Messages That Will Not Download"
 msgstr "Mesaje care nu se descarcă"
 
-#: app/src/ui/window.rs:4545
+#: app/src/ui/window.rs:4562
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
