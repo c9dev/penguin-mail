@@ -124,6 +124,11 @@ fn inert(text: &str) -> String {
 
 /// The file `source` names, when it is a `file:` URL or an absolute path.
 fn local_path(source: &str) -> Option<std::path::PathBuf> {
+    // `C:\logo.png` parses as a URL with the scheme `c`, so a path comes first.
+    let path = std::path::Path::new(source);
+    if path.is_absolute() {
+        return Some(path.to_path_buf());
+    }
     match url::Url::parse(source) {
         Ok(url) if url.scheme() == "file" => url.to_file_path().ok(),
         Ok(_) => None,
@@ -390,6 +395,26 @@ fn picture(source: &str, number: usize) -> Option<OutgoingAttachment> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn an_absolute_path_is_a_local_file() {
+        assert_eq!(
+            local_path("/home/x/logo.png"),
+            Some("/home/x/logo.png".into())
+        );
+        assert_eq!(local_path("https://example.com/logo.png"), None);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_path_is_a_local_file() {
+        assert_eq!(
+            local_path(r"C:\Users\x\logo.png"),
+            Some(r"C:\Users\x\logo.png".into())
+        );
+        assert_eq!(local_path("https://example.com/logo.png"), None);
+    }
 
     const CARD: &str = "<table><tr><td><b>David Friedrich</b><br>Project Manager</td>\
         <td style=\"border-left:1px solid #e30613\"><a href=\"mailto:<email>\"><email></a></td></tr></table>";
