@@ -4740,16 +4740,36 @@ fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
         .unwrap_or(false)
 }
 
-/// An attachment name that stays within the chosen folder.
+/// An attachment name that stays within the chosen folder on every
+/// system. The sender picks the name, so anything a path or a Windows
+/// file name cannot hold becomes `_`, a reserved device name such as
+/// `CON.txt` gets a `_` in front, and trailing dots and spaces go.
 fn attachment_name(name: &str) -> String {
-    let clean: String = name
+    let mapped: String = name
         .chars()
-        .map(|c| if c == '/' || c == '\0' { '_' } else { c })
+        .map(|c| {
+            if c.is_control() || "/\\:*?\"<>|".contains(c) {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect();
-    if clean.trim().is_empty() || clean == "." || clean == ".." {
-        "attachment".into()
+    let clean = mapped.trim_end_matches(['.', ' ']);
+    if clean.trim().is_empty() {
+        return "attachment".into();
+    }
+    let stem = clean.split('.').next().unwrap_or_default().trim_end();
+    let reserved = matches!(
+        stem.to_ascii_uppercase().as_str(),
+        "CON" | "PRN" | "AUX" | "NUL"
+    ) || matches!(stem.as_bytes(), [a, b, c, b'1'..=b'9']
+        if [a, b, c].map(u8::to_ascii_uppercase) == *b"COM"
+            || [a, b, c].map(u8::to_ascii_uppercase) == *b"LPT");
+    if reserved {
+        format!("_{clean}")
     } else {
-        clean
+        clean.to_string()
     }
 }
 
@@ -4845,6 +4865,27 @@ fn arranged_room(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attachment_names_stay_inside_the_folder() {
+        for (given, kept) in [
+            ("..\\..\\x.bat", ".._.._x.bat"),
+            ("C:\\Windows\\x.bat", "C__Windows_x.bat"),
+            ("CON.txt", "_CON.txt"),
+            ("com1", "_com1"),
+            ("Lpt9.tar.gz", "_Lpt9.tar.gz"),
+            ("COM0.txt", "COM0.txt"),
+            ("abé", "abé"),
+            ("Re: Invoice?", "Re_ Invoice_"),
+            ("a/b", "a_b"),
+            (".", "attachment"),
+            ("..", "attachment"),
+            ("name. ", "name"),
+            ("", "attachment"),
+        ] {
+            assert_eq!(attachment_name(given), kept, "{given}");
+        }
+    }
 
     #[test]
     fn a_folder_on_a_folder_account_is_followed_when_opened() {

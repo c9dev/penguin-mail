@@ -269,7 +269,7 @@ pub fn file_name(subject: &str, date: EpochMillis, extension: &str) -> String {
     let mut name = String::new();
     let mut space = true;
     for c in subject.chars() {
-        let plain = if c == '/' || c == '\\' || c.is_control() {
+        let plain = if c.is_control() || "/\\:*?\"<>|".contains(c) {
             ' '
         } else {
             c
@@ -386,6 +386,7 @@ mod file_name_tests {
     fn a_file_name_leaves_out_a_date_the_message_lacks() {
         assert_eq!(file_name("Kite plans", 0, "eml"), "Kite plans.eml");
         assert_eq!(file_name("", 0, "eml"), "mail.eml");
+        assert_eq!(file_name("Re: Invoice?", 0, "eml"), "Re Invoice.eml");
         assert_eq!(
             file_name("Kite plans", 1_773_000_000_000, "eml"),
             "Kite plans 2026-03-08.eml"
