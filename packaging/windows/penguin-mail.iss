@@ -1,7 +1,9 @@
 ; Penguin Mail's installer: the staged prefix tree, the Start Menu entry
 ; with the app's AppUserModelID, the mailto/.eml/.ics capabilities Windows
-; lists in Default Apps, and a WebView2 runtime check for the odd machine
-; without it. Per-user install; admin rights never come up.
+; lists in Default Apps, the COM class Windows starts to deliver a toast
+; click after the app quit, a wait for the running app on updates, and a
+; WebView2 runtime check for the odd machine without it. Per-user install;
+; admin rights never come up.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -44,7 +46,7 @@ Source: "{#WebView2Bootstrapper}"; DestDir: "{tmp}"; DestName: "MicrosoftEdgeWeb
 #endif
 
 [Icons]
-Name: "{userprograms}\Penguin Mail\Penguin Mail"; Filename: "{app}\bin\penguin-mail.exe"; AppUserModelID: "io.github.c9dev.PenguinMail"
+Name: "{userprograms}\Penguin Mail\Penguin Mail"; Filename: "{app}\bin\penguin-mail.exe"; AppUserModelID: "io.github.c9dev.PenguinMail"; AppUserModelToastActivatorCLSID: "7B4D8E4A-3C1F-4F6E-9A2B-5D1E0C9F8A61"
 
 [Registry]
 ; Preferences creates this value only when start at sign-in is enabled.
@@ -60,6 +62,11 @@ Root: HKCU; Subkey: "Software\PenguinMail\Capabilities\URLAssociations"; ValueTy
 Root: HKCU; Subkey: "Software\PenguinMail\Capabilities\FileAssociations"; ValueType: string; ValueName: ".eml"; ValueData: "PenguinMail.eml"
 Root: HKCU; Subkey: "Software\PenguinMail\Capabilities\FileAssociations"; ValueType: string; ValueName: ".ics"; ValueData: "PenguinMail.ics"
 Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "PenguinMail"; ValueData: "Software\PenguinMail\Capabilities"; Flags: uninsdeletevalue
+
+; Windows starts this server when a toast is clicked after the app quit.
+; The CLSID matches app/src/app/notifications/windows.rs and the shortcut above.
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{7B4D8E4A-3C1F-4F6E-9A2B-5D1E0C9F8A61}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{7B4D8E4A-3C1F-4F6E-9A2B-5D1E0C9F8A61}\LocalServer32"; ValueType: string; ValueData: """{app}\bin\penguin-mail.exe"""
 
 Root: HKCU; Subkey: "Software\Classes\PenguinMail.mailto"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\PenguinMail.mailto"; ValueType: string; ValueData: "URL:MailTo Protocol"
@@ -86,8 +93,33 @@ Type: dirifempty; Name: "{userprograms}\Penguin Mail"
 
 [Run]
 Filename: "{app}\bin\penguin-mail.exe"; Description: "Open Penguin Mail"; Flags: nowait postinstall skipifsilent
+; An update started by the app passes /RELAUNCH=background or /RELAUNCH=window,
+; and the app comes back the way it was.
+Filename: "{app}\bin\penguin-mail.exe"; Parameters: "--background"; Flags: nowait runasoriginaluser; Check: Relaunch('background')
+Filename: "{app}\bin\penguin-mail.exe"; Flags: nowait runasoriginaluser; Check: Relaunch('window')
 
 [Code]
+{ The app quits right after it starts an update, so the mutex can outlive
+  the call for a moment. Waiting here keeps AppMutex from stopping a silent
+  update. Thirty seconds is far longer than a quit takes. }
+function InitializeSetup(): Boolean;
+var
+  Waited: Integer;
+begin
+  Waited := 0;
+  while CheckForMutexes('PenguinMailRunning') and (Waited < 30000) do
+  begin
+    Sleep(250);
+    Waited := Waited + 250;
+  end;
+  Result := True;
+end;
+
+function Relaunch(Mode: String): Boolean;
+begin
+  Result := CompareText(ExpandConstant('{param:RELAUNCH|}'), Mode) = 0;
+end;
+
 { WebView2's evergreen runtime registers its version here when present. A
   per-machine install lands in the 32-bit view (WOW6432Node). }
 function WebView2Installed(): Boolean;
