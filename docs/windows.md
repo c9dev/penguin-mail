@@ -216,14 +216,20 @@ name as a token.
 ### Single instance and handoff
 
 `main.rs` hands `--compose`, `mailto:` and `.ics`/`.eml` opens to the
-running copy through `gio::Application` registration. Verify
-`is_remote()`/`activate_action` work on Windows builds of GIO (it has a
-win32 backend that should cover this). GLib autolaunches the session
-bus through `gdbus.exe`, so `package-windows.sh` stages it beside the
-exe; without it the second copy would not find the first. The smoke job
-starts the installed app and then `--compose`, and fails unless one
-`penguin-mail.exe` is left after 10 seconds. If GIO's handoff ever stops
-working, a named mutex plus a named pipe could carry it.
+running copy through `gio::Application` registration, over the session
+bus GLib autolaunches with `gdbus.exe`. `package-windows.sh` stages it
+beside the exe; without it every launch is a full copy of its own.
+Verified on Windows 11: a second launch with `--compose mailto:...`
+opens a composer in the running copy and exits. The smoke job starts the
+installed app and then `--compose`, and fails unless one
+`penguin-mail.exe` is left after 10 seconds.
+
+The bus outlives the app and holds files in `bin\`, which Restart
+Manager cannot close, so the installer and uninstaller stop the
+`gdbus.exe` that runs from this install's own `bin\` before they touch
+files. A restart that hands over to a new copy (the idle restart, an
+update) can find the old copy still holding the store's lock for a
+moment, so the app waits up to five seconds for it.
 
 The app also creates the named mutex `PenguinMailRunning` at start. The
 installer's `AppMutex` names it, so an upgrade or uninstall waits for
@@ -238,8 +244,10 @@ against the release's `SHA256SUMS`, and checks that file's signature with
 the project key built into the app (`signature.rs`). The installer ships a
 native `gpgv.exe` under `libexec\gnupg\` for that, so the check is the
 one Linux runs. The installer itself is not signed: Windows shows
-SmartScreen's prompt on a first download. Whether an update the app
-downloads gets the prompt too is for the VM run to confirm.
+SmartScreen's prompt on a first download. An update the app downloads
+gets no prompt, since the app starts it directly. Setup writes its log
+to `setup.log` beside the download, the file to ask for when an update
+fails.
 
 The app starts the installer with `/VERYSILENT /SUPPRESSMSGBOXES
 /NORESTART /RELAUNCH=background` (when it was running in the tray) or
@@ -387,7 +395,13 @@ there, then rewrite the checksum list from the downloaded files.
 A release build started from the Start Menu has no console, so the app
 also writes `%LOCALAPPDATA%\penguin-mail\logs\penguin-mail.log`. At each
 start the previous run moves to `penguin-mail.1.log`. Ask for this file
-when someone reports a problem.
+when someone reports a problem. The file is written from the first
+warning on, so a run with nothing to report leaves the last one in place.
+
+GLib puts caches in Internet Explorer's `INetCache` on Windows, which Disk
+Cleanup empties, so `main.rs` sets `XDG_CACHE_HOME` to
+`%LOCALAPPDATA%\penguin-mail\cache` before anything asks for it. Updates,
+content filters and invitation files live there.
 
 ## Order of work
 
@@ -518,3 +532,11 @@ reading a PDF; an attachment with a hostile name; an opened `.js`
 attachment, which Windows must warn about; an update from one version to
 the next through `PENGUIN_MAIL_RELEASES_URL` pointing at a local mirror;
 and an uninstall that leaves nothing behind.
+
+All of these passed on 2026-11-26 on Windows 11 25H2 (a KVM VM, 1280x800,
+100 % and 150 %), with Dovecot, Mailpit and Radicale in containers on the
+host and the update signed by a throwaway key in a test build. That run
+found and fixed: a missing WebView2Loader.dll, the SVG loader path, the
+window size on a small screen, a firewall prompt from DNS lookups, the
+idle restart's lock race, double and lost toast clicks, the exe's name,
+the cache folder, and the session bus stopping updates.
