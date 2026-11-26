@@ -408,6 +408,19 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
         .bind_property("active", &vips_only, "sensitive")
         .sync_create()
         .build();
+    let sound = switch(
+        app,
+        &gettext("Notification Sound"),
+        Some(&gettext(
+            "The desktop's own notification sound, played when Penguin Mail shows its reminder window",
+        )),
+        settings.notification_sound,
+        Change::NotificationSound,
+    );
+    enabled
+        .bind_property("active", &sound, "sensitive")
+        .sync_create()
+        .build();
     let actions = crate::ui::disclosure::row(
         adw::ExpanderRow::builder()
             .title(gettext("Buttons"))
@@ -432,6 +445,7 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
         .build();
     notifications.add(&enabled);
     notifications.add(&vips_only);
+    notifications.add(&sound);
     notifications.add(&previews);
     if cfg!(target_os = "macos") {
         notifications.add(&bold_subject);

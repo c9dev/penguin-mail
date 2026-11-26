@@ -130,9 +130,15 @@ impl App {
         let shown = notice::notice(due, now, &chrono::Local);
         // The window is the person's chosen answer to how easy a
         // notification is to miss: the reminder goes there instead,
-        // above everything until they answer it.
+        // above everything until they answer it. No server plays a
+        // sound for a window of ours, so it says itself out loud with
+        // the desktop's own notification sound, the standard each
+        // surface of ours inherits where no server sounds for it.
         if self.settings_with(|s| s.reminder_window) {
             self.reminders_window().show(&shown);
+            if self.settings_with(|s| s.notification_sound) {
+                crate::alert::alert();
+            }
         } else {
             self.notifications.reminder(&shown);
         }

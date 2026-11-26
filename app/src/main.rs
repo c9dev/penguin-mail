@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod accent_contrast;
 mod add_account;
+mod alert;
 mod app;
 #[cfg(any(feature = "packaging-appimage", test))]
 mod appimage;
