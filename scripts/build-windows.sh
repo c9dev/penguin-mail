@@ -101,7 +101,9 @@ cargo build --release --target x86_64-pc-windows-msvc -p mailrs
 exe=target/x86_64-pc-windows-msvc/release/penguin-mail.exe
 # webview2-com-sys keeps the delay-loaded loader in its OUT_DIR; beside
 # the exe is where the packager looks for it first.
-loader=$(ls "$PWD/target/x86_64-pc-windows-msvc/release/build/"webview2-com-sys-*/out/x64/WebView2Loader.dll 2>/dev/null | head -1) || true
+release_build="$PWD/target/x86_64-pc-windows-msvc/release/build"
+# Cargo 1.100 moved build output from webview2-com-sys-<hash> to webview2-com-sys/<hash>.
+loader=$(ls -t "$release_build"/webview2-com-sys-*/out/x64/WebView2Loader.dll "$release_build"/webview2-com-sys/*/out/x64/WebView2Loader.dll 2>/dev/null | head -1) || true
 if [ -n "$loader" ]; then
     cp "$loader" "$(dirname "$exe")/"
 fi
