@@ -10,6 +10,11 @@
 #   scripts/package-windows.sh --exe target/.../penguin-mail.exe \
 #       --prefix D:/gtk-msvc/prefix --busybox path/to/busybox64u.exe
 #
+# --msys2 names the MSYS2 UCRT64 prefix (default C:/msys64/ucrt64) that
+# supplies gpgv.exe and pdftotext.exe. Each goes into its own folder under
+# libexec/ with its own DLLs, so its GLib and cairo never meet the GTK
+# DLLs in bin/.
+#
 # --stage-only writes the tree under dist/penguin-mail/ and stops.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -17,6 +22,7 @@ cd "$(dirname "$0")/.."
 exe=
 prefix=${PENGUIN_MAIL_GTK_PREFIX:-}
 busybox=
+msys2=C:/msys64/ucrt64
 out=dist
 installer=yes
 while [ "$#" -gt 0 ]; do
@@ -33,6 +39,10 @@ while [ "$#" -gt 0 ]; do
             [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--busybox needs a value" >&2; exit 2; }
             busybox=$2; shift 2 ;;
         --busybox=*) busybox=${1#*=}; shift ;;
+        --msys2)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--msys2 needs a value" >&2; exit 2; }
+            msys2=$2; shift 2 ;;
+        --msys2=*) msys2=${1#*=}; shift ;;
         --out)
             [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--out needs a value" >&2; exit 2; }
             out=$2; shift 2 ;;
@@ -44,6 +54,8 @@ done
 
 [ -f "$exe" ] || { echo "--exe needs the built penguin-mail.exe" >&2; exit 2; }
 [ -d "$prefix/bin" ] || { echo "--prefix needs a GTK prefix holding bin/" >&2; exit 2; }
+msys2=$(cygpath -u "$msys2")
+[ -d "$msys2/bin" ] || { echo "--msys2 needs the MSYS2 UCRT64 prefix holding bin/" >&2; exit 2; }
 
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
@@ -74,11 +86,51 @@ collect() {
 }
 collect "$stage/bin/penguin-mail.exe"
 
+# stage_tool EXE DEST-DIR DLL-DIR copies one program and every DLL it imports
+# from DLL-DIR into DEST-DIR and nowhere else. Anything DLL-DIR lacks is a
+# system library.
+stage_tool() {
+    local tool=$1 dest=$2 dlls=$3
+    [ -f "$tool" ] || { echo "no $tool" >&2; exit 1; }
+    mkdir -p "$dest"
+    cp "$tool" "$dest/"
+    stage_imports "$dest/$(basename "$tool")" "$dest" "$dlls"
+}
+stage_imports() {
+    local file=$1 dest=$2 dlls=$3 dll
+    while read -r dll; do
+        [ -f "$dlls/$dll" ] || continue
+        [ -f "$dest/$dll" ] && continue
+        cp "$dlls/$dll" "$dest/"
+        stage_imports "$dest/$dll" "$dest" "$dlls"
+    done < <(objdump -p "$file" | awk '/DLL Name/ {print $3}' | sort -u)
+}
+
 # GLib starts the session bus through gdbus.exe, which single-instance
 # needs; nothing imports it, so the walk above never finds it.
 [ -f "$prefix/bin/gdbus.exe" ] || { echo "no gdbus.exe in $prefix/bin" >&2; exit 1; }
 cp "$prefix/bin/gdbus.exe" "$stage/bin/"
 collect "$stage/bin/gdbus.exe"
+
+# The updater checks a release's signature with gpgv, and the assistant reads
+# PDFs with pdftotext. Neither is on a Windows machine, so both ship here.
+# shortcut: pdftotext gets no poppler-data, so text in a PDF that uses an
+# unembedded Chinese, Japanese or Korean font may not extract; add
+# poppler-data when someone reports it.
+stage_tool "$msys2/bin/gpgv.exe" "$stage/libexec/gnupg" "$msys2/bin"
+stage_tool "$msys2/bin/pdftotext.exe" "$stage/libexec/poppler" "$msys2/bin"
+mkdir -p "$stage/share/licenses"
+for package in gnupg poppler; do
+    [ -d "$msys2/share/licenses/$package" ] || { echo "no licence files for $package in $msys2" >&2; exit 1; }
+    cp -r "$msys2/share/licenses/$package" "$stage/share/licenses/"
+done
+cat > "$stage/share/licenses/helpers.txt" <<'NOTE'
+libexec\gnupg and libexec\poppler hold gpgv.exe and pdftotext.exe with the
+libraries they load, unchanged from the MSYS2 packages
+mingw-w64-ucrt-x86_64-gnupg and mingw-w64-ucrt-x86_64-poppler. Their source
+is at https://github.com/msys2/MINGW-packages and the upstream projects:
+https://gnupg.org and https://poppler.freedesktop.org.
+NOTE
 
 # Pieces the import walk cannot see: WebView2Loader is delay-loaded on
 # MSVC, and the VC++ runtime DLLs ride along so a machine without the
@@ -131,6 +183,8 @@ for catalog in "$prefix/share/locale"/*/LC_MESSAGES/{glib20,gtk40,gtk40-properti
 done
 
 cp -rL "$prefix/etc/fonts" "$stage/etc/"
+
+scripts/stage-windows-data.sh "$stage" "$prefix/bin/msgfmt.exe"
 
 cp LICENSE "$stage/"
 [ -d "$prefix/share/licenses" ] && cp -r "$prefix/share/licenses" "$stage/share/"
