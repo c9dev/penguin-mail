@@ -213,8 +213,10 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     let (_stand_in, program) = stand_in();
     let started = std::time::Instant::now();
 
+    // Windows can take most of a second to start a freshly copied exe while
+    // Defender scans it, so the limit leaves room for the start.
     let err = match program.run_within(
-        std::time::Duration::from_millis(500),
+        std::time::Duration::from_millis(2000),
         b"",
         Pinentry::Never,
         |command| {
@@ -233,7 +235,7 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     let waited = started.elapsed();
     assert_eq!(err.kind(), std::io::ErrorKind::TimedOut, "{err}");
     assert!(
-        waited < std::time::Duration::from_secs(3),
+        waited < std::time::Duration::from_secs(5),
         "gave up after {waited:?}"
     );
     let pid = std::fs::read_to_string(&pid).expect("the stand-in wrote its pid");
