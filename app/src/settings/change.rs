@@ -62,6 +62,10 @@ pub enum Change {
     /// The address new messages come from; `None` means the first account.
     DefaultAccount(Option<String>),
     AccountDefaults(super::AccountDefaults),
+    TeamsByDefault {
+        email: String,
+        enabled: bool,
+    },
     InboxCategories(bool),
     DefaultCategory(Category),
     SuggestFollowUps(bool),
@@ -336,6 +340,13 @@ impl Change {
             Change::UndoSend(delay) => settings.undo_send = delay,
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::AccountDefaults(defaults) => settings.account_defaults = defaults,
+            Change::TeamsByDefault { email, enabled } => {
+                if enabled {
+                    settings.teams_by_default.insert(email);
+                } else {
+                    settings.teams_by_default.remove(&email);
+                }
+            }
             Change::InboxCategories(on) => settings.inbox_categories = on,
             Change::DefaultCategory(category) => settings.default_category = category,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
@@ -677,6 +688,7 @@ settable! {
         account_names,
         account_order,
         account_defaults,
+        teams_by_default,
         ai,
         // The updater's own record of what it announced.
         announced_update,
@@ -927,6 +939,7 @@ impl Effects {
             notification_previews,
             default_account,
             account_defaults,
+            teams_by_default,
             signatures,
             signature_modes,
             undo_send,
@@ -993,6 +1006,7 @@ impl Effects {
             notification_previews,
             default_account,
             account_defaults,
+            teams_by_default,
             signatures,
             signature_modes,
             undo_send,

@@ -237,6 +237,7 @@ mod tests {
             hidden: false,
             reminders,
             all_day_reminders: None,
+            supports_teams: false,
         }
     }
 

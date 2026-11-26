@@ -1,7 +1,7 @@
 //! App preferences, kept in `~/.config/penguin-mail/settings.toml`. Sync options
 //! stay in `config.toml`, which the command-line tool reads too.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use mailrs_domain::Category;
@@ -61,6 +61,8 @@ pub struct Settings {
     pub default_account: Option<String>,
     /// Per-task choices, preserving context unless the person overrides it.
     pub account_defaults: AccountDefaults,
+    /// Account addresses that default to Teams for new invitations.
+    pub teams_by_default: BTreeSet<String>,
     /// Markdown signature per account address.
     pub signatures: BTreeMap<String, String>,
     /// Whether a sender uses the account signature, its own, or none.
@@ -532,6 +534,7 @@ impl Default for Settings {
             never_translate: Vec::new(),
             default_account: None,
             account_defaults: AccountDefaults::default(),
+            teams_by_default: BTreeSet::new(),
             signatures: BTreeMap::new(),
             signature_modes: BTreeMap::new(),
             undo_send: UndoSend::Ten,

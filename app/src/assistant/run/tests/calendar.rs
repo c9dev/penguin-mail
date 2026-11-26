@@ -514,6 +514,7 @@ async fn once_the_copy_has_read_the_account_listing_events_uses_it() {
             hidden: false,
             reminders: Vec::new(),
             all_day_reminders: None,
+            supports_teams: false,
         }];
     });
     h.gmail.put_calendar_event(mailrs_domain::calendar::Event {
@@ -717,6 +718,7 @@ fn calendars() -> Vec<Calendar> {
         hidden: false,
         reminders: Vec::new(),
         all_day_reminders: None,
+        supports_teams: false,
     };
     vec![
         one(ME, "Personal", "#e8660c", Access::Owner),

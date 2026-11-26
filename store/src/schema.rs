@@ -1126,6 +1126,7 @@ CREATE TABLE microsoft_shared (
     // An IMAP account shows only the folders the person subscribes to,
     // as Thunderbird does, unless this asks for every folder.
     "ALTER TABLE accounts ADD COLUMN all_folders INTEGER NOT NULL DEFAULT 0;",
+    "ALTER TABLE calendars ADD COLUMN supports_teams INTEGER NOT NULL DEFAULT 0;",
 ];
 
 /// How long the copy taken before a migration stays once the store has

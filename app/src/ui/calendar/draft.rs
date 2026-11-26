@@ -153,6 +153,7 @@ pub struct Draft {
     pub private: bool,
     pub color: Option<String>,
     pub add_meet: bool,
+    pub teams_request: bool,
     /// An ordinary event, out of office or focus time. A working location
     /// or a birthday never reaches the editor.
     pub kind: Kind,
@@ -203,6 +204,7 @@ impl Draft {
             private: false,
             color: None,
             add_meet: false,
+            teams_request: false,
             kind: Kind::Event,
             attachments: Vec::new(),
             attachments_known: true,
@@ -241,6 +243,7 @@ impl Draft {
             private: event.private,
             color: event.color.clone(),
             add_meet: false,
+            teams_request: false,
             kind: event.kind.clone(),
             attachments: event.attachments.clone().unwrap_or_default(),
             attachments_known: event.attachments.is_some(),
@@ -594,6 +597,7 @@ impl Draft {
         event.rules = self.rules();
         event.meet_request =
             (self.add_meet && event.conference.is_none()).then(|| meet_request.to_string());
+        event.teams_request = self.is_new() && self.teams_request;
         event.kind = self.kind.clone();
         event.attachments = self.attachments_known.then(|| self.attachments.clone());
         if event.kind.decline().is_some() {
@@ -924,6 +928,7 @@ mod tests {
                 method: ReminderMethod::Notification,
             }],
             all_day_reminders: None,
+            supports_teams: false,
         }
     }
 

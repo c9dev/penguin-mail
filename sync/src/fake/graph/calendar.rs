@@ -283,6 +283,11 @@ pub(super) fn create_event(s: &mut GraphState, calendar: &str, body: &Value) -> 
         ..GraphEvent::default()
     };
     read_body(&mut event, body);
+    if body["isOnlineMeeting"] == true && body["onlineMeetingProvider"] == "teamsForBusiness" {
+        event.online_meeting = Some(mailrs_graph::OnlineMeeting {
+            join_url: Some(format!("https://teams.microsoft.com/meet/{id}")),
+        });
+    }
     tagged(s, &mut event);
     if let Some(t) = transaction {
         s.transactions.insert(t.to_string(), id.clone());

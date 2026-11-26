@@ -573,6 +573,21 @@ fn accounts_page(
             && account.provider_name() == "Microsoft 365"
         {
             row.add_row(&shared_mailbox::row(app, account));
+            let teams = adw::SwitchRow::builder()
+                .title(gettext("Add Microsoft Teams to New Calendar Invitations"))
+                .active(settings.teams_by_default.contains(&account.email))
+                .build();
+            let weak = Rc::downgrade(app);
+            let email = account.email.clone();
+            teams.connect_active_notify(move |row| {
+                if let Some(app) = weak.upgrade() {
+                    app.change_settings(Change::TeamsByDefault {
+                        email: email.clone(),
+                        enabled: row.is_active(),
+                    });
+                }
+            });
+            row.add_row(&teams);
         }
         if app.microsoft_owner(account.id).is_none()
             && let Some((_, reasons)) = missing.iter().find(|(email, _)| email == &account.email)

@@ -53,6 +53,7 @@ pub struct Choices {
     /// What each writable account's provider keeps, for the Type row and
     /// the decline choice (`draft::creatable_types`).
     pub offers: HashMap<AccountId, Offers>,
+    pub teams_defaults: HashSet<AccountId>,
 }
 
 /// What attaching a file needs from outside the editor: whether the
@@ -126,6 +127,9 @@ struct Editor {
     guest_rows: RefCell<Vec<adw::ActionRow>>,
     /// The field new guests are typed into, read again on Save.
     guest_entry: RefCell<Option<gtk::Entry>>,
+    teams_row: RefCell<Option<adw::SwitchRow>>,
+    teams_override: Cell<Option<bool>>,
+    teams_defaults: HashSet<AccountId>,
     reminders_group: RefCell<Option<adw::PreferencesGroup>>,
     /// The calendar whose own reminders show while `draft.reminders` is
     /// `None`. Follows the calendar row on a new event.
@@ -219,6 +223,9 @@ pub fn open(
         guest_list: RefCell::new(None),
         guest_rows: RefCell::new(Vec::new()),
         guest_entry: RefCell::new(None),
+        teams_row: RefCell::new(None),
+        teams_override: Cell::new(None),
+        teams_defaults: choices.teams_defaults.clone(),
         reminders_group: RefCell::new(None),
         reminders_calendar: RefCell::new(Calendar::default()),
         reminder_rows: RefCell::new(Vec::new()),
@@ -378,6 +385,22 @@ impl Editor {
         page.add(&place_group);
         let guests_group = self.guests_group_widget(contacts);
         page.add(&guests_group);
+        if self.draft.borrow().is_new() {
+            let row = adw::SwitchRow::builder()
+                .title(gettext("Add Microsoft Teams Meeting"))
+                .build();
+            let weak = Rc::downgrade(self);
+            row.connect_active_notify(move |row| {
+                if let Some(this) = weak.upgrade()
+                    && !this.quiet.get()
+                {
+                    this.teams_override.set(Some(row.is_active()));
+                    this.draft.borrow_mut().teams_request = row.is_active();
+                }
+            });
+            guests_group.add(&row);
+            self.teams_row.replace(Some(row));
+        }
         self.kind_hidden
             .borrow_mut()
             .extend([place_group.clone().upcast(), guests_group.upcast()]);
@@ -583,6 +606,7 @@ impl Editor {
         for widget in hidden {
             widget.set_visible(!typed);
         }
+        self.refresh_teams();
         // A type picked after the editor opened brings its own decline
         // choice and message, which the rows show. Each write runs a
         // handler that borrows the draft, which is free by now.
@@ -1453,8 +1477,34 @@ impl Editor {
             rows.push(row);
         }
         *self.guest_rows.borrow_mut() = rows;
+        self.refresh_teams();
         // Whether a file says the guests can open it follows the list.
         self.rebuild_files();
+    }
+
+    fn refresh_teams(&self) {
+        let Some(row) = self.teams_row.borrow().clone() else {
+            return;
+        };
+        let (offered, active) = {
+            let mut draft = self.draft.borrow_mut();
+            let offered = matches!(draft.kind, calendar::Kind::Event)
+                && !draft.guests.is_empty()
+                && self
+                    .calendars
+                    .get(&(draft.account_id, draft.calendar.clone()))
+                    .is_some_and(|c| c.supports_teams);
+            draft.teams_request = offered
+                && self
+                    .teams_override
+                    .get()
+                    .unwrap_or_else(|| self.teams_defaults.contains(&draft.account_id));
+            (offered, draft.teams_request)
+        };
+        row.set_visible(offered);
+        let quiet = self.quiet.replace(true);
+        row.set_active(active);
+        self.quiet.set(quiet);
     }
 
     // ---- Reminders ----

@@ -4542,7 +4542,7 @@ msgstr "Mniejsze niż {size}"
 msgid "Larger than {size}"
 msgstr "Większe niż {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:960
+#: app/src/rules.rs:251 app/src/settings/mod.rs:963
 msgid "All mail"
 msgstr "Wszystka poczta"
 
@@ -4614,8 +4614,8 @@ msgstr "Znaleziono pod adresem {host}. Użyć?"
 msgid "{host} refused the login: {reason}"
 msgstr "{host} odrzucił logowanie: {reason}"
 
-#: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
-#: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
+#: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1245
+#: app/src/ui/calendar/editor.rs:1321 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:549
 #: app/src/ui/sidebar.rs:1904 app/src/ui/window/shortcuts.rs:240
@@ -4640,233 +4640,233 @@ msgstr "Na tym komputerze, gdy Penguin Mail jest otwarty"
 msgid "On the server"
 msgstr "Na serwerze"
 
-#: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
-#: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/settings/mod.rs:231 app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:875 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1169
 msgid "Off"
 msgstr "Wyłączone"
 
-#: app/src/settings/mod.rs:230
+#: app/src/settings/mod.rs:232
 msgid "Local Server"
 msgstr "Serwer lokalny"
 
-#: app/src/settings/mod.rs:231
+#: app/src/settings/mod.rs:233
 msgid "Anthropic API"
 msgstr "API Anthropic"
 
-#: app/src/settings/mod.rs:232
+#: app/src/settings/mod.rs:234
 msgid "Claude Subscription"
 msgstr "Subskrypcja Claude"
 
-#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3748
+#: app/src/settings/mod.rs:259 app/src/ui/window.rs:3748
 #: app/src/ui/window.rs:3836
 msgid "Assistant"
 msgstr "Asystent"
 
-#: app/src/settings/mod.rs:258 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:260 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Tłumaczenie"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:262
+#: app/src/settings/mod.rs:264
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Rezygnowanie z subskrypcji"
 
-#: app/src/settings/mod.rs:268
+#: app/src/settings/mod.rs:270
 msgid "Answers questions and acts on your mail"
 msgstr "Odpowiada na pytania i wykonuje czynności w poczcie"
 
-#: app/src/settings/mod.rs:269
+#: app/src/settings/mod.rs:271
 msgid "Translates a message when you ask"
 msgstr "Tłumaczy wiadomość na Twoją prośbę"
 
-#: app/src/settings/mod.rs:271
+#: app/src/settings/mod.rs:273
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Odczytuje stronę rezygnacji z biuletynu, gdy reguły nie wystarczają"
 
-#: app/src/settings/mod.rs:309
+#: app/src/settings/mod.rs:311
 msgid "Same as the Assistant"
 msgstr "Tak samo jak asystent"
 
-#: app/src/settings/mod.rs:439
+#: app/src/settings/mod.rs:441
 msgid "Claude's own only"
 msgstr "Tylko własne wyszukiwanie Claude"
 
-#: app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:442
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:443
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:444
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:621
+#: app/src/settings/mod.rs:624
 msgid "Rich text"
 msgstr "Tekst sformatowany"
 
-#: app/src/settings/mod.rs:622
+#: app/src/settings/mod.rs:625
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:644 app/src/settings/mod.rs:666
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Automatycznie"
 
-#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:645 app/src/ui/calendar/editor.rs:2216
 msgid "Monday"
 msgstr "Poniedziałek"
 
-#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:646 app/src/ui/calendar/editor.rs:2222
 msgid "Sunday"
 msgstr "Niedziela"
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:667
 msgid "12-hour (AM/PM)"
 msgstr "12-godzinny (AM/PM)"
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:668
 msgid "24-hour"
 msgstr "24-godzinny"
 
-#: app/src/settings/mod.rs:703
+#: app/src/settings/mod.rs:706
 msgid "When opened"
 msgstr "Po otwarciu"
 
-#: app/src/settings/mod.rs:704
+#: app/src/settings/mod.rs:707
 msgid "After 2 seconds"
 msgstr "Po 2 sekundach"
 
-#: app/src/settings/mod.rs:705
+#: app/src/settings/mod.rs:708
 msgid "Only when I choose"
 msgstr "Tylko na moje polecenie"
 
-#: app/src/settings/mod.rs:721 app/src/settings/mod.rs:739
+#: app/src/settings/mod.rs:724 app/src/settings/mod.rs:742
 msgid "Ask each time"
 msgstr "Pytaj za każdym razem"
 
-#: app/src/settings/mod.rs:722
+#: app/src/settings/mod.rs:725
 msgid "Always load"
 msgstr "Zawsze wczytuj"
 
-#: app/src/settings/mod.rs:740
+#: app/src/settings/mod.rs:743
 msgid "Never ask"
 msgstr "Nigdy nie pytaj"
 
-#: app/src/settings/mod.rs:767
+#: app/src/settings/mod.rs:770
 msgid "No Preview"
 msgstr "Bez podglądu"
 
-#: app/src/settings/mod.rs:768
+#: app/src/settings/mod.rs:771
 msgid "1 Line"
 msgstr "1 wiersz"
 
-#: app/src/settings/mod.rs:769
+#: app/src/settings/mod.rs:772
 msgid "2 Lines"
 msgstr "2 wiersze"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:799
 msgid "Short (80 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:800
 msgid "Medium (140 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:801
 msgid "Long (280 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:835
 msgid "Small"
 msgstr "Mały"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:836
 msgid "Default"
 msgstr "Domyślny"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:837
 msgid "Large"
 msgstr "Duży"
 
-#: app/src/settings/mod.rs:835
+#: app/src/settings/mod.rs:838
 msgid "Larger"
 msgstr "Większy"
 
-#: app/src/settings/mod.rs:873
+#: app/src/settings/mod.rs:876
 msgid "5 seconds"
 msgstr "5 sekund"
 
-#: app/src/settings/mod.rs:874
+#: app/src/settings/mod.rs:877
 msgid "10 seconds"
 msgstr "10 sekund"
 
-#: app/src/settings/mod.rs:875
+#: app/src/settings/mod.rs:878
 msgid "20 seconds"
 msgstr "20 sekund"
 
-#: app/src/settings/mod.rs:876
+#: app/src/settings/mod.rs:879
 msgid "30 seconds"
 msgstr "30 sekund"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:896
 msgid "Follow system"
 msgstr "Zgodnie z systemem"
 
-#: app/src/settings/mod.rs:894
+#: app/src/settings/mod.rs:897
 msgid "Light"
 msgstr "Jasny"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:898
 msgid "Dark"
 msgstr "Ciemny"
 
-#: app/src/settings/mod.rs:929
+#: app/src/settings/mod.rs:932
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Co sekundę"
 msgstr[1] "Co {count} sekundy"
 msgstr[2] "Co {count} sekund"
 
-#: app/src/settings/mod.rs:937
+#: app/src/settings/mod.rs:940
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Co minutę"
 msgstr[1] "Co {count} minuty"
 msgstr[2] "Co {count} minut"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:957
 msgid "2 weeks"
 msgstr "2 tygodnie"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:958
 msgid "30 days"
 msgstr "30 dni"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:959
 msgid "90 days"
 msgstr "90 dni"
 
-#: app/src/settings/mod.rs:957
+#: app/src/settings/mod.rs:960
 msgid "1 year"
 msgstr "1 rok"
 
-#: app/src/settings/mod.rs:958
+#: app/src/settings/mod.rs:961
 msgid "2 years"
 msgstr "2 lata"
 
-#: app/src/settings/mod.rs:959
+#: app/src/settings/mod.rs:962
 msgid "5 years"
 msgstr "5 lat"
 
-#: app/src/settings/mod.rs:981
+#: app/src/settings/mod.rs:984
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4874,21 +4874,21 @@ msgstr ""
 "Wszystkie wiadomości pozostają na tym komputerze. Duże konto zajmuje dużo "
 "miejsca na dysku i pamięci, a jego starsza poczta pobiera się w tle."
 
-#: app/src/settings/mod.rs:983
+#: app/src/settings/mod.rs:986
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Cała poczta ze skrzynki odbiorczej także pozostaje, a starszą pocztę nadal "
 "można wyszukiwać"
 
-#: app/src/settings/mod.rs:990
+#: app/src/settings/mod.rs:993
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:991
+#: app/src/settings/mod.rs:994
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:992
+#: app/src/settings/mod.rs:995
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5086,7 +5086,7 @@ msgstr "Co nowego w wersji {version}"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1229 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Sprawdź aktualizacje"
 
@@ -5264,7 +5264,7 @@ msgstr "Kopiuj odnośnik"
 
 #: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4278
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
-#: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
+#: app/src/ui/calendar/editor.rs:192 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
@@ -5406,7 +5406,7 @@ msgstr "Dodaj kolejne konto"
 msgid "Not Now"
 msgstr "Nie teraz"
 
-#: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
+#: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1734
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1652
@@ -5430,7 +5430,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail przechowuje na tym komputerze każdą pobraną wiadomość."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1590
 msgid "Days"
 msgstr "Dni"
 
@@ -5768,7 +5768,7 @@ msgid "Running"
 msgstr "W toku"
 
 #: app/src/ui/assistant.rs:1099 app/src/ui/assistant.rs:1262
-#: app/src/ui/calendar/editor.rs:268 app/src/ui/hide_my_email.rs:851
+#: app/src/ui/calendar/editor.rs:275 app/src/ui/hide_my_email.rs:851
 msgid "Done"
 msgstr "Gotowe"
 
@@ -5835,7 +5835,7 @@ msgstr "Bieżący model"
 msgid "No models found."
 msgstr "Nie znaleziono modeli."
 
-#: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
+#: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1784
 #: app/src/ui/composer/mod.rs:2257
 msgid "Remove {file}"
 msgstr "Usuń {file}"
@@ -5877,7 +5877,7 @@ msgstr "Edytuj"
 msgid "Edit {server}"
 msgstr "Edytuj {server}"
 
-#: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
+#: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1779
 #: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3512
 msgid "Remove"
@@ -5956,7 +5956,7 @@ msgstr "Sprawdź serwer"
 msgid "Test"
 msgstr "Sprawdź"
 
-#: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
+#: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:188
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
@@ -6267,7 +6267,7 @@ msgstr ""
 "piaskownicy bez dostępu do poczty, kluczy i folderu domowego. Asystent pyta "
 "przed każdym poleceniem."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:582
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:597
 msgid "Not Available"
 msgstr "Niedostępne"
 
@@ -6385,7 +6385,7 @@ msgstr "Klucz API Keenable (zapisany)"
 msgid "Keenable API Key (Optional)"
 msgstr "Klucz API Keenable (opcjonalny)"
 
-#: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2412
+#: app/src/ui/autocomplete.rs:311 app/src/ui/calendar/editor.rs:2462
 #: app/src/ui/composer/recipients.rs:50
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
@@ -6455,7 +6455,7 @@ msgid "Declined"
 msgstr "Odrzucono"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1396
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6471,33 +6471,39 @@ msgstr "{title}, cały dzień, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, od {start} do {end}, {calendar}"
 
-#: app/src/ui/calendar/draft.rs:121 app/src/ui/calendar/editor.rs:2129
+#: app/src/ui/calendar/draft.rs:121 app/src/ui/calendar/editor.rs:2179
 #: app/src/ui/calendar/kinds.rs:59
 msgid "Out of office"
 msgstr "Poza biurem"
 
-#: app/src/ui/calendar/draft.rs:122 app/src/ui/calendar/editor.rs:2128
+#: app/src/ui/calendar/draft.rs:122 app/src/ui/calendar/editor.rs:2178
 #: app/src/ui/calendar/kinds.rs:60
 msgid "Focus time"
 msgstr "Czas skupienia"
 
-#: app/src/ui/calendar/draft.rs:425
+#: app/src/ui/calendar/draft.rs:428
 msgid "Declined because I am out of office"
 msgstr "Odrzucono z powodu mojej nieobecności"
 
-#: app/src/ui/calendar/editor.rs:179
+#: app/src/ui/calendar/editor.rs:183
 msgid "New Event"
 msgstr "Nowe wydarzenie"
 
-#: app/src/ui/calendar/editor.rs:181
+#: app/src/ui/calendar/editor.rs:185
 msgid "Edit Event"
 msgstr "Edytuj wydarzenie"
 
-#: app/src/ui/calendar/editor.rs:277
+#: app/src/ui/calendar/editor.rs:284
 msgid "Custom Repeat"
 msgstr "Niestandardowe powtarzanie"
 
-#: app/src/ui/calendar/editor.rs:403
+#: app/src/ui/calendar/editor.rs:390
+#, fuzzy
+#| msgid "Microsoft Teams"
+msgid "Add Microsoft Teams Meeting"
+msgstr "Microsoft Teams"
+
+#: app/src/ui/calendar/editor.rs:426
 msgid ""
 "{organizer} organizes this event, so its time, place and guests stay as they "
 "set them."
@@ -6505,359 +6511,359 @@ msgstr ""
 "Organizatorem tego wydarzenia jest {organizer}, więc czas, miejsce i goście "
 "pozostają zgodne z jego ustawieniami."
 
-#: app/src/ui/calendar/editor.rs:429 app/src/ui/calendar/quick.rs:190
+#: app/src/ui/calendar/editor.rs:452 app/src/ui/calendar/quick.rs:190
 msgid "Title"
 msgstr "Tytuł"
 
-#: app/src/ui/calendar/editor.rs:464 app/src/ui/calendar/quick.rs:196
+#: app/src/ui/calendar/editor.rs:487 app/src/ui/calendar/quick.rs:196
 msgid "Type"
 msgstr "Typ"
 
-#: app/src/ui/calendar/editor.rs:566
+#: app/src/ui/calendar/editor.rs:589
 msgid "Out of office and focus time go on a primary calendar"
 msgstr "Nieobecność i czas skupienia zapisuje się w kalendarzu głównym"
 
-#: app/src/ui/calendar/editor.rs:568
+#: app/src/ui/calendar/editor.rs:591
 msgid "Out of office goes on a primary calendar"
 msgstr "Nieobecność zapisuje się w kalendarzu głównym"
 
-#: app/src/ui/calendar/editor.rs:613
+#: app/src/ui/calendar/editor.rs:637
 msgid "Meetings"
 msgstr "Spotkania"
 
-#: app/src/ui/calendar/editor.rs:622
+#: app/src/ui/calendar/editor.rs:646
 msgid "Decline"
 msgstr "Odrzucaj"
 
-#: app/src/ui/calendar/editor.rs:627
+#: app/src/ui/calendar/editor.rs:651
 msgid "None"
 msgstr "Brak"
 
-#: app/src/ui/calendar/editor.rs:628
+#: app/src/ui/calendar/editor.rs:652
 msgid "New only"
 msgstr "Tylko nowe"
 
-#: app/src/ui/calendar/editor.rs:629
+#: app/src/ui/calendar/editor.rs:653
 msgid "New and existing"
 msgstr "Nowe i istniejące"
 
-#: app/src/ui/calendar/editor.rs:634 app/src/ui/composer/mod.rs:592
+#: app/src/ui/calendar/editor.rs:658 app/src/ui/composer/mod.rs:592
 #: app/src/ui/eml_file.rs:67 app/src/ui/vacation.rs:289
 #: app/src/ui/vacation.rs:317 app/src/ui/window/loose.rs:76
 #: app/src/ui/window/loose.rs:158
 msgid "Message"
 msgstr "Wiadomość"
 
-#: app/src/ui/calendar/editor.rs:664 app/src/ui/calendar/words.rs:71
+#: app/src/ui/calendar/editor.rs:688 app/src/ui/calendar/words.rs:71
 #: app/src/ui/calendar/words.rs:187
 msgid "All day"
 msgstr "Cały dzień"
 
-#: app/src/ui/calendar/editor.rs:678
+#: app/src/ui/calendar/editor.rs:702
 msgid "Start date"
 msgstr "Data rozpoczęcia"
 
-#: app/src/ui/calendar/editor.rs:696
+#: app/src/ui/calendar/editor.rs:720
 msgid "Start time"
 msgstr "Godzina rozpoczęcia"
 
-#: app/src/ui/calendar/editor.rs:716
+#: app/src/ui/calendar/editor.rs:740
 msgid "End date"
 msgstr "Data zakończenia"
 
-#: app/src/ui/calendar/editor.rs:738
+#: app/src/ui/calendar/editor.rs:762
 msgid "End time"
 msgstr "Godzina zakończenia"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:777 app/src/ui/preferences.rs:1542
 msgid "Starts"
 msgstr "Początek"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:780 app/src/ui/preferences.rs:1544
 msgid "Ends"
 msgstr "Koniec"
 
-#: app/src/ui/calendar/editor.rs:898
+#: app/src/ui/calendar/editor.rs:922
 msgid "Repeats"
 msgstr "Powtarzanie"
 
-#: app/src/ui/calendar/editor.rs:941
+#: app/src/ui/calendar/editor.rs:965
 msgid "Custom…"
 msgstr "Niestandardowe…"
 
-#: app/src/ui/calendar/editor.rs:1001
+#: app/src/ui/calendar/editor.rs:1025
 msgid "Every"
 msgstr "Co"
 
-#: app/src/ui/calendar/editor.rs:1005
+#: app/src/ui/calendar/editor.rs:1029
 msgid "Unit"
 msgstr "Jednostka"
 
-#: app/src/ui/calendar/editor.rs:1009
+#: app/src/ui/calendar/editor.rs:1033
 msgid "On"
 msgstr "W dni"
 
-#: app/src/ui/calendar/editor.rs:1061
+#: app/src/ui/calendar/editor.rs:1085
 msgid "Stops"
 msgstr "Koniec powtarzania"
 
-#: app/src/ui/calendar/editor.rs:1068 app/src/ui/calendar/editor.rs:1073
+#: app/src/ui/calendar/editor.rs:1092 app/src/ui/calendar/editor.rs:1097
 #: app/src/ui/calendar/words.rs:510
 msgid "Never"
 msgstr "Nigdy"
 
-#: app/src/ui/calendar/editor.rs:1069 app/src/ui/calendar/editor.rs:1092
+#: app/src/ui/calendar/editor.rs:1093 app/src/ui/calendar/editor.rs:1116
 msgid "On a date"
 msgstr "W dniu"
 
-#: app/src/ui/calendar/editor.rs:1070 app/src/ui/calendar/editor.rs:1118
+#: app/src/ui/calendar/editor.rs:1094 app/src/ui/calendar/editor.rs:1142
 msgid "After"
 msgstr "Po"
 
-#: app/src/ui/calendar/editor.rs:1082
+#: app/src/ui/calendar/editor.rs:1106
 msgid "End date of the repeat"
 msgstr "Data końca powtarzania"
 
-#: app/src/ui/calendar/editor.rs:1105 app/src/ui/calendar/editor.rs:1114
+#: app/src/ui/calendar/editor.rs:1129 app/src/ui/calendar/editor.rs:1138
 msgid "time"
 msgid_plural "times"
 msgstr[0] "raz"
 msgstr[1] "razy"
 msgstr[2] "razy"
 
-#: app/src/ui/calendar/editor.rs:1106
+#: app/src/ui/calendar/editor.rs:1130
 msgid "Number of times"
 msgstr "Liczba powtórzeń"
 
-#: app/src/ui/calendar/editor.rs:1309
+#: app/src/ui/calendar/editor.rs:1333
 msgid "Place"
 msgstr "Miejsce"
 
 #. Named for the moment Show all hands it the focus.
-#: app/src/ui/calendar/editor.rs:1324 app/src/ui/calendar/popover.rs:291
+#: app/src/ui/calendar/editor.rs:1348 app/src/ui/calendar/popover.rs:291
 msgid "Guests"
 msgstr "Goście"
 
-#: app/src/ui/calendar/editor.rs:1327 app/src/ui/calendar/editor.rs:1332
+#: app/src/ui/calendar/editor.rs:1351 app/src/ui/calendar/editor.rs:1356
 msgid "Add guests"
 msgstr "Dodaj gości"
 
-#: app/src/ui/calendar/editor.rs:1394
+#: app/src/ui/calendar/editor.rs:1418
 msgid "Not an address: {text}"
 msgstr "To nie jest adres: {text}"
 
-#: app/src/ui/calendar/editor.rs:1419
+#: app/src/ui/calendar/editor.rs:1443
 msgid "{address} · {answer}"
 msgstr "{address} · {answer}"
 
-#: app/src/ui/calendar/editor.rs:1437
+#: app/src/ui/calendar/editor.rs:1461
 msgid "Remove {guest}"
 msgstr "Usuń gościa {guest}"
 
-#: app/src/ui/calendar/editor.rs:1464
+#: app/src/ui/calendar/editor.rs:1514
 msgid "Reminders"
 msgstr "Przypomnienia"
 
-#: app/src/ui/calendar/editor.rs:1514
+#: app/src/ui/calendar/editor.rs:1564
 msgid "Add Reminder"
 msgstr "Dodaj przypomnienie"
 
-#: app/src/ui/calendar/editor.rs:1557
+#: app/src/ui/calendar/editor.rs:1607
 msgid "Remove reminder"
 msgstr "Usuń przypomnienie"
 
-#: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
+#: app/src/ui/calendar/editor.rs:1651 app/src/ui/calendar/editor.rs:1662
 #: app/src/ui/calendar/popover.rs:272
 msgid "Notes"
 msgstr "Notatki"
 
-#: app/src/ui/calendar/editor.rs:1628
+#: app/src/ui/calendar/editor.rs:1678
 msgid "Attachments"
 msgstr "Załączniki"
 
-#: app/src/ui/calendar/editor.rs:1634 app/src/ui/calendar/editor.rs:1640
+#: app/src/ui/calendar/editor.rs:1684 app/src/ui/calendar/editor.rs:1690
 msgid "Attach File…"
 msgstr "Dołącz plik…"
 
-#: app/src/ui/calendar/editor.rs:1691
+#: app/src/ui/calendar/editor.rs:1741
 msgid "Grant access to upload {file}"
 msgstr "Udziel dostępu, aby przesłać {file}"
 
-#: app/src/ui/calendar/editor.rs:1707
+#: app/src/ui/calendar/editor.rs:1757
 msgid "Share with guests"
 msgstr "Udostępnij gościom"
 
-#: app/src/ui/calendar/editor.rs:1712
+#: app/src/ui/calendar/editor.rs:1762
 msgid "Share {file} with the guests"
 msgstr "Udostępnij plik {file} gościom"
 
-#: app/src/ui/calendar/editor.rs:1771
+#: app/src/ui/calendar/editor.rs:1821
 msgid "Cancel Upload"
 msgstr "Anuluj przesyłanie"
 
-#: app/src/ui/calendar/editor.rs:1775
+#: app/src/ui/calendar/editor.rs:1825
 msgid "Cancel upload of {file}"
 msgstr "Anuluj przesyłanie pliku {file}"
 
-#: app/src/ui/calendar/editor.rs:1802
+#: app/src/ui/calendar/editor.rs:1852
 msgid "Attach File"
 msgstr "Dołącz plik"
 
-#: app/src/ui/calendar/editor.rs:1821
+#: app/src/ui/calendar/editor.rs:1871
 msgid "Penguin Mail can attach only a file saved on this computer."
 msgstr "Penguin Mail może dołączyć tylko plik zapisany na tym komputerze."
 
-#: app/src/ui/calendar/editor.rs:1856
+#: app/src/ui/calendar/editor.rs:1906
 msgid "Uploading {file}"
 msgstr "Przesyłanie pliku {file}"
 
-#: app/src/ui/calendar/editor.rs:1903
+#: app/src/ui/calendar/editor.rs:1953
 msgid "Could not attach {file}: {reason}"
 msgstr "Nie udało się dołączyć pliku {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
+#: app/src/ui/calendar/editor.rs:2000 app/src/ui/composer/mod.rs:416
 #: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "Więcej"
 
-#: app/src/ui/calendar/editor.rs:1954
+#: app/src/ui/calendar/editor.rs:2004
 msgid "Time zone"
 msgstr "Strefa czasowa"
 
-#: app/src/ui/calendar/editor.rs:1998
+#: app/src/ui/calendar/editor.rs:2048
 msgid "Show as busy"
 msgstr "Pokaż jako zajęty czas"
 
-#: app/src/ui/calendar/editor.rs:2012
+#: app/src/ui/calendar/editor.rs:2062
 msgid "Private"
 msgstr "Prywatne"
 
-#: app/src/ui/calendar/editor.rs:2014
+#: app/src/ui/calendar/editor.rs:2064
 msgid "Only people who can change this calendar see the details"
 msgstr "Tylko osoby mogące zmieniać ten kalendarz widzą szczegóły"
 
-#: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
+#: app/src/ui/calendar/editor.rs:2078 app/src/ui/calendar/manage.rs:412
 #: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2238
 #: app/src/ui/sidebar.rs:2539
 msgid "Color"
 msgstr "Kolor"
 
-#: app/src/ui/calendar/editor.rs:2032
+#: app/src/ui/calendar/editor.rs:2082
 msgid "Calendar color"
 msgstr "Kolor kalendarza"
 
-#: app/src/ui/calendar/editor.rs:2076
+#: app/src/ui/calendar/editor.rs:2126
 msgid "Add Google Meet"
 msgstr "Dodaj Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
+#: app/src/ui/calendar/editor.rs:2177 app/src/ui/calendar/mod.rs:2436
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Wydarzenie"
 
-#: app/src/ui/calendar/editor.rs:2151
+#: app/src/ui/calendar/editor.rs:2201
 msgid "day"
 msgid_plural "days"
 msgstr[0] "dzień"
 msgstr[1] "dni"
 msgstr[2] "dni"
 
-#: app/src/ui/calendar/editor.rs:2152
+#: app/src/ui/calendar/editor.rs:2202
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "tydzień"
 msgstr[1] "tygodnie"
 msgstr[2] "tygodni"
 
-#: app/src/ui/calendar/editor.rs:2153
+#: app/src/ui/calendar/editor.rs:2203
 msgid "month"
 msgid_plural "months"
 msgstr[0] "miesiąc"
 msgstr[1] "miesiące"
 msgstr[2] "miesięcy"
 
-#: app/src/ui/calendar/editor.rs:2154
+#: app/src/ui/calendar/editor.rs:2204
 msgid "year"
 msgid_plural "years"
 msgstr[0] "rok"
 msgstr[1] "lata"
 msgstr[2] "lat"
 
-#: app/src/ui/calendar/editor.rs:2167
+#: app/src/ui/calendar/editor.rs:2217
 msgid "Tuesday"
 msgstr "Wtorek"
 
-#: app/src/ui/calendar/editor.rs:2168
+#: app/src/ui/calendar/editor.rs:2218
 msgid "Wednesday"
 msgstr "Środa"
 
-#: app/src/ui/calendar/editor.rs:2169
+#: app/src/ui/calendar/editor.rs:2219
 msgid "Thursday"
 msgstr "Czwartek"
 
-#: app/src/ui/calendar/editor.rs:2170
+#: app/src/ui/calendar/editor.rs:2220
 msgid "Friday"
 msgstr "Piątek"
 
-#: app/src/ui/calendar/editor.rs:2171
+#: app/src/ui/calendar/editor.rs:2221
 msgid "Saturday"
 msgstr "Sobota"
 
-#: app/src/ui/calendar/editor.rs:2183
+#: app/src/ui/calendar/editor.rs:2233
 msgid "Lavender"
 msgstr "Lawendowy"
 
-#: app/src/ui/calendar/editor.rs:2184
+#: app/src/ui/calendar/editor.rs:2234
 msgid "Sage"
 msgstr "Szałwiowy"
 
-#: app/src/ui/calendar/editor.rs:2185
+#: app/src/ui/calendar/editor.rs:2235
 msgid "Grape"
 msgstr "Winogronowy"
 
-#: app/src/ui/calendar/editor.rs:2186
+#: app/src/ui/calendar/editor.rs:2236
 msgid "Flamingo"
 msgstr "Flamingowy"
 
-#: app/src/ui/calendar/editor.rs:2187
+#: app/src/ui/calendar/editor.rs:2237
 msgid "Banana"
 msgstr "Bananowy"
 
-#: app/src/ui/calendar/editor.rs:2188
+#: app/src/ui/calendar/editor.rs:2238
 msgid "Tangerine"
 msgstr "Mandarynkowy"
 
-#: app/src/ui/calendar/editor.rs:2189
+#: app/src/ui/calendar/editor.rs:2239
 msgid "Peacock"
 msgstr "Pawi"
 
-#: app/src/ui/calendar/editor.rs:2190
+#: app/src/ui/calendar/editor.rs:2240
 msgid "Graphite"
 msgstr "Grafitowy"
 
-#: app/src/ui/calendar/editor.rs:2191
+#: app/src/ui/calendar/editor.rs:2241
 msgid "Blueberry"
 msgstr "Jagodowy"
 
-#: app/src/ui/calendar/editor.rs:2192
+#: app/src/ui/calendar/editor.rs:2242
 msgid "Basil"
 msgstr "Bazyliowy"
 
-#: app/src/ui/calendar/editor.rs:2193
+#: app/src/ui/calendar/editor.rs:2243
 msgid "Tomato"
 msgstr "Pomidorowy"
 
-#: app/src/ui/calendar/editor.rs:2201 app/src/ui/calendar/editor.rs:2452
+#: app/src/ui/calendar/editor.rs:2251 app/src/ui/calendar/editor.rs:2502
 msgid "By email"
 msgstr "E-mailem"
 
-#: app/src/ui/calendar/editor.rs:2202 app/src/ui/calendar/editor.rs:2448
-#: app/src/ui/calendar/editor.rs:2452
+#: app/src/ui/calendar/editor.rs:2252 app/src/ui/calendar/editor.rs:2498
+#: app/src/ui/calendar/editor.rs:2502
 msgid "Reminder"
 msgstr "Przypomnienie"
 
-#: app/src/ui/calendar/editor.rs:2208
+#: app/src/ui/calendar/editor.rs:2258
 msgid "Uses the calendar's default"
 msgstr "Używa domyślnego ustawienia kalendarza"
 
@@ -7256,9 +7262,9 @@ msgstr "Wydarzenia całodniowe"
 msgid "All-day"
 msgstr "Cały dzień"
 
-#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
+#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3076
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1410 app/src/ui/preferences.rs:1598
 msgid "%a"
 msgstr "%a"
 
@@ -7296,7 +7302,7 @@ msgstr "Czas skupienia"
 msgid "Out of Office"
 msgstr "Poza biurem"
 
-#: app/src/ui/calendar/mod.rs:2807
+#: app/src/ui/calendar/mod.rs:2815
 msgid "Could not save the event: {reason}"
 msgstr "Nie udało się zapisać wydarzenia: {reason}"
 
@@ -9521,7 +9527,7 @@ msgid "{folder}, always shown"
 msgstr ""
 
 #: app/src/ui/manage_folders.rs:402 app/src/ui/manage_folders.rs:508
-#: app/src/ui/preferences.rs:696
+#: app/src/ui/preferences.rs:711
 msgid "This account is not syncing yet"
 msgstr "To konto nie jest jeszcze synchronizowane"
 
@@ -9850,11 +9856,11 @@ msgid ""
 msgstr ""
 "Podpis, adresy nadawcze, serwery, kontakty i miejsce zgłaszane przez serwer."
 
-#: app/src/ui/preferences.rs:489 app/src/ui/preferences.rs:759
+#: app/src/ui/preferences.rs:489 app/src/ui/preferences.rs:774
 msgid "No Accounts Yet"
 msgstr "Nie ma jeszcze kont"
 
-#: app/src/ui/preferences.rs:491 app/src/ui/preferences.rs:761
+#: app/src/ui/preferences.rs:491 app/src/ui/preferences.rs:776
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Dodaj konto, aby wybrać nadawcę i tworzyć podpisy."
 
@@ -9878,11 +9884,15 @@ msgstr "Udostępniona skrzynka"
 msgid "Signed in through {account}"
 msgstr "Zalogowano przez {account}"
 
-#: app/src/ui/preferences.rs:640 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:577
+msgid "Add Microsoft Teams to New Calendar Invitations"
+msgstr ""
+
+#: app/src/ui/preferences.rs:655 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "Podpis"
 
-#: app/src/ui/preferences.rs:654
+#: app/src/ui/preferences.rs:669
 #, fuzzy
 #| msgid ""
 #| "Used by this account and addresses without their own signature. Markdown "
@@ -9897,68 +9907,68 @@ msgstr ""
 "<email> zamienia się w adres nadawcy razem z przyrostkiem, a <domain> w jego "
 "domenę."
 
-#: app/src/ui/preferences.rs:662 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:677 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "Podpis dla {account}"
 
-#: app/src/ui/preferences.rs:676
+#: app/src/ui/preferences.rs:691
 msgid "Import from Gmail"
 msgstr "Importuj z Gmaila"
 
-#: app/src/ui/preferences.rs:712
+#: app/src/ui/preferences.rs:727
 msgid "Imported the signature from Gmail"
 msgstr "Zaimportowano podpis z Gmaila"
 
-#: app/src/ui/preferences.rs:716
+#: app/src/ui/preferences.rs:731
 msgid "Gmail has no signature for this account"
 msgstr "Gmail nie ma podpisu dla tego konta"
 
-#: app/src/ui/preferences.rs:719
+#: app/src/ui/preferences.rs:734
 msgid "Could not import: {reason}"
 msgstr "Nie udało się zaimportować: {reason}"
 
-#: app/src/ui/preferences.rs:754 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:769 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Pisanie"
 
-#: app/src/ui/preferences.rs:770 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:785 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Nowe wiadomości"
 
-#: app/src/ui/preferences.rs:774
+#: app/src/ui/preferences.rs:789
 msgid "New Messages Start As"
 msgstr "Format nowych wiadomości"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:791
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr "Tekst sformatowany pokazuje styl słów, a Markdown pokazuje znaczniki"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:783 app/src/ui/sidebar.rs:66
+#: app/src/ui/preferences.rs:798 app/src/ui/sidebar.rs:66
 #: app/src/ui/sidebar.rs:79
 msgid "Undo Send"
 msgstr "Cofnij wysyłanie"
 
-#: app/src/ui/preferences.rs:785
+#: app/src/ui/preferences.rs:800
 msgid "How long you can take a message back after sending it"
 msgstr "Czas na cofnięcie wysłanej wiadomości"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:807
 msgid "Check for Missing Attachments"
 msgstr "Sprawdzaj brakujące załączniki"
 
-#: app/src/ui/preferences.rs:794
+#: app/src/ui/preferences.rs:809
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Pytaj przed wysłaniem wiadomości, która zapowiada plik, ale go nie zawiera"
 
-#: app/src/ui/preferences.rs:828
+#: app/src/ui/preferences.rs:843
 msgid "Signing and Encryption"
 msgstr "Podpisywanie i szyfrowanie"
 
-#: app/src/ui/preferences.rs:830
+#: app/src/ui/preferences.rs:845
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -9966,49 +9976,49 @@ msgstr ""
 "Penguin Mail podpisuje i szyfruje za pomocą GnuPG, które przechowuje klucze "
 "i samo pyta o hasło."
 
-#: app/src/ui/preferences.rs:835
+#: app/src/ui/preferences.rs:850
 msgid "Your OpenPGP Keys"
 msgstr "Twoje klucze OpenPGP"
 
-#: app/src/ui/preferences.rs:836
+#: app/src/ui/preferences.rs:851
 msgid "Asking gpg…"
 msgstr "Odpytywanie gpg…"
 
-#: app/src/ui/preferences.rs:840
+#: app/src/ui/preferences.rs:855
 msgid "Your S/MIME Certificates"
 msgstr "Twoje certyfikaty S/MIME"
 
-#: app/src/ui/preferences.rs:841
+#: app/src/ui/preferences.rs:856
 msgid "Asking gpgsm…"
 msgstr "Odpytywanie gpgsm…"
 
-#: app/src/ui/preferences.rs:848
+#: app/src/ui/preferences.rs:863
 msgid "Sign My Messages by Default"
 msgstr "Domyślnie podpisuj moje wiadomości"
 
-#: app/src/ui/preferences.rs:849
+#: app/src/ui/preferences.rs:864
 msgid "New messages open with Sign turned on"
 msgstr "Nowe wiadomości mają włączoną opcję Podpisz"
 
-#: app/src/ui/preferences.rs:855
+#: app/src/ui/preferences.rs:870
 msgid "Encrypt When I Can"
 msgstr "Szyfruj, gdy to możliwe"
 
-#: app/src/ui/preferences.rs:857
+#: app/src/ui/preferences.rs:872
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Włączaj szyfrowanie, gdy każdy odbiorca ma klucz lub certyfikat"
 
-#: app/src/ui/preferences.rs:946
+#: app/src/ui/preferences.rs:961
 msgid "gpg could not be asked: {reason}"
 msgstr "Nie udało się odpytać gpg: {reason}"
 
-#: app/src/ui/preferences.rs:965
+#: app/src/ui/preferences.rs:980
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Nie udało się odpytać gpgsm: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:974
+#: app/src/ui/preferences.rs:989
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -10025,11 +10035,11 @@ msgstr[2] ""
 "Penguin Mail podpisuje i szyfruje za pomocą {programs}. Te programy "
 "przechowują klucze i same pytają o hasło."
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
+#: app/src/ui/preferences.rs:1021 app/src/ui/preferences.rs:1034
 msgid "Spelling"
 msgstr "Pisownia"
 
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:1023
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10039,7 +10049,7 @@ msgstr ""
 "Zainstaluj słownik Hunspell, np. hunspell-en-us lub hunspell-pt-pt, i otwórz "
 "ponownie okno tworzenia wiadomości."
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1036
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10047,59 +10057,59 @@ msgstr ""
 "Język sprawdzania pisowni dla każdego konta. Zainstalowane słowniki: "
 "{languages}."
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1048
 msgid "System: {language}"
 msgstr "Systemowy: {language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1063
 msgid "All Installed Languages"
 msgstr "Wszystkie zainstalowane języki"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1106
 msgid "Sync"
 msgstr "Synchronizacja"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1114
 msgid "Checking"
 msgstr "Sprawdzanie"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1120
 msgid "Check for New Mail"
 msgstr "Sprawdzaj nową pocztę"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1129
 msgid "Storage"
 msgstr "Przechowywanie"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1137
 msgid "Keep Mail on This Computer For"
 msgstr "Przechowuj pocztę na tym komputerze przez"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1158
 msgid "Message text kept for opening offline"
 msgstr "Tekst wiadomości przechowywany do otwierania bez połączenia"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1161
 msgid "Message Cache"
 msgstr "Pamięć podręczna wiadomości"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1170
 msgid "100 messages"
 msgstr "100 wiadomości"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1171
 msgid "300 messages"
 msgstr "300 wiadomości"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1172
 msgid "1,000 messages"
 msgstr "1000 wiadomości"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1176
 msgid "Download Recent Inbox Messages"
 msgstr "Pobieraj najnowsze wiadomości ze skrzynki odbiorczej"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1177
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10107,152 +10117,152 @@ msgstr ""
 "Pobiera tekst wiadomości z każdego konta, aby szybciej je otwierać i czytać "
 "bez połączenia. Załączniki i zdalne obrazy nie są pobierane."
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1204
 msgid "Startup"
 msgstr "Uruchamianie"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1207
 msgid "Start in the Tray at Login"
 msgstr "Uruchamiaj w zasobniku po zalogowaniu"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1222
 msgid "Not available in demo mode"
 msgstr "Niedostępne w trybie demonstracyjnym"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1230
 msgid "Look for a new release once a day"
 msgstr "Szukaj nowego wydania raz dziennie"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1271
 msgid "{used} of {limit}"
 msgstr "{used} z {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1283
 msgid "{amount} · Full"
 msgstr "{amount} · Pełne"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1285
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Prawie pełne"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1297
 msgid "Senders Who May Load Images"
 msgstr "Nadawcy z pozwoleniem na wczytywanie obrazów"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1298 app/src/ui/preferences.rs:1307
 msgid "Nobody yet"
 msgstr "Jeszcze nikt"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1309
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} nadawca"
 msgstr[1] "{count} nadawcy"
 msgstr[2] "{count} nadawców"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1319
 msgid "Anyone at this domain"
 msgstr "Każdy z tej domeny"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1321
 msgid "This address"
 msgstr "Ten adres"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1326
 msgid "Stop Loading Images from This Sender"
 msgstr "Przestań wczytywać obrazy od tego nadawcy"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1333
 msgid "Stop loading images from {sender}"
 msgstr "Przestań wczytywać obrazy od {sender}"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1403
 msgid "Monday to Friday"
 msgstr "Od poniedziałku do piątku"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1404
 msgid "Every day of the week"
 msgstr "Każdy dzień tygodnia"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1405
 msgid "No days"
 msgstr "Żadne dni"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1412
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1415
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1478
 msgid "Time Format"
 msgstr "Format czasu"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1482
 msgid "Automatic follows the system clock format"
 msgstr "Automatyczny używa systemowego formatu czasu"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1496
 msgid "Week Starts On"
 msgstr "Początek tygodnia"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1501
 msgid "Automatic follows the locale's own first day of the week"
 msgstr ""
 "Automatycznie wybiera pierwszy dzień tygodnia zgodnie z ustawieniami "
 "regionalnymi"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1515
 msgid "Working Hours"
 msgstr "Godziny pracy"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1534
 msgid "Hours"
 msgstr "Godziny"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1585
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1643
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1645
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1689
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Nie udało się zmienić koloru: {reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1733
 msgid "Never Translate"
 msgstr "Nigdy nie tłumacz"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1735
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Dla wiadomości w tych językach nie proponuj tłumaczenia"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1764
 msgid "Follow System"
 msgstr "Zgodny z systemem"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1768
 msgid "Language"
 msgstr "Język"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1769
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail pokaże nowy język po ponownym uruchomieniu"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1850 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Bez podpisu"
 
@@ -13581,23 +13591,23 @@ msgstr "Pęk kluczy odmówiła: {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "Reguła na tym komputerze przekazała załączoną wiadomość od {address}."
 
-#: sync/src/services/caldav.rs:640
+#: sync/src/services/caldav.rs:641
 msgid "An event needs an ID to be imported."
 msgstr "Wydarzenie wymaga identyfikatora do zaimportowania."
 
-#: sync/src/services/caldav.rs:699
+#: sync/src/services/caldav.rs:700
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Kalendarz CalDAV nie może przechowywać załączonych plików."
 
-#: sync/src/services/caldav.rs:705
+#: sync/src/services/caldav.rs:706
 msgid "A CalDAV calendar has no files to share."
 msgstr "Kalendarz CalDAV nie ma plików do udostępnienia."
 
-#: sync/src/services/caldav.rs:761
+#: sync/src/services/caldav.rs:762
 msgid "You are not a guest of this event."
 msgstr "Nie jesteś gościem tego wydarzenia."
 
-#: sync/src/services/caldav.rs:770
+#: sync/src/services/caldav.rs:771
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail nie może zmieniać listy kalendarzy serwera CalDAV."
 
@@ -13666,16 +13676,16 @@ msgstr "stan"
 msgid "The server kept the event but did not say its id."
 msgstr "Serwer zachował wydarzenie, ale nie podał jego identyfikatora."
 
-#: sync/src/services/jmap/calendar.rs:1119
+#: sync/src/services/jmap/calendar.rs:1120
 msgid "Penguin Mail cannot attach files to events on this JMAP calendar."
 msgstr ""
 "Penguin Mail nie może dołączać plików do wydarzeń w tym kalendarzu JMAP."
 
-#: sync/src/services/jmap/calendar.rs:1125
+#: sync/src/services/jmap/calendar.rs:1126
 msgid "This JMAP calendar has no files to share."
 msgstr "Ten kalendarz JMAP nie ma plików do udostępnienia."
 
-#: sync/src/services/jmap/calendar.rs:1263
+#: sync/src/services/jmap/calendar.rs:1264
 msgid "Penguin Mail cannot change the calendar list of a JMAP server."
 msgstr "Penguin Mail nie może zmieniać listy kalendarzy serwera JMAP."
 
@@ -13790,35 +13800,35 @@ msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 "Ta reguła jest tylko do odczytu, więc Penguin Mail pozostawia ją bez zmian."
 
-#: sync/src/services/microsoft/calendar.rs:444
+#: sync/src/services/microsoft/calendar.rs:449
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook nie może powtarzać wydarzenia w ten sposób."
 
-#: sync/src/services/microsoft/calendar.rs:837
+#: sync/src/services/microsoft/calendar.rs:846
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook nie może dołączyć pliku do wydarzenia."
 
-#: sync/src/services/microsoft/calendar.rs:842
+#: sync/src/services/microsoft/calendar.rs:851
 msgid "Outlook has no files to share."
 msgstr "Outlook nie ma plików do udostępnienia."
 
-#: sync/src/services/microsoft/calendar.rs:852
+#: sync/src/services/microsoft/calendar.rs:861
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook nie może przenieść wydarzenia do innego kalendarza."
 
-#: sync/src/services/microsoft/calendar.rs:910
+#: sync/src/services/microsoft/calendar.rs:919
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook nie może usunąć kalendarza z listy."
 
-#: sync/src/services/microsoft/calendar.rs:915
+#: sync/src/services/microsoft/calendar.rs:924
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook nie może ukryć kalendarza na wszystkich twoich urządzeniach."
 
-#: sync/src/services/microsoft/calendar.rs:920
+#: sync/src/services/microsoft/calendar.rs:929
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook nie może zasubskrybować kalendarza za pomocą jego adresu."
 
-#: sync/src/services/microsoft/calendar.rs:924
+#: sync/src/services/microsoft/calendar.rs:933
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook nie ma innych kalendarzy do dodania."
 

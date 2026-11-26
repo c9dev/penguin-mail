@@ -982,6 +982,7 @@ impl<J: JmapApi> CalendarService for Jmap<J> {
                         .map(jscal::default_reminders)
                         .unwrap_or_default(),
                 ),
+                supports_teams: false,
                 name: c.name,
                 id: c.id,
             })
