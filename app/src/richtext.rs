@@ -21,7 +21,6 @@ pub enum BlockKind {
     Heading(u8),
     Bullet,
     Numbered,
-    Quote,
     /// A line of a code block.
     Code,
 }
@@ -71,11 +70,11 @@ impl Span {
 #[serde(default)]
 pub struct Block {
     pub kind: BlockKind,
-    /// Whether the line sits inside a block quote, whatever kind of line
-    /// it is. A list item or a heading under a quote is still somebody
-    /// else's quoted words, which is what asks for it to be treated as
-    /// such even though [`BlockKind`] has stopped saying.
-    pub quoted: bool,
+    /// How many quotes deep the line sits: 0 for the writer's own words,
+    /// 1 for what a reply quotes, 2 for what that message quoted in turn.
+    /// A quoted line is still a paragraph, a bullet or a heading, so the
+    /// depth lives beside the kind and not in it.
+    pub quote: u8,
     pub spans: Vec<Span>,
 }
 
@@ -83,16 +82,21 @@ impl Block {
     pub fn new(kind: BlockKind, spans: Vec<Span>) -> Block {
         Block {
             kind,
-            quoted: kind == BlockKind::Quote,
+            quote: 0,
             spans,
         }
     }
 
-    /// Whether the line is quoted content, list and heading included.
-    /// Reading only [`BlockKind::Quote`] misses the lines a quote holds
-    /// that the quote made into something else.
+    /// The same line, `depth` quotes deep.
+    pub fn quoted(mut self, depth: u8) -> Block {
+        self.quote = depth;
+        self
+    }
+
+    /// Whether the line is somebody else's quoted words, list and heading
+    /// included.
     pub fn is_quote(&self) -> bool {
-        self.quoted || self.kind == BlockKind::Quote
+        self.quote > 0
     }
 
     /// The line's text with every style dropped.
@@ -142,70 +146,27 @@ impl RichBody {
 
     /// The body as email HTML.
     pub fn to_html(&self) -> String {
-        let mut out = String::new();
-        let mut rest = self.blocks.as_slice();
-        while let Some(first) = rest.first() {
-            let kind = first.kind;
-            let run = match kind {
-                BlockKind::Quote => quote_run(rest),
-                _ => rest.iter().take_while(|b| b.kind == kind).count(),
-            };
-            let (group, tail) = rest.split_at(run);
-            rest = tail;
-            match kind {
-                BlockKind::Heading(level) => {
-                    for block in group {
-                        let level = level.clamp(1, 3);
-                        out.push_str(&format!(
-                            "<h{level} style=\"margin:0 0 0.5em\">{}</h{level}>",
-                            spans_to_html(&block.spans)
-                        ));
-                    }
-                }
-                BlockKind::Bullet | BlockKind::Numbered => {
-                    let list = if kind == BlockKind::Bullet {
-                        "ul"
-                    } else {
-                        "ol"
-                    };
-                    out.push_str(&format!(
-                        "<{list} style=\"margin:0 0 1em;padding-left:1.4em\">"
-                    ));
-                    for block in group {
-                        out.push_str(&format!("<li>{}</li>", spans_to_html(&block.spans)));
-                    }
-                    out.push_str(&format!("</{list}>"));
-                }
-                BlockKind::Quote => {
-                    out.push_str(&format!("<blockquote style=\"{QUOTE}\">"));
-                    for run in split_on_blanks(group) {
-                        out.push_str(&format!(
-                            "<p style=\"{PARAGRAPH}\">{}</p>",
-                            lines_to_html(run)
-                        ));
-                    }
-                    out.push_str("</blockquote>");
-                }
-                BlockKind::Code => {
-                    let text: Vec<String> = group.iter().map(|b| escape(&b.text())).collect();
-                    out.push_str(&format!(
-                        "<pre style=\"{PRE}\"><code>{}</code></pre>",
-                        text.join("\n")
-                    ));
-                }
-                BlockKind::Paragraph => {
-                    // Blank lines end a paragraph; the rest join with breaks,
-                    // the way a single newline reads in any mail client.
-                    for run in split_on_blanks(group) {
-                        out.push_str(&format!(
-                            "<p style=\"{PARAGRAPH}\">{}</p>",
-                            lines_to_html(run)
-                        ));
-                    }
-                }
+        document(&blocks_to_html(&self.blocks, 0))
+    }
+
+    /// How deep each line is quoted, for the text forms. A blank line
+    /// between two quoted lines is part of the quote, even though the
+    /// editor cannot mark an empty line and reads it back as unquoted.
+    fn quote_depths(&self) -> Vec<u8> {
+        let mut depths: Vec<u8> = Vec::with_capacity(self.blocks.len());
+        for (index, block) in self.blocks.iter().enumerate() {
+            let mut depth = block.quote;
+            if block.is_blank() && block.kind == BlockKind::Paragraph {
+                let before = depths.last().copied().unwrap_or(0);
+                let after = self.blocks[index + 1..]
+                    .iter()
+                    .find(|b| !b.is_blank())
+                    .map_or(0, |b| b.quote);
+                depth = depth.max(before.min(after));
             }
+            depths.push(depth);
         }
-        document(&out)
+        depths
     }
 
     /// The body as plain text, for the part beside the HTML: no markers
@@ -213,7 +174,8 @@ impl RichBody {
     pub fn to_plain(&self) -> String {
         let mut out: Vec<String> = Vec::new();
         let mut number = 0;
-        for block in &self.blocks {
+        let depths = self.quote_depths();
+        for (block, depth) in self.blocks.iter().zip(depths) {
             let mut line = String::new();
             for span in &block.spans {
                 match (&span.image, &span.link) {
@@ -229,11 +191,16 @@ impl RichBody {
             } else {
                 number = 0;
             }
-            out.push(match block.kind {
+            let line = match block.kind {
                 BlockKind::Bullet => format!("- {line}"),
                 BlockKind::Numbered => format!("{number}. {line}"),
-                BlockKind::Quote => format!("> {line}").trim_end().to_string(),
                 _ => line,
+            };
+            out.push(match depth {
+                0 => line,
+                depth => format!("{}{line}", quote_marks(depth))
+                    .trim_end()
+                    .to_string(),
             });
         }
         out.join("\n").trim_end().to_string()
@@ -244,23 +211,31 @@ impl RichBody {
     pub fn to_markdown(&self) -> String {
         let mut out: Vec<String> = Vec::new();
         let mut number = 0;
-        let mut fenced = false;
-        for block in &self.blocks {
-            if block.kind == BlockKind::Code && !fenced {
-                out.push("```".into());
-                fenced = true;
+        // The depth of the code fence that is open, if one is.
+        let mut fenced: Option<u8> = None;
+        let marked = |depth: u8, line: String| match depth {
+            0 => line,
+            depth => format!("{}{line}", quote_marks(depth))
+                .trim_end()
+                .to_string(),
+        };
+        let depths = self.quote_depths();
+        for (block, quote) in self.blocks.iter().zip(depths) {
+            let code = block.kind == BlockKind::Code;
+            if fenced.is_some_and(|depth| !code || depth != quote) {
+                out.push(marked(fenced.take().unwrap_or(0), "```".into()));
             }
-            if block.kind != BlockKind::Code && fenced {
-                out.push("```".into());
-                fenced = false;
+            if code && fenced.is_none() {
+                out.push(marked(quote, "```".into()));
+                fenced = Some(quote);
             }
             if block.kind == BlockKind::Numbered {
                 number += 1;
             } else {
                 number = 0;
             }
-            if block.kind == BlockKind::Code {
-                out.push(block.text());
+            if code {
+                out.push(marked(quote, block.text()));
                 continue;
             }
             let body: String = block.spans.iter().map(span_to_markdown).collect();
@@ -270,18 +245,12 @@ impl RichBody {
                 }
                 BlockKind::Bullet => format!("- {body}"),
                 BlockKind::Numbered => format!("{number}. {body}"),
-                BlockKind::Quote => format!("> {body}").trim_end().to_string(),
                 BlockKind::Paragraph | BlockKind::Code => body,
             };
-            // A quoted list item is still a list item, under a quote.
-            out.push(if block.quoted && block.kind != BlockKind::Quote {
-                format!("> {line}").trim_end().to_string()
-            } else {
-                line
-            });
+            out.push(marked(quote, line));
         }
-        if fenced {
-            out.push("```".into());
+        if let Some(depth) = fenced {
+            out.push(marked(depth, "```".into()));
         }
         out.join("\n")
     }
@@ -393,20 +362,94 @@ fn lines_to_html(blocks: &[Block]) -> String {
         .join("<br />")
 }
 
-/// How many of `blocks`, which start with a quoted line, belong to that
-/// quote. A blank line between quoted paragraphs has no quote of its own
-/// in the editor, but it stays inside the quote while quoted lines follow
-/// it, so a reply sends one blockquote rather than one per paragraph.
-fn quote_run(blocks: &[Block]) -> usize {
+/// The quote marks that start a line `depth` quotes deep.
+fn quote_marks(depth: u8) -> String {
+    "> ".repeat(depth as usize)
+}
+
+/// How many of `blocks`, which start with a line deeper than `depth`,
+/// belong to that quote. A blank line between quoted paragraphs may sit
+/// at a shallower depth, since the editor does not mark it, but it stays
+/// inside the quote while quoted lines follow it, so a reply sends one
+/// blockquote rather than one per paragraph.
+fn quote_run(blocks: &[Block], depth: u8) -> usize {
     let mut end = 0;
     for (index, block) in blocks.iter().enumerate() {
-        match block.kind {
-            BlockKind::Quote => end = index + 1,
-            _ if block.is_blank() => continue,
-            _ => break,
+        if block.quote > depth {
+            end = index + 1;
+        } else if !block.is_blank() {
+            break;
         }
     }
     end
+}
+
+/// The HTML for `blocks`, whose lines are at least `depth` quotes deep:
+/// the lines at that depth as their own blocks, and each deeper run
+/// inside a blockquote of its own.
+fn blocks_to_html(blocks: &[Block], depth: u8) -> String {
+    let mut out = String::new();
+    let mut rest = blocks;
+    while let Some(first) = rest.first() {
+        if first.quote > depth {
+            let (inner, tail) = rest.split_at(quote_run(rest, depth));
+            rest = tail;
+            out.push_str(&format!("<blockquote style=\"{QUOTE}\">"));
+            out.push_str(&blocks_to_html(inner, depth + 1));
+            out.push_str("</blockquote>");
+            continue;
+        }
+        let kind = first.kind;
+        let run = rest
+            .iter()
+            .take_while(|b| b.quote <= depth && b.kind == kind)
+            .count();
+        let (group, tail) = rest.split_at(run);
+        rest = tail;
+        match kind {
+            BlockKind::Heading(level) => {
+                for block in group {
+                    let level = level.clamp(1, 3);
+                    out.push_str(&format!(
+                        "<h{level} style=\"margin:0 0 0.5em\">{}</h{level}>",
+                        spans_to_html(&block.spans)
+                    ));
+                }
+            }
+            BlockKind::Bullet | BlockKind::Numbered => {
+                let list = if kind == BlockKind::Bullet {
+                    "ul"
+                } else {
+                    "ol"
+                };
+                out.push_str(&format!(
+                    "<{list} style=\"margin:0 0 1em;padding-left:1.4em\">"
+                ));
+                for block in group {
+                    out.push_str(&format!("<li>{}</li>", spans_to_html(&block.spans)));
+                }
+                out.push_str(&format!("</{list}>"));
+            }
+            BlockKind::Code => {
+                let text: Vec<String> = group.iter().map(|b| escape(&b.text())).collect();
+                out.push_str(&format!(
+                    "<pre style=\"{PRE}\"><code>{}</code></pre>",
+                    text.join("\n")
+                ));
+            }
+            BlockKind::Paragraph => {
+                // Blank lines end a paragraph; the rest join with breaks,
+                // the way a single newline reads in any mail client.
+                for run in split_on_blanks(group) {
+                    out.push_str(&format!(
+                        "<p style=\"{PARAGRAPH}\">{}</p>",
+                        lines_to_html(run)
+                    ));
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Groups of lines with the blank ones between them dropped.
@@ -426,12 +469,10 @@ struct Builder {
     link: Option<String>,
     /// The list kinds we are inside, innermost last.
     lists: Vec<BlockKind>,
-    /// How many quotes we are inside. A quote inside a quote ends
-    /// halfway, so a boolean would drop the outer one with it. Wide
-    /// because a sender controls the nesting and a counter that saturates
-    /// would fail open: back at zero inside live quotes, an image there
-    /// would be fetched.
-    quote_depth: usize,
+    /// How many blockquotes we are inside. Wide because a sender controls
+    /// the nesting and a counter that saturates would fail open: back at
+    /// zero inside live quotes, an image there would be fetched.
+    quote: usize,
     /// The heading level or code block we are inside.
     block: Option<BlockKind>,
     open: bool,
@@ -440,15 +481,17 @@ struct Builder {
 }
 
 impl Builder {
+    /// The depth a line gets, held at the most a block can store.
+    fn depth(&self) -> u8 {
+        u8::try_from(self.quote).unwrap_or(u8::MAX)
+    }
+
     fn kind(&self) -> BlockKind {
         if let Some(kind) = self.block {
             return kind;
         }
         if let Some(list) = self.lists.last() {
             return *list;
-        }
-        if self.quote_depth > 0 {
-            return BlockKind::Quote;
         }
         BlockKind::Paragraph
     }
@@ -479,12 +522,15 @@ impl Builder {
         }
         self.body.blocks.push(Block {
             kind,
-            quoted: self.quote_depth > 0,
+            quote: self.depth(),
             spans,
         });
     }
 
-    /// A blank line between blocks, unless one is already there.
+    /// A blank line between blocks, unless one is already there. A blank
+    /// line is never quoted itself: the editor cannot mark an empty line,
+    /// and the writers put it inside the quote when quoted lines sit on
+    /// both sides of it.
     fn gap(&mut self) {
         if self
             .body
@@ -495,10 +541,7 @@ impl Builder {
             return;
         }
         if !self.body.blocks.is_empty() {
-            self.body.blocks.push(Block {
-                quoted: self.quote_depth > 0,
-                ..Block::default()
-            });
+            self.body.blocks.push(Block::default());
         }
     }
 
@@ -544,11 +587,9 @@ impl Builder {
                     self.gap();
                 }
             }
-            Event::Start(Tag::BlockQuote(_)) => {
-                self.quote_depth = self.quote_depth.saturating_add(1);
-            }
+            Event::Start(Tag::BlockQuote(_)) => self.quote = self.quote.saturating_add(1),
             Event::End(TagEnd::BlockQuote(_)) => {
-                self.quote_depth = self.quote_depth.saturating_sub(1);
+                self.quote = self.quote.saturating_sub(1);
                 self.gap();
             }
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(_) | CodeBlockKind::Indented)) => {
@@ -657,7 +698,6 @@ fn container(name: &str) -> Option<BlockKind> {
     Some(match name {
         "ul" => BlockKind::Bullet,
         "ol" => BlockKind::Numbered,
-        "blockquote" => BlockKind::Quote,
         "pre" => BlockKind::Code,
         _ => return None,
     })
@@ -670,6 +710,7 @@ fn breaks_line(name: &str) -> bool {
         "p" | "div" | "li" | "tr" | "td" | "table" | "section" | "article" | "hr" | "dt" | "dd"
     ) || heading_level(name).is_some()
         || container(name).is_some()
+        || name == "blockquote"
 }
 
 fn heading_level(name: &str) -> Option<u8> {
@@ -708,8 +749,12 @@ struct HtmlBuilder {
     strike: usize,
     code: usize,
     links: Vec<String>,
-    /// The lists, quotes and code blocks we are inside, innermost last.
+    /// The lists and code blocks we are inside, innermost last.
     open: Vec<BlockKind>,
+    /// How many blockquotes we are inside. Wide because a sender controls
+    /// the nesting and a counter that saturates would fail open: back at
+    /// zero inside live quotes, an image there would be fetched.
+    quote: usize,
     heading: Option<u8>,
     /// Inside `<pre>`, where the spaces and the line breaks are the text.
     pre: usize,
@@ -718,6 +763,11 @@ struct HtmlBuilder {
 }
 
 impl HtmlBuilder {
+    /// The depth a line gets, held at the most a block can store.
+    fn depth(&self) -> u8 {
+        u8::try_from(self.quote).unwrap_or(u8::MAX)
+    }
+
     fn kind(&self) -> BlockKind {
         if let Some(level) = self.heading {
             return BlockKind::Heading(level);
@@ -766,7 +816,7 @@ impl HtmlBuilder {
         let spans = std::mem::take(&mut self.spans);
         self.body.blocks.push(Block {
             kind,
-            quoted: self.open.contains(&BlockKind::Quote),
+            quote: self.depth(),
             spans,
         });
     }
@@ -890,6 +940,16 @@ impl HtmlBuilder {
             }
             return;
         }
+        if name == "blockquote" {
+            match closing {
+                true => {
+                    self.quote = self.quote.saturating_sub(1);
+                    self.gap();
+                }
+                false => self.quote = self.quote.saturating_add(1),
+            }
+            return;
+        }
         if let Some(kind) = container(name) {
             match closing {
                 true => {
@@ -1003,7 +1063,7 @@ mod tests {
             Block::new(BlockKind::Bullet, vec![Span::plain("eggs")]),
             Block::new(BlockKind::Numbered, vec![Span::plain("first")]),
             Block::new(BlockKind::Numbered, vec![Span::plain("second")]),
-            Block::new(BlockKind::Quote, vec![Span::plain("she said")]),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("she said")]).quoted(1),
             Block::new(BlockKind::Code, vec![Span::plain("cargo test")]),
         ]);
         let html = doc.to_html();
@@ -1025,15 +1085,104 @@ mod tests {
     }
 
     #[test]
+    fn a_quote_inside_a_quote_nests_and_a_list_inside_a_quote_stays_a_list() {
+        let markdown = "On Monday, Ann wrote:\n> Hi\n>\n> - one\n> - two\n>\n> > Bob wrote:\n> > older\n>\n> bye";
+        let doc = RichBody::from_markdown(markdown);
+        let shape: Vec<(BlockKind, u8, String)> = doc
+            .blocks
+            .iter()
+            .map(|b| (b.kind, b.quote, b.text()))
+            .collect();
+        let line = |kind, quote, text: &str| (kind, quote, text.to_string());
+        assert_eq!(
+            shape,
+            [
+                line(BlockKind::Paragraph, 0, "On Monday, Ann wrote:"),
+                line(BlockKind::Paragraph, 0, ""),
+                line(BlockKind::Paragraph, 1, "Hi"),
+                line(BlockKind::Paragraph, 0, ""),
+                line(BlockKind::Bullet, 1, "one"),
+                line(BlockKind::Bullet, 1, "two"),
+                line(BlockKind::Paragraph, 0, ""),
+                line(BlockKind::Paragraph, 2, "Bob wrote:"),
+                line(BlockKind::Paragraph, 2, "older"),
+                line(BlockKind::Paragraph, 0, ""),
+                line(BlockKind::Paragraph, 1, "bye"),
+            ],
+            "{doc:#?}"
+        );
+        let html = doc.to_html();
+        assert_eq!(html.matches("<blockquote").count(), 2, "{html}");
+        assert_eq!(html.matches("</blockquote>").count(), 2, "{html}");
+        assert!(html.contains("<li>one</li>"), "{html}");
+        // The inner quote sits inside the outer one, ahead of "bye".
+        let inner = html.find("Bob wrote").unwrap();
+        let bye = html.find("bye").unwrap();
+        assert!(html[..inner].matches("<blockquote").count() == 2, "{html}");
+        assert!(html[inner..bye].contains("</blockquote>"), "{html}");
+        // Markdown and plain text keep every level's marks.
+        assert_eq!(
+            doc.to_markdown(),
+            "On Monday, Ann wrote:\n\n> Hi\n>\n> - one\n> - two\n>\n> > Bob wrote:\n> > older\n>\n> bye"
+        );
+        assert_eq!(RichBody::from_markdown(&doc.to_markdown()), doc);
+        assert!(doc.to_plain().contains("\n> > Bob wrote:\n> > older\n"));
+    }
+
+    #[test]
+    fn a_blank_the_editor_could_not_mark_stays_inside_the_quote() {
+        // The editor reads an empty line back with no quote on it.
+        let doc = body(vec![
+            Block::new(BlockKind::Paragraph, vec![Span::plain("a")]).quoted(1),
+            Block::new(BlockKind::Paragraph, Vec::new()),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("b")]).quoted(1),
+            Block::new(BlockKind::Paragraph, Vec::new()),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("mine")]),
+        ]);
+        assert_eq!(doc.to_markdown(), "> a\n>\n> b\n\nmine");
+        assert_eq!(doc.to_plain(), "> a\n>\n> b\n\nmine");
+    }
+
+    #[test]
+    fn nested_blockquotes_in_mail_html_keep_their_depth() {
+        let doc = RichBody::from_html(
+            "<div>Thanks</div><blockquote><p>Ann wrote:</p><blockquote><p>Bob wrote:</p><p>older</p></blockquote><p>newer</p></blockquote><p>after</p>",
+        );
+        let shape: Vec<(u8, String)> = doc
+            .blocks
+            .iter()
+            .filter(|b| !b.is_blank())
+            .map(|b| (b.quote, b.text()))
+            .collect();
+        let line = |quote, text: &str| (quote, text.to_string());
+        assert_eq!(
+            shape,
+            [
+                line(0, "Thanks"),
+                line(1, "Ann wrote:"),
+                line(2, "Bob wrote:"),
+                line(2, "older"),
+                line(1, "newer"),
+                line(0, "after"),
+            ],
+            "{doc:#?}"
+        );
+    }
+
+    #[test]
     fn a_quote_with_blank_lines_between_its_paragraphs_stays_one_quote() {
         let doc = body(vec![
             Block::new(BlockKind::Paragraph, vec![Span::plain("Sounds good.")]),
-            Block::new(BlockKind::Quote, vec![Span::plain("On Monday, Ann wrote:")]),
-            Block::new(BlockKind::Quote, vec![Span::plain("Hello,")]),
+            Block::new(
+                BlockKind::Paragraph,
+                vec![Span::plain("On Monday, Ann wrote:")],
+            )
+            .quoted(1),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("Hello,")]).quoted(1),
             Block::new(BlockKind::Paragraph, Vec::new()),
-            Block::new(BlockKind::Quote, vec![Span::plain("Lunch on Monday?")]),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("Lunch on Monday?")]).quoted(1),
             Block::new(BlockKind::Paragraph, Vec::new()),
-            Block::new(BlockKind::Quote, vec![Span::plain("Ann")]),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("Ann")]).quoted(1),
         ]);
         let html = doc.to_html();
         assert_eq!(html.matches("<blockquote").count(), 1, "{html}");
@@ -1091,7 +1240,7 @@ mod tests {
                 BlockKind::Bullet,
                 BlockKind::Bullet,
                 BlockKind::Paragraph,
-                BlockKind::Quote,
+                BlockKind::Paragraph,
                 BlockKind::Paragraph,
                 BlockKind::Numbered,
                 BlockKind::Numbered,
@@ -1123,13 +1272,13 @@ mod tests {
             .iter()
             .find(|block| block.kind == BlockKind::Bullet)
             .expect("the list item survives");
-        assert!(bullet.quoted, "{doc:#?}");
+        assert!(bullet.is_quote(), "{doc:#?}");
         let heading = doc
             .blocks
             .iter()
             .find(|block| matches!(block.kind, BlockKind::Heading(_)))
             .expect("the heading survives");
-        assert!(heading.quoted, "{doc:#?}");
+        assert!(heading.is_quote(), "{doc:#?}");
         assert_eq!(
             doc.to_markdown(),
             "> - milk\n>\n> # Title\n>\n> said",
@@ -1147,7 +1296,7 @@ mod tests {
         assert!(
             doc.blocks
                 .iter()
-                .any(|block| block.kind == BlockKind::Bullet && block.quoted),
+                .any(|block| block.kind == BlockKind::Bullet && block.is_quote()),
             "{doc:#?}"
         );
     }
@@ -1196,7 +1345,9 @@ mod tests {
             words.iter().any(|line| line == "the reply"),
             "the reply merged into another line: {joined}"
         );
-        for block in &doc.blocks {
+        // A blank line is never quoted itself; the text forms quote it
+        // when quoted lines sit on both sides.
+        for block in doc.blocks.iter().filter(|block| !block.is_blank()) {
             assert!(block.is_quote(), "a line lost the quote: {block:?}");
         }
     }
@@ -1289,8 +1440,8 @@ mod tests {
             Block::new(BlockKind::Numbered, vec![Span::plain("first")]),
             Block::new(BlockKind::Numbered, vec![Span::plain("second")]),
             Block::default(),
-            Block::new(BlockKind::Quote, vec![Span::plain("she said")]),
-            Block::new(BlockKind::Quote, vec![Span::plain("and then some")]),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("she said")]).quoted(1),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("and then some")]).quoted(1),
             Block::default(),
             Block::new(BlockKind::Code, vec![Span::plain("cargo test")]),
             Block::new(BlockKind::Code, vec![Span::plain("cargo fmt")]),

@@ -632,13 +632,32 @@ impl Editor {
         if self.format.get() == ComposeFormat::Markdown {
             let prefix = match kind {
                 BlockKind::Numbered => LinePrefix::Numbered,
-                BlockKind::Quote => LinePrefix::Quote,
                 _ => LinePrefix::Bullet,
             };
             prefix_lines(&self.buffer, prefix);
             return;
         }
         self.set_block_lines(kind, true);
+    }
+
+    /// Quotes the lines the cursor touches, or takes the quote off when
+    /// they all were quoted already. The lines keep their kind: a quoted
+    /// bullet is still a bullet.
+    pub fn quote(&self) {
+        if self.format.get() == ComposeFormat::Markdown {
+            prefix_lines(&self.buffer, LinePrefix::Quote);
+            return;
+        }
+        let buffer = &self.buffer;
+        let (first, last) = self.lines_touched();
+        let all = (first..=last).all(|line| richbuffer::quote_at(buffer, line) > 0);
+        self.busy.set(true);
+        buffer.begin_user_action();
+        for line in first..=last {
+            richbuffer::set_quote(buffer, line, if all { 0 } else { 1 });
+        }
+        buffer.end_user_action();
+        self.busy.set(false);
     }
 
     /// Makes the lines the cursor touches a paragraph, a heading or a code
@@ -1002,7 +1021,7 @@ impl Editor {
             _ => buffer.line_count(),
         };
         let end = (0..end)
-            .find(|line| richbuffer::kind_at(buffer, *line) == BlockKind::Quote)
+            .find(|line| richbuffer::quote_at(buffer, *line) > 0)
             .map_or(end, |quote| quote + 1);
         richbuffer::read_until(buffer, &self.anchors.borrow(), end)
     }
@@ -1225,10 +1244,13 @@ impl Editor {
                 .unwrap_or_else(|| self.buffer.end_iter());
             if first + removed < self.buffer.line_count() as usize && !replacement.blocks.is_empty()
             {
-                replacement.blocks.push(Block::new(
-                    richbuffer::kind_at(&self.buffer, (first + removed) as i32),
-                    Vec::new(),
-                ));
+                // The line after the signature continues on this one, so it
+                // keeps that line's kind and its quote.
+                let after = (first + removed) as i32;
+                replacement.blocks.push(
+                    Block::new(richbuffer::kind_at(&self.buffer, after), Vec::new())
+                        .quoted(richbuffer::quote_at(&self.buffer, after)),
+                );
             }
             drop(anchors);
             let cursor = self.buffer.create_mark(
@@ -1284,13 +1306,17 @@ impl Editor {
             if line >= signature_end && text.trim_end() == "--" {
                 signature_end = line + 1 + signature_lines;
             }
+            let depth = match rich {
+                true => richbuffer::quote_at(buffer, line),
+                false => 0,
+            };
             let quoted = match rich {
-                true => richbuffer::kind_at(buffer, line) == BlockKind::Quote,
+                true => depth > 0,
                 false => text.trim_start().starts_with('>'),
             };
-            match rich && quoted {
-                true => lines.push(format!("> {text}")),
-                false => lines.push(text),
+            match depth {
+                0 => lines.push(text),
+                depth => lines.push(format!("{}{text}", "> ".repeat(depth as usize))),
             }
             if quoted && line >= signature_end {
                 break;
@@ -1453,6 +1479,9 @@ impl Editor {
             // The line keeps its kind, so typing at its end stays in it.
             let kind = richbuffer::kind_at(buffer, from.line());
             buffer.apply_tag_by_name(richbuffer::block_tag(kind), &from, &to);
+            if let Some(quote) = richbuffer::quote_tag(richbuffer::quote_at(buffer, from.line())) {
+                buffer.apply_tag_by_name(quote, &from, &to);
+            }
             *self.typing.borrow_mut() = Some((to.offset(), style, link));
         }
         // Undo and Redo bring the markers back as text with the rest, and
@@ -1587,14 +1616,15 @@ fn style_quotes(buffer: &gtk::TextBuffer, first: i32, last: i32) -> usize {
         };
         looked += 1;
         let end = line_end(buffer, line);
-        buffer.remove_tag_by_name("quote", &start, &end);
-        if buffer
-            .text(&start, &end, false)
-            .trim_start()
-            .starts_with('>')
-        {
-            buffer.apply_tag_by_name("quote", &start, &end);
+        // Each `>` ahead of the words is one quote deeper.
+        let text = buffer.text(&start, &end, false);
+        let mut rest = text.trim_start();
+        let mut depth = 0;
+        while let Some(after) = rest.strip_prefix('>') {
+            depth += 1;
+            rest = after.trim_start();
         }
+        richbuffer::set_quote(buffer, line, depth);
     }
     looked
 }
@@ -2049,7 +2079,7 @@ pub(super) mod checks {
     fn format_keeps_styled_words_and_the_quote() {
         let (_view, editor) =
             opened("Hi **Ann**.\n\nOn Monday, Ann wrote:\n\n> \\- one\n> \\- two\n> \\# three");
-        assert_eq!(richbuffer::kind_at(&editor.buffer, 4), BlockKind::Quote);
+        assert_eq!(richbuffer::quote_at(&editor.buffer, 4), 1);
         let quoted_before: Vec<Block> = editor.rich().blocks[1..].to_vec();
         cursor_at(&editor, 7);
         editor.buffer.insert_at_cursor("\n- soup\n- salad");
@@ -2136,7 +2166,7 @@ pub(super) mod checks {
                         // Blank separator lines have no quote tag in the buffer.
                         for block in &mut expected.blocks {
                             if block.kind == BlockKind::Paragraph && block.spans.is_empty() {
-                                block.quoted = false;
+                                block.quote = 0;
                             }
                         }
                         assert_eq!(after.rich, Some(expected), "{typed:?}");
@@ -2235,7 +2265,7 @@ pub(super) mod checks {
         editor.fill("plain\nwords", None, &[]);
         cursor_at(&editor, 6);
         editor.buffer.insert_at_cursor("> ");
-        assert_eq!(richbuffer::kind_at(&editor.buffer, 1), BlockKind::Quote);
+        assert_eq!(richbuffer::quote_at(&editor.buffer, 1), 1);
         assert_eq!(richbuffer::kind_at(&editor.buffer, 0), BlockKind::Paragraph);
     }
 
@@ -2400,7 +2430,8 @@ pub(super) mod checks {
             let view = gtk::TextView::new();
             let editor = Editor::new(&view, ComposeFormat::Rich);
             let mut body = RichBody::from_markdown(&crate::compose::with_signature("", old));
-            let quote = Block::new(BlockKind::Quote, vec![Span::plain("Original message")]);
+            let quote =
+                Block::new(BlockKind::Paragraph, vec![Span::plain("Original message")]).quoted(1);
             body.blocks.push(quote.clone());
             editor.fill("", Some(&body), &[]);
             assert!(editor.swap_signature(old, "Dana Reyes"));

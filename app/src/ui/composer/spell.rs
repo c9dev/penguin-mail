@@ -220,8 +220,8 @@ pub fn languages_to_load(wanted: &[String], locale: &str, installed: &[String]) 
 /// neither gets a squiggle. The buffer carries the kind on every line, in
 /// rich text and in Markdown alike, so nothing here has to read the text to
 /// find out.
-pub fn checks_prose(kind: BlockKind) -> bool {
-    !matches!(kind, BlockKind::Quote | BlockKind::Code)
+pub fn checks_prose(kind: BlockKind, quote: u8) -> bool {
+    quote == 0 && kind != BlockKind::Code
 }
 
 /// Whether a line opens or closes a fenced code block. Rich text gives
@@ -307,7 +307,12 @@ fn prose_runs(
             fenced = !fenced;
             continue;
         }
-        if fenced || !checks_prose(richbuffer::kind_at(buffer, line)) {
+        if fenced
+            || !checks_prose(
+                richbuffer::kind_at(buffer, line),
+                richbuffer::quote_at(buffer, line),
+            )
+        {
             continue;
         }
         let mut iter = start;
@@ -713,15 +718,16 @@ mod tests {
     fn a_quote_and_a_code_block_are_not_prose() {
         // These two kinds are the whole rule, so a new kind has to be
         // decided here rather than slipping through as prose.
-        assert!(!checks_prose(BlockKind::Quote));
-        assert!(!checks_prose(BlockKind::Code));
+        assert!(!checks_prose(BlockKind::Paragraph, 1));
+        assert!(!checks_prose(BlockKind::Bullet, 2));
+        assert!(!checks_prose(BlockKind::Code, 0));
         for kind in [
             BlockKind::Paragraph,
             BlockKind::Heading(1),
             BlockKind::Bullet,
             BlockKind::Numbered,
         ] {
-            assert!(checks_prose(kind), "{kind:?}");
+            assert!(checks_prose(kind, 0), "{kind:?}");
         }
     }
 
@@ -762,12 +768,7 @@ mod tests {
         // the four style tags and the link tags. The squiggle is none of
         // them, so there is no path from a mark to the message.
         assert!(!richbuffer::STYLES.contains(&TAG));
-        for kind in [
-            BlockKind::Paragraph,
-            BlockKind::Quote,
-            BlockKind::Code,
-            BlockKind::Bullet,
-        ] {
+        for kind in [BlockKind::Paragraph, BlockKind::Code, BlockKind::Bullet] {
             assert_ne!(richbuffer::block_tag(kind), TAG);
         }
     }

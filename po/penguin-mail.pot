@@ -1980,7 +1980,7 @@ msgstr ""
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr ""
 
-#: app/src/compose.rs:697 app/src/compose.rs:3565
+#: app/src/compose.rs:697 app/src/compose.rs:3593
 msgid "Add at least one recipient."
 msgstr ""
 
@@ -1988,7 +1988,7 @@ msgstr ""
 msgid "“{address}” is not an email address."
 msgstr ""
 
-#: app/src/compose.rs:932 app/src/compose.rs:3571
+#: app/src/compose.rs:932 app/src/compose.rs:3599
 msgid "Choose a time in the future"
 msgstr ""
 
@@ -4828,7 +4828,7 @@ msgstr ""
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
-#: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/mod.rs:2488 app/src/ui/composer/mod.rs:2907
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5446,7 +5446,7 @@ msgid ""
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2892 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:2902 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr ""
@@ -5482,7 +5482,7 @@ msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2907
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -7596,136 +7596,136 @@ msgstr ""
 msgid "Quote (Ctrl+Shift+9)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2375
+#: app/src/ui/composer/mod.rs:2378
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2388
 msgid "Paragraph"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2389
 msgid "Heading 1"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2390
 msgid "Heading 2"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2391
 msgid "Heading 3"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2389
+#: app/src/ui/composer/mod.rs:2392
 msgid "Code Block"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2403
+#: app/src/ui/composer/mod.rs:2406
 msgid "Turn Markdown into Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2407
+#: app/src/ui/composer/mod.rs:2410
 msgid "Clear Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2413
+#: app/src/ui/composer/mod.rs:2416
 msgid "Write in Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2420 app/src/ui/composer/mod.rs:2424
+#: app/src/ui/composer/mod.rs:2423 app/src/ui/composer/mod.rs:2427
 msgid "More Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2461
+#: app/src/ui/composer/mod.rs:2471
 msgid "Add a Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2467
+#: app/src/ui/composer/mod.rs:2477
 msgid "Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2479
+#: app/src/ui/composer/mod.rs:2489
 msgid "Add Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2515
+#: app/src/ui/composer/mod.rs:2525
 msgid "Markdown formatted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2644
 msgid "Pasted as rich text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2635
+#: app/src/ui/composer/mod.rs:2645
 msgid "Paste as Plain Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2669
+#: app/src/ui/composer/mod.rs:2679
 msgid "Editing as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2705
+#: app/src/ui/composer/mod.rs:2715
 msgid "Images"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2710
+#: app/src/ui/composer/mod.rs:2720
 msgid "Insert Image"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2754
+#: app/src/ui/composer/mod.rs:2764
 msgid "Could not read the file: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2836
+#: app/src/ui/composer/mod.rs:2846
 msgid "No Templates Yet"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2886
+#: app/src/ui/composer/mod.rs:2896
 msgid "Save as Template"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2888
+#: app/src/ui/composer/mod.rs:2898
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2911 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2921 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2929
 msgid "Template saved"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2922
+#: app/src/ui/composer/mod.rs:2932
 msgid "Template not saved: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3045
+#: app/src/ui/composer/mod.rs:3055
 msgid "This looks like Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3061
 msgid "Format"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3052
+#: app/src/ui/composer/mod.rs:3062
 msgid "Turn the Markdown into rich text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3058 app/src/ui/composer/mod.rs:3062
+#: app/src/ui/composer/mod.rs:3068 app/src/ui/composer/mod.rs:3072
 msgid "Dismiss"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3145
+#: app/src/ui/composer/mod.rs:3155
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3149
+#: app/src/ui/composer/mod.rs:3159
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:3153
+#: app/src/ui/composer/mod.rs:3163
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -7746,15 +7746,15 @@ msgstr ""
 msgid "Picture"
 msgstr ""
 
-#: app/src/ui/composer/spell.rs:653
+#: app/src/ui/composer/spell.rs:658
 msgid "No Suggestions"
 msgstr ""
 
-#: app/src/ui/composer/spell.rs:665
+#: app/src/ui/composer/spell.rs:670
 msgid "Add to Dictionary"
 msgstr ""
 
-#: app/src/ui/composer/spell.rs:666
+#: app/src/ui/composer/spell.rs:671
 msgid "Ignore"
 msgstr ""
 
