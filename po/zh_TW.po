@@ -6068,11 +6068,11 @@ msgstr "參與者可開啟此檔案"
 msgid "Not shared with the guests"
 msgstr "未與參與者共用"
 
-#: app/src/ui/calendar/attachments.rs:135
+#: app/src/ui/calendar/attachments.rs:153
 msgid "Open {file} in the browser"
 msgstr "在瀏覽器中開啟 {file}"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:171 app/src/ui/calendar/popover.rs:930
 msgid "Open in Browser"
 msgstr "在瀏覽器中開啟"
 

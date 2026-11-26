@@ -6061,11 +6061,11 @@ msgstr "参与者可打开此文件"
 msgid "Not shared with the guests"
 msgstr "未与参与者共享"
 
-#: app/src/ui/calendar/attachments.rs:135
+#: app/src/ui/calendar/attachments.rs:153
 msgid "Open {file} in the browser"
 msgstr "在浏览器中打开 {file}"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:171 app/src/ui/calendar/popover.rs:930
 msgid "Open in Browser"
 msgstr "在浏览器中打开"
 

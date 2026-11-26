@@ -5920,11 +5920,11 @@ msgstr ""
 msgid "Not shared with the guests"
 msgstr ""
 
-#: app/src/ui/calendar/attachments.rs:135
+#: app/src/ui/calendar/attachments.rs:153
 msgid "Open {file} in the browser"
 msgstr ""
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:171 app/src/ui/calendar/popover.rs:930
 msgid "Open in Browser"
 msgstr ""
 

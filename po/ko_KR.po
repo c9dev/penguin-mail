@@ -6194,11 +6194,11 @@ msgstr "참석자가 이 파일을 열 수 있습니다"
 msgid "Not shared with the guests"
 msgstr "참석자에게 공유하지 않음"
 
-#: app/src/ui/calendar/attachments.rs:135
+#: app/src/ui/calendar/attachments.rs:153
 msgid "Open {file} in the browser"
 msgstr "브라우저에서 {file} 열기"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:171 app/src/ui/calendar/popover.rs:930
 msgid "Open in Browser"
 msgstr "브라우저에서 열기"
 
