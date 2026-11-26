@@ -65,7 +65,42 @@ impl Drop for Event {
             mask_addresses(&text)
         };
         let _ = io::stderr().lock().write_all(text.as_bytes());
+        #[cfg(windows)]
+        if let Some(file) = log_file() {
+            let _ = file
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .write_all(text.as_bytes());
+        }
     }
+}
+
+/// The log file of a Windows run, `%LOCALAPPDATA%\penguin-mail\logs\penguin-mail.log`.
+/// The release build has no console, so standard error goes nowhere and
+/// this file is the only record a person can send. The run before it stays
+/// as `penguin-mail.1.log`. The file is opened for sharing reads only, so a
+/// second copy that hands over to this one can neither move nor reopen it
+/// and writes none. `None` when the folder or file cannot be made.
+#[cfg(windows)]
+fn log_file() -> Option<&'static std::sync::Mutex<std::fs::File>> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+    use std::sync::{Mutex, OnceLock};
+    static FILE: OnceLock<Option<Mutex<std::fs::File>>> = OnceLock::new();
+    FILE.get_or_init(|| {
+        let dir = crate::exe::local_data()?.join("logs");
+        std::fs::create_dir_all(&dir).ok()?;
+        let log = dir.join("penguin-mail.log");
+        let _ = std::fs::rename(&log, dir.join("penguin-mail.1.log"));
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .share_mode(1) // FILE_SHARE_READ
+            .open(&log)
+            .ok()
+            .map(Mutex::new)
+    })
+    .as_ref()
 }
 
 /// `text` with the local part of each email address cut to its first
