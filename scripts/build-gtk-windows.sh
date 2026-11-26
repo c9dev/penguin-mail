@@ -27,12 +27,17 @@ sed -i "/hash=\"$gtk4_hash\",/a\\            patches=[\"gtk4-zero-monitor-popup.
 grep -q 'patches=\["gtk4-zero-monitor-popup.patch"\]' "$gtk_py" || { echo "the patch line did not land in $gtk_py" >&2; exit 1; }
 
 # gvsbuild assumes Visual Studio 2022 and refuses any other; hosted runners moved to 2026. Name the
-# newest one installed (17 is 2022, 18 is 2026).
+# newest one installed, in gvsbuild's words.
 vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
-vs_ver=$("$vswhere" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationVersion | tr -d '\r')
-vs_ver=${vs_ver%%.*}
-[ -n "$vs_ver" ] || { echo "no Visual Studio with the C++ tools is installed" >&2; exit 1; }
+vs_find=("$vswhere" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64)
+installed=$("${vs_find[@]}" -property installationVersion | tr -d '\r')
+vs_path=$("${vs_find[@]}" -property installationPath | tr -d '\r')
+case ${installed%%.*} in
+    17) vs_ver=vs2022 ;;
+    18) vs_ver=vs2026 ;;
+    *) echo "no Visual Studio 2022 or 2026 with the C++ tools is installed (found '$installed')" >&2; exit 1 ;;
+esac
 
 cd "$gvsbuild"
 # -j2 keeps the build inside a hosted runner's memory, as gvsbuild's own CI does.
-exec uv run --no-dev gvsbuild build --vs-ver "$vs_ver" --ninja-opts -j2 gtk4 libadwaita adwaita-icon-theme
+exec uv run --no-dev gvsbuild build --vs-ver "$vs_ver" --vs-install-path "$vs_path" --ninja-opts -j2 gtk4 libadwaita adwaita-icon-theme
