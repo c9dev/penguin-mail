@@ -47,15 +47,36 @@ impl Stdio {
         env: &[(String, String)],
         notifications: mpsc::UnboundedSender<Value>,
     ) -> Result<Stdio, Failure> {
-        let mut child = Command::new(command)
-            .args(args)
-            .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
-            .stdin(Piped::piped())
-            .stdout(Piped::piped())
-            .stderr(Piped::piped())
-            .kill_on_drop(true)
-            .spawn()
-            .map_err(|e| Failure::Other(format!("could not start {command}: {e}")))?;
+        let start = |program: &str| {
+            let mut command = Command::new(program);
+            command
+                .args(args)
+                .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+                .stdin(Piped::piped())
+                .stdout(Piped::piped())
+                .stderr(Piped::piped())
+                .kill_on_drop(true);
+            #[cfg(windows)]
+            command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+            command.spawn()
+        };
+        #[allow(unused_mut)]
+        let mut started = start(command);
+        // npm installs `npx` as `npx.cmd`, which Windows only runs by its full name.
+        #[cfg(windows)]
+        if matches!(&started, Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+            && std::path::Path::new(command).extension().is_none()
+        {
+            for extension in ["cmd", "bat"] {
+                let retried = start(&format!("{command}.{extension}"));
+                if !matches!(&retried, Err(e) if e.kind() == std::io::ErrorKind::NotFound) {
+                    started = retried;
+                    break;
+                }
+            }
+        }
+        let mut child =
+            started.map_err(|e| Failure::Other(format!("could not start {command}: {e}")))?;
         let stdout = child.stdout.take().expect("stdout is piped");
         let stderr_pipe = child.stderr.take().expect("stderr is piped");
         let stdin: Writer = Arc::new(tokio::sync::Mutex::new(child.stdin.take()));

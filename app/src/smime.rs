@@ -76,10 +76,9 @@ pub fn open(smime: &Smime, opening: Opening, raw: &[u8]) -> Result<Found, Refusa
 /// What gpgsm says it is, for Preferences. The version is the last word of
 /// its first line, as in `gpgsm (GnuPG) 2.4.8`.
 pub fn version(smime: &Smime) -> Option<String> {
-    let run = Command::new(smime.program())
-        .arg("--version")
-        .output()
-        .ok()?;
+    let mut command = Command::new(smime.program());
+    mailrs_pgp::gnupg::hide_console(&mut command);
+    let run = command.arg("--version").output().ok()?;
     protection::version_of(&String::from_utf8_lossy(&run.stdout))
 }
 

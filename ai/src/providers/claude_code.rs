@@ -4,7 +4,7 @@
 //! [`crate::bridge`].
 
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 #[cfg(unix)]
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
@@ -268,9 +268,30 @@ impl ClaudeCodeChat {
         let config = mcp_config(&bridge_command, &bridge.socket);
 
         tracing::debug!(command = %self.command.display(), resume = self.session_id.is_some(), "starting Claude Code");
+        // `cmd.exe` mangles quotes, newlines and percent signs in arguments,
+        // so a batch shim reads both from files instead.
+        let (mcp_arg, prompt_flag, prompt_arg) = if is_batch(&self.command) {
+            let io_file = |name: &str, text: &str| {
+                let path = self.work_dir.join(name);
+                std::fs::write(&path, text)
+                    .map(|()| path.into_os_string())
+                    .map_err(|e| io("could not write Claude Code's settings", e))
+            };
+            (
+                io_file("mcp.json", &config)?,
+                "--system-prompt-file",
+                io_file("system-prompt.txt", &self.system_prompt)?,
+            )
+        } else {
+            (
+                OsString::from(&config),
+                "--system-prompt",
+                OsString::from(&self.system_prompt),
+            )
+        };
         let mut command = cli_command(&self.command);
         command
-            .args(self.args(&config))
+            .args(self.args(&mcp_arg, prompt_flag, &prompt_arg))
             .current_dir(&self.work_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -360,7 +381,7 @@ impl ClaudeCodeChat {
         }
     }
 
-    fn args(&self, mcp_config: &str) -> Vec<OsString> {
+    fn args(&self, mcp_config: &OsStr, prompt_flag: &str, prompt: &OsStr) -> Vec<OsString> {
         let mut args: Vec<OsString> = [
             "-p",
             "--output-format",
@@ -368,27 +389,31 @@ impl ClaudeCodeChat {
             "--verbose",
             "--strict-mcp-config",
             "--mcp-config",
-            mcp_config,
-            // No shell, no file access and no page fetch. Search joins the
-            // mail tools when web search is on.
-            "--tools",
-            if self.web { WEB_TOOLS } else { "" },
-            "--allowedTools",
-            &match self.web {
-                true => format!("mcp__{SERVER_NAME},{WEB_TOOLS}"),
-                false => format!("mcp__{SERVER_NAME}"),
-            },
-            // Anything not allowed above is refused without a prompt. The
-            // bridge's tools are all allowed here, and the app asks the
-            // person itself before a call that needs it.
-            "--permission-mode",
-            "dontAsk",
-            "--system-prompt",
-            &self.system_prompt,
         ]
-        .iter()
         .map(OsString::from)
-        .collect();
+        .into();
+        args.push(mcp_config.to_os_string());
+        args.extend(
+            [
+                // No shell, no file access and no page fetch. Search joins the
+                // mail tools when web search is on.
+                "--tools",
+                if self.web { WEB_TOOLS } else { "" },
+                "--allowedTools",
+                &match self.web {
+                    true => format!("mcp__{SERVER_NAME},{WEB_TOOLS}"),
+                    false => format!("mcp__{SERVER_NAME}"),
+                },
+                // Anything not allowed above is refused without a prompt. The
+                // bridge's tools are all allowed here, and the app asks the
+                // person itself before a call that needs it.
+                "--permission-mode",
+                "dontAsk",
+                prompt_flag,
+            ]
+            .map(OsString::from),
+        );
+        args.push(prompt.to_os_string());
         if let Some(model) = &self.model {
             args.extend(["--model", model].map(OsString::from));
         }
@@ -614,13 +639,22 @@ pub(crate) async fn test(command: &Path) -> Result<String, AiError> {
 /// A `Command` that runs the Claude Code CLI. Windows batch shims
 /// (`.cmd`, `.bat`) only run inside `cmd.exe`.
 fn cli_command(path: &Path) -> Command {
-    let batch = cfg!(windows) && path.extension().is_some_and(|e| e == "cmd" || e == "bat");
-    if batch {
+    #[allow(unused_mut)] // only Windows adds a creation flag
+    let mut command = if is_batch(path) {
         let mut command = Command::new("cmd");
         command.arg("/c").arg(path);
-        return command;
-    }
-    Command::new(path)
+        command
+    } else {
+        Command::new(path)
+    };
+    #[cfg(windows)]
+    command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    command
+}
+
+/// Whether `path` is a Windows batch shim, as npm installs Claude Code.
+fn is_batch(path: &Path) -> bool {
+    cfg!(windows) && path.extension().is_some_and(|e| e == "cmd" || e == "bat")
 }
 
 /// Starts `command`, trying again a few times while the file is still open

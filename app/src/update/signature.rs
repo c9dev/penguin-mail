@@ -45,6 +45,14 @@ impl Checker {
     /// keys nor their GnuPG settings take part, and nothing goes to a key
     /// server.
     fn command(&self, home: &Path, keyring: &Path) -> tokio::process::Command {
+        #[allow(unused_mut)] // only Windows adds a creation flag
+        let mut command = self.checker(home, keyring);
+        #[cfg(windows)]
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        command
+    }
+
+    fn checker(&self, home: &Path, keyring: &Path) -> tokio::process::Command {
         match self {
             Checker::Gpgv(program) => {
                 let mut command = tokio::process::Command::new(program);

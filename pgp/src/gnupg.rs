@@ -20,6 +20,19 @@ use crate::status::{Trust, Verdict};
 /// The prefix GnuPG puts on every status line.
 const STATUS: &str = "[GNUPG:] ";
 
+/// Keeps a console program from opening a console window of its own when
+/// the app has none, as the Windows release build has not. It does
+/// nothing elsewhere.
+pub fn hide_console(command: &mut Command) -> &mut Command {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
+}
+
 /// Whether a run may put a pinentry window in front of the person.
 ///
 /// Reading a message must never do that: a stranger's signature asks
@@ -282,6 +295,7 @@ impl Program {
     ) -> std::io::Result<(Command, std::io::PipeReader, std::io::PipeWriter)> {
         let (status_reader, status_writer) = std::io::pipe()?;
         let mut command = Command::new(&self.path);
+        hide_console(&mut command);
         command.args(["--batch", "--no-tty"]);
         status_fd(&mut command, &status_writer)?;
         if let Some(home) = &self.home {
