@@ -662,12 +662,15 @@ fn create(inner: &Weak<Inner>) {
                 match core {
                     Some(core) => {
                         wire(&inner, &core);
-                        inner.placed();
                         let ops = std::mem::take(&mut *inner.queued.borrow_mut());
                         *inner.core.borrow_mut() = Some(core.clone());
                         for op in ops {
                             op(&core);
                         }
+                        // After the core is in place, or `placed` finds none
+                        // and leaves the page unsized: a new window that has
+                        // stopped painting would show nothing until resized.
+                        inner.placed();
                     }
                     None => {
                         tracing::warn!("WebView2 made no controller: a page will draw nothing");

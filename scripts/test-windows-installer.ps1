@@ -19,7 +19,7 @@ Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $work | Out-Null
 
 $required = @(
-    'bin\penguin-mail.exe', 'bin\gdbus.exe',
+    'bin\penguin-mail.exe', 'bin\gdbus.exe', 'bin\gspawn-win64-helper.exe', 'bin\WebView2Loader.dll',
     'libexec\gnupg\gpgv.exe', 'libexec\poppler\pdftotext.exe',
     'share\hunspell\en_US.dic', 'share\iso-codes\json\iso_639-2.json', 'share\iso-codes\json\iso_3166-1.json'
 )

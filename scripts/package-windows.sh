@@ -111,6 +111,14 @@ stage_imports() {
 [ -f "$prefix/bin/gdbus.exe" ] || { echo "no gdbus.exe in $prefix/bin" >&2; exit 1; }
 cp "$prefix/bin/gdbus.exe" "$stage/bin/"
 collect "$stage/bin/gdbus.exe"
+# GLib starts every other program (a browser for a link, a helper) through
+# gspawn-win64-helper; without it each launch fails with "Failed to execute
+# helper program". Nothing imports them, so the walk above misses them too.
+for helper in gspawn-win64-helper.exe gspawn-win64-helper-console.exe; do
+    [ -f "$prefix/bin/$helper" ] || { echo "no $helper in $prefix/bin" >&2; exit 1; }
+    cp "$prefix/bin/$helper" "$stage/bin/"
+    collect "$stage/bin/$helper"
+done
 
 # The updater checks a release's signature with gpgv, and the assistant reads
 # PDFs with pdftotext. Neither is on a Windows machine, so both ship here.

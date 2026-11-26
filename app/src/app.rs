@@ -2011,6 +2011,12 @@ impl App {
     }
 
     fn start_tray(self: &Rc<Self>) {
+        // The icon's window gets its clicks through Windows messages, and
+        // GLib's loop dispatches those only once GDK is up. A copy started
+        // with --background (at sign-in, after the idle restart) has no
+        // window yet, so its tray would ignore every click.
+        #[cfg(windows)]
+        crate::ensure_gtk();
         let (commands, received) = async_channel::unbounded();
         let tray = MailTray {
             unread: 0,

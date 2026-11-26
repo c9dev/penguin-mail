@@ -225,6 +225,9 @@ impl App {
                 }
                 Ok(Err(failed)) => {
                     tracing::warn!(%version, reason = %failed.reason, "the update failed");
+                    // Install can start from the tray, where no banner shows
+                    // the failure, so the reason also goes out as a notice.
+                    update::tell(failed.reason.clone());
                     this.set_update_state(State::Failed {
                         version,
                         log: failed.log,
