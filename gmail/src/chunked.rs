@@ -184,4 +184,19 @@ mod tests {
         assert!(slots.0.borrow().is_empty());
         assert_eq!(load(&slots, "a").unwrap(), None);
     }
+
+    /// The real Credential Manager, not the mock: a 3000-character secret
+    /// is past the 1280-unit limit, so it must go in parts and come back.
+    #[cfg(windows)]
+    #[test]
+    fn a_long_secret_survives_the_real_credential_manager() {
+        let slots = Native("penguin-mail-test-chunked");
+        let user = format!("long-{}", std::process::id());
+        let value: String = (0..3000).map(|i| char::from(b'a' + (i % 26) as u8)).collect();
+        save(&slots, &user, &value).unwrap();
+        let back = load(&slots, &user);
+        delete(&slots, &user).unwrap();
+        assert_eq!(back.unwrap().as_deref(), Some(value.as_str()));
+        assert_eq!(load(&slots, &user).unwrap(), None);
+    }
 }
