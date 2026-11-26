@@ -99,6 +99,30 @@ Filename: "{app}\bin\penguin-mail.exe"; Parameters: "--background"; Flags: nowai
 Filename: "{app}\bin\penguin-mail.exe"; Flags: nowait runasoriginaluser; Check: Relaunch('window')
 
 [Code]
+{ The session bus the app starts (bin\gdbus.exe) outlives it and holds files
+  Setup must replace. Restart Manager cannot close it, so a silent update
+  would abort. It belongs to this install alone, so it is stopped. }
+procedure StopSessionBus(Dir: String);
+var
+  Code: Integer;
+begin
+  if Dir = '' then
+    Exit;
+  Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -NonInteractive -Command "Get-Process gdbus -ErrorAction SilentlyContinue | ' +
+    'Where-Object { $_.Path -like ''' + AddBackslash(Dir) + 'bin\*'' } | Stop-Process -Force"',
+    '', SW_HIDE, ewWaitUntilTerminated, Code);
+end;
+
+{ Where an earlier version is installed, or empty. }
+function InstalledDir(): String;
+begin
+  if not RegQueryStringValue(HKCU,
+    'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8B5C2E1A-4D3F-4A6B-9E7C-2F1D5A8B3C6E}_is1',
+    'InstallLocation', Result) then
+    Result := '';
+end;
+
 { The app quits right after it starts an update, so the mutex can outlive
   the call for a moment. Waiting here keeps AppMutex from stopping a silent
   update. Thirty seconds is far longer than a quit takes. }
@@ -112,6 +136,13 @@ begin
     Sleep(250);
     Waited := Waited + 250;
   end;
+  StopSessionBus(InstalledDir());
+  Result := True;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  StopSessionBus(ExpandConstant('{app}'));
   Result := True;
 end;
 

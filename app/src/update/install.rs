@@ -70,6 +70,13 @@ pub fn work_dir(version: Version) -> PathBuf {
 pub fn windows_installer(setup: &Path, window_open: bool) -> std::process::Command {
     let mut command = std::process::Command::new(setup);
     command.args(["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]);
+    // A silent install that fails says why only in its log, kept beside
+    // the download for the person to send.
+    if let Some(folder) = setup.parent() {
+        let mut log = std::ffi::OsString::from("/LOG=");
+        log.push(folder.join("setup.log"));
+        command.arg(log);
+    }
     command.arg(if window_open {
         "/RELAUNCH=window"
     } else {
