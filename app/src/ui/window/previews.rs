@@ -22,6 +22,23 @@ pub(crate) fn folder() -> PathBuf {
         .join("previews")
 }
 
+/// Marks a file the mail brought as downloaded from the internet, so
+/// Windows warns before it runs a script or an installer. It does nothing
+/// elsewhere. A volume with no alternate streams (FAT, exFAT) refuses the
+/// mark and the file stays as written.
+pub(crate) fn mark_from_internet(path: &Path) {
+    #[cfg(windows)]
+    {
+        let mut stream = path.as_os_str().to_owned();
+        stream.push(":Zone.Identifier");
+        if let Err(err) = fs::write(&stream, "[ZoneTransfer]\r\nZoneId=3\r\n") {
+            tracing::debug!("could not mark {} as downloaded: {err}", path.display());
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = path;
+}
+
 /// Writes `data` under `dir` as `name`, or `name (2)` and so on when that
 /// is taken, readable by the person alone. Runs on any thread.
 pub(crate) fn write(dir: &Path, name: &str, data: &[u8]) -> io::Result<PathBuf> {
@@ -49,6 +66,8 @@ pub(crate) fn write(dir: &Path, name: &str, data: &[u8]) -> io::Result<PathBuf> 
         match opened {
             Ok(mut file) => {
                 file.write_all(data)?;
+                drop(file);
+                mark_from_internet(&path);
                 return Ok(path);
             }
             // Another copy took the name between the look and the write.
