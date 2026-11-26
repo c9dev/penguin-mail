@@ -68,6 +68,7 @@ url.workspace = true
 # WebKitGTK draws the conversation on Linux. It does not exist on macOS,
 # where WKWebView draws it instead; see src/web.
 [target.'cfg(target_os = "linux")'.dependencies]
+gtk4-layer-shell = { version = "0.9.0", optional = true }
 webkit.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -109,3 +110,7 @@ packaging-nix = []
 # Secret portal; see gmail/src/secret_portal.rs.
 packaging-flatpak = ["mailrs-gmail/packaging-flatpak", "mailrs-sync/packaging-flatpak"]
 packaging-snap = []
+# Anchors the reminder window to a screen corner, on compositors that
+# speak the layer shell protocol (KDE's KWin does; GNOME Shell does
+# not, and falls back to a plain window). Needs libgtk4-layer-shell.
+layer-shell = ["dep:gtk4-layer-shell"]
