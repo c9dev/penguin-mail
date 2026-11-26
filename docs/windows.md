@@ -533,10 +533,20 @@ attachment, which Windows must warn about; an update from one version to
 the next through `PENGUIN_MAIL_RELEASES_URL` pointing at a local mirror;
 and an uninstall that leaves nothing behind.
 
-All of these passed on 2026-11-26 on Windows 11 25H2 (a KVM VM, 1280x800,
-100 % and 150 %), with Dovecot, Mailpit and Radicale in containers on the
-host and the update signed by a throwaway key in a test build. That run
-found and fixed: a missing WebView2Loader.dll, the SVG loader path, the
-window size on a small screen, a firewall prompt from DNS lookups, the
-idle restart's lock race, double and lost toast clicks, the exe's name,
-the cache folder, and the session bus stopping updates.
+On 2026-11-26 these ran on Windows 11 25H2 (a KVM VM, 1280x800, 100 % and
+150 %, the MSYS2 build), with Dovecot, Mailpit and Radicale in containers
+on the host and the update signed by a throwaway key in a test build. All
+passed except two that were not run in the app: the assistant reading a
+PDF (only the bundled `pdftotext.exe` was run by hand) and PGP sign and
+verify (only the crate tests, against MSYS2's GnuPG). Not run either:
+Google and Microsoft sign-in, an MCP server started as `npx`, Claude Code
+installed from npm, and a Gpg4win install.
+
+That run found and fixed: a missing WebView2Loader.dll, the SVG loader
+path, GLib's missing spawn helpers (no link opened), the window size on a
+small screen, a firewall prompt from DNS lookups, the idle restart's lock
+race, a tray that ignored clicks after a background start, double and lost
+toast clicks, an update notice whose button did nothing, the exe's name,
+the cache folder, a blank page in a newly opened mail window, timers
+throttled in the hidden unsubscribe browser, and the session bus stopping
+updates.

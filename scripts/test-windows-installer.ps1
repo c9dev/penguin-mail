@@ -91,7 +91,8 @@ if ($Launch) {
     Save-Screenshot 'first-start'
 
     # A second launch must hand over to the running copy and exit.
-    Start-Process $exe -ArgumentList '--compose'
+    # The demo registers its own name, so the second copy must be a demo too.
+    Start-Process $exe -ArgumentList '--demo', '--compose'
     Start-Sleep -Seconds 10
     if ((Get-App).Count -ne 1) { throw "A second launch left $((Get-App).Count) copies running" }
     Save-Screenshot 'second-launch'

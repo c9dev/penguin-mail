@@ -193,7 +193,13 @@ mod tests {
         let slots = Native("penguin-mail-test-chunked");
         let user = format!("long-{}", std::process::id());
         let value: String = (0..3000).map(|i| char::from(b'a' + (i % 26) as u8)).collect();
-        save(&slots, &user, &value).unwrap();
+        // A session without a logon (a key-based SSH login) has no
+        // Credential Manager at all; the desktop and CI runs have one.
+        if let Err(err) = save(&slots, &user, &value) {
+            assert!(err.contains("NO_SUCH_LOGON_SESSION"), "{err}");
+            eprintln!("skipping: no Credential Manager in this session");
+            return;
+        }
         let back = load(&slots, &user);
         delete(&slots, &user).unwrap();
         assert_eq!(back.unwrap().as_deref(), Some(value.as_str()));

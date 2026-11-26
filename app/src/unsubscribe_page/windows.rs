@@ -123,7 +123,11 @@ impl Inner {
                 &HSTRING::from("*"),
                 COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL,
             );
-            let _ = core.controller.SetIsVisible(false);
+            // Visible to the page, not to anyone: the parent is a message-only
+            // window, which never shows. A hidden page gets its timers
+            // throttled to once a second, and an answer a script writes a
+            // moment after the press would come too late to be read.
+            let _ = core.controller.SetIsVisible(true);
 
             let inner = Rc::downgrade(self);
             let handler = WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
