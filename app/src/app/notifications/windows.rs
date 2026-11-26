@@ -369,8 +369,14 @@ fn toast_xml(title: &str, body: &str, actions: &Actions) -> String {
                 t: String::new(),
             })
     };
-    let launch = serde_json::to_string(&click(actions.open.as_ref()))
-        .expect("a notification's click payload serializes");
+    let opens = match &actions.shows {
+        Some(thread) => Click {
+            a: "show-thread".to_string(),
+            t: thread.clone(),
+        },
+        None => click(actions.open.as_ref()),
+    };
+    let launch = serde_json::to_string(&opens).expect("a notification's click payload serializes");
     let mut xml = format!("<toast launch=\"{}\"", escaped(&launch));
     if actions.open == Some(Action::OpenEvent) {
         xml.push_str(" scenario=\"reminder\"");
@@ -530,9 +536,23 @@ mod tests {
     fn actions(open: Option<Action>, target: &str, buttons: Vec<Action>) -> Actions {
         Actions {
             open,
+            shows: None,
             target: target.into(),
             buttons,
         }
+    }
+
+    #[test]
+    fn a_mail_toast_opens_its_thread_without_a_token() {
+        let mut mail = actions(Some(Action::OpenMail), "token", vec![]);
+        mail.shows = Some("7:thread-1".into());
+        let xml = toast_xml("Ana", "Hello", &mail);
+        let launch = serde_json::to_string(&Click {
+            a: "show-thread".into(),
+            t: "7:thread-1".into(),
+        })
+        .unwrap();
+        assert!(xml.contains(&format!("launch=\"{}\"", escaped(&launch))), "{xml}");
     }
 
     #[test]

@@ -4890,7 +4890,7 @@ msgstr "업데이트 확인"
 msgid "Quit"
 msgstr "종료"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:178
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:179
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 

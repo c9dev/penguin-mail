@@ -550,3 +550,8 @@ toast clicks, an update notice whose button did nothing, the exe's name,
 the cache folder, a blank page in a newly opened mail window, timers
 throttled in the hidden unsubscribe browser, and the session bus stopping
 updates.
+
+Since then, also checked live: the tray menu follows dark mode (popup
+menus take uxtheme's preferred app mode, set once at start and flushed when
+the theme changes), and a mail notification clicked after the app quit
+opens that mail, through the `show-thread` action its click carries.

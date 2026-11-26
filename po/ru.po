@@ -5104,7 +5104,7 @@ msgstr "Проверить обновления"
 msgid "Quit"
 msgstr "Выйти"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:178
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:179
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 

@@ -1059,8 +1059,14 @@ impl WebView {
             } else {
                 core.web.NavigateToString(&HSTRING::from(&html))
             };
-            if let Err(err) = result {
-                tracing::warn!("WebView2 could not load the page: {err}");
+            match result {
+                Ok(()) => {}
+                // ERROR_INVALID_STATE: the view closed with its window
+                // before the page reached it, so there is nothing to show.
+                Err(err) if err.code() == windows::core::HRESULT(0x8007_139Fu32 as i32) => {
+                    tracing::debug!("a closed WebView2 was handed a page: {err}");
+                }
+                Err(err) => tracing::warn!("WebView2 could not load the page: {err}"),
             }
         });
     }

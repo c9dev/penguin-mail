@@ -1487,6 +1487,23 @@ impl App {
             }
         });
         self.gio.add_action(&open_file);
+        // `account:thread`, what a Windows toast opens when clicked. It only
+        // shows a thread, so it needs none of the tokens the buttons check,
+        // and a click after a restart still finds its mail.
+        let show_thread = gio::SimpleAction::new("show-thread", Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(self);
+        show_thread.connect_activate(move |_, parameter| {
+            let Some(app) = weak.upgrade() else { return };
+            let shown = parameter.and_then(|p| p.get::<String>());
+            match shown.as_deref().and_then(crate::notify::thread_shown) {
+                Some((account_id, thread_id)) => {
+                    app.show_window()
+                        .reveal(account_id, thread_id, Reveal::Read);
+                }
+                None => app.gio.activate(),
+            }
+        });
+        self.gio.add_action(&show_thread);
         let open_mail =
             gio::SimpleAction::new("open-mail-file", Some(glib::VariantTy::BYTE_STRING));
         let weak = Rc::downgrade(self);

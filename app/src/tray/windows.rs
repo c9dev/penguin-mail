@@ -80,6 +80,7 @@ pub(crate) fn remove() {
 /// event loops, or nothing when Windows will not take it. Runs on the
 /// GTK thread.
 pub fn spawn(tray: MailTray) -> Option<Handle> {
+    allow_dark_menus();
     let plain = Icon::from_resource(PLAIN_ICON, None)
         .inspect_err(|err| tracing::warn!(error = %err, "the tray icon is not in the exe"))
         .ok()?;
@@ -230,4 +231,30 @@ fn command_key(command: &TrayCommand) -> String {
         TrayCommand::WhatsNew => "whats-new".into(),
         TrayCommand::Quit => "quit".into(),
     }
+}
+
+/// Lets the tray's popup menu follow Windows' dark mode. Popup menus take
+/// the process's preferred app mode, which only uxtheme's unnamed exports
+/// 135 (SetPreferredAppMode) and 136 (FlushMenuThemes) set. Windows 10 1903
+/// and later have both; an older one keeps the light menu. A theme switch
+/// while the app runs needs the menus flushed again, so libadwaita's
+/// notice of it does that.
+fn allow_dark_menus() {
+    use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+    use windows::core::{PCSTR, w};
+    let Ok(uxtheme) = (unsafe { LoadLibraryW(w!("uxtheme.dll")) }) else {
+        return;
+    };
+    // Exported by ordinal only: the ordinal goes where a name would.
+    let export = |ordinal: usize| unsafe { GetProcAddress(uxtheme, PCSTR(ordinal as *const u8)) };
+    let (Some(set_mode), Some(flush)) = (export(135), export(136)) else {
+        return;
+    };
+    // SAFETY: the signatures Windows has kept for these exports since 1903.
+    let set_mode: extern "system" fn(i32) -> i32 = unsafe { std::mem::transmute(set_mode) };
+    let flush: extern "system" fn() = unsafe { std::mem::transmute(flush) };
+    const ALLOW_DARK: i32 = 1;
+    set_mode(ALLOW_DARK);
+    flush();
+    adw::StyleManager::default().connect_dark_notify(move |_| flush());
 }
