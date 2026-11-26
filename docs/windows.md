@@ -505,8 +505,8 @@ does too is unchecked.
 
 `.github/workflows/windows.yml` runs on every pull request:
 
-- `native`: builds the app test binary with MSYS2 UCRT64 and runs the
-  AppContainer, WebView2 string, locale and update-install regressions,
+- `native`: builds the app test binary with MSYS2 UCRT64 and runs its
+  whole suite on one thread, the AppContainer sandbox tests included,
   then clippy. BusyBox is built from a pinned upstream release commit.
   It also compiles a placeholder installer and checks what it installs
   and what uninstall removes.

@@ -87,9 +87,9 @@ jobs:
           export PENGUIN_MAIL_BUSYBOX="$(cygpath -m "$PWD/busybox64u.exe")"
           export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
           export GETTEXT_SYSTEM=1
-          for filter in sandbox::windows_tests sandbox::windows::tests locale_time::windows_tests web::owned_text::tests update::install::tests; do
-            cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail "$filter" -- --test-threads=1
-          done
+          # The whole app suite, Windows-only tests included; one thread, since
+          # the sandbox tests change folder permissions the others read.
+          cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail -- --test-threads=1
       - name: Lint the Windows build
         shell: msys2 {0}
         env:
