@@ -17,6 +17,12 @@ use std::path::{Path, PathBuf};
 
 /// The folder under the cache the copies go in.
 pub(crate) fn folder() -> PathBuf {
+    // GLib's cache folder on Windows is INetCache, which the system cleans
+    // and scans on its own terms.
+    #[cfg(windows)]
+    if let Some(local) = crate::exe::local_data() {
+        return local.join("previews");
+    }
     gtk::glib::user_cache_dir()
         .join("penguin-mail")
         .join("previews")
