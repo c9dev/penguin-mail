@@ -178,10 +178,11 @@ for module in "$loaders_src"/*.dll; do
     cp "$module" "$loaders_dst/"
     collect "$loaders_dst/$(basename "$module")"
 done
-# The cache names each loader by bare filename; gdk-pixbuf resolves those
-# against the loaders' own folder, which keeps the tree relocatable.
+# On Windows gdk-pixbuf resolves a relative loader path against the install
+# folder, not the loaders' own, so the cache names each loader from there
+# and the tree stays relocatable.
 "$prefix/bin/gdk-pixbuf-query-loaders.exe" "$loaders_dst"/*.dll \
-    | sed 's|"[^"]*[\\/]\([^\\/]*\.dll\)|"\1|g' \
+    | sed 's|"[^"]*[\\/]\([^\\/]*\.dll\)|"lib/gdk-pixbuf-2.0/2.10.0/loaders/\1|g' \
     | grep -v '^#' > "$loaders_dst/../loaders.cache"
 grep -q svg "$loaders_dst/../loaders.cache" || echo "warning: no SVG pixbuf loader staged" >&2
 

@@ -70,9 +70,30 @@ impl Drop for Event {
             let _ = file
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .write_all(text.as_bytes());
+                .write_all(without_colours(&text).as_bytes());
         }
     }
+}
+
+/// `text` without the ANSI colour codes the console formatter adds, which a
+/// log file opened in Notepad would show as noise.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn without_colours(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // A colour code is ESC, `[`, digits and `;`, then a letter.
+            for code in chars.by_ref() {
+                if code.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// The log file of a Windows run, `%LOCALAPPDATA%\penguin-mail\logs\penguin-mail.log`.
@@ -143,7 +164,16 @@ pub fn mask_addresses(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::mask_addresses;
+    use super::{mask_addresses, without_colours};
+
+    #[test]
+    fn a_log_file_line_carries_no_colour_codes() {
+        assert_eq!(
+            without_colours("\x1b[2m2026-11-26\x1b[0m \x1b[33m WARN\x1b[0m could not draw"),
+            "2026-11-26  WARN could not draw"
+        );
+        assert_eq!(without_colours("plain line"), "plain line");
+    }
 
     #[test]
     fn an_address_keeps_its_first_letter_and_its_domain() {
