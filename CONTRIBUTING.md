@@ -112,7 +112,10 @@ scripts/build-windows.sh --prefix D:/gtk-msvc/prefix
 ```
 
 The script finds the compiler, builds the release exe, and produces the
-installer under `dist/`. Development builds can use the
+installer under `dist/`. The released installer uses a GTK built with
+`scripts/build-gtk-windows.sh`, which adds a monitor patch to gvsbuild's
+GTK 4 and needs MSYS2 UCRT64 with `gnupg` and `poppler` for the bundled
+helpers (`--msys2`). Development builds can use the
 `x86_64-pc-windows-gnu` target with MSYS2 UCRT64's GTK instead;
 [docs/windows.md](docs/windows.md#building) covers both paths and the
 dependencies in detail. Without the OAuth variables described in
