@@ -93,6 +93,20 @@ jobs:
           # The whole app suite, Windows-only tests included; one thread, since
           # the sandbox tests change folder permissions the others read.
           cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail -- --test-threads=1
+      # A test that aborts the process loses its captured output, so a failed
+      # suite runs the web view check again with its output shown.
+      - name: Show the web view check's output
+        if: failure()
+        shell: msys2 {0}
+        env:
+          CARGO_BUILD_JOBS: '2'
+          RUST_BACKTRACE: '1'
+          RUST_LOG: 'debug'
+        run: |
+          set -euo pipefail
+          export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
+          export GETTEXT_SYSTEM=1
+          cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail ui::composer::richbuffer::tests::the_buffer_holds_a_rich_body_and_gives_it_back -- --exact --nocapture --test-threads=1
       - name: Lint the Windows build
         shell: msys2 {0}
         env:
