@@ -1,49 +1,16 @@
-//! Whether to drop the desktop's icon theme for Adwaita. GTK takes the
-//! theme's name from the desktop, and a snap or a Flatpak cannot always
-//! see that theme: Cinnamon names Mint-Y or Pop over XSETTINGS, and
-//! neither is inside the snap. GTK 4 then finds only the icons the app
-//! and GTK carry, and every other button shows a broken picture.
+//! The app draws its icons for Adwaita and always uses it. Another
+//! desktop theme, such as Ubuntu's Yaru, swaps some of the symbolic
+//! icons for its own and leaves the rest to Adwaita, so the toolbar
+//! mixes two styles. A snap or a Flatpak may not see the desktop's theme
+//! at all (Cinnamon names Mint-Y over XSETTINGS, which is not inside the
+//! snap), and then every button but GTK's own shows a broken picture.
 
 /// The theme the app's icons are drawn for, and the one every package
 /// carries.
-pub const FALLBACK: &str = "Adwaita";
-
-/// Icons from the theme that the app shows on its first screen. If the
-/// theme GTK picked cannot give these, it cannot give the rest.
-pub const PROBES: &[&str] = &["mail-message-new-symbolic", "mail-reply-sender-symbolic"];
-
-/// Whether to set the icon theme to `FALLBACK`. `theme` is the name GTK
-/// picked, and `has_icon` asks GTK's icon theme for a name.
-pub fn needs_fallback(theme: &str, has_icon: impl Fn(&str) -> bool) -> bool {
-    theme != FALLBACK && !PROBES.iter().all(|name| has_icon(name))
-}
+pub const THEME: &str = "Adwaita";
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn a_theme_with_the_icons_stays() {
-        assert!(!needs_fallback("Yaru", |_| true));
-    }
-
-    #[test]
-    fn a_theme_the_app_cannot_see_falls_back_to_adwaita() {
-        assert!(needs_fallback("Mint-Y-Dark-Aqua", |_| false));
-    }
-
-    #[test]
-    fn one_missing_icon_is_enough_to_fall_back() {
-        assert!(needs_fallback("Pop", |name| name != PROBES[1]));
-    }
-
-    #[test]
-    fn adwaita_is_kept_even_when_it_lacks_the_icons() {
-        // Setting the same name again would change nothing, and an
-        // install without Adwaita has no better theme to offer.
-        assert!(!needs_fallback(FALLBACK, |_| false));
-    }
-
     /// Icons GTK carries in its own resources, so they show under every
     /// theme. Adwaita 48, as Debian 13 ships it, dropped the first.
     const GTK_CARRIES: &[&str] = &["emblem-system-symbolic"];
