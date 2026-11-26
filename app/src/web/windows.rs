@@ -1577,7 +1577,8 @@ pub(crate) fn check_scheme_after_last_view_closes() {
             window.set_child(Some(&page.widget()));
             window.present();
             page.load_html("<img src='mailrs-reopen-check:picture'>");
-            for _ in 0..100 {
+            // 30 s: a hosted CI runner starts WebView2 cold and slowly.
+            for _ in 0..600 {
                 if received.get() {
                     break;
                 }

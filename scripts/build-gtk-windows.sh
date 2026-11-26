@@ -26,6 +26,13 @@ cp packaging/windows/gtk4-zero-monitor-popup.patch "$gvsbuild/gvsbuild/patches/g
 sed -i "/hash=\"$gtk4_hash\",/a\\            patches=[\"gtk4-zero-monitor-popup.patch\"]," "$gtk_py"
 grep -q 'patches=\["gtk4-zero-monitor-popup.patch"\]' "$gtk_py" || { echo "the patch line did not land in $gtk_py" >&2; exit 1; }
 
+# gvsbuild assumes Visual Studio 2022 and refuses any other; hosted runners moved to 2026. Name the
+# newest one installed (17 is 2022, 18 is 2026).
+vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+vs_ver=$("$vswhere" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationVersion | tr -d '\r')
+vs_ver=${vs_ver%%.*}
+[ -n "$vs_ver" ] || { echo "no Visual Studio with the C++ tools is installed" >&2; exit 1; }
+
 cd "$gvsbuild"
 # -j2 keeps the build inside a hosted runner's memory, as gvsbuild's own CI does.
-exec uv run --no-dev gvsbuild build --ninja-opts -j2 gtk4 libadwaita adwaita-icon-theme
+exec uv run --no-dev gvsbuild build --vs-ver "$vs_ver" --ninja-opts -j2 gtk4 libadwaita adwaita-icon-theme
