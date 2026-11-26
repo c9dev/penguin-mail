@@ -99,12 +99,33 @@ impl IClassFactory_Impl for Factory_Impl {
 /// Hands a click's arguments to the loop that opens the mail. Both the
 /// in-process handler and the COM activator end here.
 fn deliver(arguments: &str) {
-    let Ok(click) = serde_json::from_str::<Click>(arguments) else {
-        return;
+    let click = match serde_json::from_str::<Click>(arguments) {
+        Ok(click) => click,
+        Err(err) => {
+            tracing::warn!(%err, arguments, "a toast click carried arguments the app cannot read");
+            return;
+        }
     };
+    tracing::debug!(action = %click.a, "a toast was clicked");
+    if repeated(arguments, std::time::Instant::now()) {
+        return;
+    }
     if let Some(sender) = clicks_channel().get() {
         let _ = sender.try_send(click);
     }
+}
+
+/// Whether `arguments` is the click just delivered. With the activator
+/// registered, Windows reports one click both to the toast's `Activated`
+/// handler and to the COM activator, and Reply must open one composer.
+fn repeated(arguments: &str, now: std::time::Instant) -> bool {
+    static LAST: Mutex<Option<(String, std::time::Instant)>> = Mutex::new(None);
+    let mut last = LAST.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let repeat = last.as_ref().is_some_and(|(seen, at)| {
+        seen == arguments && now.duration_since(*at) < std::time::Duration::from_secs(2)
+    });
+    *last = Some((arguments.to_string(), now));
+    repeat
 }
 
 /// Every toast's group, which Action Center needs to find one again.
@@ -430,6 +451,15 @@ fn register_server(exe: &std::path::Path) {
 mod tests {
     use super::*;
     use crate::notify;
+
+    #[test]
+    fn one_click_reported_twice_is_delivered_once() {
+        let start = std::time::Instant::now();
+        assert!(!repeated("reply-1", start));
+        assert!(repeated("reply-1", start + std::time::Duration::from_millis(30)));
+        assert!(!repeated("delete-1", start + std::time::Duration::from_millis(40)));
+        assert!(!repeated("delete-1", start + std::time::Duration::from_secs(5)));
+    }
 
     #[test]
     fn the_activator_text_names_the_activator_class() {
