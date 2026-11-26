@@ -79,6 +79,9 @@ pub struct Settings {
     /// Put up a notification before calendar events, at the times each
     /// event or its calendar sets.
     pub event_reminders: bool,
+    /// Put each due reminder in a small window of its own, above
+    /// everything until it is answered, instead of a notification.
+    pub reminder_window: bool,
     /// Languages, by code such as `pt`, whose messages get no translation
     /// card: the person reads them as they are.
     pub never_translate: Vec<String>,
@@ -540,6 +543,7 @@ impl Default for Settings {
             notify_vips_only: false,
             notification_buttons: crate::notify::Button::DEFAULT.to_vec(),
             event_reminders: true,
+            reminder_window: false,
             smart_mailboxes: Vec::new(),
             account_order: Vec::new(),
             account_colors: BTreeMap::new(),

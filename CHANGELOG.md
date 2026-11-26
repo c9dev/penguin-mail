@@ -18,6 +18,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Event reminders can open in a window of their own that stays above everything until answered, with Dismiss, Snooze and a click that opens the event. Turn on Reminder Window in Preferences, under Calendar.
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
 
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.

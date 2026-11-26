@@ -154,6 +154,9 @@ pub struct App {
     reminder_wake: RefCell<Option<glib::SourceId>>,
     /// A reminder check is reading or posting; another waits for it.
     reminders_running: Cell<bool>,
+    /// The window reminders open in, when the person chose it over a
+    /// notification. Built at the first reminder, kept for the rest.
+    reminder_window: RefCell<Option<Rc<crate::ui::reminder::Reminders>>>,
     /// Finds and installs newer releases. None in the demo and in a cargo
     /// build, which never update.
     updater: Option<Rc<crate::update::Updater>>,
@@ -237,6 +240,7 @@ impl App {
             storage,
             reminder_wake: RefCell::new(None),
             reminders_running: Cell::new(false),
+            reminder_window: RefCell::new(None),
             updater: crate::update::Updater::for_this_copy(core_demo).map(Rc::new),
             _hold: gio_app.hold(),
         });

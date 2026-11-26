@@ -104,6 +104,7 @@ app/src/ui/gmail_password_page.rs
 app/src/ui/goa_page.rs
 app/src/ui/hide_my_email.rs
 app/src/ui/ics_file.rs
+app/src/ui/reminder.rs
 app/src/ui/invitation.rs
 app/src/ui/invitation/strip.rs
 app/src/ui/key_import.rs
