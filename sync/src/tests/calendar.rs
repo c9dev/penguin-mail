@@ -969,6 +969,44 @@ async fn a_file_added_twice_is_one_event() {
     assert_eq!(first.spots[0].start, NINE);
 }
 
+/// A booking tool's file names no id for its events; the import makes one
+/// from each event's own details, so the file added twice is still one
+/// event, without the copy the file never asked for.
+#[tokio::test]
+async fn a_file_with_no_ids_adds_and_reopens_as_one() {
+    let h = harness().await;
+    h.fake
+        .with(|s| s.calendars = vec![cal("primary", "Personal", Access::Owner)]);
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+    let blank = [ticket("", "Outbound")];
+    // The id the import will file the event under, made from the event's
+    // own details before the import takes it.
+    let made = blank[0].to_event("primary", "UTC").expect("an event");
+
+    let first = calendar
+        .import(h.account_id, None, &blank)
+        .await
+        .unwrap()
+        .done()
+        .unwrap();
+    let again = calendar
+        .import(h.account_id, None, &blank)
+        .await
+        .unwrap()
+        .done()
+        .unwrap();
+
+    assert_eq!(first.spots.len(), 1, "the unnamed event went on");
+    assert_eq!(first.skipped, 0);
+    assert_eq!(first.spots[0].id, again.spots[0].id);
+    assert_eq!(
+        held(&h, &made.uid).len(),
+        1,
+        "one event, found by the id made for it"
+    );
+}
+
 #[tokio::test]
 async fn a_file_with_two_events_adds_both_to_the_calendar_picked() {
     let h = harness().await;

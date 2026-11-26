@@ -262,14 +262,12 @@ fn import(
         let say = |text: &str| toasts.add_toast(crate::ui::toast(text));
         match done {
             Ok(Permitted::Done(added)) if added.spots.is_empty() => say(&gettext(
-                "Nothing in this file can be added, since its events have no id or start time",
+                "Nothing in this file can be added, since its events have no start time",
             )),
             Ok(Permitted::Done(added)) => {
                 card.set_added(&uid, &added.calendar, &added.spots);
                 if added.skipped > 0 {
-                    say(&gettext(
-                        "Some events were left out, since they have no id or start time",
-                    ));
+                    say(&gettext("Some events were left out, since they have no start time"));
                 }
                 // The main window reads its calendar from the copy the
                 // import just wrote to.
