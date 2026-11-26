@@ -186,19 +186,17 @@ impl Reminders {
 /// stacks any window.
 #[cfg(feature = "layer-shell")]
 fn anchor_above(window: &adw::Window) {
+    use gtk4_layer_shell::{Edge, Layer, LayerShell};
     if gtk4_layer_shell::is_supported() {
-        gtk4_layer_shell::init(window, gtk4_layer_shell::Layer::Top);
-        gtk4_layer_shell::set_namespace(window, "penguin-mail-reminder");
-        for (edge, on) in [
-            (gtk4_layer_shell::Edge::Bottom, true),
-            (gtk4_layer_shell::Edge::Right, true),
-            (gtk4_layer_shell::Edge::Left, false),
-            (gtk4_layer_shell::Edge::Top, false),
-        ] {
-            gtk4_layer_shell::set_anchor(window, edge, on);
-        }
-        gtk4_layer_shell::set_margin(window, gtk4_layer_shell::Edge::Bottom, 12);
-        gtk4_layer_shell::set_margin(window, gtk4_layer_shell::Edge::Right, 12);
+        window.init_layer_shell();
+        window.set_layer(Layer::Top);
+        window.set_namespace(Some("penguin-mail-reminder"));
+        window.set_anchor(Edge::Bottom, true);
+        window.set_anchor(Edge::Right, true);
+        window.set_anchor(Edge::Left, false);
+        window.set_anchor(Edge::Top, false);
+        window.set_margin(Edge::Bottom, 12);
+        window.set_margin(Edge::Right, 12);
     }
 }
 
