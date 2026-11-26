@@ -105,6 +105,9 @@ pub struct Calendar {
     /// means [`Self::reminders`] serves both.
     #[serde(default)]
     pub all_day_reminders: Option<Vec<Reminder>>,
+    /// Whether this calendar can organize Microsoft Teams meetings.
+    #[serde(default)]
+    pub supports_teams: bool,
 }
 
 impl Calendar {
@@ -471,6 +474,9 @@ pub struct Event {
     /// carries it; the store does not keep it.
     #[serde(default)]
     pub meet_request: Option<String>,
+    /// Whether the queued creation should ask Microsoft Graph for a Teams link.
+    #[serde(default)]
+    pub teams_request: bool,
     /// An ordinary event, or out of office, focus time, a working
     /// location or a birthday.
     #[serde(default)]
@@ -1468,6 +1474,7 @@ mod tests {
             "reminders":null,"conference":null,"rules":[],"series":null,"original_start":null,"pending":true}"#;
         let event: Event = serde_json::from_str(old).unwrap();
         assert_eq!(event.meet_request, None);
+        assert!(!event.teams_request);
     }
 
     #[test]

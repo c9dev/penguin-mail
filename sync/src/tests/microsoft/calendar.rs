@@ -396,8 +396,11 @@ async fn shown_on(h: &super::Outlook, day: &str) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn calendars_come_with_their_colour_and_access() {
+async fn calendars_come_with_their_colour_access_and_teams_support() {
     let h = outlook().await;
+    h.fake.with(|s| {
+        s.calendars[0].allowed_online_meeting_providers = vec!["teamsForBusiness".into()];
+    });
     h.fake.add_calendar(GraphCalendar {
         id: "cal-2".into(),
         name: "Holidays".into(),
@@ -416,6 +419,8 @@ async fn calendars_come_with_their_colour_and_access() {
     let main = list.iter().find(|c| c.id == "cal-1").unwrap();
     assert!(main.primary && main.access == Access::Owner && main.color == "#0078d4");
     let holidays = list.iter().find(|c| c.id == "cal-2").unwrap();
+    assert!(main.supports_teams);
+    assert!(!holidays.supports_teams);
     assert_eq!(holidays.access, Access::Reader);
     assert!(holidays.color.starts_with('#'));
 }
@@ -579,6 +584,76 @@ async fn a_repeat_outlook_cannot_hold_is_refused_in_plain_words() {
     assert!(
         matches!(answer, Err(BackendError::Refused(line)) if line.contains("Outlook cannot repeat"))
     );
+}
+
+#[tokio::test]
+async fn teams_is_requested_with_the_invitation_and_read_back_as_a_join_link() {
+    let h = outlook().await;
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let mut local = Event {
+        calendar: "cal-1".into(),
+        id: "pmteams".into(),
+        title: "Planning".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_003_600_000,
+        zone: "UTC".into(),
+        busy: true,
+        teams_request: true,
+        guests: vec![mailrs_domain::calendar::Guest {
+            email: "ana@example.com".into(),
+            ..Default::default()
+        }],
+        ..Event::default()
+    };
+    let made = calendar
+        .put_event(&local, None, true, Notify::Guests)
+        .await
+        .unwrap();
+    assert_eq!(
+        made.conference.as_deref(),
+        Some(format!("https://teams.microsoft.com/meet/{}", made.id).as_str())
+    );
+    let retried = calendar
+        .put_event(&local, None, true, Notify::Guests)
+        .await
+        .unwrap();
+    assert_eq!(made.id, retried.id);
+    assert_eq!(made.conference, retried.conference);
+    h.fake.with(|s| {
+        let body = s.event_bodies.last().unwrap();
+        assert_eq!(
+            body["attendees"][0]["emailAddress"]["address"],
+            "ana@example.com"
+        );
+        assert_eq!(body["isOnlineMeeting"], true);
+        assert_eq!(body["onlineMeetingProvider"], "teamsForBusiness");
+    });
+
+    local.id = "pminperson".into();
+    local.teams_request = false;
+    let in_person = calendar
+        .put_event(&local, None, true, Notify::Guests)
+        .await
+        .unwrap();
+    assert!(in_person.conference.is_none());
+    h.fake.with(|s| {
+        assert!(
+            s.event_bodies
+                .last()
+                .unwrap()
+                .get("isOnlineMeeting")
+                .is_none()
+        )
+    });
+
+    local.id = "pmsolo".into();
+    local.teams_request = true;
+    local.guests.clear();
+    let solo = calendar
+        .put_event(&local, None, true, Notify::Guests)
+        .await
+        .unwrap();
+    assert!(solo.conference.is_none());
 }
 
 #[tokio::test]

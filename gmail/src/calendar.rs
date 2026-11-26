@@ -488,6 +488,7 @@ pub(crate) fn google_calendar(item: &Value) -> calendar::Calendar {
         hidden: item.get("hidden").and_then(Value::as_bool) == Some(true),
         reminders: reminders(item.get("defaultReminders")),
         all_day_reminders: None,
+        supports_teams: false,
     }
 }
 
@@ -622,6 +623,7 @@ pub fn google_event(
         // A Meet request is something Penguin Mail asks for on a write;
         // Google's answer never needs to say one is still pending here.
         meet_request: None,
+        teams_request: false,
         kind: kind_of(item),
         // Google leaves the key off an event with no files, so an event
         // read here always knows its list, empty or not.

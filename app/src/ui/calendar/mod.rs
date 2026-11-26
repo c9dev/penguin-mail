@@ -2717,7 +2717,15 @@ impl CalendarView {
     /// The editor on `draft`.
     pub(super) fn edit(self: &Rc<Self>, draft: Draft) {
         let contacts = (self.hooks.contacts)();
+        let settings = (self.settings)();
         let choices = editor::Choices {
+            teams_defaults: self
+                .accounts
+                .borrow()
+                .iter()
+                .filter(|(account, _, _)| settings.teams_by_default.contains(&account.email))
+                .map(|(account, _, _)| account.id)
+                .collect(),
             writable: self.writable(),
             hidden: self.hidden.borrow().clone(),
             calendars: self.calendars.borrow().clone(),

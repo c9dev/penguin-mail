@@ -24,6 +24,8 @@ pub struct GraphCalendar {
     pub can_edit: bool,
     pub is_default_calendar: bool,
     pub owner: Option<EmailAddress>,
+    #[serde(deserialize_with = "default_if_null")]
+    pub allowed_online_meeting_providers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -168,7 +170,7 @@ impl Graph {
                 ("$top", "100"),
                 (
                     "$select",
-                    "id,name,hexColor,color,canEdit,isDefaultCalendar,owner",
+                    "id,name,hexColor,color,canEdit,isDefaultCalendar,owner,allowedOnlineMeetingProviders",
                 ),
             ],
         )

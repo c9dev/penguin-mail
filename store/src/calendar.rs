@@ -61,11 +61,11 @@ pub fn save_calendars(conn: &Connection, account_id: AccountId, list: &[Calendar
     }
     for calendar in list {
         conn.execute(
-            "INSERT INTO calendars (account_id, id, name, color, access, zone, is_primary, shown, reminders) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
+            "INSERT INTO calendars (account_id, id, name, color, access, zone, is_primary, shown, reminders, supports_teams) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) \
              ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, color = excluded.color, \
              access = excluded.access, zone = excluded.zone, is_primary = excluded.is_primary, \
-             reminders = excluded.reminders",
+             reminders = excluded.reminders, supports_teams = excluded.supports_teams",
             params![
                 account_id,
                 calendar.id,
@@ -76,6 +76,7 @@ pub fn save_calendars(conn: &Connection, account_id: AccountId, list: &[Calendar
                 calendar.primary,
                 calendar.shown,
                 reminders_text(calendar),
+                calendar.supports_teams,
             ],
         )?;
     }
@@ -85,7 +86,7 @@ pub fn save_calendars(conn: &Connection, account_id: AccountId, list: &[Calendar
 pub fn calendars(conn: &Connection, account_id: AccountId) -> Result<Vec<Calendar>> {
     let mut stmt = conn.prepare(
         "SELECT id, name, COALESCE(own_color, color), access, zone, is_primary, shown, reminders, \
-         COALESCE(provider_hidden, 0) \
+         COALESCE(provider_hidden, 0), supports_teams \
          FROM calendars WHERE account_id = ?1 ORDER BY is_primary DESC, name",
     )?;
     let rows = stmt.query_map(params![account_id], |row| {
@@ -101,6 +102,7 @@ pub fn calendars(conn: &Connection, account_id: AccountId) -> Result<Vec<Calenda
             reminders,
             all_day_reminders,
             hidden: row.get(8)?,
+            supports_teams: row.get(9)?,
         })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -1143,9 +1145,10 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         pending: row.get(23)?,
         sequence: row.get(24)?,
         guests: Vec::new(),
-        // A Meet request lives only in a queued write, never in a row
-        // the store reads back.
+        // Conference requests live in queued writes. The event row only
+        // keeps the link returned by the provider.
         meet_request: None,
+        teams_request: false,
         kind: row
             .get::<_, Option<String>>(25)?
             .map(|k| parse(&k))
@@ -2154,6 +2157,7 @@ mod tests {
             hidden: false,
             reminders: Vec::new(),
             all_day_reminders: None,
+            supports_teams: false,
         }
     }
 
@@ -2170,6 +2174,19 @@ mod tests {
             busy: true,
             ..Event::default()
         }
+    }
+
+    #[test]
+    fn teams_support_follows_the_calendar_list() {
+        let (conn, id) = store();
+        let mut primary = calendar("primary", true);
+        primary.supports_teams = true;
+        save_calendars(&conn, id, std::slice::from_ref(&primary)).unwrap();
+        assert!(calendars(&conn, id).unwrap()[0].supports_teams);
+
+        primary.supports_teams = false;
+        crate::calendar_list::refresh_calendar(&conn, id, &primary).unwrap();
+        assert!(!calendars(&conn, id).unwrap()[0].supports_teams);
     }
 
     #[test]

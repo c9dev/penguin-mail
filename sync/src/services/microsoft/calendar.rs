@@ -187,6 +187,10 @@ fn calendar_of(c: &GraphCalendar) -> model::Calendar {
         shown: true,
         reminders: Vec::new(),
         all_day_reminders: None,
+        supports_teams: c
+            .allowed_online_meeting_providers
+            .iter()
+            .any(|p| p == "teamsForBusiness"),
         ..model::Calendar::default()
     }
 }
@@ -383,6 +387,7 @@ impl<G: GraphApi> Microsoft<G> {
             original_start: original_start_of(e),
             pending: false,
             meet_request: None,
+            teams_request: false,
             kind: if e.show_as.as_deref() == Some("oof") {
                 Kind::OutOfOffice(Default::default())
             } else {
@@ -455,6 +460,10 @@ impl<G: GraphApi> Microsoft<G> {
         }
         if create {
             body["transactionId"] = json!(event.id);
+            if event.teams_request && !attendees.is_empty() {
+                body["isOnlineMeeting"] = json!(true);
+                body["onlineMeetingProvider"] = json!("teamsForBusiness");
+            }
         }
         Ok(body)
     }

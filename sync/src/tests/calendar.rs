@@ -251,6 +251,7 @@ fn primary() -> Cal {
         hidden: false,
         reminders: Vec::new(),
         all_day_reminders: None,
+        supports_teams: false,
     }
 }
 
@@ -699,6 +700,7 @@ fn cal(id: &str, name: &str, access: Access) -> Cal {
         hidden: false,
         reminders: Vec::new(),
         all_day_reminders: None,
+        supports_teams: false,
     }
 }
 

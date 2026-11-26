@@ -1067,6 +1067,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                     method: ReminderMethod::Notification,
                 }],
                 all_day_reminders: None,
+                supports_teams: false,
             },
             CalendarModel {
                 id: FAMILY.into(),
@@ -1079,6 +1080,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 hidden: false,
                 reminders: Vec::new(),
                 all_day_reminders: None,
+                supports_teams: false,
             },
             CalendarModel {
                 id: HOLIDAYS_PT.into(),
@@ -1091,6 +1093,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 hidden: false,
                 reminders: Vec::new(),
                 all_day_reminders: None,
+                supports_teams: false,
             },
         ],
         1 => vec![
@@ -1105,6 +1108,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 hidden: false,
                 reminders: Vec::new(),
                 all_day_reminders: None,
+                supports_teams: false,
             },
             CalendarModel {
                 id: DESIGN_TEAM.into(),
@@ -1117,6 +1121,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 hidden: false,
                 reminders: Vec::new(),
                 all_day_reminders: None,
+                supports_teams: false,
             },
             CalendarModel {
                 id: MARKETING.into(),
@@ -1129,6 +1134,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 hidden: false,
                 reminders: Vec::new(),
                 all_day_reminders: None,
+                supports_teams: false,
             },
         ],
         _ => vec![CalendarModel {
@@ -1142,6 +1148,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
             hidden: false,
             reminders: Vec::new(),
             all_day_reminders: None,
+            supports_teams: false,
         }],
     }
 }

@@ -34,6 +34,7 @@ fn primary() -> Calendar {
         hidden: false,
         reminders: Vec::new(),
         all_day_reminders: None,
+        supports_teams: false,
     }
 }
 

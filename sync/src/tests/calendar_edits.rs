@@ -20,6 +20,7 @@ async fn new_event_edits_survive_a_server_read_on_every_provider() {
             color: "#3584e4".into(),
             reminders: Vec::new(),
             all_day_reminders: None,
+            supports_teams: false,
         }]
     });
     let microsoft = super::microsoft::outlook().await;

@@ -110,8 +110,8 @@ pub fn finish_edit(conn: &Connection, seq: i64) -> Result<()> {
 /// the provider has it. A calendar already there keeps its row.
 pub fn add_calendar(conn: &Connection, account_id: AccountId, calendar: &Calendar) -> Result<()> {
     conn.execute(
-        "INSERT INTO calendars (account_id, id, name, color, access, zone, is_primary, shown, reminders) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, '[]') ON CONFLICT (account_id, id) DO NOTHING",
+        "INSERT INTO calendars (account_id, id, name, color, access, zone, is_primary, shown, reminders, supports_teams) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, '[]', ?9) ON CONFLICT (account_id, id) DO NOTHING",
         params![
             account_id,
             calendar.id,
@@ -121,6 +121,7 @@ pub fn add_calendar(conn: &Connection, account_id: AccountId, calendar: &Calenda
             calendar.zone,
             calendar.primary,
             calendar.shown,
+            calendar.supports_teams,
         ],
     )?;
     Ok(())
@@ -164,7 +165,7 @@ pub fn set_provider_color(
 }
 
 /// Takes what the provider says of one calendar on its list (its name,
-/// colour, access, zone and reminders) into the copy, and leaves the
+/// colour, access, zone, reminders and Teams support) into the copy, and leaves the
 /// person's choices alone: whether it shows, whether it is listed, and a
 /// colour of their own.
 pub fn refresh_calendar(
@@ -174,7 +175,7 @@ pub fn refresh_calendar(
 ) -> Result<()> {
     conn.execute(
         "UPDATE calendars SET name = ?3, color = ?4, access = ?5, zone = ?6, is_primary = ?7, \
-         reminders = ?8, provider_hidden = ?9 WHERE account_id = ?1 AND id = ?2",
+         reminders = ?8, provider_hidden = ?9, supports_teams = ?10 WHERE account_id = ?1 AND id = ?2",
         params![
             account_id,
             calendar.id,
@@ -185,6 +186,7 @@ pub fn refresh_calendar(
             calendar.primary,
             crate::calendar::reminders_text(calendar),
             calendar.hidden,
+            calendar.supports_teams,
         ],
     )?;
     Ok(())
@@ -417,6 +419,7 @@ mod tests {
             hidden: false,
             reminders: Vec::new(),
             all_day_reminders: None,
+            supports_teams: false,
         }
     }
 

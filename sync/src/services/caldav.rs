@@ -523,6 +523,7 @@ impl<D: DavApi> CalendarService for CalDav<D> {
                 hidden: false,
                 reminders: Vec::new(),
                 all_day_reminders: None,
+                supports_teams: false,
             })
             .collect();
         *locked(&self.listed) = calendars.iter().map(|c| c.id.clone()).collect();

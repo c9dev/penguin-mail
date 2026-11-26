@@ -43,6 +43,7 @@ fn calendar_named(id: &str) -> Calendar {
         hidden: false,
         reminders: Vec::new(),
         all_day_reminders: None,
+        supports_teams: false,
     }
 }
 
