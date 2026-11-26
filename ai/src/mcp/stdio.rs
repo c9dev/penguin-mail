@@ -65,15 +65,11 @@ impl Stdio {
         // npm installs `npx` as `npx.cmd`, which Windows only runs by its full name.
         #[cfg(windows)]
         if matches!(&started, Err(e) if e.kind() == std::io::ErrorKind::NotFound)
-            && std::path::Path::new(command).extension().is_none()
+            && let Some(script) = script_for(command)
         {
-            for extension in ["cmd", "bat"] {
-                let retried = start(&format!("{command}.{extension}"));
-                if !matches!(&retried, Err(e) if e.kind() == std::io::ErrorKind::NotFound) {
-                    started = retried;
-                    break;
-                }
-            }
+            // std runs a .cmd through cmd.exe, which starts even when the
+            // script is missing, so only a script that exists is tried.
+            started = start(&script);
         }
         let mut child =
             started.map_err(|e| Failure::Other(format!("could not start {command}: {e}")))?;
@@ -337,4 +333,25 @@ async fn read_stderr(
         kept.push_back(line);
     }
     let _ = done.send(true);
+}
+
+/// `command.cmd` or `command.bat`, beside the path it names or on PATH, for
+/// a command given without an extension.
+#[cfg(windows)]
+fn script_for(command: &str) -> Option<String> {
+    use std::path::{Path, PathBuf};
+    if Path::new(command).extension().is_some() {
+        return None;
+    }
+    let dirs: Vec<PathBuf> = if command.contains(['/', '\\']) {
+        vec![PathBuf::new()]
+    } else {
+        std::env::split_paths(&std::env::var_os("PATH")?).collect()
+    };
+    ["cmd", "bat"].iter().find_map(|extension| {
+        dirs.iter()
+            .map(|dir| dir.join(format!("{command}.{extension}")))
+            .find(|path| path.is_file())
+            .map(|path| path.display().to_string())
+    })
 }

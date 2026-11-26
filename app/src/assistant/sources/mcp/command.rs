@@ -128,8 +128,19 @@ fn quote(word: &str) -> String {
             .all(|c| c.is_ascii_alphanumeric() || "@%+=:,./-_~".contains(c));
     if plain {
         word.to_string()
+    } else if word.contains('\'') {
+        // `'\''` needs a backslash escape, which Windows reads as a path
+        // character; double quotes read back the same on every platform.
+        let escaped: String = word
+            .chars()
+            .flat_map(|c| {
+                let escape = matches!(c, '"' | '\\' | '$' | '`').then_some('\\');
+                escape.into_iter().chain(std::iter::once(c))
+            })
+            .collect();
+        format!("\"{escaped}\"")
     } else {
-        format!("'{}'", word.replace('\'', r"'\''"))
+        format!("'{word}'")
     }
 }
 

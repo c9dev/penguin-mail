@@ -724,9 +724,14 @@ mod tests {
         assert!(names_local_file(
             "<div><img src=\"/home/dana/Pictures/id.png\"></div>"
         ));
-        assert!(names_local_file(
-            "<div><IMG SRC='file:///home/dana/logo.png'></div>"
-        ));
+        let file_url = if cfg!(windows) {
+            "file:///C:/Users/dana/logo.png"
+        } else {
+            "file:///home/dana/logo.png"
+        };
+        assert!(names_local_file(&format!(
+            "<div><IMG SRC='{file_url}'></div>"
+        )));
         assert!(names_local_file(
             "<div>Dana<img src = \"/home/dana/logo.png\"></div>"
         ));
