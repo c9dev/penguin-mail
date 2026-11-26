@@ -978,7 +978,30 @@ fn an_all_day_event_from_a_file_ends_the_day_after_its_last_day() {
 }
 
 #[test]
-fn a_file_with_no_uid_cannot_be_added_twice_safely() {
+fn an_event_from_a_file_with_no_uid_takes_an_id_from_its_details() {
     let text = ticket(None).replace("UID:ticket-4471@rail.example\r\n", "");
-    assert!(read(&text).unwrap().to_event("primary", "UTC").is_none());
+    let added = read(&text)
+        .unwrap()
+        .to_event("primary", "UTC")
+        .expect("an event");
+    // Opened again, the same event takes the same id, so the second
+    // import matches what the first left instead of adding a copy.
+    let again = read(&text)
+        .unwrap()
+        .to_event("primary", "UTC")
+        .expect("an event");
+    assert!(
+        added.uid.starts_with("pm"),
+        "the id says where it came from: {added:?}"
+    );
+    assert!(added.uid.chars().all(|byte| byte.is_ascii_alphanumeric()));
+    assert_eq!(added.uid, again.uid);
+    // A changed detail takes a new id, so the reprint after a schedule
+    // change adds as an update to what changed, not a stale match.
+    let reprinted = text.replace("seat 22", "seat 23");
+    let moved = read(&reprinted)
+        .unwrap()
+        .to_event("primary", "UTC")
+        .expect("an event");
+    assert_ne!(added.uid, moved.uid);
 }

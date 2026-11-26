@@ -87,8 +87,8 @@ pub struct Added {
     /// Where each event sits, in the order the file listed them, for
     /// Show in Calendar.
     pub spots: Vec<Spot>,
-    /// Events the file lists that could not go: no UID to match on, or no
-    /// start time.
+    /// Events the file lists that could not go: no start time, so
+    /// nothing places them.
     pub skipped: usize,
 }
 

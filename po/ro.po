@@ -1076,11 +1076,11 @@ msgstr "{provider} se conectează prin navigator"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "„Continuă” deschide pagina de conectare {provider} în navigator."
 
-#: app/src/app.rs:428
+#: app/src/app.rs:433
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nu s-a putut marca toată corespondența ca citită: {reason}"
 
-#: app/src/app.rs:475
+#: app/src/app.rs:480
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -5772,7 +5772,7 @@ msgid "What it did"
 msgstr "Ce a făcut"
 
 #: app/src/ui/assistant.rs:682 app/src/ui/calendar/words.rs:634
-#: app/src/ui/invitation.rs:1323
+#: app/src/ui/invitation.rs:1362
 msgid "You"
 msgstr "Dumneavoastră"
 
@@ -7346,8 +7346,8 @@ msgstr "Absent de la birou"
 msgid "Could not save the event: {reason}"
 msgstr "Nu s-a putut salva evenimentul: {reason}"
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:850
-#: app/src/ui/invitation.rs:995 app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:861
+#: app/src/ui/invitation.rs:1022 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr "Eveniment fără titlu"
 
@@ -7763,7 +7763,7 @@ msgstr[2] "{yes} din {count} au acceptat"
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:263 app/src/ui/calendar/words.rs:638
-#: app/src/ui/invitation.rs:1245
+#: app/src/ui/invitation.rs:1284
 msgid "{name}, organizer"
 msgstr "{name}, organizator"
 
@@ -9159,7 +9159,7 @@ msgstr "Nicio aplicație de pe acest desktop nu deschide fișiere calendar"
 msgid "A file has nobody to answer to"
 msgstr "Un fișier nu are cui să răspundă"
 
-#: app/src/ui/ics_file.rs:179
+#: app/src/ui/ics_file.rs:183
 msgid ""
 "No account here has a calendar Penguin Mail can add to. Add an account with "
 "a calendar, or turn one on in Preferences, under Calendar, then open the "
@@ -9169,25 +9169,30 @@ msgstr ""
 "Adăugați un cont cu calendar sau activați unul în Preferințe, la Calendar, "
 "apoi deschideți din nou fișierul."
 
-#: app/src/ui/ics_file.rs:258
-msgid ""
-"Nothing in this file can be added, since its events have no id or start time"
+#: app/src/ui/ics_file.rs:265
+#, fuzzy
+#| msgid ""
+#| "Nothing in this file can be added, since its events have no id or start "
+#| "time"
+msgid "Nothing in this file can be added, since its events have no start time"
 msgstr ""
 "Nimic din acest fișier nu poate fi adăugat, deoarece evenimentele sale nu au "
 "id sau oră de început"
 
-#: app/src/ui/ics_file.rs:264
-msgid "Some events were left out, since they have no id or start time"
+#: app/src/ui/ics_file.rs:270
+#, fuzzy
+#| msgid "Some events were left out, since they have no id or start time"
+msgid "Some events were left out, since they have no start time"
 msgstr "Unele evenimente au fost omise, deoarece nu au id sau oră de început"
 
-#: app/src/ui/ics_file.rs:274
+#: app/src/ui/ics_file.rs:279
 msgid ""
 "Penguin Mail has no permission to use this calendar. Allow it in Preferences."
 msgstr ""
 "Penguin Mail nu are permisiunea de a folosi acest calendar. Permiteți-o în "
 "Preferințe."
 
-#: app/src/ui/ics_file.rs:277
+#: app/src/ui/ics_file.rs:282
 msgid "Could not add to your calendar: {reason}"
 msgstr "Nu s-a putut adăuga în calendar: {reason}"
 
@@ -9242,22 +9247,22 @@ msgstr ""
 "Penguin Mail are nevoie de permisiune pentru a arăta acest eveniment în "
 "calendar."
 
-#: app/src/ui/invitation.rs:906
+#: app/src/ui/invitation.rs:933
 msgid "Added to your calendar"
 msgstr "Adăugat în calendar"
 
-#: app/src/ui/invitation.rs:908
+#: app/src/ui/invitation.rs:935
 msgid "Added {count} events to your calendar"
 msgid_plural "Added {count} events to your calendar"
 msgstr[0] "S-a adăugat {count} eveniment în calendar"
 msgstr[1] "S-au adăugat {count} evenimente în calendar"
 msgstr[2] "S-au adăugat {count} de evenimente în calendar"
 
-#: app/src/ui/invitation.rs:913
+#: app/src/ui/invitation.rs:940
 msgid "Added to {calendar}"
 msgstr "Adăugat în {calendar}"
 
-#: app/src/ui/invitation.rs:915
+#: app/src/ui/invitation.rs:942
 msgid "Added {count} events to {calendar}"
 msgid_plural "Added {count} events to {calendar}"
 msgstr[0] "S-a adăugat {count} eveniment în {calendar}"
@@ -9266,108 +9271,108 @@ msgstr[2] "S-au adăugat {count} de evenimente în {calendar}"
 
 #. A file with several events names none of them on the card's
 #. head: the list below does, one row each.
-#: app/src/ui/invitation.rs:1005
+#: app/src/ui/invitation.rs:1032
 msgid "{count} events"
 msgid_plural "{count} events"
 msgstr[0] "{count} eveniment"
 msgstr[1] "{count} evenimente"
 msgstr[2] "{count} de evenimente"
 
-#: app/src/ui/invitation.rs:1085
+#: app/src/ui/invitation.rs:1112
 msgid "Pick a Time…"
 msgstr "Alegeți o oră…"
 
-#: app/src/ui/invitation.rs:1128
+#: app/src/ui/invitation.rs:1155
 msgid "No reply yet"
 msgstr "Niciun răspuns încă"
 
-#: app/src/ui/invitation.rs:1198
+#: app/src/ui/invitation.rs:1237
 msgid "Half an Hour Later"
 msgstr "Peste o jumătate de oră"
 
-#: app/src/ui/invitation.rs:1201
+#: app/src/ui/invitation.rs:1240
 msgid "An Hour Later"
 msgstr "Peste o oră"
 
-#: app/src/ui/invitation.rs:1203
+#: app/src/ui/invitation.rs:1242
 msgid "Same Time Tomorrow"
 msgstr "Mâine la aceeași oră"
 
-#: app/src/ui/invitation.rs:1207
+#: app/src/ui/invitation.rs:1246
 msgid "Same Time Next Week"
 msgstr "Săptămâna viitoare la aceeași oră"
 
-#: app/src/ui/invitation.rs:1222
+#: app/src/ui/invitation.rs:1261
 msgid "You have {event} then"
 msgstr "Atunci aveți {event}"
 
-#: app/src/ui/invitation.rs:1224
+#: app/src/ui/invitation.rs:1263
 msgid "You have {event} and {other} then"
 msgstr "Atunci aveți {event} și {other}"
 
-#: app/src/ui/invitation.rs:1228
+#: app/src/ui/invitation.rs:1267
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] "Atunci aveți {event} și încă {count}"
 msgstr[1] "Atunci aveți {event} și încă {count}"
 msgstr[2] "Atunci aveți {event} și încă {count}"
 
-#: app/src/ui/invitation.rs:1241
+#: app/src/ui/invitation.rs:1280
 msgid "Reply to the invitation from {organizer}"
 msgstr "Răspundeți la invitația de la {organizer}"
 
-#: app/src/ui/invitation.rs:1349
+#: app/src/ui/invitation.rs:1388
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] "{count} da"
 msgstr[1] "{count} da"
 msgstr[2] "{count} da"
 
-#: app/src/ui/invitation.rs:1357
+#: app/src/ui/invitation.rs:1396
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] "{count} nu"
 msgstr[1] "{count} nu"
 msgstr[2] "{count} nu"
 
-#: app/src/ui/invitation.rs:1365
+#: app/src/ui/invitation.rs:1404
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] "{count} poate"
 msgstr[1] "{count} poate"
 msgstr[2] "{count} poate"
 
-#: app/src/ui/invitation.rs:1373
+#: app/src/ui/invitation.rs:1412
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] "{count} în așteptare"
 msgstr[1] "{count} în așteptare"
 msgstr[2] "{count} în așteptare"
 
-#: app/src/ui/invitation.rs:1381
+#: app/src/ui/invitation.rs:1420
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] "{count} invitat"
 msgstr[1] "{count} invitați"
 msgstr[2] "{count} de invitați"
 
-#: app/src/ui/invitation.rs:1387
+#: app/src/ui/invitation.rs:1426
 msgid "{guests} · {answers}"
 msgstr "{guests} · {answers}"
 
-#: app/src/ui/invitation.rs:1397
+#: app/src/ui/invitation.rs:1436
 msgid "This meeting moved from {when}"
 msgstr "Această întâlnire a fost mutată de la {when}"
 
-#: app/src/ui/invitation.rs:1400
+#: app/src/ui/invitation.rs:1439
 msgid "The organizer changed this meeting"
 msgstr "Organizatorul a modificat această întâlnire"
 
-#: app/src/ui/invitation.rs:1401
+#: app/src/ui/invitation.rs:1440
 msgid "The organizer canceled this meeting"
 msgstr "Organizatorul a anulat această întâlnire"
 
-#: app/src/ui/invitation.rs:1402
+#: app/src/ui/invitation.rs:1441
 msgid "This meeting is canceled"
 msgstr "Această întâlnire este anulată"
 
@@ -13029,23 +13034,23 @@ msgctxt "inbox"
 msgid "Other"
 msgstr "Altele"
 
-#: domain/src/invitation.rs:84
+#: domain/src/invitation.rs:85
 msgid "Yes"
 msgstr "Da"
 
-#: domain/src/invitation.rs:85
+#: domain/src/invitation.rs:86
 msgid "No"
 msgstr "Nu"
 
-#: domain/src/invitation.rs:86 domain/src/invitation.rs:95
+#: domain/src/invitation.rs:87 domain/src/invitation.rs:96
 msgid "Maybe"
 msgstr "Poate"
 
-#: domain/src/invitation.rs:93
+#: domain/src/invitation.rs:94
 msgid "Going"
 msgstr "Particip"
 
-#: domain/src/invitation.rs:94
+#: domain/src/invitation.rs:95
 msgid "Not going"
 msgstr "Nu particip"
 

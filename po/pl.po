@@ -1073,11 +1073,11 @@ msgstr "{provider} używa logowania przez przeglądarkę"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Dalej otworzy stronę logowania dostawcy {provider} w przeglądarce."
 
-#: app/src/app.rs:428
+#: app/src/app.rs:433
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nie można oznaczyć całej poczty jako przeczytanej: {reason}"
 
-#: app/src/app.rs:475
+#: app/src/app.rs:480
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -5727,7 +5727,7 @@ msgid "What it did"
 msgstr "Wykonane czynności"
 
 #: app/src/ui/assistant.rs:682 app/src/ui/calendar/words.rs:634
-#: app/src/ui/invitation.rs:1323
+#: app/src/ui/invitation.rs:1362
 msgid "You"
 msgstr "Ty"
 
@@ -7300,8 +7300,8 @@ msgstr "Poza biurem"
 msgid "Could not save the event: {reason}"
 msgstr "Nie udało się zapisać wydarzenia: {reason}"
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:850
-#: app/src/ui/invitation.rs:995 app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:861
+#: app/src/ui/invitation.rs:1022 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr "Wydarzenie bez tytułu"
 
@@ -7717,7 +7717,7 @@ msgstr[2] "{yes} z {count} potwierdza udział"
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:263 app/src/ui/calendar/words.rs:638
-#: app/src/ui/invitation.rs:1245
+#: app/src/ui/invitation.rs:1284
 msgid "{name}, organizer"
 msgstr "{name}, organizator"
 
@@ -9106,7 +9106,7 @@ msgstr "Żadna aplikacja w tym środowisku nie otwiera plików kalendarza"
 msgid "A file has nobody to answer to"
 msgstr "Nie można odpowiedzieć na zaproszenie z pliku"
 
-#: app/src/ui/ics_file.rs:179
+#: app/src/ui/ics_file.rs:183
 msgid ""
 "No account here has a calendar Penguin Mail can add to. Add an account with "
 "a calendar, or turn one on in Preferences, under Calendar, then open the "
@@ -9116,26 +9116,31 @@ msgstr ""
 "wydarzenia. Dodaj konto z kalendarzem lub włącz kalendarz w Preferencjach, w "
 "sekcji Kalendarz, a następnie ponownie otwórz plik."
 
-#: app/src/ui/ics_file.rs:258
-msgid ""
-"Nothing in this file can be added, since its events have no id or start time"
+#: app/src/ui/ics_file.rs:265
+#, fuzzy
+#| msgid ""
+#| "Nothing in this file can be added, since its events have no id or start "
+#| "time"
+msgid "Nothing in this file can be added, since its events have no start time"
 msgstr ""
 "Nie można dodać niczego z tego pliku, ponieważ wydarzenia nie mają "
 "identyfikatora lub czasu rozpoczęcia"
 
-#: app/src/ui/ics_file.rs:264
-msgid "Some events were left out, since they have no id or start time"
+#: app/src/ui/ics_file.rs:270
+#, fuzzy
+#| msgid "Some events were left out, since they have no id or start time"
+msgid "Some events were left out, since they have no start time"
 msgstr ""
 "Pominięto część wydarzeń, ponieważ nie mają identyfikatora lub czasu "
 "rozpoczęcia"
 
-#: app/src/ui/ics_file.rs:274
+#: app/src/ui/ics_file.rs:279
 msgid ""
 "Penguin Mail has no permission to use this calendar. Allow it in Preferences."
 msgstr ""
 "Penguin Mail nie ma uprawnień do tego kalendarza. Udziel ich w Preferencjach."
 
-#: app/src/ui/ics_file.rs:277
+#: app/src/ui/ics_file.rs:282
 msgid "Could not add to your calendar: {reason}"
 msgstr "Nie udało się dodać do kalendarza: {reason}"
 
@@ -9189,22 +9194,22 @@ msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr ""
 "Penguin Mail potrzebuje uprawnień, aby pokazać to wydarzenie w Kalendarzu."
 
-#: app/src/ui/invitation.rs:906
+#: app/src/ui/invitation.rs:933
 msgid "Added to your calendar"
 msgstr "Dodano do twojego kalendarza"
 
-#: app/src/ui/invitation.rs:908
+#: app/src/ui/invitation.rs:935
 msgid "Added {count} events to your calendar"
 msgid_plural "Added {count} events to your calendar"
 msgstr[0] "Dodano {count} wydarzenie do twojego kalendarza"
 msgstr[1] "Dodano {count} wydarzenia do twojego kalendarza"
 msgstr[2] "Dodano {count} wydarzeń do twojego kalendarza"
 
-#: app/src/ui/invitation.rs:913
+#: app/src/ui/invitation.rs:940
 msgid "Added to {calendar}"
 msgstr "Dodano do {calendar}"
 
-#: app/src/ui/invitation.rs:915
+#: app/src/ui/invitation.rs:942
 msgid "Added {count} events to {calendar}"
 msgid_plural "Added {count} events to {calendar}"
 msgstr[0] "Dodano {count} wydarzenie do {calendar}"
@@ -9213,108 +9218,108 @@ msgstr[2] "Dodano {count} wydarzeń do {calendar}"
 
 #. A file with several events names none of them on the card's
 #. head: the list below does, one row each.
-#: app/src/ui/invitation.rs:1005
+#: app/src/ui/invitation.rs:1032
 msgid "{count} events"
 msgid_plural "{count} events"
 msgstr[0] "{count} wydarzenie"
 msgstr[1] "{count} wydarzenia"
 msgstr[2] "{count} wydarzeń"
 
-#: app/src/ui/invitation.rs:1085
+#: app/src/ui/invitation.rs:1112
 msgid "Pick a Time…"
 msgstr "Wybierz termin…"
 
-#: app/src/ui/invitation.rs:1128
+#: app/src/ui/invitation.rs:1155
 msgid "No reply yet"
 msgstr "Brak odpowiedzi"
 
-#: app/src/ui/invitation.rs:1198
+#: app/src/ui/invitation.rs:1237
 msgid "Half an Hour Later"
 msgstr "Pół godziny później"
 
-#: app/src/ui/invitation.rs:1201
+#: app/src/ui/invitation.rs:1240
 msgid "An Hour Later"
 msgstr "Godzinę później"
 
-#: app/src/ui/invitation.rs:1203
+#: app/src/ui/invitation.rs:1242
 msgid "Same Time Tomorrow"
 msgstr "O tej samej porze jutro"
 
-#: app/src/ui/invitation.rs:1207
+#: app/src/ui/invitation.rs:1246
 msgid "Same Time Next Week"
 msgstr "O tej samej porze za tydzień"
 
-#: app/src/ui/invitation.rs:1222
+#: app/src/ui/invitation.rs:1261
 msgid "You have {event} then"
 msgstr "Masz wtedy wydarzenie {event}"
 
-#: app/src/ui/invitation.rs:1224
+#: app/src/ui/invitation.rs:1263
 msgid "You have {event} and {other} then"
 msgstr "Masz wtedy wydarzenia {event} i {other}"
 
-#: app/src/ui/invitation.rs:1228
+#: app/src/ui/invitation.rs:1267
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] "Masz wtedy wydarzenie {event} i jeszcze {count}"
 msgstr[1] "Masz wtedy wydarzenie {event} i jeszcze {count}"
 msgstr[2] "Masz wtedy wydarzenie {event} i jeszcze {count}"
 
-#: app/src/ui/invitation.rs:1241
+#: app/src/ui/invitation.rs:1280
 msgid "Reply to the invitation from {organizer}"
 msgstr "Odpowiedz na zaproszenie od {organizer}"
 
-#: app/src/ui/invitation.rs:1349
+#: app/src/ui/invitation.rs:1388
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] "{count} potwierdzenie"
 msgstr[1] "{count} potwierdzenia"
 msgstr[2] "{count} potwierdzeń"
 
-#: app/src/ui/invitation.rs:1357
+#: app/src/ui/invitation.rs:1396
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] "{count} odmowa"
 msgstr[1] "{count} odmowy"
 msgstr[2] "{count} odmów"
 
-#: app/src/ui/invitation.rs:1365
+#: app/src/ui/invitation.rs:1404
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] "{count} niezdecydowana osoba"
 msgstr[1] "{count} niezdecydowane osoby"
 msgstr[2] "{count} niezdecydowanych osób"
 
-#: app/src/ui/invitation.rs:1373
+#: app/src/ui/invitation.rs:1412
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] "{count} oczekująca odpowiedź"
 msgstr[1] "{count} oczekujące odpowiedzi"
 msgstr[2] "{count} oczekujących odpowiedzi"
 
-#: app/src/ui/invitation.rs:1381
+#: app/src/ui/invitation.rs:1420
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] "{count} gość"
 msgstr[1] "{count} gości"
 msgstr[2] "{count} gości"
 
-#: app/src/ui/invitation.rs:1387
+#: app/src/ui/invitation.rs:1426
 msgid "{guests} · {answers}"
 msgstr "{guests} · {answers}"
 
-#: app/src/ui/invitation.rs:1397
+#: app/src/ui/invitation.rs:1436
 msgid "This meeting moved from {when}"
 msgstr "To spotkanie przeniesiono z terminu {when}"
 
-#: app/src/ui/invitation.rs:1400
+#: app/src/ui/invitation.rs:1439
 msgid "The organizer changed this meeting"
 msgstr "Organizator zmienił to spotkanie"
 
-#: app/src/ui/invitation.rs:1401
+#: app/src/ui/invitation.rs:1440
 msgid "The organizer canceled this meeting"
 msgstr "Organizator odwołał to spotkanie"
 
-#: app/src/ui/invitation.rs:1402
+#: app/src/ui/invitation.rs:1441
 msgid "This meeting is canceled"
 msgstr "To spotkanie jest odwołane"
 
@@ -12940,23 +12945,23 @@ msgctxt "inbox"
 msgid "Other"
 msgstr "Inne"
 
-#: domain/src/invitation.rs:84
+#: domain/src/invitation.rs:85
 msgid "Yes"
 msgstr "Tak"
 
-#: domain/src/invitation.rs:85
+#: domain/src/invitation.rs:86
 msgid "No"
 msgstr "Nie"
 
-#: domain/src/invitation.rs:86 domain/src/invitation.rs:95
+#: domain/src/invitation.rs:87 domain/src/invitation.rs:96
 msgid "Maybe"
 msgstr "Może"
 
-#: domain/src/invitation.rs:93
+#: domain/src/invitation.rs:94
 msgid "Going"
 msgstr "Wezmę udział"
 
-#: domain/src/invitation.rs:94
+#: domain/src/invitation.rs:95
 msgid "Not going"
 msgstr "Nie wezmę udziału"
 

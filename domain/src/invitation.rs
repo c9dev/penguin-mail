@@ -25,6 +25,7 @@ use icalendar::{
     Calendar, CalendarComponent, CalendarDateTime, Component, DatePerhapsTime, Property,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::translate::gettext;
 use crate::{Address, EpochMillis, UnknownVariant};
@@ -258,15 +259,14 @@ impl Invitation {
 
     /// The event as a calendar keeps it, on `calendar`, ready to import.
     /// A time with no zone of its own takes `calendar_zone`. `None` when
-    /// the event has no start or no UID: an import matches on the UID, so
-    /// a file without one would add a new copy each time it was opened.
-    /// Nothing but the event itself goes: the guests and the organizer
-    /// belong to somebody else's calendar, and importing them would send
-    /// mail on the reader's behalf.
+    /// the event has no start: nothing places it on a calendar. An event
+    /// whose file named no UID takes an id made from its own details, so
+    /// a file opened again matches what it holds instead of adding a
+    /// copy, which is what an id is for. Nothing but the event itself
+    /// goes: the guests and the organizer belong to somebody else's
+    /// calendar, and importing them would send mail on the reader's
+    /// behalf.
     pub fn to_event(&self, calendar: &str, calendar_zone: &str) -> Option<crate::calendar::Event> {
-        if self.uid.trim().is_empty() {
-            return None;
-        }
         const DAY: EpochMillis = 24 * 60 * 60 * 1_000;
         let midnight = |day: NaiveDate| {
             day.and_hms_opt(0, 0, 0)
@@ -280,9 +280,34 @@ impl Invitation {
             ),
             When::Days { first, last } => (midnight(first)?, midnight(last)? + DAY, true),
         };
+        // An id from the event's own details: the same event takes the
+        // same one, a changed detail takes a new one, and the length of
+        // each part goes in first, so a part holding what separates two
+        // others cannot be fed to look the same. Only the parts a calendar
+        // keeps count, so the id leaves guests and organizer out with
+        // them.
+        let uid = match self.uid.trim().is_empty() {
+            true => {
+                let mut hasher = Sha256::new();
+                let mut feed = |bytes: &[u8]| {
+                    hasher.update((bytes.len() as u64).to_le_bytes());
+                    hasher.update(bytes);
+                };
+                feed(self.summary.as_bytes());
+                feed(&start.to_le_bytes());
+                feed(&end.to_le_bytes());
+                feed(&[all_day as u8]);
+                feed(self.location.as_deref().unwrap_or_default().as_bytes());
+                feed(self.description.as_deref().unwrap_or_default().as_bytes());
+                let said = hasher.finalize();
+                let hex: String = said.iter().map(|byte| format!("{byte:02x}")).collect();
+                format!("pm{hex}")
+            }
+            false => self.uid.clone(),
+        };
         Some(crate::calendar::Event {
             calendar: calendar.to_string(),
-            uid: self.uid.clone(),
+            uid,
             start,
             end,
             all_day,

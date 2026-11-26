@@ -317,14 +317,14 @@ impl MainWindow {
                 })
                 .await;
             match done {
-                Ok(mailrs_sync::Permitted::Done(added)) if added.spots.is_empty() => this.toast(&gettext(
-                    "Nothing in this file can be added, since its events have no id or start time",
-                )),
+                Ok(mailrs_sync::Permitted::Done(added)) if added.spots.is_empty() => this.toast(
+                    &gettext("Nothing in this file can be added, since its events have no start time"),
+                ),
                 Ok(mailrs_sync::Permitted::Done(added)) => {
                     view.events_added(&uid, &added.calendar, &added.spots);
                     if added.skipped > 0 {
                         this.toast(&gettext(
-                            "Some events were left out, since they have no id or start time",
+                            "Some events were left out, since they have no start time",
                         ));
                     }
                     this.calendar.reload();
