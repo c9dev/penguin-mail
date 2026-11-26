@@ -162,6 +162,13 @@ for extra in WebView2Loader.dll vcruntime140.dll vcruntime140_1.dll; do
         [ -f "$dir/$extra" ] && { cp "$dir/$extra" "$stage/bin/"; break; }
     done
 done
+# Without the loader the app does not start at all, so a build that left it
+# in webview2-com-sys's OUT_DIR still finds it, and a missing one stops here.
+if [ ! -f "$stage/bin/WebView2Loader.dll" ]; then
+    loader=$(ls "$exe_dir"/build/webview2-com-sys-*/out/x64/WebView2Loader.dll 2>/dev/null | head -1) || true
+    [ -n "$loader" ] || { echo "WebView2Loader.dll is not beside $exe or in its build folder" >&2; exit 1; }
+    cp "$loader" "$stage/bin/"
+fi
 
 # gdk-pixbuf loads its loaders at runtime; the import walk never sees them.
 loaders_src=$prefix/lib/gdk-pixbuf-2.0/2.10.0/loaders
