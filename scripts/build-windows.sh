@@ -11,7 +11,8 @@
 #
 # The compiler is whatever Visual Studio 2022 is installed — Build
 # Tools, Community or another edition — found through vswhere, so a
-# machine does not have to name its edition. --busybox and --stage-only
+# machine does not have to name its edition. --busybox, --stage-only and
+# --msys2 (the MSYS2 UCRT64 prefix that supplies gpgv and pdftotext)
 # pass through to scripts/package-windows.sh, which this calls once the
 # exe is built; with no --busybox a copy of BusyBox is fetched once into
 # the cache folder.
@@ -33,6 +34,10 @@ while [ "$#" -gt 0 ]; do
             [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--busybox needs a value" >&2; exit 2; }
             busybox=$2; shift 2 ;;
         --busybox=*) busybox=${1#*=}; shift ;;
+        --msys2)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--msys2 needs a value" >&2; exit 2; }
+            package_args+=(--msys2 "$2"); shift 2 ;;
+        --msys2=*) package_args+=("$1"); shift ;;
         --stage-only) package_args+=(--stage-only); shift ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac

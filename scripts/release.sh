@@ -3,7 +3,7 @@
 # changelog section and the store listings' release notes, brings the
 # translation template up to the new version, runs the gate, commits "Release X.Y.Z", tags vX.Y.Z,
 # and pushes. The pushed tag starts .github/workflows/release.yml, which
-# builds the .deb, the tarball and the zip and publishes the release.
+# builds the .deb, the tarball, the zip and the Windows installer and publishes the release.
 #
 #   scripts/release.sh              0.1.0 -> 0.1.1
 #   scripts/release.sh minor        0.1.0 -> 0.2.0

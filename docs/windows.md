@@ -29,9 +29,16 @@ What a machine needs:
   releases, unzipped anywhere — its `bin`, `lib`, `share` and `etc`
   sit at its root. The script rewrites the `prefix=` lines of its
   `lib/pkgconfig/*.pc` when they still name the zip's build location.
-  Building the stack from source with `gvsbuild build gtk4 libadwaita
-  librsvg` works the same and is the way to ship
-  `packaging/windows/gtk4-zero-monitor-popup.patch`.
+  Building the stack from source works the same and is the way to ship
+  `packaging/windows/gtk4-zero-monitor-popup.patch`:
+  `scripts/build-gtk-windows.sh <gvsbuild checkout>` copies the patch
+  into the checkout, adds it to gvsbuild's GTK 4 project, and builds
+  GTK 4, libadwaita and the Adwaita icons into
+  `C:\gtk-build\gtk\x64\release`. CI uses it, so the released installer
+  carries the patched GTK.
+- **MSYS2 UCRT64** with `mingw-w64-ucrt-x86_64-{binutils,gnupg,poppler}`,
+  for `gpgv.exe` and `pdftotext.exe`, which the installer ships. The
+  default prefix is `C:/msys64/ucrt64`; `--msys2` names another.
 - **MSYS2 or Git Bash**, for bash and cygpath.
 - **Inno Setup 6**, for the installer step; `--stage-only` skips it.
 - **BusyBox** for the skills sandbox: downloaded to the cache once and
@@ -187,6 +194,14 @@ uses. A Start-menu shortcut carrying `AppUserModel_ID` is created at
 startup because unpackaged toasts need it; `withdraw` maps to `Hide` by
 tag, and reminders use `scenario="reminder"`.
 
+A toast clicked after the app quit starts the exe again. The installer
+gives the Start Menu shortcut `AppUserModelToastActivatorCLSID`
+`{7B4D8E4A-3C1F-4F6E-9A2B-5D1E0C9F8A61}` and writes
+`HKCU\Software\Classes\CLSID\{...}\LocalServer32` with the exe's path;
+Windows launches that with `-Embedding` and the app answers the
+activation. Uninstall removes the key. Run from a development folder, the
+app writes the same key itself.
+
 `dock_badge` draws the unread count into an overlay icon itself
 (`ITaskbarList3::SetOverlayIcon` on each top-level HWND).
 
@@ -205,9 +220,10 @@ running copy through `gio::Application` registration. Verify
 `is_remote()`/`activate_action` work on Windows builds of GIO (it has a
 win32 backend that should cover this). GLib autolaunches the session
 bus through `gdbus.exe`, so `package-windows.sh` stages it beside the
-exe; without it the second copy would not find the first. This has not
-run on Windows yet and still needs a live check. If it fails, a named
-mutex plus a named pipe carries the same handoff.
+exe; without it the second copy would not find the first. The smoke job
+starts the installed app and then `--compose`, and fails unless one
+`penguin-mail.exe` is left after 10 seconds. If GIO's handoff ever stops
+working, a named mutex plus a named pipe could carry it.
 
 The app also creates the named mutex `PenguinMailRunning` at start. The
 installer's `AppMutex` names it, so an upgrade or uninstall waits for
@@ -215,13 +231,24 @@ the running copy instead of replacing files it holds.
 
 ### Updates
 
-`method_for` in `install.rs` returns no method on Windows, so the
-updater stays off. Enabling it means adding a method that downloads
-the release's installer and launches it, then exits. `signature.rs` cannot lean on `gpgv`/`gpg` on
-Windows; sign the installer with Authenticode and verify it with
-`WinVerifyTrust` against the embedded certificate, which also covers
-the tarball checksum's job for that channel. Until signing secrets
-exist, the updater stays off and About shows the usual unmanaged line.
+The Windows installer is an update channel like the Linux tarball.
+`install.rs` `method_for` returns `WindowsInstaller` for an installed
+copy. The app downloads `penguin-mail-<version>-setup.exe`, checks it
+against the release's `SHA256SUMS`, and checks that file's signature with
+the project key built into the app (`signature.rs`). The installer ships a
+native `gpgv.exe` under `libexec\gnupg\` for that, so the check is the
+one Linux runs. The installer itself is not signed: Windows shows
+SmartScreen's prompt on a first download. Whether an update the app
+downloads gets the prompt too is for the VM run to confirm.
+
+The app starts the installer with `/VERYSILENT /SUPPRESSMSGBOXES
+/NORESTART /RELAUNCH=background` (when it was running in the tray) or
+`/RELAUNCH=window`, then quits so it releases the `PenguinMailRunning`
+mutex. The installer waits up to 30 seconds for that mutex in
+`InitializeSetup`, installs over the old copy, and starts the app again,
+with `--background` for `background`. The smoke job runs this path: it
+installs, kills the app while a second setup waits, and expects exactly one
+running copy afterwards.
 
 ### PGP and S-MIME (done)
 
@@ -266,8 +293,9 @@ Live testing surfaced two platform truths:
   config file; the test writes `database`/`crlnumber` paths
   forward-slashed.
 
-`signature.rs` keeps its gpgv path on Unix and learns Authenticode on
-Windows.
+`signature.rs` looks for `gpgv.exe` in `<exe dir>\..\libexec\gnupg\`
+before `PATH`. That copy comes from the MSYS2 gnupg package, with its own
+DLLs in the same folder.
 
 ### Skill scripts
 
@@ -328,10 +356,38 @@ full-trust GTK app sharing folders with an external gpg and chaining
 dependency installs fits the classic installer without packaged-mode
 detection or filesystem virtualization getting in the way. The build ships unsigned: Penguin Mail is free
 software, so each download gets one SmartScreen "Run anyway" prompt
-rather than an Authenticode certificate's upkeep. With nothing signed
-there is nothing for `signature.rs` to verify against, so the updater
-stays off and About shows the usual unmanaged line; a new installer
-download is the update path.
+rather than an Authenticode certificate's upkeep. Updates are checked
+through the signed `SHA256SUMS` instead (see Updates).
+
+### What the install tree holds
+
+Besides `bin/` and the GTK data, `package-windows.sh` stages:
+
+- `libexec\gnupg\gpgv.exe` and `libexec\poppler\pdftotext.exe` from
+  MSYS2, each with its own DLLs and nothing shared with `bin\`, so
+  MSYS2's GLib never meets the GTK DLLs. `stage_tool` does the copying
+  by walking the import table. Their licences are under `share\licenses`.
+  `pdftotext` has no poppler-data, so a PDF with unembedded Chinese,
+  Japanese or Korean fonts may not give text.
+- `share\hunspell`: LibreOffice's dictionaries for 16 of the app's
+  languages (Japanese and Chinese have none), from a pinned commit, each
+  file checked against `packaging/windows/dictionaries.sha256`. The
+  composer's spell checker also reads extra pairs a person drops in a
+  folder under AppData.
+- `share\iso-codes\json` and the translated `iso_639-2.mo` and
+  `iso_3166-1.mo`, from the pinned iso-codes 4.20.1 tarball, for language
+  names in Preferences.
+
+`scripts/stage-windows-data.sh` downloads and checks the dictionaries and
+iso-codes files. To update one, change the pinned commit or version
+there, then rewrite the checksum list from the downloaded files.
+
+### Log file
+
+A release build started from the Start Menu has no console, so the app
+also writes `%LOCALAPPDATA%\penguin-mail\logs\penguin-mail.log`. At each
+start the previous run moves to `penguin-mail.1.log`. Ask for this file
+when someone reports a problem.
 
 ## Order of work
 
@@ -345,9 +401,8 @@ download is the update path.
 4. ~~WebView2 adapter, then the unsubscribe `Engine`.~~ Done, verified
    end-to-end including the own-scheme and link-preview paths.
 5. ~~Desktop integration: tray, toasts with action routing, autostart,
-   AUMID.~~ Done. Single-instance handoff still needs a check that
-   GIO's win32 backend answers `is_remote`/`activate_action`.
-6. ~~Gpg4win status-fd~~, ~~skills sandbox~~, updates+Authenticode.
+   AUMID.~~ Done. The smoke job checks the single-instance handoff.
+6. ~~Gpg4win status-fd~~, ~~skills sandbox~~, ~~updates~~ (bundled gpgv).
    Status-fd done and verified live against a native GnuPG build; a
    winget Gpg4win install on this machine left registry entries but no
    files, so the real run used ucrt64's mingw gnupg instead. The skills
@@ -411,33 +466,55 @@ checks the three dereference sites (`get_primary_monitor`'s unref,
 `gdk_win32_surface_layout_popup`'s workarea read, and the
 `gdk_monitor_set_scale_factor` call in `gdkevents-win32.c`). With it,
 `monitors()` reports the madeup monitor and popovers actually present
-in the session instead of being skipped. Apply it inside the GTK
-source tree (`patch -p1`) before `gvsbuild build gtk4`; the
+in the session instead of being skipped. The release build applies it with
+`scripts/build-gtk-windows.sh`, which stops if gvsbuild moves GTK 4 off
+4.24.1 until the patch is checked against the new version. The
 prebuilt gvsbuild zip cannot take patches. A console session keeps
 the monitor list populated, and whether an interactive RDP session
 does too is unchecked.
 
 ## Open items
 
-- Signing: decided out of scope — the installer ships unsigned, so
-  the updater stays off (nothing to verify against).
-- Packaging the MSVC build: the same `package-windows.sh` run against
-  the gvsbuild prefix, plus the `msvc-env` recipe turned into a
-  script. Verified so far only on the MSYS2-gnu build.
-- Gpg4win: done (HANDLE status-fd, Job-Object kill, `search_path`) and
-  verified against a native GnuPG build. The winget Gpg4win install here
-  registered but wrote no files; worth a second look on a clean machine.
-- Whether GIO's win32 backend handles `is_remote`/`activate_action` for
-  the single-instance handoff.
-- Whether the second-instance toast activation path needs the
-  `--compose`-style CLI handoff when a click lands on a toast after the
-  process exited.
-- ARM64 support is out of scope for v1.
+- Signing: out of scope. The installer ships unsigned and the README
+  explains SmartScreen.
+- ARM64: out of scope.
+- Gpg4win: the app finds an installed copy for PGP and S/MIME keys a
+  person already has. The winget Gpg4win install here registered but wrote
+  no files; worth a second look on a clean machine.
+- The release job's GTK cache is written only by runs on main. After a
+  change to the patch or to `build-gtk-windows.sh`, merge to main before
+  tagging, or the release builds GTK from scratch (over an hour).
+- Everything under "Checks on a Windows VM" below is run by hand before a
+  release that touches Windows.
 
-## Native regression checks
+## What CI checks
 
-The Windows workflow builds the app test binary with MSYS2 UCRT64 and runs
-the AppContainer, WebView2 string and locale regressions. BusyBox is built
-from a pinned upstream release commit. It also compiles the installer and verifies
-that uninstall removes both Start Menu shortcut locations and the sign-in
-entry. These tests run on Windows, separately from the Linux gate.
+`.github/workflows/windows.yml` runs on every pull request:
+
+- `native`: builds the app test binary with MSYS2 UCRT64 and runs the
+  AppContainer, WebView2 string, locale and update-install regressions,
+  then clippy. BusyBox is built from a pinned upstream release commit.
+  It also compiles a placeholder installer and checks what it installs
+  and what uninstall removes.
+- `installer`: builds GTK 4 and libadwaita with gvsbuild and the monitor
+  patch (cached), builds the app for MSVC, and uploads
+  `penguin-mail-<version>-setup.exe`. The release workflow calls the same
+  job.
+- `smoke`: installs that file silently, checks the bundled helpers, data
+  and the toast activator key, starts the app with `--demo`, takes
+  screenshots, checks that a second launch hands over, updates over the
+  running app, and uninstalls. It fails if a file, shortcut, Run value or
+  registry key is left behind. The screenshots are an artifact.
+
+## Checks on a Windows VM
+
+CI cannot judge how the app looks or behaves under a real session, so a
+Windows 11 VM runs these before a release: first start; light and dark;
+100 % and 150 % scaling; tray; toasts with actions, and a toast clicked
+after quitting; a second launch and a `mailto:` click; opening an `.eml`;
+an IMAP account against a local Dovecot (sign in, sync, send, move); PGP
+sign and verify with the bundled gpgv; spell checking; the assistant
+reading a PDF; an attachment with a hostile name; an opened `.js`
+attachment, which Windows must warn about; an update from one version to
+the next through `PENGUIN_MAIL_RELEASES_URL` pointing at a local mirror;
+and an uninstall that leaves nothing behind.

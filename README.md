@@ -260,8 +260,8 @@ StatusNotifier host, which Ubuntu's AppIndicator extension provides.
 
 | | .deb | rpm | Arch | Flatpak | Snap | Windows |
 |---|---|---|---|---|---|---|
-| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | `flatpak update` | Snap Store | Download the new installer |
-| GnuPG | the system's | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` | Gpg4win's |
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | `flatpak update` | Snap Store | Install in the app |
+| GnuPG | the system's | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` | Gpg4win's, optional |
 | Assistant skills | yes | yes | yes | no | no | yes |
 | Claude Code, and MCP servers you run as a command | yes | yes | yes | no | no | yes |
 | Tray icon | yes | yes | yes | yes | yes | yes |
@@ -293,17 +293,19 @@ icon. GnuPG and command-line assistants are not bundled.
 
 Download `penguin-mail-X.Y.Z-setup.exe` from the
 [latest release](https://github.com/c9dev/penguin-mail/releases/latest) and
-run it. The installer sets up Penguin Mail for your user account — no
-administrator rights needed — with a Start Menu entry, and mailto links
-plus .eml and .ics files that open with the app. When Microsoft's WebView2
-runtime is missing, the installer downloads it for you, so stay online for
-the first install.
+run it. The installer sets up Penguin Mail for your user account, with no
+administrator rights, a Start Menu entry, and mailto links plus .eml and
+.ics files that open with the app. Spell checking dictionaries come with it.
+When Microsoft's WebView2 runtime is missing, the installer downloads it for
+you, so stay online for the first install.
 
-The build is unsigned, so SmartScreen shows "Windows protected your PC" the
-first time: choose **More info**, then **Run anyway**. PGP and S/MIME work
-once Gpg4win is installed — the app finds it on its own. To update,
-download the next installer; it replaces the old copy and your mail and
-settings stay in your user folder.
+The installer is not signed, so Windows shows "Windows protected your PC" the
+first time. Choose **More info**, then **Run anyway**.
+
+Penguin Mail updates itself: open About and install the new version when it
+offers one. The app closes, installs and opens again, and your mail and
+settings stay in your user folder. If you already have PGP keys, install
+[Gpg4win](https://www.gpg4win.org); Penguin Mail finds it on its own.
 
 ### With apt (recommended on Ubuntu)
 
@@ -439,9 +441,9 @@ notification, a banner across the window, and the tray menu, and
   would rather update that way.
 - **From the tarball or from source**, it downloads the new tarball and
   installs it into the same folder as before, with no password.
-- **On Windows** there is no in-app update yet, since the unsigned build
-  has no signature to check a download against; the next installer from
-  the releases page installs over the old copy.
+- **On Windows** it downloads the new installer, runs it silently and
+  starts Penguin Mail again. The installer includes the small program that
+  checks the signature below.
 
 Before it installs anything, Penguin Mail checks that the release's
 `SHA256SUMS` carries a good signature from the apt repository's key,
