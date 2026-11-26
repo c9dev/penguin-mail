@@ -1,5 +1,6 @@
-//! The event editor: one column of fields in the spec's order, a More row
-//! for the rarer ones, and a page for a custom repeat. It shows a `Draft`
+//! The event editor: one column of fields in the spec's order, its
+//! Time zone beside the times it reads, a More row for the rarer
+//! ones, and a page for a custom repeat. It shows a `Draft`
 //! and changes it through the draft's setters; the rules live there.
 //!
 //! Every handler below closes over `Rc::downgrade(&editor)`, never
@@ -784,6 +785,9 @@ impl Editor {
         group.add(&all_day);
         group.add(&starts);
         group.add(&ends);
+        // The zone sits with the times it reads, not under More: a
+        // calendar set to another zone shows itself before it surprises.
+        group.add(&self.zone_row());
         group
     }
 
@@ -1942,58 +1946,51 @@ impl Editor {
         }
     }
 
+    /// The Time zone the event's times are read in: the calendar's own
+    /// until the person picks another, which then sticks through
+    /// calendar changes. Built with its list, so a later calendar
+    /// change can still re-select the inherited zone quietly, through
+    /// `show_zone`.
+    fn zone_row(self: &Rc<Self>) -> adw::ComboRow {
+        let row = adw::ComboRow::builder()
+            .title(gettext("Time zone"))
+            .enable_search(true)
+            .build();
+        crate::ui::name_combo_row_items(&row);
+        row.set_visible(!self.draft.borrow().all_day);
+        row.set_sensitive(self.may(Part::Zone));
+        let names: Vec<&str> = TZ_VARIANTS.iter().map(|tz| tz.name()).collect();
+        row.set_model(Some(&gtk::StringList::new(&names)));
+        row.set_expression(Some(&gtk::PropertyExpression::new(
+            gtk::StringObject::static_type(),
+            None::<gtk::Expression>,
+            "string",
+        )));
+        let current = self.draft.borrow().zone.clone();
+        if let Some(i) = TZ_VARIANTS.iter().position(|tz| tz.name() == current) {
+            row.set_selected(i as u32);
+        }
+        let weak = Rc::downgrade(self);
+        row.connect_selected_notify(move |row| {
+            let Some(this) = weak.upgrade() else { return };
+            if this.quiet.get() {
+                return;
+            }
+            if let Some(tz) = TZ_VARIANTS.get(row.selected() as usize) {
+                this.draft.borrow_mut().zone = tz.name().to_string();
+                this.zone_touched.set(true);
+            }
+        });
+        *self.zone_row.borrow_mut() = Some(row.clone());
+        row
+    }
+
     // ---- More ----
 
     fn more_group(self: &Rc<Self>) -> adw::PreferencesGroup {
         let group = adw::PreferencesGroup::new();
         let more =
             crate::ui::disclosure::row(adw::ExpanderRow::builder().title(gettext("More")).build());
-        let all_day = self.draft.borrow().all_day;
-
-        let zone_row = adw::ComboRow::builder()
-            .title(gettext("Time zone"))
-            .enable_search(true)
-            .build();
-        crate::ui::name_combo_row_items(&zone_row);
-        zone_row.set_visible(!all_day);
-        zone_row.set_sensitive(self.may(Part::Zone));
-        let weak = Rc::downgrade(self);
-        let built = Cell::new(false);
-        let zone_row_for_expand = zone_row.clone();
-        more.connect_expanded_notify(move |row| {
-            if !row.is_expanded() || built.get() {
-                return;
-            }
-            built.set(true);
-            let Some(this) = weak.upgrade() else { return };
-            let names: Vec<&str> = TZ_VARIANTS.iter().map(|tz| tz.name()).collect();
-            let model = gtk::StringList::new(&names);
-            let expression = gtk::PropertyExpression::new(
-                gtk::StringObject::static_type(),
-                None::<gtk::Expression>,
-                "string",
-            );
-            zone_row_for_expand.set_expression(Some(&expression));
-            zone_row_for_expand.set_model(Some(&model));
-            let current = this.draft.borrow().zone.clone();
-            if let Some(i) = TZ_VARIANTS.iter().position(|tz| tz.name() == current) {
-                zone_row_for_expand.set_selected(i as u32);
-            }
-            let weak = Rc::downgrade(&this);
-            zone_row_for_expand.connect_selected_notify(move |row| {
-                let Some(this) = weak.upgrade() else { return };
-                if this.quiet.get() {
-                    return;
-                }
-                if let Some(tz) = TZ_VARIANTS.get(row.selected() as usize) {
-                    this.draft.borrow_mut().zone = tz.name().to_string();
-                    this.zone_touched.set(true);
-                }
-            });
-        });
-        more.add_row(&zone_row);
-        *self.zone_row.borrow_mut() = Some(zone_row.clone());
-
         let busy = adw::SwitchRow::builder()
             .title(gettext("Show as busy"))
             .active(self.draft.borrow().busy)
