@@ -104,6 +104,12 @@ jobs:
           # A newer build must finish it successfully before recovery publishes.
           if any(job["name"] == "Build the Debian 13 .deb" for job in jobs):
               required.add("Build the Debian 13 .deb")
+          # Releases before the Windows installer was added have no such jobs.
+          if any(job["name"].startswith("Build the Windows installer / ") for job in jobs):
+              required |= {
+                  "Build the Windows installer / Build the installer",
+                  "Build the Windows installer / Install and launch",
+              }
           passed = {job["name"] for job in jobs if job["conclusion"] == "success"}
           if missing := required - passed:
               raise SystemExit(f"Package jobs have not passed: {sorted(missing)}")
@@ -150,7 +156,9 @@ jobs:
           fi
           cd dist
           rm -f SHA256SUMS SHA256SUMS.asc
-          sha256sum -- *.deb *.rpm *.pkg.tar.zst *.tar.gz *.zip *.flatpak *.AppImage > SHA256SUMS
+          # The Windows installer is missing from runs that predate it.
+          mapfile -t installers < <(compgen -G '*-setup.exe' || true)
+          sha256sum -- *.deb *.rpm *.pkg.tar.zst *.tar.gz *.zip *.flatpak *.AppImage "${installers[@]}" > SHA256SUMS
           cat SHA256SUMS
           signing=$(mktemp -d)
           trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
@@ -175,8 +183,9 @@ jobs:
           shopt -s failglob
           git fetch --depth=1 origin "refs/tags/$TAG"
           test "$(git rev-parse 'FETCH_HEAD^{commit}')" = "$SOURCE_SHA"
+          mapfile -t installers < <(compgen -G 'dist/*-setup.exe' || true)
           files=(dist/*.deb dist/*.rpm dist/*.pkg.tar.zst dist/*.tar.gz dist/*.zip \
-              dist/*.flatpak dist/*.AppImage dist/SHA256SUMS dist/SHA256SUMS.asc)
+              dist/*.flatpak dist/*.AppImage "${installers[@]}" dist/SHA256SUMS dist/SHA256SUMS.asc)
           if gh release view "$TAG" >/dev/null 2>&1; then
               gh release edit "$TAG" --title "Penguin Mail $VERSION" \
                   --notes-file dist/notes.md --latest
