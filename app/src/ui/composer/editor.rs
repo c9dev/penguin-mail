@@ -307,17 +307,13 @@ impl Editor {
         crate::ui::name_menu_items(&popover);
         popover.set_parent(&self.view);
         popover.set_has_arrow(false);
-        popover.set_pointing_to(Some(&rect));
         // A closed menu lets go of the view on the next turn of the main
         // loop, once the item that closed it has done its work.
         popover.connect_closed(|popover| {
             let popover = popover.clone();
             glib::idle_add_local_once(move || popover.unparent());
         });
-        if safe_popup_at(&popover, &rect) == PopoverResult::NoMonitors {
-            return false;
-        }
-        true
+        safe_popup_at(&popover, &rect) != PopoverResult::NoMonitors
     }
 
     /// Asks for the words that describe the picture the menu was opened
