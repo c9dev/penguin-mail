@@ -1060,11 +1060,11 @@ msgstr "{provider} usa il browser per l'accesso"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continua apre la pagina di accesso di {provider} nel browser."
 
-#: app/src/app.rs:442
+#: app/src/app.rs:444
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Impossibile segnare tutta la posta come letta: {reason}"
 
-#: app/src/app.rs:489
+#: app/src/app.rs:491
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -12825,11 +12825,13 @@ msgstr "Mostra registro dell'aggiornamento"
 msgid "Checking for Updates…"
 msgstr "Controllo degli aggiornamenti…"
 
-#: app/src/update/mod.rs:116 app/src/update/mod.rs:206
+#: app/src/update/mod.rs:116 app/src/update/mod.rs:209
+#: app/src/update/mod.rs:223
 msgid "Penguin Mail {version} is available"
 msgstr "Penguin Mail {version} è disponibile"
 
-#: app/src/update/mod.rs:119 app/src/update/mod.rs:211
+#: app/src/update/mod.rs:119 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:228
 msgid "Install"
 msgstr "Installa"
 
@@ -12841,7 +12843,7 @@ msgstr "Installazione di Penguin Mail {version}"
 msgid "Restart to finish updating"
 msgstr "Riavvia per completare l'aggiornamento"
 
-#: app/src/update/mod.rs:209
+#: app/src/update/mod.rs:212 app/src/update/mod.rs:226
 msgid "Install it now, or later from the tray."
 msgstr "Installalo ora oppure in seguito dalla barra di sistema."
 

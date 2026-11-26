@@ -1087,11 +1087,11 @@ msgstr ""
 "Η «Συνέχεια» ανοίγει τη σελίδα σύνδεσης του {provider} στο πρόγραμμα "
 "περιήγησης."
 
-#: app/src/app.rs:442
+#: app/src/app.rs:444
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Δεν ήταν δυνατή η σήμανση όλων των μηνυμάτων ως αναγνωσμένων: {reason}"
 
-#: app/src/app.rs:489
+#: app/src/app.rs:491
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -13020,11 +13020,13 @@ msgstr "Εμφάνιση αρχείου καταγραφής ενημέρωση�
 msgid "Checking for Updates…"
 msgstr "Έλεγχος για ενημερώσεις…"
 
-#: app/src/update/mod.rs:116 app/src/update/mod.rs:206
+#: app/src/update/mod.rs:116 app/src/update/mod.rs:209
+#: app/src/update/mod.rs:223
 msgid "Penguin Mail {version} is available"
 msgstr "Το Penguin Mail {version} είναι διαθέσιμο"
 
-#: app/src/update/mod.rs:119 app/src/update/mod.rs:211
+#: app/src/update/mod.rs:119 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:228
 msgid "Install"
 msgstr "Εγκατάσταση"
 
@@ -13036,7 +13038,7 @@ msgstr "Εγκατάσταση του Penguin Mail {version}"
 msgid "Restart to finish updating"
 msgstr "Επανεκκινήστε για να ολοκληρωθεί η ενημέρωση"
 
-#: app/src/update/mod.rs:209
+#: app/src/update/mod.rs:212 app/src/update/mod.rs:226
 msgid "Install it now, or later from the tray."
 msgstr "Εγκαταστήστε την τώρα ή αργότερα από την περιοχή ειδοποιήσεων."
 

@@ -1024,11 +1024,11 @@ msgstr "{provider} đăng nhập qua trình duyệt"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Tiếp tục sẽ mở trang đăng nhập của {provider} trong trình duyệt."
 
-#: app/src/app.rs:442
+#: app/src/app.rs:444
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Không thể đánh dấu tất cả thư là đã đọc: {reason}"
 
-#: app/src/app.rs:489
+#: app/src/app.rs:491
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -12462,11 +12462,13 @@ msgstr "Hiện nhật ký cập nhật"
 msgid "Checking for Updates…"
 msgstr "Đang kiểm tra bản cập nhật…"
 
-#: app/src/update/mod.rs:116 app/src/update/mod.rs:206
+#: app/src/update/mod.rs:116 app/src/update/mod.rs:209
+#: app/src/update/mod.rs:223
 msgid "Penguin Mail {version} is available"
 msgstr "Đã có Penguin Mail {version}"
 
-#: app/src/update/mod.rs:119 app/src/update/mod.rs:211
+#: app/src/update/mod.rs:119 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:228
 msgid "Install"
 msgstr "Cài đặt"
 
@@ -12478,7 +12480,7 @@ msgstr "Đang cài Penguin Mail {version}"
 msgid "Restart to finish updating"
 msgstr "Khởi động lại để hoàn tất cập nhật"
 
-#: app/src/update/mod.rs:209
+#: app/src/update/mod.rs:212 app/src/update/mod.rs:226
 msgid "Install it now, or later from the tray."
 msgstr "Cài ngay hoặc sau từ khay hệ thống."
 
