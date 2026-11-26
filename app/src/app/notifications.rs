@@ -15,6 +15,8 @@ use macos::Desktop;
 mod windows;
 #[cfg(windows)]
 use windows::Desktop;
+#[cfg(windows)]
+pub(crate) use windows::post_action_notice;
 #[cfg(not(any(target_os = "macos", windows)))]
 mod linux;
 #[cfg(not(any(target_os = "macos", windows)))]

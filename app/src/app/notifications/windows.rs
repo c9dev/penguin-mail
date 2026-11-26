@@ -101,6 +101,11 @@ impl IClassFactory_Impl for Factory_Impl {
 fn deliver(arguments: &str) {
     let click = match serde_json::from_str::<Click>(arguments) {
         Ok(click) => click,
+        // A click on a notice that carries no payload opens the app.
+        Err(_) if arguments.trim().is_empty() => Click {
+            a: String::new(),
+            t: String::new(),
+        },
         Err(err) => {
             tracing::warn!(%err, arguments, "a toast click carried arguments the app cannot read");
             return;
@@ -161,6 +166,9 @@ impl Desktop {
                 let Some(app) = weak.upgrade() else { break };
                 if click.a.is_empty() {
                     app.activate();
+                } else if click.t.is_empty() {
+                    // An action such as install-update takes no parameter.
+                    app.activate_action(&click.a, None);
                 } else {
                     app.activate_action(&click.a, Some(&click.t.to_variant()));
                 }
@@ -287,6 +295,56 @@ impl Desktop {
         }
     }
 }
+
+/// A notice outside the mail, such as a release to install, whose one
+/// button runs the app action `action`. It goes through the click handling
+/// mail toasts use, so the button works from Action Center too.
+pub fn post_action_notice(title: &str, body: &str, button: &str, action: &str) {
+    let click = |a: &str| {
+        serde_json::to_string(&Click {
+            a: a.to_string(),
+            t: String::new(),
+        })
+        .expect("a notice's click payload serializes")
+    };
+    let xml = format!(
+        "<toast launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text>\
+         <text>{}</text></binding></visual><actions><action content=\"{}\" arguments=\"{}\"/>\
+         </actions></toast>",
+        escaped(&click("")),
+        escaped(title),
+        escaped(body),
+        escaped(button),
+        escaped(&click(action)),
+    );
+    let shown = (|| -> windows::core::Result<ToastNotification> {
+        let document = XmlDocument::new()?;
+        document.LoadXml(&HSTRING::from(xml))?;
+        let toast = ToastNotification::CreateToastNotification(&document)?;
+        toast.Activated(&TypedEventHandler::new(
+            |_toast: Ref<ToastNotification>, args: Ref<windows::core::IInspectable>| {
+                let arguments = args
+                    .ok()?
+                    .cast::<ToastActivatedEventArgs>()?
+                    .Arguments()?
+                    .to_string();
+                deliver(&arguments);
+                Ok(())
+            },
+        ))?;
+        ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(crate::APP_ID))?
+            .Show(&toast)?;
+        Ok(toast)
+    })();
+    match shown {
+        // The toast must outlive this call for its click handler to run.
+        Ok(toast) => *NOTICE.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(toast),
+        Err(err) => tracing::warn!(error = %err, "a notice did not show"),
+    }
+}
+
+/// The last action notice, kept alive for its click handler.
+static NOTICE: Mutex<Option<ToastNotification>> = Mutex::new(None);
 
 /// The channel `Activated` handlers post to, set once at `Desktop::new`.
 fn clicks_channel() -> &'static std::sync::OnceLock<async_channel::Sender<Click>> {

@@ -198,6 +198,23 @@ impl Updater {
 /// `install`. The daemon's reply arrives on its own thread, as it does for
 /// new mail.
 pub fn announce(version: Version, install: async_channel::Sender<()>) {
+    // Windows sends a toast's clicks to the app's own activator, which
+    // notify-rust's handler never hears, so the app posts this one itself
+    // and its button runs the install-update action.
+    #[cfg(windows)]
+    {
+        drop(install);
+        crate::app::post_action_notice(
+            &fill(
+                &gettext("Penguin Mail {version} is available"),
+                &[("version", &version.to_string())],
+            ),
+            &gettext("Install it now, or later from the tray."),
+            &gettext("Install"),
+            "install-update",
+        );
+    }
+    #[cfg(not(windows))]
     std::thread::spawn(move || {
         let mut notification = notify_rust::Notification::new();
         notification

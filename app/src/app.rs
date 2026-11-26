@@ -51,6 +51,8 @@ mod storage;
 mod tray_feed;
 
 pub use composing::Signature;
+#[cfg(windows)]
+pub(crate) use notifications::post_action_notice;
 mod updates;
 
 type AppAction = Box<dyn Fn(&Rc<App>)>;
