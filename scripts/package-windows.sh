@@ -130,9 +130,12 @@ for file in "$stage"/libexec/*/*; do
     owner=$(pacman -Qqo "$(cygpath -u "$msys2")/bin/$(basename "$file")" 2>/dev/null) || { echo "no MSYS2 package owns $(basename "$file")" >&2; exit 1; }
     [ -n "${licensed[$owner]:-}" ] && continue
     licensed[$owner]=1
-    name=${owner#mingw-w64-ucrt-x86_64-}
-    if [ -d "$msys2/share/licenses/$name" ]; then
-        cp -r "$msys2/share/licenses/$name" "$stage/share/licenses/"
+    # A package's licence folder need not carry its name: openjpeg2's is openjpeg.
+    folders=$(pacman -Ql "$owner" | sed -n 's|^[^ ]* /ucrt64/share/licenses/\([^/]\{1,\}\)/$|\1|p' | sort -u)
+    if [ -n "$folders" ]; then
+        for folder in $folders; do
+            cp -r "$(cygpath -u "$msys2")/share/licenses/$folder" "$stage/share/licenses/"
+        done
     else
         unlicensed+=("$owner $(pacman -Qi "$owner" | sed -n 's/^Licenses *: //p')")
     fi
