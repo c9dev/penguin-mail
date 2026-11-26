@@ -4762,6 +4762,19 @@ fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
 /// file name cannot hold becomes `_`, a reserved device name such as
 /// `CON.txt` gets a `_` in front, and trailing dots and spaces go.
 fn attachment_name(name: &str) -> String {
+    if !cfg!(windows) {
+        let clean: String = name
+            .chars()
+            .map(|c| if c == '/' || c == '\0' { '_' } else { c })
+            .collect();
+        return if clean.trim().is_empty() || clean == "." || clean == ".." {
+            "attachment".into()
+        } else {
+            clean
+        };
+    }
+    // Windows reads a backslash and a drive colon as path, refuses the
+    // other five, drops trailing dots and spaces, and keeps device names.
     let mapped: String = name
         .chars()
         .map(|c| {
@@ -4883,6 +4896,21 @@ fn arranged_room(
 mod tests {
     use super::*;
 
+    #[cfg(not(windows))]
+    #[test]
+    fn attachment_names_stay_inside_the_folder_on_unix() {
+        for (given, kept) in [
+            ("a/b", "a_b"),
+            ("..\\x:y?", "..\\x:y?"),
+            (".", "attachment"),
+            ("..", "attachment"),
+            ("", "attachment"),
+        ] {
+            assert_eq!(attachment_name(given), kept, "{given}");
+        }
+    }
+
+    #[cfg(windows)]
     #[test]
     fn attachment_names_stay_inside_the_folder() {
         for (given, kept) in [
