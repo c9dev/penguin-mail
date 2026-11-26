@@ -408,6 +408,19 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
         .bind_property("active", &vips_only, "sensitive")
         .sync_create()
         .build();
+    let sound = switch(
+        app,
+        &gettext("Notification Sound"),
+        Some(&gettext(
+            "The desktop's own notification sound, played when Penguin Mail shows its reminder window",
+        )),
+        settings.notification_sound,
+        Change::NotificationSound,
+    );
+    enabled
+        .bind_property("active", &sound, "sensitive")
+        .sync_create()
+        .build();
     let actions = crate::ui::disclosure::row(
         adw::ExpanderRow::builder()
             .title(gettext("Buttons"))
@@ -432,6 +445,7 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
         .build();
     notifications.add(&enabled);
     notifications.add(&vips_only);
+    notifications.add(&sound);
     notifications.add(&previews);
     if cfg!(target_os = "macos") {
         notifications.add(&bold_subject);
@@ -445,17 +459,32 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
 
 /// Event reminders stay independent of the new-mail notification switch.
 fn calendar_rows(app: &Rc<App>, settings: &Settings) -> Vec<gtk::Widget> {
+    let reminders = switch(
+        app,
+        &gettext("Event Reminders"),
+        Some(&gettext(
+            "A notification before each event, at the times the event or its calendar sets",
+        )),
+        settings.event_reminders,
+        Change::EventReminders,
+    );
+    let window = switch(
+        app,
+        &gettext("Reminder Window"),
+        Some(&gettext(
+            "Each reminder opens a small window above everything, instead of a notification",
+        )),
+        settings.reminder_window,
+        Change::ReminderWindow,
+    );
+    // The window says nothing while the reminders themselves are off.
+    reminders
+        .bind_property("active", &window, "sensitive")
+        .sync_create()
+        .build();
     vec![
-        switch(
-            app,
-            &gettext("Event Reminders"),
-            Some(&gettext(
-                "A notification before each event, at the times the event or its calendar sets",
-            )),
-            settings.event_reminders,
-            Change::EventReminders,
-        )
-        .upcast(),
+        reminders.upcast(),
+        window.upcast(),
         week_start_row(app, settings.week_start).upcast(),
         calendar_clock_row(app, settings.calendar_clock).upcast(),
         working_hours_row(app, settings.working_hours).upcast(),

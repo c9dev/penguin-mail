@@ -28,6 +28,7 @@ pub mod goa_page;
 pub mod hide_my_email;
 pub mod ics_file;
 pub mod invitation;
+pub mod reminder;
 pub mod key_import;
 pub mod link_preview;
 pub mod list_feed;

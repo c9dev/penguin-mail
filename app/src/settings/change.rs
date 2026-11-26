@@ -52,6 +52,12 @@ pub enum Change {
     },
     /// Notifications before calendar events.
     EventReminders(bool),
+    /// Reminders in a small window of their own, above everything until
+    /// they are answered, instead of a notification.
+    ReminderWindow(bool),
+    /// The desktop's notification sound, played when Penguin Mail
+    /// surfaces something itself, as its reminder window does.
+    NotificationSound(bool),
     /// Stops offering to translate messages in one language, by its code
     /// such as `pt`, or starts again.
     NeverTranslate {
@@ -330,6 +336,8 @@ impl Change {
                 settings.show_notification_button(button, show)
             }
             Change::EventReminders(on) => settings.event_reminders = on,
+            Change::ReminderWindow(on) => settings.reminder_window = on,
+            Change::NotificationSound(on) => settings.notification_sound = on,
             Change::NeverTranslate { language, never } => {
                 settings.never_translate(&language, never)
             }
@@ -668,6 +676,8 @@ settable! {
         NotificationPreviews => notification_previews,
         NotifyVipsOnly => notify_vips_only,
         EventReminders => event_reminders,
+        ReminderWindow => reminder_window,
+        NotificationSound => notification_sound,
         UndoSend => undo_send,
         DefaultAccount => default_account,
         ComposeFormat => compose_format,
@@ -938,6 +948,8 @@ impl Effects {
             notification_bold_subject,
             notification_preview_length,
             event_reminders,
+            reminder_window,
+            notification_sound,
             never_translate,
             smart_mailboxes,
             account_order,
@@ -1005,6 +1017,8 @@ impl Effects {
             // The reminder scheduler reads this on each check, at most a
             // minute away.
             event_reminders,
+            reminder_window,
+            notification_sound,
             hidden_addresses,
             // The composer reads these when it opens, so a refreshed alias
             // list or a newly kept word changes nothing already on screen.
@@ -1983,6 +1997,42 @@ mod tests {
                 .unwrap()
                 .change(&json!(true)),
             Ok(Change::EventReminders(true))
+        );
+    }
+
+    #[test]
+    fn the_reminder_window_is_off_until_it_is_chosen() {
+        assert!(!Settings::default().reminder_window);
+        let mut settings = Settings::default();
+        let effects = Change::ReminderWindow(true).apply(&mut settings);
+        assert!(settings.reminder_window);
+        assert!(
+            effects.is_empty(),
+            "the scheduler reads the switch on its next check"
+        );
+        assert_eq!(
+            Setting::named("reminder_window")
+                .unwrap()
+                .change(&json!(true)),
+            Ok(Change::ReminderWindow(true))
+        );
+    }
+
+    #[test]
+    fn the_notification_sound_is_on_until_it_is_not() {
+        assert!(Settings::default().notification_sound);
+        let mut settings = Settings::default();
+        let effects = Change::NotificationSound(false).apply(&mut settings);
+        assert!(!settings.notification_sound);
+        assert!(
+            effects.is_empty(),
+            "the scheduler reads the switch on its next check"
+        );
+        assert_eq!(
+            Setting::named("notification_sound")
+                .unwrap()
+                .change(&json!(false)),
+            Ok(Change::NotificationSound(false))
         );
     }
 

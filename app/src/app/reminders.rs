@@ -115,9 +115,33 @@ impl App {
         self.reminder_wake.replace(Some(source));
     }
 
-    fn post_reminder(&self, due: &Due, now: EpochMillis) {
+    /// The reminder window, built at the first reminder that needs it
+    /// and kept for the rest.
+    fn reminders_window(self: &Rc<Self>) -> Rc<crate::ui::reminder::Reminders> {
+        if let Some(held) = self.reminder_window.borrow().clone() {
+            return held;
+        }
+        let window = crate::ui::reminder::Reminders::new(&self.gio);
+        *self.reminder_window.borrow_mut() = Some(Rc::clone(&window));
+        window
+    }
+
+    fn post_reminder(self: &Rc<Self>, due: &Due, now: EpochMillis) {
         let shown = notice::notice(due, now, &chrono::Local);
-        self.notifications.reminder(&shown);
+        // The window is the person's chosen answer to how easy a
+        // notification is to miss: the reminder goes there instead,
+        // above everything until they answer it. No server plays a
+        // sound for a window of ours, so it says itself out loud with
+        // the desktop's own notification sound, the standard each
+        // surface of ours inherits where no server sounds for it.
+        if self.settings_with(|s| s.reminder_window) {
+            self.reminders_window().show(&shown);
+            if self.settings_with(|s| s.notification_sound) {
+                crate::alert::alert();
+            }
+        } else {
+            self.notifications.reminder(&shown);
+        }
         tracing::info!(event = %due.key.event, minutes = due.key.minutes, "posted an event reminder");
     }
 

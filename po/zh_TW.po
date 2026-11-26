@@ -983,11 +983,11 @@ msgstr "{provider} 透過瀏覽器登入"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "選擇 [繼續] 會在瀏覽器中開啟 {provider} 的登入頁面。"
 
-#: app/src/app.rs:428
+#: app/src/app.rs:432
 msgid "Could not mark all mail as read: {reason}"
 msgstr "無法將所有郵件標示為已讀：{reason}"
 
-#: app/src/app.rs:475
+#: app/src/app.rs:479
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -2480,7 +2480,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language}（{country}）"
 
-#: app/src/main.rs:104
+#: app/src/main.rs:105
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2502,15 +2502,15 @@ msgstr ""
 "  mailto:...     等同於 --compose mailto:...\n"
 "  FILE.ics       開啟行事曆檔案，將其中活動加入行事曆"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:217
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知選項 {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:495
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 無法啟動"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:500 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "回報問題"
 
@@ -4241,7 +4241,7 @@ msgstr "小於 {size}"
 msgid "Larger than {size}"
 msgstr "大於 {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:960
+#: app/src/rules.rs:251 app/src/settings/mod.rs:970
 msgid "All mail"
 msgstr "所有郵件"
 
@@ -4339,229 +4339,229 @@ msgstr "在此電腦上，Penguin Mail 開啟時"
 msgid "On the server"
 msgstr "在伺服器上"
 
-#: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
-#: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/settings/mod.rs:237 app/src/settings/mod.rs:446
+#: app/src/settings/mod.rs:882 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/preferences.rs:1183
 msgid "Off"
 msgstr "關閉"
 
-#: app/src/settings/mod.rs:230
+#: app/src/settings/mod.rs:238
 msgid "Local Server"
 msgstr "本機伺服器"
 
-#: app/src/settings/mod.rs:231
+#: app/src/settings/mod.rs:239
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:232
+#: app/src/settings/mod.rs:240
 msgid "Claude Subscription"
 msgstr "Claude 訂閱"
 
-#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3748
+#: app/src/settings/mod.rs:265 app/src/ui/window.rs:3748
 #: app/src/ui/window.rs:3836
 msgid "Assistant"
 msgstr "助理"
 
-#: app/src/settings/mod.rs:258 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:266 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "翻譯"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:262
+#: app/src/settings/mod.rs:270
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "取消訂閱"
 
-#: app/src/settings/mod.rs:268
+#: app/src/settings/mod.rs:276
 msgid "Answers questions and acts on your mail"
 msgstr "回答問題並處理郵件"
 
-#: app/src/settings/mod.rs:269
+#: app/src/settings/mod.rs:277
 msgid "Translates a message when you ask"
 msgstr "依要求翻譯郵件"
 
-#: app/src/settings/mod.rs:271
+#: app/src/settings/mod.rs:279
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "規則無法處理時，讀取電子報的取消訂閱頁面"
 
-#: app/src/settings/mod.rs:309
+#: app/src/settings/mod.rs:317
 msgid "Same as the Assistant"
 msgstr "與助理相同"
 
-#: app/src/settings/mod.rs:439
+#: app/src/settings/mod.rs:447
 msgid "Claude's own only"
 msgstr "僅限 Claude 內建搜尋"
 
-#: app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:448
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:449
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:450
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:621
+#: app/src/settings/mod.rs:631
 msgid "Rich text"
 msgstr "富文字"
 
-#: app/src/settings/mod.rs:622
+#: app/src/settings/mod.rs:632
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:641 app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:651 app/src/settings/mod.rs:673
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "自動"
 
-#: app/src/settings/mod.rs:642 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:652 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "星期一"
 
-#: app/src/settings/mod.rs:643 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:653 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "星期日"
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:674
 msgid "12-hour (AM/PM)"
 msgstr "12 小時制（AM/PM）"
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:675
 msgid "24-hour"
 msgstr "24 小時制"
 
-#: app/src/settings/mod.rs:703
+#: app/src/settings/mod.rs:713
 msgid "When opened"
 msgstr "開啟時"
 
-#: app/src/settings/mod.rs:704
+#: app/src/settings/mod.rs:714
 msgid "After 2 seconds"
 msgstr "2 秒後"
 
-#: app/src/settings/mod.rs:705
+#: app/src/settings/mod.rs:715
 msgid "Only when I choose"
 msgstr "僅在手動選擇時"
 
-#: app/src/settings/mod.rs:721 app/src/settings/mod.rs:739
+#: app/src/settings/mod.rs:731 app/src/settings/mod.rs:749
 msgid "Ask each time"
 msgstr "每次詢問"
 
-#: app/src/settings/mod.rs:722
+#: app/src/settings/mod.rs:732
 msgid "Always load"
 msgstr "一律載入"
 
-#: app/src/settings/mod.rs:740
+#: app/src/settings/mod.rs:750
 msgid "Never ask"
 msgstr "永不詢問"
 
-#: app/src/settings/mod.rs:767
+#: app/src/settings/mod.rs:777
 msgid "No Preview"
 msgstr "不顯示預覽"
 
-#: app/src/settings/mod.rs:768
+#: app/src/settings/mod.rs:778
 msgid "1 Line"
 msgstr "1 行"
 
-#: app/src/settings/mod.rs:769
+#: app/src/settings/mod.rs:779
 msgid "2 Lines"
 msgstr "2 行"
 
-#: app/src/settings/mod.rs:796
+#: app/src/settings/mod.rs:806
 msgid "Short (80 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:797
+#: app/src/settings/mod.rs:807
 msgid "Medium (140 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:798
+#: app/src/settings/mod.rs:808
 msgid "Long (280 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:832
+#: app/src/settings/mod.rs:842
 msgid "Small"
 msgstr "小"
 
-#: app/src/settings/mod.rs:833
+#: app/src/settings/mod.rs:843
 msgid "Default"
 msgstr "預設"
 
-#: app/src/settings/mod.rs:834
+#: app/src/settings/mod.rs:844
 msgid "Large"
 msgstr "大"
 
-#: app/src/settings/mod.rs:835
+#: app/src/settings/mod.rs:845
 msgid "Larger"
 msgstr "更大"
 
-#: app/src/settings/mod.rs:873
+#: app/src/settings/mod.rs:883
 msgid "5 seconds"
 msgstr "5 秒"
 
-#: app/src/settings/mod.rs:874
+#: app/src/settings/mod.rs:884
 msgid "10 seconds"
 msgstr "10 秒"
 
-#: app/src/settings/mod.rs:875
+#: app/src/settings/mod.rs:885
 msgid "20 seconds"
 msgstr "20 秒"
 
-#: app/src/settings/mod.rs:876
+#: app/src/settings/mod.rs:886
 msgid "30 seconds"
 msgstr "30 秒"
 
-#: app/src/settings/mod.rs:893
+#: app/src/settings/mod.rs:903
 msgid "Follow system"
 msgstr "跟隨系統"
 
-#: app/src/settings/mod.rs:894
+#: app/src/settings/mod.rs:904
 msgid "Light"
 msgstr "淺色"
 
-#: app/src/settings/mod.rs:895
+#: app/src/settings/mod.rs:905
 msgid "Dark"
 msgstr "深色"
 
-#: app/src/settings/mod.rs:929
+#: app/src/settings/mod.rs:939
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "每 {count} 秒"
 
-#: app/src/settings/mod.rs:937
+#: app/src/settings/mod.rs:947
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "每 {count} 分鐘"
 
-#: app/src/settings/mod.rs:954
+#: app/src/settings/mod.rs:964
 msgid "2 weeks"
 msgstr "2 週"
 
-#: app/src/settings/mod.rs:955
+#: app/src/settings/mod.rs:965
 msgid "30 days"
 msgstr "30 天"
 
-#: app/src/settings/mod.rs:956
+#: app/src/settings/mod.rs:966
 msgid "90 days"
 msgstr "90 天"
 
-#: app/src/settings/mod.rs:957
+#: app/src/settings/mod.rs:967
 msgid "1 year"
 msgstr "1 年"
 
-#: app/src/settings/mod.rs:958
+#: app/src/settings/mod.rs:968
 msgid "2 years"
 msgstr "2 年"
 
-#: app/src/settings/mod.rs:959
+#: app/src/settings/mod.rs:969
 msgid "5 years"
 msgstr "5 年"
 
-#: app/src/settings/mod.rs:981
+#: app/src/settings/mod.rs:991
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4569,19 +4569,19 @@ msgstr ""
 "每封郵件都會保留在此電腦上。大型帳號會占用大量磁碟空間和記憶體，較舊的郵件會"
 "在背景下載。"
 
-#: app/src/settings/mod.rs:983
+#: app/src/settings/mod.rs:993
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "收件匣中的所有郵件也會保留，較舊的郵件仍可搜尋"
 
-#: app/src/settings/mod.rs:990
+#: app/src/settings/mod.rs:1000
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:991
+#: app/src/settings/mod.rs:1001
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:992
+#: app/src/settings/mod.rs:1002
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -4767,7 +4767,7 @@ msgstr "{version} 的新功能"
 
 #: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1243 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "檢查更新"
 
@@ -5104,7 +5104,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail 會在此電腦上保留下載的每封郵件。"
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1604
 msgid "Days"
 msgstr "天數"
 
@@ -5907,7 +5907,7 @@ msgstr ""
 "各技能必須手動啟用。技能中的指令稿會在沙箱中執行，無法存取郵件、金鑰或家目"
 "錄，且助理會在每次執行指令前詢問。"
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:582
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:611
 msgid "Not Available"
 msgstr "無法使用"
 
@@ -6089,7 +6089,7 @@ msgid "Declined"
 msgstr "已婉拒"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1410
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6201,11 +6201,11 @@ msgstr "結束日期"
 msgid "End time"
 msgstr "結束時間"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1556
 msgid "Starts"
 msgstr "開始"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1558
 msgid "Ends"
 msgstr "結束"
 
@@ -6284,7 +6284,8 @@ msgstr "{address} · {answer}"
 msgid "Remove {guest}"
 msgstr "移除 {guest}"
 
-#: app/src/ui/calendar/editor.rs:1464
+#: app/src/ui/calendar/editor.rs:1464 app/src/ui/reminder.rs:45
+#: app/src/ui/reminder.rs:51
 msgid "Reminders"
 msgstr "提醒"
 
@@ -6862,7 +6863,7 @@ msgstr "全天"
 
 #: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1424 app/src/ui/preferences.rs:1612
 msgid "%a"
 msgstr "%a"
 
@@ -7851,6 +7852,7 @@ msgid "Turn the Markdown into rich text"
 msgstr "將 Markdown 轉為富文字"
 
 #: app/src/ui/composer/mod.rs:3058 app/src/ui/composer/mod.rs:3062
+#: app/src/ui/reminder.rs:171 app/src/ui/reminder.rs:172
 msgid "Dismiss"
 msgstr "關閉"
 
@@ -7949,7 +7951,7 @@ msgstr "再次尋找"
 msgid "Edit…"
 msgstr "編輯…"
 
-#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:567
+#: app/src/ui/contacts_prefs.rs:257 app/src/ui/preferences.rs:596
 msgid "Shared mailboxes support mail only."
 msgstr "共用信箱僅支援郵件功能。"
 
@@ -9022,7 +9024,7 @@ msgid "{folder}, always shown"
 msgstr ""
 
 #: app/src/ui/manage_folders.rs:402 app/src/ui/manage_folders.rs:508
-#: app/src/ui/preferences.rs:696
+#: app/src/ui/preferences.rs:725
 msgid "This account is not syncing yet"
 msgstr "此帳號尚未開始同步"
 
@@ -9032,7 +9034,7 @@ msgstr "此帳號尚未開始同步"
 msgid "Could not change the subscription: {reason}"
 msgstr "無法變更顏色：{reason}"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "灰色"
 
@@ -9313,67 +9315,91 @@ msgid "Stay quiet about mail from everyone else"
 msgstr "不通知其他寄件者的郵件"
 
 #: app/src/ui/preferences.rs:413
+#, fuzzy
+#| msgid "Notifications"
+msgid "Notification Sound"
+msgstr "通知"
+
+#: app/src/ui/preferences.rs:415
+msgid ""
+"The desktop's own notification sound, played when Penguin Mail shows its "
+"reminder window"
+msgstr ""
+
+#: app/src/ui/preferences.rs:426
 msgid "Buttons"
 msgstr "按鈕"
 
-#: app/src/ui/preferences.rs:415
+#: app/src/ui/preferences.rs:428
 msgid "What a notification offers besides opening the conversation"
 msgstr "通知除了開啟對話外，還提供哪些操作"
 
-#: app/src/ui/preferences.rs:451
+#: app/src/ui/preferences.rs:464
 msgid "Event Reminders"
 msgstr "活動提醒"
 
-#: app/src/ui/preferences.rs:453
+#: app/src/ui/preferences.rs:466
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr "依活動或行事曆設定的時間，在每個活動開始前通知"
 
-#: app/src/ui/preferences.rs:476 app/src/ui/preferences.rs:483
+#: app/src/ui/preferences.rs:473
+#, fuzzy
+#| msgid "Reminder"
+msgid "Reminder Window"
+msgstr "提醒"
+
+#: app/src/ui/preferences.rs:475
+msgid ""
+"Each reminder opens a small window above everything, instead of a "
+"notification"
+msgstr ""
+
+#: app/src/ui/preferences.rs:505 app/src/ui/preferences.rs:512
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:47
 #: app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
 msgstr "帳號"
 
-#: app/src/ui/preferences.rs:484
+#: app/src/ui/preferences.rs:513
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
 msgstr "簽名、寄件地址、伺服器、聯絡人，以及伺服器回報的儲存空間。"
 
-#: app/src/ui/preferences.rs:489 app/src/ui/preferences.rs:759
+#: app/src/ui/preferences.rs:518 app/src/ui/preferences.rs:788
 msgid "No Accounts Yet"
 msgstr "尚無帳號"
 
-#: app/src/ui/preferences.rs:491 app/src/ui/preferences.rs:761
+#: app/src/ui/preferences.rs:520 app/src/ui/preferences.rs:790
 msgid "Add an account to choose a sender and write signatures."
 msgstr "請新增帳號以選擇寄件者及撰寫簽名。"
 
-#: app/src/ui/preferences.rs:541
+#: app/src/ui/preferences.rs:570
 msgid "Mailbox storage is not available through this connection."
 msgstr "此連線無法提供信箱儲存空間資訊。"
 
-#: app/src/ui/preferences.rs:543
+#: app/src/ui/preferences.rs:572
 msgid "The server has not reported its storage usage."
 msgstr "伺服器尚未回報儲存空間用量。"
 
-#: app/src/ui/preferences.rs:546
+#: app/src/ui/preferences.rs:575
 msgid "Space on the Server"
 msgstr "伺服器上的空間"
 
-#: app/src/ui/preferences.rs:560
+#: app/src/ui/preferences.rs:589
 msgid "Shared Mailbox"
 msgstr "共用信箱"
 
-#: app/src/ui/preferences.rs:564
+#: app/src/ui/preferences.rs:593
 msgid "Signed in through {account}"
 msgstr "透過 {account} 登入"
 
-#: app/src/ui/preferences.rs:640 app/src/ui/sender_prefs/signature.rs:32
+#: app/src/ui/preferences.rs:669 app/src/ui/sender_prefs/signature.rs:32
 msgid "Signature"
 msgstr "簽名"
 
-#: app/src/ui/preferences.rs:654
+#: app/src/ui/preferences.rs:683
 #, fuzzy
 #| msgid ""
 #| "Used by this account and addresses without their own signature. Markdown "
@@ -9387,116 +9413,116 @@ msgstr ""
 "此帳號與未另設簽名的地址會使用此簽名。支援 Markdown。<email> 會替換為包含字尾"
 "的寄件地址；<domain> 則替換為該地址的網域。"
 
-#: app/src/ui/preferences.rs:662 app/src/ui/sender_prefs.rs:127
+#: app/src/ui/preferences.rs:691 app/src/ui/sender_prefs.rs:127
 #: app/src/ui/sender_prefs/signature.rs:22
 msgid "Signature for {account}"
 msgstr "{account} 的簽名"
 
-#: app/src/ui/preferences.rs:676
+#: app/src/ui/preferences.rs:705
 msgid "Import from Gmail"
 msgstr "從 Gmail 匯入"
 
-#: app/src/ui/preferences.rs:712
+#: app/src/ui/preferences.rs:741
 msgid "Imported the signature from Gmail"
 msgstr "已從 Gmail 匯入簽名"
 
-#: app/src/ui/preferences.rs:716
+#: app/src/ui/preferences.rs:745
 msgid "Gmail has no signature for this account"
 msgstr "此帳號在 Gmail 中沒有簽名"
 
-#: app/src/ui/preferences.rs:719
+#: app/src/ui/preferences.rs:748
 msgid "Could not import: {reason}"
 msgstr "無法匯入：{reason}"
 
-#: app/src/ui/preferences.rs:754 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:783 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "撰寫"
 
-#: app/src/ui/preferences.rs:770 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:799 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "新郵件"
 
-#: app/src/ui/preferences.rs:774
+#: app/src/ui/preferences.rs:803
 msgid "New Messages Start As"
 msgstr "新郵件初始格式"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:805
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr "富文字直接呈現文字樣式；Markdown 則顯示標記"
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:783 app/src/ui/sidebar.rs:66
+#: app/src/ui/preferences.rs:812 app/src/ui/sidebar.rs:66
 #: app/src/ui/sidebar.rs:79
 msgid "Undo Send"
 msgstr "取消傳送"
 
-#: app/src/ui/preferences.rs:785
+#: app/src/ui/preferences.rs:814
 msgid "How long you can take a message back after sending it"
 msgstr "傳送後可取消的時間"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:821
 msgid "Check for Missing Attachments"
 msgstr "檢查遺漏的附件"
 
-#: app/src/ui/preferences.rs:794
+#: app/src/ui/preferences.rs:823
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr "郵件提到檔案卻沒有附件時，傳送前詢問"
 
-#: app/src/ui/preferences.rs:828
+#: app/src/ui/preferences.rs:857
 msgid "Signing and Encryption"
 msgstr "簽署與加密"
 
-#: app/src/ui/preferences.rs:830
+#: app/src/ui/preferences.rs:859
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
 msgstr ""
 "Penguin Mail 透過 GnuPG 簽署與加密。GnuPG 會保管金鑰，並自行要求輸入密語。"
 
-#: app/src/ui/preferences.rs:835
+#: app/src/ui/preferences.rs:864
 msgid "Your OpenPGP Keys"
 msgstr "OpenPGP 金鑰"
 
-#: app/src/ui/preferences.rs:836
+#: app/src/ui/preferences.rs:865
 msgid "Asking gpg…"
 msgstr "正在查詢 gpg…"
 
-#: app/src/ui/preferences.rs:840
+#: app/src/ui/preferences.rs:869
 msgid "Your S/MIME Certificates"
 msgstr "S/MIME 憑證"
 
-#: app/src/ui/preferences.rs:841
+#: app/src/ui/preferences.rs:870
 msgid "Asking gpgsm…"
 msgstr "正在查詢 gpgsm…"
 
-#: app/src/ui/preferences.rs:848
+#: app/src/ui/preferences.rs:877
 msgid "Sign My Messages by Default"
 msgstr "預設簽署郵件"
 
-#: app/src/ui/preferences.rs:849
+#: app/src/ui/preferences.rs:878
 msgid "New messages open with Sign turned on"
 msgstr "開啟新郵件時，自動啟用 [簽署]"
 
-#: app/src/ui/preferences.rs:855
+#: app/src/ui/preferences.rs:884
 msgid "Encrypt When I Can"
 msgstr "可加密時加密"
 
-#: app/src/ui/preferences.rs:857
+#: app/src/ui/preferences.rs:886
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "每位收件者都有金鑰或憑證時，立即啟用 [加密]"
 
-#: app/src/ui/preferences.rs:946
+#: app/src/ui/preferences.rs:975
 msgid "gpg could not be asked: {reason}"
 msgstr "無法查詢 gpg：{reason}"
 
-#: app/src/ui/preferences.rs:965
+#: app/src/ui/preferences.rs:994
 msgid "gpgsm could not be asked: {reason}"
 msgstr "無法查詢 gpgsm：{reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:974
+#: app/src/ui/preferences.rs:1003
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -9507,11 +9533,11 @@ msgstr[0] ""
 "Penguin Mail 透過 {programs} 簽署與加密。這些程式會保管金鑰，並自行要求輸入密"
 "語。"
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
+#: app/src/ui/preferences.rs:1035 app/src/ui/preferences.rs:1048
 msgid "Spelling"
 msgstr "拼字"
 
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:1037
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9520,213 +9546,213 @@ msgstr ""
 "尚未安裝字典，因此 Penguin Mail 不會檢查拼字。請安裝 hunspell-en-us 或 "
 "hunspell-pt-pt 等 Hunspell 字典，再重新開啟郵件編輯器。"
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1050
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "各帳號的拼字檢查語言。已安裝的字典：{languages}。"
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1062
 msgid "System: {language}"
 msgstr "系統：{language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1077
 msgid "All Installed Languages"
 msgstr "所有已安裝的語言"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1120
 msgid "Sync"
 msgstr "同步"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1128
 msgid "Checking"
 msgstr "檢查"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1134
 msgid "Check for New Mail"
 msgstr "檢查新郵件"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1143
 msgid "Storage"
 msgstr "儲存空間"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1151
 msgid "Keep Mail on This Computer For"
 msgstr "此電腦上的郵件保留期間"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1172
 msgid "Message text kept for opening offline"
 msgstr "為離線開啟而保存的郵件內文"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1175
 msgid "Message Cache"
 msgstr "郵件快取"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1184
 msgid "100 messages"
 msgstr "100 封郵件"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1185
 msgid "300 messages"
 msgstr "300 封郵件"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1186
 msgid "1,000 messages"
 msgstr "1,000 封郵件"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1190
 msgid "Download Recent Inbox Messages"
 msgstr "下載收件匣中的近期郵件"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1191
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
 msgstr ""
 "下載每個帳號的郵件內文，以便更快開啟並離線閱讀。不會下載附件和遠端圖片。"
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1218
 msgid "Startup"
 msgstr "啟動"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1221
 msgid "Start in the Tray at Login"
 msgstr "登入時在系統匣中啟動"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1236
 msgid "Not available in demo mode"
 msgstr "示範模式無法使用"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1244
 msgid "Look for a new release once a day"
 msgstr "每天檢查一次新版本"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1285
 msgid "{used} of {limit}"
 msgstr "{used} / {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1297
 msgid "{amount} · Full"
 msgstr "{amount} · 已滿"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1299
 msgid "{amount} · Nearly full"
 msgstr "{amount} · 快滿了"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1311
 msgid "Senders Who May Load Images"
 msgstr "允許載入圖片的寄件者"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1312 app/src/ui/preferences.rs:1321
 msgid "Nobody yet"
 msgstr "尚無寄件者"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1323
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} 位寄件者"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1333
 msgid "Anyone at this domain"
 msgstr "此網域的所有人"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1335
 msgid "This address"
 msgstr "此地址"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1340
 msgid "Stop Loading Images from This Sender"
 msgstr "停止載入此寄件者的圖片"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1347
 msgid "Stop loading images from {sender}"
 msgstr "停止載入 {sender} 的圖片"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1417
 msgid "Monday to Friday"
 msgstr "星期一至星期五"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1418
 msgid "Every day of the week"
 msgstr "每一天"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1419
 msgid "No days"
 msgstr "未選擇工作日"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1426
 msgid ", "
 msgstr "、"
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1429
 msgid "{time}, {days}"
 msgstr "{time}，{days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1492
 msgid "Time Format"
 msgstr "時間格式"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1496
 msgid "Automatic follows the system clock format"
 msgstr "自動使用系統時鐘格式"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1510
 msgid "Week Starts On"
 msgstr "每週起始日"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1515
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "[自動] 會使用語系的每週起始日"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1529
 msgid "Working Hours"
 msgstr "工作時間"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1548
 msgid "Hours"
 msgstr "時段"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1599
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1657
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1659
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1703
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "無法變更顏色：{reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1747
 msgid "Never Translate"
 msgstr "不翻譯"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1749
 msgid "Messages in these languages get no offer to translate them"
 msgstr "不提供翻譯這些語言郵件的選項"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1778
 msgid "Follow System"
 msgstr "跟隨系統"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1782
 msgid "Language"
 msgstr "語言"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1783
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "重新啟動後，Penguin Mail 會顯示新的語言"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1864 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "無簽名"
 
