@@ -120,9 +120,22 @@ collect "$stage/bin/gdbus.exe"
 stage_tool "$msys2/bin/gpgv.exe" "$stage/libexec/gnupg" "$msys2/bin"
 stage_tool "$msys2/bin/pdftotext.exe" "$stage/libexec/poppler" "$msys2/bin"
 mkdir -p "$stage/share/licenses"
-for package in gnupg poppler; do
-    [ -d "$msys2/share/licenses/$package" ] || { echo "no licence files for $package in $msys2" >&2; exit 1; }
-    cp -r "$msys2/share/licenses/$package" "$stage/share/licenses/"
+# Every MSYS2 package that owns a file under libexec/ brings its licence
+# folder. A package that ships none, such as poppler, is named in
+# helpers.txt, and its GPL text is the LICENSE beside it.
+command -v pacman >/dev/null || { echo "staging the helpers needs MSYS2's pacman for their licences" >&2; exit 1; }
+declare -A licensed=()
+unlicensed=()
+for file in "$stage"/libexec/*/*; do
+    owner=$(pacman -Qqo "$(cygpath -u "$msys2")/bin/$(basename "$file")" 2>/dev/null) || { echo "no MSYS2 package owns $(basename "$file")" >&2; exit 1; }
+    [ -n "${licensed[$owner]:-}" ] && continue
+    licensed[$owner]=1
+    name=${owner#mingw-w64-ucrt-x86_64-}
+    if [ -d "$msys2/share/licenses/$name" ]; then
+        cp -r "$msys2/share/licenses/$name" "$stage/share/licenses/"
+    else
+        unlicensed+=("$owner $(pacman -Qi "$owner" | sed -n 's/^Licenses *: //p')")
+    fi
 done
 cat > "$stage/share/licenses/helpers.txt" <<'NOTE'
 libexec\gnupg and libexec\poppler hold gpgv.exe and pdftotext.exe with the
@@ -130,7 +143,11 @@ libraries they load, unchanged from the MSYS2 packages
 mingw-w64-ucrt-x86_64-gnupg and mingw-w64-ucrt-x86_64-poppler. Their source
 is at https://github.com/msys2/MINGW-packages and the upstream projects:
 https://gnupg.org and https://poppler.freedesktop.org.
+
+These packages ship no licence files of their own; their licences are
+named here, and the GPL text is in LICENSE at the top of this folder:
 NOTE
+printf '%s\n' "${unlicensed[@]}" >> "$stage/share/licenses/helpers.txt"
 
 # Pieces the import walk cannot see: WebView2Loader is delay-loaded on
 # MSVC, and the VC++ runtime DLLs ride along so a machine without the
