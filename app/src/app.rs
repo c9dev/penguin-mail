@@ -1601,8 +1601,14 @@ impl App {
             let request = parameter
                 .and_then(|p| p.get::<String>())
                 .and_then(|p| app.issued.borrow().request(&p));
-            if let Some(request) = request {
-                let _ = app.chosen.try_send(request);
+            match request {
+                Some(request) => {
+                    let _ = app.chosen.try_send(request);
+                }
+                // A notification from before a restart, clicked in the
+                // notification centre: its token is gone with the old
+                // process, so the click opens the app rather than nothing.
+                None => app.gio.activate(),
             }
         });
         self.gio.add_action(&action);

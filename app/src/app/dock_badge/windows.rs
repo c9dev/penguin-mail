@@ -7,7 +7,7 @@ use std::cell::{OnceCell, RefCell};
 
 use gtk::prelude::*;
 use mailrs_domain::translate::fill_plural;
-use windows::Win32::Foundation::{COLORREF, HWND, RECT};
+use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::Com::{
     CLSCTX_ALL, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
@@ -16,11 +16,7 @@ use windows::Win32::UI::Shell::{ITaskbarList3, TaskbarList};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateIconIndirect, DestroyIcon, GetSystemMetrics, HICON, ICONINFO, SM_CXSMICON,
 };
-use windows::core::{HSTRING, PCWSTR, w};
-
-/// The beak's orange, as Windows colors want it: blue, green, red.
-const ORANGE: COLORREF = COLORREF(0x000C_66E8);
-const WHITE: COLORREF = COLORREF(0x00FF_FFFF);
+use windows::core::{HSTRING, PCWSTR};
 
 pub(in crate::app) struct Badge {
     /// The taskbar list, made at the first count: COM and the shell
@@ -138,67 +134,36 @@ fn toplevels() -> Vec<HWND> {
         .collect()
 }
 
-/// An icon-sized orange square with `unread` in white, drawn small like
-/// the unread dot on the app's own icon. Counts past 99 say 99+.
+/// The overlay icon: [`badge_pixels`] in a 32-bit icon, whose alpha
+/// leaves the corners of the round badge transparent.
 unsafe fn count_icon(unread: i64) -> HICON {
     let size = unsafe { GetSystemMetrics(SM_CXSMICON) }.max(16);
-    let size_y = size as usize;
-    let text = if unread > 99 {
-        "99+".to_string()
-    } else {
-        unread.to_string()
+    let Some(pixels) = badge_pixels(unread, size) else {
+        return HICON::default();
     };
     unsafe {
-        let screen = GetDC(None);
-        let dc = CreateCompatibleDC(Some(screen));
-        let color = CreateCompatibleBitmap(screen, size, size);
-        let old_bitmap = SelectObject(dc, color.into());
-        let brush = CreateSolidBrush(ORANGE);
-        let square = RECT {
-            left: 0,
-            top: 0,
-            right: size,
-            bottom: size,
+        let info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: size,
+                // Negative: the rows run top to bottom, as cairo's do.
+                biHeight: -size,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            },
+            ..Default::default()
         };
-        FillRect(dc, &square, brush);
-        let height = match text.len() {
-            1 => size * 70 / 100,
-            2 => size * 55 / 100,
-            _ => size * 42 / 100,
+        let mut bits: *mut core::ffi::c_void = std::ptr::null_mut();
+        let Ok(color) = CreateDIBSection(None, &info, DIB_RGB_COLORS, &mut bits, None, 0) else {
+            return HICON::default();
         };
-        let font = CreateFontW(
-            -height,
-            0,
-            0,
-            0,
-            FW_BOLD.0 as i32,
-            0,
-            0,
-            0,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS,
-            CLIP_DEFAULT_PRECIS,
-            DEFAULT_QUALITY,
-            DEFAULT_PITCH.0 as u32 | FF_DONTCARE.0 as u32,
-            w!("Segoe UI"),
-        );
-        let old_font = SelectObject(dc, font.into());
-        SetBkMode(dc, TRANSPARENT);
-        SetTextColor(dc, WHITE);
-        let mut square_text = square;
-        let mut wide: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
-        DrawTextW(
-            dc,
-            &mut wide,
-            &mut square_text,
-            DT_CENTER | DT_VCENTER | DT_SINGLELINE,
-        );
-        SelectObject(dc, old_font);
-        // A bitmap still selected into a DC is not freed by DeleteObject.
-        SelectObject(dc, old_bitmap);
-        // The AND mask is all zeros: the square draws opaque everywhere.
+        std::ptr::copy_nonoverlapping(pixels.as_ptr(), bits.cast::<u8>(), pixels.len());
+        // With a 32-bit color bitmap Windows draws by its alpha; the AND
+        // mask must still exist, so it is all zeros.
         let row = ((size + 15) / 16) as usize * 2;
-        let zeros = vec![0u8; row * size_y];
+        let zeros = vec![0u8; row * size as usize];
         let mask = CreateBitmap(
             size,
             size,
@@ -206,20 +171,101 @@ unsafe fn count_icon(unread: i64) -> HICON {
             1,
             Some(zeros.as_ptr() as *const core::ffi::c_void),
         );
-        let info = ICONINFO {
+        let icon_info = ICONINFO {
             fIcon: true.into(),
             xHotspot: 0,
             yHotspot: 0,
             hbmMask: mask,
             hbmColor: color,
         };
-        let icon = CreateIconIndirect(&info).unwrap_or_default();
+        let icon = CreateIconIndirect(&icon_info).unwrap_or_default();
         let _ = DeleteObject(mask.into());
         let _ = DeleteObject(color.into());
-        let _ = DeleteObject(font.into());
-        let _ = DeleteObject(brush.into());
-        let _ = DeleteDC(dc);
-        ReleaseDC(None, screen);
         icon
+    }
+}
+
+/// A round orange badge with a white rim and `unread` in white, `size`
+/// pixels square, as straight-alpha BGRA rows for a Windows icon. Counts
+/// past 99 say 99+.
+fn badge_pixels(unread: i64, size: i32) -> Option<Vec<u8>> {
+    use gtk::cairo;
+    let text = if unread > 99 {
+        "99+".to_string()
+    } else {
+        unread.to_string()
+    };
+    let mut surface = cairo::ImageSurface::create(cairo::Format::ARgb32, size, size).ok()?;
+    {
+        let cr = cairo::Context::new(&surface).ok()?;
+        let side = f64::from(size);
+        let middle = side / 2.0;
+        // The white rim keeps the badge apart from the envelope under it.
+        cr.arc(middle, middle, middle, 0.0, std::f64::consts::TAU);
+        cr.set_source_rgb(1.0, 1.0, 1.0);
+        cr.fill().ok()?;
+        cr.arc(middle, middle, middle - (side / 16.0).max(1.0), 0.0, std::f64::consts::TAU);
+        // The beak's orange.
+        cr.set_source_rgb(0.91, 0.40, 0.05);
+        cr.fill().ok()?;
+        cr.select_font_face("Segoe UI", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
+        let mut options = cairo::FontOptions::new().ok()?;
+        // Grey antialiasing: ClearType's colored fringes show on a badge.
+        options.set_antialias(cairo::Antialias::Gray);
+        cr.set_font_options(&options);
+        cr.set_font_size(side * if text.len() == 1 { 0.72 } else { 0.56 });
+        let mut extents = cr.text_extents(&text).ok()?;
+        let room = side * 0.78;
+        if extents.width() > room {
+            cr.set_font_size(side * 0.56 * room / extents.width());
+            extents = cr.text_extents(&text).ok()?;
+        }
+        cr.move_to(
+            middle - extents.width() / 2.0 - extents.x_bearing(),
+            middle - extents.height() / 2.0 - extents.y_bearing(),
+        );
+        cr.set_source_rgb(1.0, 1.0, 1.0);
+        cr.show_text(&text).ok()?;
+    }
+    surface.flush();
+    let stride = surface.stride() as usize;
+    let width = size as usize * 4;
+    let data = surface.data().ok()?;
+    let mut pixels = Vec::with_capacity(width * size as usize);
+    for row in data.chunks(stride).take(size as usize) {
+        // cairo's pixels are premultiplied; an icon's are not.
+        for pixel in row[..width].chunks_exact(4) {
+            let alpha = pixel[3];
+            let straight = |c: u8| match alpha {
+                0 => 0,
+                a => ((u16::from(c) * 255 + u16::from(a) / 2) / u16::from(a)).min(255) as u8,
+            };
+            pixels.extend([straight(pixel[0]), straight(pixel[1]), straight(pixel[2]), alpha]);
+        }
+    }
+    Some(pixels)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::badge_pixels;
+
+    #[test]
+    fn the_badge_is_round_and_carries_the_count() {
+        let size = 32;
+        let pixels = badge_pixels(7, size).expect("cairo draws");
+        assert_eq!(pixels.len(), (size * size * 4) as usize);
+        let alpha = |x: i32, y: i32| pixels[((y * size + x) * 4 + 3) as usize];
+        // The corners stay clear and the middle is filled.
+        assert_eq!(alpha(0, 0), 0);
+        assert_eq!(alpha(size - 1, size - 1), 0);
+        assert_eq!(alpha(size / 2, size / 2), 255);
+        // Some pixels are white text on the orange.
+        let white = pixels
+            .chunks_exact(4)
+            .filter(|p| p[0] > 230 && p[1] > 230 && p[2] > 230 && p[3] == 255)
+            .count();
+        assert!(white > 10, "{white}");
+        assert!(badge_pixels(1234, 16).is_some());
     }
 }
