@@ -18,9 +18,9 @@ pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
     if packaging.updated_by().is_some() {
         return None;
     }
-    // The Windows installer replaces the app; the Linux tarball never fits.
+    // The Linux tarball never fits Windows.
     if cfg!(windows) {
-        return None;
+        return windows_method(exe);
     }
     // A macOS app is replaced as a signed bundle, never by the Linux installer.
     if exe.parent().is_some_and(|folder| {
@@ -41,6 +41,41 @@ pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
     Some(Method::Local {
         prefix: prefix.to_path_buf(),
     })
+}
+
+/// The Windows installer's update, for any copy but a build tree under a
+/// cargo `target` folder. It reads the path as text, so it answers the same
+/// on every system.
+fn windows_method(exe: &Path) -> Option<Method> {
+    let path = exe.to_string_lossy().to_lowercase().replace('\\', "/");
+    if path.split('/').any(|part| part == "target") {
+        None
+    } else {
+        Some(Method::WindowsInstaller)
+    }
+}
+
+/// Where the files of the update to `version` are kept while it installs.
+pub fn work_dir(version: Version) -> PathBuf {
+    gtk::glib::user_cache_dir()
+        .join(mailrs_sync::config::DIR_NAME)
+        .join("update")
+        .join(version.to_string())
+}
+
+/// The command that installs the downloaded `setup` over this copy without
+/// a window. This copy must quit first: the installer waits for it to
+/// leave and then starts the new one, in the tray when `window_open` is
+/// false.
+pub fn windows_installer(setup: &Path, window_open: bool) -> std::process::Command {
+    let mut command = std::process::Command::new(setup);
+    command.args(["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]);
+    command.arg(if window_open {
+        "/RELAUNCH=window"
+    } else {
+        "/RELAUNCH=background"
+    });
+    command
 }
 
 /// The checksum `SHA256SUMS` gives for one file, in `sha256sum`'s format.
@@ -88,6 +123,11 @@ pub async fn run(
     package: &Path,
     work: &Path,
 ) -> Result<(), Failed> {
+    // The Windows installer cannot run while this copy does, so it starts
+    // as the app quits; see `App::restart_for_update`.
+    if *method == Method::WindowsInstaller {
+        return Ok(());
+    }
     let log = work.join("install.log");
     let fail = |reason: String| Failed {
         reason,
@@ -102,6 +142,7 @@ pub async fn run(
             apt.args(["apt-get", "install", "-y"]).arg(package);
             apt
         }
+        Method::WindowsInstaller => unreachable!("returned above"),
         Method::Local { prefix } => {
             let unpacked = tokio::process::Command::new("tar")
                 .arg("-xzf")
@@ -157,11 +198,16 @@ mod tests {
         );
     }
 
-    #[cfg(windows)]
     #[test]
-    fn a_windows_install_has_no_method() {
-        let exe = Path::new(r"C:\Program Files\Penguin Mail\bin\penguin-mail.exe");
-        assert_eq!(method_for(Packaging::Native, exe), None);
+    fn a_windows_install_updates_through_its_installer() {
+        let exe = Path::new(r"C:\Users\a\AppData\Local\Programs\Penguin Mail\bin\penguin-mail.exe");
+        assert_eq!(windows_method(exe), Some(Method::WindowsInstaller));
+    }
+
+    #[test]
+    fn a_windows_build_tree_never_updates() {
+        let exe = Path::new(r"C:\src\mail\target\release\penguin-mail.exe");
+        assert_eq!(windows_method(exe), None);
     }
 
     #[cfg(not(windows))]

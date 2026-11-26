@@ -162,10 +162,7 @@ impl App {
             files.sums.clone(),
             files.signature.cloned(),
         );
-        let work = glib::user_cache_dir()
-            .join(mailrs_sync::config::DIR_NAME)
-            .join("update")
-            .join(version.to_string());
+        let work = install::work_dir(version);
         self.set_update_state(State::Installing(version));
         let method = updater.method().clone();
         let client = updater.client();
@@ -270,6 +267,17 @@ impl App {
                         app.restart_for_update(asked);
                     }
                 });
+            }
+            Restart::Now if *updater.method() == version::Method::WindowsInstaller => {
+                let State::Installed(version) = updater.state() else {
+                    return;
+                };
+                let setup = install::work_dir(version).join(format!("penguin-mail-{version}-setup.exe"));
+                tracing::info!("handing over to the installer");
+                match install::windows_installer(&setup, window_open).spawn() {
+                    Ok(_) => self.quit(),
+                    Err(err) => tracing::warn!(error = %err, "could not start the installer"),
+                }
             }
             Restart::Now => {
                 let Ok(exe) = crate::exe::launcher() else {
