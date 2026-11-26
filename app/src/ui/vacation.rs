@@ -87,7 +87,7 @@ pub fn present(
             .build();
         choices.append(&link);
         let page = adw::StatusPage::builder()
-            .icon_name("mail-reply-sender-symbolic")
+            .icon_name("penguin-mail-mail-reply-sender-symbolic")
             .title(glib::markup_escape_text(&text).as_str())
             .child(&choices)
             .build();
@@ -190,7 +190,7 @@ pub fn present(
 
 fn problem(message: &str) -> adw::StatusPage {
     adw::StatusPage::builder()
-        .icon_name("dialog-warning-symbolic")
+        .icon_name("penguin-mail-dialog-warning-symbolic")
         .title(gettext("Could Not Load the Automatic Reply"))
         .description(glib::markup_escape_text(message).as_str())
         .build()

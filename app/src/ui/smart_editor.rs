@@ -104,7 +104,7 @@ pub fn present(
     let add = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("list-add-symbolic")
+                .icon_name("penguin-mail-list-add-symbolic")
                 .label(gettext("Add Condition"))
                 .build(),
         )
@@ -272,7 +272,7 @@ pub fn present(
                 previous.set(chosen);
             });
             let remove = gtk::Button::builder()
-                .icon_name("list-remove-symbolic")
+                .icon_name("penguin-mail-list-remove-symbolic")
                 .tooltip_text(gettext("Remove Condition"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])

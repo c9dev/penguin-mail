@@ -618,9 +618,9 @@ pub fn guest_answer_words(guest: &Guest) -> String {
 /// menu button.
 pub fn answer_icon(answer: Option<Answer>) -> &'static str {
     match answer {
-        Some(Answer::Yes) => "object-select-symbolic",
-        Some(Answer::Maybe) => "dialog-question-symbolic",
-        Some(Answer::No) => "process-stop-symbolic",
+        Some(Answer::Yes) => "penguin-mail-object-select-symbolic",
+        Some(Answer::Maybe) => "penguin-mail-dialog-question-symbolic",
+        Some(Answer::No) => "penguin-mail-process-stop-symbolic",
         None => "penguin-mail-waiting-symbolic",
     }
 }
@@ -1230,9 +1230,9 @@ mod tests {
 
     #[test]
     fn answer_icon_names_a_symbolic_icon_for_each_answer() {
-        assert_eq!(answer_icon(Some(Answer::Yes)), "object-select-symbolic");
-        assert_eq!(answer_icon(Some(Answer::Maybe)), "dialog-question-symbolic");
-        assert_eq!(answer_icon(Some(Answer::No)), "process-stop-symbolic");
+        assert_eq!(answer_icon(Some(Answer::Yes)), "penguin-mail-object-select-symbolic");
+        assert_eq!(answer_icon(Some(Answer::Maybe)), "penguin-mail-dialog-question-symbolic");
+        assert_eq!(answer_icon(Some(Answer::No)), "penguin-mail-process-stop-symbolic");
         assert_eq!(answer_icon(None), "penguin-mail-waiting-symbolic");
     }
 

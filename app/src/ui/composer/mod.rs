@@ -383,7 +383,7 @@ impl Composer {
         );
         later.append_section(None, &custom);
         let send_content = adw::ButtonContent::builder()
-            .icon_name("mail-send-symbolic")
+            .icon_name("penguin-mail-mail-send-symbolic")
             .label(gettext("Send"))
             .build();
         let send = adw::SplitButton::builder()
@@ -394,7 +394,7 @@ impl Composer {
             .tooltip_text(gettext("Send (Ctrl+Enter)"))
             .build();
         let attach = gtk::Button::builder()
-            .icon_name("mail-attachment-symbolic")
+            .icon_name("penguin-mail-mail-attachment-symbolic")
             .tooltip_text(gettext("Attach Files (Ctrl+Shift+A)"))
             .build();
         let template_items = gio::Menu::new();
@@ -412,7 +412,7 @@ impl Composer {
         let receipt = Check::new("receipt", draft.receipt);
         let menu = more_menu(&template_menu, has_engine);
         let more = gtk::MenuButton::builder()
-            .icon_name("view-more-symbolic")
+            .icon_name("penguin-mail-view-more-symbolic")
             .tooltip_text(gettext("More"))
             .menu_model(&menu)
             .build();
@@ -622,7 +622,7 @@ impl Composer {
             .build();
         name(&unfold, &gettext("Show trimmed content"));
         let drop_history = gtk::Button::builder()
-            .icon_name("window-close-symbolic")
+            .icon_name("penguin-mail-window-close-symbolic")
             .css_classes(["flat", "circular", "trimmed-drop"])
             .valign(gtk::Align::Center)
             .build();
@@ -1920,7 +1920,7 @@ impl Composer {
         self.send.set_sensitive(false);
         if sending {
             self.send_content.set_label(&gettext("Sending…"));
-            self.send_content.set_icon_name("content-loading-symbolic");
+            self.send_content.set_icon_name("penguin-mail-content-loading-symbolic");
         }
         self.set_content_sensitive(false);
     }
@@ -1928,7 +1928,7 @@ impl Composer {
     /// Undoes [`Composer::show_busy`] once the send or save came back.
     fn show_idle(self: &Rc<Self>) {
         self.send_content.set_label(&gettext("Send"));
-        self.send_content.set_icon_name("mail-send-symbolic");
+        self.send_content.set_icon_name("penguin-mail-mail-send-symbolic");
         self.set_content_sensitive(true);
         self.check_send();
     }
@@ -2216,7 +2216,7 @@ impl Composer {
                 .css_classes(["attachment-row"])
                 .build();
             let details = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-            details.append(&gtk::Image::from_icon_name("mail-attachment-symbolic"));
+            details.append(&gtk::Image::from_icon_name("penguin-mail-mail-attachment-symbolic"));
             details.append(
                 &gtk::Label::builder()
                     .label(&attachment.filename)
@@ -2248,7 +2248,7 @@ impl Composer {
             });
             row.append(&open);
             let remove = gtk::Button::builder()
-                .icon_name("window-close-symbolic")
+                .icon_name("penguin-mail-window-close-symbolic")
                 .css_classes(["flat", "circular"])
                 .tooltip_text(gettext("Remove"))
                 .build();
@@ -2344,17 +2344,17 @@ impl Composer {
         });
         for (icon, tip, kind) in [
             (
-                "view-list-bullet-symbolic",
+                "penguin-mail-view-list-bullet-symbolic",
                 gettext("Bulleted List (Ctrl+Shift+8)"),
                 BlockKind::Bullet,
             ),
             (
-                "view-list-ordered-symbolic",
+                "penguin-mail-view-list-ordered-symbolic",
                 gettext("Numbered List (Ctrl+Shift+7)"),
                 BlockKind::Numbered,
             ),
             (
-                "format-indent-more-symbolic",
+                "penguin-mail-format-indent-more-symbolic",
                 gettext("Quote (Ctrl+Shift+9)"),
                 BlockKind::Quote,
             ),
@@ -2371,7 +2371,7 @@ impl Composer {
         let weak = Rc::downgrade(self);
         button(
             &extras,
-            "image-x-generic-symbolic",
+            "penguin-mail-image-x-generic-symbolic",
             gettext("Insert Image (Ctrl+Shift+P)"),
         )
         .connect_clicked(move |_| {
@@ -2416,7 +2416,7 @@ impl Composer {
         menu.append_section(None, &switch);
         // A letter rather than ⋮, so it does not read as the header's More.
         let more = gtk::MenuButton::builder()
-            .icon_name("format-text-rich-symbolic")
+            .icon_name("penguin-mail-format-text-rich-symbolic")
             .tooltip_text(gettext("More Formatting"))
             .menu_model(&menu)
             .css_classes(["flat"])
@@ -3054,7 +3054,7 @@ fn markdown_bar() -> (gtk::Revealer, gtk::Button, gtk::Button) {
         .valign(gtk::Align::Center)
         .build();
     let close = gtk::Button::builder()
-        .icon_name("window-close-symbolic")
+        .icon_name("penguin-mail-window-close-symbolic")
         .tooltip_text(gettext("Dismiss"))
         .css_classes(["flat", "circular"])
         .valign(gtk::Align::Center)

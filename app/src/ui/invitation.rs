@@ -387,7 +387,7 @@ impl EventCard {
         menu.append(&write_note);
         menu.append(&propose);
         let more = gtk::MenuButton::builder()
-            .icon_name("view-more-symbolic")
+            .icon_name("penguin-mail-view-more-symbolic")
             .tooltip_text(gettext("More Answers"))
             .css_classes(["flat", "circular"])
             .valign(gtk::Align::Center)

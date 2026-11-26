@@ -847,7 +847,7 @@ pub fn new_picture(alt: &str, data: &[u8]) -> gtk::Picture {
     match crate::ui::texture::here(&bytes) {
         Some(texture) => show_picture(&picture, &texture),
         None => {
-            show_placeholder(&picture, "image-x-generic-symbolic");
+            show_placeholder(&picture, "penguin-mail-image-x-generic-symbolic");
             let weak = picture.downgrade();
             glib::spawn_future_local(async move {
                 let texture = crate::ui::texture::decode(bytes).await;
@@ -857,7 +857,7 @@ pub fn new_picture(alt: &str, data: &[u8]) -> gtk::Picture {
                 };
                 match texture {
                     Some(texture) => show_picture(&picture, &texture),
-                    None => show_placeholder(&picture, "image-missing-symbolic"),
+                    None => show_placeholder(&picture, "penguin-mail-image-missing-symbolic"),
                 }
             });
         }
@@ -873,7 +873,7 @@ pub fn new_web_picture(alt: &str, url: &str) -> gtk::Picture {
     let picture = gtk::Picture::new();
     picture.set_can_shrink(true);
     describe(&picture, alt);
-    show_placeholder(&picture, "image-x-generic-symbolic");
+    show_placeholder(&picture, "penguin-mail-image-x-generic-symbolic");
     let weak = picture.downgrade();
     let url = url.to_string();
     glib::spawn_future_local(async move {
@@ -887,7 +887,7 @@ pub fn new_web_picture(alt: &str, url: &str) -> gtk::Picture {
         };
         match texture {
             Some(texture) => show_picture(&picture, &texture),
-            None => show_placeholder(&picture, "image-missing-symbolic"),
+            None => show_placeholder(&picture, "penguin-mail-image-missing-symbolic"),
         }
     });
     picture

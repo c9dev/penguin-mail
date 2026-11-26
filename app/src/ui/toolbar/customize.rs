@@ -174,7 +174,7 @@ pub fn present(app: &Rc<App>, parent: &impl IsA<gtk::Widget>) {
                 }
             });
         }
-        let handle = gtk::Image::from_icon_name("list-drag-handle-symbolic");
+        let handle = gtk::Image::from_icon_name("penguin-mail-list-drag-handle-symbolic");
         handle.set_tooltip_text(Some(&gettext("Drag to Reorder Buttons")));
         row.add_prefix(&handle);
         let source = gtk::DragSource::new();

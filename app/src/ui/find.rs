@@ -125,8 +125,8 @@ impl FindBar {
                 .sensitive(false)
                 .build()
         };
-        let previous = arrow("go-up-symbolic", gettext("Previous Match"));
-        let next = arrow("go-down-symbolic", gettext("Next Match"));
+        let previous = arrow("penguin-mail-go-up-symbolic", gettext("Previous Match"));
+        let next = arrow("penguin-mail-go-down-symbolic", gettext("Next Match"));
         name(&entry, &gettext("Find in the conversation"));
         name(&previous, &gettext("Previous Match"));
         name(&next, &gettext("Next Match"));

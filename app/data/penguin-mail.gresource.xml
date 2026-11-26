@@ -1,33 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/io/github/c9dev/PenguinMail">
-    <file>icons/scalable/actions/penguin-mail-chevron-up-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-alarm-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-all-mail-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-appointment-soon-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-archive-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-audio-volume-muted-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-audio-x-generic-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-avatar-default-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-cake-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-calendar-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-call-start-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-changes-prevent-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-channel-insecure-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-channel-secure-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-chevron-down-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-chevron-right-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-move-up-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-move-down-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-inbox-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-chevron-up-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-cloud-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-computer-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-content-loading-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-dialog-information-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-dialog-password-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-dialog-question-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-dialog-warning-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-document-edit-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-document-open-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-document-print-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-document-save-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-drive-harddisk-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-edit-copy-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-edit-delete-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-edit-find-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-edit-undo-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-emblem-system-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-external-link-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-filter-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-archive-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-all-mail-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-flag-outline-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-flag-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-focus-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-folder-documents-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-folder-saved-search-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-folder-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-format-indent-more-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-format-text-rich-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-globe-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-go-down-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-go-next-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-go-previous-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-go-up-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-image-missing-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-image-x-generic-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-inbox-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-inode-directory-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-link-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-list-add-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-list-drag-handle-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-list-remove-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-lock-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-attachment-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-forward-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-mark-junk-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-mark-notjunk-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-message-new-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-read-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-reply-all-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-reply-sender-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-send-receive-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-send-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mail-unread-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mark-location-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mark-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mask-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-media-playback-stop-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-move-down-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-move-up-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-network-offline-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-network-wireless-offline-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-object-select-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-open-menu-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-outbox-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-outgoing-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-tag-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-link-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-sparkle-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-calendar-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-package-x-generic-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-pan-down-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-pan-end-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-people-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-lock-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-flag-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-flag-outline-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-person-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-focus-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-cake-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-globe-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-preferences-desktop-display-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-preferences-desktop-locale-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-preferences-system-notifications-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-preferences-system-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-process-stop-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-security-high-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-sidebar-show-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-sparkle-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-starred-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-system-search-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-system-users-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-tag-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-text-x-generic-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-user-trash-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-video-x-generic-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-view-list-bullet-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-view-list-ordered-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-view-more-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-view-paged-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-view-refresh-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-view-restore-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-waiting-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-mark-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-cloud-symbolic.svg</file>
-    <file>icons/scalable/actions/penguin-mail-mask-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-weather-overcast-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-window-close-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-window-new-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-x-office-calendar-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-x-office-document-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-x-office-drawing-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-x-office-presentation-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-x-office-spreadsheet-symbolic.svg</file>
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail.svg</file>
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail-symbolic.svg</file>
     <file>icons/16x16/apps/io.github.c9dev.PenguinMail.svg</file>

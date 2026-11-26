@@ -63,7 +63,7 @@ impl Files {
             .max_width_chars(22)
             .build();
         let remove = gtk::Button::builder()
-            .icon_name("window-close-symbolic")
+            .icon_name("penguin-mail-window-close-symbolic")
             .css_classes(["flat", "circular"])
             .build();
         let said = fill(&gettext("Remove {file}"), &[("file", &filename)]);

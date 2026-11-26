@@ -87,7 +87,7 @@ impl Copied {
             if width > 0 {
                 button.set_width_request(width);
             }
-            write(&button, "object-select-symbolic", &gettext("Copied"));
+            write(&button, "penguin-mail-object-select-symbolic", &gettext("Copied"));
         }
         let (weak, saved) = (self.button.clone(), Rc::clone(&self.saved));
         self.hold.restart(HOLD, move || {

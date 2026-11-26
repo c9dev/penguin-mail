@@ -60,7 +60,7 @@ impl UndoPill {
     fn new() -> UndoPill {
         let left = gtk::Label::builder().css_classes(["undo-left"]).build();
         let content = gtk::Box::builder().spacing(8).build();
-        content.append(&gtk::Image::from_icon_name("edit-undo-symbolic"));
+        content.append(&gtk::Image::from_icon_name("penguin-mail-edit-undo-symbolic"));
         content.append(
             &gtk::Label::builder()
                 .label(gettext("Undo Send"))
@@ -136,7 +136,7 @@ impl NextEvent {
         let content = gtk::Box::builder().spacing(8).build();
         content.append(&bar);
         content.append(&lines);
-        content.append(&gtk::Image::from_icon_name("x-office-calendar-symbolic"));
+        content.append(&gtk::Image::from_icon_name("penguin-mail-x-office-calendar-symbolic"));
         let button = gtk::Button::builder()
             .child(&content)
             .css_classes(["next-event"])
@@ -491,12 +491,12 @@ impl Sidebar {
             .build();
         let mut labels = Vec::new();
         let badges = [
-            (Space::Mail, "mail", gettext("Mail"), "mail-unread-symbolic"),
+            (Space::Mail, "mail", gettext("Mail"), "penguin-mail-mail-unread-symbolic"),
             (
                 Space::Calendar,
                 "calendar",
                 gettext("Calendar"),
-                "x-office-calendar-symbolic",
+                "penguin-mail-x-office-calendar-symbolic",
             ),
         ]
         .map(|(space, name, label, icon)| {
@@ -1176,7 +1176,7 @@ impl Sidebar {
                 let mailbox = Mailbox::Smart(smart.clone());
                 if extras.sidebar.visible(&format!("smart:{}", smart.id), true) {
                     let row =
-                        self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
+                        self.add_mailbox(mailbox, &smart.name, "penguin-mail-folder-saved-search-symbolic", 0);
                     smart_menu(&row, &smart.id);
                 }
             }
@@ -1426,7 +1426,7 @@ impl Sidebar {
                     emails: vips.iter().map(|(e, _)| e.clone()).collect(),
                     name: gettext("VIPs"),
                 };
-                let row = self.add_mailbox(everyone, &gettext("VIPs"), "starred-symbolic", 0);
+                let row = self.add_mailbox(everyone, &gettext("VIPs"), "penguin-mail-starred-symbolic", 0);
                 if let Some(icon) = row.child().and_then(|c| c.first_child()) {
                     icon.add_css_class("sidebar-vip");
                 }
@@ -1435,7 +1435,7 @@ impl Sidebar {
                         emails: vec![email.clone()],
                         name: name.clone(),
                     };
-                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let row = self.add_mailbox(person, name, "penguin-mail-avatar-default-symbolic", 1);
                     let menu = gio::Menu::new();
                     let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
                     item.set_action_and_target_value(
@@ -1483,7 +1483,7 @@ impl Sidebar {
                 self.add_mailbox(
                     Mailbox::Reminders,
                     &gettext("Remind Me"),
-                    "alarm-symbolic",
+                    "penguin-mail-alarm-symbolic",
                     0,
                 );
             }
@@ -1491,7 +1491,7 @@ impl Sidebar {
                 self.add_mailbox(
                     Mailbox::FollowUp,
                     &gettext("Follow Up"),
-                    "appointment-soon-symbolic",
+                    "penguin-mail-appointment-soon-symbolic",
                     0,
                 );
             }
@@ -1528,7 +1528,7 @@ impl Sidebar {
     /// the folders under it nest, but nothing selects or opens it and it
     /// takes no dropped mail.
     fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) -> gtk::ListBoxRow {
-        let row = self.add_row(mailbox, name, "folder-symbolic", depth, false);
+        let row = self.add_row(mailbox, name, "penguin-mail-folder-symbolic", depth, false);
         row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
         // The keys stop on it and Enter opens its menu (`row_keys`).
         row.add_css_class(GROUP_CLASS);
@@ -2011,13 +2011,13 @@ pub fn mailbox_choices(
             "reminders",
             Mailbox::Reminders,
             gettext("Remind Me"),
-            "alarm-symbolic",
+            "penguin-mail-alarm-symbolic",
         ),
         (
             "follow-up",
             Mailbox::FollowUp,
             gettext("Follow Up"),
-            "appointment-soon-symbolic",
+            "penguin-mail-appointment-soon-symbolic",
         ),
     ] {
         add(key.into(), mailbox, name, icon);
@@ -2030,7 +2030,7 @@ pub fn mailbox_choices(
                 name: gettext("VIPs"),
             },
             gettext("VIPs"),
-            "starred-symbolic",
+            "penguin-mail-starred-symbolic",
         );
     }
     for folder in smart {
@@ -2038,7 +2038,7 @@ pub fn mailbox_choices(
             format!("smart:{}", folder.id),
             Mailbox::Smart(folder.clone()),
             folder.name.clone(),
-            "folder-saved-search-symbolic",
+            "penguin-mail-folder-saved-search-symbolic",
         );
     }
     for (account, labels) in accounts {
@@ -2081,7 +2081,7 @@ pub fn mailbox_choices(
                     name: label.name.replace('/', " › "),
                 },
                 label.name.clone(),
-                "folder-symbolic",
+                "penguin-mail-folder-symbolic",
             );
         }
     }
@@ -2184,7 +2184,7 @@ fn label_icon(offers: Offers) -> &'static str {
     if offers.labels {
         "penguin-mail-tag-symbolic"
     } else {
-        "folder-symbolic"
+        "penguin-mail-folder-symbolic"
     }
 }
 
@@ -2285,7 +2285,7 @@ fn row_menu(row: &gtk::ListBoxRow, menu: &gio::Menu, filing: Filing, name: &str)
         return;
     };
     let options = gtk::MenuButton::builder()
-        .icon_name("view-more-symbolic")
+        .icon_name("penguin-mail-view-more-symbolic")
         .css_classes(["flat", "circular", "label-options"])
         .valign(gtk::Align::Center)
         .halign(gtk::Align::End)
@@ -2552,7 +2552,7 @@ fn heading(
     danger.append_item(&item(&gettext("Remove Account…"), "win.account-remove"));
     menu.append_section(None, &danger);
     let options = gtk::MenuButton::builder()
-        .icon_name("view-more-symbolic")
+        .icon_name("penguin-mail-view-more-symbolic")
         .menu_model(&menu)
         .css_classes(["flat", "circular", "account-options"])
         .valign(gtk::Align::Center)
@@ -2618,12 +2618,12 @@ fn heading(
 fn status_of(account: &Account) -> Option<(&'static str, String)> {
     match account.state {
         AccountState::NeedsReauth => Some((
-            "dialog-warning-symbolic",
+            "penguin-mail-dialog-warning-symbolic",
             gettext("Sign in again to keep syncing"),
         )),
-        AccountState::Offline => Some(("network-offline-symbolic", gettext("Offline"))),
+        AccountState::Offline => Some(("penguin-mail-network-offline-symbolic", gettext("Offline"))),
         AccountState::BackingOff => Some((
-            "network-offline-symbolic",
+            "penguin-mail-network-offline-symbolic",
             fill(
                 &gettext("{provider} is not responding; retrying"),
                 &[(
@@ -2635,18 +2635,18 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
         // A keyring read that never answers, often an unlock prompt
         // nobody can see, is no fault of the provider's.
         AccountState::WaitingForKeyring => Some((
-            "dialog-password-symbolic",
+            "penguin-mail-dialog-password-symbolic",
             gettext("The keyring is not responding; retrying"),
         )),
         AccountState::Bootstrapping => {
-            Some(("mail-send-receive-symbolic", gettext("Downloading mail")))
+            Some(("penguin-mail-mail-send-receive-symbolic", gettext("Downloading mail")))
         }
         AccountState::Stopped => Some((
-            "dialog-warning-symbolic",
+            "penguin-mail-dialog-warning-symbolic",
             gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
         )),
         AccountState::DownloadLimit => Some((
-            "network-offline-symbolic",
+            "penguin-mail-network-offline-symbolic",
             // Translators: the line beside a Gmail account when Gmail
             // stopped handing out mail for the day.
             gettext(
@@ -2776,7 +2776,7 @@ mod tests {
                 labels: false,
                 ..Offers::EVERYTHING
             }),
-            "folder-symbolic"
+            "penguin-mail-folder-symbolic"
         );
     }
 
@@ -2826,7 +2826,7 @@ mod tests {
         assert_eq!(
             status_of(&waiting),
             Some((
-                "dialog-password-symbolic",
+                "penguin-mail-dialog-password-symbolic",
                 "The keyring is not responding; retrying".to_string()
             ))
         );
@@ -3154,7 +3154,7 @@ pub(crate) mod checks {
         let window = adw::Window::new();
         window.set_content(Some(&sidebar.page));
         let menu = gtk::MenuButton::builder()
-            .icon_name("open-menu-symbolic")
+            .icon_name("penguin-mail-open-menu-symbolic")
             .build();
         sidebar.header.pack_end(&menu);
         let titles = sidebar.switch.parent().unwrap();

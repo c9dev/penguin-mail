@@ -40,7 +40,7 @@ pub fn group(app: &Rc<App>, dialog: &adw::ToastOverlay) -> adw::PreferencesGroup
             .build(),
     );
     let add = gtk::Button::builder()
-        .icon_name("list-add-symbolic")
+        .icon_name("penguin-mail-list-add-symbolic")
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .tooltip_text(gettext("Add Server"))
@@ -121,7 +121,7 @@ impl List {
             &fill(&gettext("Use {server}"), &[("server", &server.name)]),
         );
         let edit = gtk::Button::builder()
-            .icon_name("document-edit-symbolic")
+            .icon_name("penguin-mail-document-edit-symbolic")
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .tooltip_text(gettext("Edit"))
@@ -131,7 +131,7 @@ impl List {
             &fill(&gettext("Edit {server}"), &[("server", &server.name)]),
         );
         let remove = gtk::Button::builder()
-            .icon_name("user-trash-symbolic")
+            .icon_name("penguin-mail-user-trash-symbolic")
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .tooltip_text(gettext("Remove"))

@@ -256,7 +256,7 @@ pub fn name(widget: &impl IsA<gtk::Widget>, spoken: &str) {
 pub fn external_link_content(words: &str, spacing: i32) -> gtk::Box {
     let content = gtk::Box::builder().spacing(spacing).build();
     content.append(&gtk::Label::new(Some(words)));
-    content.append(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+    content.append(&gtk::Image::from_icon_name("penguin-mail-external-link-symbolic"));
     content
 }
 

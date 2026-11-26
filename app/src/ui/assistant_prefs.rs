@@ -358,7 +358,7 @@ fn always_allowed(app: &Rc<App>) -> adw::PreferencesGroup {
             .subtitle(glib::markup_escape_text(source))
             .build();
         let remove = gtk::Button::builder()
-            .icon_name("user-trash-symbolic")
+            .icon_name("penguin-mail-user-trash-symbolic")
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .tooltip_text(gettext("Ask Again"))
@@ -868,7 +868,7 @@ fn model_item(model: &Model, chosen: bool) -> adw::ActionRow {
         );
     }
     if chosen {
-        row.add_suffix(&gtk::Image::from_icon_name("object-select-symbolic"));
+        row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-object-select-symbolic"));
     }
     row
 }

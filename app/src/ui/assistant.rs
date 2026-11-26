@@ -124,10 +124,10 @@ impl AssistantPane {
             .valign(gtk::Align::Center)
             .build();
         model_capsule.append(&model);
-        let detach = controls::icon_button("window-new-symbolic", &gettext("Detach"));
-        let close = controls::icon_button("window-close-symbolic", &gettext("Close"));
+        let detach = controls::icon_button("penguin-mail-window-new-symbolic", &gettext("Detach"));
+        let close = controls::icon_button("penguin-mail-window-close-symbolic", &gettext("Close"));
         close.set_visible(false);
-        let new_chat = controls::icon_button("list-add-symbolic", &gettext("New Chat"));
+        let new_chat = controls::icon_button("penguin-mail-list-add-symbolic", &gettext("New Chat"));
         let header = adw::HeaderBar::builder()
             .show_title(false)
             .show_start_title_buttons(false)
@@ -179,7 +179,7 @@ impl AssistantPane {
 
         let (field, input) = question_box();
         let send = gtk::Button::builder()
-            .icon_name("go-up-symbolic")
+            .icon_name("penguin-mail-go-up-symbolic")
             .tooltip_text(gettext("Send"))
             .css_classes(["circular", "suggested-action"])
             // Stays by the last line as the question grows.
@@ -188,7 +188,7 @@ impl AssistantPane {
         crate::ui::name(&send, &gettext("Send"));
         let files = files::Files::new();
         let attach = gtk::Button::builder()
-            .icon_name("mail-attachment-symbolic")
+            .icon_name("penguin-mail-mail-attachment-symbolic")
             .css_classes(["flat", "circular"])
             .tooltip_text(gettext("Attach"))
             .build();
@@ -580,9 +580,9 @@ impl AssistantPane {
             self.send.remove_css_class("assistant-stop");
         }
         self.send.set_icon_name(if running {
-            "media-playback-stop-symbolic"
+            "penguin-mail-media-playback-stop-symbolic"
         } else {
-            "go-up-symbolic"
+            "penguin-mail-go-up-symbolic"
         });
         let said = match running {
             true => gettext("Stop"),
@@ -1118,8 +1118,8 @@ impl Detail {
                 return;
             }
             Mark::Thought => "penguin-mail-sparkle-symbolic",
-            Mark::Done => "object-select-symbolic",
-            Mark::Failed => "dialog-warning-symbolic",
+            Mark::Done => "penguin-mail-object-select-symbolic",
+            Mark::Failed => "penguin-mail-dialog-warning-symbolic",
         };
         let image = gtk::Image::from_icon_name(icon);
         // Sized to the row's smaller text rather than the usual 16 px.

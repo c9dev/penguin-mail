@@ -26,7 +26,7 @@ pub fn calendar_page(
 ) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("Calendar"))
-        .icon_name("x-office-calendar-symbolic")
+        .icon_name("penguin-mail-x-office-calendar-symbolic")
         .name("calendar")
         .build();
     let missed = |id, missing| app.core.missed(id, missing);

@@ -677,7 +677,7 @@ fn api_library_links() -> gtk::Box {
     ));
     for (name, url) in own_project::API_LIBRARY {
         let content = adw::ButtonContent::builder()
-            .icon_name("adw-external-link-symbolic")
+            .icon_name("penguin-mail-external-link-symbolic")
             .label(name)
             .build();
         let link = gtk::LinkButton::builder()
@@ -694,7 +694,7 @@ fn api_library_links() -> gtk::Box {
 fn help_link(step: Step) -> gtk::LinkButton {
     let text = gettext("Steps look different?");
     let content = adw::ButtonContent::builder()
-        .icon_name("adw-external-link-symbolic")
+        .icon_name("penguin-mail-external-link-symbolic")
         .label(&text)
         .build();
     let link = gtk::LinkButton::builder()
@@ -762,7 +762,7 @@ fn step_page(step: Step) -> StepPage {
     let open = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("adw-external-link-symbolic")
+                .icon_name("penguin-mail-external-link-symbolic")
                 .label(&open_text)
                 .build(),
         )
@@ -804,7 +804,7 @@ fn file_page() -> FilePage {
     let words = own_project::words(Step::File);
     let plain = plain_page(Step::File, &words.heading);
     let icon = gtk::Image::builder()
-        .icon_name("document-save-symbolic")
+        .icon_name("penguin-mail-document-save-symbolic")
         .pixel_size(44)
         .css_classes(["own-drop-icon"])
         .build();
@@ -871,7 +871,7 @@ fn file_page() -> FilePage {
         .css_classes(["own-ready"])
         .build();
     let tick = gtk::Image::builder()
-        .icon_name("object-select-symbolic")
+        .icon_name("penguin-mail-object-select-symbolic")
         .css_classes(["own-ready-icon"])
         .build();
     // The words are ours; nothing from the file reaches them.

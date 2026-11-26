@@ -35,7 +35,7 @@ impl FollowUpBanner {
             .valign(gtk::Align::Center)
             .build();
         let close = gtk::Button::builder()
-            .icon_name("window-close-symbolic")
+            .icon_name("penguin-mail-window-close-symbolic")
             .tooltip_text(gettext("Hide Until Next Launch"))
             .valign(gtk::Align::Center)
             .css_classes(["flat", "circular"])
@@ -46,7 +46,7 @@ impl FollowUpBanner {
             .css_classes(["follow-up-banner"])
             .accessible_role(gtk::AccessibleRole::Group)
             .build();
-        content.append(&gtk::Image::from_icon_name("mail-reply-sender-symbolic"));
+        content.append(&gtk::Image::from_icon_name("penguin-mail-mail-reply-sender-symbolic"));
         content.append(&title);
         content.append(&review);
         content.append(&close);

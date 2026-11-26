@@ -412,7 +412,7 @@ fn help_card(heading: &str, body: &str, link: Option<&add_account::Link>) -> gtk
     card.append(&label(body, &["switch-help-body", "dim-label"]));
     if let Some(link) = link {
         let content = adw::ButtonContent::builder()
-            .icon_name("adw-external-link-symbolic")
+            .icon_name("penguin-mail-external-link-symbolic")
             .label(&link.label)
             .build();
         let button = gtk::LinkButton::builder()

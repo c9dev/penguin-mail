@@ -417,7 +417,7 @@ impl GoaPage {
                 ))
                 .activatable(true)
                 .build();
-            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+            row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
             let (weak, other) = (Rc::downgrade(self), other.clone());
             row.connect_activated(move |_| {
                 if let Some(this) = weak.upgrade() {

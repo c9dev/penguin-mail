@@ -97,7 +97,7 @@ pub const LAYOUT: [(Section, &[Place]); 2] = [
 pub fn outbox_icon(stuck: i64) -> &'static str {
     match stuck {
         ..=0 => "penguin-mail-outgoing-symbolic",
-        _ => "dialog-warning-symbolic",
+        _ => "penguin-mail-dialog-warning-symbolic",
     }
 }
 
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn an_outbox_holding_a_failed_send_shows_a_warning() {
-        assert_eq!(outbox_icon(2), "dialog-warning-symbolic");
+        assert_eq!(outbox_icon(2), "penguin-mail-dialog-warning-symbolic");
     }
 
     #[test]

@@ -159,7 +159,7 @@ impl About {
             if let Some(subtitle) = subtitle {
                 row.set_subtitle(subtitle);
             }
-            row.add_suffix(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
+            row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-external-link-symbolic"));
             row.connect_activated(move |row| {
                 let window = row.root().and_downcast::<gtk::Window>();
                 gtk::UriLauncher::new(&uri).launch(

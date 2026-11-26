@@ -1428,7 +1428,7 @@ impl Editor {
                 .build();
             if !guest.organizer {
                 let remove = gtk::Button::builder()
-                    .icon_name("window-close-symbolic")
+                    .icon_name("penguin-mail-window-close-symbolic")
                     .css_classes(["flat"])
                     .valign(gtk::Align::Center)
                     .build();
@@ -1512,7 +1512,7 @@ impl Editor {
         }
         let add = adw::ButtonRow::builder()
             .title(gettext("Add Reminder"))
-            .start_icon_name("list-add-symbolic")
+            .start_icon_name("penguin-mail-list-add-symbolic")
             .build();
         let weak = Rc::downgrade(self);
         add.connect_activated(move |_| {
@@ -1550,7 +1550,7 @@ impl Editor {
             row.set_selected(i as u32);
         }
         let remove = gtk::Button::builder()
-            .icon_name("window-close-symbolic")
+            .icon_name("penguin-mail-window-close-symbolic")
             .css_classes(["flat"])
             .valign(gtk::Align::Center)
             .build();
@@ -1630,7 +1630,7 @@ impl Editor {
         let attach = gtk::Button::builder()
             .child(
                 &adw::ButtonContent::builder()
-                    .icon_name("mail-attachment-symbolic")
+                    .icon_name("penguin-mail-mail-attachment-symbolic")
                     .label(gettext("Attach File…"))
                     .build(),
             )
@@ -1723,7 +1723,7 @@ impl Editor {
             }
             if can_attach {
                 let remove = gtk::Button::builder()
-                    .icon_name("window-close-symbolic")
+                    .icon_name("penguin-mail-window-close-symbolic")
                     .css_classes(["flat"])
                     .valign(gtk::Align::Center)
                     .tooltip_text(gettext("Remove"))
@@ -1755,7 +1755,7 @@ impl Editor {
         for (id, title, bar) in uploading {
             let row = ui::plain_row().title_lines(1).build();
             row.set_title(&title);
-            let icon = gtk::Image::from_icon_name("mail-attachment-symbolic");
+            let icon = gtk::Image::from_icon_name("penguin-mail-mail-attachment-symbolic");
             icon.add_css_class("dim-label");
             row.add_prefix(&icon);
             // The bar outlives the row a rebuild drops, since the timer
@@ -1765,7 +1765,7 @@ impl Editor {
             }
             row.add_suffix(&bar);
             let cancel = gtk::Button::builder()
-                .icon_name("process-stop-symbolic")
+                .icon_name("penguin-mail-process-stop-symbolic")
                 .css_classes(["flat"])
                 .valign(gtk::Align::Center)
                 .tooltip_text(gettext("Cancel Upload"))

@@ -117,7 +117,7 @@ impl StorageBand {
             .valign(gtk::Align::Center)
             .build();
         let close = gtk::Button::builder()
-            .icon_name("window-close-symbolic")
+            .icon_name("penguin-mail-window-close-symbolic")
             .tooltip_text(gettext("Hide Until Next Launch"))
             .valign(gtk::Align::Center)
             .css_classes(["flat", "circular"])
@@ -141,7 +141,7 @@ impl StorageBand {
             .build();
         words.append(&title);
         words.append(&review);
-        content.append(&gtk::Image::from_icon_name("drive-harddisk-symbolic"));
+        content.append(&gtk::Image::from_icon_name("penguin-mail-drive-harddisk-symbolic"));
         content.append(&words);
         content.append(&close);
         let revealer = gtk::Revealer::builder()

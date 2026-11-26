@@ -141,7 +141,7 @@ fn reading_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("Reading"))
         .name("reading")
-        .icon_name("view-paged-symbolic")
+        .icon_name("penguin-mail-view-paged-symbolic")
         .build();
     let reading = adw::PreferencesGroup::builder()
         .title(gettext("Inbox"))
@@ -241,7 +241,7 @@ fn appearance_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("Appearance"))
         .name("appearance")
-        .icon_name("preferences-desktop-display-symbolic")
+        .icon_name("penguin-mail-preferences-desktop-display-symbolic")
         .build();
     let appearance = adw::PreferencesGroup::new();
     appearance.add(&combo(
@@ -314,7 +314,7 @@ fn notifications_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPag
     let page = adw::PreferencesPage::builder()
         .title(gettext("Notifications"))
         .name("notifications")
-        .icon_name("preferences-system-notifications-symbolic")
+        .icon_name("penguin-mail-preferences-system-notifications-symbolic")
         .build();
     let notifications = adw::PreferencesGroup::builder()
         .title(gettext("Notifications"))
@@ -475,7 +475,7 @@ fn accounts_page(
     let page = adw::PreferencesPage::builder()
         .title(gettext("Accounts"))
         .name("accounts")
-        .icon_name("avatar-default-symbolic")
+        .icon_name("penguin-mail-avatar-default-symbolic")
         .build();
     let defaults = accounts::Defaults::new(app);
     page.add(&defaults.group);
@@ -752,7 +752,7 @@ fn writing_page(
     let page = adw::PreferencesPage::builder()
         .name("writing")
         .title(gettext("Writing"))
-        .icon_name("document-edit-symbolic")
+        .icon_name("penguin-mail-document-edit-symbolic")
         .build();
     if accounts.is_empty() {
         let empty = adw::PreferencesGroup::builder()
@@ -1091,7 +1091,7 @@ fn sync_page(
         .title(gettext("Sync"))
         // Calls that open Sync use this name.
         .name("sync")
-        .icon_name("mail-send-receive-symbolic")
+        .icon_name("penguin-mail-mail-send-receive-symbolic")
         .build();
     let current = pending.borrow().clone();
 
@@ -1307,7 +1307,7 @@ fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
                 })
                 .build();
             let remove = gtk::Button::builder()
-                .icon_name("user-trash-symbolic")
+                .icon_name("penguin-mail-user-trash-symbolic")
                 .tooltip_text(gettext("Stop Loading Images from This Sender"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])

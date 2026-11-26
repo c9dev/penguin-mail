@@ -446,11 +446,11 @@ impl MainWindow {
 
         let header = adw::HeaderBar::new();
         let save = gtk::Button::builder()
-            .icon_name("document-save-symbolic")
+            .icon_name("penguin-mail-document-save-symbolic")
             .tooltip_text(gettext("Save As…"))
             .build();
         let open = gtk::Button::builder()
-            .icon_name("document-open-symbolic")
+            .icon_name("penguin-mail-document-open-symbolic")
             .tooltip_text(gettext("Open in Another Program"))
             .build();
         crate::ui::name(&save, &gettext("Save As…"));

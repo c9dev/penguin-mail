@@ -810,7 +810,7 @@ impl CalendarSidebar {
     /// shows only while the store holds the message the invitation came
     /// in; without it the card stays, since it still opens the event.
     fn waiting_row(&self, w: &Waiting) -> gtk::ListBoxRow {
-        let icon = gtk::Image::from_icon_name("mail-unread-symbolic");
+        let icon = gtk::Image::from_icon_name("penguin-mail-mail-unread-symbolic");
         icon.add_css_class("waiting-icon");
         icon.set_pixel_size(16);
         let title = gtk::Label::builder()
@@ -1178,7 +1178,7 @@ impl CalendarSidebar {
             row.append(&lock);
         }
         let options = gtk::MenuButton::builder()
-            .icon_name("view-more-symbolic")
+            .icon_name("penguin-mail-view-more-symbolic")
             .menu_model(&calendar_menu(
                 account_id,
                 calendar,
@@ -1308,7 +1308,7 @@ fn account_menu(account: &SidebarAccount) -> gtk::MenuButton {
         menu.append_section(None, &section);
     }
     let options = gtk::MenuButton::builder()
-        .icon_name("view-more-symbolic")
+        .icon_name("penguin-mail-view-more-symbolic")
         .menu_model(&menu)
         .css_classes(["flat", "circular", "calendar-options"])
         .valign(gtk::Align::Center)
@@ -1451,7 +1451,7 @@ fn add_menu(accounts: &[(AccountId, String, bool)]) -> gtk::MenuButton {
     let content = gtk::Box::builder().spacing(6).build();
     content.append(
         &gtk::Image::builder()
-            .icon_name("list-add-symbolic")
+            .icon_name("penguin-mail-list-add-symbolic")
             .pixel_size(14)
             .build(),
     );

@@ -51,7 +51,7 @@ pub fn widen_value(row: &adw::ComboRow) {
         };
         let label = gtk::Label::builder().xalign(0.0).hexpand(true).build();
         let check = gtk::Image::builder()
-            .icon_name("object-select-symbolic")
+            .icon_name("penguin-mail-object-select-symbolic")
             .accessible_role(gtk::AccessibleRole::Presentation)
             .build();
         let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);

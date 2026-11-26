@@ -58,7 +58,7 @@ pub fn account_row(app: &Rc<App>, account: &Account, route: Option<MailRoute>) -
             .css_classes(["dim-label"])
             .build();
         let content = adw::ButtonContent::builder()
-            .icon_name("adw-external-link-symbolic")
+            .icon_name("penguin-mail-external-link-symbolic")
             .label(crate::offered::settings_link_label())
             .build();
         let link = gtk::LinkButton::builder()
@@ -147,7 +147,7 @@ impl List {
                 }
             });
             if self.editable {
-                row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+                row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
             }
             group.add_row(&row);
             self.rows.borrow_mut().push(row);

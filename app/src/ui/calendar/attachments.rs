@@ -51,13 +51,13 @@ pub fn icon_name(mime: &str) -> &'static str {
     let (top, sub) = mime.split_once('/').unwrap_or((mime.as_str(), ""));
     let has = |words: &[&str]| words.iter().any(|w| sub.contains(w));
     if top == "application" && has(&["google-apps.folder"]) {
-        "inode-directory-symbolic"
+        "penguin-mail-inode-directory-symbolic"
     } else if top == "application" && has(&["google-apps.drawing"]) {
-        "x-office-drawing-symbolic"
+        "penguin-mail-x-office-drawing-symbolic"
     } else if has(&["spreadsheet", "ms-excel"]) || mime == "text/csv" {
-        "x-office-spreadsheet-symbolic"
+        "penguin-mail-x-office-spreadsheet-symbolic"
     } else if has(&["presentation", "ms-powerpoint"]) {
-        "x-office-presentation-symbolic"
+        "penguin-mail-x-office-presentation-symbolic"
     } else if top == "application"
         && (has(&[
             "google-apps.document",
@@ -66,18 +66,18 @@ pub fn icon_name(mime: &str) -> &'static str {
             "msword",
         ]) || sub == "pdf")
     {
-        "x-office-document-symbolic"
+        "penguin-mail-x-office-document-symbolic"
     } else if top == "application"
         && has(&["zip", "gzip", "x-tar", "x-7z", "x-rar", "x-bzip", "x-xz"])
     {
-        "package-x-generic-symbolic"
+        "penguin-mail-package-x-generic-symbolic"
     } else {
         match top {
-            "image" => "image-x-generic-symbolic",
-            "audio" => "audio-x-generic-symbolic",
-            "video" => "video-x-generic-symbolic",
-            "text" => "text-x-generic-symbolic",
-            _ => "mail-attachment-symbolic",
+            "image" => "penguin-mail-image-x-generic-symbolic",
+            "audio" => "penguin-mail-audio-x-generic-symbolic",
+            "video" => "penguin-mail-video-x-generic-symbolic",
+            "text" => "penguin-mail-text-x-generic-symbolic",
+            _ => "penguin-mail-mail-attachment-symbolic",
         }
     }
 }
@@ -200,66 +200,66 @@ mod tests {
     fn google_files_take_the_office_icon_of_their_kind() {
         assert_eq!(
             icon_name("application/vnd.google-apps.document"),
-            "x-office-document-symbolic"
+            "penguin-mail-x-office-document-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.google-apps.spreadsheet"),
-            "x-office-spreadsheet-symbolic"
+            "penguin-mail-x-office-spreadsheet-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.google-apps.presentation"),
-            "x-office-presentation-symbolic"
+            "penguin-mail-x-office-presentation-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.google-apps.drawing"),
-            "x-office-drawing-symbolic"
+            "penguin-mail-x-office-drawing-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.google-apps.folder"),
-            "inode-directory-symbolic"
+            "penguin-mail-inode-directory-symbolic"
         );
     }
 
     #[test]
     fn office_files_take_the_same_icons_as_googles() {
-        assert_eq!(icon_name("application/pdf"), "x-office-document-symbolic");
+        assert_eq!(icon_name("application/pdf"), "penguin-mail-x-office-document-symbolic");
         assert_eq!(
             icon_name("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-            "x-office-document-symbolic"
+            "penguin-mail-x-office-document-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.oasis.opendocument.text"),
-            "x-office-document-symbolic"
+            "penguin-mail-x-office-document-symbolic"
         );
         assert_eq!(
             icon_name("application/msword"),
-            "x-office-document-symbolic"
+            "penguin-mail-x-office-document-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.ms-excel"),
-            "x-office-spreadsheet-symbolic"
+            "penguin-mail-x-office-spreadsheet-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-            "x-office-spreadsheet-symbolic"
+            "penguin-mail-x-office-spreadsheet-symbolic"
         );
-        assert_eq!(icon_name("text/csv"), "x-office-spreadsheet-symbolic");
+        assert_eq!(icon_name("text/csv"), "penguin-mail-x-office-spreadsheet-symbolic");
         assert_eq!(
             icon_name("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
-            "x-office-presentation-symbolic"
+            "penguin-mail-x-office-presentation-symbolic"
         );
         assert_eq!(
             icon_name("application/vnd.oasis.opendocument.presentation"),
-            "x-office-presentation-symbolic"
+            "penguin-mail-x-office-presentation-symbolic"
         );
     }
 
     #[test]
     fn media_takes_the_icon_of_its_top_level_type() {
-        assert_eq!(icon_name("image/png"), "image-x-generic-symbolic");
-        assert_eq!(icon_name("audio/ogg"), "audio-x-generic-symbolic");
-        assert_eq!(icon_name("video/mp4"), "video-x-generic-symbolic");
-        assert_eq!(icon_name("text/plain"), "text-x-generic-symbolic");
+        assert_eq!(icon_name("image/png"), "penguin-mail-image-x-generic-symbolic");
+        assert_eq!(icon_name("audio/ogg"), "penguin-mail-audio-x-generic-symbolic");
+        assert_eq!(icon_name("video/mp4"), "penguin-mail-video-x-generic-symbolic");
+        assert_eq!(icon_name("text/plain"), "penguin-mail-text-x-generic-symbolic");
     }
 
     #[test]
@@ -270,16 +270,16 @@ mod tests {
             "application/x-tar",
             "application/x-7z-compressed",
         ] {
-            assert_eq!(icon_name(mime), "package-x-generic-symbolic", "{mime}");
+            assert_eq!(icon_name(mime), "penguin-mail-package-x-generic-symbolic", "{mime}");
         }
     }
 
     #[test]
     fn a_type_read_in_any_case_or_with_parameters_finds_its_icon() {
-        assert_eq!(icon_name("Image/JPEG"), "image-x-generic-symbolic");
+        assert_eq!(icon_name("Image/JPEG"), "penguin-mail-image-x-generic-symbolic");
         assert_eq!(
             icon_name("text/plain; charset=utf-8"),
-            "text-x-generic-symbolic"
+            "penguin-mail-text-x-generic-symbolic"
         );
     }
 
@@ -287,9 +287,9 @@ mod tests {
     fn an_unknown_or_missing_type_takes_the_paper_clip() {
         assert_eq!(
             icon_name("application/octet-stream"),
-            "mail-attachment-symbolic"
+            "penguin-mail-mail-attachment-symbolic"
         );
-        assert_eq!(icon_name(""), "mail-attachment-symbolic");
+        assert_eq!(icon_name(""), "penguin-mail-mail-attachment-symbolic");
     }
 
     #[test]

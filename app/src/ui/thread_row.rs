@@ -97,7 +97,7 @@ mod imp {
                 .css_classes(["account-dot"])
                 .visible(false)
                 .build();
-            let vip = marker("starred-symbolic");
+            let vip = marker("penguin-mail-starred-symbolic");
             vip.add_css_class("vip");
             vip.set_tooltip_text(Some(&gettext("VIP")));
             // The name and the address share one label that takes the row's
@@ -122,8 +122,8 @@ mod imp {
                 short.set_child_visible(!fits);
                 Some(gdk::Rectangle::new(0, 0, overlay.width(), overlay.height()))
             });
-            let clip = marker("mail-attachment-symbolic");
-            let mute = marker("audio-volume-muted-symbolic");
+            let clip = marker("penguin-mail-mail-attachment-symbolic");
+            let mute = marker("penguin-mail-audio-volume-muted-symbolic");
             mute.set_tooltip_text(Some(&gettext("Muted")));
             let star = marker("penguin-mail-flag-symbolic");
             star.add_css_class("starred");
@@ -160,7 +160,7 @@ mod imp {
             let middle = gtk::Box::new(gtk::Orientation::Horizontal, 6);
             let subject = text_label("subject");
             subject.set_hexpand(true);
-            let invite = marker("x-office-calendar-symbolic");
+            let invite = marker("penguin-mail-x-office-calendar-symbolic");
             invite.add_css_class("invite");
             invite.set_tooltip_text(Some(&gettext("Invitation")));
             let count = gtk::Label::builder()

@@ -56,7 +56,7 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
             .title(gettext("Scripts Cannot Run"))
             .subtitle(glib::markup_escape_text(&reason))
             .build();
-        row.add_prefix(&gtk::Image::from_icon_name("dialog-warning-symbolic"));
+        row.add_prefix(&gtk::Image::from_icon_name("penguin-mail-dialog-warning-symbolic"));
         section.add_row(&row);
     }
     if found.is_empty() {
@@ -90,7 +90,7 @@ fn off_row(sandbox: &str) -> adw::ActionRow {
         )))
         .subtitle_lines(4)
         .build();
-    row.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
+    row.add_prefix(&gtk::Image::from_icon_name("penguin-mail-dialog-information-symbolic"));
     row
 }
 

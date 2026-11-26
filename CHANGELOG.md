@@ -34,6 +34,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Icons across the app share one style, whatever icon theme the desktop uses.
+
 - Paste clipboard images into a draft with Paste or Cmd/Ctrl+V, and open attached files from their rows before sending.
 
 - Deleting a conversation from a smart mailbox asks before also moving matching sent messages to Trash, with a separate remember choice for each smart mailbox.

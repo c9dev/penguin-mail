@@ -313,11 +313,11 @@ impl Permission {
     /// The icon beside that row.
     pub fn feature_icon(self) -> &'static str {
         match self {
-            Permission::Settings => "emblem-system-symbolic",
-            Permission::Delete => "user-trash-symbolic",
+            Permission::Settings => "penguin-mail-emblem-system-symbolic",
+            Permission::Delete => "penguin-mail-user-trash-symbolic",
             Permission::Contacts | Permission::ChangeContacts => "penguin-mail-people-symbolic",
             Permission::Calendar | Permission::ManageCalendars => "penguin-mail-calendar-symbolic",
-            Permission::Drive => "folder-documents-symbolic",
+            Permission::Drive => "penguin-mail-folder-documents-symbolic",
         }
     }
 }

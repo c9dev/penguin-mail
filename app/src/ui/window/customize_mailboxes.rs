@@ -324,10 +324,10 @@ impl MainWindow {
                 let available = crate::ui::plain_row().build();
                 available.set_title(&choice.name);
                 available.set_title_lines(1);
-                let add = control("go-next-symbolic", &gettext("Add to Favorites"));
+                let add = control("penguin-mail-go-next-symbolic", &gettext("Add to Favorites"));
                 available.add_suffix(&add);
                 available_list.append(&available);
-                let check = control("go-previous-symbolic", &gettext("Remove from Favorites"));
+                let check = control("penguin-mail-go-previous-symbolic", &gettext("Remove from Favorites"));
                 row.add_prefix(&check);
                 let up = control(
                     "penguin-mail-move-up-symbolic",
@@ -400,7 +400,7 @@ impl MainWindow {
                     editor.save(layout);
                 }
             });
-            let handle = gtk::Image::from_icon_name("list-drag-handle-symbolic");
+            let handle = gtk::Image::from_icon_name("penguin-mail-list-drag-handle-symbolic");
             item.row.add_prefix(&handle);
             let source = gtk::DragSource::new();
             source.set_actions(gdk::DragAction::MOVE);

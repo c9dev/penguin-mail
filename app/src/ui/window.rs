@@ -2479,7 +2479,7 @@ impl MainWindow {
         let create = gtk::Button::builder()
             .child(
                 &adw::ButtonContent::builder()
-                    .icon_name("list-add-symbolic")
+                    .icon_name("penguin-mail-list-add-symbolic")
                     .label(filing.new_item())
                     .build(),
             )
@@ -2534,7 +2534,7 @@ impl MainWindow {
             let applied = Rc::clone(&applied);
             move |label: &Label| {
                 let row = gtk::Box::builder().spacing(10).build();
-                let check = gtk::Image::from_icon_name("object-select-symbolic");
+                let check = gtk::Image::from_icon_name("penguin-mail-object-select-symbolic");
                 check.set_opacity(if applied.contains(&label.id) {
                     1.0
                 } else {
@@ -2712,7 +2712,7 @@ impl MainWindow {
             let row = gtk::Box::builder().spacing(10).build();
             // The tick keeps its place at zero opacity when the tag is off,
             // so the dot and the name start at the same x on every row.
-            let check = gtk::Image::from_icon_name("object-select-symbolic");
+            let check = gtk::Image::from_icon_name("penguin-mail-object-select-symbolic");
             check.set_opacity(if applied.contains(&tag.id) { 1.0 } else { 0.0 });
             row.append(&check);
             row.append(&super::sidebar::tag_dot(tag.color.as_deref()));
@@ -3775,7 +3775,7 @@ impl MainWindow {
         second.append(Some(&gettext("Quit")), Some("win.quit"));
         menu.append_section(None, &second);
         let button = gtk::MenuButton::builder()
-            .icon_name("open-menu-symbolic")
+            .icon_name("penguin-mail-open-menu-symbolic")
             .menu_model(&menu)
             .primary(true)
             .tooltip_text(gettext("Main Menu"))
@@ -3842,7 +3842,7 @@ impl MainWindow {
         track_dark_class(&window);
         self.assistant.header.set_show_end_title_buttons(true);
         self.assistant.close.set_visible(false);
-        self.assistant.detach.set_icon_name("view-restore-symbolic");
+        self.assistant.detach.set_icon_name("penguin-mail-view-restore-symbolic");
         self.assistant
             .detach
             .set_tooltip_text(Some(&gettext("Dock")));
@@ -3877,7 +3877,7 @@ impl MainWindow {
         self.assistant
             .close
             .set_visible(self.assistant_split.is_collapsed());
-        self.assistant.detach.set_icon_name("window-new-symbolic");
+        self.assistant.detach.set_icon_name("penguin-mail-window-new-symbolic");
         self.assistant
             .detach
             .set_tooltip_text(Some(&gettext("Detach")));

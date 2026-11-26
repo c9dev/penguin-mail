@@ -58,7 +58,7 @@ pub fn page(
     grant: impl Fn() + 'static,
 ) -> adw::StatusPage {
     let page = adw::StatusPage::builder()
-        .icon_name("mail-send-symbolic")
+        .icon_name("penguin-mail-mail-send-symbolic")
         .title(title)
         .description(permission.wording(Occasion::Needed, account, provider).body)
         .build();

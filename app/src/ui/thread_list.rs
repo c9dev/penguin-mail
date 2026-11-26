@@ -291,17 +291,17 @@ impl ThreadList {
         titles.append(&title);
         titles.append(&subtitle);
         let sidebar_button = gtk::ToggleButton::builder()
-            .icon_name("sidebar-show-symbolic")
+            .icon_name("penguin-mail-sidebar-show-symbolic")
             .tooltip_text(gettext("Show Mailboxes"))
             .visible(false)
             .build();
         let compose_button = gtk::Button::builder()
-            .icon_name("mail-message-new-symbolic")
+            .icon_name("penguin-mail-mail-message-new-symbolic")
             .tooltip_text(gettext("New Message (C)"))
             .action_name("win.compose")
             .build();
         let search_button = gtk::ToggleButton::builder()
-            .icon_name("system-search-symbolic")
+            .icon_name("penguin-mail-system-search-symbolic")
             .tooltip_text(gettext("Search (/)"))
             .build();
         search_button
@@ -490,7 +490,7 @@ impl ThreadList {
         if layout.new_below {
             self.header.remove(&self.compose_button);
             let content = adw::ButtonContent::builder()
-                .icon_name("mail-message-new-symbolic")
+                .icon_name("penguin-mail-mail-message-new-symbolic")
                 .label(gettext("New Message"))
                 .build();
             self.compose_button.set_child(Some(&content));
@@ -501,7 +501,7 @@ impl ThreadList {
         } else {
             self.bottom_slot.set_child(None::<&gtk::Widget>);
             self.compose_button
-                .set_icon_name("mail-message-new-symbolic");
+                .set_icon_name("penguin-mail-mail-message-new-symbolic");
             for class in ["suggested-action", "pill", "bottom-new"] {
                 self.compose_button.remove_css_class(class);
             }
@@ -1169,12 +1169,12 @@ pub(crate) mod checks {
         list.set_rows(
             vec![Rc::new(row.clone())],
             "No Mail",
-            "mail-unread-symbolic",
+            "penguin-mail-mail-unread-symbolic",
         );
         list.selection.select_item(0, false);
         let mut empty = row.clone();
         empty.snippet.clear();
-        list.set_rows(vec![Rc::new(empty)], "No Mail", "mail-unread-symbolic");
+        list.set_rows(vec![Rc::new(empty)], "No Mail", "penguin-mail-mail-unread-symbolic");
         list.preview_arrived(&mailrs_domain::Target::for_preview(&row), "Fetched preview");
         assert_eq!(list.rows.borrow()[0].snippet, "Fetched preview");
         assert!(list.selection.is_selected(0));
@@ -1196,7 +1196,7 @@ pub(crate) mod checks {
                 ..row
             })],
             "No Mail",
-            "mail-unread-symbolic",
+            "penguin-mail-mail-unread-symbolic",
         );
         assert!(list.selection.is_selected(0));
         if let Some(directory) = std::env::var_os("PENGUIN_MAIL_TEST_LIST_SHOTS") {
@@ -1214,7 +1214,7 @@ pub(crate) mod checks {
                 })
                 .collect(),
             "No Mail",
-            "mail-unread-symbolic",
+            "penguin-mail-mail-unread-symbolic",
         );
         assert!(list.neighbour_of_selected(true).is_none());
         list.select(1, "4", None);

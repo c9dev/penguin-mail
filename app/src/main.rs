@@ -490,7 +490,7 @@ fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
     ensure_gtk();
     let hold = gio_app.hold();
     let page = adw::StatusPage::builder()
-        .icon_name("dialog-warning-symbolic")
+        .icon_name("penguin-mail-dialog-warning-symbolic")
         .title(gettext("Penguin Mail Could Not Start"))
         .description(glib::markup_escape_text(message).as_str())
         .build();

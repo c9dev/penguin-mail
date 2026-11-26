@@ -203,11 +203,11 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
         .build();
     let loading = adw::Spinner::new();
     let failed = adw::StatusPage::builder()
-        .icon_name("dialog-warning-symbolic")
+        .icon_name("penguin-mail-dialog-warning-symbolic")
         .title(gettext("Could Not List the Folders"))
         .build();
     let empty = adw::StatusPage::builder()
-        .icon_name("system-search-symbolic")
+        .icon_name("penguin-mail-system-search-symbolic")
         .title(gettext("No Matching Folders"))
         .build();
     let stack = gtk::Stack::new();
@@ -338,9 +338,9 @@ pub fn present(core: &Rc<Core>, parent: &impl IsA<gtk::Widget>, account: Account
         arrow.set_can_focus(line.children);
         arrow.set_can_target(line.children);
         arrow.set_icon_name(if line.expanded {
-            "pan-down-symbolic"
+            "penguin-mail-pan-down-symbolic"
         } else {
-            "pan-end-symbolic"
+            "penguin-mail-pan-end-symbolic"
         });
         if line.children {
             let said = match line.expanded {

@@ -44,12 +44,12 @@ impl Dialog {
             .build();
         titles.add_named(&clamp, Some("search"));
         let searching = gtk::ToggleButton::builder()
-            .icon_name("edit-find-symbolic")
+            .icon_name("penguin-mail-edit-find-symbolic")
             .tooltip_text(gettext("Search"))
             .build();
         super::super::name(&searching, &gettext("Search"));
         let back = gtk::Button::builder()
-            .icon_name("go-previous-symbolic")
+            .icon_name("penguin-mail-go-previous-symbolic")
             .tooltip_text(gettext("Back"))
             .visible(false)
             .build();
@@ -89,7 +89,7 @@ impl Dialog {
         let results_page = adw::PreferencesPage::new();
         results_page.add(&results);
         let empty = adw::StatusPage::builder()
-            .icon_name("edit-find-symbolic")
+            .icon_name("penguin-mail-edit-find-symbolic")
             .title(gettext("No Results Found"))
             .description(gettext("Try a different search"))
             .build();
@@ -260,7 +260,7 @@ impl Dialog {
         line.append(&gtk::Image::from_icon_name(
             page.icon_name()
                 .as_deref()
-                .unwrap_or("preferences-system-symbolic"),
+                .unwrap_or("penguin-mail-preferences-system-symbolic"),
         ));
         line.append(&label);
         let arrow = gtk::Image::from_icon_name("penguin-mail-chevron-right-symbolic");

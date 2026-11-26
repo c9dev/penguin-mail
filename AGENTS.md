@@ -185,6 +185,12 @@ where a seal would. A 16 px copy is drawn on whole pixels, and the
 symbolic icon is the same shape in one colour. New icons follow this
 idiom.
 
+Every other icon the app names is a Material Design Icons glyph
+(Apache-2.0, notice in `app/data/icons/scalable/actions/LICENSE`) saved
+as `penguin-mail-<name>-symbolic.svg` and listed in the gresource. Name
+these, never a theme icon such as `user-trash-symbolic`: the desktop's
+theme would win over a file of the same name and mix styles back in.
+
 ## Agent skills
 
 ### Issue tracker

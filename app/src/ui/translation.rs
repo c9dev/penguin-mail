@@ -35,7 +35,7 @@ impl TranslationCard {
         on_never: impl Fn(&'static str) + 'static,
     ) -> Rc<TranslationCard> {
         let icon = gtk::Image::builder()
-            .icon_name("preferences-desktop-locale-symbolic")
+            .icon_name("penguin-mail-preferences-desktop-locale-symbolic")
             .valign(gtk::Align::Start)
             .build();
         let line = |classes: &[&str]| {

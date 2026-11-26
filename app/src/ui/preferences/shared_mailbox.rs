@@ -18,7 +18,7 @@ pub(super) fn row(app: &Rc<App>, owner: &Account) -> adw::ActionRow {
         ))
         .activatable(true)
         .build();
-    row.add_suffix(&gtk::Image::from_icon_name("list-add-symbolic"));
+    row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-list-add-symbolic"));
     let (app, owner) = (Rc::downgrade(app), owner.clone());
     row.connect_activated(move |row| {
         if let Some(app) = app.upgrade() {

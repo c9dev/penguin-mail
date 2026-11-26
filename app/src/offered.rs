@@ -320,7 +320,7 @@ impl Filing {
     pub fn icon(self) -> &'static str {
         match self {
             Filing::Labels => "penguin-mail-tag-symbolic",
-            Filing::Folders => "folder-symbolic",
+            Filing::Folders => "penguin-mail-folder-symbolic",
         }
     }
 
@@ -865,7 +865,7 @@ pub fn switch_rows(account: &Account, calendars: bool, token: bool) -> SwitchRow
             ),
         ),
         switch_row(
-            "weather-overcast-symbolic",
+            "penguin-mail-weather-overcast-symbolic",
             gettext("Mail is matched over JMAP"),
             gettext(
                 "Penguin Mail keeps the mail on this computer and downloads again only the messages it cannot match.",

@@ -30,7 +30,7 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
     let add = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("list-add-symbolic")
+                .icon_name("penguin-mail-list-add-symbolic")
                 .label(gettext("Add Template"))
                 .build(),
         )
@@ -90,7 +90,7 @@ fn row(
         button
     };
     let open = button(
-        "document-edit-symbolic",
+        "penguin-mail-document-edit-symbolic",
         gettext("Edit Template"),
         fill(&gettext("Edit {template}"), &[("template", &name)]),
     );
@@ -106,7 +106,7 @@ fn row(
         }
     });
     let delete = button(
-        "user-trash-symbolic",
+        "penguin-mail-user-trash-symbolic",
         gettext("Delete Template"),
         fill(&gettext("Delete {template}"), &[("template", &name)]),
     );

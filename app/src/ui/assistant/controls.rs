@@ -70,7 +70,7 @@ pub(super) fn install(
     });
 
     let tools = gtk::MenuButton::builder()
-        .icon_name("preferences-system-symbolic")
+        .icon_name("penguin-mail-preferences-system-symbolic")
         .tooltip_text(gettext("Tools"))
         .css_classes(["flat", "circular"])
         .build();
@@ -302,7 +302,7 @@ fn models(
                             .css_classes(["flat", "model-choice"])
                             .build();
                         let line = gtk::Box::builder().spacing(6).build();
-                        let checked = gtk::Image::from_icon_name("object-select-symbolic");
+                        let checked = gtk::Image::from_icon_name("penguin-mail-object-select-symbolic");
                         checked.set_accessible_role(gtk::AccessibleRole::Presentation);
                         checked.set_opacity(
                             if selected.provider == provider && current == model.id {

@@ -100,9 +100,9 @@ impl Standard {
         match self {
             Standard::Inbox => "penguin-mail-inbox-symbolic",
             Standard::Flagged => "penguin-mail-flag-symbolic",
-            Standard::Sent => "mail-send-symbolic",
-            Standard::Drafts => "document-edit-symbolic",
-            Standard::Muted => "audio-volume-muted-symbolic",
+            Standard::Sent => "penguin-mail-mail-send-symbolic",
+            Standard::Drafts => "penguin-mail-document-edit-symbolic",
+            Standard::Muted => "penguin-mail-audio-volume-muted-symbolic",
         }
     }
 
@@ -327,12 +327,12 @@ impl Mailbox {
             Mailbox::Search { .. } => {
                 return with(
                     gettext("No Results"),
-                    "system-search-symbolic",
+                    "penguin-mail-system-search-symbolic",
                     gettext("Try other words, or fewer of them."),
                 );
             }
             Mailbox::Scheduled => {
-                return empty(gettext("Nothing Scheduled"), "mail-send-symbolic");
+                return empty(gettext("Nothing Scheduled"), "penguin-mail-mail-send-symbolic");
             }
             Mailbox::Outbox => {
                 return empty(gettext("Outbox Is Empty"), "penguin-mail-outgoing-symbolic");
@@ -340,19 +340,19 @@ impl Mailbox {
             Mailbox::Reminders => {
                 return with(
                     gettext("No Reminders"),
-                    "alarm-symbolic",
+                    "penguin-mail-alarm-symbolic",
                     gettext("Choose Remind Me on a conversation to bring it back here later."),
                 );
             }
             Mailbox::FollowUp => {
-                return empty(gettext("No Follow-Ups"), "mail-reply-sender-symbolic");
+                return empty(gettext("No Follow-Ups"), "penguin-mail-mail-reply-sender-symbolic");
             }
             Mailbox::Flag(_) => {
                 return empty(gettext("No Flagged Mail"), "penguin-mail-flag-symbolic");
             }
-            Mailbox::Vips { .. } => return empty(gettext("No Mail from VIPs"), "starred-symbolic"),
+            Mailbox::Vips { .. } => return empty(gettext("No Mail from VIPs"), "penguin-mail-starred-symbolic"),
             Mailbox::Smart(_) => {
-                return empty(gettext("No Matching Mail"), "folder-saved-search-symbolic");
+                return empty(gettext("No Matching Mail"), "penguin-mail-folder-saved-search-symbolic");
             }
             Mailbox::Folder { folder, .. } => {
                 let icon = folder_icon(*folder);
@@ -366,14 +366,14 @@ impl Mailbox {
         }
         match self.standard() {
             Some(Standard::Inbox) => empty(gettext("Inbox Zero"), "penguin-mail-inbox-symbolic"),
-            Some(Standard::Flagged) => empty(gettext("No Starred Mail"), "starred-symbolic"),
-            Some(Standard::Sent) => empty(gettext("No Sent Mail"), "mail-send-symbolic"),
+            Some(Standard::Flagged) => empty(gettext("No Starred Mail"), "penguin-mail-starred-symbolic"),
+            Some(Standard::Sent) => empty(gettext("No Sent Mail"), "penguin-mail-mail-send-symbolic"),
             Some(Standard::Drafts) => with(
                 gettext("No Drafts"),
-                "document-edit-symbolic",
+                "penguin-mail-document-edit-symbolic",
                 gettext("Close a message without sending it and Penguin Mail keeps it here."),
             ),
-            Some(Standard::Muted) => empty(gettext("No Muted Mail"), "audio-volume-muted-symbolic"),
+            Some(Standard::Muted) => empty(gettext("No Muted Mail"), "penguin-mail-audio-volume-muted-symbolic"),
             None => empty(gettext("No Mail"), "penguin-mail-tag-symbolic"),
         }
     }
@@ -431,8 +431,8 @@ pub fn folder_name(folder: Folder) -> String {
 pub fn folder_icon(folder: Folder) -> &'static str {
     match folder {
         Folder::Archive => "penguin-mail-archive-symbolic",
-        Folder::Junk => "mail-mark-junk-symbolic",
-        Folder::Trash => "user-trash-symbolic",
+        Folder::Junk => "penguin-mail-mail-mark-junk-symbolic",
+        Folder::Trash => "penguin-mail-user-trash-symbolic",
         Folder::AllMail => "penguin-mail-all-mail-symbolic",
     }
 }
@@ -523,7 +523,7 @@ impl View {
             Empty {
                 title: gettext("No Matching Mail"),
                 description: gettext("Change the filters or load more messages if available."),
-                icon: "system-search-symbolic",
+                icon: "penguin-mail-system-search-symbolic",
             }
         } else {
             mailbox.empty()

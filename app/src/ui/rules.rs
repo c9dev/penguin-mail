@@ -87,7 +87,7 @@ pub fn present(
     empty.add_css_class("compact");
     stack.add_named(&empty, Some("empty"));
     let add = gtk::Button::builder()
-        .icon_name("list-add-symbolic")
+        .icon_name("penguin-mail-list-add-symbolic")
         .tooltip_text(gettext("New Rule"))
         .build();
     crate::ui::name(&add, &gettext("New Rule"));
@@ -245,7 +245,7 @@ impl Rules {
                 .title(glib::markup_escape_text(&waiting_line(&provider)))
                 .css_classes(["warning"])
                 .build();
-            row.add_prefix(&gtk::Image::from_icon_name("network-offline-symbolic"));
+            row.add_prefix(&gtk::Image::from_icon_name("penguin-mail-network-offline-symbolic"));
             self.list.add(&row);
             self.shown.borrow_mut().push(row.upcast());
         }
@@ -254,7 +254,7 @@ impl Rules {
             // pointing at the + in the header.
             let row = adw::ButtonRow::builder()
                 .title(gettext("Add Rule"))
-                .start_icon_name("list-add-symbolic")
+                .start_icon_name("penguin-mail-list-add-symbolic")
                 .build();
             let weak = Rc::downgrade(self);
             row.connect_activated(move |_| {
@@ -284,7 +284,7 @@ impl Rules {
                     gettext("Made elsewhere. Change it where you made it."),
                 )));
                 row.set_activatable(false);
-                row.add_suffix(&gtk::Image::from_icon_name("changes-prevent-symbolic"));
+                row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-changes-prevent-symbolic"));
                 self.list.add(&row);
                 self.shown.borrow_mut().push(row.upcast());
                 continue;
@@ -333,7 +333,7 @@ impl Rules {
                 }
             });
             let delete = gtk::Button::builder()
-                .icon_name("user-trash-symbolic")
+                .icon_name("penguin-mail-user-trash-symbolic")
                 .tooltip_text(gettext("Delete Rule"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
@@ -352,7 +352,7 @@ impl Rules {
                 }
             });
             row.add_suffix(&delete);
-            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+            row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
             self.list.add(&row);
             self.shown.borrow_mut().push(row.upcast());
         }
@@ -372,7 +372,7 @@ impl Rules {
                 let row = adw::ActionRow::builder()
                     .title(glib::markup_escape_text(first))
                     .build();
-                row.add_suffix(&gtk::Image::from_icon_name("changes-prevent-symbolic"));
+                row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-changes-prevent-symbolic"));
                 group.add(&row);
             }
             self.page.add(&group);
@@ -402,7 +402,7 @@ impl Rules {
 
     fn problem(&self, message: &str) {
         let page = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
+            .icon_name("penguin-mail-dialog-warning-symbolic")
             .title(gettext("Could Not Load the Rules"))
             .description(glib::markup_escape_text(message).as_str())
             .build();

@@ -236,7 +236,7 @@ impl Order {
     pub fn add(self: &Rc<Self>, row: &adw::ExpanderRow, email: &str) {
         let handle = gtk::Box::builder().valign(gtk::Align::Center).build();
         handle.set_cursor_from_name(Some("grab"));
-        handle.append(&gtk::Image::from_icon_name("list-drag-handle-symbolic"));
+        handle.append(&gtk::Image::from_icon_name("penguin-mail-list-drag-handle-symbolic"));
         handle.set_tooltip_text(Some(&gettext("Drag to Reorder Accounts")));
         row.add_prefix(&handle);
         let button = |icon: &str, text: &str| {

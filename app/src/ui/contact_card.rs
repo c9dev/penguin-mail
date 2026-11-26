@@ -118,7 +118,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
             })
             .activatable(true)
             .build();
-        row.add_prefix(&gtk::Image::from_icon_name("mail-unread-symbolic"));
+        row.add_prefix(&gtk::Image::from_icon_name("penguin-mail-mail-unread-symbolic"));
         row.set_title_lines(1);
         if let Some(label) = row.first_child() {
             label.set_tooltip_text(Some(address));
@@ -137,7 +137,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
             .title(phone)
             .subtitle(gettext("Phone"))
             .build();
-        row.add_prefix(&gtk::Image::from_icon_name("call-start-symbolic"));
+        row.add_prefix(&gtk::Image::from_icon_name("penguin-mail-call-start-symbolic"));
         details.add(&row);
     }
     content.append(&details);
@@ -165,7 +165,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         button
     };
 
-    let write = button(&gettext("New Message"), "mail-message-new-symbolic");
+    let write = button(&gettext("New Message"), "penguin-mail-mail-message-new-symbolic");
     let (chosen, address, closing) = (Rc::clone(&chose), person.email.clone(), dialog.clone());
     write.connect_clicked(move |_| {
         closing.close();
@@ -179,7 +179,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         } else {
             gettext("Add to VIPs")
         },
-        "starred-symbolic",
+        "penguin-mail-starred-symbolic",
     );
     let (chosen, closing) = (Rc::clone(&chose), dialog.clone());
     vip.connect_clicked(move |_| {
@@ -188,7 +188,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
     });
     actions.append(&vip);
 
-    let mail = button(&gettext("All Their Mail"), "system-search-symbolic");
+    let mail = button(&gettext("All Their Mail"), "penguin-mail-system-search-symbolic");
     let (chosen, closing) = (Rc::clone(&chose), dialog.clone());
     mail.connect_clicked(move |_| {
         closing.close();

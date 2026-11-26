@@ -312,11 +312,11 @@ impl CalendarView {
             .valign(gtk::Align::Center)
             .build();
         let previous = gtk::Button::builder()
-            .icon_name("go-previous-symbolic")
+            .icon_name("penguin-mail-go-previous-symbolic")
             .css_classes(["flat"])
             .build();
         let next = gtk::Button::builder()
-            .icon_name("go-next-symbolic")
+            .icon_name("penguin-mail-go-next-symbolic")
             .css_classes(["flat"])
             .build();
         // One pill holding both arrows with a hairline between them, as
@@ -365,13 +365,13 @@ impl CalendarView {
         switch_slot.append(&view_menu);
 
         let new_event = gtk::Button::builder()
-            .icon_name("list-add-symbolic")
+            .icon_name("penguin-mail-list-add-symbolic")
             .css_classes(["suggested-action", "circular", "new-event"])
             .valign(gtk::Align::Center)
             .build();
         crate::ui::name_with_shortcut(&new_event, &gettext("New Event (N)"));
         let new_split = adw::SplitButton::builder()
-            .icon_name("list-add-symbolic")
+            .icon_name("penguin-mail-list-add-symbolic")
             .css_classes(["suggested-action", "new-event-split"])
             .valign(gtk::Align::Center)
             .dropdown_tooltip(gettext("New Focus Time or Out of Office"))
@@ -382,12 +382,12 @@ impl CalendarView {
         new_slot.append(&new_event);
         new_slot.append(&new_split);
         let search_button = gtk::ToggleButton::builder()
-            .icon_name("system-search-symbolic")
+            .icon_name("penguin-mail-system-search-symbolic")
             .tooltip_text(gettext("Search the Calendar (Ctrl+F)"))
             .build();
         crate::ui::name_with_shortcut(&search_button, &gettext("Search the Calendar (Ctrl+F)"));
         let sidebar_button = gtk::ToggleButton::builder()
-            .icon_name("sidebar-show-symbolic")
+            .icon_name("penguin-mail-sidebar-show-symbolic")
             .tooltip_text(gettext("Show Calendars"))
             .visible(false)
             .build();

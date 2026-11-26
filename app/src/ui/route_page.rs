@@ -181,7 +181,7 @@ fn route_row(shown: &RouteRow) -> adw::ActionRow {
         .subtitle(&shown.subtitle)
         .activatable(true)
         .build();
-    row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
     if shown.recommended {
         let tag = gtk::Label::builder()
             .label(gettext("Recommended"))

@@ -124,7 +124,7 @@ pub fn present(
         .build();
     stack.add_named(&fitted(&list), Some("list"));
     let add = gtk::Button::builder()
-        .icon_name("list-add-symbolic")
+        .icon_name("penguin-mail-list-add-symbolic")
         .tooltip_text(gettext("Create Address"))
         .build();
     crate::ui::name(&add, &gettext("Create Address"));
@@ -367,12 +367,12 @@ impl Dialog {
             .build();
         row.add_prefix(
             &gtk::Image::builder()
-                .icon_name("dialog-warning-symbolic")
+                .icon_name("penguin-mail-dialog-warning-symbolic")
                 .css_classes(["warning"])
                 .build(),
         );
         let again = gtk::Button::builder()
-            .icon_name("view-refresh-symbolic")
+            .icon_name("penguin-mail-view-refresh-symbolic")
             .tooltip_text(gettext("Try Again"))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
@@ -406,7 +406,7 @@ impl Dialog {
             row.add_css_class("dim-label");
         }
         let copy_button = icon_button(
-            "edit-copy-symbolic",
+            "penguin-mail-edit-copy-symbolic",
             gettext("Copy Address"),
             fill(&gettext("Copy {address}"), &[("address", &hidden.address)]),
         );
@@ -462,7 +462,7 @@ impl Dialog {
         row.add_suffix(&switch);
 
         let delete = icon_button(
-            "user-trash-symbolic",
+            "penguin-mail-user-trash-symbolic",
             gettext("Delete Address"),
             fill(
                 &gettext("Delete {address}"),
@@ -493,7 +493,7 @@ impl Dialog {
             row.add_css_class("dim-label");
         }
         let copy_button = icon_button(
-            "edit-copy-symbolic",
+            "penguin-mail-edit-copy-symbolic",
             gettext("Copy Address"),
             fill(&gettext("Copy {address}"), &[("address", &masked.email)]),
         );
@@ -549,7 +549,7 @@ impl Dialog {
         row.add_suffix(&switch);
 
         let delete = icon_button(
-            "user-trash-symbolic",
+            "penguin-mail-user-trash-symbolic",
             gettext("Delete Address"),
             fill(&gettext("Delete {address}"), &[("address", &masked.email)]),
         );

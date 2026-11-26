@@ -380,7 +380,7 @@ impl Quick {
             let view = ChoiceView::new();
             view.show(&calendar.color, name, account.as_deref());
             let tick = gtk::Image::builder()
-                .icon_name("object-select-symbolic")
+                .icon_name("penguin-mail-object-select-symbolic")
                 .hexpand(true)
                 .halign(gtk::Align::End)
                 .accessible_role(gtk::AccessibleRole::Presentation)

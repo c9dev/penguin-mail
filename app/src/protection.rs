@@ -298,9 +298,9 @@ pub struct Shield {
 pub fn shield(sign: bool, encrypt: bool) -> Option<Shield> {
     let (icon, said) = match (sign, encrypt) {
         (false, false) => return None,
-        (true, false) => ("security-high-symbolic", gettext("Signed")),
-        (false, true) => ("channel-secure-symbolic", gettext("Encrypted")),
-        (true, true) => ("channel-secure-symbolic", gettext("Signed and encrypted")),
+        (true, false) => ("penguin-mail-security-high-symbolic", gettext("Signed")),
+        (false, true) => ("penguin-mail-channel-secure-symbolic", gettext("Encrypted")),
+        (true, true) => ("penguin-mail-channel-secure-symbolic", gettext("Signed and encrypted")),
     };
     Some(Shield { icon, said })
 }
@@ -1045,7 +1045,7 @@ mod tests {
         let shown = shield(true, false).expect("a shield");
         assert_eq!(
             (shown.icon, shown.said.as_str()),
-            ("security-high-symbolic", "Signed")
+            ("penguin-mail-security-high-symbolic", "Signed")
         );
     }
 
@@ -1054,12 +1054,12 @@ mod tests {
         let encrypted = shield(false, true).expect("a shield");
         assert_eq!(
             (encrypted.icon, encrypted.said.as_str()),
-            ("channel-secure-symbolic", "Encrypted")
+            ("penguin-mail-channel-secure-symbolic", "Encrypted")
         );
         let both = shield(true, true).expect("a shield");
         assert_eq!(
             (both.icon, both.said.as_str()),
-            ("channel-secure-symbolic", "Signed and encrypted")
+            ("penguin-mail-channel-secure-symbolic", "Signed and encrypted")
         );
     }
 

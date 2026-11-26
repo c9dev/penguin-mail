@@ -202,7 +202,7 @@ impl EventPopover {
         // `show` hides whichever `on_edit` or `on_delete` comes in
         // `None`, and names the second Remove for a guest.
         let edit_button = gtk::Button::builder()
-            .icon_name("document-edit-symbolic")
+            .icon_name("penguin-mail-document-edit-symbolic")
             .css_classes(["flat"])
             .valign(gtk::Align::Start)
             .visible(false)
@@ -210,7 +210,7 @@ impl EventPopover {
             .build();
         crate::ui::name(&edit_button, &gettext("Edit"));
         let delete_button = gtk::Button::builder()
-            .icon_name("user-trash-symbolic")
+            .icon_name("penguin-mail-user-trash-symbolic")
             .css_classes(["flat"])
             .valign(gtk::Align::Start)
             .visible(false)
@@ -241,7 +241,7 @@ impl EventPopover {
         // The whole place row opens the map, so the popover draws it as
         // the mockup does, with no link beside it.
         let place_row = gtk::Button::builder()
-            .child(&icon_row("mark-location-symbolic", &place_label))
+            .child(&icon_row("penguin-mail-mark-location-symbolic", &place_label))
             .css_classes(["flat", "popover-place"])
             .tooltip_text(gettext("Open in Maps"))
             .build();
@@ -376,7 +376,7 @@ impl EventPopover {
             .label(gettext("Open the invitation in Mail"))
             .build();
         let mail_row = gtk::Button::builder()
-            .child(&row_with_icon("mail-unread-symbolic", &mail_label, false))
+            .child(&row_with_icon("penguin-mail-mail-unread-symbolic", &mail_label, false))
             .css_classes(["flat", "popover-open-mail"])
             .visible(false)
             .build();

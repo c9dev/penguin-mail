@@ -110,8 +110,8 @@ fn tone_name(tone: Tone) -> String {
 
 fn icon(tone: Tone) -> &'static str {
     match tone {
-        Tone::Good => "channel-secure-symbolic",
-        Tone::Bad => "dialog-warning-symbolic",
-        Tone::Unchecked => "channel-insecure-symbolic",
+        Tone::Good => "penguin-mail-channel-secure-symbolic",
+        Tone::Bad => "penguin-mail-dialog-warning-symbolic",
+        Tone::Unchecked => "penguin-mail-channel-insecure-symbolic",
     }
 }

@@ -313,7 +313,7 @@ impl Recipients {
                     .build(),
             );
             let remove = gtk::Button::builder()
-                .icon_name("window-close-symbolic")
+                .icon_name("penguin-mail-window-close-symbolic")
                 .css_classes(["flat", "circular"])
                 .tooltip_text(gettext("Remove"))
                 .can_focus(false)

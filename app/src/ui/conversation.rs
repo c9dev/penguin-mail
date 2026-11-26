@@ -542,16 +542,16 @@ impl ConversationView {
             button
         };
         let buttons = Buttons {
-            print: button("document-print-symbolic", gettext("Print…")),
-            source: button("text-x-generic-symbolic", gettext("View Source")),
+            print: button("penguin-mail-document-print-symbolic", gettext("Print…")),
+            source: button("penguin-mail-text-x-generic-symbolic", gettext("View Source")),
             archive: button(
                 "penguin-mail-archive-symbolic",
                 gettext("Archive (E or Ctrl+Alt+A)"),
             ),
-            trash: button("user-trash-symbolic", gettext("Move to Trash (Delete)")),
-            junk: button("mail-mark-junk-symbolic", gettext("Junk (Ctrl+Shift+J)")),
+            trash: button("penguin-mail-user-trash-symbolic", gettext("Move to Trash (Delete)")),
+            junk: button("penguin-mail-mail-mark-junk-symbolic", gettext("Junk (Ctrl+Shift+J)")),
             read: button(
-                "mail-unread-symbolic",
+                "penguin-mail-mail-unread-symbolic",
                 gettext("Mark as Unread (Ctrl+Shift+U)"),
             ),
             star: {
@@ -569,12 +569,12 @@ impl ConversationView {
                 );
                 star
             },
-            reply: button("mail-reply-sender-symbolic", gettext("Reply (Ctrl+R)")),
+            reply: button("penguin-mail-mail-reply-sender-symbolic", gettext("Reply (Ctrl+R)")),
             reply_all: button(
-                "mail-reply-all-symbolic",
+                "penguin-mail-mail-reply-all-symbolic",
                 gettext("Reply All (Ctrl+Shift+R)"),
             ),
-            forward: button("mail-forward-symbolic", gettext("Forward (Ctrl+Shift+F)")),
+            forward: button("penguin-mail-mail-forward-symbolic", gettext("Forward (Ctrl+Shift+F)")),
             edit: gtk::Button::builder()
                 .label(gettext("Edit Draft"))
                 .css_classes(["suggested-action"])
@@ -582,7 +582,7 @@ impl ConversationView {
                 .build(),
             more: {
                 let more = gtk::MenuButton::builder()
-                    .icon_name("view-more-symbolic")
+                    .icon_name("penguin-mail-view-more-symbolic")
                     .tooltip_text(gettext("More Actions"))
                     .visible(false)
                     .build();
@@ -1091,18 +1091,18 @@ impl ConversationView {
         self.buttons.trash.set_visible(shown);
         self.many_trash.set_visible(shown);
         let (trash_icon, trash_tip) = match folder {
-            Some(Folder::Trash) => ("edit-delete-symbolic", gettext("Delete Forever (Delete)")),
-            _ => ("user-trash-symbolic", gettext("Move to Trash (Delete)")),
+            Some(Folder::Trash) => ("penguin-mail-edit-delete-symbolic", gettext("Delete Forever (Delete)")),
+            _ => ("penguin-mail-user-trash-symbolic", gettext("Move to Trash (Delete)")),
         };
         self.buttons.trash.set_icon_name(trash_icon);
         self.buttons.trash.set_tooltip_text(Some(&trash_tip));
         name_with_shortcut(&self.buttons.trash, &trash_tip);
         let (junk_icon, junk_tip) = match folder {
             Some(Folder::Junk) => (
-                "mail-mark-notjunk-symbolic",
+                "penguin-mail-mail-mark-notjunk-symbolic",
                 gettext("Not Junk (Ctrl+Shift+J)"),
             ),
-            _ => ("mail-mark-junk-symbolic", gettext("Junk (Ctrl+Shift+J)")),
+            _ => ("penguin-mail-mail-mark-junk-symbolic", gettext("Junk (Ctrl+Shift+J)")),
         };
         self.buttons.junk.set_icon_name(junk_icon);
         self.buttons.junk.set_tooltip_text(Some(&junk_tip));
@@ -1849,9 +1849,9 @@ impl ConversationView {
         self.set_muted(header.muted);
         let unread = header.unread;
         self.buttons.read.set_icon_name(if unread {
-            "mail-read-symbolic"
+            "penguin-mail-mail-read-symbolic"
         } else {
-            "mail-unread-symbolic"
+            "penguin-mail-mail-unread-symbolic"
         });
         let said = match unread {
             true => gettext("Mark as Read (U)"),

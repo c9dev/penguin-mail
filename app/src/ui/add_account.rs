@@ -510,7 +510,7 @@ impl Card {
     fn show_copy(&self, text: Option<&str>) {
         let Some(text) = text else { return };
         let button = icon_button(
-            "edit-copy-symbolic",
+            "penguin-mail-edit-copy-symbolic",
             &gettext("Copy Command"),
             &["pill", "post-small-pill"],
         );
@@ -536,7 +536,7 @@ impl Card {
 
 fn link_button(link: &add_account::Link) -> gtk::LinkButton {
     let content = adw::ButtonContent::builder()
-        .icon_name("adw-external-link-symbolic")
+        .icon_name("penguin-mail-external-link-symbolic")
         .label(&link.label)
         .build();
     let button = gtk::LinkButton::builder()
@@ -566,7 +566,7 @@ fn icon_row(icon: &str, title: &str, subtitle: &str, leads: bool) -> adw::Action
         .build();
     row.add_prefix(&gtk::Image::from_icon_name(icon));
     if leads {
-        row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+        row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
     }
     row
 }
@@ -662,14 +662,14 @@ pub fn browser_legend() -> gtk::Box {
 /// and the first-run window.
 pub fn by_hand_list() -> (gtk::ListBox, adw::ActionRow, adw::ActionRow) {
     let by_hand = icon_row(
-        "emblem-system-symbolic",
+        "penguin-mail-emblem-system-symbolic",
         &gettext("Enter server settings by hand"),
         "",
         true,
     );
     by_hand.add_css_class("post-by-hand");
     let calendar = icon_row(
-        "x-office-calendar-symbolic",
+        "penguin-mail-x-office-calendar-symbolic",
         &gettext("Add a calendar without mail"),
         "",
         true,
@@ -820,7 +820,7 @@ fn lookup_page() -> LookupPage {
             .build();
         status.add_named(&spinner, Some("asking"));
         let done = gtk::Image::builder()
-            .icon_name("object-select-symbolic")
+            .icon_name("penguin-mail-object-select-symbolic")
             .css_classes(["post-done"])
             .build();
         status.add_named(&done, Some("answered"));
@@ -922,17 +922,17 @@ fn browser_page() -> BrowserPage {
     );
     waiting.append(&note);
     let again = icon_button(
-        "view-refresh-symbolic",
+        "penguin-mail-view-refresh-symbolic",
         &gettext("Open Page Again"),
         &["pill", "post-small-pill"],
     );
     let copy = icon_button(
-        "edit-copy-symbolic",
+        "penguin-mail-edit-copy-symbolic",
         &gettext("Copy Link"),
         &["pill", "post-small-pill"],
     );
     let retry = icon_button(
-        "view-refresh-symbolic",
+        "penguin-mail-view-refresh-symbolic",
         &gettext("Try Again"),
         &["pill", "post-small-pill"],
     );
@@ -1129,8 +1129,8 @@ fn password_page() -> PasswordPage {
         .activatable(true)
         .title(gettext("Use an API Token Instead"))
         .build();
-    token_row.add_prefix(&gtk::Image::from_icon_name("dialog-password-symbolic"));
-    token_row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    token_row.add_prefix(&gtk::Image::from_icon_name("penguin-mail-dialog-password-symbolic"));
+    token_row.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
     let token_instead = boxed_list();
     token_instead.append(&token_row);
     token_instead.set_visible(false);
@@ -1152,12 +1152,12 @@ fn password_page() -> PasswordPage {
     let hint = Card::new();
     let failed = Card::new();
     let failed_servers = icon_button(
-        "emblem-system-symbolic",
+        "penguin-mail-emblem-system-symbolic",
         &gettext("Server Settings"),
         &["pill", "post-small-pill"],
     );
     let failed_retry = icon_button(
-        "view-refresh-symbolic",
+        "penguin-mail-view-refresh-symbolic",
         &gettext("Try Again"),
         &["pill", "post-small-pill"],
     );
@@ -1172,10 +1172,10 @@ fn password_page() -> PasswordPage {
     incoming.add_prefix(&gtk::Image::from_icon_name("penguin-mail-lock-symbolic"));
     let down = adw::ActionRow::builder().activatable(true).build();
     down.add_css_class("post-down");
-    let down_icon = gtk::Image::from_icon_name("network-wireless-offline-symbolic");
+    let down_icon = gtk::Image::from_icon_name("penguin-mail-network-wireless-offline-symbolic");
     down_icon.add_css_class("post-down-icon");
     down.add_prefix(&down_icon);
-    down.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    down.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
     down.set_visible(false);
     let outgoing = icon_row("penguin-mail-lock-symbolic", &gettext("Outgoing"), "", true);
     // Shaped like the outgoing row: a choice one level deeper, offered
@@ -1185,8 +1185,8 @@ fn password_page() -> PasswordPage {
         .subtitle(gettext("Keep this account's mail on this computer alone"))
         .visible(false)
         .build();
-    pop3_offer.add_prefix(&gtk::Image::from_icon_name("computer-symbolic"));
-    pop3_offer.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    pop3_offer.add_prefix(&gtk::Image::from_icon_name("penguin-mail-computer-symbolic"));
+    pop3_offer.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
     let summary = icon_row("penguin-mail-lock-symbolic", &gettext("Servers"), "", true);
     summary.set_visible(false);
     let confirmed = gtk::CheckButton::builder()
@@ -1209,8 +1209,8 @@ fn password_page() -> PasswordPage {
         .title(gettext("Use IMAP Instead"))
         .visible(false)
         .build();
-    imap_instead.add_prefix(&gtk::Image::from_icon_name("mail-send-receive-symbolic"));
-    imap_instead.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    imap_instead.add_prefix(&gtk::Image::from_icon_name("penguin-mail-mail-send-receive-symbolic"));
+    imap_instead.add_suffix(&gtk::Image::from_icon_name("penguin-mail-go-next-symbolic"));
     for row in [
         &incoming,
         &outgoing,
@@ -1307,14 +1307,14 @@ fn closed_page() -> ClosedPage {
     let lede = label("", &["post-lede"]);
     let list = boxed_list();
     let another_address = icon_row(
-        "document-edit-symbolic",
+        "penguin-mail-document-edit-symbolic",
         &gettext("Use another address"),
         &gettext("Change the address and look it up again"),
         true,
     );
     // It leads back, so it takes no forward chevron beside its arrow.
     let another_provider = icon_row(
-        "go-previous-symbolic",
+        "penguin-mail-go-previous-symbolic",
         &gettext("Choose another provider"),
         &gettext("Back to the list"),
         false,
@@ -1379,7 +1379,7 @@ fn added_page() -> AddedPage {
         ),
         (
             MailRole::Sent,
-            "mail-send-symbolic",
+            "penguin-mail-mail-send-symbolic",
             crate::ui::Standard::Sent.name(),
         ),
         (
@@ -2852,7 +2852,7 @@ impl Dialog {
                         });
                 page.hint.show(
                     "advice",
-                    Ok("dialog-password-symbolic"),
+                    Ok("penguin-mail-dialog-password-symbolic"),
                     &fill(&gettext("{provider} needs an app password"), &named),
                     &fill(
                         &gettext(
@@ -3033,7 +3033,7 @@ impl Dialog {
         match add_account::jmap_hint(proposal, token) {
             Some((heading, body, link)) => page.hint.show(
                 "advice",
-                Ok("dialog-password-symbolic"),
+                Ok("penguin-mail-dialog-password-symbolic"),
                 &heading,
                 &body,
                 link.as_slice(),
@@ -3320,7 +3320,7 @@ impl Dialog {
                 page.down.set_visible(true);
                 page.failed.show(
                     "trouble",
-                    Ok("network-wireless-offline-symbolic"),
+                    Ok("penguin-mail-network-wireless-offline-symbolic"),
                     &failure.title,
                     &failure.body,
                     &failure.links,
@@ -3343,7 +3343,7 @@ impl Dialog {
                 page.hint.hide();
                 page.failed.show(
                     "trouble",
-                    Ok("dialog-warning-symbolic"),
+                    Ok("penguin-mail-dialog-warning-symbolic"),
                     &failure.title,
                     &failure.body,
                     &failure.links,
@@ -3684,7 +3684,7 @@ impl Dialog {
                 }
                 Err(err) => this.password.failed.show(
                     "trouble",
-                    Ok("dialog-warning-symbolic"),
+                    Ok("penguin-mail-dialog-warning-symbolic"),
                     &gettext("Could not sign in"),
                     &err.to_string(),
                     &[],
@@ -4111,7 +4111,7 @@ impl Dialog {
         page.steps.set_visible(false);
         page.failed.show(
             "trouble",
-            Ok("dialog-warning-symbolic"),
+            Ok("penguin-mail-dialog-warning-symbolic"),
             &failure.title,
             &failure.body,
             &failure.links,
@@ -4389,7 +4389,7 @@ impl Dialog {
             .reorder_child_after(&page.failed.area, Some(&page.browser_offer));
         page.failed.show(
             "trouble",
-            Ok("dialog-warning-symbolic"),
+            Ok("penguin-mail-dialog-warning-symbolic"),
             &failure.title,
             &failure.body,
             &failure.links,

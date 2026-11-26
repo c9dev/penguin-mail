@@ -18,7 +18,7 @@ pub fn present(gio_app: &gio::Application, sandbox: &Sandbox) {
     crate::ensure_gtk();
     let hold = gio_app.hold();
     let page = adw::StatusPage::builder()
-        .icon_name("dialog-warning-symbolic")
+        .icon_name("penguin-mail-dialog-warning-symbolic")
         .css_classes(["compact"])
         .build();
     let content = gtk::Box::builder()
@@ -125,7 +125,7 @@ fn command_card(command: &str) -> (gtk::Box, gtk::Label) {
     crate::ui::name(&text, &gettext("Command"));
     card.append(&text);
     let content = adw::ButtonContent::builder()
-        .icon_name("edit-copy-symbolic")
+        .icon_name("penguin-mail-edit-copy-symbolic")
         .label(gettext("Copy Command"))
         .build();
     let copy = gtk::Button::builder()
