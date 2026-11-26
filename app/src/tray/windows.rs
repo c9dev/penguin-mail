@@ -51,11 +51,29 @@ impl Handle {
 /// The pieces redraw needs, held on the GTK thread: the icon itself is
 /// `!Send`, so it stays here while `update` runs on worker threads.
 struct OnScreen {
-    icon: TrayIcon,
+    /// `None` once [`remove`] took it away.
+    icon: RefCell<Option<TrayIcon>>,
     plain: Icon,
     unread: Icon,
     /// Each visible menu row's id to the command it sends.
     rows: RefCell<HashMap<MenuId, TrayCommand>>,
+}
+
+thread_local! {
+    /// The icon's owner on the GTK thread, so [`remove`] can reach it.
+    static SCREEN: RefCell<Option<Rc<OnScreen>>> = const { RefCell::new(None) };
+}
+
+/// Takes the icon out of the notification area. A process that ends
+/// without running destructors (`process::exit`, or the main loop's static
+/// state at exit) would otherwise leave a dead icon there until the mouse
+/// passes over it. Does nothing off the GTK thread or with no icon.
+pub(crate) fn remove() {
+    SCREEN.with(|held| {
+        if let Some(screen) = held.borrow().as_ref() {
+            drop(screen.icon.borrow_mut().take());
+        }
+    });
 }
 
 /// Puts the icon in the notification area and starts its redraw and
@@ -80,7 +98,7 @@ pub fn spawn(tray: MailTray) -> Option<Handle> {
         .inspect_err(|err| tracing::warn!(error = %err, "the tray icon did not start"))
         .ok()?;
     let screen = Rc::new(OnScreen {
-        icon,
+        icon: RefCell::new(Some(icon)),
         plain,
         unread,
         rows: RefCell::new(HashMap::new()),
@@ -89,6 +107,7 @@ pub fn spawn(tray: MailTray) -> Option<Handle> {
         &screen,
         &shared.tray.lock().expect("the tray state is poisoned"),
     );
+    SCREEN.with(|held| *held.borrow_mut() = Some(screen.clone()));
     glib::spawn_future_local({
         let shared = shared.clone();
         let screen = screen.clone();
@@ -145,12 +164,14 @@ pub fn spawn(tray: MailTray) -> Option<Handle> {
 /// Draws the current state: the glyph, the tooltip sentence, and the
 /// menu built from the same rows the AppIndicator shows on Linux.
 fn redraw(screen: &OnScreen, tray: &MailTray) {
+    let icon = screen.icon.borrow();
+    let Some(icon) = icon.as_ref() else { return };
     let glyph = if tray.unread > 0 {
         &screen.unread
     } else {
         &screen.plain
     };
-    if let Err(err) = screen.icon.set_icon(Some(glyph.clone())) {
+    if let Err(err) = icon.set_icon(Some(glyph.clone())) {
         tracing::warn!(error = %err, "the tray glyph did not change");
     }
     let tip = fill(
@@ -159,14 +180,12 @@ fn redraw(screen: &OnScreen, tray: &MailTray) {
     );
     // A NOTIFYICONDATA tip holds 127 characters.
     let tip: String = tip.chars().take(124).collect();
-    if let Err(err) = screen.icon.set_tooltip(Some(tip)) {
+    if let Err(err) = icon.set_tooltip(Some(tip)) {
         tracing::warn!(error = %err, "the tray tooltip did not change");
     }
     let mut rows = screen.rows.borrow_mut();
     rows.clear();
-    screen
-        .icon
-        .set_menu(Some(Box::new(menu(&tray.menu_model(), &mut rows))));
+    icon.set_menu(Some(Box::new(menu(&tray.menu_model(), &mut rows))));
 }
 
 /// The context menu for the rows `menu_model` gives, recording which id

@@ -152,7 +152,7 @@ pub type Handle = ksni::Handle<MailTray>;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-pub(crate) use windows::{Handle, spawn};
+pub(crate) use windows::{Handle, remove, spawn};
 
 impl MailTray {
     fn send(&self, command: TrayCommand) {

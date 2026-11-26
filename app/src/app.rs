@@ -500,6 +500,8 @@ impl App {
     pub(crate) fn before_leaving(&self) {
         crate::assistant::sources::mcp::registry().stop_all();
         self.settings_saver.flush();
+        #[cfg(windows)]
+        crate::tray::remove();
     }
 
     /// Replaces this process with `command`, as the idle restart and an
