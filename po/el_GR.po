@@ -1703,15 +1703,15 @@ msgstr "Απάντηση σε πρόσκληση"
 msgid "Working"
 msgstr "Σε εξέλιξη"
 
-#: app/src/assistant/run/mail.rs:261
+#: app/src/assistant/run/mail.rs:271
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr "Αποστολή του «{subject}» σε {recipients} {when};"
 
-#: app/src/assistant/run/mail.rs:420
+#: app/src/assistant/run/mail.rs:432
 msgid "Each account's server"
 msgstr "τον διακομιστή κάθε λογαριασμού"
 
-#: app/src/assistant/run/mail.rs:423
+#: app/src/assistant/run/mail.rs:435
 msgid "Delete {count} conversation forever? {provider} cannot bring it back."
 msgid_plural ""
 "Delete {count} conversations forever? {provider} cannot bring them back."
@@ -2272,7 +2272,7 @@ msgstr "Το Penguin Mail δεν μπόρεσε να συνθέσει το μή�
 msgid "The list did not give one address to write to."
 msgstr "Η λίστα δεν έδωσε μια διεύθυνση στην οποία να γράψετε."
 
-#: app/src/compose/html_signature.rs:168
+#: app/src/compose/html_signature.rs:173
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"
@@ -2738,15 +2738,15 @@ msgstr ""
 "  FILE.ics       άνοιγμα αρχείου ημερολογίου, για προσθήκη των συμβάντων του "
 "σε ημερολόγιο"
 
-#: app/src/main.rs:312
+#: app/src/main.rs:318
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: άγνωστη επιλογή {option}"
 
-#: app/src/main.rs:592
+#: app/src/main.rs:599
 msgid "Penguin Mail Could Not Start"
 msgstr "Δεν ήταν δυνατή η εκκίνηση του Penguin Mail"
 
-#: app/src/main.rs:597 app/src/ui/about.rs:192
+#: app/src/main.rs:604 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Αναφορά προβλήματος"
 
@@ -3927,69 +3927,69 @@ msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr ""
 "Ο λογαριασμός {account} δεν έχει επιτρέψει στο Penguin Mail να {missing}"
 
-#: app/src/pgp.rs:114
+#: app/src/pgp.rs:116
 msgid "Add a recipient whose key gpg holds."
 msgstr "Προσθέστε έναν παραλήπτη του οποίου το κλειδί υπάρχει στο gpg."
 
-#: app/src/pgp.rs:123
+#: app/src/pgp.rs:125
 msgid "gpg holds no key for {addresses}."
 msgstr "Το gpg δεν έχει κλειδί για {addresses}."
 
-#: app/src/pgp.rs:140
+#: app/src/pgp.rs:142
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr ""
 "Το gpg δεν έχει κλειδί για καμία από τις διευθύνσεις από τις οποίες στέλνετε."
 
-#: app/src/pgp.rs:142
+#: app/src/pgp.rs:144
 msgid "gpg holds a key for {addresses}."
 msgstr "Το gpg έχει κλειδί για {addresses}."
 
-#: app/src/pgp.rs:146
+#: app/src/pgp.rs:148
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "Το gpg έχει κλειδί για {addresses} και κανένα για {without}."
 
-#: app/src/pgp.rs:250
+#: app/src/pgp.rs:252
 msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
 msgstr ""
 "Αυτός ο υπολογιστής δεν έχει gpg. Εγκαταστήστε το GnuPG για να διαβάζετε ή "
 "να στέλνετε μηνύματα OpenPGP."
 
-#: app/src/pgp.rs:253 app/src/smime.rs:258
+#: app/src/pgp.rs:255 app/src/smime.rs:257
 msgid "Could not run {program}: {reason}"
 msgstr "Δεν ήταν δυνατή η εκτέλεση του {program}: {reason}"
 
-#: app/src/pgp.rs:257 app/src/smime.rs:262
+#: app/src/pgp.rs:259 app/src/smime.rs:261
 msgid "Could not write a temporary file: {reason}"
 msgstr "Δεν ήταν δυνατή η εγγραφή προσωρινού αρχείου: {reason}"
 
-#: app/src/pgp.rs:261
+#: app/src/pgp.rs:263
 msgid "This message is encrypted to a key this computer does not hold."
 msgstr ""
 "Αυτό το μήνυμα είναι κρυπτογραφημένο για κλειδί που δεν υπάρχει σε αυτόν τον "
 "υπολογιστή."
 
-#: app/src/pgp.rs:264
+#: app/src/pgp.rs:266
 msgid "gpg holds no secret key to sign as {address}."
 msgstr "Το gpg δεν έχει ιδιωτικό κλειδί για υπογραφή ως {address}."
 
-#: app/src/pgp.rs:268
+#: app/src/pgp.rs:270
 msgid "gpg holds no key it can encrypt to for {address}."
 msgstr ""
 "Το gpg δεν έχει κλειδί με το οποίο να μπορεί να κρυπτογραφήσει για {address}."
 
-#: app/src/pgp.rs:271
+#: app/src/pgp.rs:273
 msgid "This text holds no OpenPGP block."
 msgstr "Αυτό το κείμενο δεν περιέχει μπλοκ OpenPGP."
 
-#: app/src/pgp.rs:272
+#: app/src/pgp.rs:274
 msgid "This file holds no OpenPGP key."
 msgstr "Αυτό το αρχείο δεν περιέχει κλειδί OpenPGP."
 
-#: app/src/pgp.rs:273 app/src/smime.rs:278
+#: app/src/pgp.rs:275 app/src/smime.rs:277
 msgid "This message is too large to open."
 msgstr "Αυτό το μήνυμα είναι πολύ μεγάλο για να ανοίξει."
 
-#: app/src/pgp.rs:274
+#: app/src/pgp.rs:276
 msgid "gpg failed: {reason}"
 msgstr "Αποτυχία του gpg: {reason}"
 
@@ -4445,8 +4445,8 @@ msgstr[1] "{count} συνημμένα"
 msgid "Quick Look"
 msgstr "Γρήγορη προβολή"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
-#: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
+#: app/src/render.rs:644 app/src/ui/window/attachments.rs:289
+#: app/src/ui/window/attachments.rs:461 app/src/ui/window/attachments.rs:467
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Αποθήκευση ως…"
@@ -4749,7 +4749,7 @@ msgstr "Στον διακομιστή"
 
 #: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
 #: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/ui/preferences.rs:1176
 msgid "Off"
 msgstr "Ανενεργό"
 
@@ -5000,12 +5000,12 @@ msgstr "1 GB"
 msgid "4 GB"
 msgstr "4 GB"
 
-#: app/src/smime.rs:93
+#: app/src/smime.rs:92
 msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr ""
 "Προσθέστε έναν παραλήπτη του οποίου το πιστοποιητικό εμπιστεύεται το gpgsm."
 
-#: app/src/smime.rs:103
+#: app/src/smime.rs:102
 msgid ""
 "gpgsm holds no trusted certificate for {addresses}. A certificate that only "
 "arrived in mail does not count."
@@ -5013,61 +5013,61 @@ msgstr ""
 "Το gpgsm δεν έχει έμπιστο πιστοποιητικό για {addresses}. Ένα πιστοποιητικό "
 "που απλώς έφτασε με την αλληλογραφία δεν μετράει."
 
-#: app/src/smime.rs:123
+#: app/src/smime.rs:122
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr ""
 "Το gpgsm δεν έχει πιστοποιητικό για καμία από τις διευθύνσεις από τις οποίες "
 "στέλνετε."
 
-#: app/src/smime.rs:125
+#: app/src/smime.rs:124
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr "Το gpgsm έχει πιστοποιητικό για {addresses}."
 
-#: app/src/smime.rs:129
+#: app/src/smime.rs:128
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "Το gpgsm έχει πιστοποιητικό για {addresses} και κανένα για {without}."
 
-#: app/src/smime.rs:255
+#: app/src/smime.rs:254
 msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
 msgstr ""
 "Αυτός ο υπολογιστής δεν έχει gpgsm. Εγκαταστήστε το GnuPG για να διαβάζετε ή "
 "να στέλνετε μηνύματα S/MIME."
 
-#: app/src/smime.rs:266
+#: app/src/smime.rs:265
 msgid "This message is encrypted to a certificate this computer does not hold."
 msgstr ""
 "Αυτό το μήνυμα είναι κρυπτογραφημένο για ένα πιστοποιητικό που δεν υπάρχει "
 "σε αυτόν τον υπολογιστή."
 
-#: app/src/smime.rs:269
+#: app/src/smime.rs:268
 msgid "gpgsm holds no secret key to sign as {address}."
 msgstr "Το gpgsm δεν έχει μυστικό κλειδί για υπογραφή ως {address}."
 
-#: app/src/smime.rs:273
+#: app/src/smime.rs:272
 msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
 msgstr ""
 "Το gpgsm δεν έχει έμπιστο πιστοποιητικό για κρυπτογράφηση προς {address}."
 
-#: app/src/smime.rs:276
+#: app/src/smime.rs:275
 msgid "This part holds no S/MIME data."
 msgstr "Αυτό το τμήμα δεν περιέχει δεδομένα S/MIME."
 
-#: app/src/smime.rs:277
+#: app/src/smime.rs:276
 msgid "This file holds no certificate."
 msgstr "Αυτό το αρχείο δεν περιέχει πιστοποιητικό."
 
-#: app/src/smime.rs:280
+#: app/src/smime.rs:279
 msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Αυτή η φράση πρόσβασης δεν ανοίγει το αρχείο. Δεν εισήχθη τίποτα."
 
-#: app/src/smime.rs:283
+#: app/src/smime.rs:282
 msgid ""
 "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr ""
 "Το αρχείο χρειάζεται τη φράση πρόσβασής του και δεν δόθηκε καμία. Δεν "
 "εισήχθη τίποτα."
 
-#: app/src/smime.rs:286
+#: app/src/smime.rs:285
 msgid "gpgsm failed: {reason}"
 msgstr "Το gpgsm απέτυχε: {reason}"
 
@@ -5189,7 +5189,7 @@ msgstr "Τι νέο υπάρχει στην έκδοση {version}"
 
 #: app/src/tray.rs:211 app/src/ui/about.rs:130 app/src/ui/about.rs:238
 #: app/src/ui/about.rs:246 app/src/ui/about.rs:253
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1236 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Έλεγχος για ενημερώσεις"
 
@@ -5198,7 +5198,7 @@ msgstr "Έλεγχος για ενημερώσεις"
 msgid "Quit"
 msgstr "Έξοδος"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:178
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
@@ -5376,7 +5376,7 @@ msgstr "Αντιγραφή συνδέσμου"
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
-#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:349
+#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
@@ -5543,7 +5543,7 @@ msgstr ""
 "Το Penguin Mail κρατά σε αυτόν τον υπολογιστή κάθε μήνυμα που λαμβάνει."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1597
 msgid "Days"
 msgstr "Ημέρες"
 
@@ -6073,7 +6073,7 @@ msgstr "Δοκιμή"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:349 app/src/ui/composer/mod.rs:2899
+#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6577,7 +6577,7 @@ msgid "Declined"
 msgstr "Απορρίφθηκε"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1403
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6693,11 +6693,11 @@ msgstr "Ημερομηνία λήξης"
 msgid "End time"
 msgstr "Ώρα λήξης"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1549
 msgid "Starts"
 msgstr "Έναρξη"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1551
 msgid "Ends"
 msgstr "Λήξη"
 
@@ -7379,7 +7379,7 @@ msgstr "Ολοήμερα"
 
 #: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1417 app/src/ui/preferences.rs:1605
 msgid "%a"
 msgstr "%a"
 
@@ -7973,11 +7973,11 @@ msgstr "Δεν ήταν δυνατή η επικόλληση της εικόνα
 msgid "Describe Picture…"
 msgstr "Περιγραφή εικόνας…"
 
-#: app/src/ui/composer/editor.rs:337
+#: app/src/ui/composer/editor.rs:333
 msgid "Describe Picture"
 msgstr "Περιγραφή εικόνας"
 
-#: app/src/ui/composer/editor.rs:339
+#: app/src/ui/composer/editor.rs:335
 msgid ""
 "Screen readers read these words in place of the picture, and they show where "
 "the picture does not load."
@@ -7985,20 +7985,20 @@ msgstr ""
 "Οι αναγνώστες οθόνης διαβάζουν αυτές τις λέξεις στη θέση της εικόνας, και "
 "εμφανίζονται όπου η εικόνα δεν φορτώνει."
 
-#: app/src/ui/composer/editor.rs:343 app/src/ui/composer/editor.rs:347
+#: app/src/ui/composer/editor.rs:339 app/src/ui/composer/editor.rs:343
 msgid "Description"
 msgstr "Περιγραφή"
 
-#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:461
+#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:472
 msgid "{file}, preview"
 msgstr "{file}, προεπισκόπηση"
 
-#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:398
+#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:409
 msgid "Could not open {file}"
 msgstr "Δεν ήταν δυνατό το άνοιγμα του {file}"
 
 #: app/src/ui/composer/files.rs:81 app/src/ui/window/attachments.rs:79
-#: app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:366
 msgid "Could not open {file}: {reason}"
 msgstr "Δεν ήταν δυνατό το άνοιγμα του {file}: {reason}"
 
@@ -8432,15 +8432,15 @@ msgstr "Πατήστε Delete για αφαίρεση"
 msgid "Picture"
 msgstr "Εικόνα"
 
-#: app/src/ui/composer/spell.rs:653
+#: app/src/ui/composer/spell.rs:664
 msgid "No Suggestions"
 msgstr "Καμία πρόταση"
 
-#: app/src/ui/composer/spell.rs:665
+#: app/src/ui/composer/spell.rs:676
 msgid "Add to Dictionary"
 msgstr "Προσθήκη στο λεξικό"
 
-#: app/src/ui/composer/spell.rs:666
+#: app/src/ui/composer/spell.rs:677
 msgid "Ignore"
 msgstr "Παράβλεψη"
 
@@ -10170,11 +10170,7 @@ msgstr[1] ""
 "Το Penguin Mail υπογράφει και κρυπτογραφεί μέσω των {programs}, τα οποία "
 "διατηρούν τα κλειδιά σας και ζητούν τα ίδια τη φράση πρόσβασής σας."
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
-msgid "Spelling"
-msgstr "Ορθογραφία"
-
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:998
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10184,7 +10180,20 @@ msgstr ""
 "ορθογραφία. Εγκαταστήστε ένα λεξικό Hunspell, όπως το hunspell-el ή το "
 "hunspell-en-us, και ανοίξτε ξανά το παράθυρο σύνταξης."
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1011
+msgid ""
+"No dictionaries are installed, so Penguin Mail is not checking spelling. Put "
+"a dictionary's .aff and .dic files in {folder} and reopen the composer."
+msgstr ""
+"Δεν υπάρχουν εγκατεστημένα λεξικά, οπότε το Penguin Mail δεν ελέγχει την "
+"ορθογραφία. Τοποθετήστε τα αρχεία .aff και .dic ενός λεξικού στο {folder} "
+"και ανοίξτε ξανά το παράθυρο σύνταξης."
+
+#: app/src/ui/preferences.rs:1032 app/src/ui/preferences.rs:1041
+msgid "Spelling"
+msgstr "Ορθογραφία"
+
+#: app/src/ui/preferences.rs:1043
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10192,59 +10201,59 @@ msgstr ""
 "Η γλώσσα στην οποία ελέγχει την ορθογραφία κάθε λογαριασμός. Εγκατεστημένα "
 "λεξικά: {languages}."
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1055
 msgid "System: {language}"
 msgstr "Σύστημα: {language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1070
 msgid "All Installed Languages"
 msgstr "Όλες οι εγκατεστημένες γλώσσες"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1113
 msgid "Sync"
 msgstr "Συγχρονισμός"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1121
 msgid "Checking"
 msgstr "Έλεγχος"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1127
 msgid "Check for New Mail"
 msgstr "Έλεγχος για νέα μηνύματα"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1136
 msgid "Storage"
 msgstr "Αποθήκευση"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1144
 msgid "Keep Mail on This Computer For"
 msgstr "Διατήρηση αλληλογραφίας σε αυτόν τον υπολογιστή για"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1165
 msgid "Message text kept for opening offline"
 msgstr "Κείμενο μηνυμάτων που φυλάσσεται για άνοιγμα χωρίς σύνδεση"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1168
 msgid "Message Cache"
 msgstr "Προσωρινή μνήμη μηνυμάτων"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1177
 msgid "100 messages"
 msgstr "100 μηνύματα"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1178
 msgid "300 messages"
 msgstr "300 μηνύματα"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1179
 msgid "1,000 messages"
 msgstr "1.000 μηνύματα"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1183
 msgid "Download Recent Inbox Messages"
 msgstr "Λήψη πρόσφατων μηνυμάτων εισερχομένων"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1184
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10253,151 +10262,151 @@ msgstr ""
 "ανάγνωση χωρίς σύνδεση. Τα συνημμένα και οι απομακρυσμένες εικόνες δεν "
 "λαμβάνονται."
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1211
 msgid "Startup"
 msgstr "Εκκίνηση"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1214
 msgid "Start in the Tray at Login"
 msgstr "Εκκίνηση στην περιοχή ειδοποιήσεων κατά τη σύνδεση"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1229
 msgid "Not available in demo mode"
 msgstr "Μη διαθέσιμο σε λειτουργία επίδειξης"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1237
 msgid "Look for a new release once a day"
 msgstr "Αναζήτηση νέας έκδοσης μία φορά την ημέρα"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1278
 msgid "{used} of {limit}"
 msgstr "{used} από {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1290
 msgid "{amount} · Full"
 msgstr "{amount} · Πλήρες"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1292
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Σχεδόν πλήρες"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1304
 msgid "Senders Who May Load Images"
 msgstr "Αποστολείς με άδεια φόρτωσης εικόνων"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1305 app/src/ui/preferences.rs:1314
 msgid "Nobody yet"
 msgstr "Κανείς ακόμη"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1316
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} αποστολέας"
 msgstr[1] "{count} αποστολείς"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1326
 msgid "Anyone at this domain"
 msgstr "Οποιοσδήποτε σε αυτόν τον τομέα"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1328
 msgid "This address"
 msgstr "Αυτή η διεύθυνση"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1333
 msgid "Stop Loading Images from This Sender"
 msgstr "Διακοπή φόρτωσης εικόνων από αυτόν τον αποστολέα"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1340
 msgid "Stop loading images from {sender}"
 msgstr "Διακοπή φόρτωσης εικόνων από {sender}"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1410
 msgid "Monday to Friday"
 msgstr "Δευτέρα έως Παρασκευή"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1411
 msgid "Every day of the week"
 msgstr "Κάθε ημέρα της εβδομάδας"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1412
 msgid "No days"
 msgstr "Καμία ημέρα"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1419
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1422
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1485
 msgid "Time Format"
 msgstr "Μορφή ώρας"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1489
 msgid "Automatic follows the system clock format"
 msgstr "Η αυτόματη επιλογή ακολουθεί τη μορφή ώρας του συστήματος"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1503
 msgid "Week Starts On"
 msgstr "Η εβδομάδα ξεκινά την"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1508
 msgid "Automatic follows the locale's own first day of the week"
 msgstr ""
 "Η αυτόματη επιλογή ακολουθεί την πρώτη ημέρα της εβδομάδας των τοπικών "
 "ρυθμίσεων"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1522
 msgid "Working Hours"
 msgstr "Ώρες εργασίας"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1541
 msgid "Hours"
 msgstr "Ώρες"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1592
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1650
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1652
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1696
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Αδυναμία αλλαγής του χρώματος: {reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1740
 msgid "Never Translate"
 msgstr "Να μη γίνεται ποτέ μετάφραση"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1742
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Για μηνύματα σε αυτές τις γλώσσες δεν προτείνεται μετάφραση"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1771
 msgid "Follow System"
 msgstr "Όπως το σύστημα"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1775
 msgid "Language"
 msgstr "Γλώσσα"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1776
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Το Penguin Mail εμφανίζει μια νέα γλώσσα μετά από επανεκκίνηση"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1857 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Χωρίς υπογραφή"
 
@@ -12014,36 +12023,36 @@ msgid_plural "Saving {count} attachments…"
 msgstr[0] "Αποθήκευση {count} συνημμένου…"
 msgstr[1] "Αποθήκευση {count} συνημμένων…"
 
-#: app/src/ui/window/attachments.rs:192
+#: app/src/ui/window/attachments.rs:197
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "Αποθηκεύτηκε {count} συνημμένο στο {folder}"
 msgstr[1] "Αποθηκεύτηκαν {count} συνημμένα στο {folder}"
 
-#: app/src/ui/window/attachments.rs:199
+#: app/src/ui/window/attachments.rs:204
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr ""
 "Αποθηκεύτηκαν {count} στο {folder}. Δεν ήταν δυνατή η αποθήκευση των {files}"
 
-#: app/src/ui/window/attachments.rs:245
+#: app/src/ui/window/attachments.rs:250
 msgid "Downloading {file}…"
 msgstr "Λήψη του {file}…"
 
-#: app/src/ui/window/attachments.rs:269 app/src/ui/window/attachments.rs:298
-#: app/src/ui/window/attachments.rs:331
+#: app/src/ui/window/attachments.rs:274 app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:342
 msgid "Could not save {file}: {reason}"
 msgstr "Δεν ήταν δυνατή η αποθήκευση του {file}: {reason}"
 
-#: app/src/ui/window/attachments.rs:316 app/src/ui/window/export.rs:111
+#: app/src/ui/window/attachments.rs:327 app/src/ui/window/export.rs:111
 #: app/src/ui/window/export.rs:153 app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "Αποθηκεύτηκε το {file}"
 
-#: app/src/ui/window/attachments.rs:319
+#: app/src/ui/window/attachments.rs:330
 msgid "Open"
 msgstr "Άνοιγμα"
 
-#: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
+#: app/src/ui/window/attachments.rs:465 app/src/ui/window/attachments.rs:468
 msgid "Open in Another Program"
 msgstr "Άνοιγμα με άλλο πρόγραμμα"
 
@@ -13031,18 +13040,18 @@ msgstr "Επανεκκινήστε για να ολοκληρωθεί η ενη�
 msgid "Install it now, or later from the tray."
 msgstr "Εγκαταστήστε την τώρα ή αργότερα από την περιοχή ειδοποιήσεων."
 
-#: app/src/update/signature.rs:31
+#: app/src/update/signature.rs:42
 msgid "This release has no signature, so Penguin Mail will not install it."
 msgstr ""
 "Αυτή η έκδοση δεν έχει υπογραφή, οπότε το Penguin Mail δεν θα την "
 "εγκαταστήσει."
 
-#: app/src/update/signature.rs:99
+#: app/src/update/signature.rs:128
 msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr ""
 "Το Penguin Mail δεν μπόρεσε να ελέγξει την υπογραφή της έκδοσης: {reason}"
 
-#: app/src/update/signature.rs:150
+#: app/src/update/signature.rs:179
 msgid ""
 "This release is not signed with Penguin Mail's key, so Penguin Mail will not "
 "install it."
@@ -13050,7 +13059,7 @@ msgstr ""
 "Αυτή η έκδοση δεν είναι υπογεγραμμένη με το κλειδί του Penguin Mail, οπότε "
 "το Penguin Mail δεν θα την εγκαταστήσει."
 
-#: app/src/update/signature.rs:154
+#: app/src/update/signature.rs:183
 msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr ""

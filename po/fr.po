@@ -1693,15 +1693,15 @@ msgstr "Réponse à une invitation"
 msgid "Working"
 msgstr "Travail en cours"
 
-#: app/src/assistant/run/mail.rs:261
+#: app/src/assistant/run/mail.rs:271
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr "Envoyer « {subject} » à {recipients} {when} ?"
 
-#: app/src/assistant/run/mail.rs:420
+#: app/src/assistant/run/mail.rs:432
 msgid "Each account's server"
 msgstr "Le serveur de chaque compte"
 
-#: app/src/assistant/run/mail.rs:423
+#: app/src/assistant/run/mail.rs:435
 msgid "Delete {count} conversation forever? {provider} cannot bring it back."
 msgid_plural ""
 "Delete {count} conversations forever? {provider} cannot bring them back."
@@ -2257,7 +2257,7 @@ msgstr "Penguin Mail n’a pas pu assembler le message."
 msgid "The list did not give one address to write to."
 msgstr "La liste n’a pas fourni d’adresse à laquelle écrire."
 
-#: app/src/compose/html_signature.rs:168
+#: app/src/compose/html_signature.rs:173
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"
@@ -2715,15 +2715,15 @@ msgstr ""
 "  FICHIER.ics    ouvrir un fichier d’agenda pour ajouter ses événements à un "
 "agenda"
 
-#: app/src/main.rs:312
+#: app/src/main.rs:318
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail : option inconnue {option}"
 
-#: app/src/main.rs:592
+#: app/src/main.rs:599
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail n’a pas pu démarrer"
 
-#: app/src/main.rs:597 app/src/ui/about.rs:192
+#: app/src/main.rs:604 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Signaler un problème"
 
@@ -3869,66 +3869,66 @@ msgstr "Fichiers joints aux événements"
 msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr "{account} n’a pas autorisé Penguin Mail à {missing}"
 
-#: app/src/pgp.rs:114
+#: app/src/pgp.rs:116
 msgid "Add a recipient whose key gpg holds."
 msgstr "Ajoutez un destinataire dont gpg possède la clé."
 
-#: app/src/pgp.rs:123
+#: app/src/pgp.rs:125
 msgid "gpg holds no key for {addresses}."
 msgstr "gpg ne possède aucune clé pour {addresses}."
 
-#: app/src/pgp.rs:140
+#: app/src/pgp.rs:142
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr ""
 "gpg ne possède aucune clé pour les adresses depuis lesquelles vous envoyez."
 
-#: app/src/pgp.rs:142
+#: app/src/pgp.rs:144
 msgid "gpg holds a key for {addresses}."
 msgstr "gpg possède une clé pour {addresses}."
 
-#: app/src/pgp.rs:146
+#: app/src/pgp.rs:148
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "gpg possède une clé pour {addresses}, et aucune pour {without}."
 
-#: app/src/pgp.rs:250
+#: app/src/pgp.rs:252
 msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
 msgstr ""
 "Cet ordinateur n’a pas gpg. Installez GnuPG pour lire ou envoyer du courrier "
 "OpenPGP."
 
-#: app/src/pgp.rs:253 app/src/smime.rs:258
+#: app/src/pgp.rs:255 app/src/smime.rs:257
 msgid "Could not run {program}: {reason}"
 msgstr "Impossible d’exécuter {program} : {reason}"
 
-#: app/src/pgp.rs:257 app/src/smime.rs:262
+#: app/src/pgp.rs:259 app/src/smime.rs:261
 msgid "Could not write a temporary file: {reason}"
 msgstr "Impossible d’écrire un fichier temporaire : {reason}"
 
-#: app/src/pgp.rs:261
+#: app/src/pgp.rs:263
 msgid "This message is encrypted to a key this computer does not hold."
 msgstr "Ce message est chiffré pour une clé que cet ordinateur ne possède pas."
 
-#: app/src/pgp.rs:264
+#: app/src/pgp.rs:266
 msgid "gpg holds no secret key to sign as {address}."
 msgstr "gpg ne possède aucune clé secrète pour signer en tant que {address}."
 
-#: app/src/pgp.rs:268
+#: app/src/pgp.rs:270
 msgid "gpg holds no key it can encrypt to for {address}."
 msgstr "gpg ne possède aucune clé permettant de chiffrer pour {address}."
 
-#: app/src/pgp.rs:271
+#: app/src/pgp.rs:273
 msgid "This text holds no OpenPGP block."
 msgstr "Ce texte ne contient aucun bloc OpenPGP."
 
-#: app/src/pgp.rs:272
+#: app/src/pgp.rs:274
 msgid "This file holds no OpenPGP key."
 msgstr "Ce fichier ne contient aucune clé OpenPGP."
 
-#: app/src/pgp.rs:273 app/src/smime.rs:278
+#: app/src/pgp.rs:275 app/src/smime.rs:277
 msgid "This message is too large to open."
 msgstr "Ce message est trop volumineux pour être ouvert."
 
-#: app/src/pgp.rs:274
+#: app/src/pgp.rs:276
 msgid "gpg failed: {reason}"
 msgstr "Échec de gpg : {reason}"
 
@@ -4377,8 +4377,8 @@ msgstr[1] "{count} pièces jointes"
 msgid "Quick Look"
 msgstr "Aperçu rapide"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
-#: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
+#: app/src/render.rs:644 app/src/ui/window/attachments.rs:289
+#: app/src/ui/window/attachments.rs:461 app/src/ui/window/attachments.rs:467
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Enregistrer sous…"
@@ -4681,7 +4681,7 @@ msgstr "Sur le serveur"
 
 #: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
 #: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/ui/preferences.rs:1176
 msgid "Off"
 msgstr "Désactivé"
 
@@ -4932,11 +4932,11 @@ msgstr "1 Go"
 msgid "4 GB"
 msgstr "4 Go"
 
-#: app/src/smime.rs:93
+#: app/src/smime.rs:92
 msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr "Ajoutez un destinataire dont gpgsm reconnaît le certificat."
 
-#: app/src/smime.rs:103
+#: app/src/smime.rs:102
 msgid ""
 "gpgsm holds no trusted certificate for {addresses}. A certificate that only "
 "arrived in mail does not count."
@@ -4944,61 +4944,61 @@ msgstr ""
 "gpgsm ne possède aucun certificat de confiance pour {addresses}. Un "
 "certificat simplement reçu par courrier ne compte pas."
 
-#: app/src/smime.rs:123
+#: app/src/smime.rs:122
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr ""
 "gpgsm ne possède aucun certificat pour les adresses depuis lesquelles vous "
 "envoyez."
 
-#: app/src/smime.rs:125
+#: app/src/smime.rs:124
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr "gpgsm possède un certificat pour {addresses}."
 
-#: app/src/smime.rs:129
+#: app/src/smime.rs:128
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "gpgsm possède un certificat pour {addresses}, et aucun pour {without}."
 
-#: app/src/smime.rs:255
+#: app/src/smime.rs:254
 msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
 msgstr ""
 "Cet ordinateur n’a pas gpgsm. Installez GnuPG pour lire ou envoyer du "
 "courrier S/MIME."
 
-#: app/src/smime.rs:266
+#: app/src/smime.rs:265
 msgid "This message is encrypted to a certificate this computer does not hold."
 msgstr ""
 "Ce message est chiffré pour un certificat que cet ordinateur ne possède pas."
 
-#: app/src/smime.rs:269
+#: app/src/smime.rs:268
 msgid "gpgsm holds no secret key to sign as {address}."
 msgstr "gpgsm ne possède aucune clé secrète pour signer en tant que {address}."
 
-#: app/src/smime.rs:273
+#: app/src/smime.rs:272
 msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
 msgstr ""
 "gpgsm ne possède aucun certificat de confiance permettant de chiffrer pour "
 "{address}."
 
-#: app/src/smime.rs:276
+#: app/src/smime.rs:275
 msgid "This part holds no S/MIME data."
 msgstr "Cette partie ne contient aucune donnée S/MIME."
 
-#: app/src/smime.rs:277
+#: app/src/smime.rs:276
 msgid "This file holds no certificate."
 msgstr "Ce fichier ne contient aucun certificat."
 
-#: app/src/smime.rs:280
+#: app/src/smime.rs:279
 msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Cette phrase secrète n’ouvre pas ce fichier. Rien n’a été importé."
 
-#: app/src/smime.rs:283
+#: app/src/smime.rs:282
 msgid ""
 "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr ""
 "Le fichier demande sa phrase secrète, et aucune n’a été fournie. Rien n’a "
 "été importé."
 
-#: app/src/smime.rs:286
+#: app/src/smime.rs:285
 msgid "gpgsm failed: {reason}"
 msgstr "Échec de gpgsm : {reason}"
 
@@ -5120,7 +5120,7 @@ msgstr "Nouveautés de la version {version}"
 
 #: app/src/tray.rs:211 app/src/ui/about.rs:130 app/src/ui/about.rs:238
 #: app/src/ui/about.rs:246 app/src/ui/about.rs:253
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1236 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Rechercher des mises à jour"
 
@@ -5129,7 +5129,7 @@ msgstr "Rechercher des mises à jour"
 msgid "Quit"
 msgstr "Quitter"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:178
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail : {summary}"
 
@@ -5303,7 +5303,7 @@ msgstr "Copier le lien"
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
-#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:349
+#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
@@ -5467,7 +5467,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail garde sur cet ordinateur chaque message qu’il télécharge."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1597
 msgid "Days"
 msgstr "Jours"
 
@@ -6002,7 +6002,7 @@ msgstr "Tester"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:349 app/src/ui/composer/mod.rs:2899
+#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6504,7 +6504,7 @@ msgid "Declined"
 msgstr "Refusé"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1403
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6619,11 +6619,11 @@ msgstr "Date de fin"
 msgid "End time"
 msgstr "Heure de fin"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1549
 msgid "Starts"
 msgstr "Début"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1551
 msgid "Ends"
 msgstr "Fin"
 
@@ -7301,7 +7301,7 @@ msgstr "Journée"
 
 #: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1417 app/src/ui/preferences.rs:1605
 msgid "%a"
 msgstr "%a"
 
@@ -7894,11 +7894,11 @@ msgstr "Impossible de coller l’image"
 msgid "Describe Picture…"
 msgstr "Décrire l’image…"
 
-#: app/src/ui/composer/editor.rs:337
+#: app/src/ui/composer/editor.rs:333
 msgid "Describe Picture"
 msgstr "Décrire l’image"
 
-#: app/src/ui/composer/editor.rs:339
+#: app/src/ui/composer/editor.rs:335
 msgid ""
 "Screen readers read these words in place of the picture, and they show where "
 "the picture does not load."
@@ -7906,20 +7906,20 @@ msgstr ""
 "Les lecteurs d’écran lisent ces mots à la place de l’image, et ils "
 "s’affichent là où l’image ne se charge pas."
 
-#: app/src/ui/composer/editor.rs:343 app/src/ui/composer/editor.rs:347
+#: app/src/ui/composer/editor.rs:339 app/src/ui/composer/editor.rs:343
 msgid "Description"
 msgstr "Description"
 
-#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:461
+#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:472
 msgid "{file}, preview"
 msgstr "{file}, aperçu"
 
-#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:398
+#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:409
 msgid "Could not open {file}"
 msgstr "Impossible d’ouvrir {file}"
 
 #: app/src/ui/composer/files.rs:81 app/src/ui/window/attachments.rs:79
-#: app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:366
 msgid "Could not open {file}: {reason}"
 msgstr "Impossible d’ouvrir {file} : {reason}"
 
@@ -8346,15 +8346,15 @@ msgstr "Appuyez sur Suppr pour retirer"
 msgid "Picture"
 msgstr "Image"
 
-#: app/src/ui/composer/spell.rs:653
+#: app/src/ui/composer/spell.rs:664
 msgid "No Suggestions"
 msgstr "Aucune suggestion"
 
-#: app/src/ui/composer/spell.rs:665
+#: app/src/ui/composer/spell.rs:676
 msgid "Add to Dictionary"
 msgstr "Ajouter au dictionnaire"
 
-#: app/src/ui/composer/spell.rs:666
+#: app/src/ui/composer/spell.rs:677
 msgid "Ignore"
 msgstr "Ignorer"
 
@@ -10065,11 +10065,7 @@ msgstr[1] ""
 "Penguin Mail signe et chiffre via {programs}, qui détiennent vos clés et "
 "demandent eux-mêmes votre phrase secrète."
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
-msgid "Spelling"
-msgstr "Orthographe"
-
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:998
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10079,7 +10075,20 @@ msgstr ""
 "l’orthographe. Installez un dictionnaire Hunspell, comme hunspell-fr ou "
 "hunspell-en-us, et rouvrez la fenêtre de rédaction."
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1011
+msgid ""
+"No dictionaries are installed, so Penguin Mail is not checking spelling. Put "
+"a dictionary's .aff and .dic files in {folder} and reopen the composer."
+msgstr ""
+"Aucun dictionnaire n’est installé, Penguin Mail ne vérifie donc pas "
+"l’orthographe. Placez les fichiers .aff et .dic d’un dictionnaire dans "
+"{folder} et rouvrez la fenêtre de rédaction."
+
+#: app/src/ui/preferences.rs:1032 app/src/ui/preferences.rs:1041
+msgid "Spelling"
+msgstr "Orthographe"
+
+#: app/src/ui/preferences.rs:1043
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10087,59 +10096,59 @@ msgstr ""
 "La langue dans laquelle chaque compte vérifie l’orthographe. Dictionnaires "
 "installés : {languages}."
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1055
 msgid "System: {language}"
 msgstr "Système : {language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1070
 msgid "All Installed Languages"
 msgstr "Toutes les langues installées"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1113
 msgid "Sync"
 msgstr "Synchronisation"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1121
 msgid "Checking"
 msgstr "Vérification"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1127
 msgid "Check for New Mail"
 msgstr "Vérifier le nouveau courrier"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1136
 msgid "Storage"
 msgstr "Stockage"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1144
 msgid "Keep Mail on This Computer For"
 msgstr "Garder le courrier sur cet ordinateur pendant"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1165
 msgid "Message text kept for opening offline"
 msgstr "Texte des messages conservé pour les ouvrir hors connexion"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1168
 msgid "Message Cache"
 msgstr "Cache des messages"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1177
 msgid "100 messages"
 msgstr "100 messages"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1178
 msgid "300 messages"
 msgstr "300 messages"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1179
 msgid "1,000 messages"
 msgstr "1 000 messages"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1183
 msgid "Download Recent Inbox Messages"
 msgstr "Télécharger les messages récents de la boîte de réception"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1184
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10148,149 +10157,149 @@ msgstr ""
 "et les lire hors connexion. Les pièces jointes et les images distantes ne "
 "sont pas téléchargées."
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1211
 msgid "Startup"
 msgstr "Démarrage"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1214
 msgid "Start in the Tray at Login"
 msgstr "Démarrer dans la zone de notification à la connexion"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1229
 msgid "Not available in demo mode"
 msgstr "Non disponible en mode démo"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1237
 msgid "Look for a new release once a day"
 msgstr "Rechercher une nouvelle version une fois par jour"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1278
 msgid "{used} of {limit}"
 msgstr "{used} sur {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1290
 msgid "{amount} · Full"
 msgstr "{amount} · Plein"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1292
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Presque plein"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1304
 msgid "Senders Who May Load Images"
 msgstr "Expéditeurs autorisés à charger des images"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1305 app/src/ui/preferences.rs:1314
 msgid "Nobody yet"
 msgstr "Personne pour l’instant"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1316
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} expéditeur"
 msgstr[1] "{count} expéditeurs"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1326
 msgid "Anyone at this domain"
 msgstr "Tout expéditeur de ce domaine"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1328
 msgid "This address"
 msgstr "Cette adresse"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1333
 msgid "Stop Loading Images from This Sender"
 msgstr "Ne plus charger les images de cet expéditeur"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1340
 msgid "Stop loading images from {sender}"
 msgstr "Ne plus charger les images de {sender}"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1410
 msgid "Monday to Friday"
 msgstr "Du lundi au vendredi"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1411
 msgid "Every day of the week"
 msgstr "Tous les jours de la semaine"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1412
 msgid "No days"
 msgstr "Aucun jour"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1419
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1422
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1485
 msgid "Time Format"
 msgstr "Format de l'heure"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1489
 msgid "Automatic follows the system clock format"
 msgstr "Automatique suit le format horaire du système"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1503
 msgid "Week Starts On"
 msgstr "La semaine commence le"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1508
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Automatique suit le premier jour de la semaine de la langue régionale"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1522
 msgid "Working Hours"
 msgstr "Heures de travail"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1541
 msgid "Hours"
 msgstr "Heures"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1592
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1650
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1652
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1696
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Impossible de changer la couleur : {reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1740
 msgid "Never Translate"
 msgstr "Ne jamais traduire"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1742
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Aucune traduction n’est proposée pour les messages dans ces langues"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1771
 msgid "Follow System"
 msgstr "Suivre le système"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1775
 msgid "Language"
 msgstr "Langue"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1776
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail affiche une nouvelle langue après un redémarrage"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1857 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Aucune signature"
 
@@ -11903,35 +11912,35 @@ msgid_plural "Saving {count} attachments…"
 msgstr[0] "Enregistrement de {count} pièce jointe…"
 msgstr[1] "Enregistrement de {count} pièces jointes…"
 
-#: app/src/ui/window/attachments.rs:192
+#: app/src/ui/window/attachments.rs:197
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} pièce jointe enregistrée dans {folder}"
 msgstr[1] "{count} pièces jointes enregistrées dans {folder}"
 
-#: app/src/ui/window/attachments.rs:199
+#: app/src/ui/window/attachments.rs:204
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} enregistrées dans {folder}. Impossible d’enregistrer {files}"
 
-#: app/src/ui/window/attachments.rs:245
+#: app/src/ui/window/attachments.rs:250
 msgid "Downloading {file}…"
 msgstr "Téléchargement de {file}…"
 
-#: app/src/ui/window/attachments.rs:269 app/src/ui/window/attachments.rs:298
-#: app/src/ui/window/attachments.rs:331
+#: app/src/ui/window/attachments.rs:274 app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:342
 msgid "Could not save {file}: {reason}"
 msgstr "Impossible d’enregistrer {file} : {reason}"
 
-#: app/src/ui/window/attachments.rs:316 app/src/ui/window/export.rs:111
+#: app/src/ui/window/attachments.rs:327 app/src/ui/window/export.rs:111
 #: app/src/ui/window/export.rs:153 app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file} enregistré"
 
-#: app/src/ui/window/attachments.rs:319
+#: app/src/ui/window/attachments.rs:330
 msgid "Open"
 msgstr "Ouvrir"
 
-#: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
+#: app/src/ui/window/attachments.rs:465 app/src/ui/window/attachments.rs:468
 msgid "Open in Another Program"
 msgstr "Ouvrir avec un autre programme"
 
@@ -12915,16 +12924,16 @@ msgstr "Redémarrer pour terminer la mise à jour"
 msgid "Install it now, or later from the tray."
 msgstr "Installez-la maintenant, ou plus tard depuis la zone de notification."
 
-#: app/src/update/signature.rs:31
+#: app/src/update/signature.rs:42
 msgid "This release has no signature, so Penguin Mail will not install it."
 msgstr ""
 "Cette version n’a pas de signature, Penguin Mail ne l’installera donc pas."
 
-#: app/src/update/signature.rs:99
+#: app/src/update/signature.rs:128
 msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr "Penguin Mail n’a pas pu vérifier la signature de la version : {reason}"
 
-#: app/src/update/signature.rs:150
+#: app/src/update/signature.rs:179
 msgid ""
 "This release is not signed with Penguin Mail's key, so Penguin Mail will not "
 "install it."
@@ -12932,7 +12941,7 @@ msgstr ""
 "Cette version n’est pas signée avec la clé de Penguin Mail, Penguin Mail ne "
 "l’installera donc pas."
 
-#: app/src/update/signature.rs:154
+#: app/src/update/signature.rs:183
 msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr ""

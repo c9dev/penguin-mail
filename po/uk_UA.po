@@ -1681,15 +1681,15 @@ msgstr "Відповідь на запрошення"
 msgid "Working"
 msgstr "Виконується"
 
-#: app/src/assistant/run/mail.rs:261
+#: app/src/assistant/run/mail.rs:271
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr "Надіслати «{subject}» до {recipients} {when}?"
 
-#: app/src/assistant/run/mail.rs:420
+#: app/src/assistant/run/mail.rs:432
 msgid "Each account's server"
 msgstr "Сервер кожного облікового запису"
 
-#: app/src/assistant/run/mail.rs:423
+#: app/src/assistant/run/mail.rs:435
 msgid "Delete {count} conversation forever? {provider} cannot bring it back."
 msgid_plural ""
 "Delete {count} conversations forever? {provider} cannot bring them back."
@@ -2256,7 +2256,7 @@ msgstr "Penguin Mail не вдалося скласти повідомлення
 msgid "The list did not give one address to write to."
 msgstr "Список не надав жодної адреси для листування."
 
-#: app/src/compose/html_signature.rs:168
+#: app/src/compose/html_signature.rs:173
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"
@@ -2711,15 +2711,15 @@ msgstr ""
 "  mailto:...     те саме, що --compose mailto:...\n"
 "  ФАЙЛ.ics       відкрити файл календаря, щоб додати його події до календаря"
 
-#: app/src/main.rs:312
+#: app/src/main.rs:318
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: невідомий параметр {option}"
 
-#: app/src/main.rs:592
+#: app/src/main.rs:599
 msgid "Penguin Mail Could Not Start"
 msgstr "Не вдалося запустити Penguin Mail"
 
-#: app/src/main.rs:597 app/src/ui/about.rs:192
+#: app/src/main.rs:604 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Повідомити про проблему"
 
@@ -3850,65 +3850,65 @@ msgstr "Файли, долучені до подій"
 msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr "{account} не дозволив Penguin Mail {missing}"
 
-#: app/src/pgp.rs:114
+#: app/src/pgp.rs:116
 msgid "Add a recipient whose key gpg holds."
 msgstr "Додайте отримувача, ключ якого є в gpg."
 
-#: app/src/pgp.rs:123
+#: app/src/pgp.rs:125
 msgid "gpg holds no key for {addresses}."
 msgstr "У gpg немає ключа для {addresses}."
 
-#: app/src/pgp.rs:140
+#: app/src/pgp.rs:142
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr "У gpg немає ключа для жодної з адрес, з яких ви надсилаєте."
 
-#: app/src/pgp.rs:142
+#: app/src/pgp.rs:144
 msgid "gpg holds a key for {addresses}."
 msgstr "У gpg є ключ для {addresses}."
 
-#: app/src/pgp.rs:146
+#: app/src/pgp.rs:148
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "У gpg є ключ для {addresses}, але немає для {without}."
 
-#: app/src/pgp.rs:250
+#: app/src/pgp.rs:252
 msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
 msgstr ""
 "На цьому комп'ютері немає gpg. Встановіть GnuPG, щоб читати або надсилати "
 "пошту OpenPGP."
 
-#: app/src/pgp.rs:253 app/src/smime.rs:258
+#: app/src/pgp.rs:255 app/src/smime.rs:257
 msgid "Could not run {program}: {reason}"
 msgstr "Не вдалося запустити {program}: {reason}"
 
-#: app/src/pgp.rs:257 app/src/smime.rs:262
+#: app/src/pgp.rs:259 app/src/smime.rs:261
 msgid "Could not write a temporary file: {reason}"
 msgstr "Не вдалося записати тимчасовий файл: {reason}"
 
-#: app/src/pgp.rs:261
+#: app/src/pgp.rs:263
 msgid "This message is encrypted to a key this computer does not hold."
 msgstr "Це повідомлення зашифровано ключем, якого немає на цьому комп'ютері."
 
-#: app/src/pgp.rs:264
+#: app/src/pgp.rs:266
 msgid "gpg holds no secret key to sign as {address}."
 msgstr "У gpg немає секретного ключа для підпису від імені {address}."
 
-#: app/src/pgp.rs:268
+#: app/src/pgp.rs:270
 msgid "gpg holds no key it can encrypt to for {address}."
 msgstr "У gpg немає ключа, яким можна зашифрувати для {address}."
 
-#: app/src/pgp.rs:271
+#: app/src/pgp.rs:273
 msgid "This text holds no OpenPGP block."
 msgstr "Цей текст не містить блоку OpenPGP."
 
-#: app/src/pgp.rs:272
+#: app/src/pgp.rs:274
 msgid "This file holds no OpenPGP key."
 msgstr "Цей файл не містить ключа OpenPGP."
 
-#: app/src/pgp.rs:273 app/src/smime.rs:278
+#: app/src/pgp.rs:275 app/src/smime.rs:277
 msgid "This message is too large to open."
 msgstr "Це повідомлення завелике, щоб його відкрити."
 
-#: app/src/pgp.rs:274
+#: app/src/pgp.rs:276
 msgid "gpg failed: {reason}"
 msgstr "Помилка gpg: {reason}"
 
@@ -4365,8 +4365,8 @@ msgstr[2] "{count} вкладень"
 msgid "Quick Look"
 msgstr "Швидкий перегляд"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
-#: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
+#: app/src/render.rs:644 app/src/ui/window/attachments.rs:289
+#: app/src/ui/window/attachments.rs:461 app/src/ui/window/attachments.rs:467
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Зберегти як…"
@@ -4668,7 +4668,7 @@ msgstr "На сервері"
 
 #: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
 #: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/ui/preferences.rs:1176
 msgid "Off"
 msgstr "Вимкнено"
 
@@ -4918,11 +4918,11 @@ msgstr "1 ГБ"
 msgid "4 GB"
 msgstr "4 ГБ"
 
-#: app/src/smime.rs:93
+#: app/src/smime.rs:92
 msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr "Додайте отримувача, сертифікату якого довіряє gpgsm."
 
-#: app/src/smime.rs:103
+#: app/src/smime.rs:102
 msgid ""
 "gpgsm holds no trusted certificate for {addresses}. A certificate that only "
 "arrived in mail does not count."
@@ -4930,58 +4930,58 @@ msgstr ""
 "У gpgsm немає довіреного сертифіката для {addresses}. Сертифікат, який лише "
 "надійшов у листі, не враховується."
 
-#: app/src/smime.rs:123
+#: app/src/smime.rs:122
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr ""
 "У gpgsm немає сертифіката для жодної з адрес, з яких ви надсилаєте пошту."
 
-#: app/src/smime.rs:125
+#: app/src/smime.rs:124
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr "У gpgsm є сертифікат для {addresses}."
 
-#: app/src/smime.rs:129
+#: app/src/smime.rs:128
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "У gpgsm є сертифікат для {addresses}, але немає для {without}."
 
-#: app/src/smime.rs:255
+#: app/src/smime.rs:254
 msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
 msgstr ""
 "На цьому комп'ютері немає gpgsm. Встановіть GnuPG, щоб читати або надсилати "
 "пошту S/MIME."
 
-#: app/src/smime.rs:266
+#: app/src/smime.rs:265
 msgid "This message is encrypted to a certificate this computer does not hold."
 msgstr ""
 "Це повідомлення зашифровано для сертифіката, якого немає на цьому комп'ютері."
 
-#: app/src/smime.rs:269
+#: app/src/smime.rs:268
 msgid "gpgsm holds no secret key to sign as {address}."
 msgstr "У gpgsm немає секретного ключа, щоб підписати від імені {address}."
 
-#: app/src/smime.rs:273
+#: app/src/smime.rs:272
 msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
 msgstr ""
 "У gpgsm немає довіреного сертифіката, яким можна зашифрувати для {address}."
 
-#: app/src/smime.rs:276
+#: app/src/smime.rs:275
 msgid "This part holds no S/MIME data."
 msgstr "Ця частина не містить даних S/MIME."
 
-#: app/src/smime.rs:277
+#: app/src/smime.rs:276
 msgid "This file holds no certificate."
 msgstr "Цей файл не містить сертифіката."
 
-#: app/src/smime.rs:280
+#: app/src/smime.rs:279
 msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Ця парольна фраза не відкриває цей файл. Нічого не імпортовано."
 
-#: app/src/smime.rs:283
+#: app/src/smime.rs:282
 msgid ""
 "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr ""
 "Для файла потрібна парольна фраза, але її не введено. Нічого не імпортовано."
 
-#: app/src/smime.rs:286
+#: app/src/smime.rs:285
 msgid "gpgsm failed: {reason}"
 msgstr "Помилка gpgsm: {reason}"
 
@@ -5103,7 +5103,7 @@ msgstr "Що нового у {version}"
 
 #: app/src/tray.rs:211 app/src/ui/about.rs:130 app/src/ui/about.rs:238
 #: app/src/ui/about.rs:246 app/src/ui/about.rs:253
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1236 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Перевірити оновлення"
 
@@ -5112,7 +5112,7 @@ msgstr "Перевірити оновлення"
 msgid "Quit"
 msgstr "Вийти"
 
-#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:157
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:178
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
@@ -5288,7 +5288,7 @@ msgstr "Копіювати посилання"
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
-#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:349
+#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
@@ -5453,7 +5453,7 @@ msgstr ""
 "Penguin Mail зберігає на цьому комп'ютері кожне завантажене повідомлення."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1597
 msgid "Days"
 msgstr "Дні"
 
@@ -5981,7 +5981,7 @@ msgstr "Перевірити"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:349 app/src/ui/composer/mod.rs:2899
+#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6478,7 +6478,7 @@ msgid "Declined"
 msgstr "Відхилено"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1403
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6593,11 +6593,11 @@ msgstr "Дата завершення"
 msgid "End time"
 msgstr "Час завершення"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1549
 msgid "Starts"
 msgstr "Початок"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1551
 msgid "Ends"
 msgstr "Завершення"
 
@@ -7280,7 +7280,7 @@ msgstr "Увесь день"
 
 #: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1417 app/src/ui/preferences.rs:1605
 msgid "%a"
 msgstr "%a"
 
@@ -7884,11 +7884,11 @@ msgstr "Не вдалося вставити зображення"
 msgid "Describe Picture…"
 msgstr "Описати зображення…"
 
-#: app/src/ui/composer/editor.rs:337
+#: app/src/ui/composer/editor.rs:333
 msgid "Describe Picture"
 msgstr "Опис зображення"
 
-#: app/src/ui/composer/editor.rs:339
+#: app/src/ui/composer/editor.rs:335
 msgid ""
 "Screen readers read these words in place of the picture, and they show where "
 "the picture does not load."
@@ -7896,20 +7896,20 @@ msgstr ""
 "Засоби читання з екрана читають ці слова замість зображення, і вони "
 "показуються там, де зображення не завантажується."
 
-#: app/src/ui/composer/editor.rs:343 app/src/ui/composer/editor.rs:347
+#: app/src/ui/composer/editor.rs:339 app/src/ui/composer/editor.rs:343
 msgid "Description"
 msgstr "Опис"
 
-#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:461
+#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:472
 msgid "{file}, preview"
 msgstr "{file}, попередній перегляд"
 
-#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:398
+#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:409
 msgid "Could not open {file}"
 msgstr "Не вдалося відкрити {file}"
 
 #: app/src/ui/composer/files.rs:81 app/src/ui/window/attachments.rs:79
-#: app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:366
 msgid "Could not open {file}: {reason}"
 msgstr "Не вдалося відкрити {file}: {reason}"
 
@@ -8339,15 +8339,15 @@ msgstr "Натисніть Delete, щоб прибрати"
 msgid "Picture"
 msgstr "Зображення"
 
-#: app/src/ui/composer/spell.rs:653
+#: app/src/ui/composer/spell.rs:664
 msgid "No Suggestions"
 msgstr "Немає пропозицій"
 
-#: app/src/ui/composer/spell.rs:665
+#: app/src/ui/composer/spell.rs:676
 msgid "Add to Dictionary"
 msgstr "Додати до словника"
 
-#: app/src/ui/composer/spell.rs:666
+#: app/src/ui/composer/spell.rs:677
 msgid "Ignore"
 msgstr "Пропустити"
 
@@ -10057,11 +10057,7 @@ msgstr[2] ""
 "Penguin Mail підписує й шифрує через {programs}, які зберігають ваші ключі й "
 "самі запитують вашу парольну фразу."
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
-msgid "Spelling"
-msgstr "Правопис"
-
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:998
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -10071,7 +10067,20 @@ msgstr ""
 "Встановіть словник Hunspell, наприклад hunspell-uk або hunspell-en-us, і "
 "знову відкрийте вікно написання."
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1011
+msgid ""
+"No dictionaries are installed, so Penguin Mail is not checking spelling. Put "
+"a dictionary's .aff and .dic files in {folder} and reopen the composer."
+msgstr ""
+"Не встановлено жодного словника, тому Penguin Mail не перевіряє правопис. "
+"Покладіть файли .aff і .dic словника до {folder} і знову відкрийте вікно "
+"написання."
+
+#: app/src/ui/preferences.rs:1032 app/src/ui/preferences.rs:1041
+msgid "Spelling"
+msgstr "Правопис"
+
+#: app/src/ui/preferences.rs:1043
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -10079,59 +10088,59 @@ msgstr ""
 "Мова перевірки правопису для кожного облікового запису. Встановлені "
 "словники: {languages}."
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1055
 msgid "System: {language}"
 msgstr "Системна: {language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1070
 msgid "All Installed Languages"
 msgstr "Усі встановлені мови"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1113
 msgid "Sync"
 msgstr "Синхронізація"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1121
 msgid "Checking"
 msgstr "Перевірка"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1127
 msgid "Check for New Mail"
 msgstr "Перевіряти нову пошту"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1136
 msgid "Storage"
 msgstr "Сховище"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1144
 msgid "Keep Mail on This Computer For"
 msgstr "Зберігати пошту на цьому комп'ютері"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1165
 msgid "Message text kept for opening offline"
 msgstr "Текст листів, збережений для відкриття без з’єднання"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1168
 msgid "Message Cache"
 msgstr "Кеш повідомлень"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1177
 msgid "100 messages"
 msgstr "100 листів"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1178
 msgid "300 messages"
 msgstr "300 листів"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1179
 msgid "1,000 messages"
 msgstr "1000 листів"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1183
 msgid "Download Recent Inbox Messages"
 msgstr "Завантажувати останні листи з «Вхідних»"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1184
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -10140,150 +10149,150 @@ msgstr ""
 "відкривалися й були доступні без з’єднання. Вкладення та зовнішні зображення "
 "не завантажуються."
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1211
 msgid "Startup"
 msgstr "Запуск"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1214
 msgid "Start in the Tray at Login"
 msgstr "Запускати в системному лотку під час входу"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1229
 msgid "Not available in demo mode"
 msgstr "Недоступно в демонстраційному режимі"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1237
 msgid "Look for a new release once a day"
 msgstr "Шукати новий випуск раз на день"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1278
 msgid "{used} of {limit}"
 msgstr "{used} з {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1290
 msgid "{amount} · Full"
 msgstr "{amount} · Заповнено"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1292
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Майже заповнено"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1304
 msgid "Senders Who May Load Images"
 msgstr "Відправники, яким дозволено завантажувати зображення"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1305 app/src/ui/preferences.rs:1314
 msgid "Nobody yet"
 msgstr "Поки нікого"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1316
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} відправник"
 msgstr[1] "{count} відправники"
 msgstr[2] "{count} відправників"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1326
 msgid "Anyone at this domain"
 msgstr "Будь-хто з цього домену"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1328
 msgid "This address"
 msgstr "Ця адреса"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1333
 msgid "Stop Loading Images from This Sender"
 msgstr "Не завантажувати зображення від цього відправника"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1340
 msgid "Stop loading images from {sender}"
 msgstr "Не завантажувати зображення від {sender}"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1410
 msgid "Monday to Friday"
 msgstr "З понеділка по п'ятницю"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1411
 msgid "Every day of the week"
 msgstr "Щодня"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1412
 msgid "No days"
 msgstr "Жодного дня"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1419
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1422
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1485
 msgid "Time Format"
 msgstr "Формат часу"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1489
 msgid "Automatic follows the system clock format"
 msgstr "Автоматичний режим використовує системний формат часу"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1503
 msgid "Week Starts On"
 msgstr "Тиждень починається з"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1508
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "«Автоматично» використовує перший день тижня з локалі"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1522
 msgid "Working Hours"
 msgstr "Робочі години"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1541
 msgid "Hours"
 msgstr "Години"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1592
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1650
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1652
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1696
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Не вдалося змінити колір: {reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1740
 msgid "Never Translate"
 msgstr "Ніколи не перекладати"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1742
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Для повідомлень цими мовами переклад не пропонується"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1771
 msgid "Follow System"
 msgstr "Як у системі"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1775
 msgid "Language"
 msgstr "Мова"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1776
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail покаже нову мову після перезапуску"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1857 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "Без підпису"
 
@@ -11910,36 +11919,36 @@ msgstr[0] "Збереження {count} вкладення…"
 msgstr[1] "Збереження {count} вкладень…"
 msgstr[2] "Збереження {count} вкладень…"
 
-#: app/src/ui/window/attachments.rs:192
+#: app/src/ui/window/attachments.rs:197
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} вкладення збережено в {folder}"
 msgstr[1] "{count} вкладення збережено в {folder}"
 msgstr[2] "{count} вкладень збережено в {folder}"
 
-#: app/src/ui/window/attachments.rs:199
+#: app/src/ui/window/attachments.rs:204
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "Збережено в {folder}: {count}. Не вдалося зберегти {files}"
 
-#: app/src/ui/window/attachments.rs:245
+#: app/src/ui/window/attachments.rs:250
 msgid "Downloading {file}…"
 msgstr "Завантаження {file}…"
 
-#: app/src/ui/window/attachments.rs:269 app/src/ui/window/attachments.rs:298
-#: app/src/ui/window/attachments.rs:331
+#: app/src/ui/window/attachments.rs:274 app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:342
 msgid "Could not save {file}: {reason}"
 msgstr "Не вдалося зберегти {file}: {reason}"
 
-#: app/src/ui/window/attachments.rs:316 app/src/ui/window/export.rs:111
+#: app/src/ui/window/attachments.rs:327 app/src/ui/window/export.rs:111
 #: app/src/ui/window/export.rs:153 app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file} збережено"
 
-#: app/src/ui/window/attachments.rs:319
+#: app/src/ui/window/attachments.rs:330
 msgid "Open"
 msgstr "Відкрити"
 
-#: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
+#: app/src/ui/window/attachments.rs:465 app/src/ui/window/attachments.rs:468
 msgid "Open in Another Program"
 msgstr "Відкрити в іншій програмі"
 
@@ -12929,15 +12938,15 @@ msgstr "Перезапустіть, щоб завершити оновлення
 msgid "Install it now, or later from the tray."
 msgstr "Встановіть зараз або пізніше із системного лотка."
 
-#: app/src/update/signature.rs:31
+#: app/src/update/signature.rs:42
 msgid "This release has no signature, so Penguin Mail will not install it."
 msgstr "Цей випуск не має підпису, тому Penguin Mail не встановлюватиме його."
 
-#: app/src/update/signature.rs:99
+#: app/src/update/signature.rs:128
 msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr "Penguin Mail не вдалося перевірити підпис випуску: {reason}"
 
-#: app/src/update/signature.rs:150
+#: app/src/update/signature.rs:179
 msgid ""
 "This release is not signed with Penguin Mail's key, so Penguin Mail will not "
 "install it."
@@ -12945,7 +12954,7 @@ msgstr ""
 "Цей випуск не підписано ключем Penguin Mail, тому Penguin Mail не "
 "встановлюватиме його."
 
-#: app/src/update/signature.rs:154
+#: app/src/update/signature.rs:183
 msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr ""
