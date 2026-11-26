@@ -16,23 +16,95 @@ use windows::UI::Notifications::{
     ToastActivatedEventArgs, ToastDismissalReason, ToastDismissedEventArgs, ToastNotification,
     ToastNotificationManager, ToastNotifier,
 };
-use windows::Win32::Storage::EnhancedStorage::PKEY_AppUserModel_ID;
-use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
+use windows::Win32::Foundation::{CLASS_E_NOAGGREGATION, ERROR_SUCCESS, HKEY_CURRENT_USER};
+use windows::Win32::Storage::EnhancedStorage::{
+    PKEY_AppUserModel_ID, PKEY_AppUserModel_ToastActivatorCLSID,
+};
+use windows::Win32::System::Com::StructuredStorage::{InitPropVariantFromCLSID, PROPVARIANT};
 use windows::Win32::System::Com::{
-    CLSCTX_ALL, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree,
-    IPersistFile,
+    CLSCTX_ALL, CLSCTX_LOCAL_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
+    CoRegisterClassObject, CoTaskMemFree, IClassFactory, IClassFactory_Impl, IPersistFile,
+    REGCLS_MULTIPLEUSE,
+};
+use windows::Win32::System::Registry::{
+    REG_SZ, RRF_RT_REG_SZ, RegGetValueW, RegSetKeyValueW,
+};
+use windows::Win32::UI::Notifications::{
+    INotificationActivationCallback, INotificationActivationCallback_Impl,
+    NOTIFICATION_USER_INPUT_DATA,
 };
 use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
 use windows::Win32::UI::Shell::{
     FOLDERID_Programs, IShellLinkW, KF_FLAG_CREATE, SHGetKnownFolderPath,
     SetCurrentProcessExplicitAppUserModelID, ShellLink,
 };
-use windows::core::{HSTRING, Interface, PCWSTR, Ref};
+use windows::core::{BOOL, GUID, HSTRING, IUnknown, Interface, PCWSTR, Ref, implement};
 
 use super::{Action, Actions};
 
 pub(super) struct Desktop {
     native: Option<Native>,
+}
+
+/// The COM class Windows starts to deliver a toast click when the app is
+/// not running, or when the toast sits in Action Center. The installer's
+/// shortcut and registry key name the same value.
+const ACTIVATOR: GUID = GUID::from_u128(0x7B4D8E4A_3C1F_4F6E_9A2B_5D1E0C9F8A61);
+const ACTIVATOR_TEXT: &str = "{7B4D8E4A-3C1F-4F6E-9A2B-5D1E0C9F8A61}";
+
+/// What Windows calls with a click's arguments. The arguments are the
+/// same string the in-process `Activated` handler reads.
+#[implement(INotificationActivationCallback)]
+struct Activation;
+
+impl INotificationActivationCallback_Impl for Activation_Impl {
+    fn Activate(
+        &self,
+        _app_id: &PCWSTR,
+        invoked_args: &PCWSTR,
+        _input: *const NOTIFICATION_USER_INPUT_DATA,
+        _count: u32,
+    ) -> windows::core::Result<()> {
+        // SAFETY: Windows passes a NUL-terminated string, or null.
+        let arguments = unsafe { invoked_args.to_string() }.unwrap_or_default();
+        deliver(&arguments);
+        Ok(())
+    }
+}
+
+/// Makes one [`Activation`] for each request.
+#[implement(IClassFactory)]
+struct Factory;
+
+impl IClassFactory_Impl for Factory_Impl {
+    fn CreateInstance(
+        &self,
+        outer: Ref<IUnknown>,
+        iid: *const GUID,
+        object: *mut *mut core::ffi::c_void,
+    ) -> windows::core::Result<()> {
+        if !outer.is_null() {
+            return Err(CLASS_E_NOAGGREGATION.into());
+        }
+        let callback: IUnknown = Activation.into();
+        // SAFETY: COM gives a valid interface id and an out pointer.
+        unsafe { callback.query(iid, object).ok() }
+    }
+
+    fn LockServer(&self, _lock: BOOL) -> windows::core::Result<()> {
+        Ok(())
+    }
+}
+
+/// Hands a click's arguments to the loop that opens the mail. Both the
+/// in-process handler and the COM activator end here.
+fn deliver(arguments: &str) {
+    let Ok(click) = serde_json::from_str::<Click>(arguments) else {
+        return;
+    };
+    if let Some(sender) = clicks_channel().get() {
+        let _ = sender.try_send(click);
+    }
 }
 
 /// Every toast's group, which Action Center needs to find one again.
@@ -88,6 +160,12 @@ impl Desktop {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
             SetCurrentProcessExplicitAppUserModelID(PCWSTR(HSTRING::from(crate::APP_ID).as_ptr()))?;
+            let factory: IClassFactory = Factory.into();
+            if let Err(err) =
+                CoRegisterClassObject(&ACTIVATOR, &factory, CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE)
+            {
+                tracing::warn!(error = %err, "a toast clicked after quit will not open its mail");
+            }
             ensure_shortcut();
             ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(crate::APP_ID))
         }
@@ -136,9 +214,6 @@ impl Desktop {
                 Ok(())
             },
         ));
-        let Some(sender) = clicks_channel().get().cloned() else {
-            return;
-        };
         let shown = native.shown.clone();
         let id_owned = id.to_string();
         let _ = toast.Activated(&TypedEventHandler::new(
@@ -147,16 +222,12 @@ impl Desktop {
                     .lock()
                     .expect("the toast map is poisoned")
                     .remove(&id_owned);
-                let Ok(click) = serde_json::from_str::<Click>(
-                    &args
-                        .ok()?
-                        .cast::<ToastActivatedEventArgs>()?
-                        .Arguments()?
-                        .to_string(),
-                ) else {
-                    return Ok(());
-                };
-                let _ = sender.try_send(click);
+                let arguments = args
+                    .ok()?
+                    .cast::<ToastActivatedEventArgs>()?
+                    .Arguments()?
+                    .to_string();
+                deliver(&arguments);
                 Ok(())
             },
         ));
@@ -296,13 +367,18 @@ fn ensure_shortcut() {
             return;
         };
         let id = PROPVARIANT::from(crate::APP_ID);
+        let Ok(activator) = InitPropVariantFromCLSID(&ACTIVATOR) else {
+            return;
+        };
         if store
             .SetValue(&PKEY_AppUserModel_ID, &id)
+            .and_then(|_| store.SetValue(&PKEY_AppUserModel_ToastActivatorCLSID, &activator))
             .and_then(|_| store.Commit())
             .is_err()
         {
             return;
         }
+        register_server(&exe);
         let Ok(file) = link.cast::<IPersistFile>() else {
             return;
         };
@@ -310,10 +386,58 @@ fn ensure_shortcut() {
     }
 }
 
+/// Tells Windows which program serves [`ACTIVATOR`], for a copy run
+/// without the installer. An entry that exists stays, since the installer
+/// wrote it for the installed copy.
+///
+/// shortcut: a dev build that moves leaves its old path here, until the
+/// key is deleted by hand.
+fn register_server(exe: &std::path::Path) {
+    let subkey = HSTRING::from(format!(
+        r"Software\Classes\CLSID\{ACTIVATOR_TEXT}\LocalServer32"
+    ));
+    let subkey = PCWSTR(subkey.as_ptr());
+    let command: Vec<u16> = format!("\"{}\"", exe.display())
+        .encode_utf16()
+        .chain([0])
+        .collect();
+    // SAFETY: `subkey` and `command` outlive both calls, and `command` is
+    // NUL-terminated with its byte length passed.
+    unsafe {
+        let present = RegGetValueW(
+            HKEY_CURRENT_USER,
+            subkey,
+            PCWSTR::null(),
+            RRF_RT_REG_SZ,
+            None,
+            None,
+            None,
+        ) == ERROR_SUCCESS;
+        if !present {
+            let _ = RegSetKeyValueW(
+                HKEY_CURRENT_USER,
+                subkey,
+                PCWSTR::null(),
+                REG_SZ.0,
+                Some(command.as_ptr().cast()),
+                (command.len() * 2) as u32,
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::notify;
+
+    #[test]
+    fn the_activator_text_names_the_activator_class() {
+        assert_eq!(
+            GUID::try_from(ACTIVATOR_TEXT.trim_matches(['{', '}'])).unwrap(),
+            ACTIVATOR
+        );
+    }
 
     fn actions(open: Option<Action>, target: &str, buttons: Vec<Action>) -> Actions {
         Actions {

@@ -2867,6 +2867,7 @@ dependencies = [
  "webview2-com",
  "webview2-com-sys",
  "windows",
+ "windows-core",
  "wiremock",
  "zbus 6.3.0",
 ]

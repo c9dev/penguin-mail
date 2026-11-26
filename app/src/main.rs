@@ -305,8 +305,14 @@ fn main() -> glib::ExitCode {
         println!("penguin-mail {}", env!("CARGO_PKG_VERSION"));
         return glib::ExitCode::SUCCESS;
     }
+    // Windows starts the program with `-Embedding` to deliver a click on a
+    // toast, after the app has quit. The click itself arrives through the
+    // COM class `notifications` registers.
+    let embedded = cfg!(windows) && args.iter().any(|a| a == "-Embedding");
     if let Some(unknown) = args.iter().skip(1).find(|a| {
-        a.starts_with('-') && !matches!(a.as_str(), "--background" | "--demo" | "--compose")
+        a.starts_with('-')
+            && !(embedded && *a == "-Embedding")
+            && !matches!(a.as_str(), "--background" | "--demo" | "--compose")
     }) {
         let line = fill(
             &gettext("penguin-mail: unknown option {option}"),
@@ -324,7 +330,8 @@ fn main() -> glib::ExitCode {
         .ok()
         .and_then(|here| named_file(&raw_args, &here));
     let demo = args.iter().any(|a| a == "--demo");
-    let background = args.iter().any(|a| a == "--background");
+    // A toast click opens its own window, so the start has none of its own.
+    let background = embedded || args.iter().any(|a| a == "--background");
     if !demo {
         old_id::carry_over_on_start();
     }
