@@ -1,112 +1,49 @@
 #!/usr/bin/env bash
-# Builds the Windows release and its installer, end to end:
+# Builds the Windows release and its installer, end to end, with MSYS2 UCRT64:
 #
-#   scripts/build-windows.sh --prefix D:/gtk-msvc/prefix
+#   scripts/build-windows.sh [--msys2 C:/msys64/ucrt64] [--busybox PATH] [--stage-only]
 #
-# --prefix names the GTK prefix the build links against: the gvsbuild
-# GTK4 zip unpacked anywhere, or a prefix gvsbuild built from source.
-# PENGUIN_MAIL_GTK_PREFIX works instead of the flag. The zip's
-# lib/pkgconfig/*.pc files bake in C:/gtk-build/...; the script rewrites
-# the prefix= lines to the real location itself.
+# --msys2 names the UCRT64 prefix that supplies GTK, libadwaita and the helpers (default
+# C:/msys64/ucrt64). The release CI installs a gtk4 package carrying the monitor patch first
+# (scripts/build-gtk4-msys2.sh); a stock gtk4 builds too, without the patch. --busybox and
+# --stage-only pass through to scripts/package-windows.sh, which this calls once the exe is built;
+# with no --busybox a copy of BusyBox is fetched once into the cache folder.
 #
-# The compiler is whatever Visual Studio 2022 is installed — Build
-# Tools, Community or another edition — found through vswhere, so a
-# machine does not have to name its edition. --busybox, --stage-only and
-# --msys2 (the MSYS2 UCRT64 prefix that supplies gpgv and pdftotext)
-# pass through to scripts/package-windows.sh, which this calls once the
-# exe is built; with no --busybox a copy of BusyBox is fetched once into
-# the cache folder.
-#
-# Run it from an MSYS2 or Git Bash shell.
+# Run it from an MSYS2 UCRT64 shell with the GNU Rust toolchain installed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-prefix=${PENGUIN_MAIL_GTK_PREFIX:-}
+msys2=C:/msys64/ucrt64
 busybox=
 package_args=()
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --prefix)
-            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--prefix needs a value" >&2; exit 2; }
-            prefix=$2; shift 2 ;;
-        --prefix=*) prefix=${1#*=}; shift ;;
+        --msys2)
+            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--msys2 needs a value" >&2; exit 2; }
+            msys2=$2; shift 2 ;;
+        --msys2=*) msys2=${1#*=}; shift ;;
         --busybox)
             [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--busybox needs a value" >&2; exit 2; }
             busybox=$2; shift 2 ;;
         --busybox=*) busybox=${1#*=}; shift ;;
-        --msys2)
-            [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != --* ]] || { echo "--msys2 needs a value" >&2; exit 2; }
-            package_args+=(--msys2 "$2"); shift 2 ;;
-        --msys2=*) package_args+=("$1"); shift ;;
         --stage-only) package_args+=(--stage-only); shift ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
 
-[ -d "$prefix/bin" ] || {
-    echo "--prefix needs a GTK prefix holding bin/ (the gvsbuild zip unpacked)" >&2
+[ -d "$msys2/bin" ] && [ -d "$msys2/lib/pkgconfig" ] || {
+    echo "--msys2 needs an MSYS2 UCRT64 prefix holding bin/ and lib/pkgconfig/" >&2
     exit 2
 }
-prefix=$(cd "$prefix" && pwd)
+prefix=$(cd "$msys2" && pwd)
 
-# The prefix= lines of every .pc must name where the prefix really sits.
-# A first file still pointing at its build location speaks for them all.
-pc=$(ls "$prefix/lib/pkgconfig/"*.pc 2>/dev/null | head -1) || true
-if [ -n "$pc" ] && ! grep -q "^prefix=$(cygpath -m "$prefix")" "$pc"; then
-    sed -i "s|^prefix=.*|prefix=$(cygpath -m "$prefix")|" "$prefix/lib/pkgconfig/"*.pc
-fi
-
-# MSVC's own variables arrive through vcvarsall, dumped to `set` by a
-# throwaway batch file and imported one by one. vswhere locates the
-# installation without knowing the edition.
-if [ -z "${VCToolsInstallDir:-}" ]; then
-    vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
-    [ -x "$vswhere" ] || { echo "vswhere not found; is Visual Studio 2022 installed?" >&2; exit 1; }
-    vs=$("$vswhere" -latest -products "*" \
-        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
-        -property installationPath | tr -d '\r')
-    vcvars=$(cygpath -u "$vs")/VC/Auxiliary/Build/vcvarsall.bat
-    [ -f "$vcvars" ] || { echo "vcvarsall.bat not found under $vs" >&2; exit 1; }
-    work=$(mktemp -d)
-    trap 'rm -rf "$work"' EXIT
-    cat > "$work/env.bat" <<EOF
-@echo off
-call "$(cygpath -w "$vcvars")" x64 >nul 2>nul
-set
-EOF
-    while IFS='=' read -r k v; do
-        v="${v%$'\r'}"
-        case "$k" in
-            PATH | Path)
-                # vcvars rewrites Path entirely; the unix form is what
-                # this shell uses, and children get Windows paths back.
-                export PATH="$(cygpath -pu "$v")"
-                ;;
-            "" | *[^A-Za-z0-9_]*) ;;
-            *) export "$k=$v" ;;
-        esac
-    done < <(cmd //c "$(cygpath -w "$work/env.bat")")
-fi
-
-export PKG_CONFIG="$(cygpath -w "$prefix")\\bin\\pkg-config.exe"
-export PKG_CONFIG_PATH="$(cygpath -w "$prefix")\\lib\\pkgconfig;$(cygpath -w "$prefix")\\share\\pkgconfig"
-export GETTEXT_DIR="$(cygpath -w "$prefix")"
-export GETTEXT_LIB_DIR="$(cygpath -w "$prefix")\\lib"
-export GETTEXT_INCLUDE_DIR="$(cygpath -w "$prefix")\\include"
-export RUSTFLAGS="-L native=$(cygpath -w "$prefix")\\lib"
+export PKG_CONFIG_PATH="$(cygpath -m "$prefix")/lib/pkgconfig"
+export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m "$prefix")"
+export GETTEXT_SYSTEM=1
 export PATH="$prefix/bin:$PATH"
 
-cargo build --release --target x86_64-pc-windows-msvc -p mailrs
-
-exe=target/x86_64-pc-windows-msvc/release/penguin-mail.exe
-# webview2-com-sys keeps the delay-loaded loader in its OUT_DIR; beside
-# the exe is where the packager looks for it first.
-release_build="$PWD/target/x86_64-pc-windows-msvc/release/build"
-# Cargo 1.100 moved build output from webview2-com-sys-<hash> to webview2-com-sys/<hash>.
-loader=$(ls -t "$release_build"/webview2-com-sys-*/out/x64/WebView2Loader.dll "$release_build"/webview2-com-sys/*/out/x64/WebView2Loader.dll 2>/dev/null | head -1) || true
-if [ -n "$loader" ]; then
-    cp "$loader" "$(dirname "$exe")/"
-fi
+cargo build --release --target x86_64-pc-windows-gnu -p mailrs
+exe=target/x86_64-pc-windows-gnu/release/penguin-mail.exe
 
 # BusyBox gives the skill sandbox its shell. Kept in the cache so a
 # rebuild does not fetch it again; Windows' curl verifies against the
@@ -128,4 +65,4 @@ if [ -z "$busybox" ]; then
 fi
 "$busybox" true >/dev/null 2>&1 || { echo "$busybox does not run" >&2; exit 1; }
 
-scripts/package-windows.sh --exe="$exe" --prefix="$prefix" --busybox="$busybox" "${package_args[@]}"
+scripts/package-windows.sh --exe="$exe" --prefix="$prefix" --busybox="$busybox" --msys2="$(cygpath -m "$prefix")" "${package_args[@]}"

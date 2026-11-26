@@ -285,12 +285,12 @@ fn windows_build_options_accept_separate_values_and_reject_missing_ones() {
         (
             "build-windows.sh",
             vec![
-                "--prefix",
-                "/nonexistent/gtk",
+                "--msys2",
+                "/nonexistent/ucrt64",
                 "--busybox",
                 "/nonexistent/busybox",
             ],
-            "--prefix needs a GTK prefix",
+            "--msys2 needs an MSYS2 UCRT64 prefix",
         ),
         (
             "package-windows.sh",
@@ -309,8 +309,8 @@ fn windows_build_options_accept_separate_values_and_reject_missing_ones() {
         ),
         (
             "build-windows.sh",
-            vec!["--prefix"],
-            "--prefix needs a value",
+            vec!["--msys2"],
+            "--msys2 needs a value",
         ),
         (
             "package-windows.sh",

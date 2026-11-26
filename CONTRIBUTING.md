@@ -102,23 +102,19 @@ add a Google or Microsoft account; use `--demo` to explore it.
 
 ### Windows
 
-On Windows, install Rust with the `x86_64-pc-windows-msvc` target, Visual
-Studio 2022's C++ workload, MSYS2 or Git Bash, and Inno Setup 6, then
-point the build at a GTK prefix — the `GTK4_Gvsbuild_*_x64.zip` from the
-gvsbuild releases unzipped anywhere works:
+On Windows, install Rust's `x86_64-pc-windows-gnu` toolchain, MSYS2 with
+the UCRT64 GTK 4 and libadwaita packages, and Inno Setup 6, then run this
+from an MSYS2 UCRT64 shell:
 
 ```sh
-scripts/build-windows.sh --prefix D:/gtk-msvc/prefix
+scripts/build-windows.sh
 ```
 
-The script finds the compiler, builds the release exe, and produces the
-installer under `dist/`. The released installer uses a GTK built with
-`scripts/build-gtk-windows.sh`, which adds a monitor patch to gvsbuild's
-GTK 4 and needs MSYS2 UCRT64 with `gnupg` and `poppler` for the bundled
-helpers (`--msys2`). Development builds can use the
-`x86_64-pc-windows-gnu` target with MSYS2 UCRT64's GTK instead;
-[docs/windows.md](docs/windows.md#building) covers both paths and the
-dependencies in detail. Without the OAuth variables described in
+The script builds the release exe and produces the installer under
+`dist/`. The released installer uses a gtk4 package rebuilt with
+`scripts/build-gtk4-msys2.sh`, which adds a monitor patch to MSYS2's GTK 4.
+[docs/windows.md](docs/windows.md#building) lists the packages and
+details. Without the OAuth variables described in
 [setup](docs/setup.md#building-your-own-copy), `--demo` explores the
 app on sample data.
 

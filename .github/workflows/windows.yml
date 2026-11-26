@@ -121,19 +121,18 @@ jobs:
         shell: pwsh
         run: scripts/test-windows-installer.ps1
 
-  # GTK 4 and libadwaita are built from source with the monitor patch, then the
-  # app is built against them and packed. gvsbuild's release is pinned by commit.
+  # The release is the MSYS2 UCRT64 build the native job tests, with MSYS2's
+  # gtk4 package rebuilt from its pinned recipe plus the monitor patch.
   installer:
     name: Build the installer
-    # windows-2025 carries Visual Studio, Inno Setup 6 and MSYS2, which the
-    # build needs; windows-latest moves to newer images.
+    # windows-2025 carries Inno Setup 6 and MSYS2; windows-latest moves to newer images.
     runs-on: windows-2025
     timeout-minutes: 180
     outputs:
       artifact: ${{ steps.version.outputs.artifact }}
     env:
-      GVSBUILD_SHA: fcc48112291b113683ac153104d95fd1c57fceb1 # 2026.10.0
-      GTK_PREFIX: C:\gtk-build\gtk\x64\release
+      MINGW_PACKAGES_SHA: 250d5f562ec1587ec36100cf2c42fa6f1c170c4a # gtk4: 4.24.2
+      GTK4_PACKAGE: dist/gtk4-package
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -141,9 +140,10 @@ jobs:
           ref: ${{ inputs.source_ref || github.sha }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: wingtk/gvsbuild
-          ref: ${{ env.GVSBUILD_SHA }}
-          path: .ci-gvsbuild
+          repository: msys2/MINGW-packages
+          ref: ${{ env.MINGW_PACKAGES_SHA }}
+          path: .ci-mingw-packages
+          sparse-checkout: mingw-w64-gtk4
           persist-credentials: false
       - name: Read the version
         id: version
@@ -152,42 +152,43 @@ jobs:
           version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "artifact=penguin-mail-$version-windows-x64" >> "$GITHUB_OUTPUT"
-      # Only main writes the cache, so a release restores what a run on main
-      # built and no other run can plant a prefix inside a release.
-      - name: Restore the GTK prefix
-        id: gtk-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.GTK_PREFIX }}
-          key: gtk-windows-${{ env.GVSBUILD_SHA }}-${{ hashFiles('packaging/windows/gtk4-zero-monitor-popup.patch', 'scripts/build-gtk-windows.sh') }}
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        if: steps.gtk-cache.outputs.cache-hit != 'true'
-        with:
-          version: 0.13.10
-          enable-cache: false
-      - name: Build GTK 4 and libadwaita
-        if: steps.gtk-cache.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          # gvsbuild applies patches with MSYS2's patch.
-          [ -x /c/msys64/usr/bin/patch.exe ] || /c/msys64/usr/bin/pacman.exe -S --noconfirm --needed patch
-          scripts/build-gtk-windows.sh .ci-gvsbuild
-      - name: Save the GTK prefix
-        if: steps.gtk-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.GTK_PREFIX }}
-          key: ${{ steps.gtk-cache.outputs.cache-primary-key }}
       - uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2
         with:
           msystem: UCRT64
           update: true
           path-type: inherit
-          # binutils for objdump, gnupg and poppler for the helpers the installer ships.
+          # base-devel and the toolchain build the gtk4 package; binutils gives
+          # objdump, gnupg and poppler the helpers the installer ships.
           install: >-
+            base-devel
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-gettext-tools
+            mingw-w64-ucrt-x86_64-gettext-runtime
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-binutils
             mingw-w64-ucrt-x86_64-gnupg
             mingw-w64-ucrt-x86_64-poppler
+      # Only main writes the cache, so a release restores what a run on main
+      # built and no other run can plant a package inside a release.
+      - name: Restore the patched gtk4 package
+        id: gtk-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.GTK4_PACKAGE }}
+          key: gtk4-msys2-${{ env.MINGW_PACKAGES_SHA }}-${{ hashFiles('packaging/windows/gtk4-zero-monitor-popup.patch', 'scripts/build-gtk4-msys2.sh') }}
+      - name: Build and install the patched gtk4
+        shell: msys2 {0}
+        run: scripts/build-gtk4-msys2.sh .ci-mingw-packages "$GTK4_PACKAGE"
+      - name: Save the patched gtk4 package
+        if: steps.gtk-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.GTK4_PACKAGE }}
+          key: ${{ steps.gtk-cache.outputs.cache-primary-key }}
       - name: Build the app and the installer
         shell: msys2 {0}
         env:
@@ -197,9 +198,9 @@ jobs:
         run: |
           set -euo pipefail
           rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
-          rustup toolchain install "$rust" --profile minimal --target x86_64-pc-windows-msvc
-          export RUSTUP_TOOLCHAIN=$rust
-          scripts/build-windows.sh --prefix "$(cygpath -u "$GTK_PREFIX")" --msys2 "$(cygpath -m /ucrt64)"
+          rustup toolchain install "$rust-x86_64-pc-windows-gnu" --profile minimal
+          export RUSTUP_TOOLCHAIN=$rust-x86_64-pc-windows-gnu
+          scripts/build-windows.sh --msys2 "$(cygpath -m /ucrt64)"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.version.outputs.artifact }}

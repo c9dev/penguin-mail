@@ -1,51 +1,48 @@
 # Windows port
 
-Penguin Mail on Windows: `x86_64-pc-windows-msvc` for release,
-`x86_64-pc-windows-gnu` (MSYS2 UCRT64) for development, Windows 10 or
-later, with feature parity as the goal. WebView2 draws mail HTML, an
-Inno Setup installer carries it for direct downloads, and PGP/S-MIME
-and skill scripts are in scope.
+Penguin Mail on Windows: `x86_64-pc-windows-gnu` (MSYS2 UCRT64) for
+release and development, Windows 10 or later, with feature parity as the
+goal. WebView2 draws mail HTML, an Inno Setup installer carries it for
+direct downloads, and PGP/S-MIME and skill scripts are in scope.
 
 ## Building
 
-From an MSYS2 or Git Bash shell, one command covers the release:
+From an MSYS2 UCRT64 shell, one command covers the release:
 
 ```sh
-scripts/build-windows.sh --prefix D:/gtk-msvc/prefix
+scripts/build-windows.sh
 ```
 
-It finds Visual Studio through vswhere — any 2022 edition with the C++
-workload, so no edition-specific path is hard-coded — imports the MSVC
-environment, builds `target/x86_64-pc-windows-msvc/release/
-penguin-mail.exe`, and hands the exe to `scripts/package-windows.sh`,
+It builds `target/x86_64-pc-windows-gnu/release/penguin-mail.exe`
+against MSYS2's GTK and hands the exe to `scripts/package-windows.sh`,
 which stages the install tree at `dist/penguin-mail/` and compiles
 `dist/penguin-mail-<version>-setup.exe` with Inno Setup 6.
 
 What a machine needs:
 
-- **Rust** with the `x86_64-pc-windows-msvc` target installed.
-- **Visual Studio 2022** with the C++ workload: Build Tools is enough.
-- **A GTK prefix**: the `GTK4_Gvsbuild_*_x64.zip` from the gvsbuild
-  releases, unzipped anywhere — its `bin`, `lib`, `share` and `etc`
-  sit at its root. The script rewrites the `prefix=` lines of its
-  `lib/pkgconfig/*.pc` when they still name the zip's build location.
-  Building the stack from source works the same and is the way to ship
-  `packaging/windows/gtk4-zero-monitor-popup.patch`:
-  `scripts/build-gtk-windows.sh <gvsbuild checkout>` copies the patch
-  into the checkout, adds it to gvsbuild's GTK 4 project, and builds
-  GTK 4, libadwaita and the Adwaita icons into
-  `C:\gtk-build\gtk\x64\release`. CI uses it, so the released installer
-  carries the patched GTK.
-- **MSYS2 UCRT64** with `mingw-w64-ucrt-x86_64-{binutils,gnupg,poppler}`,
-  for `gpgv.exe` and `pdftotext.exe`, which the installer ships. The
+- **Rust** with the `x86_64-pc-windows-gnu` toolchain.
+- **MSYS2 UCRT64** with the packages the CI's `installer` job installs
+  (GTK 4, libadwaita, gettext, pkgconf, binutils, gnupg, poppler). The
   default prefix is `C:/msys64/ucrt64`; `--msys2` names another.
-- **MSYS2 or Git Bash**, for bash and cygpath.
+- **The patched GTK**, for a release:
+  `scripts/build-gtk4-msys2.sh <MINGW-packages checkout>` rebuilds
+  MSYS2's gtk4 package from its recipe with
+  `packaging/windows/gtk4-zero-monitor-popup.patch` added and installs
+  it. It stops when the recipe moves off GTK 4.24.2 until the patch is
+  checked against the new version. A stock gtk4 builds too, without the
+  patch.
 - **Inno Setup 6**, for the installer step; `--stage-only` skips it.
 - **BusyBox** for the skills sandbox: downloaded to the cache once and
   checked against a pinned SHA-256 (update the pin in `build-windows.sh`
   when upstream publishes a new build), or named with `--busybox`.
 - The WebView2 evergreen bootstrapper is fetched at packaging time
   and embedded in the installer.
+
+The release moved off MSVC and gvsbuild on 2026-11-26: gvsbuild 2026.10.0
+builds GLib with `proxy-libintl` in place of gettext's `intl.dll`, so
+gettext-rs no longer links (`textdomain`, `gettext` unresolved). The MSVC
+notes below describe the earlier gvsbuild 2025.11.1 zip, which still
+carried the real `intl.dll`.
 
 For development the gnu target builds against MSYS2's own GTK:
 
@@ -340,12 +337,9 @@ unchanged and `packaging::runs_skills` can still turn scripts off.
 
 ## Toolchain
 
-GTK4 and libadwaita for MSVC come from gvsbuild (MSYS2 works too but its
-gnu toolchain mixes badly with MSVC). The release zip's prefix provides
-`glib-compile-resources`, libintl for `GETTEXT_DIR`, compiled schemas,
-gdk-pixbuf loaders, Adwaita icons, fonts configuration and the `.mo`
-catalogues. Building the same stack from source with `gvsbuild build
-gtk4 libadwaita` remains the fallback when the zip drifts out of date.
+GTK4 and libadwaita come from MSYS2 UCRT64, whose prefix provides
+`glib-compile-resources`, libintl, compiled schemas, gdk-pixbuf loaders,
+Adwaita icons, fonts configuration and the `.mo` catalogues.
 `scripts/package-windows.sh` collects the exe plus those DLLs and data
 files the same way `scripts/package-macos.sh` collects the macOS
 bundle, walking the import tables breadth-first so every transitive
@@ -481,9 +475,9 @@ checks the three dereference sites (`get_primary_monitor`'s unref,
 `gdk_monitor_set_scale_factor` call in `gdkevents-win32.c`). With it,
 `monitors()` reports the madeup monitor and popovers actually present
 in the session instead of being skipped. The release build applies it with
-`scripts/build-gtk-windows.sh`, which stops if gvsbuild moves GTK 4 off
-4.24.1 until the patch is checked against the new version. The
-prebuilt gvsbuild zip cannot take patches. A console session keeps
+`scripts/build-gtk4-msys2.sh`, which rebuilds MSYS2's gtk4 package with
+the patch and stops if the recipe moves GTK 4 off 4.24.2 until the patch
+is checked against the new version. A console session keeps
 the monitor list populated, and whether an interactive RDP session
 does too is unchecked.
 
@@ -495,9 +489,9 @@ does too is unchecked.
 - Gpg4win: the app finds an installed copy for PGP and S/MIME keys a
   person already has. The winget Gpg4win install here registered but wrote
   no files; worth a second look on a clean machine.
-- The release job's GTK cache is written only by runs on main. After a
-  change to the patch or to `build-gtk-windows.sh`, merge to main before
-  tagging, or the release builds GTK from scratch (over an hour).
+- The release job's gtk4 package cache is written only by runs on main.
+  After a change to the patch or to `build-gtk4-msys2.sh`, merge to main
+  before tagging, or the release builds the gtk4 package from scratch.
 - Everything under "Checks on a Windows VM" below is run by hand before a
   release that touches Windows.
 
@@ -510,8 +504,8 @@ does too is unchecked.
   then clippy. BusyBox is built from a pinned upstream release commit.
   It also compiles a placeholder installer and checks what it installs
   and what uninstall removes.
-- `installer`: builds GTK 4 and libadwaita with gvsbuild and the monitor
-  patch (cached), builds the app for MSVC, and uploads
+- `installer`: rebuilds MSYS2's gtk4 package with the monitor patch
+  (cached), builds the app with MSYS2 UCRT64, and uploads
   `penguin-mail-<version>-setup.exe`. The release workflow calls the same
   job.
 - `smoke`: installs that file silently, checks the bundled helpers, data
