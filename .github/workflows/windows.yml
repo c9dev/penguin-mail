@@ -145,6 +145,14 @@ jobs:
           path: .ci-mingw-packages
           sparse-checkout: mingw-w64-gtk4
           persist-credentials: false
+      # frippery.org refuses downloads from the runners, so CI builds the same
+      # pinned BusyBox release from source.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rmyorston/busybox-w32
+          ref: 5f09fb446adf81d005f0aad9dc47eca19ac3b74c # FRP-6354-g5f09fb446
+          path: .ci-busybox
+          persist-credentials: false
       - name: Read the version
         id: version
         shell: bash
@@ -189,6 +197,13 @@ jobs:
         with:
           path: ${{ env.GTK4_PACKAGE }}
           key: ${{ steps.gtk-cache.outputs.cache-primary-key }}
+      - name: Build the pinned BusyBox helper
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          make -C .ci-busybox CROSS_COMPILE= mingw64u_defconfig
+          make -C .ci-busybox CROSS_COMPILE= -j2 busybox.exe
+          cp .ci-busybox/busybox.exe busybox64u.exe
       - name: Build the app and the installer
         shell: msys2 {0}
         env:
@@ -200,7 +215,7 @@ jobs:
           rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
           rustup toolchain install "$rust-x86_64-pc-windows-gnu" --profile minimal
           export RUSTUP_TOOLCHAIN=$rust-x86_64-pc-windows-gnu
-          scripts/build-windows.sh --msys2 "$(cygpath -m /ucrt64)"
+          scripts/build-windows.sh --msys2 "$(cygpath -m /ucrt64)" --busybox busybox64u.exe
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.version.outputs.artifact }}
