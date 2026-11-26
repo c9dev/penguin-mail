@@ -2656,15 +2656,15 @@ msgstr ""
 "  mailto:...     --compose mailto:... ile aynı\n"
 "  FILE.ics       etkinliklerini takvime eklemek için takvim dosyası aç"
 
-#: app/src/main.rs:318
+#: app/src/main.rs:327
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: bilinmeyen seçenek {option}"
 
-#: app/src/main.rs:599
+#: app/src/main.rs:608
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Başlatılamadı"
 
-#: app/src/main.rs:604 app/src/ui/about.rs:192
+#: app/src/main.rs:613 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Sorun Bildir"
 

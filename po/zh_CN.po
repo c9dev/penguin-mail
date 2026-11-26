@@ -2521,15 +2521,15 @@ msgstr ""
 "  mailto:...     等同于 --compose mailto:...\n"
 "  FILE.ics       打开日历文件，将其中活动加入日历"
 
-#: app/src/main.rs:318
+#: app/src/main.rs:327
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知选项 {option}"
 
-#: app/src/main.rs:599
+#: app/src/main.rs:608
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 无法启动"
 
-#: app/src/main.rs:604 app/src/ui/about.rs:192
+#: app/src/main.rs:613 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "报告问题"
 

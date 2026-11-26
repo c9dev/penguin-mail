@@ -2721,15 +2721,15 @@ msgstr ""
 "  FIȘIER.ics     deschide un fișier de calendar, pentru a-i adăuga "
 "evenimentele într-un calendar"
 
-#: app/src/main.rs:318
+#: app/src/main.rs:327
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opțiune necunoscută {option}"
 
-#: app/src/main.rs:599
+#: app/src/main.rs:608
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail nu a putut porni"
 
-#: app/src/main.rs:604 app/src/ui/about.rs:192
+#: app/src/main.rs:613 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Raportează o problemă"
 

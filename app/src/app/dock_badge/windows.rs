@@ -234,7 +234,7 @@ fn badge_pixels(unread: i64, size: i32) -> Option<Vec<u8>> {
     let mut pixels = Vec::with_capacity(width * size as usize);
     for row in data.chunks(stride).take(size as usize) {
         // cairo's pixels are premultiplied; an icon's are not.
-        for pixel in row[..width].chunks_exact(4) {
+        for pixel in row[..width].as_chunks::<4>().0 {
             let alpha = pixel[3];
             let straight = |c: u8| match alpha {
                 0 => 0,
@@ -262,7 +262,9 @@ mod tests {
         assert_eq!(alpha(size / 2, size / 2), 255);
         // Some pixels are white text on the orange.
         let white = pixels
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .filter(|p| p[0] > 230 && p[1] > 230 && p[2] > 230 && p[3] == 255)
             .count();
         assert!(white > 10, "{white}");

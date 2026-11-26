@@ -2738,15 +2738,15 @@ msgstr ""
 "  FILE.ics       άνοιγμα αρχείου ημερολογίου, για προσθήκη των συμβάντων του "
 "σε ημερολόγιο"
 
-#: app/src/main.rs:318
+#: app/src/main.rs:327
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: άγνωστη επιλογή {option}"
 
-#: app/src/main.rs:599
+#: app/src/main.rs:608
 msgid "Penguin Mail Could Not Start"
 msgstr "Δεν ήταν δυνατή η εκκίνηση του Penguin Mail"
 
-#: app/src/main.rs:604 app/src/ui/about.rs:192
+#: app/src/main.rs:613 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Αναφορά προβλήματος"
 
