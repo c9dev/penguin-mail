@@ -1122,7 +1122,14 @@ impl App {
                 // The fold reads every address book as an effect of the
                 // change, asking for the permission where it is missing.
                 if this.settings.borrow().contacts {
-                    let emails = loaded.iter().map(|(a, _)| a.email.clone()).collect();
+                    // The demo leaves one account's contacts off, so Contacts
+                    // shows an account that waits for Turn On.
+                    let demo = this.core.demo;
+                    let emails = loaded
+                        .iter()
+                        .map(|(a, _)| a.email.clone())
+                        .filter(|e| !(demo && e == "dana@reyes-home.example"))
+                        .collect();
                     this.change_settings(Change::AllContacts(emails));
                 } else {
                     this.refresh_contacts(false);

@@ -2243,13 +2243,12 @@ searchentry.cts-search { min-height: 32px; border-radius: 999px; border: none; b
 
 .cts-chip { min-height: 24px; padding: 0 8px 0 7px; border-radius: 999px; background: #e3e3e7; font-size: 0.82em; font-weight: 600; }
 .app-dark .cts-chip { background: #3a3a40; }
-.cts-avatar { border-radius: 999px; }
-.cts-avatar.lg label { font-size: 1.5em; font-weight: 700; }
-.cts-avatar.sm label { font-size: 0.85em; font-weight: 700; }
+label.cts-avatar { border-radius: 999px; color: #fff; font-weight: 700; letter-spacing: 0.02em; }
+label.cts-avatar.lg { font-size: 1.5em; letter-spacing: -0.02em; }
+label.cts-avatar.sm { font-size: 0.85em; }
 .cts-hue-0 { background: #2f5f86; } .cts-hue-1 { background: #3d6b4a; } .cts-hue-2 { background: #8a4b2f; }
 .cts-hue-3 { background: #5c4d8a; } .cts-hue-4 { background: #6b3d55; } .cts-hue-5 { background: #3d5c58; }
 .cts-hue-6 { background: #3d4f6b; }
-.cts-avatar label { color: #fff; }
 
 /* Buttons the mockup draws as 32 px rounded rectangles. */
 button.cts-btn {
@@ -2321,6 +2320,8 @@ checkbutton.cts-radio check:checked { background: var(--accent-fill); border-col
 .app-dark .cts-entry-label { color: alpha(currentColor, 0.64); }
 entry.cts-entry-field { min-height: 24px; padding: 0; border: none; box-shadow: none; background: none; outline: none; font-size: 0.99em; letter-spacing: -0.01em; }
 .cts-entryrow { background: var(--view-bg-color); }
+box.cts-rowsbox.after { border-top: 1px solid #ececef; }
+.app-dark box.cts-rowsbox.after { border-top-color: #2c2c31; }
 .cts-notes { padding: 10px 14px; min-height: 80px; font-size: 0.99em; background: none; }
 .cts-dirty { font-size: 0.85em; font-weight: 600; color: alpha(currentColor, 0.75); }
 .cts-error { color: #a51d2d; padding: 8px 16px 0; font-size: 0.89em; }

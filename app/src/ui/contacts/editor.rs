@@ -351,14 +351,21 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
     let photo_box = gtk::Box::builder().spacing(12).css_classes(["cts-photo"]).build();
     body.append(&photo_box);
     body.append(&parts::sec(&gettext("Details")));
-    let mut details = vec![name_cell.upcast::<gtk::Widget>(), org_cell.upcast()];
-    for row in [&emails, &phones] {
-        details.push(row.group.clone().upcast());
-    }
+    let details = vec![name_cell.upcast::<gtk::Widget>(), org_cell.upcast()];
+    // Name, organization, addresses and numbers are one group, as the
+    // mockup draws them; each kind keeps its own Add line below it.
     let first_group = parts::group(&[details[0].clone(), details[1].clone()]);
+    for rows in [&emails, &phones] {
+        rows.group.remove_css_class("cts-group");
+        rows.group.add_css_class("cts-rowsbox");
+        rows.holder.remove(&rows.group);
+        rows.holder.remove(&rows.add);
+        rows.group.add_css_class("after");
+        first_group.append(&rows.group);
+    }
     body.append(&first_group);
     for rows in [&emails, &phones] {
-        body.append(&rows.holder);
+        body.append(&rows.add);
     }
     for (title, rows) in [
         (gettext("Postal addresses"), &addresses),

@@ -116,6 +116,8 @@ pub(super) struct State {
     pub keep: HashMap<String, usize>,
     /// Whose name a link shows.
     pub shown_a: HashMap<String, bool>,
+    /// Accounts the demo turned on this session.
+    pub turned_on: HashSet<AccountId>,
 }
 
 pub struct Contacts {
@@ -598,7 +600,18 @@ impl Contacts {
     pub(super) fn reads(&self, account: &Account) -> bool {
         self.app
             .upgrade()
-            .is_some_and(|a| a.core.demo || a.settings().reads_contacts(&account.email))
+            .is_some_and(|app| {
+                let state = self.state.borrow();
+                match app.core.demo {
+                    // The demo keeps its contacts in the store, so an
+                    // account is on when it holds some, or once turned on.
+                    true => {
+                        state.data.held.contains(&account.id)
+                            || state.turned_on.contains(&account.id)
+                    }
+                    false => app.settings().reads_contacts(&account.email),
+                }
+            })
     }
 
     pub(super) fn is_vip(&self, person: &Person) -> bool {
@@ -931,18 +944,20 @@ impl Contacts {
     /// Turns contacts on for an account. Undo turns them off again.
     pub(super) fn turn_on(self: &Rc<Self>, account: Account) {
         let Some(app) = self.app.upgrade() else { return };
+        self.state.borrow_mut().turned_on.insert(account.id);
         app.change_settings(Change::AccountContacts {
             email: account.email.clone(),
             on: true,
         });
         let name = account_label(account.id).short;
-        let email = account.email.clone();
+        let (email, account_id) = (account.email.clone(), account.id);
         self.tell(
             &fill(
                 &gettext("Contacts are on for {account}. The book on this computer is empty."),
                 &[("account", &name)],
             ),
             Some(Box::new(move |this| {
+                this.state.borrow_mut().turned_on.remove(&account_id);
                 if let Some(app) = this.app.upgrade() {
                     app.change_settings(Change::AccountContacts { email, on: false });
                 }

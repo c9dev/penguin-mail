@@ -19,7 +19,7 @@ pub fn icon(name: &str) -> gtk::Image {
 
 pub fn label(text: &str, classes: &[&str]) -> gtk::Label {
     // Headings and counts stay on one line; the rest may wrap.
-    let one_line = classes.iter().any(|c| matches!(*c, "cts-h2" | "cts-count" | "cts-kicker"));
+    let one_line = classes.iter().any(|c| matches!(*c, "cts-h2" | "cts-count" | "cts-kicker" | "cts-keep-name" | "cts-who-name"));
     gtk::Label::builder()
         .label(text)
         .xalign(0.0)
@@ -88,24 +88,22 @@ pub fn avatar(name: &str, size: i32, photo: Option<&gtk::gdk::Texture>) -> gtk::
         avatar.set_custom_image(Some(photo));
         return avatar.upcast();
     }
-    let text = initials(name);
-    let tag = gtk::Label::builder()
-        .label(&text)
+    gtk::Label::builder()
+        .label(initials(name))
         .halign(gtk::Align::Center)
         .valign(gtk::Align::Center)
-        .css_classes(["cts-av"])
-        .build();
-    let holder = gtk::Box::builder()
-        .halign(gtk::Align::Center)
-        .valign(gtk::Align::Center)
+        .xalign(0.5)
+        .yalign(0.5)
+        .justify(gtk::Justification::Center)
         .width_request(size)
         .height_request(size)
-        .css_classes(["cts-avatar", if size > 40 { "lg" } else { "sm" }])
-        .build();
-    holder.set_overflow(gtk::Overflow::Hidden);
-    holder.append(&tag);
-    holder.add_css_class(&format!("cts-hue-{}", hue(name)));
-    holder.upcast()
+        .css_classes([
+            "cts-avatar".to_string(),
+            (if size > 40 { "lg" } else { "sm" }).to_string(),
+            format!("cts-hue-{}", hue(name)),
+        ])
+        .build()
+        .upcast()
 }
 
 pub fn sec(title: &str) -> gtk::Label {
@@ -222,6 +220,7 @@ pub fn switch_line(
 pub fn button(text: &str, classes: &[&str]) -> gtk::Button {
     let b = gtk::Button::builder()
         .label(text)
+        .valign(gtk::Align::Center)
         .css_classes(
             std::iter::once("cts-btn")
                 .chain(classes.iter().copied())
