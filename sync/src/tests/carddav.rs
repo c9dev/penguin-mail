@@ -466,3 +466,42 @@ async fn read_only_books_are_not_offered_and_their_cards_say_so() {
         .unwrap();
     assert!(made.resource.starts_with("/card/work/"), "{}", made.resource);
 }
+
+#[tokio::test]
+async fn a_book_with_group_cards_keeps_group_names_out_of_categories() {
+    use mailrs_domain::contact::Changes;
+    let (dav, carddav) = adapter();
+    let href = "/card/default/demo.vcf";
+    dav.put_resource(
+        href,
+        &card("demo", "Demo", "demo@example.org")
+            .replace("END:VCARD", "CATEGORIES:Friends,Old\r\nEND:VCARD"),
+    );
+    let friends = "/card/default/friends.vcf";
+    dav.put_resource(friends, &mailrs_dav::vcard::new_group("friends", "Friends", "demo"));
+    carddav
+        .update_contact(
+            href,
+            &ContactFields {
+                expected_groups: Some(vec!["Friends".into(), "Old".into()]),
+                details: Changes {
+                    groups: Some(vec!["Friends".into(), "Colleagues".into()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let body = dav.body(href).unwrap();
+    assert!(!body.contains("CATEGORIES"), "{body}");
+    let members = |text: String| mailrs_dav::vcard::read_card(&text).unwrap().details.members;
+    assert_eq!(members(dav.body(friends).unwrap()), Some(vec!["demo".into()]));
+    let colleagues = dav.with(|s| {
+        s.resources
+            .values()
+            .map(|(_, body)| body.clone())
+            .find(|body| body.contains("FN:Colleagues"))
+    });
+    assert_eq!(members(colleagues.unwrap()), Some(vec!["demo".into()]));
+}

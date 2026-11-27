@@ -331,16 +331,20 @@ fn check_groups(
 }
 
 /// Splits `wanted` into the CATEGORIES the card keeps and the names that go
-/// to group cards. A book with group cards keeps only the categories the
-/// card already had, and every other name goes to a card.
-fn split_groups(native: bool, wanted: &[String], categories: &[String]) -> (Vec<String>, Vec<String>) {
-    if !native {
+/// to group cards. In a book with group cards, a name only stays a category
+/// when the card already had it and no group card carries it; every other
+/// name goes to a card.
+fn split_groups(
+    groups: &GroupCards,
+    wanted: &[String],
+    categories: &[String],
+) -> (Vec<String>, Vec<String>) {
+    if !groups.native {
         return (wanted.to_vec(), Vec::new());
     }
-    wanted
-        .iter()
-        .cloned()
-        .partition(|name| categories.contains(name))
+    wanted.iter().cloned().partition(|name| {
+        categories.contains(name) && !groups.cards.iter().any(|(_, card, _)| card == name)
+    })
 }
 
 impl<D: DavApi> ContactsService for CardDav<D> {
@@ -499,7 +503,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         if let Some(wanted) = &fields_in.details.groups {
             let groups = self.group_cards(&href).await?;
             check_groups(&groups, &uid, wanted, None, &[])?;
-            let (categories, named) = split_groups(groups.native, wanted, &[]);
+            let (categories, named) = split_groups(&groups, wanted, &[]);
             fields.details.groups = Some(categories);
             cards = groups.native.then_some((groups, named));
         }
@@ -564,7 +568,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
                 fields_in.expected_groups.as_deref(),
                 &card.details.groups,
             )?;
-            let (categories, named) = split_groups(groups.native, wanted, &card.details.groups);
+            let (categories, named) = split_groups(&groups, wanted, &card.details.groups);
             fields.details.groups = Some(categories);
             cards = groups.native.then_some((groups, uid, named));
         }
