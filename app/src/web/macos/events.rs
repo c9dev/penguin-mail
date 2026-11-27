@@ -168,6 +168,38 @@ fn copy_key(modifiers: NSEventModifierFlags, text: &str) -> bool {
         && text.eq_ignore_ascii_case("c")
 }
 
+fn diagnose(event: &NSEvent, dequeue: bool) {
+    let pages: Vec<String> = PAGES.with(|pages| {
+        pages
+            .borrow()
+            .iter()
+            .filter_map(Weak::upgrade)
+            .map(|page| {
+                format!(
+                    "on_window={} focused={} frozen={} clip_hidden={} takes_key={}",
+                    on_page_window(&page, event),
+                    page.float.focused.get(),
+                    page.float.frozen.get(),
+                    page.clip.isHidden(),
+                    takes_key(&page, event)
+                )
+            })
+            .collect()
+    });
+    eprintln!(
+        "drive: diag key dequeue={dequeue} type={:?} code={} chars={:?} plain={:?} flags={:?} window={} copies={} pages={pages:?}",
+        event.r#type(),
+        event.keyCode(),
+        event.characters().map(|text| text.to_string()),
+        event
+            .charactersIgnoringModifiers()
+            .map(|text| text.to_string()),
+        event.modifierFlags(),
+        event.windowNumber(),
+        copies(event)
+    );
+}
+
 define_class!(
     #[unsafe(super(NSApplication))]
     #[thread_kind = MainThreadOnly]
@@ -198,11 +230,17 @@ define_class!(
             let Some(event) = event else {
                 return std::ptr::null_mut();
             };
+            if matches!(event.r#type(), NSEventType::KeyDown | NSEventType::KeyUp)
+                && event.modifierFlags().contains(NSEventModifierFlags::Command)
+            {
+                diagnose(&event, dequeue);
+            }
             if dequeue && let Some(page) = owner(&event) {
                 if copies(&event) {
                     if event.r#type() == NSEventType::KeyDown {
                         // GTK's menu has no native Copy action for WebKit to resolve.
-                        unsafe { self.sendAction_to_from(sel!(copy:), Some(&page.view), None) };
+                        let sent = unsafe { self.sendAction_to_from(sel!(copy:), Some(&page.view), None) };
+                        eprintln!("drive: diag sent copy: to the page, handled={sent}");
                     }
                 } else if let Some(window) = page.float.window.borrow().as_ref() {
                     window.sendEvent(&event);

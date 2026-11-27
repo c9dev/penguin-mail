@@ -210,6 +210,19 @@ async fn copy_selected_text(unmodified: &str) {
     let before = clipboard.changeCount();
     let native = page.0.float.window.borrow().clone().unwrap();
     let app = NSApplication::sharedApplication(main_thread());
+    eprintln!(
+        "drive: diag before Cmd+C app_active={} key_window={} main_window={} gtk_active={} has_focus={} focused={} frozen={} clip_hidden={} first_responder={:?} window={}",
+        app.isActive(),
+        native.isKeyWindow(),
+        native.isMainWindow(),
+        gtk::prelude::GtkWindowExt::is_active(&window),
+        page.has_focus(),
+        page.0.float.focused.get(),
+        page.0.float.frozen.get(),
+        page.0.clip.isHidden(),
+        native.firstResponder(),
+        native.windowNumber()
+    );
     for kind in [NSEventType::KeyDown, NSEventType::KeyUp] {
         let event = NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
             kind, NSPoint::new(0.0, 0.0), NSEventModifierFlags::Command, 0.0,
@@ -227,6 +240,44 @@ async fn copy_selected_text(unmodified: &str) {
         && clipboard
             .stringForType(unsafe { NSPasteboardTypeString })
             .is_some_and(|text| text.to_string() == "Copy this message text");
+    eprintln!(
+        "drive: diag after Cmd+C changed={} text={:?}",
+        clipboard.changeCount() != before,
+        clipboard
+            .stringForType(unsafe { NSPasteboardTypeString })
+            .map(|text| text.to_string())
+    );
+    if !copied {
+        let probe = clipboard.changeCount();
+        let sent = unsafe { app.sendAction_to_from(objc2::sel!(copy:), Some(&page.0.view), None) };
+        for _ in 0..40 {
+            glib::timeout_future(Duration::from_millis(50)).await;
+            if clipboard.changeCount() != probe {
+                break;
+            }
+        }
+        eprintln!(
+            "drive: diag probe copy: to the page handled={sent} changed={} text={:?}",
+            clipboard.changeCount() != probe,
+            clipboard
+                .stringForType(unsafe { NSPasteboardTypeString })
+                .map(|text| text.to_string())
+        );
+        let probe = clipboard.changeCount();
+        native.makeFirstResponder(Some(&page.0.view));
+        let sent = unsafe { app.sendAction_to_from(objc2::sel!(copy:), None, None) };
+        for _ in 0..40 {
+            glib::timeout_future(Duration::from_millis(50)).await;
+            if clipboard.changeCount() != probe {
+                break;
+            }
+        }
+        eprintln!(
+            "drive: diag probe copy: down the responder chain handled={sent} changed={} first_responder={:?}",
+            clipboard.changeCount() != probe,
+            native.firstResponder()
+        );
+    }
     if clipboard.changeCount() != before {
         clipboard.clearContents();
         assert!(clipboard.writeObjects(&NSArray::from_retained_slice(&saved)));
