@@ -10,8 +10,8 @@ use std::collections::HashMap;
 
 use mailrs_domain::translate::{fill, gettext};
 
-const LANGUAGES: &str = "/usr/share/iso-codes/json/iso_639-2.json";
-const COUNTRIES: &str = "/usr/share/iso-codes/json/iso_3166-1.json";
+const LANGUAGES: &str = "iso_639-2.json";
+const COUNTRIES: &str = "iso_3166-1.json";
 
 /// Language and country names by their two-letter codes.
 #[derive(Debug, Default)]
@@ -28,8 +28,8 @@ impl IsoNames {
     /// is missing.
     pub fn load() -> Self {
         IsoNames {
-            languages: read(LANGUAGES, "639-2", "iso_639-2"),
-            countries: read(COUNTRIES, "3166-1", "iso_3166-1"),
+            languages: read(&lists(LANGUAGES), "639-2", "iso_639-2"),
+            countries: read(&lists(COUNTRIES), "3166-1", "iso_3166-1"),
         }
     }
 
@@ -54,11 +54,23 @@ impl IsoNames {
     }
 }
 
+/// Where iso-codes keeps `file`: the system's folder, or on Windows the
+/// copy the installer puts in `share/iso-codes/json`.
+fn lists(file: &str) -> std::path::PathBuf {
+    #[cfg(windows)]
+    if let Some(shipped) = crate::exe::beside("share/iso-codes/json").map(|dir| dir.join(file))
+        && shipped.is_file()
+    {
+        return shipped;
+    }
+    std::path::Path::new("/usr/share/iso-codes/json").join(file)
+}
+
 /// Reads one iso-codes list: the entries under `key` that have a
 /// two-letter code, named in the interface's language through `domain`.
 /// ISO 639-2 gives some languages two names ("Spanish; Castilian"); the
 /// first is the one people use.
-fn read(path: &str, key: &str, domain: &str) -> HashMap<String, String> {
+fn read(path: &std::path::Path, key: &str, domain: &str) -> HashMap<String, String> {
     let Ok(text) = std::fs::read_to_string(path) else {
         return HashMap::new();
     };

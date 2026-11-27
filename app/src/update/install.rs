@@ -18,6 +18,10 @@ pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
     if packaging.updated_by().is_some() {
         return None;
     }
+    // The Linux tarball never fits Windows.
+    if cfg!(windows) {
+        return windows_method(exe);
+    }
     // A macOS app is replaced as a signed bundle, never by the Linux installer.
     if exe.parent().is_some_and(|folder| {
         folder.ends_with("Contents/MacOS") || folder.ends_with("Contents/Resources")
@@ -37,6 +41,48 @@ pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
     Some(Method::Local {
         prefix: prefix.to_path_buf(),
     })
+}
+
+/// The Windows installer's update, for any copy but a build tree under a
+/// cargo `target` folder. It reads the path as text, so it answers the same
+/// on every system.
+fn windows_method(exe: &Path) -> Option<Method> {
+    let path = exe.to_string_lossy().to_lowercase().replace('\\', "/");
+    if path.split('/').any(|part| part == "target") {
+        None
+    } else {
+        Some(Method::WindowsInstaller)
+    }
+}
+
+/// Where the files of the update to `version` are kept while it installs.
+pub fn work_dir(version: Version) -> PathBuf {
+    gtk::glib::user_cache_dir()
+        .join(mailrs_sync::config::DIR_NAME)
+        .join("update")
+        .join(version.to_string())
+}
+
+/// The command that installs the downloaded `setup` over this copy without
+/// a window. This copy must quit first: the installer waits for it to
+/// leave and then starts the new one, in the tray when `window_open` is
+/// false.
+pub fn windows_installer(setup: &Path, window_open: bool) -> std::process::Command {
+    let mut command = std::process::Command::new(setup);
+    command.args(["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]);
+    // A silent install that fails says why only in its log, kept beside
+    // the download for the person to send.
+    if let Some(folder) = setup.parent() {
+        let mut log = std::ffi::OsString::from("/LOG=");
+        log.push(folder.join("setup.log"));
+        command.arg(log);
+    }
+    command.arg(if window_open {
+        "/RELAUNCH=window"
+    } else {
+        "/RELAUNCH=background"
+    });
+    command
 }
 
 /// The checksum `SHA256SUMS` gives for one file, in `sha256sum`'s format.
@@ -84,6 +130,11 @@ pub async fn run(
     package: &Path,
     work: &Path,
 ) -> Result<(), Failed> {
+    // The Windows installer cannot run while this copy does, so it starts
+    // as the app quits; see `App::restart_for_update`.
+    if *method == Method::WindowsInstaller {
+        return Ok(());
+    }
     let log = work.join("install.log");
     let fail = |reason: String| Failed {
         reason,
@@ -98,6 +149,7 @@ pub async fn run(
             apt.args(["apt-get", "install", "-y"]).arg(package);
             apt
         }
+        Method::WindowsInstaller => unreachable!("returned above"),
         Method::Local { prefix } => {
             let unpacked = tokio::process::Command::new("tar")
                 .arg("-xzf")
@@ -153,6 +205,19 @@ mod tests {
         );
     }
 
+    #[test]
+    fn a_windows_install_updates_through_its_installer() {
+        let exe = Path::new(r"C:\Users\a\AppData\Local\Programs\Penguin Mail\bin\penguin-mail.exe");
+        assert_eq!(windows_method(exe), Some(Method::WindowsInstaller));
+    }
+
+    #[test]
+    fn a_windows_build_tree_never_updates() {
+        let exe = Path::new(r"C:\src\mail\target\release\penguin-mail.exe");
+        assert_eq!(windows_method(exe), None);
+    }
+
+    #[cfg(not(windows))]
     #[test]
     fn the_binary_path_says_how_this_copy_was_installed() {
         let native = |exe: &str| method_for(Packaging::Native, Path::new(exe));
@@ -224,6 +289,7 @@ mod tests {
         assert!(verify(&file, good, "missing").is_err());
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn a_tarball_installs_into_the_prefix_through_its_own_script() {
         let dir = tempfile::tempdir().unwrap();
@@ -273,6 +339,7 @@ mod tests {
 
     /// Runs the real `scripts/install-files.sh` into `prefix` with `home` as
     /// HOME, from a tree holding the files it copies.
+    #[cfg(unix)]
     fn install_files(dir: &Path, prefix: &Path, home: &Path) {
         let tree = dir.join("tree");
         std::fs::create_dir_all(tree.join("bin")).unwrap();
@@ -309,6 +376,7 @@ mod tests {
     /// The program an Exec line starts, read the way GLib launches a
     /// desktop entry: the key file's string rule, `%%` as a field code,
     /// then the shell's quoting.
+    #[cfg(unix)]
     fn program(entry: &Path) -> String {
         let file = gtk::glib::KeyFile::new();
         file.load_from_file(entry, gtk::glib::KeyFileFlags::NONE)
@@ -318,6 +386,7 @@ mod tests {
         argv[0].to_str().unwrap().to_string()
     }
 
+    #[cfg(unix)]
     #[test]
     fn the_install_script_quotes_a_prefix_with_a_space() {
         let dir = tempfile::tempdir().unwrap();
@@ -345,6 +414,7 @@ mod tests {
         assert_eq!(program(&login), exe.to_str().unwrap());
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_login_item_carried_from_an_old_name_quotes_the_prefix_too() {
         let dir = tempfile::tempdir().unwrap();

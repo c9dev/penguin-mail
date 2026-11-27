@@ -8,6 +8,9 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_smime::{Chain, Smime, Verdict};
 
 /// A GnuPG home under a temp directory, with one certificate in it.
@@ -137,7 +140,7 @@ impl Drop for Home {
         // The agent gpgsm started holds sockets open under the temp
         // directory. Killing it leaves nothing running once the directory
         // goes.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf::gpgconf(self.smime.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "all"])
@@ -638,6 +641,8 @@ fn require_crypto() {
     }
 }
 
+// The pinentry spy is a shell script, which only Unix runs.
+#[cfg(unix)]
 #[test]
 fn reading_a_message_never_asks_the_person_anything() {
     // The bug this pins: verifying a signature whose root nobody here
@@ -739,12 +744,10 @@ fn permit_run(path: &Path) {
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).expect("chmod");
 }
 
-#[cfg(not(unix))]
-fn permit_run(_path: &Path) {}
-
 /// Picks up a gpg-agent.conf written after the agent already started.
+#[cfg(unix)]
 fn restart_agent(home: &Home) {
-    let _ = Command::new("gpgconf")
+    let _ = Command::new(gpgconf::gpgconf(home.smime.program()))
         .arg("--homedir")
         .arg(home.dir.path())
         .args(["--kill", "gpg-agent"])

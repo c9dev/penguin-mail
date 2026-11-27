@@ -540,12 +540,14 @@ mod tests {
 
     #[test]
     fn a_long_date_with_a_time_adds_it_after_at() {
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let when = Local.with_ymd_and_hms(2026, 10, 5, 13, 36, 0).unwrap();
         assert_eq!(long_date_time(when), "Monday, 5 October 2026 at 13:36");
     }
 
     #[test]
     fn full_dates_spell_everything_out() {
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             full_date(at(2026, 9, 3, 14, 32)),
             "Thursday, 3 September 2026 at 14:32"
@@ -556,6 +558,7 @@ mod tests {
     fn portuguese_names_its_weekdays_and_months() {
         // Each test runs on its own thread, which keeps the locale here.
         mailrs_domain::translate::set_date_locale("pt_PT");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
         assert_eq!(relative_date(at(2026, 9, 14, 12, 0), now), "segunda");
         assert_eq!(relative_date(at(2026, 3, 3, 12, 0), now), "3 mar");
@@ -571,6 +574,7 @@ mod tests {
 
     #[test]
     fn an_event_reads_as_the_event_popover_words_it() {
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
         let at = |start: EpochMillis, end: Option<EpochMillis>| {
             event_when(
@@ -661,6 +665,7 @@ mod tests {
 
     #[test]
     fn a_moved_meeting_names_where_it_was() {
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
         assert_eq!(
             event_moved_from(at_local(2026, 9, 22, 10, 0), false, now),

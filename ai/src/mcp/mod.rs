@@ -172,7 +172,7 @@ fn answer_server_request(id: Value, method: &str) -> Value {
 }
 
 enum Wire {
-    Stdio(stdio::Stdio),
+    Stdio(Box<stdio::Stdio>),
     Http(http::Http),
 }
 
@@ -314,9 +314,9 @@ impl McpClient {
     async fn open(label: &str, transport: Transport) -> Result<McpClient, McpError> {
         let (sender, notifications) = mpsc::unbounded_channel();
         let wire = match &transport {
-            Transport::Stdio { command, args, env } => {
-                Wire::Stdio(stdio::Stdio::spawn(label, command, args, env, sender)?)
-            }
+            Transport::Stdio { command, args, env } => Wire::Stdio(Box::new(stdio::Stdio::spawn(
+                label, command, args, env, sender,
+            )?)),
             Transport::Http { url, token } => {
                 Wire::Http(http::Http::new(url, token.clone(), sender)?)
             }

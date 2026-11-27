@@ -100,6 +100,24 @@ covers signing and notarization. Without the OAuth variables described in
 [setup](docs/setup.md#building-your-own-copy), the app builds but cannot
 add a Google or Microsoft account; use `--demo` to explore it.
 
+### Windows
+
+On Windows, install Rust's `x86_64-pc-windows-gnu` toolchain, MSYS2 with
+the UCRT64 GTK 4 and libadwaita packages, and Inno Setup 6, then run this
+from an MSYS2 UCRT64 shell:
+
+```sh
+scripts/build-windows.sh
+```
+
+The script builds the release exe and produces the installer under
+`dist/`. The released installer uses a gtk4 package rebuilt with
+`scripts/build-gtk4-msys2.sh`, which adds a monitor patch to MSYS2's GTK 4.
+[docs/windows.md](docs/windows.md#building) lists the packages and
+details. Without the OAuth variables described in
+[setup](docs/setup.md#building-your-own-copy), `--demo` explores the
+app on sample data.
+
 ### The Flatpak
 
 Penguin Mail is not on Flathub. To build and install the Flatpak from
