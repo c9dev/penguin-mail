@@ -552,12 +552,7 @@ pub fn ensure_gtk() {
     if let Some(display) = gdk::Display::default() {
         let icons = gtk::IconTheme::for_display(&display);
         icons.add_resource_path("/io/github/c9dev/PenguinMail/icons");
-        let theme = icons.theme_name();
-        if icon_theme::needs_fallback(&theme, |name| icons.has_icon(name)) {
-            tracing::info!(%theme, "the icon theme lacks the app's icons; using Adwaita");
-            gtk::Settings::for_display(&display)
-                .set_gtk_icon_theme_name(Some(icon_theme::FALLBACK));
-        }
+        gtk::Settings::for_display(&display).set_gtk_icon_theme_name(Some(icon_theme::THEME));
         let css = gtk::CssProvider::new();
         css.load_from_resource("/io/github/c9dev/PenguinMail/style.css");
         gtk::style_context_add_provider_for_display(

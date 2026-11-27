@@ -2660,11 +2660,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: bilinmeyen seçenek {option}"
 
-#: app/src/main.rs:608
+#: app/src/main.rs:603
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Başlatılamadı"
 
-#: app/src/main.rs:613 app/src/ui/about.rs:192
+#: app/src/main.rs:608 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Sorun Bildir"
 

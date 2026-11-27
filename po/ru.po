@@ -2715,11 +2715,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: неизвестный параметр {option}"
 
-#: app/src/main.rs:608
+#: app/src/main.rs:603
 msgid "Penguin Mail Could Not Start"
 msgstr "Не удалось запустить Penguin Mail"
 
-#: app/src/main.rs:613 app/src/ui/about.rs:192
+#: app/src/main.rs:608 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Сообщить о проблеме"
 

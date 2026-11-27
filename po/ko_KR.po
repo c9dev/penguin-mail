@@ -2583,11 +2583,11 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: 알 수 없는 옵션 {option}"
 
-#: app/src/main.rs:608
+#: app/src/main.rs:603
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail을 시작할 수 없습니다"
 
-#: app/src/main.rs:613 app/src/ui/about.rs:192
+#: app/src/main.rs:608 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "문제 보고"
 
