@@ -9599,7 +9599,7 @@ msgstr "Dieses Konto wird noch nicht abgeglichen"
 msgid "Could not change the subscription: {reason}"
 msgstr "Die Farbe konnte nicht geändert werden: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Grau"
 

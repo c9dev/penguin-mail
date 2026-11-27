@@ -9407,7 +9407,7 @@ msgstr "Bu hesap henüz eşitlenmiyor"
 msgid "Could not change the subscription: {reason}"
 msgstr "Renk değiştirilemedi: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Gri"
 

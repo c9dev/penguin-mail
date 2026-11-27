@@ -9236,7 +9236,7 @@ msgstr "Tài khoản này chưa đồng bộ"
 msgid "Could not change the subscription: {reason}"
 msgstr "Không thể đổi màu: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Xám"
 

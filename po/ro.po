@@ -9610,7 +9610,7 @@ msgstr "Acest cont nu se sincronizează încă"
 msgid "Could not change the subscription: {reason}"
 msgstr "Nu s-a putut schimba culoarea: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Gri"
 

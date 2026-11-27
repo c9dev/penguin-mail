@@ -9211,7 +9211,7 @@ msgstr "이 계정은 아직 동기화 중이 아닙니다"
 msgid "Could not change the subscription: {reason}"
 msgstr "색을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "회색"
 

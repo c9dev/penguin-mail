@@ -9558,7 +9558,7 @@ msgstr "Эта учётная запись ещё не синхронизиру�
 msgid "Could not change the subscription: {reason}"
 msgstr "Не удалось изменить цвет: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Серый"
 

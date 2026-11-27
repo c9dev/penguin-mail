@@ -8555,7 +8555,7 @@ msgstr "This account is not syncing yet"
 msgid "Could not change the subscription: {reason}"
 msgstr "Could not change the subscription: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Grey"
 

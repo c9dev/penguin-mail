@@ -8891,7 +8891,7 @@ msgstr ""
 msgid "Could not change the subscription: {reason}"
 msgstr ""
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr ""
 

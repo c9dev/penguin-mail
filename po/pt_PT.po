@@ -9479,7 +9479,7 @@ msgstr "Esta conta ainda não está a sincronizar"
 msgid "Could not change the subscription: {reason}"
 msgstr "Não foi possível alterar a subscrição: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Cinzento"
 

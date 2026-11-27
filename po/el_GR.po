@@ -9662,7 +9662,7 @@ msgstr "Αυτός ο λογαριασμός δεν συγχρονίζεται �
 msgid "Could not change the subscription: {reason}"
 msgstr "Αδυναμία αλλαγής του χρώματος: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Γκρι"
 

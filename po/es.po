@@ -9504,7 +9504,7 @@ msgstr "Esta cuenta todavía no se está sincronizando"
 msgid "Could not change the subscription: {reason}"
 msgstr "No se ha podido cambiar el color: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Gris"
 

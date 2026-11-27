@@ -9270,7 +9270,7 @@ msgstr "このアカウントはまだ同期していません"
 msgid "Could not change the subscription: {reason}"
 msgstr "色を変更できませんでした: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "灰色"
 

@@ -9042,7 +9042,7 @@ msgstr "此账号尚未开始同步"
 msgid "Could not change the subscription: {reason}"
 msgstr "无法更改颜色：{reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "灰色"
 

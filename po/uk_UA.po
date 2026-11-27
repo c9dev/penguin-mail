@@ -9559,7 +9559,7 @@ msgstr "Цей обліковий запис ще не синхронізуєт�
 msgid "Could not change the subscription: {reason}"
 msgstr "Не вдалося змінити колір: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Сірий"
 

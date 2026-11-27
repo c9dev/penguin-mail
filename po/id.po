@@ -9461,7 +9461,7 @@ msgstr "Akun ini belum menyinkronkan"
 msgid "Could not change the subscription: {reason}"
 msgstr "Tidak dapat mengubah warna: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Abu-Abu"
 
