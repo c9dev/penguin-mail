@@ -2378,7 +2378,7 @@ msgstr "Mark as Read"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:340
 #: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
 #: app/src/ui/calendar/popover.rs:763 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:486 app/src/ui/contacts/mod.rs:710
+#: app/src/ui/contacts/mod.rs:486 app/src/ui/contacts/mod.rs:713
 #: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -4641,7 +4641,7 @@ msgstr "Copy Link"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:709
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:712
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5901,7 +5901,7 @@ msgstr "Remove reminder"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:397
-#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:608
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:609
 msgid "Notes"
 msgstr "Notes"
 
@@ -6240,7 +6240,7 @@ msgid "Working location"
 msgstr "Working location"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:586
+#: app/src/ui/contacts/mod.rs:587
 msgid "Birthday"
 msgstr "Birthday"
 
@@ -7562,7 +7562,7 @@ msgstr "Change Photo…"
 msgid "Remove Photo"
 msgstr "Remove Photo"
 
-#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:582
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:583
 msgid "Organization"
 msgstr "Organisation"
 
@@ -7570,15 +7570,15 @@ msgstr "Organisation"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 
-#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:592
+#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:593
 msgid "Groups"
 msgstr "Groups"
 
-#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:632
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:635
 msgid "Websites"
 msgstr "Websites"
 
-#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:594
+#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:595
 msgid "Postal Addresses"
 msgstr "Postal Addresses"
 
@@ -7745,19 +7745,19 @@ msgstr "Call"
 msgid "Send SMS"
 msgstr "Send SMS"
 
-#: app/src/ui/contacts/mod.rs:684
+#: app/src/ui/contacts/mod.rs:687
 msgid "Allow contacts access in Preferences, then try again."
 msgstr "Allow contacts access in Preferences, then try again."
 
-#: app/src/ui/contacts/mod.rs:702
+#: app/src/ui/contacts/mod.rs:705
 msgid "Delete Contact?"
 msgstr "Delete Contact?"
 
-#: app/src/ui/contacts/mod.rs:704
+#: app/src/ui/contacts/mod.rs:707
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr "Delete {name} from its account? This cannot be undone."
 
-#: app/src/ui/contacts/mod.rs:775 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:778 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Copy"
@@ -11856,7 +11856,7 @@ msgstr "This release is not signed with Penguin Mail's key, so Penguin Mail will
 msgid "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr "Checking the release's signature needs gpgv or gpg, and neither is installed."
 
-#: dav/src/vcard.rs:636
+#: dav/src/vcard.rs:637
 msgid "Custom field names must be uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
 msgstr "Custom field names must be uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
 

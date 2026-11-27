@@ -577,6 +577,7 @@ impl Window {
             .title(gettext("Details"))
             .build();
         let d = &contact.details;
+        let mut shown = !d.dates.is_empty() || !d.custom.is_empty();
         for (label, value) in [
             (
                 gettext("Organization"),
@@ -608,6 +609,7 @@ impl Window {
             (gettext("Notes"), d.notes.clone()),
         ] {
             if !value.is_empty() {
+                shown = true;
                 details.add(
                     &adw::ActionRow::builder()
                         .use_markup(false)
@@ -626,6 +628,7 @@ impl Window {
                     .build(),
             );
         }
+        details.set_visible(shown);
         self.detail.append(&details);
         if !d.urls.is_empty() {
             let websites = adw::PreferencesGroup::builder()
