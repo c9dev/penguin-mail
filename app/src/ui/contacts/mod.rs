@@ -53,7 +53,7 @@ pub(super) enum Pane {
     /// The row that is selected.
     View,
     /// An edit of one contact of the selected person.
-    Edit(Contact),
+    Edit(Box<Contact>),
     /// A contact nobody has saved yet.
     New,
 }

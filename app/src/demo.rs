@@ -3516,15 +3516,16 @@ mod tests {
             .take_while(|s| s.known())
             .map(|s| s.email.as_str())
             .collect();
-        // Four Gmail contacts, the four in the Fastmail address book (one of
-        // them Priya again) and the two at Outlook.
-        assert_eq!(known.len(), 9, "every demo contact comes before the rest");
+        // Eight addresses in the Gmail address books (Priya twice over, with
+        // a second address of her own), the four in the Fastmail address book
+        // (one of them Priya again) and the two at Outlook.
+        assert_eq!(known.len(), 13, "every demo contact comes before the rest");
         assert!(known.contains(&"jonas@fernwood.example"));
         let priya = suggestions
             .iter()
             .find(|s| s.email == "priya@fernwood.example")
             .expect("Priya is a demo contact");
-        assert_eq!(priya.accounts.len(), 2, "two address books hold Priya");
+        assert_eq!(priya.accounts.len(), 3, "three address books hold Priya");
     }
 
     #[tokio::test]

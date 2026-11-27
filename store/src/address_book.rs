@@ -727,4 +727,78 @@ mod tests {
         set_book(&conn, id, None, 9_000).unwrap();
         assert_eq!(book(&conn, id).unwrap(), Some((None, 9_000)));
     }
+
+    #[test]
+    fn a_link_joins_two_contacts_and_goes_with_either() {
+        let conn = open_in_memory().unwrap();
+        let work = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let home = accounts::insert_account(&conn, "dana@fernwood.example", 0).unwrap();
+        save(&conn, &[contact(work, "a", "Owen Mercer", &["o@a.example"])]).unwrap();
+        save(&conn, &[contact(home, "b", "Owen M.", &["o@b.example"])]).unwrap();
+        let ends = ((work, "a".to_string()), (home, "b".to_string()));
+        link(
+            &conn,
+            &Link { a: ends.0.clone(), b: ends.1.clone(), shown_a: false },
+        )
+        .unwrap();
+        let found = links(&conn).unwrap();
+        assert_eq!(found.len(), 1);
+        assert!(!found[0].shown_a);
+        // Unlinking works in the other order, too.
+        unlink(&conn, &ends.1, &ends.0).unwrap();
+        assert!(links(&conn).unwrap().is_empty());
+        link(&conn, &Link { a: ends.0.clone(), b: ends.1.clone(), shown_a: true }).unwrap();
+        forget(&conn, home, &["b".to_string()]).unwrap();
+        assert!(links(&conn).unwrap().is_empty());
+        let count: i64 = conn
+            .query_row("SELECT count(*) FROM contact_links", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0, "deleting a contact takes its link");
+    }
+
+    #[test]
+    fn a_link_survives_a_refresh_that_replaces_its_contacts() {
+        let conn = open_in_memory().unwrap();
+        let work = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let home = accounts::insert_account(&conn, "dana@fernwood.example", 0).unwrap();
+        let (a, b) = (
+            contact(work, "a", "Owen Mercer", &["o@a.example"]),
+            contact(home, "b", "Owen M.", &["o@b.example"]),
+        );
+        save(&conn, &[a.clone(), b.clone()]).unwrap();
+        link(
+            &conn,
+            &Link { a: (work, "a".into()), b: (home, "b".into()), shown_a: true },
+        )
+        .unwrap();
+        save(&conn, &[a, b]).unwrap();
+        assert_eq!(links(&conn).unwrap().len(), 1);
+    }
+
+    fn mail(conn: &Connection, account: AccountId, id: &str, from: &str, to: &str, date: i64) {
+        conn.execute(
+            "INSERT INTO messages (account_id, id, thread_id, from_addr, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) \
+             VALUES (?1, ?2, ?3, ?4, ?5, '', 'Re', ?6, '', 1, 0, 0)",
+            params![account, id, id.split('/').next().unwrap(), from, to, date],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn mail_with_counts_conversations_and_finds_what_the_owner_wrote() {
+        let conn = open_in_memory().unwrap();
+        let me = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        mail(&conn, me, "t1/1", "ana@x.example", "dana@example.com", 100);
+        mail(&conn, me, "t1/2", "dana@example.com", "Ana@X.example", 200);
+        mail(&conn, me, "t2/1", "ana@x.example", "dana@example.com", 300);
+        mail(&conn, me, "t3/1", "other@x.example", "dana@example.com", 400);
+        let found = mail_with(&conn, &["ana@x.example".into()]).unwrap();
+        assert_eq!(found.conversations, 2);
+        assert_eq!(found.last.as_ref().map(|l| l.3), Some(300));
+        assert!(!found.last_mine);
+        assert_eq!(found.last_wrote, Some(200));
+        let counts = message_counts(&conn, &["ANA@x.example".into()]).unwrap();
+        assert_eq!(counts.get("ana@x.example"), Some(&2));
+        assert_eq!(counts.get("other@x.example"), None);
+    }
 }

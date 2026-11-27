@@ -218,7 +218,7 @@ pub fn switch_line(
 
 /// A pill button as the mockup's `.btn`.
 pub fn button(text: &str, classes: &[&str]) -> gtk::Button {
-    let b = gtk::Button::builder()
+    gtk::Button::builder()
         .label(text)
         .valign(gtk::Align::Center)
         .css_classes(
@@ -227,8 +227,7 @@ pub fn button(text: &str, classes: &[&str]) -> gtk::Button {
                 .map(String::from)
                 .collect::<Vec<_>>(),
         )
-        .build();
-    b
+        .build()
 }
 
 pub fn icon_button(name: &str, spoken: &str, classes: &[&str]) -> gtk::Button {

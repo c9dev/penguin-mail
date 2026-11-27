@@ -110,7 +110,7 @@ impl Contacts {
         self.nav.set_min_sidebar_width(320.0);
         self.pane.set_visible(!list_only);
         match pane {
-            Pane::Edit(contact) => self.edit_pane(contact),
+            Pane::Edit(contact) => self.edit_pane(*contact),
             Pane::New => self.new_pane(),
             Pane::View => match kind {
                 None => {}
@@ -244,7 +244,7 @@ impl Contacts {
             let weak = weak.clone();
             edit.connect_clicked(move |_| {
                 if let Some(this) = weak.upgrade() {
-                    this.state.borrow_mut().pane = Some(Pane::Edit(first.clone()));
+                    this.state.borrow_mut().pane = Some(Pane::Edit(Box::new(first.clone())));
                     this.show_pane();
                 }
             });
@@ -652,8 +652,6 @@ impl Contacts {
             let (weak, keep, drop) = (weak.clone(), keep.clone(), drop.clone());
             delete.connect_clicked(move |_| {
                 if let Some(this) = weak.upgrade() {
-                    let still = Some(format!("{}", keep.display()));
-                    let _ = still;
                     this.do_merge(keep.clone(), drop.clone());
                 }
             });
@@ -890,13 +888,12 @@ impl Contacts {
     // From mail
 
     fn from_pane(self: &Rc<Self>, index: usize) {
-        let (c, seen, accounts) = {
+        let (c, seen) = {
             let state = self.state.borrow();
             let c = state.data.correspondents[index].clone();
             let seen = state.data.seen.get(&c.email.to_lowercase()).copied().unwrap_or(1);
-            (c, seen, ())
+            (c, seen)
         };
-        let _ = accounts;
         let targets = self.accounts_with_contacts();
         let name = c.name.clone().filter(|n| !n.trim().is_empty()).unwrap_or_else(|| c.email.clone());
         let actions = Self::actions_box();

@@ -273,9 +273,7 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
         let d = dirty.clone();
         e.connect_changed(move |_| d());
     }
-    for c in [&org_cell] {
-        c.add_css_class("after");
-    }
+    org_cell.add_css_class("after");
     let emails = Rows::new(
         &gettext("Add email"),
         Some(gettext("Email")),
@@ -351,7 +349,7 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
     let photo_box = gtk::Box::builder().spacing(12).css_classes(["cts-photo"]).build();
     body.append(&photo_box);
     body.append(&parts::sec(&gettext("Details")));
-    let details = vec![name_cell.upcast::<gtk::Widget>(), org_cell.upcast()];
+    let details = [name_cell.upcast::<gtk::Widget>(), org_cell.upcast()];
     // Name, organization, addresses and numbers are one group, as the
     // mockup draws them; each kind keeps its own Add line below it.
     let first_group = parts::group(&[details[0].clone(), details[1].clone()]);
@@ -542,7 +540,7 @@ impl Contacts {
             let (weak, others) = (weak.clone(), others.clone());
             top.append(&parts::seg(&gettext("Which account"), &names, at, move |to| {
                 if let (Some(this), Some(next)) = (weak.upgrade(), others.get(to)) {
-                    this.state.borrow_mut().pane = Some(Pane::Edit(next.clone()));
+                    this.state.borrow_mut().pane = Some(Pane::Edit(Box::new(next.clone())));
                     this.show_pane();
                 }
             }));
