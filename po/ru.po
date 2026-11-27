@@ -13535,7 +13535,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Ваше изменение «{title}» не сохранено: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Показать событие"
 
@@ -14634,7 +14634,7 @@ msgstr ""
 "Сообщение должно оставаться хотя бы в одном почтовом ящике, а на этом "
 "сервере нет архива."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 "Это правило доступно только для чтения, поэтому Penguin Mail оставляет его "

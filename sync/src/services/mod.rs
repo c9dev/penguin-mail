@@ -22,6 +22,7 @@ pub use google::withheld as withheld_by_grant;
 pub mod imap;
 pub mod jmap;
 pub(crate) mod local;
+pub(crate) mod local_contacts;
 pub mod microsoft;
 mod no_mail;
 mod pacing;
@@ -38,6 +39,7 @@ pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
 pub use imap::{GmailImap, Imap, ImapApi, ImapSettings, Submit};
 pub use jmap::{Jmap, JmapApi, JmapSettings, JmapSieve, SERVER_REPLY_SCRIPT};
 pub use local::LocalRules;
+pub use local_contacts::LocalContacts;
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
 pub use no_mail::NoMail;
 pub use pacing::{Priority, background, priority};
@@ -694,7 +696,10 @@ impl AccountServices {
         AccountServices {
             mail: AnyMail::Pop3(adapter.clone()),
             calendar: None,
-            contacts: None,
+            contacts: Some(AnyContacts::Local(LocalContacts::new(
+                db.clone(),
+                account_id,
+            ))),
             rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
             auto_reply: None,
             identities: AnyIdentities::Pop3(adapter),

@@ -12087,7 +12087,7 @@ msgstr "Your change to “{title}” was not saved because it changed elsewhere"
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Your change to “{title}” was not saved: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Show Event"
 
@@ -13055,7 +13055,7 @@ msgstr "This server does not sort mail into categories."
 msgid "A message must stay in at least one mailbox, and this server has no Archive."
 msgstr "A message must stay in at least one mailbox, and this server has no Archive."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 

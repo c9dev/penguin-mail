@@ -13383,7 +13383,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Perubahan Anda pada “{title}” tidak disimpan: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Tampilkan Acara"
 
@@ -14461,7 +14461,7 @@ msgstr ""
 "Pesan harus tetap berada di setidaknya satu kotak surat, dan server ini "
 "tidak memiliki Arsip."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 "Aturan ini hanya dapat dibaca, sehingga Penguin Mail membiarkannya tetap "

@@ -13117,7 +13117,7 @@ msgstr "「{title}」は別の場所で変更されたため、変更を保存�
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "「{title}」の変更を保存できませんでした: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "予定を表示"
 
@@ -14177,7 +14177,7 @@ msgstr ""
 "メッセージは少なくとも1つのメールボックスに残す必要がありますが、このサーバー"
 "にはアーカイブがありません。"
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "このルールは読み取り専用のため、変更しません。"
 

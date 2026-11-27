@@ -13312,7 +13312,7 @@ msgstr "Başka yerde değiştiği için “{title}” değişikliğiniz kaydedil
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "“{title}” değişikliğiniz kaydedilmedi: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Etkinliği Göster"
 
@@ -14387,7 +14387,7 @@ msgid ""
 msgstr ""
 "İleti en az bir posta kutusunda kalmalıdır, ancak bu sunucuda Arşiv yok."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Bu kural salt okunur olduğundan Penguin Mail onu olduğu gibi bırakır."
 

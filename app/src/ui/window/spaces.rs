@@ -108,6 +108,12 @@ impl MainWindow {
                 self.spaces.set_visible_child_name("contacts");
                 self.sidebar.show_contacts(&self.contacts.sidebar);
                 self.contacts.reload();
+                // Reading is where Google asks for a missing permission, or
+                // says the People API is off in the person's project, so
+                // opening Contacts names the step that fixes either.
+                if let Some(app) = self.app.upgrade() {
+                    app.refresh_contacts(true);
+                }
             }
         }
         self.set_calendar_only_actions_enabled(space == Space::Calendar);

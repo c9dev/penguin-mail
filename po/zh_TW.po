@@ -12807,7 +12807,7 @@ msgstr "「{title}」已在其他地方變更，因此未儲存此次變更"
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "未儲存「{title}」的變更：{reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "顯示活動"
 
@@ -13824,7 +13824,7 @@ msgid ""
 "A message must stay in at least one mailbox, and this server has no Archive."
 msgstr "郵件必須至少留在一個信箱中，而此伺服器沒有 [封存] 信箱。"
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "此為唯讀規則，Penguin Mail 會保留原樣。"
 

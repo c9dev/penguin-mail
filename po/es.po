@@ -13440,7 +13440,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Tu cambio en «{title}» no se ha guardado: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Mostrar evento"
 
@@ -14526,7 +14526,7 @@ msgstr ""
 "Un mensaje debe permanecer en al menos un buzón, y este servidor no tiene "
 "archivo."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regla es de solo lectura, así que Penguin Mail la deja como está."
 

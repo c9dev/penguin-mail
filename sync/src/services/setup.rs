@@ -113,13 +113,13 @@ impl AccountServices {
         if vacation && !sieve {
             services = services.with_auto_reply(AnyAutoReply::Jmap(adapter));
         }
-        services.or_local_rules(beside.local)
+        services.or_local(beside.local)
     }
 
     /// `self` with each found server behind the service it offers, then
     /// the rules kept on this computer where no server runs rules.
     pub(crate) fn with_beside(self, beside: Beside) -> AccountServices {
-        self.with_found(&beside).or_local_rules(beside.local)
+        self.with_found(&beside).or_local(beside.local)
     }
 
     fn with_found(self, beside: &Beside) -> AccountServices {
@@ -129,10 +129,17 @@ impl AccountServices {
             .fold(self, |services, found| services.attach(found, beside))
     }
 
-    fn or_local_rules(self, local: Option<LocalRules>) -> AccountServices {
-        match (&self.rules, local) {
-            (None, Some(local)) => self.with_rules(AnyRules::Local(local)),
-            _ => self,
+    /// The rules and the address book kept on this computer, where no
+    /// server runs either.
+    fn or_local(self, local: Option<LocalRules>) -> AccountServices {
+        let Some(local) = local else { return self };
+        let mut services = self;
+        if services.contacts.is_none() {
+            services = services.with_contacts(AnyContacts::Local(local.contacts()));
+        }
+        match services.rules {
+            None => services.with_rules(AnyRules::Local(local)),
+            Some(_) => services,
         }
     }
 

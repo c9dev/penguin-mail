@@ -13640,7 +13640,7 @@ msgstr "Η αλλαγή σας στο «{title}» δεν αποθηκεύτηκ�
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Η αλλαγή σας στο «{title}» δεν αποθηκεύτηκε: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Εμφάνιση συμβάντος"
 
@@ -14757,7 +14757,7 @@ msgstr ""
 "Ένα μήνυμα πρέπει να μένει σε τουλάχιστον ένα γραμματοκιβώτιο, και αυτός ο "
 "διακομιστής δεν έχει Αρχείο."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 "Αυτός ο κανόνας είναι μόνο για ανάγνωση, οπότε το Penguin Mail τον αφήνει ως "

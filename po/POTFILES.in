@@ -242,6 +242,10 @@ app/src/ui/toolbar/customize.rs
 app/src/ui/contacts/mod.rs
 app/src/ui/contacts/editor.rs
 app/src/ui/contacts/photo.rs
+sync/src/services/local_contacts.rs
+app/src/ui/contacts/side.rs
+app/src/ui/contacts/person.rs
+app/src/ui/contacts/ops.rs
 dav/src/vcard.rs
 sync/src/services/carddav.rs
 

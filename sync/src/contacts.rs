@@ -144,6 +144,11 @@ impl<A: Accounts> ContactBook<A> {
     /// contacts off runs this, so nothing of the address book is left on
     /// the computer.
     pub async fn forget(&self, account_id: AccountId) -> Result<(), SyncError> {
+        // A book kept on this computer has no server behind it: forgetting
+        // it would delete the only copy.
+        if matches!(self.contacts(account_id), Ok(AnyContacts::Local(_))) {
+            return Ok(());
+        }
         let files = self
             .db
             .read(move |c| {

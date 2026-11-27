@@ -13036,7 +13036,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "“{title}”의 변경 사항을 저장하지 못했습니다: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "일정 표시"
 
@@ -14085,7 +14085,7 @@ msgid ""
 msgstr ""
 "메시지는 하나 이상의 메일함에 있어야 하며 이 서버에는 보관함이 없습니다."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "이 규칙은 읽기 전용이므로 Penguin Mail이 그대로 둡니다."
 

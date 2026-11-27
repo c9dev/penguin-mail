@@ -13607,7 +13607,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Modificarea dumneavoastră la „{title}” nu a fost salvată: {reason}"
 
-#: app/src/ui/window/spaces.rs:294
+#: app/src/ui/window/spaces.rs:300
 msgid "Show Event"
 msgstr "Afișează evenimentul"
 
@@ -14714,7 +14714,7 @@ msgstr ""
 "Un mesaj trebuie să rămână în cel puțin o căsuță poștală, iar acest server "
 "nu are Arhivă."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 "Această regulă este doar în citire, așa că Penguin Mail o lasă așa cum este."
