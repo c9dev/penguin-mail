@@ -32,6 +32,13 @@ pub const PAGE_SIZE: u32 = 50;
 /// well under a megabyte; this stops a broken server from filling memory.
 const JSON_LIMIT: usize = 8 << 20;
 
+/// The most one `$batch` answer may take. Graph answers a message's move
+/// or update with the whole message, body and all, unless it honours
+/// `Prefer: return=minimal`, so twenty of them pass [`JSON_LIMIT`] with a
+/// few large newsletters in a selection, and deleting a hundred mails
+/// failed as a whole.
+const BATCH_ANSWER_LIMIT: usize = 64 << 20;
+
 /// What an error body may take; Graph's are a few hundred bytes.
 const ERROR_LIMIT: usize = 64 << 10;
 
@@ -401,6 +408,18 @@ impl Graph {
         body: Option<&Value>,
         headers: &[(&str, &str)],
     ) -> Result<Option<T>, GraphError> {
+        self.send_capped(method, path, body, headers, JSON_LIMIT)
+            .await
+    }
+
+    async fn send_capped<T: DeserializeOwned>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&Value>,
+        headers: &[(&str, &str)],
+        limit: usize,
+    ) -> Result<Option<T>, GraphError> {
         let url = self.url(path, &[])?;
         let call = Call {
             method,
@@ -415,7 +434,7 @@ impl Graph {
         if matches!(response.status().as_u16(), 202 | 204) {
             return Ok(None);
         }
-        json_of(response).await.map(Some)
+        json_capped(response, limit).await.map(Some)
     }
 
     /// Posts a MIME message, base64 in a `text/plain` body, as Graph's
@@ -508,7 +527,9 @@ impl Graph {
             })
             .collect();
         let body = json!({ "requests": entries });
-        let answer: Option<Value> = self.send(Method::Post, "$batch", Some(&body), &[]).await?;
+        let answer: Option<Value> = self
+            .send_capped(Method::Post, "$batch", Some(&body), &[], BATCH_ANSWER_LIMIT)
+            .await?;
         let mut by_id: Vec<(usize, BatchResponse)> = answer
             .and_then(|a| a.get("responses").cloned())
             .and_then(|r| r.as_array().cloned())
@@ -622,7 +643,14 @@ async fn error_of(response: reqwest::Response) -> GraphError {
 }
 
 async fn json_of<T: DeserializeOwned>(response: reqwest::Response) -> Result<T, GraphError> {
-    let bytes = read_capped(response, JSON_LIMIT).await?;
+    json_capped(response, JSON_LIMIT).await
+}
+
+async fn json_capped<T: DeserializeOwned>(
+    response: reqwest::Response,
+    limit: usize,
+) -> Result<T, GraphError> {
+    let bytes = read_capped(response, limit).await?;
     serde_json::from_slice(&bytes).map_err(|e| GraphError::Decode(e.to_string()))
 }
 

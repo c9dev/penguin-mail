@@ -227,6 +227,8 @@ impl MessagePatch {
     }
 }
 
+const RETURN_MINIMAL: &str = "return=minimal";
+
 /// One change to one message, sent inside a `$batch`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Write {
@@ -251,16 +253,20 @@ pub enum Write {
 impl Write {
     fn request(&self) -> BatchRequest {
         match self {
+            // Nothing reads the message these answer with; asking for the
+            // least keeps a batch of them small where Graph listens.
             Write::Move { id, folder } => BatchRequest::new(
                 Method::Post,
                 format!("me/messages/{id}/move"),
                 Some(json!({ "destinationId": folder })),
-            ),
+            )
+            .header("Prefer", RETURN_MINIMAL),
             Write::Patch { id, patch } => BatchRequest::new(
                 Method::Patch,
                 format!("me/messages/{id}"),
                 Some(patch.json()),
-            ),
+            )
+            .header("Prefer", RETURN_MINIMAL),
             Write::Delete { id } => {
                 BatchRequest::new(Method::Delete, format!("me/messages/{id}"), None)
             }

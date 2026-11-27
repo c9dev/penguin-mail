@@ -298,6 +298,49 @@ async fn writes_go_as_one_batch_in_graphs_shapes() {
         (Some("DELETE"), Some("/me/messages/m3"))
     );
     assert_eq!(r[3]["url"], "/me/messages/m4/permanentDelete");
+    for moved_or_patched in &r[..2] {
+        let prefer = moved_or_patched["headers"]["Prefer"].as_str().unwrap();
+        assert!(prefer.contains("return=minimal"), "{prefer}");
+        assert!(prefer.contains("IdType=\"ImmutableId\""), "{prefer}");
+    }
+}
+
+/// Graph answers a move with the whole message. Twenty large ones are more
+/// than any single listing may take, and deleting them must still work.
+#[tokio::test]
+async fn a_batch_of_large_moved_messages_is_not_refused() {
+    let server = MockServer::start().await;
+    common::token_endpoint(&server, "r").await;
+    let body = "x".repeat(600 << 10);
+    Mock::given(method("POST"))
+        .and(path("/v1.0/$batch"))
+        .respond_with(move |request: &Request| {
+            let asked: Value = serde_json::from_slice(&request.body).unwrap();
+            let answers: Vec<Value> = asked["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| {
+                    json!({
+                        "id": r["id"],
+                        "status": 201,
+                        "body": {"id": "moved", "body": {"contentType": "html", "content": body}},
+                    })
+                })
+                .collect();
+            ResponseTemplate::new(200).set_body_json(json!({"responses": answers}))
+        })
+        .mount(&server)
+        .await;
+    let writes: Vec<Write> = (0..20)
+        .map(|i| Write::Move {
+            id: format!("m{i}"),
+            folder: "deleteditems".into(),
+        })
+        .collect();
+    let done = common::graph(&server).apply(&writes).await.unwrap();
+    assert_eq!(done.len(), 20);
+    assert!(done.iter().all(Result::is_ok));
 }
 
 #[tokio::test]
