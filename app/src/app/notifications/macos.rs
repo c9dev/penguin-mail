@@ -339,6 +339,7 @@ mod tests {
     fn clicks_select_only_buttons_carried_by_the_notification() {
         let actions = Actions {
             open: Some(Action::OpenMail),
+            shows: None,
             target: "issued-token".into(),
             buttons: vec![
                 Action::Mail(notify::Button::Delete),
@@ -361,6 +362,7 @@ mod tests {
         }
         let summary = Actions {
             open: None,
+            shows: None,
             target: "summary".into(),
             buttons: vec![],
         };

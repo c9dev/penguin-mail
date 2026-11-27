@@ -477,9 +477,23 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
 
+  # The installer is unsigned. GTK comes from the cache a run on main wrote,
+  # so no other run can plant a prefix inside a release.
+  windows:
+    name: Build the Windows installer
+    needs: version
+    uses: ./.github/workflows/windows.yml # zizmor: ignore[self-repository]
+    with:
+      source_ref: ${{ needs.version.outputs.source_sha }}
+      release: true
+    secrets:
+      PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+      PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+      MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+
   publish:
     name: Publish the release
-    needs: [version, ci, build, appimage, rpm, debian, arch, flatpak, macos]
+    needs: [version, ci, build, appimage, rpm, debian, arch, flatpak, macos, windows]
     if: needs.version.outputs.publish == 'true'
     permissions:
       contents: write

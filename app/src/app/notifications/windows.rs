@@ -1,0 +1,617 @@
+//! WinRT toasts on Windows: they draw the buttons, keep a click
+//! working after the toast moves to Action Center, and withdraw a
+//! delivered notification by tag. Toasts need an AppUserModelID, which
+//! an unpackaged program gets through a shortcut in the Start Menu
+//! Programs folder; `ensure_shortcut` keeps that file there.
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+use gtk::prelude::*;
+use gtk::{gio, glib};
+use serde::{Deserialize, Serialize};
+use windows::Data::Xml::Dom::XmlDocument;
+use windows::Foundation::TypedEventHandler;
+use windows::UI::Notifications::{
+    ToastActivatedEventArgs, ToastDismissalReason, ToastDismissedEventArgs, ToastNotification,
+    ToastNotificationManager, ToastNotifier,
+};
+use windows::Win32::Foundation::{CLASS_E_NOAGGREGATION, ERROR_SUCCESS};
+use windows::Win32::Storage::EnhancedStorage::{
+    PKEY_AppUserModel_ID, PKEY_AppUserModel_ToastActivatorCLSID,
+};
+use windows::Win32::System::Com::StructuredStorage::{InitPropVariantFromCLSID, PROPVARIANT};
+use windows::Win32::System::Com::{
+    CLSCTX_ALL, CLSCTX_LOCAL_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
+    CoRegisterClassObject, CoTaskMemFree, IClassFactory, IClassFactory_Impl, IPersistFile,
+    REGCLS_MULTIPLEUSE,
+};
+use windows::Win32::System::Registry::{
+    HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegGetValueW, RegSetKeyValueW,
+};
+use windows::Win32::UI::Notifications::{
+    INotificationActivationCallback, INotificationActivationCallback_Impl,
+    NOTIFICATION_USER_INPUT_DATA,
+};
+use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
+use windows::Win32::UI::Shell::{
+    FOLDERID_Programs, IShellLinkW, KF_FLAG_CREATE, SHGetKnownFolderPath,
+    SetCurrentProcessExplicitAppUserModelID, ShellLink,
+};
+use windows::core::{BOOL, GUID, HSTRING, IUnknown, Interface, PCWSTR, Ref, implement};
+
+use super::{Action, Actions};
+
+pub(super) struct Desktop {
+    native: Option<Native>,
+}
+
+/// The COM class Windows starts to deliver a toast click when the app is
+/// not running, or when the toast sits in Action Center. The installer's
+/// shortcut and registry key name the same value.
+const ACTIVATOR: GUID = GUID::from_u128(0x7B4D8E4A_3C1F_4F6E_9A2B_5D1E0C9F8A61);
+const ACTIVATOR_TEXT: &str = "{7B4D8E4A-3C1F-4F6E-9A2B-5D1E0C9F8A61}";
+
+/// What Windows calls with a click's arguments. The arguments are the
+/// same string the in-process `Activated` handler reads.
+#[implement(INotificationActivationCallback)]
+struct Activation;
+
+impl INotificationActivationCallback_Impl for Activation_Impl {
+    fn Activate(
+        &self,
+        _app_id: &PCWSTR,
+        invoked_args: &PCWSTR,
+        _input: *const NOTIFICATION_USER_INPUT_DATA,
+        _count: u32,
+    ) -> windows::core::Result<()> {
+        // SAFETY: Windows passes a NUL-terminated string, or null.
+        let arguments = unsafe { invoked_args.to_string() }.unwrap_or_default();
+        deliver(&arguments);
+        Ok(())
+    }
+}
+
+/// Makes one [`Activation`] for each request.
+#[implement(IClassFactory)]
+struct Factory;
+
+impl IClassFactory_Impl for Factory_Impl {
+    fn CreateInstance(
+        &self,
+        outer: Ref<IUnknown>,
+        iid: *const GUID,
+        object: *mut *mut core::ffi::c_void,
+    ) -> windows::core::Result<()> {
+        if !outer.is_null() {
+            return Err(CLASS_E_NOAGGREGATION.into());
+        }
+        let callback: IUnknown = Activation.into();
+        // SAFETY: COM gives a valid interface id and an out pointer.
+        unsafe { callback.query(iid, object).ok() }
+    }
+
+    fn LockServer(&self, _lock: BOOL) -> windows::core::Result<()> {
+        Ok(())
+    }
+}
+
+/// Hands a click's arguments to the loop that opens the mail. Both the
+/// in-process handler and the COM activator end here.
+fn deliver(arguments: &str) {
+    let click = match serde_json::from_str::<Click>(arguments) {
+        Ok(click) => click,
+        // A click on a notice that carries no payload opens the app.
+        Err(_) if arguments.trim().is_empty() => Click {
+            a: String::new(),
+            t: String::new(),
+        },
+        Err(err) => {
+            tracing::warn!(%err, arguments, "a toast click carried arguments the app cannot read");
+            return;
+        }
+    };
+    tracing::debug!(action = %click.a, "a toast was clicked");
+    if repeated(arguments, std::time::Instant::now()) {
+        return;
+    }
+    if let Some(sender) = clicks_channel().get() {
+        let _ = sender.try_send(click);
+    }
+}
+
+/// Whether `arguments` is the click just delivered. With the activator
+/// registered, Windows reports one click both to the toast's `Activated`
+/// handler and to the COM activator, and Reply must open one composer.
+fn repeated(arguments: &str, now: std::time::Instant) -> bool {
+    static LAST: Mutex<Option<(String, std::time::Instant)>> = Mutex::new(None);
+    let mut last = LAST.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let repeat = last.as_ref().is_some_and(|(seen, at)| {
+        seen == arguments && now.duration_since(*at) < std::time::Duration::from_secs(2)
+    });
+    *last = Some((arguments.to_string(), now));
+    repeat
+}
+
+/// Every toast's group, which Action Center needs to find one again.
+const GROUP: &str = "mail";
+
+struct Native {
+    notifier: ToastNotifier,
+    /// The toasts shown, by their tag, kept both for `withdraw` and so
+    /// their click handlers stay alive. The event handlers must be
+    /// `Send`, so the map is `Arc` even though all posting is local.
+    shown: Arc<Mutex<HashMap<String, ToastNotification>>>,
+}
+
+/// A click's payload, packed into the toast's launch arguments.
+#[derive(Serialize, Deserialize)]
+struct Click {
+    /// The app action's name, empty for "just open the app".
+    a: String,
+    /// The action's parameter, the same string the D-Bus path sends.
+    t: String,
+}
+
+impl Desktop {
+    pub fn new(app: &gio::Application, demo: bool) -> Self {
+        if demo {
+            return Self { native: None };
+        }
+        let (clicked, clicks) = async_channel::unbounded::<Click>();
+        let _ = clicks_channel().set(clicked);
+        let weak = app.downgrade();
+        glib::spawn_future_local(async move {
+            while let Ok(click) = clicks.recv().await {
+                let Some(app) = weak.upgrade() else { break };
+                if click.a.is_empty() {
+                    app.activate();
+                } else if click.t.is_empty() {
+                    // An action such as install-update takes no parameter.
+                    app.activate_action(&click.a, None);
+                } else {
+                    app.activate_action(&click.a, Some(&click.t.to_variant()));
+                }
+            }
+        });
+        let shown = Arc::new(Mutex::new(HashMap::new()));
+        let notifier = unsafe { Self::start() }
+            .inspect_err(|err| tracing::warn!(error = %err, "Windows toasts are not available"))
+            .ok();
+        Self {
+            native: notifier.map(|notifier| Native { notifier, shown }),
+        }
+    }
+
+    /// The process's id and its Start Menu shortcut, then the notifier.
+    /// Any of these failing means Windows will not show toasts at all.
+    unsafe fn start() -> windows::core::Result<ToastNotifier> {
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+            SetCurrentProcessExplicitAppUserModelID(PCWSTR(HSTRING::from(crate::APP_ID).as_ptr()))?;
+            let factory: IClassFactory = Factory.into();
+            if let Err(err) =
+                CoRegisterClassObject(&ACTIVATOR, &factory, CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE)
+            {
+                tracing::warn!(error = %err, "a toast clicked after quit will not open its mail");
+            }
+            ensure_shortcut();
+            ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(crate::APP_ID))
+        }
+    }
+
+    pub fn post(&self, id: &str, title: &str, subtitle: &str, body: &str, actions: Actions) {
+        let Some(native) = &self.native else { return };
+        let body = [subtitle, body]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let Ok(xml) = XmlDocument::new().and_then(|doc| {
+            doc.LoadXml(&HSTRING::from(toast_xml(title, &body, &actions)))?;
+            Ok(doc)
+        }) else {
+            return;
+        };
+        let toast = match ToastNotification::CreateToastNotification(&xml).and_then(|toast| {
+            toast.SetTag(&HSTRING::from(id))?;
+            toast.SetGroup(&HSTRING::from(GROUP))?;
+            Ok(toast)
+        }) {
+            Ok(toast) => toast,
+            Err(err) => {
+                tracing::warn!(error = %err, "a toast did not build");
+                return;
+            }
+        };
+        let shown = native.shown.clone();
+        let id_owned = id.to_string();
+        let _ = toast.Dismissed(&TypedEventHandler::new(
+            move |_toast: Ref<ToastNotification>, args: Ref<ToastDismissedEventArgs>| {
+                // A toast that timed out moves to Action Center, where
+                // `withdraw` can still remove it.
+                let timed_out = args
+                    .ok()
+                    .and_then(|args| args.Reason())
+                    .is_ok_and(|reason| reason == ToastDismissalReason::TimedOut);
+                if !timed_out {
+                    shown
+                        .lock()
+                        .expect("the toast map is poisoned")
+                        .remove(&id_owned);
+                }
+                Ok(())
+            },
+        ));
+        let shown = native.shown.clone();
+        let id_owned = id.to_string();
+        let _ = toast.Activated(&TypedEventHandler::new(
+            move |_toast: Ref<ToastNotification>, args: Ref<windows::core::IInspectable>| {
+                shown
+                    .lock()
+                    .expect("the toast map is poisoned")
+                    .remove(&id_owned);
+                let arguments = args
+                    .ok()?
+                    .cast::<ToastActivatedEventArgs>()?
+                    .Arguments()?
+                    .to_string();
+                deliver(&arguments);
+                Ok(())
+            },
+        ));
+        native
+            .shown
+            .lock()
+            .expect("the toast map is poisoned")
+            .insert(id.to_string(), toast.clone());
+        if let Err(err) = native.notifier.Show(&toast) {
+            tracing::warn!(error = %err, "a toast did not show");
+        }
+    }
+
+    pub fn withdraw(&self, id: &str) {
+        let Some(native) = &self.native else { return };
+        let toast = native
+            .shown
+            .lock()
+            .expect("the toast map is poisoned")
+            .remove(id);
+        if let Some(toast) = toast
+            && let Err(err) = native.notifier.Hide(&toast)
+        {
+            tracing::warn!(error = %err, "a toast would not hide");
+        }
+        // Hide only covers a toast still on screen; one that moved to
+        // Action Center goes through the history.
+        if let Err(err) = ToastNotificationManager::History().and_then(|history| {
+            history.RemoveGroupedTagWithId(
+                &HSTRING::from(id),
+                &HSTRING::from(GROUP),
+                &HSTRING::from(crate::APP_ID),
+            )
+        }) {
+            tracing::debug!(error = %err, "no toast in Action Center to remove");
+        }
+    }
+}
+
+/// A notice outside the mail, such as a release to install, whose one
+/// button runs the app action `action`. It goes through the click handling
+/// mail toasts use, so the button works from Action Center too.
+pub fn post_action_notice(title: &str, body: &str, button: &str, action: &str) {
+    let click = |a: &str| {
+        serde_json::to_string(&Click {
+            a: a.to_string(),
+            t: String::new(),
+        })
+        .expect("a notice's click payload serializes")
+    };
+    let xml = format!(
+        "<toast launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text>\
+         <text>{}</text></binding></visual><actions><action content=\"{}\" arguments=\"{}\"/>\
+         </actions></toast>",
+        escaped(&click("")),
+        escaped(title),
+        escaped(body),
+        escaped(button),
+        escaped(&click(action)),
+    );
+    let shown = (|| -> windows::core::Result<ToastNotification> {
+        let document = XmlDocument::new()?;
+        document.LoadXml(&HSTRING::from(xml))?;
+        let toast = ToastNotification::CreateToastNotification(&document)?;
+        toast.Activated(&TypedEventHandler::new(
+            |_toast: Ref<ToastNotification>, args: Ref<windows::core::IInspectable>| {
+                let arguments = args
+                    .ok()?
+                    .cast::<ToastActivatedEventArgs>()?
+                    .Arguments()?
+                    .to_string();
+                deliver(&arguments);
+                Ok(())
+            },
+        ))?;
+        ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(crate::APP_ID))?
+            .Show(&toast)?;
+        Ok(toast)
+    })();
+    match shown {
+        // The toast must outlive this call for its click handler to run.
+        Ok(toast) => *NOTICE.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(toast),
+        Err(err) => tracing::warn!(error = %err, "a notice did not show"),
+    }
+}
+
+/// The last action notice, kept alive for its click handler.
+static NOTICE: Mutex<Option<ToastNotification>> = Mutex::new(None);
+
+/// The channel `Activated` handlers post to, set once at `Desktop::new`.
+fn clicks_channel() -> &'static std::sync::OnceLock<async_channel::Sender<Click>> {
+    static SENDER: std::sync::OnceLock<async_channel::Sender<Click>> = std::sync::OnceLock::new();
+    &SENDER
+}
+
+/// The toast document: title and body, the click payload on `launch`,
+/// a button per action, and the reminder scenario for events.
+fn toast_xml(title: &str, body: &str, actions: &Actions) -> String {
+    let click = |action: Option<&Action>| {
+        action
+            .map(|action| {
+                let (name, target) = action.destination(&actions.target);
+                Click {
+                    a: name.to_string(),
+                    t: target,
+                }
+            })
+            .unwrap_or(Click {
+                a: String::new(),
+                t: String::new(),
+            })
+    };
+    let opens = match &actions.shows {
+        Some(thread) => Click {
+            a: "show-thread".to_string(),
+            t: thread.clone(),
+        },
+        None => click(actions.open.as_ref()),
+    };
+    let launch = serde_json::to_string(&opens).expect("a notification's click payload serializes");
+    let mut xml = format!("<toast launch=\"{}\"", escaped(&launch));
+    if actions.open == Some(Action::OpenEvent) {
+        xml.push_str(" scenario=\"reminder\"");
+    }
+    xml.push_str("><visual><binding template=\"ToastGeneric\"><text>");
+    xml.push_str(&escaped(title));
+    xml.push_str("</text>");
+    if !body.is_empty() {
+        xml.push_str("<text>");
+        xml.push_str(&escaped(body));
+        xml.push_str("</text>");
+    }
+    xml.push_str("</binding></visual>");
+    if !actions.buttons.is_empty() {
+        xml.push_str("<actions>");
+        for button in &actions.buttons {
+            let args = serde_json::to_string(&click(Some(button)))
+                .expect("a notification's click payload serializes");
+            xml.push_str(&format!(
+                "<action content=\"{}\" arguments=\"{}\"/>",
+                escaped(&button.label()),
+                escaped(&args),
+            ));
+        }
+        xml.push_str("</actions>");
+    }
+    xml.push_str("</toast>");
+    xml
+}
+
+/// XML text or an attribute value, with its five escapes.
+fn escaped(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+/// Writes the Start Menu shortcut with the AppUserModelID that
+/// toasts need, or updates it for the exe this run started from. A toast
+/// with no AUMI shows under nothing and draws no buttons.
+fn ensure_shortcut() {
+    unsafe {
+        let folder = SHGetKnownFolderPath(&FOLDERID_Programs, KF_FLAG_CREATE, None);
+        let Ok(folder) = folder else {
+            return;
+        };
+        let programs = folder.to_string().unwrap_or_default();
+        CoTaskMemFree(Some(folder.as_ptr() as *const core::ffi::c_void));
+        if programs.is_empty() {
+            return;
+        }
+        let folder = std::path::Path::new(&programs).join("Penguin Mail");
+        if std::fs::create_dir_all(&folder).is_err() {
+            return;
+        }
+        let lnk = folder.join("Penguin Mail.lnk");
+        let Ok(exe) = crate::exe::path() else {
+            return;
+        };
+        let link: IShellLinkW = match CoCreateInstance(&ShellLink, None, CLSCTX_ALL) {
+            Ok(link) => link,
+            Err(_) => return,
+        };
+        let target = HSTRING::from(exe.as_os_str());
+        if link.SetPath(PCWSTR(target.as_ptr())).is_err()
+            || link.SetIconLocation(PCWSTR(target.as_ptr()), 0).is_err()
+        {
+            return;
+        }
+        let Ok(store) = link.cast::<IPropertyStore>() else {
+            return;
+        };
+        let id = PROPVARIANT::from(crate::APP_ID);
+        let Ok(activator) = InitPropVariantFromCLSID(&ACTIVATOR) else {
+            return;
+        };
+        if store
+            .SetValue(&PKEY_AppUserModel_ID, &id)
+            .and_then(|_| store.SetValue(&PKEY_AppUserModel_ToastActivatorCLSID, &activator))
+            .and_then(|_| store.Commit())
+            .is_err()
+        {
+            return;
+        }
+        register_server(&exe);
+        let Ok(file) = link.cast::<IPersistFile>() else {
+            return;
+        };
+        let _ = file.Save(PCWSTR(HSTRING::from(lnk.as_os_str()).as_ptr()), true);
+    }
+}
+
+/// Tells Windows which program serves [`ACTIVATOR`], for a copy run
+/// without the installer. An entry that exists stays, since the installer
+/// wrote it for the installed copy.
+///
+/// shortcut: a dev build that moves leaves its old path here, until the
+/// key is deleted by hand.
+fn register_server(exe: &std::path::Path) {
+    let subkey = HSTRING::from(format!(
+        r"Software\Classes\CLSID\{ACTIVATOR_TEXT}\LocalServer32"
+    ));
+    let subkey = PCWSTR(subkey.as_ptr());
+    let command: Vec<u16> = format!("\"{}\"", exe.display())
+        .encode_utf16()
+        .chain([0])
+        .collect();
+    // SAFETY: `subkey` and `command` outlive both calls, and `command` is
+    // NUL-terminated with its byte length passed.
+    unsafe {
+        let present = RegGetValueW(
+            HKEY_CURRENT_USER,
+            subkey,
+            PCWSTR::null(),
+            RRF_RT_REG_SZ,
+            None,
+            None,
+            None,
+        ) == ERROR_SUCCESS;
+        if !present {
+            let _ = RegSetKeyValueW(
+                HKEY_CURRENT_USER,
+                subkey,
+                PCWSTR::null(),
+                REG_SZ.0,
+                Some(command.as_ptr().cast()),
+                (command.len() * 2) as u32,
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::notify;
+
+    #[test]
+    fn one_click_reported_twice_is_delivered_once() {
+        let start = std::time::Instant::now();
+        assert!(!repeated("reply-1", start));
+        assert!(repeated("reply-1", start + std::time::Duration::from_millis(30)));
+        assert!(!repeated("delete-1", start + std::time::Duration::from_millis(40)));
+        assert!(!repeated("delete-1", start + std::time::Duration::from_secs(5)));
+    }
+
+    #[test]
+    fn the_activator_text_names_the_activator_class() {
+        assert_eq!(
+            GUID::try_from(ACTIVATOR_TEXT.trim_matches(['{', '}'])).unwrap(),
+            ACTIVATOR
+        );
+    }
+
+    fn actions(open: Option<Action>, target: &str, buttons: Vec<Action>) -> Actions {
+        Actions {
+            open,
+            shows: None,
+            target: target.into(),
+            buttons,
+        }
+    }
+
+    #[test]
+    fn a_mail_toast_opens_its_thread_without_a_token() {
+        let mut mail = actions(Some(Action::OpenMail), "token", vec![]);
+        mail.shows = Some("7:thread-1".into());
+        let xml = toast_xml("Ana", "Hello", &mail);
+        let launch = serde_json::to_string(&Click {
+            a: "show-thread".into(),
+            t: "7:thread-1".into(),
+        })
+        .unwrap();
+        assert!(xml.contains(&format!("launch=\"{}\"", escaped(&launch))), "{xml}");
+    }
+
+    #[test]
+    fn a_mail_toast_carries_its_click_payload_and_escaped_text() {
+        let xml = toast_xml(
+            "A & B <tag>",
+            "he said \"hi\"",
+            &actions(
+                Some(Action::OpenMail),
+                "token/1",
+                vec![Action::Mail(notify::Button::Reply)],
+            ),
+        );
+        let (name, target) = Action::OpenMail.destination("token/1");
+        let launch = serde_json::to_string(&Click {
+            a: name.into(),
+            t: target,
+        })
+        .unwrap();
+        assert!(
+            xml.contains(&format!("launch=\"{}\"", escaped(&launch))),
+            "{xml}"
+        );
+        assert!(xml.contains("<text>A &amp; B &lt;tag&gt;</text>"), "{xml}");
+        assert!(xml.contains("he said &quot;hi&quot;"), "{xml}");
+        assert!(xml.contains("<action"), "{xml}");
+        // Foreground is the default activation, so nothing names it.
+        assert!(!xml.contains("activationType"), "{xml}");
+        assert!(xml.contains("ToastGeneric"), "{xml}");
+        assert!(!xml.contains("scenario"), "{xml}");
+    }
+
+    #[test]
+    fn an_event_toast_is_a_reminder_and_a_click_without_open_just_activates() {
+        let xml = toast_xml(
+            "Standup",
+            "",
+            &actions(
+                Some(Action::OpenEvent),
+                "event",
+                vec![Action::Join, Action::Snooze],
+            ),
+        );
+        assert!(xml.contains("scenario=\"reminder\""), "{xml}");
+        assert_eq!(xml.matches("<action ").count(), 2, "{xml}");
+        // No empty <text></text> for an empty body.
+        assert!(!xml.contains("<text></text>"), "{xml}");
+
+        let xml = toast_xml("hi", "", &actions(None, "x", vec![]));
+        let launch: Click = serde_json::from_str(
+            &xml.split("launch=\"")
+                .nth(1)
+                .unwrap()
+                .split('"')
+                .next()
+                .unwrap()
+                .replace("&quot;", "\""),
+        )
+        .unwrap();
+        assert!(launch.a.is_empty(), "a body click only activates the app");
+    }
+}

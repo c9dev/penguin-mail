@@ -16,7 +16,13 @@ pub struct CommandLine {
 /// quotes and backslashes, then takes the `NAME=value` words in front as
 /// the environment.
 pub fn split_command_line(line: &str) -> Result<CommandLine, String> {
-    let words = words(line)?;
+    split_with(line, cfg!(windows))
+}
+
+/// [`split_command_line`], where `path_backslashes` reads a backslash
+/// outside quotes as part of a path, as Windows does, not as an escape.
+fn split_with(line: &str, path_backslashes: bool) -> Result<CommandLine, String> {
+    let words = words(line, path_backslashes)?;
     let mut env = BTreeMap::new();
     let mut rest = words.into_iter().peekable();
     while let Some((name, value)) = rest.peek().and_then(|word| assignment(word)) {
@@ -40,7 +46,7 @@ fn assignment(word: &str) -> Option<(String, String)> {
     valid.then(|| (name.to_string(), value.to_string()))
 }
 
-fn words(line: &str) -> Result<Vec<String>, String> {
+fn words(line: &str, path_backslashes: bool) -> Result<Vec<String>, String> {
     let mut words = Vec::new();
     let mut word = String::new();
     // A word can be empty and still be a word, as `''` is.
@@ -82,6 +88,10 @@ fn words(line: &str) -> Result<Vec<String>, String> {
                     }
                 }
             }
+            '\\' if path_backslashes => {
+                started = true;
+                word.push('\\');
+            }
             '\\' => {
                 started = true;
                 if let Some(c) = chars.next() {
@@ -118,7 +128,32 @@ fn quote(word: &str) -> String {
             .all(|c| c.is_ascii_alphanumeric() || "@%+=:,./-_~".contains(c));
     if plain {
         word.to_string()
+    } else if word.contains('\'') {
+        // `'\''` needs a backslash escape, which Windows reads as a path
+        // character; double quotes read back the same on every platform.
+        let escaped: String = word
+            .chars()
+            .flat_map(|c| {
+                let escape = matches!(c, '"' | '\\' | '$' | '`').then_some('\\');
+                escape.into_iter().chain(std::iter::once(c))
+            })
+            .collect();
+        format!("\"{escaped}\"")
     } else {
-        format!("'{}'", word.replace('\'', r"'\''"))
+        format!("'{word}'")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_with;
+
+    #[test]
+    fn a_windows_path_keeps_its_backslashes() {
+        let line = split_with(r"C:\tools\srv.exe --x", true).unwrap();
+        assert_eq!(line.command, r"C:\tools\srv.exe");
+        assert_eq!(line.args, ["--x"]);
+        let unix = split_with(r"a\ b", false).unwrap();
+        assert_eq!(unix.command, "a b");
     }
 }

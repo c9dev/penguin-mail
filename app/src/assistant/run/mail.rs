@@ -63,7 +63,17 @@ pub(super) fn kind_of(mime: &str, name: &str) -> Kind {
 /// The text of a PDF, from poppler's `pdftotext`. `None` when this computer
 /// has no `pdftotext` to ask.
 pub(super) async fn pdf_text(bytes: Vec<u8>) -> Result<Option<String>, String> {
-    let spawned = tokio::process::Command::new("pdftotext")
+    // The Windows installer ships its own copy beside the app.
+    #[cfg(windows)]
+    let program = crate::exe::beside("libexec/poppler/pdftotext.exe")
+        .filter(|path| path.is_file())
+        .unwrap_or_else(|| "pdftotext".into());
+    #[cfg(not(windows))]
+    let program = "pdftotext";
+    let mut command = tokio::process::Command::new(program);
+    #[cfg(windows)]
+    command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    let spawned = command
         .args(["-layout", "-enc", "UTF-8", "-", "-"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -384,9 +394,11 @@ impl<A: Accounts> Tools<A> {
             Kind::Pdf => match self.away(pdf_text(bytes)).await?? {
                 Some(text) => Some(text),
                 None => {
-                    result["note"] = json!(
+                    result["note"] = json!(if cfg!(windows) {
+                        "This copy of Penguin Mail has no pdftotext, so the PDF cannot be read."
+                    } else {
                         "This computer has no pdftotext, so the PDF cannot be read. Installing poppler-utils adds it."
-                    );
+                    });
                     None
                 }
             },

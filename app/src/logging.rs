@@ -65,7 +65,63 @@ impl Drop for Event {
             mask_addresses(&text)
         };
         let _ = io::stderr().lock().write_all(text.as_bytes());
+        #[cfg(windows)]
+        if let Some(file) = log_file() {
+            let _ = file
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .write_all(without_colours(&text).as_bytes());
+        }
     }
+}
+
+/// `text` without the ANSI colour codes the console formatter adds, which a
+/// log file opened in Notepad would show as noise.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn without_colours(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // A colour code is ESC, `[`, digits and `;`, then a letter.
+            for code in chars.by_ref() {
+                if code.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// The log file of a Windows run, `%LOCALAPPDATA%\penguin-mail\logs\penguin-mail.log`.
+/// The release build has no console, so standard error goes nowhere and
+/// this file is the only record a person can send. The run before it stays
+/// as `penguin-mail.1.log`. The file is opened for sharing reads only, so a
+/// second copy that hands over to this one can neither move nor reopen it
+/// and writes none. `None` when the folder or file cannot be made.
+#[cfg(windows)]
+fn log_file() -> Option<&'static std::sync::Mutex<std::fs::File>> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+    use std::sync::{Mutex, OnceLock};
+    static FILE: OnceLock<Option<Mutex<std::fs::File>>> = OnceLock::new();
+    FILE.get_or_init(|| {
+        let dir = crate::exe::local_data()?.join("logs");
+        std::fs::create_dir_all(&dir).ok()?;
+        let log = dir.join("penguin-mail.log");
+        let _ = std::fs::rename(&log, dir.join("penguin-mail.1.log"));
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .share_mode(1) // FILE_SHARE_READ
+            .open(&log)
+            .ok()
+            .map(Mutex::new)
+    })
+    .as_ref()
 }
 
 /// `text` with the local part of each email address cut to its first
@@ -108,7 +164,16 @@ pub fn mask_addresses(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::mask_addresses;
+    use super::{mask_addresses, without_colours};
+
+    #[test]
+    fn a_log_file_line_carries_no_colour_codes() {
+        assert_eq!(
+            without_colours("\x1b[2m2026-11-26\x1b[0m \x1b[33m WARN\x1b[0m could not draw"),
+            "2026-11-26  WARN could not draw"
+        );
+        assert_eq!(without_colours("plain line"), "plain line");
+    }
 
     #[test]
     fn an_address_keeps_its_first_letter_and_its_domain() {

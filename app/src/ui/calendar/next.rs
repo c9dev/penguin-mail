@@ -181,6 +181,7 @@ mod tests {
 
     #[test]
     fn an_event_within_three_hours_shows_as_next() {
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let found = next_up(&[at("Sprint planning", NOW + 20 * M, 90)], NOW, DAY_ENDS);
         assert_eq!(title(&found), Some("Sprint planning"));
         let said = words(&found.expect("an event"), NOW, &utc());
@@ -213,6 +214,7 @@ mod tests {
 
     #[test]
     fn an_event_under_way_shows_until_it_ends() {
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let found = next_up(&[at("Stand-up", NOW - 10 * M, 30)], NOW, DAY_ENDS).expect("an event");
         assert!(matches!(found, NextUp::Now(_)));
         let said = words(&found, NOW, &utc());

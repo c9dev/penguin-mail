@@ -59,7 +59,7 @@ fn a_server_name_holds_what_a_tool_name_can() {
 #[test]
 fn a_command_line_splits_the_way_a_shell_reads_it() {
     let line = split_command_line(
-        r#"GITHUB_TOKEN=abc npx -y "@modelcontextprotocol/server-filesystem" '/home/ana/My Files' it\'s"#,
+        r#"GITHUB_TOKEN=abc npx -y "@modelcontextprotocol/server-filesystem" '/home/ana/My Files' "it's""#,
     )
     .unwrap();
     assert_eq!(line.command, "npx");
@@ -88,7 +88,7 @@ fn a_joined_command_line_reads_back_the_same() {
     let line = join_command_line(&env, "~/bin/server", &args);
     assert_eq!(
         line,
-        r"KEY='two words' ~/bin/server --dir '/it'\''s here' ''"
+        r#"KEY='two words' ~/bin/server --dir "/it's here" ''"#
     );
     let back = split_command_line(&line).unwrap();
     assert_eq!(
