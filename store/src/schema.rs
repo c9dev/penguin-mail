@@ -1130,6 +1130,20 @@ CREATE TABLE microsoft_shared (
     // Old cursors describe the smaller set of contact fields. Keep the
     // cached cards until a complete read of the expanded fields succeeds.
     "UPDATE contact_books SET sync_token = NULL, synced_at = 0;",
+    // Two contacts in different accounts that the person said are one
+    // human. Neither contact changes; All contacts shows them as one row.
+    // `shown_a` says whose name the row uses. No foreign key to `contacts`:
+    // a refresh replaces those rows, and a link must outlive that.
+    r#"
+CREATE TABLE contact_links (
+    account_a  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource_a TEXT NOT NULL,
+    account_b  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource_b TEXT NOT NULL,
+    shown_a    INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (account_a, resource_a, account_b, resource_b)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

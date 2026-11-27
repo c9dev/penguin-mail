@@ -2359,12 +2359,17 @@ struct SampleContact {
     email: &'static str,
     organization: &'static str,
     phone: Option<&'static str>,
+    /// A second address.
+    other_email: Option<&'static str>,
+    /// Whether the card also holds a group, birthday, notes, a website,
+    /// a date and a custom field, so every part of the person pane shows.
+    rich: bool,
     /// The colour their drawn portrait uses. `None` leaves them with
     /// initials, as a contact with no photo has.
     photo: Option<(u8, u8, u8)>,
 }
 
-const CONTACTS: [SampleContact; 4] = [
+const CONTACTS: [SampleContact; 9] = [
     SampleContact {
         account: 0,
         resource: "people/c1",
@@ -2372,6 +2377,8 @@ const CONTACTS: [SampleContact; 4] = [
         email: "mara.okafor@example.org",
         organization: "Ridgeline Trails",
         phone: Some("+1 555 0100"),
+        other_email: None,
+        rich: true,
         photo: Some((0x2d, 0x6a, 0x4f)),
     },
     SampleContact {
@@ -2381,6 +2388,8 @@ const CONTACTS: [SampleContact; 4] = [
         email: "priya@fernwood.example",
         organization: "Fernwood",
         phone: Some("+1 555 0142"),
+        other_email: None,
+        rich: true,
         photo: Some((0x7b, 0x2c, 0x6b)),
     },
     SampleContact {
@@ -2389,7 +2398,9 @@ const CONTACTS: [SampleContact; 4] = [
         name: "Jonas Weber",
         email: "jonas@fernwood.example",
         organization: "Fernwood",
-        phone: None,
+        phone: Some("+1 415 555 0148"),
+        other_email: None,
+        rich: false,
         photo: None,
     },
     SampleContact {
@@ -2399,9 +2410,115 @@ const CONTACTS: [SampleContact; 4] = [
         email: "s.iyer@uni.example",
         organization: "Department of Geology",
         phone: None,
+        other_email: None,
+        rich: false,
         photo: Some((0x1b, 0x4d, 0x7a)),
     },
+    // Priya again in the first account: one person, two accounts.
+    SampleContact {
+        account: 0,
+        resource: "people/c5",
+        name: "Priya Raman",
+        email: "priya@fernwood.example",
+        organization: "Fernwood",
+        phone: Some("+351 910 000 000"),
+        other_email: Some("priya.shah@gmail.example"),
+        rich: false,
+        photo: None,
+    },
+    // A second card for Jonas in the same account: Same address.
+    SampleContact {
+        account: 1,
+        resource: "people/c6",
+        name: "J. Weber",
+        email: "jonas@fernwood.example",
+        organization: "",
+        phone: None,
+        other_email: None,
+        rich: false,
+        photo: None,
+    },
+    // A close name in two accounts: Same person.
+    SampleContact {
+        account: 0,
+        resource: "people/c7",
+        name: "Owen Mercer",
+        email: "accounts@mapleandfinch.example",
+        organization: "Maple & Finch",
+        phone: None,
+        other_email: None,
+        rich: false,
+        photo: None,
+    },
+    SampleContact {
+        account: 1,
+        resource: "people/c8",
+        name: "Owen M.",
+        email: "owen@mercer.example",
+        organization: "",
+        phone: None,
+        other_email: None,
+        rich: false,
+        photo: None,
+    },
+    SampleContact {
+        account: 0,
+        resource: "people/c9",
+        name: "Harbor Lane Lettings",
+        email: "office@harborlane.example",
+        organization: "",
+        phone: None,
+        other_email: None,
+        rich: false,
+        photo: None,
+    },
 ];
+
+impl SampleContact {
+    fn details(&self) -> mailrs_domain::contact::Details {
+        let phones = self.phone.map(str::to_string).into_iter().collect();
+        if !self.rich {
+            return mailrs_domain::contact::Details {
+                phones,
+                ..Default::default()
+            };
+        }
+        mailrs_domain::contact::Details {
+            phones,
+            groups: vec!["Friends".into()],
+            birthday: "1990-04-12".into(),
+            notes: "A sample contact for the address book demo.".into(),
+            urls: vec!["https://example.org".into()],
+            dates: vec![mailrs_domain::contact::Field {
+                label: "Anniversary".into(),
+                value: "2015-06-20".into(),
+            }],
+            custom: vec![mailrs_domain::contact::Field {
+                label: "X-CUSTOMER-ID".into(),
+                value: "DEMO-42".into(),
+            }],
+            ..Default::default()
+        }
+    }
+
+    /// As the fake People API serves them.
+    fn person(&self) -> mailrs_gmail::Person {
+        mailrs_gmail::Person {
+            resource: self.resource.into(),
+            details: self.details(),
+            name: Some(self.name.into()),
+            emails: std::iter::once(self.email)
+                .chain(self.other_email)
+                .map(str::to_string)
+                .collect(),
+            photo_url: self
+                .photo
+                .map(|_| format!("https://photos.example/{}", self.resource)),
+            organization: (!self.organization.is_empty()).then(|| self.organization.to_string()),
+            phone: self.phone.map(str::to_string),
+        }
+    }
+}
 
 /// Writes the demo address books, with a photo on disk for the contacts
 /// that have one. A photo that cannot be written leaves that contact with
@@ -2426,27 +2543,16 @@ pub fn seed_contacts(conn: &Connection, photo_dir: &std::path::Path) -> Result<(
         address_book::save(
             conn,
             &[address_book::Contact {
-                details: mailrs_domain::contact::Details {
-                    phones: contact.phone.map(str::to_string).into_iter().collect(),
-                    groups: vec!["Friends".into()],
-                    birthday: "1990-04-12".into(),
-                    notes: "A sample contact for the address book demo.".into(),
-                    urls: vec!["https://example.org".into()],
-                    dates: vec![mailrs_domain::contact::Field {
-                        label: "Anniversary".into(),
-                        value: "2015-06-20".into(),
-                    }],
-                    custom: vec![mailrs_domain::contact::Field {
-                        label: "X-CUSTOMER-ID".into(),
-                        value: "DEMO-42".into(),
-                    }],
-                    ..Default::default()
-                },
+                details: contact.details(),
                 account_id,
                 resource: contact.resource.into(),
                 name: Some(contact.name.into()),
-                emails: vec![contact.email.into()],
-                organization: Some(contact.organization.into()),
+                emails: std::iter::once(contact.email)
+                    .chain(contact.other_email)
+                    .map(str::to_string)
+                    .collect(),
+                organization: (!contact.organization.is_empty())
+                    .then(|| contact.organization.to_string()),
                 phone: contact.phone.map(str::to_string),
                 photo_url: contact
                     .photo
@@ -2527,6 +2633,14 @@ impl SampleAccount {
             // The demo lists a mailbox in one page, as a Gmail search does.
             state.page_size = 1000;
             state.labels = system.chain(user).collect();
+            // The address book a refresh reads back, so it keeps the
+            // contacts `seed_contacts` wrote.
+            let index = ACCOUNTS.iter().position(|a| a.email == self.email);
+            state.contacts = CONTACTS
+                .iter()
+                .filter(|c| Some(c.account) == index)
+                .map(SampleContact::person)
+                .collect();
         });
         fake
     }

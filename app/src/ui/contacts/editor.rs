@@ -1,118 +1,168 @@
-//! Edits are sparse so opening a card does not rewrite its unrecognized fields.
-use super::{Window, photo};
+//! The editor in the person pane. It names the account it will change,
+//! and writes nothing until Save. Edits are sparse so opening a card does
+//! not rewrite its unrecognized fields.
+
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
+
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::contact::{Changes, Details, Field};
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::ContactFields;
-use mailrs_store::address_book::{self, Contact};
-use mailrs_sync::Permitted;
-use std::cell::{Cell, RefCell};
-use std::rc::Rc;
+use mailrs_store::address_book::Contact;
 
-// A row's first value is its label only for dates and custom fields.
+use super::person::{body_box, editable_members};
+use super::{Contacts, List, Pane, parts, people};
+use crate::format::account_label;
+
+/// A repeated field: one entry box per value, with Add and a remove cross.
 struct Rows {
-    group: adw::PreferencesGroup,
-    rows: RefCell<Vec<(adw::ActionRow, Vec<gtk::Entry>)>>,
+    group: gtk::Box,
+    rows: RefCell<Vec<(gtk::Box, Vec<gtk::Entry>)>>,
+    /// The label of each entry of a row, and the label of the first row
+    /// when it differs from the others.
     labels: Vec<String>,
+    first: Option<String>,
+    dirty: Rc<dyn Fn()>,
+    /// The add line under the group.
+    add: gtk::Button,
+    holder: gtk::Box,
 }
+
 impl Rows {
-    fn new(title: &str, labels: Vec<String>, values: Vec<Vec<String>>) -> Rc<Self> {
-        let group = adw::PreferencesGroup::builder().title(title).build();
-        let add = gtk::Button::builder()
-            .icon_name("list-add-symbolic")
-            .valign(gtk::Align::Center)
+    fn new(
+        add_label: &str,
+        first: Option<String>,
+        labels: Vec<String>,
+        values: Vec<Vec<String>>,
+        at_least: usize,
+        dirty: Rc<dyn Fn()>,
+    ) -> Rc<Self> {
+        let group = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .css_classes(["cts-group"])
             .build();
-        super::super::name(&add, &fill(&gettext("Add {field}"), &[("field", title)]));
-        group.set_header_suffix(Some(&add));
+        group.set_overflow(gtk::Overflow::Hidden);
+        let add = gtk::Button::builder()
+            .child(&{
+                let row = gtk::Box::builder().spacing(6).build();
+                row.append(&parts::icon("plus"));
+                row.append(&gtk::Label::new(Some(add_label)));
+                row
+            })
+            .halign(gtk::Align::Start)
+            .css_classes(["cts-addline"])
+            .build();
+        super::super::name(&add, add_label);
+        let holder = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
+        holder.append(&group);
+        holder.append(&add);
         let rows = Rc::new(Self {
             group,
             rows: RefCell::default(),
             labels,
+            first,
+            dirty,
+            add,
+            holder,
         });
-        for value in values {
-            rows.add(value);
+        let count = values.len().max(at_least);
+        for at in 0..count {
+            rows.push(values.get(at).cloned().unwrap_or_default(), false);
         }
         let weak = Rc::downgrade(&rows);
-        add.connect_clicked(move |_| {
+        rows.add.connect_clicked(move |_| {
             if let Some(rows) = weak.upgrade() {
-                rows.add(Vec::new());
+                rows.push(Vec::new(), true);
             }
         });
+        rows.group.set_visible(count > 0);
         rows
     }
-    fn add(self: &Rc<Self>, values: Vec<String>) {
-        let row = adw::ActionRow::new();
-        let content = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .hexpand(true)
-            .margin_top(8)
-            .margin_bottom(8)
-            .build();
-        let entries: Vec<_> = self
+
+    fn push(self: &Rc<Self>, values: Vec<String>, user: bool) {
+        let at = self.rows.borrow().len();
+        let shown_labels: Vec<String> = self
             .labels
             .iter()
             .enumerate()
-            .map(|(i, label)| {
-                let entry = gtk::Entry::builder()
-                    .placeholder_text(label)
-                    .text(values.get(i).map(String::as_str).unwrap_or_default())
-                    .hexpand(true)
-                    .build();
-                super::super::name(&entry, label);
-                content.append(&entry);
-                entry
+            .map(|(i, l)| match (&self.first, at, i) {
+                (Some(first), 0, 0) => first.clone(),
+                _ => l.clone(),
             })
             .collect();
-        row.add_prefix(&content);
-        let remove = gtk::Button::builder()
-            .icon_name("list-remove-symbolic")
-            .valign(gtk::Align::Center)
+        let row = gtk::Box::builder().css_classes(["cts-entryrow"]).build();
+        let fields = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
             .build();
-        super::super::name(&remove, &gettext("Remove Field"));
-        row.add_suffix(&remove);
-        let weak = Rc::downgrade(self);
-        let weak_row = row.downgrade();
+        let mut entries = Vec::new();
+        for (i, label) in shown_labels.iter().enumerate() {
+            let (cell, entry) = parts::entry(label, values.get(i).map_or("", String::as_str), "");
+            let dirty = self.dirty.clone();
+            entry.connect_changed(move |_| dirty());
+            if i > 0 {
+                cell.add_css_class("after");
+            }
+            fields.append(&cell);
+            entries.push(entry);
+        }
+        row.append(&fields);
+        let remove = parts::icon_button("x", &gettext("Remove Field"), &[]);
+        remove.set_valign(gtk::Align::Center);
+        remove.set_margin_end(8);
+        row.append(&remove);
+        if at > 0 {
+            row.add_css_class("after");
+        }
+        let (weak, weak_row) = (Rc::downgrade(self), row.downgrade());
         remove.connect_clicked(move |_| {
             if let (Some(rows), Some(row)) = (weak.upgrade(), weak_row.upgrade()) {
                 rows.group.remove(&row);
                 rows.rows.borrow_mut().retain(|(r, _)| r != &row);
+                rows.group.set_visible(!rows.rows.borrow().is_empty());
+                (rows.dirty)();
             }
         });
-        self.group.add(&row);
+        self.group.append(&row);
+        self.group.set_visible(true);
         self.rows.borrow_mut().push((row, entries));
+        if user {
+            (self.dirty)();
+            if let Some((_, e)) = self.rows.borrow().last()
+                && let Some(first) = e.first()
+            {
+                first.grab_focus();
+            }
+        }
     }
+
     fn values(&self) -> Vec<Vec<String>> {
         self.rows
             .borrow()
             .iter()
-            .map(|(_, entries)| {
-                entries
-                    .iter()
-                    .map(|e| e.text().trim().to_string())
-                    .collect::<Vec<_>>()
-            })
+            .map(|(_, entries)| entries.iter().map(|e| e.text().trim().to_string()).collect::<Vec<_>>())
             .filter(|r| r.iter().any(|s| !s.is_empty()))
             .collect()
     }
+
     fn strings(&self) -> Vec<String> {
         self.values().into_iter().map(|r| r[0].clone()).collect()
     }
+
     fn fields(&self) -> Vec<Field> {
         self.values()
             .into_iter()
-            .map(|r| Field {
-                label: r[0].clone(),
-                value: r[1].clone(),
-            })
+            .map(|r| Field { label: r[0].clone(), value: r[1].clone() })
             .collect()
     }
 }
+
 struct Form {
-    name: adw::EntryRow,
-    organization: adw::EntryRow,
-    birthday: adw::EntryRow,
+    name: gtk::Entry,
+    organization: gtk::Entry,
+    birthday: gtk::Entry,
     notes: gtk::TextBuffer,
     emails: Rc<Rows>,
     phones: Rc<Rows>,
@@ -121,8 +171,10 @@ struct Form {
     groups: Rc<Rows>,
     dates: Rc<Rows>,
     custom: Rc<Rows>,
+    /// `Some(empty)` removes the photo, `Some(bytes)` replaces it.
     photo: Rc<RefCell<Option<Vec<u8>>>>,
 }
+
 impl Form {
     fn values(&self) -> (String, String, Vec<String>, Details) {
         (
@@ -140,7 +192,7 @@ impl Form {
                     .addresses
                     .values()
                     .into_iter()
-                    .map(|r| std::array::from_fn(|i| r[i].clone()))
+                    .map(|r| std::array::from_fn(|i| r.get(i).cloned().unwrap_or_default()))
                     .collect(),
                 urls: self.urls.strings(),
                 groups: self.groups.strings(),
@@ -150,7 +202,8 @@ impl Form {
             },
         )
     }
-    fn changes(&self, original: &Contact, rich: bool) -> ContactFields {
+
+    fn changes(&self, original: &Contact) -> ContactFields {
         let (name, org, emails, d) = self.values();
         let before = &original.details;
         let phones = if before.phones.is_empty() {
@@ -163,19 +216,15 @@ impl Form {
             organization: changed(original.organization.clone().unwrap_or_default(), org),
             emails: changed(original.emails.clone(), emails),
             phones: changed(phones, d.phones),
-            photo: rich.then(|| self.photo.borrow().clone()).flatten(),
-            details: if rich {
-                Changes {
-                    birthday: changed(before.birthday.clone(), d.birthday),
-                    notes: changed(before.notes.clone(), d.notes),
-                    addresses: changed(before.addresses.clone(), d.addresses),
-                    urls: changed(before.urls.clone(), d.urls),
-                    groups: changed(before.groups.clone(), d.groups),
-                    dates: changed(before.dates.clone(), d.dates),
-                    custom: changed(before.custom.clone(), d.custom),
-                }
-            } else {
-                Changes::default()
+            photo: self.photo.borrow().clone(),
+            details: Changes {
+                birthday: changed(before.birthday.clone(), d.birthday),
+                notes: changed(before.notes.clone(), d.notes),
+                addresses: changed(before.addresses.clone(), d.addresses),
+                urls: changed(before.urls.clone(), d.urls),
+                groups: changed(before.groups.clone(), d.groups),
+                dates: changed(before.dates.clone(), d.dates),
+                custom: changed(before.custom.clone(), d.custom),
             },
             expected_revision: (!before.revision.is_empty()).then(|| before.revision.clone()),
             expected_groups: None,
@@ -184,618 +233,529 @@ impl Form {
         }
     }
 }
+
 fn changed<T: PartialEq>(old: T, new: T) -> Option<T> {
     (old != new).then_some(new)
 }
 
-pub(super) fn present(window: &Rc<Window>, contact: Option<Contact>) {
-    let Some(app) = window.app.upgrade() else {
-        return;
-    };
-    let owners: Vec<_> = window
-        .owners
-        .iter()
-        .filter(|a| app.core.demo || app.settings().reads_contacts(&a.email))
-        .cloned()
-        .collect();
-    if owners.is_empty() {
-        window.say(&gettext(
-            "Enable contacts for an account in Preferences first.",
-        ));
-        return;
-    }
-    if contact
-        .as_ref()
-        .is_some_and(|c| !owners.iter().any(|a| a.id == c.account_id))
-    {
-        window.say(&gettext(
-            "Enable contacts for this account in Preferences first.",
-        ));
-        return;
-    }
-    let original = contact.clone().unwrap_or_default();
-    let dialog = adw::Dialog::builder()
-        .title(if contact.is_some() {
-            gettext("Edit Contact")
-        } else {
-            gettext("New Contact")
-        })
-        .content_width(600)
-        .content_height(720)
-        .build();
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(20)
-        .margin_start(20)
-        .margin_end(20)
-        .margin_top(16)
-        .margin_bottom(24)
-        .build();
-    let account = adw::ComboRow::builder()
-        .title(gettext("Account"))
-        .model(&gtk::StringList::new(
-            &owners.iter().map(|a| a.email.as_str()).collect::<Vec<_>>(),
-        ))
-        .build();
-    account.set_selected(
-        owners
-            .iter()
-            .position(|a| a.id == original.account_id)
-            .unwrap_or(0) as u32,
-    );
-    account.set_sensitive(contact.is_none());
-    let identity = adw::PreferencesGroup::new();
-    identity.add(&account);
-    content.append(&identity);
-    let avatar = adw::Avatar::builder()
-        .size(128)
-        .show_initials(true)
-        .text(original.display())
-        .halign(gtk::Align::Center)
-        .build();
-    photo::load(&avatar, &original, &app);
-    content.append(&avatar);
-    let photo_buttons = gtk::Box::builder()
-        .spacing(8)
-        .halign(gtk::Align::Center)
-        .build();
-    let choose = gtk::Button::with_label(&gettext("Change Photo…"));
-    let remove = gtk::Button::with_label(&gettext("Remove Photo"));
-    photo_buttons.append(&choose);
-    photo_buttons.append(&remove);
-    content.append(&photo_buttons);
-    let image = Rc::new(RefCell::new(None));
-    let weak = dialog.downgrade();
-    let (selected, preview) = (image.clone(), avatar.downgrade());
-    choose.connect_clicked(move |_| {
-        if let Some(dialog) = weak.upgrade() {
-            let (selected, preview) = (selected.clone(), preview.clone());
-            photo::choose(&dialog, move |bytes, texture| {
-                *selected.borrow_mut() = Some(bytes);
-                if let Some(a) = preview.upgrade() {
-                    a.set_custom_image(Some(&texture));
-                }
-            });
-        }
-    });
-    let (selected, preview) = (image.clone(), avatar.downgrade());
-    remove.connect_clicked(move |_| {
-        *selected.borrow_mut() = Some(Vec::new());
-        if let Some(a) = preview.upgrade() {
-            a.set_custom_image(gtk::gdk::Texture::NONE);
-        }
-    });
-    let basic = adw::PreferencesGroup::new();
-    let name = entry(
-        &basic,
-        &gettext("Name"),
-        original.name.as_deref().unwrap_or_default(),
-    );
-    let organization = entry(
-        &basic,
-        &gettext("Organization"),
-        original.organization.as_deref().unwrap_or_default(),
-    );
-    content.append(&basic);
-    let strings = |title: &str, values: &[String]| {
-        Rows::new(
-            title,
-            vec![title.to_string()],
-            values.iter().map(|s| vec![s.clone()]).collect(),
-        )
-    };
-    let emails = strings(&gettext("Email"), &original.emails);
-    let numbers = if original.details.phones.is_empty() {
-        original.phone.iter().cloned().collect()
+/// The edit and new-contact forms share these widgets.
+struct Built {
+    form: Rc<Form>,
+    body: gtk::Box,
+    photo_box: gtk::Box,
+}
+
+fn text_group(label: &str, value: &str, placeholder: &str, dirty: &Rc<dyn Fn()>) -> (gtk::Box, gtk::Entry) {
+    let (cell, entry) = parts::entry(label, value, placeholder);
+    let d = dirty.clone();
+    entry.connect_changed(move |_| d());
+    (parts::group(&[cell.upcast()]), entry)
+}
+
+fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool) -> Built {
+    let phones_before = if original.details.phones.is_empty() {
+        original.phone.iter().cloned().collect::<Vec<_>>()
     } else {
         original.details.phones.clone()
     };
-    let phones = strings(&gettext("Phone"), &numbers);
-    content.append(&emails.group);
-    content.append(&phones.group);
-    let rich_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(20)
-        .build();
-    content.append(&rich_box);
-    let dates_group = adw::PreferencesGroup::builder()
-        .description(gettext(
-            "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown.",
-        ))
-        .build();
-    let birthday = entry(
-        &dates_group,
-        &gettext("Birthday"),
-        &mailrs_domain::contact::date_for_edit(&original.details.birthday),
+    let d = &original.details;
+    let (name_cell, name) = parts::entry(
+        &gettext("Name"),
+        original.name.as_deref().unwrap_or_default(),
+        &if new { gettext("Full name") } else { String::new() },
     );
-    let birthday_preview = gtk::Label::builder()
-        .label(mailrs_domain::contact::birthday_label(
-            &birthday.text(),
-            chrono::Local::now().date_naive(),
-        ))
-        .xalign(0.0)
-        .wrap(true)
-        .css_classes(["dim-label"])
-        .build();
-    birthday.connect_changed({
-        let preview = birthday_preview.clone();
-        move |entry| {
-            preview.set_label(&mailrs_domain::contact::birthday_label(
-                &entry.text(),
-                chrono::Local::now().date_naive(),
-            ))
+    let (org_cell, organization) = parts::entry(
+        &gettext("Organization"),
+        original.organization.as_deref().unwrap_or_default(),
+        "",
+    );
+    for e in [&name, &organization] {
+        let d = dirty.clone();
+        e.connect_changed(move |_| d());
+    }
+    for c in [&org_cell] {
+        c.add_css_class("after");
+    }
+    let emails = Rows::new(
+        &gettext("Add email"),
+        Some(gettext("Email")),
+        vec![gettext("Other email")],
+        original.emails.iter().map(|e| vec![e.clone()]).collect(),
+        1,
+        dirty.clone(),
+    );
+    if new {
+        for (_, entries) in emails.rows.borrow().iter() {
+            entries[0].set_placeholder_text(Some(&gettext("name@example.com")));
         }
-    });
-    dates_group.add(&birthday_preview);
-    rich_box.append(&dates_group);
-    let groups = strings(&gettext("Groups"), &original.details.groups);
-    let urls = strings(&gettext("Websites"), &original.details.urls);
+    }
+    let phones = Rows::new(
+        &gettext("Add phone"),
+        None,
+        vec![gettext("Phone")],
+        phones_before.iter().map(|p| vec![p.clone()]).collect(),
+        1,
+        dirty.clone(),
+    );
     let addresses = Rows::new(
-        &gettext("Postal Addresses"),
-        [
-            gettext("PO Box"),
-            gettext("Extended Address"),
+        &gettext("Add postal address"),
+        None,
+        vec![
+            gettext("PO box"),
+            gettext("Extended address"),
             gettext("Street"),
             gettext("City"),
             gettext("Region"),
-            gettext("Postal Code"),
+            gettext("Postal code"),
             gettext("Country"),
-        ]
-        .to_vec(),
-        original
-            .details
-            .addresses
-            .iter()
-            .map(|parts| parts.to_vec())
-            .collect(),
+        ],
+        d.addresses.iter().map(|a| a.to_vec()).collect(),
+        0,
+        dirty.clone(),
     );
-    let fields = |title: &str, values: &[Field]| {
-        Rows::new(
-            title,
-            vec![gettext("Label"), gettext("Value")],
-            values
-                .iter()
-                .map(|s| vec![s.label.clone(), s.value.clone()])
-                .collect(),
-        )
-    };
-    let dates = fields(&gettext("Other Dates"), &original.details.dates);
-    let custom = fields(&gettext("Custom Fields"), &original.details.custom);
-    custom.group.set_description(Some(&gettext(
-        "For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-ID.",
-    )));
-    for group in [&groups, &urls, &addresses, &dates, &custom] {
-        rich_box.append(&group.group);
-    }
+    let urls = Rows::new(&gettext("Add website"), None, vec![gettext("Website")], d.urls.iter().map(|u| vec![u.clone()]).collect(), 0, dirty.clone());
+    let groups = Rows::new(&gettext("Add group"), None, vec![gettext("Group")], d.groups.iter().map(|g| vec![g.clone()]).collect(), 0, dirty.clone());
+    let dates = Rows::new(
+        &gettext("Add date"),
+        None,
+        vec![gettext("Label"), gettext("Date")],
+        d.dates.iter().map(|f| vec![f.label.clone(), f.value.clone()]).collect(),
+        0,
+        dirty.clone(),
+    );
+    let custom = Rows::new(
+        &gettext("Add custom field"),
+        None,
+        vec![gettext("Label"), gettext("Value")],
+        d.custom.iter().map(|f| vec![f.label.clone(), f.value.clone()]).collect(),
+        0,
+        dirty.clone(),
+    );
+    let (birthday_group, birthday) = text_group(&gettext("Birthday"), &d.birthday, "YYYY-MM-DD", &dirty);
     let notes = gtk::TextBuffer::new(None);
-    notes.set_text(&original.details.notes);
+    notes.set_text(&d.notes);
+    {
+        let dirty = dirty.clone();
+        notes.connect_changed(move |_| dirty());
+    }
     let notes_view = gtk::TextView::builder()
         .buffer(&notes)
         .wrap_mode(gtk::WrapMode::WordChar)
-        .height_request(120)
+        .accepts_tab(false)
+        .css_classes(["cts-notes"])
         .build();
     super::super::name(&notes_view, &gettext("Notes"));
-    rich_box.append(&gtk::Label::new(Some(&gettext("Notes"))));
-    rich_box.append(&notes_view);
-    let capabilities = gtk::Label::builder()
-        .label(gettext(
-            "This account supports editing names, email addresses, phone numbers, and organizations only.",
-        ))
-        .wrap(true)
-        .build();
-    content.append(&capabilities);
-    let update_capabilities = {
-        let owners = owners.clone();
-        let weak_app = Rc::downgrade(&app);
-        let (rich_box, photo_buttons, capabilities) = (
-            rich_box.downgrade(),
-            photo_buttons.downgrade(),
-            capabilities.downgrade(),
-        );
-        move |account: &adw::ComboRow| {
-            if let Some(app) = weak_app.upgrade() {
-                let rich = owners
-                    .get(account.selected() as usize)
-                    .is_some_and(|a| app.core.demo || app.core.contacts().edits_details(a.id));
-                if let Some(b) = rich_box.upgrade() {
-                    b.set_visible(rich);
-                }
-                if let Some(b) = photo_buttons.upgrade() {
-                    b.set_visible(rich);
-                }
-                if let Some(b) = capabilities.upgrade() {
-                    b.set_visible(!rich);
-                }
-            }
-        }
-    };
-    update_capabilities(&account);
-    account.connect_selected_notify(update_capabilities);
-    let form = Rc::new(Form {
-        name,
-        organization,
-        birthday,
-        notes,
-        emails,
-        phones,
-        addresses,
-        urls,
-        groups,
-        dates,
-        custom,
-        photo: image,
-    });
-    let save = gtk::Button::with_label(&gettext("Save"));
-    save.add_css_class("suggested-action");
-    let header = adw::HeaderBar::new();
-    header.pack_end(&save);
-    let error = gtk::Label::builder()
-        .wrap(true)
-        .selectable(true)
-        .css_classes(["error"])
-        .visible(false)
-        .build();
-    error.set_margin_start(12);
-    error.set_margin_end(12);
-    let view = adw::ToolbarView::builder()
-        .content(
-            &gtk::ScrolledWindow::builder()
-                .child(&content)
-                .hscrollbar_policy(gtk::PolicyType::Never)
-                .build(),
-        )
-        .build();
-    view.add_top_bar(&header);
-    view.add_top_bar(&error);
-    dialog.set_child(Some(&view));
-    let saving = Rc::new(Cell::new(false));
-    let weak = dialog.downgrade();
-    let weak_window = Rc::downgrade(window);
-    // Compare with what the controls initially showed, so trimming in a field
-    // does not turn an untouched server value into an edit.
-    let mut initial = original.clone();
-    let (name, organization, emails, mut details) = form.values();
-    details.revision = original.details.revision.clone();
-    initial.name = Some(name);
-    initial.organization = Some(organization);
-    initial.emails = emails;
-    initial.details = details;
-    let (saved_form, saved_original, saved_flag) = (form.clone(), initial, saving.clone());
-    let books = Rc::new(RefCell::new(Vec::<(String, String)>::new()));
-    let book_row = adw::ComboRow::builder()
-        .title(gettext("Address Book"))
-        .visible(false)
-        .build();
-    identity.add(&book_row);
-    let loading = Rc::new(Cell::new(false));
-    if contact.is_none() {
-        let load = {
-            let (owners, books, loading, row, save, error, app) = (
-                owners.clone(),
-                books.clone(),
-                loading.clone(),
-                book_row.downgrade(),
-                save.downgrade(),
-                error.downgrade(),
-                Rc::downgrade(&app),
-            );
-            move |account: &adw::ComboRow| {
-                let Some(app) = app.upgrade() else {
-                    return;
-                };
-                let Some(owner) = owners.get(account.selected() as usize) else {
-                    return;
-                };
-                let id = owner.id;
-                books.borrow_mut().clear();
-                let rich = !app.core.demo && app.core.contacts().edits_details(id);
-                if let Some(row) = row.upgrade() {
-                    row.set_visible(rich);
-                    row.set_model(None::<&gtk::StringList>);
-                }
-                loading.set(rich);
-                if let Some(save) = save.upgrade() {
-                    save.set_sensitive(!rich);
-                }
-                if !rich {
-                    return;
-                }
-                let (books, loading, row, save, error, selected, selected_index) = (
-                    books.clone(),
-                    loading.clone(),
-                    row.clone(),
-                    save.clone(),
-                    error.clone(),
-                    account.downgrade(),
-                    account.selected(),
-                );
-                glib::spawn_future_local(async move {
-                    let service = app.core.contacts();
-                    let answer = app
-                        .core
-                        .call(async move { service.address_books(id).await })
-                        .await;
-                    if !selected
-                        .upgrade()
-                        .is_some_and(|a| a.selected() == selected_index)
-                    {
-                        return;
-                    }
-                    loading.set(false);
-                    match answer {
-                        Ok(found) if !found.is_empty() => {
-                            if let Some(row) = row.upgrade() {
-                                row.set_model(Some(&gtk::StringList::new(
-                                    &found
-                                        .iter()
-                                        .map(|(_, name)| name.as_str())
-                                        .collect::<Vec<_>>(),
-                                )));
-                                row.set_selected(0);
-                            }
-                            *books.borrow_mut() = found;
-                            if let Some(save) = save.upgrade() {
-                                save.set_sensitive(true);
-                            }
-                        }
-                        result => {
-                            if let Some(error) = error.upgrade() {
-                                error.set_text(&match result {
-                                    Err(err) => err.to_string(),
-                                    _ => gettext("This account has no address books."),
-                                });
-                                error.set_visible(true);
-                            }
-                        }
-                    }
-                });
-            }
-        };
-        load(&account);
-        account.connect_selected_notify(load);
+    let photo = Rc::new(RefCell::new(None));
+
+    let body = body_box();
+    let photo_box = gtk::Box::builder().spacing(12).css_classes(["cts-photo"]).build();
+    body.append(&photo_box);
+    body.append(&parts::sec(&gettext("Details")));
+    let mut details = vec![name_cell.upcast::<gtk::Widget>(), org_cell.upcast()];
+    for row in [&emails, &phones] {
+        details.push(row.group.clone().upcast());
     }
-    let creation_key = glib::uuid_string_random().to_string();
-    save.connect_clicked(move |save| {
-        if saved_flag.get() || loading.get() {
-            return;
-        }
-        let Some(window) = weak_window.upgrade() else {
-            return;
-        };
-        let Some(app) = window.app.upgrade() else {
-            return;
-        };
-        let Some(owner) = owners.get(account.selected() as usize) else {
-            return;
-        };
-        if !app.core.demo && !app.settings().reads_contacts(&owner.email) {
-            error.set_text(&gettext("Contacts access for this account was turned off."));
-            error.set_visible(true);
-            return;
-        }
-        let rich = app.core.demo || app.core.contacts().edits_details(owner.id);
-        let mut fields = saved_form.changes(&saved_original, rich);
-        if fields.details.groups.is_some() {
-            fields.expected_groups = contact.as_ref().map(|c| c.details.groups.clone());
-        }
-        if contact.is_none() {
-            fields.creation_key = Some(creation_key.clone());
-            fields.address_book = books
-                .borrow()
-                .get(book_row.selected() as usize)
-                .map(|(id, _)| id.clone());
-            if !app.core.demo && rich && fields.address_book.is_none() {
-                error.set_text(&gettext("Choose an address book first."));
-                error.set_visible(true);
-                return;
-            }
-        }
-        if contact.is_none() && fields.name.is_none() {
-            fields.name = Some(saved_form.name.text().trim().to_string());
-        }
-        if saved_form.name.text().trim().is_empty() && saved_form.emails.strings().is_empty() {
-            error.set_text(&gettext("Enter a name or an email address."));
-            error.set_visible(true);
-            return;
-        }
-        if saved_form
-            .emails
-            .strings()
-            .iter()
-            .any(|email| !email.contains('@') || email.chars().any(char::is_whitespace))
-        {
-            error.set_text(&gettext("Enter a valid email address."));
-            error.set_visible(true);
-            return;
-        }
-        if contact.is_some() && fields.is_empty() {
-            if let Some(dialog) = weak.upgrade() {
-                dialog.force_close();
-            }
-            return;
-        }
-        let id = owner.id;
-        let original = saved_original.clone();
-        let new = contact.is_none();
-        let (name, org, emails, details) = saved_form.values();
-        let mut demo_contact = Contact {
-            account_id: id,
-            resource: if new {
-                format!("demo/{}", glib::uuid_string_random())
-            } else {
-                original.resource.clone()
-            },
-            name: Some(name),
-            organization: Some(org),
+    let first_group = parts::group(&[details[0].clone(), details[1].clone()]);
+    body.append(&first_group);
+    for rows in [&emails, &phones] {
+        body.append(&rows.holder);
+    }
+    for (title, rows) in [
+        (gettext("Postal addresses"), &addresses),
+        (gettext("Websites"), &urls),
+        (gettext("Groups"), &groups),
+        (gettext("Other dates"), &dates),
+        (gettext("Custom fields"), &custom),
+    ] {
+        body.append(&parts::sec(&title));
+        body.append(&rows.holder);
+    }
+    body.append(&parts::sec(&gettext("Birthday")));
+    body.append(&birthday_group);
+    body.append(&parts::sec(&gettext("Notes")));
+    body.append(&parts::group(&[notes_view.upcast()]));
+    let _ = this;
+    Built {
+        form: Rc::new(Form {
+            name,
+            organization,
+            birthday,
+            notes,
             emails,
-            phone: details.phones.first().cloned(),
-            details,
-            ..original.clone()
-        };
-        saved_flag.set(true);
-        save.set_sensitive(false);
-        account.set_sensitive(false);
-        content.set_sensitive(false);
-        if let Some(d) = weak.upgrade() {
-            d.set_can_close(false);
-        }
-        let (weak, weak_window, flag, save, error, content, account) = (
-            weak.clone(),
-            weak_window.clone(),
-            saved_flag.clone(),
-            save.downgrade(),
-            error.downgrade(),
-            content.downgrade(),
-            account.downgrade(),
-        );
-        glib::spawn_future_local(async move {
-            let result: anyhow::Result<()> = if app.core.demo {
-                async {
-                    if let Some(bytes) = fields.photo {
-                        demo_contact.photo_file = None;
-                        demo_contact.photo_url = None;
-                        if !bytes.is_empty() {
-                            let file = format!("demo-{}.png", glib::uuid_string_random());
-                            let directory = app.core.contacts().photo_dir().to_owned();
-                            let path = directory.join(&file);
-                            app.core
-                                .call(async move {
-                                    std::fs::create_dir_all(directory)?;
-                                    std::fs::write(path, bytes)
-                                })
-                                .await?;
-                            demo_contact.photo_url = Some(file.clone());
-                            demo_contact.photo_file = Some(file);
-                        }
-                    }
-                    app.core
-                        .write(move |c| address_book::save(c, &[demo_contact]))
-                        .await?;
-                    Ok(())
-                }
-                .await
-            } else {
-                let book = app.core.contacts();
-                app.core
-                    .call(async move {
-                        if new {
-                            book.create(id, &fields, true).await
-                        } else {
-                            book.update(id, &original.resource, &fields, true).await
-                        }
-                    })
-                    .await
-                    .and_then(|answer| match answer {
-                        Permitted::Done(_) => Ok(()),
-                        Permitted::NeedsPermission => Err(anyhow::anyhow!(gettext(
-                            "Grant contacts permission in Preferences, then try again."
-                        ))),
-                    })
-            };
-            flag.set(false);
-            let Some(dialog) = weak.upgrade() else {
-                return;
-            };
-            dialog.set_can_close(false);
-            match result {
-                Ok(()) => {
-                    app.contacts_added();
-                    if let Some(w) = weak_window.upgrade() {
-                        w.reload();
-                    }
-                    dialog.force_close();
-                }
-                Err(err) => {
-                    if let Some(e) = error.upgrade() {
-                        // A change refused before sending already says what to fix.
-                        let invalid = matches!(
-                            err.downcast_ref::<mailrs_sync::SyncError>(),
-                            Some(mailrs_sync::SyncError::Backend(
-                                mailrs_sync::BackendError::Invalid(_)
-                            ))
-                        );
-                        e.set_text(&if invalid {
-                            err.to_string()
-                        } else {
-                            fill(
-                                &gettext("Could not save contact: {reason}"),
-                                &[("reason", &err.to_string())],
-                            )
-                        });
-                        e.set_visible(true);
-                    }
-                    if let Some(s) = save.upgrade() {
-                        s.set_sensitive(true);
-                    }
-                    if let Some(c) = content.upgrade() {
-                        c.set_sensitive(true);
-                    }
-                    if new && let Some(a) = account.upgrade() {
-                        a.set_sensitive(true);
-                    }
-                }
-            }
-        });
-    });
-    // Refuse an accidental close once any field changed, including a photo.
-    dialog.set_can_close(false);
-    let original_values = form.values();
-    dialog.connect_close_attempt(move |dialog| {
-        if saving.get() {
-            return;
-        }
-        if form.values() == original_values && form.photo.borrow().is_none() {
-            dialog.force_close();
-            return;
-        }
-        let confirm = adw::AlertDialog::builder()
-            .heading(gettext("Discard Contact Changes?"))
-            .body(gettext("Your changes have not been saved to the account."))
-            .build();
-        confirm.add_responses(&[
-            ("cancel", &gettext("Keep Editing")),
-            ("discard", &gettext("Discard")),
-        ]);
-        confirm.set_default_response(Some("cancel"));
-        confirm.set_close_response("cancel");
-        confirm.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
-        let weak = dialog.downgrade();
-        confirm.connect_response(None, move |_, response| {
-            if response == "discard"
-                && let Some(d) = weak.upgrade()
-            {
-                d.force_close();
-            }
-        });
-        confirm.present(Some(dialog));
-    });
-    // The selected card is rebuilt after saving. Return focus to a widget
-    // that survives that rebuild when the dialog closes.
-    window.search.grab_focus();
-    dialog.present(Some(&window.window));
+            phones,
+            addresses,
+            urls,
+            groups,
+            dates,
+            custom,
+            photo,
+        }),
+        body,
+        photo_box,
+    }
 }
-fn entry(group: &adw::PreferencesGroup, title: &str, value: &str) -> adw::EntryRow {
-    let row = adw::EntryRow::builder().title(title).text(value).build();
-    group.add(&row);
-    row
+
+impl Contacts {
+    pub(super) fn edit_pane(self: &Rc<Self>, contact: Contact) {
+        let (person, contacts, links, list) = {
+            let state = self.state.borrow();
+            let key = (contact.account_id, contact.resource.clone());
+            let person = state
+                .people
+                .iter()
+                .find(|p| p.members.iter().any(|&i| (state.data.contacts[i].account_id, state.data.contacts[i].resource.clone()) == key))
+                .cloned();
+            (person, state.data.contacts.clone(), state.data.links.clone(), state.list.clone().unwrap_or(List::All))
+        };
+        let others: Vec<Contact> = person
+            .as_ref()
+            .map(|p| {
+                editable_members(p, &contacts, &links)
+                    .into_iter()
+                    .map(|i| contacts[i].clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let account = account_label(contact.account_id).short;
+        let hint = edit_hint(&contact, &contacts, &links, &person, &account, &list);
+        self.form_pane(Some(contact), others, hint);
+    }
+
+    pub(super) fn new_pane(self: &Rc<Self>) {
+        self.form_pane(None, Vec::new(), gettext("A new contact is saved into one account. The other accounts do not get a copy. Add a name or an email. Save stays off until one of those is filled in."));
+    }
+
+    /// The editor, for `contact` or, with none, a new contact.
+    fn form_pane(self: &Rc<Self>, contact: Option<Contact>, others: Vec<Contact>, hint: String) {
+        let Some(app) = self.app.upgrade() else { return };
+        let new = contact.is_none();
+        let targets = self.accounts_with_contacts();
+        let original = contact.clone().unwrap_or_default();
+        let chosen = Rc::new(Cell::new(
+            targets
+                .iter()
+                .position(|a| a.id == original.account_id)
+                .unwrap_or_else(|| match self.current_list() {
+                    List::Account(id) => targets.iter().position(|a| a.id == id).unwrap_or(0),
+                    _ => 0,
+                }),
+        ));
+        let unsaved = parts::label(&gettext("Unsaved changes"), &["cts-dirty"]);
+        unsaved.set_visible(false);
+        let save = parts::button(&gettext("Save"), &["yes"]);
+        let error = parts::label("", &["cts-error"]);
+        error.set_visible(false);
+        let dirty: Rc<dyn Fn()> = {
+            let (unsaved, save) = (unsaved.downgrade(), save.downgrade());
+            Rc::new(move || {
+                if let Some(u) = unsaved.upgrade() {
+                    u.set_visible(true);
+                }
+                let _ = &save;
+            })
+        };
+        let built = build(self, &original, dirty, new);
+        let form = built.form.clone();
+        // Header
+        let phead = gtk::Box::builder().css_classes(["cts-phead"]).spacing(8).build();
+        let back = parts::icon_button("back", &gettext("Back"), &["back"]);
+        self.nav.bind_property("collapsed", &back, "visible").sync_create().build();
+        let weak = Rc::downgrade(self);
+        {
+            let weak = weak.clone();
+            back.connect_clicked(move |_| {
+                if let Some(this) = weak.upgrade() {
+                    this.nav.set_show_content(false);
+                }
+            });
+        }
+        phead.append(&back);
+        phead.append(&parts::label(
+            &if new { gettext("New contact") } else { gettext("Edit contact") },
+            &["cts-h2"],
+        ));
+        phead.append(&gtk::Box::builder().hexpand(true).build());
+        let cancel = parts::button(&gettext("Cancel"), &[]);
+        {
+            let weak = weak.clone();
+            cancel.connect_clicked(move |_| {
+                if let Some(this) = weak.upgrade() {
+                    this.state.borrow_mut().pane = Some(Pane::View);
+                    this.show_pane();
+                }
+            });
+        }
+        phead.append(&cancel);
+        phead.append(&unsaved);
+        phead.append(&save);
+        self.pane.append(&phead);
+        self.pane.append(&error);
+
+        // Save stays off for a new contact until it has a name or address.
+        if new {
+            save.set_sensitive(false);
+            super::super::name(&save, &gettext("Save"));
+            save.update_property(&[gtk::accessible::Property::Description(&hint)]);
+            let (save, f) = (save.downgrade(), form.clone());
+            let update = move || {
+                if let Some(save) = save.upgrade() {
+                    save.set_sensitive(!f.name.text().trim().is_empty() || !f.emails.strings().is_empty());
+                }
+            };
+            let u = update.clone();
+            form.name.connect_changed(move |_| u());
+            for (_, entries) in form.emails.rows.borrow().iter() {
+                let u = update.clone();
+                entries[0].connect_changed(move |_| u());
+            }
+            let u = update.clone();
+            form.emails.add.connect_clicked(move |_| u());
+        }
+
+        let body = built.body.clone();
+        // Hint, account choice
+        let top = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
+        top.append(&parts::hint(&hint));
+        if new {
+            if targets.is_empty() {
+                top.append(&parts::hint(&gettext("Turn contacts on for an account first.")));
+                save.set_sensitive(false);
+            } else {
+                top.append(&parts::sec(&gettext("Save to")));
+                let names: Vec<String> = targets.iter().map(|a| account_label(a.id).short).collect();
+                let chosen = chosen.clone();
+                top.append(&parts::seg(&gettext("Save to"), &names, chosen.get(), move |at| chosen.set(at)));
+            }
+        } else if others.len() > 1 {
+            let names: Vec<String> = others.iter().map(|c| account_label(c.account_id).short).collect();
+            let at = others
+                .iter()
+                .position(|c| c.resource == original.resource && c.account_id == original.account_id)
+                .unwrap_or(0);
+            let (weak, others) = (weak.clone(), others.clone());
+            top.append(&parts::seg(&gettext("Which account"), &names, at, move |to| {
+                if let (Some(this), Some(next)) = (weak.upgrade(), others.get(to)) {
+                    this.state.borrow_mut().pane = Some(Pane::Edit(next.clone()));
+                    this.show_pane();
+                }
+            }));
+        }
+        body.prepend(&top);
+
+        // Photo
+        let avatar_holder = gtk::Box::builder().build();
+        avatar_holder.append(&self.photo_avatar(
+            &original.name.clone().unwrap_or_default(),
+            56,
+            contact.as_ref(),
+        ));
+        built.photo_box.append(&avatar_holder);
+        let replace = parts::button(&gettext("Replace Photo"), &[]);
+        let remove = parts::button(&gettext("Remove Photo"), &[]);
+        remove.set_visible(original.photo_file.is_some());
+        {
+            let (form, holder, remove, dirty_label) = (form.clone(), avatar_holder.clone(), remove.clone(), unsaved.clone());
+            let name = original.name.clone().unwrap_or_default();
+            replace.connect_clicked(move |b| {
+                let (form, holder, remove, dirty_label, name) = (form.clone(), holder.clone(), remove.clone(), dirty_label.clone(), name.clone());
+                super::photo::choose(b.upcast_ref(), move |bytes, texture| {
+                    *form.photo.borrow_mut() = Some(bytes);
+                    while let Some(c) = holder.first_child() {
+                        holder.remove(&c);
+                    }
+                    holder.append(&parts::avatar(&name, 56, Some(&texture)));
+                    remove.set_visible(true);
+                    dirty_label.set_visible(true);
+                });
+            });
+        }
+        {
+            let (form, holder, remove, dirty_label) = (form.clone(), avatar_holder.clone(), remove.clone(), unsaved.clone());
+            let name = original.name.clone().unwrap_or_default();
+            remove.connect_clicked(move |b| {
+                *form.photo.borrow_mut() = Some(Vec::new());
+                while let Some(c) = holder.first_child() {
+                    holder.remove(&c);
+                }
+                holder.append(&parts::avatar(&name, 56, None));
+                b.set_visible(false);
+                dirty_label.set_visible(true);
+            });
+        }
+        built.photo_box.append(&replace);
+        built.photo_box.append(&remove);
+
+        // Remove
+        if let Some(c) = contact.clone().filter(|c| !c.details.read_only) {
+            body.append(&parts::sec(&gettext("Remove")));
+            let delete = gtk::Button::builder()
+                .label(fill(
+                    &gettext("Delete {name} from {account}"),
+                    &[("name", c.display()), ("account", &account_label(c.account_id).short)],
+                ))
+                .halign(gtk::Align::Fill)
+                .css_classes(["cts-line", "cts-danger"])
+                .build();
+            if let Some(l) = delete.child().and_downcast::<gtk::Label>() {
+                l.set_xalign(0.0);
+            }
+            let weak = weak.clone();
+            let still = others
+                .iter()
+                .find(|o| o.account_id != c.account_id)
+                .map(|o| account_label(o.account_id).short);
+            delete.connect_clicked(move |_| {
+                if let Some(this) = weak.upgrade() {
+                    this.delete_contact(c.clone(), still.clone());
+                }
+            });
+            body.append(&parts::group(&[delete.upcast()]));
+        }
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .child(&body)
+            .build();
+        self.pane.append(&scroll);
+
+        // Save
+        let weak_this = Rc::downgrade(self);
+        let (form, error_label, targets, chosen, original) = (form.clone(), error.clone(), targets.clone(), chosen.clone(), original.clone());
+        save.connect_clicked(move |b| {
+            let Some(this) = weak_this.upgrade() else { return };
+            let Some(app) = this.app.upgrade() else { return };
+            let Some(owner) = targets.get(chosen.get()).cloned() else { return };
+            let fail = |text: &str| {
+                error_label.set_label(text);
+                error_label.set_visible(true);
+            };
+            let (name, org, emails, details) = form.values();
+            if name.is_empty() && emails.is_empty() {
+                return fail(&gettext("Enter a name or an email address."));
+            }
+            if emails.iter().any(|e| !e.contains('@') || e.chars().any(char::is_whitespace)) {
+                return fail(&gettext("Enter a valid email address."));
+            }
+            if !app.core.demo && !app.settings().reads_contacts(&owner.email) {
+                return fail(&gettext("Contacts access for this account was turned off."));
+            }
+            let mut fields = form.changes(&original);
+            if new && fields.name.is_none() {
+                fields.name = Some(name.clone());
+            }
+            if fields.details.groups.is_some() {
+                fields.expected_groups = (!new).then(|| original.details.groups.clone());
+            }
+            if !new && fields.is_empty() {
+                this.state.borrow_mut().pane = Some(Pane::View);
+                this.show_pane();
+                return;
+            }
+            let demo = Contact {
+                account_id: owner.id,
+                resource: if new {
+                    format!("demo/{}", glib::uuid_string_random())
+                } else {
+                    original.resource.clone()
+                },
+                name: Some(name),
+                organization: Some(org),
+                emails,
+                phone: details.phones.first().cloned(),
+                details,
+                ..original.clone()
+            };
+            b.set_sensitive(false);
+            error_label.set_visible(false);
+            let (weak, error_label, b) = (Rc::downgrade(&this), error_label.clone(), b.clone());
+            let old = (!new).then(|| original.clone());
+            glib::spawn_future_local(async move {
+                let result = super::ops::save(&app, owner.id, old, fields, demo).await;
+                let Some(this) = weak.upgrade() else { return };
+                b.set_sensitive(true);
+                match result {
+                    Ok(()) => {
+                        app.contacts_added();
+                        this.state.borrow_mut().pane = Some(Pane::View);
+                        this.reload();
+                    }
+                    Err(err) => {
+                        error_label.set_label(&fill(
+                            &gettext("Could not save the contact: {reason}"),
+                            &[("reason", &err.to_string())],
+                        ));
+                        error_label.set_visible(true);
+                    }
+                }
+            });
+        });
+        let _ = app;
+    }
+}
+
+/// The words above the form, naming the account it will change.
+fn edit_hint(
+    contact: &Contact,
+    contacts: &[Contact],
+    links: &[mailrs_store::address_book::Link],
+    person: &Option<people::Person>,
+    account: &str,
+    list: &List,
+) -> String {
+    let linked = links.iter().find(|l| {
+        (l.a == (contact.account_id, contact.resource.clone()))
+            || (l.b == (contact.account_id, contact.resource.clone()))
+    });
+    let other_of = |l: &mailrs_store::address_book::Link| {
+        let key = if l.a == (contact.account_id, contact.resource.clone()) { &l.b } else { &l.a };
+        contacts
+            .iter()
+            .find(|c| (c.account_id, c.resource.clone()) == *key)
+            .cloned()
+    };
+    if let Some(link) = linked
+        && let Some(other) = other_of(link)
+    {
+        let shown_here = (link.shown_a && link.a == (contact.account_id, contact.resource.clone()))
+            || (!link.shown_a && link.b == (contact.account_id, contact.resource.clone()));
+        let other_account = account_label(other.account_id).short;
+        return if shown_here && !matches!(list, List::Account(_)) {
+            fill(
+                &gettext("Editing the {account} contact. The All contacts row uses this name. {other_account} still has {other}, and linking does not change that record. Nothing is written until you press Save."),
+                &[("account", account), ("other_account", &other_account), ("other", other.display())],
+            )
+        } else {
+            fill(
+                &gettext("Editing the {account} contact for {name}. {other_account} keeps {other}. Nothing is written until you press Save."),
+                &[
+                    ("account", account),
+                    ("name", contact.display()),
+                    ("other_account", &other_account),
+                    ("other", other.display()),
+                ],
+            )
+        };
+    }
+    let across: Vec<String> = person
+        .as_ref()
+        .map(|p| {
+            p.accounts
+                .iter()
+                .filter(|a| **a != contact.account_id)
+                .map(|a| account_label(*a).short)
+                .collect()
+        })
+        .unwrap_or_default();
+    if across.is_empty() {
+        fill(
+            &gettext("Editing the {account} contact. Nothing is written until you press Save."),
+            &[("account", account)],
+        )
+    } else {
+        let refs: Vec<&str> = across.iter().map(String::as_str).collect();
+        fill(
+            &gettext("Editing the {account} contact. {others} keeps its own. Nothing is written until you press Save."),
+            &[("account", account), ("others", &crate::protection::joined(&refs))],
+        )
+    }
 }

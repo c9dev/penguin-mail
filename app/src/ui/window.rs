@@ -157,9 +157,10 @@ pub struct MainWindow {
     /// The About window while it is open, so an update's progress reaches
     /// its button.
     about: RefCell<Option<Rc<crate::ui::about::About>>>,
+    /// The Contacts space.
+    pub contacts: Rc<super::contacts::Contacts>,
     /// Preferences while it is open, so another press brings it back
     /// rather than stacking a second one.
-    contacts_window: RefCell<Option<Rc<super::contacts::Window>>>,
     preferences: RefCell<Option<Rc<super::preferences::dialog::Dialog>>>,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
@@ -722,6 +723,33 @@ impl MainWindow {
                 .build();
             spaces.add_named(&nav, Some("mail"));
             spaces.add_named(&calendar.page, Some("calendar"));
+            let contacts = {
+                let (search, open) = (weak.clone(), weak.clone());
+                super::contacts::Contacts::new(
+                    app,
+                    super::contacts::Hooks {
+                        search_mail: Box::new(move |addresses| {
+                            if let Some(win) = search.upgrade() {
+                                let terms: Vec<String> = addresses
+                                    .iter()
+                                    .map(|a| {
+                                        let a = a.replace('\\', "\\\\").replace('"', "\\\"");
+                                        format!("from:\"{a}\" OR to:\"{a}\"")
+                                    })
+                                    .collect();
+                                win.show_space(crate::settings::Space::Mail);
+                                win.search(terms.join(" OR "));
+                            }
+                        }),
+                        open_thread: Box::new(move |account_id, thread_id| {
+                            if let Some(win) = open.upgrade() {
+                                win.open_invitation_mail(account_id, thread_id);
+                            }
+                        }),
+                    },
+                )
+            };
+            spaces.add_named(&contacts.page, Some("contacts"));
             let split = adw::OverlaySplitView::builder()
                 .sidebar_width_unit(adw::LengthUnit::Px)
                 .sidebar(&sidebar.page)
@@ -1033,7 +1061,7 @@ impl MainWindow {
                 storage_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
-                contacts_window: RefCell::new(None),
+                contacts,
                 preferences: RefCell::new(None),
                 stack,
                 split,
@@ -2299,6 +2327,7 @@ impl MainWindow {
     /// Draws the rows and open conversations again once the contact photos
     /// on disk are known, so they show faces instead of initials.
     fn contacts_loaded(self: &Rc<Self>) {
+        self.contacts.reload();
         self.calendar.contacts_changed();
         self.list.photos_changed();
         self.reopen_for_photos();
@@ -4144,31 +4173,14 @@ impl MainWindow {
         }
     }
 
+    /// Shows the Contacts space.
     fn show_contacts(self: &Rc<Self>) {
-        if let Some(open) = self.contacts_window.borrow().as_ref() {
-            open.window.present();
-            return;
-        }
-        let Some(app) = self.app.upgrade() else {
-            return;
-        };
-        let weak = Rc::downgrade(self);
-        let contacts = super::contacts::Window::new(&app, &self.window, move |address| {
-            if let Some(win) = weak.upgrade() {
-                let address = address.replace('\\', "\\\\").replace('"', "\\\"");
-                win.show_space(crate::settings::Space::Mail);
-                win.search(format!("from:\"{address}\" OR to:\"{address}\""));
-                win.window.present();
-            }
-        });
-        let weak = Rc::downgrade(self);
-        contacts.window.connect_close_request(move |_| {
-            if let Some(win) = weak.upgrade() {
-                win.contacts_window.replace(None);
-            }
-            glib::Propagation::Proceed
-        });
-        self.contacts_window.replace(Some(contacts));
+        self.show_space(crate::settings::Space::Contacts);
+    }
+
+    /// A search key while Contacts shows: the contacts search takes it.
+    pub(super) fn contacts_page_key(self: &Rc<Self>, _name: &str) {
+        self.contacts.focus_search();
     }
 
     fn show_preferences(self: &Rc<Self>) {
@@ -4475,6 +4487,7 @@ impl MainWindow {
                 if let Some(app) = self.app.upgrade() {
                     self.accounts_for_calendar(&app.accounts());
                 }
+                self.contacts.reload();
                 self.calendar.contacts_changed();
                 self.list.photos_changed();
                 self.reopen_for_photos();

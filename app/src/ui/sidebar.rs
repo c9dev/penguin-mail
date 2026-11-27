@@ -306,6 +306,9 @@ pub struct Sidebar {
     foot: gtk::Box,
     /// Whether the Mail space shows, which the next-event card needs.
     mail_showing: Cell<bool>,
+    /// Whether the Contacts space shows.
+    contacts_showing: Cell<bool>,
+    calendar_offered: Cell<bool>,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
@@ -313,7 +316,7 @@ pub struct Sidebar {
     /// too while no account has mail, and "Calendars" shows in its place.
     pub switch: adw::ToggleGroup,
     /// The badge on the Mail toggle and on the Calendar one.
-    badges: [(Space, gtk::Label); 2],
+    badges: [(Space, gtk::Label); 3],
     /// Unread mail in the unified inbox, for the Mail toggle's badge.
     unread: Cell<i64>,
     /// Invitations waiting for an answer, for the Calendar toggle's.
@@ -499,6 +502,12 @@ impl Sidebar {
                 gettext("Calendar"),
                 "x-office-calendar-symbolic",
             ),
+            (
+                Space::Contacts,
+                "contacts",
+                gettext("Contacts"),
+                "penguin-mail-ct-person-symbolic",
+            ),
         ]
         .map(|(space, name, label, icon)| {
             let content = adw::ButtonContent::builder()
@@ -537,7 +546,14 @@ impl Sidebar {
         title.set_visible(false);
         badges[1].1.set_label(&gettext("99+"));
         badges[1].1.set_visible(true);
-        let wide = titles.measure(gtk::Orientation::Horizontal, -1).1;
+        // Only the space on screen shows its name, so the widest layout is
+        // the one with the longest name open.
+        let mut wide = 0;
+        for name in ["mail", "calendar", "contacts"] {
+            switch.set_active_name(Some(name));
+            wide = wide.max(titles.measure(gtk::Orientation::Horizontal, -1).1);
+        }
+        switch.set_active_name(Some("mail"));
         let height = titles.measure(gtk::Orientation::Vertical, -1).1;
         for label in &labels {
             label.set_label("");
@@ -548,6 +564,7 @@ impl Sidebar {
         switch.remove_css_class("compact");
         labels[0].set_label(&gettext("Mail"));
         labels[1].set_label(&gettext("Calendar"));
+        labels[2].set_label(&gettext("Contacts"));
         switch.set_visible(false);
         title.set_visible(true);
         let adaptive = adw::BreakpointBin::builder()
@@ -647,6 +664,8 @@ impl Sidebar {
             undo,
             foot,
             mail_showing: Cell::new(true),
+            contacts_showing: Cell::new(false),
+            calendar_offered: Cell::new(false),
             switch,
             badges,
             unread: Cell::new(0),
@@ -889,6 +908,34 @@ impl Sidebar {
         self.title.set_visible(!visible);
     }
 
+    /// Shows or hides the Calendar toggle: no account offering a calendar
+    /// leaves nothing for it to show.
+    pub fn set_calendar_offered(&self, offered: bool) {
+        self.calendar_offered.set(offered);
+        if let Some(toggle) = self.switch.toggle_by_name("calendar") {
+            toggle.set_enabled(offered);
+        }
+    }
+
+    /// Whether some account offers a calendar.
+    pub fn calendar_offered(&self) -> bool {
+        self.calendar_offered.get()
+    }
+
+    /// Puts the contacts' own sidebar, `content`, in place of the
+    /// mailbox list, with no next-event card, as the calendar has none.
+    pub fn show_contacts(&self, content: &gtk::Widget) {
+        if self.content.child_by_name("contacts").is_none() {
+            self.content.add_named(content, Some("contacts"));
+        }
+        self.content.set_visible_child_name("contacts");
+        self.contacts_showing.set(true);
+        self.mail_showing.set(false);
+        self.title.set_label(&gettext("Contacts"));
+        self.sync_foot();
+        self.sync_badges();
+    }
+
     /// Puts the calendar's own sidebar, `content`, in place of the
     /// mailbox list. The foot, shared by both spaces, stays below it, but
     /// the next-event card belongs to Mail alone: the calendar shows the
@@ -898,6 +945,7 @@ impl Sidebar {
             self.content.add_named(content, Some("calendar"));
         }
         self.content.set_visible_child_name("calendar");
+        self.contacts_showing.set(false);
         self.mail_showing.set(false);
         self.title.set_label(&gettext("Calendars"));
         self.sync_foot();
@@ -907,6 +955,7 @@ impl Sidebar {
     /// Puts the mailbox list back.
     pub fn show_mail(&self) {
         self.content.set_visible_child_name("mail");
+        self.contacts_showing.set(false);
         self.mail_showing.set(true);
         self.title.set_label(&gettext("Mailboxes"));
         self.sync_foot();
@@ -930,6 +979,8 @@ impl Sidebar {
     fn sync_badges(&self) {
         let on_screen = if self.mail_showing.get() {
             Space::Mail
+        } else if self.contacts_showing.get() {
+            Space::Contacts
         } else {
             Space::Calendar
         };
@@ -945,6 +996,7 @@ impl Sidebar {
             let count = match space {
                 Space::Mail => badges.mail,
                 Space::Calendar => badges.calendar,
+                Space::Contacts => 0,
             };
             let text = badge_text(count);
             badge.set_label(text.as_deref().unwrap_or_default());
@@ -1438,7 +1490,7 @@ impl Sidebar {
                         emails: vec![email.clone()],
                         name: name.clone(),
                     };
-                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let row = self.add_mailbox(person, name, "penguin-mail-ct-person-symbolic", 1);
                     let menu = gio::Menu::new();
                     let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
                     item.set_action_and_target_value(
@@ -1880,12 +1932,8 @@ pub struct SpaceBadges {
 
 pub fn space_badges(on_screen: Space, unread: i64, waiting: i64) -> SpaceBadges {
     SpaceBadges {
-        mail: if on_screen == Space::Calendar {
-            unread
-        } else {
-            0
-        },
-        calendar: if on_screen == Space::Mail { waiting } else { 0 },
+        mail: if on_screen != Space::Mail { unread } else { 0 },
+        calendar: if on_screen != Space::Calendar { waiting } else { 0 },
     }
 }
 
@@ -1905,6 +1953,7 @@ pub fn toggle_name(space: Space, count: i64) -> String {
     match (space, count > 0) {
         (Space::Mail, false) => gettext("Mail"),
         (Space::Calendar, false) => gettext("Calendar"),
+        (Space::Contacts, _) => gettext("Contacts"),
         (Space::Mail, true) => fill_plural(
             "Mail, {count} unread",
             "Mail, {count} unread",

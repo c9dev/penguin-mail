@@ -6,22 +6,7 @@ use mailrs_domain::translate::gettext;
 use mailrs_store::address_book::Contact;
 use std::rc::Rc;
 
-pub(super) fn load(avatar: &adw::Avatar, contact: &Contact, app: &App) {
-    let Some(file) = contact.photo_file.as_ref() else {
-        return;
-    };
-    let path = app.core.contacts().photo_dir().join(file);
-    let weak = avatar.downgrade();
-    glib::spawn_future_local(async move {
-        if let Some(texture) = read(&path).await
-            && let Some(avatar) = weak.upgrade()
-        {
-            avatar.set_custom_image(Some(&texture));
-        }
-    });
-}
-
-async fn read(path: &std::path::Path) -> Option<gdk::Texture> {
+pub(super) async fn read(path: &std::path::Path) -> Option<gdk::Texture> {
     use std::io::Read;
     let path = path.to_owned();
     let bytes = super::super::texture::off_thread(super::super::texture::WAIT, move || {
@@ -50,7 +35,7 @@ async fn read(path: &std::path::Path) -> Option<gdk::Texture> {
         .then_some(texture)
 }
 
-pub(super) fn choose(parent: &adw::Dialog, selected: impl Fn(Vec<u8>, gdk::Texture) + 'static) {
+pub(super) fn choose(parent: &gtk::Widget, selected: impl Fn(Vec<u8>, gdk::Texture) + 'static) {
     let chooser = gtk::FileDialog::builder()
         .title(gettext("Choose Contact Photo"))
         .build();
@@ -98,7 +83,7 @@ pub(super) fn choose(parent: &adw::Dialog, selected: impl Fn(Vec<u8>, gdk::Textu
 }
 
 fn crop_dialog(
-    parent: &adw::Dialog,
+    parent: &gtk::Widget,
     texture: gdk::Texture,
     selected: impl Fn(Vec<u8>, gdk::Texture) + 'static,
 ) {
@@ -219,7 +204,7 @@ fn crop(
     out
 }
 
-pub(super) fn view(parent: &adw::Window, contact: &Contact, app: &App) {
+pub(super) fn view(parent: &gtk::Widget, contact: &Contact, app: &App) {
     let Some(file) = &contact.photo_file else {
         return;
     };

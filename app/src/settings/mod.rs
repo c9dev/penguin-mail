@@ -900,13 +900,15 @@ impl Choice for ColorScheme {
     }
 }
 
-/// What the window shows beside the sidebar: the mail or the calendar.
+/// What the window shows beside the sidebar: the mail, the calendar or the
+/// contacts.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Space {
     #[default]
     Mail,
     Calendar,
+    Contacts,
 }
 
 /// Which grid the calendar page shows. Lives here, not in `ui`, because

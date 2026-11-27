@@ -532,6 +532,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Calendar,
+        description: || gettext("Show contacts"),
+        keys: &[main("<Alt>3", "win.show-contacts")],
+    },
+    Shortcut {
+        section: Section::Calendar,
         description: || gettext("Go to today"),
         keys: &[calendar("t")],
     },
@@ -705,6 +710,9 @@ pub(super) enum Route {
     /// Goes to the calendar instead: Ctrl+F and the search keys search
     /// the calendar while it shows.
     Calendar,
+    /// Goes to the contacts page: its search and New Message answer the
+    /// search keys and C while it shows.
+    Contacts,
     /// Does nothing, since it would act on a conversation the calendar
     /// hides.
     Skip,
@@ -753,6 +761,16 @@ pub(super) fn route(space: Space, name: &str) -> Route {
             Route::Skip
         }
         Space::Calendar => Route::Run,
+        Space::Contacts if matches!(name, "customize-toolbar" | "customize-mailboxes") => {
+            Route::Run
+        }
+        Space::Contacts if matches!(name, "find" | "search") => Route::Contacts,
+        Space::Contacts
+            if MAIL_ONLY.contains(&name) || VIEW_ACTIONS.iter().any(|(n, _)| *n == name) =>
+        {
+            Route::Skip
+        }
+        Space::Contacts => Route::Run,
     }
 }
 
@@ -847,6 +865,7 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
     ("search", |win| win.list.open_search()),
     ("show-mail", |win| win.show_space(Space::Mail)),
     ("show-calendar", |win| win.show_space(Space::Calendar)),
+    ("show-contacts", |win| win.show_space(Space::Contacts)),
     ("hide-my-email", |win| win.show_hide_my_email(None)),
     ("check", |win| {
         win.core.poke_all();
@@ -1035,6 +1054,7 @@ impl MainWindow {
                 match own.then(|| route(win.space(), name)) {
                     None | Some(Route::Run) => run(&win, &view),
                     Some(Route::Calendar) => win.calendar.focus_search(),
+                    Some(Route::Contacts) => win.contacts_page_key(name),
                     Some(Route::Skip) => {}
                 }
             });
@@ -1067,6 +1087,7 @@ impl MainWindow {
                 match route(win.space(), name) {
                     Route::Run => run(&win),
                     Route::Calendar => win.calendar.focus_search(),
+                    Route::Contacts => win.contacts_page_key(name),
                     Route::Skip => {}
                 }
             });
@@ -1419,6 +1440,12 @@ mod tests {
                 _ => Route::Skip,
             };
             assert_eq!(route(Space::Calendar, name), expected, "{name}");
+            let expected = match *name {
+                "find" => Route::Contacts,
+                "customize-toolbar" | "customize-mailboxes" => Route::Run,
+                _ => Route::Skip,
+            };
+            assert_eq!(route(Space::Contacts, name), expected, "{name}");
         }
     }
 

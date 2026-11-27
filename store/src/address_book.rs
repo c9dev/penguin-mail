@@ -114,6 +114,10 @@ pub fn forget(conn: &Connection, account_id: AccountId, resources: &[String]) ->
             "DELETE FROM contacts WHERE account_id = ?1 AND resource = ?2",
             params![account_id, resource],
         )?;
+        conn.execute(
+            "DELETE FROM contact_links WHERE (account_a = ?1 AND resource_a = ?2) OR (account_b = ?1 AND resource_b = ?2)",
+            params![account_id, resource],
+        )?;
     }
     Ok(())
 }
@@ -122,6 +126,10 @@ pub fn forget(conn: &Connection, account_id: AccountId, resources: &[String]) ->
 /// contacts off.
 pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
     conn.execute("DELETE FROM contacts WHERE account_id = ?1", [account_id])?;
+    conn.execute(
+        "DELETE FROM contact_links WHERE account_a = ?1 OR account_b = ?1",
+        [account_id],
+    )?;
     conn.execute(
         "DELETE FROM contact_books WHERE account_id = ?1",
         [account_id],
@@ -321,6 +329,124 @@ pub fn set_book(
         params![account_id, sync_token, at],
     )?;
     Ok(())
+}
+
+/// Two contacts in different accounts the person said are one human.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Link {
+    pub a: (AccountId, String),
+    pub b: (AccountId, String),
+    /// Whether All contacts shows `a`'s name for the pair rather than `b`'s.
+    pub shown_a: bool,
+}
+
+/// Links two contacts. Neither contact changes.
+pub fn link(conn: &Connection, link: &Link) -> Result<()> {
+    conn.execute(
+        "INSERT OR REPLACE INTO contact_links (account_a, resource_a, account_b, resource_b, shown_a) \
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![link.a.0, link.a.1, link.b.0, link.b.1, link.shown_a],
+    )?;
+    Ok(())
+}
+
+/// Takes a link away, in whichever order it was made.
+pub fn unlink(conn: &Connection, one: &(AccountId, String), other: &(AccountId, String)) -> Result<()> {
+    conn.execute(
+        "DELETE FROM contact_links WHERE (account_a = ?1 AND resource_a = ?2 AND account_b = ?3 AND resource_b = ?4) \
+         OR (account_a = ?3 AND resource_a = ?4 AND account_b = ?1 AND resource_b = ?2)",
+        params![one.0, one.1, other.0, other.1],
+    )?;
+    Ok(())
+}
+
+/// Every link, for contacts that are still stored.
+pub fn links(conn: &Connection) -> Result<Vec<Link>> {
+    let mut stmt = conn.prepare(
+        "SELECT l.account_a, l.resource_a, l.account_b, l.resource_b, l.shown_a FROM contact_links l \
+         WHERE EXISTS (SELECT 1 FROM contacts c WHERE c.account_id = l.account_a AND c.resource = l.resource_a) \
+         AND EXISTS (SELECT 1 FROM contacts c WHERE c.account_id = l.account_b AND c.resource = l.resource_b)",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(Link {
+            a: (row.get(0)?, row.get(1)?),
+            b: (row.get(2)?, row.get(3)?),
+            shown_a: row.get(4)?,
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// What the mailbox holds about some addresses, for a person's Mail section.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MailWith {
+    /// The newest message to or from them: account, thread, subject, date.
+    pub last: Option<(AccountId, String, String, EpochMillis)>,
+    /// Whether one of the accounts sent that message.
+    pub last_mine: bool,
+    /// How many conversations include them.
+    pub conversations: i64,
+    /// The newest message one of the accounts sent them.
+    pub last_wrote: Option<EpochMillis>,
+}
+
+/// How many messages each of `emails` sent, by lower-case address.
+pub fn message_counts(
+    conn: &Connection,
+    emails: &[String],
+) -> Result<std::collections::HashMap<String, i64>> {
+    let wanted: std::collections::HashSet<String> =
+        emails.iter().map(|e| e.to_lowercase()).collect();
+    let mut stmt = conn.prepare_cached(
+        "SELECT lower(from_addr), count(*) FROM messages WHERE from_addr IS NOT NULL GROUP BY 1",
+    )?;
+    let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)))?;
+    let mut out = std::collections::HashMap::new();
+    for row in rows {
+        let (email, count) = row?;
+        if wanted.contains(&email) {
+            out.insert(email, count);
+        }
+    }
+    Ok(out)
+}
+
+/// The mail to or from any of `emails`, in any account.
+pub fn mail_with(conn: &Connection, emails: &[String]) -> Result<MailWith> {
+    let mut out = MailWith::default();
+    let mut threads = std::collections::HashSet::new();
+    for email in emails {
+        let email = email.to_lowercase();
+        let like = format!("%{}%", email.replace('%', "").replace('_', "\\_"));
+        let mut stmt = conn.prepare_cached(
+            "SELECT account_id, thread_id, subject, date, \
+                    lower(from_addr) IN (SELECT lower(email) FROM accounts) \
+             FROM messages WHERE lower(from_addr) = ?1 OR lower(to_addrs) LIKE ?2 ESCAPE '\\' OR lower(cc_addrs) LIKE ?2 ESCAPE '\\' \
+             ORDER BY date DESC",
+        )?;
+        let rows = stmt.query_map(params![email, like], |row| {
+            Ok((
+                row.get::<_, AccountId>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, EpochMillis>(3)?,
+                row.get::<_, bool>(4)?,
+            ))
+        })?;
+        for row in rows {
+            let (account, thread, subject, date, mine) = row?;
+            threads.insert((account, thread.clone()));
+            if out.last.as_ref().is_none_or(|l| date > l.3) {
+                out.last_mine = mine;
+                out.last = Some((account, thread, subject, date));
+            }
+            if mine && out.last_wrote.is_none_or(|w| date > w) {
+                out.last_wrote = Some(date);
+            }
+        }
+    }
+    out.conversations = threads.len() as i64;
+    Ok(out)
 }
 
 /// The contacts `filter` keeps, each with its addresses, by name.
