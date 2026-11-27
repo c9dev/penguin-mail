@@ -78,7 +78,7 @@ struct Badges {
 }
 
 /// A badge, faded out until there is mail to count.
-fn badge(place: &str, valign: gtk::Align) -> CountBadge {
+fn count_badge(place: &str, valign: gtk::Align) -> CountBadge {
     glib::Object::builder()
         .property(
             "css-classes",
@@ -121,7 +121,7 @@ impl CategoryBar {
                     .css_classes(["category-name"])
                     .build(),
             );
-            let inline = badge("inline", gtk::Align::Center);
+            let inline = count_badge("inline", gtk::Align::Center);
             named.append(&inline);
             let name = slider(&named);
             content.append(&name);
@@ -130,7 +130,7 @@ impl CategoryBar {
             // clear of the 16 px icon, so a count arriving never moves the
             // icons. A worded tab always shows its name and needs none.
             let corner = (!worded).then(|| {
-                let corner = badge("corner", gtk::Align::Start);
+                let corner = count_badge("corner", gtk::Align::Start);
                 face.add_overlay(&corner);
                 corner
             });

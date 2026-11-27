@@ -46,7 +46,12 @@ mod imp {
             let layout = self.layout();
             let (ink, _) = layout.extents();
             snapshot.save();
-            snapshot.translate(&ink_origin(badge.width(), badge.height(), ink));
+            snapshot.translate(&ink_origin(
+                badge.width(),
+                badge.height(),
+                ink,
+                badge.scale_factor(),
+            ));
             snapshot.append_layout(&layout, &badge.color());
             snapshot.restore();
         }
@@ -80,11 +85,13 @@ glib::wrapper! {
 }
 
 // The line box reserves space for marks and descenders the badge does not use.
-fn ink_origin(width: i32, height: i32, ink: pango::Rectangle) -> graphene::Point {
+// The origin lands on a whole device pixel, so the digits stay sharp.
+fn ink_origin(width: i32, height: i32, ink: pango::Rectangle, scale: i32) -> graphene::Point {
     let pixels = |units: i32| units as f32 / pango::SCALE as f32;
+    let snap = |at: f32| (at * scale as f32).round() / scale as f32;
     graphene::Point::new(
-        (width as f32 - pixels(ink.width())) / 2.0 - pixels(ink.x()),
-        (height as f32 - pixels(ink.height())) / 2.0 - pixels(ink.y()),
+        snap((width as f32 - pixels(ink.width())) / 2.0 - pixels(ink.x())),
+        snap((height as f32 - pixels(ink.height())) / 2.0 - pixels(ink.y())),
     )
 }
 
@@ -96,6 +103,7 @@ mod tests {
     fn centers_ink_with_fractional_bearings() {
         let scale = pango::SCALE;
         let ink = pango::Rectangle::new(-scale / 4, 3 * scale / 2, 27 * scale / 2, 9 * scale);
-        assert_eq!(ink_origin(22, 18, ink), graphene::Point::new(4.5, 3.0));
+        assert_eq!(ink_origin(22, 18, ink, 2), graphene::Point::new(4.5, 3.0));
+        assert_eq!(ink_origin(22, 18, ink, 1), graphene::Point::new(5.0, 3.0));
     }
 }
