@@ -1038,10 +1038,12 @@ impl WebView {
         // whatever replaced its anchor, such as the calendar.
         let weak = Rc::downgrade(&inner);
         inner.anchor.connect_unmap(move |_| {
-            if let Some(inner) = weak.upgrade()
-                && let Some(core) = inner.core.borrow().as_ref()
-            {
-                unsafe {
+            let Some(inner) = weak.upgrade() else {
+                return;
+            };
+            unsafe {
+                let _ = ShowWindow(inner.host.get(), SW_HIDE);
+                if let Some(core) = inner.core.borrow().as_ref() {
                     let _ = core.controller.SetIsVisible(false);
                 }
             }
