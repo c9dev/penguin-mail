@@ -483,6 +483,13 @@ is checked against the new version. A console session keeps
 the monitor list populated, and whether an interactive RDP session
 does too is unchecked.
 
+An SSH session (a non-interactive window station) reports no monitors.
+There the app crashes at start (0xC0000005) with stock and patched GTK
+alike, so that session says nothing about the patch. With the patch, the
+`richbuffer` GTK checks no longer skip there, since the made-up monitor
+counts, and they crash the same way. Run the tests from the desktop
+session, as CI's runner does.
+
 ## Open items
 
 - Signing: out of scope. The installer ships unsigned and the README
@@ -496,6 +503,15 @@ does too is unchecked.
   before tagging, or the release builds the gtk4 package from scratch.
 - Everything under "Checks on a Windows VM" below is run by hand before a
   release that touches Windows.
+- The `richbuffer` GTK checks, run alone, crash in about 6 runs of 10
+  (0xc000041d, inside GDK's window procedure while `present()` creates the
+  next window). The full suite passes. Measured on stock gtk4 4.24.1 in
+  the desktop session: without `closing_releases_the_body` the crash goes
+  away (0 of 10). Without its focus grab, or without
+  `release_content_on_close`, it stays. So closing a presented window and
+  then making another one on the checks' own thread is enough. The app
+  does the same on its main thread (composers, Open in New Window) and has
+  not crashed in live runs; the cause is not identified.
 
 ## What CI checks
 

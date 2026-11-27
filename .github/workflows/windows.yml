@@ -94,8 +94,10 @@ jobs:
           # the sandbox tests change folder permissions the others read.
           cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail -- --test-threads=1
       # A test that aborts the process loses its captured output, so a failed
-      # suite runs the web view check again with its output shown.
-      - name: Show the web view check's output
+      # suite runs the GTK checks again with their output shown. Run alone they
+      # crash often (0xc000041d) when a window is made after one was closed,
+      # which is still open; see docs/windows.md.
+      - name: Show the GTK checks' output
         if: failure()
         shell: msys2 {0}
         env:
