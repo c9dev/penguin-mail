@@ -1135,7 +1135,7 @@ CREATE TABLE microsoft_shared (
     // `shown_a` says whose name the row uses. No foreign key to `contacts`:
     // a refresh replaces those rows, and a link must outlive that.
     r#"
-CREATE TABLE contact_links (
+CREATE TABLE IF NOT EXISTS contact_links (
     account_a  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     resource_a TEXT NOT NULL,
     account_b  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,

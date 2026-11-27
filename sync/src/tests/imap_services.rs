@@ -82,11 +82,13 @@ async fn an_account_with_no_servers_found_keeps_rules_here_and_has_no_reply() {
         services.rules.as_ref().map(AnyRules::place),
         Some(RulesPlace::ThisComputer)
     );
+    assert!(services.auto_reply.is_none() && services.calendar.is_none());
     assert!(
-        services.auto_reply.is_none() && services.calendar.is_none() && services.contacts.is_none()
+        matches!(services.contacts, Some(crate::AnyContacts::Local(_))),
+        "with no server, the address book stays on this computer"
     );
     let offers = services.offers();
-    assert!(offers.rules && !offers.auto_reply && !offers.calendar);
+    assert!(offers.rules && offers.contacts && !offers.auto_reply && !offers.calendar);
 }
 
 #[tokio::test]

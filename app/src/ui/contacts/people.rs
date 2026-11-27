@@ -240,6 +240,12 @@ pub fn same_person(contacts: &[Contact], links: &[Link]) -> Vec<Pair> {
                 && close_names(x.display(), y.display())
                 && !together(a, b)
             {
+                // The fuller name leads, so it is the one the row shows first.
+                let (a, b) = if y.display().len() > x.display().len() {
+                    (b, a)
+                } else {
+                    (a, b)
+                };
                 pairs.push(Pair { a, b });
             }
         }
@@ -413,7 +419,9 @@ mod tests {
             contact(2, "b", "Owen M.", &["owen@mercer.example"]),
         ];
         assert_eq!(group(&all, &[]).len(), 2);
-        assert_eq!(same_person(&all, &[]).len(), 1);
+        let pairs = same_person(&all, &[]);
+        assert_eq!(pairs.len(), 1);
+        assert_eq!(all[pairs[0].a].display(), "Owen Mercer");
         let link = Link {
             a: (1, "a".into()),
             b: (2, "b".into()),

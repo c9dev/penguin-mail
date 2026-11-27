@@ -127,7 +127,7 @@ impl ContactsService for LocalContacts {
         let account_id = self.account_id;
         let held = self
             .db
-            .read(move |c| address_book::list(c))
+            .read(address_book::list)
             .await
             .map_err(stored)?;
         Ok(ConnectionsPage {
@@ -183,18 +183,19 @@ mod tests {
 
     use super::*;
 
-    async fn book() -> (LocalContacts, Db) {
-        let db = Db::open_in_memory().await.unwrap();
+    async fn book() -> (LocalContacts, Db, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("mail.db")).unwrap();
         let id = db
             .write(|c| accounts::insert_account(c, "dana@home.example", 0))
             .await
             .unwrap();
-        (LocalContacts::new(db.clone(), id), db)
+        (LocalContacts::new(db.clone(), id), db, dir)
     }
 
     #[tokio::test]
     async fn a_local_book_creates_edits_and_lists_every_field() {
-        let (book, db) = book().await;
+        let (book, db, _dir) = book().await;
         let created = book
             .create_contact(&ContactFields {
                 name: Some("Owen Mercer".into()),
