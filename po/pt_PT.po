@@ -5044,7 +5044,7 @@ msgstr "Abrir o Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:495
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "Nova mensagem"
 
@@ -6704,8 +6704,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Não foi possível anexar {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:468
-#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:356 app/src/ui/thread_list.rs:362
+#: app/src/ui/thread_list.rs:1182
 msgid "More"
 msgstr "Mais"
 
@@ -10296,7 +10296,7 @@ msgstr "Última conta de calendário usada"
 msgid "Same as New Messages"
 msgstr "Igual às mensagens novas"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:280
 msgid "All Inboxes"
 msgstr "Todas as caixas de entrada"
 
@@ -10762,7 +10762,7 @@ msgid "Mailboxes"
 msgstr "Caixas de correio"
 
 #: app/src/ui/sidebar.rs:495 app/src/ui/sidebar.rs:549
-#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:373
+#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "Correio"
 
@@ -11114,30 +11114,30 @@ msgstr "Corpo"
 msgid "New Template"
 msgstr "Novo modelo"
 
-#: app/src/ui/thread_list.rs:239
+#: app/src/ui/thread_list.rs:243
 msgid "No Mail"
 msgstr "Sem correio"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:257
+#: app/src/ui/thread_list.rs:261
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Pesquisar correio, por exemplo from:ana has:attachment"
 
-#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
+#: app/src/ui/thread_list.rs:300 app/src/ui/thread_list.rs:320
 msgid "Show Mailboxes"
 msgstr "Mostrar as caixas de correio"
 
-#: app/src/ui/thread_list.rs:301
+#: app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "Nova mensagem (C)"
 
-#: app/src/ui/thread_list.rs:306
+#: app/src/ui/thread_list.rs:310
 msgid "Search (/)"
 msgstr "Pesquisar (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:319
 msgid "Search mail"
 msgstr "Pesquisar correio"
 

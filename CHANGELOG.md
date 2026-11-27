@@ -9,6 +9,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - A recipient chip no longer runs its background past its Remove button when a longer chip sits beside it.
 - Closing Customize Mailboxes releases its folder lists.
+- An open mail list updates its dates ("Yesterday", the weekday) when the day changes.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
 - Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
 
