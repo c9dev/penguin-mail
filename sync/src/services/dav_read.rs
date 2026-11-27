@@ -89,6 +89,7 @@ pub(super) fn backend(err: DavError, refused: &Mutex<Option<String>>) -> Backend
             BackendError::NeedsReauth
         }
         DavError::Forbidden(words) => BackendError::Forbidden(words),
+        DavError::Invalid(why) => BackendError::Invalid(why),
         DavError::NotFound => BackendError::NotFound,
         DavError::Changed => BackendError::Changed,
         DavError::InvalidSyncToken | DavError::NoSyncCollection => BackendError::StateLost,

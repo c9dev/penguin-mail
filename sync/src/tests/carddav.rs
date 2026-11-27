@@ -384,3 +384,85 @@ async fn groups_with_the_same_name_do_not_gain_unwanted_members() {
     );
     assert_eq!(dav.with(|s| s.puts), writes);
 }
+
+#[tokio::test]
+async fn a_refused_contact_write_leaves_its_groups_alone() {
+    use mailrs_domain::contact::Changes;
+    let (dav, carddav) = adapter();
+    let href = "/card/default/demo.vcf";
+    dav.put_resource(href, &card("demo", "Demo", "demo@example.org"));
+    let group = "/card/default/group.vcf";
+    dav.put_resource(group, &mailrs_dav::vcard::new_group("group", "Friends", "demo"));
+    let before = dav.body(group).unwrap();
+    dav.with(|s| s.changed_on_put.push(href.into()));
+    let result = carddav
+        .update_contact(
+            href,
+            &ContactFields {
+                expected_groups: Some(vec!["Friends".into()]),
+                details: Changes {
+                    groups: Some(vec!["Colleagues".into()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await;
+    assert!(result.is_err());
+    assert_eq!(dav.body(group).unwrap(), before);
+    assert_eq!(dav.with(|s| s.resources.len()), 2);
+}
+
+#[tokio::test]
+async fn read_only_books_are_not_offered_and_their_cards_say_so() {
+    let (dav, carddav) = adapter();
+    dav.with(|s| {
+        for c in &mut s.collections {
+            if c.href == "/card/default/" {
+                c.can_write = false;
+            }
+        }
+    });
+    dav.put_resource(
+        "/card/default/ana.vcf",
+        &card("a", "Ana Rocha", "ana@example.pt"),
+    );
+    dav.put_resource(
+        "/card/work/bruno.vcf",
+        &card("b", "Bruno Dias", "bruno@example.org"),
+    );
+    let books = carddav.address_books().await.unwrap();
+    assert_eq!(books.len(), 1);
+    assert_eq!(books[0].0, "/card/work/");
+    let read = read_all(&carddav, None).await.unwrap();
+    let only = |href: &str| {
+        read.people
+            .iter()
+            .find(|p| p.resource == href)
+            .unwrap()
+            .details
+            .read_only
+    };
+    assert!(only("/card/default/ana.vcf"));
+    assert!(!only("/card/work/bruno.vcf"));
+    let puts = dav.with(|s| s.puts);
+    assert!(
+        carddav
+            .create_contact(&ContactFields {
+                name: Some("Demo".into()),
+                address_book: Some("/card/default/".into()),
+                ..Default::default()
+            })
+            .await
+            .is_err()
+    );
+    assert_eq!(dav.with(|s| s.puts), puts);
+    let made = carddav
+        .create_contact(&ContactFields {
+            name: Some("Demo".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert!(made.resource.starts_with("/card/work/"), "{}", made.resource);
+}

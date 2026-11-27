@@ -48,6 +48,8 @@ pub struct FakeState {
     pub addresses: Vec<String>,
     /// How many times the homes were asked.
     pub homes: usize,
+    /// PUTs to these hrefs answer 412, as when another device saved first.
+    pub changed_on_put: Vec<String>,
 }
 
 #[derive(Default)]
@@ -352,6 +354,9 @@ impl DavApi for FakeDav {
     ) -> Result<Option<String>, DavError> {
         let href = &canonical_href(href);
         let mut s = self.open()?;
+        if s.changed_on_put.contains(href) {
+            return Err(DavError::Changed);
+        }
         let held = s.resources.get(href).map(|(e, _)| e.clone());
         match (&when, &held) {
             (Precondition::NoneMatch, Some(_)) => return Err(DavError::Changed),
