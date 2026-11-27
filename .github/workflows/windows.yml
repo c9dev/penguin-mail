@@ -27,6 +27,13 @@ on:
 permissions:
   contents: read
 
+# The installer ships MSYS2's gtk4 rebuilt from this recipe, and the tests run against the same
+# build. MSYS2's own gtk4 4.24.1 leaves a freed IME context in GDK's message filters when a
+# focused text widget's window closes, which 4.24.2 fixed, and the GTK checks then crash.
+env:
+  MINGW_PACKAGES_SHA: 250d5f562ec1587ec36100cf2c42fa6f1c170c4a # gtk4: 4.24.2
+  GTK4_PACKAGE: dist/gtk4-package
+
 concurrency:
   group: windows-${{ github.ref }}-${{ inputs.release && 'release' || 'ci' }}
   cancel-in-progress: ${{ !inputs.release }}
@@ -49,6 +56,13 @@ jobs:
           ref: 5f09fb446adf81d005f0aad9dc47eca19ac3b74c # FRP-6354-g5f09fb446
           path: .ci-busybox
           persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: msys2/MINGW-packages
+          ref: ${{ env.MINGW_PACKAGES_SHA }}
+          path: .ci-mingw-packages
+          sparse-checkout: mingw-w64-gtk4
+          persist-credentials: false
       - uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2
         with:
           msystem: UCRT64
@@ -65,6 +79,21 @@ jobs:
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-poppler
+      # The installer job builds and saves this package on main; this job only reads it.
+      - name: Restore the patched gtk4 package
+        id: gtk-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.GTK4_PACKAGE }}
+          key: gtk4-msys2-${{ env.MINGW_PACKAGES_SHA }}-${{ hashFiles('packaging/windows/gtk4-zero-monitor-popup.patch', 'scripts/build-gtk4-msys2.sh') }}
+      - name: Install the patched gtk4
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          if [ '${{ steps.gtk-cache.outputs.cache-hit }}' != 'true' ]; then
+            pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+          fi
+          scripts/build-gtk4-msys2.sh .ci-mingw-packages "$GTK4_PACKAGE"
       - name: Install the GNU Rust toolchain
         shell: msys2 {0}
         run: |
@@ -94,9 +123,7 @@ jobs:
           # the sandbox tests change folder permissions the others read.
           cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail -- --test-threads=1
       # A test that aborts the process loses its captured output, so a failed
-      # suite runs the GTK checks again with their output shown. Run alone they
-      # crash often (0xc000041d) when a window is made after one was closed,
-      # which is still open; see docs/windows.md.
+      # suite runs the GTK checks again with their output shown.
       - name: Show the GTK checks' output
         if: failure()
         shell: msys2 {0}
@@ -132,9 +159,6 @@ jobs:
     timeout-minutes: 180
     outputs:
       artifact: ${{ steps.version.outputs.artifact }}
-    env:
-      MINGW_PACKAGES_SHA: 250d5f562ec1587ec36100cf2c42fa6f1c170c4a # gtk4: 4.24.2
-      GTK4_PACKAGE: dist/gtk4-package
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
