@@ -417,19 +417,17 @@ impl ThreadList {
             row_popover,
         });
         // A row's date says "Yesterday", a weekday or a date only for
-        // the day it was drawn. A list left open, over a weekend or a
-        // night shift, redraws its rows when the local day changes; a
-        // minute's poll also catches a clock moved by hand. Seconds, not
-        // millis, so GLib can batch this with the other slow timers.
+        // the day it was drawn. A list left open past midnight redraws its
+        // rows when the local day changes; a minute's poll also catches a
+        // clock moved by hand. Seconds, not millis, so GLib can batch this
+        // with the other slow timers.
         let weak = Rc::downgrade(&list);
-        glib::timeout_add_seconds_local(60, move || {
-            match weak.upgrade() {
-                Some(list) => {
-                    list.roll_day();
-                    glib::ControlFlow::Continue
-                }
-                None => glib::ControlFlow::Break,
+        glib::timeout_add_seconds_local(60, move || match weak.upgrade() {
+            Some(list) => {
+                list.roll_day(chrono::Local::now().date_naive());
+                glib::ControlFlow::Continue
             }
+            None => glib::ControlFlow::Break,
         });
         // A search's subtitle is its query, which the open entry already
         // shows; it comes back when the entry closes.
@@ -550,11 +548,9 @@ impl ThreadList {
         self.redraw_made(|_| true);
     }
 
-    /// Draws the rows' dates again when the local day has moved on since
-    /// they were drawn. Whether the minute has come round is the timer's
-    /// job; this answers whether anything has to change.
-    fn roll_day(&self) -> bool {
-        let today = chrono::Local::now().date_naive();
+    /// Draws the rows' dates again when `today` differs from the day they
+    /// were drawn for. Returns whether the dates were redrawn.
+    fn roll_day(&self, today: chrono::NaiveDate) -> bool {
         if self.day.get() == today {
             return false;
         }
@@ -1280,16 +1276,20 @@ pub(crate) mod checks {
         list.show_loading();
         assert!(!list.more.is_visible());
         // Dates are drawn against a day; the list must notice the day move.
-        // The cached day is pinned first so a run at midnight's edge cannot
-        // be flaky, and a day ahead of today is a clock moved backwards.
-        let today = chrono::Local::now().date_naive();
+        // The days are fixed, so the result does not depend on when this runs.
+        let today = chrono::NaiveDate::from_ymd_opt(2026, 3, 10).unwrap();
         list.day.set(today);
-        assert!(!list.roll_day(), "a list does not redraw for its own day");
-        list.day.set(today - chrono::Duration::days(1));
-        assert!(list.roll_day(), "a day that passed must redraw the dates");
-        list.day.set(today + chrono::Duration::days(1));
-        assert!(list.roll_day(), "and so must a clock moved backwards");
-        assert!(!list.roll_day(), "but only once per day");
+        assert!(
+            !list.roll_day(today),
+            "a list does not redraw for its own day"
+        );
+        let tomorrow = today + chrono::Duration::days(1);
+        assert!(
+            list.roll_day(tomorrow),
+            "a day that passed must redraw the dates"
+        );
+        assert!(list.roll_day(today), "and so must a clock moved backwards");
+        assert!(!list.roll_day(today), "but only once per day");
     }
 
     fn save_shots(list: &ThreadList, directory: &std::path::Path) {
