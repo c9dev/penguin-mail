@@ -1130,8 +1130,6 @@ CREATE TABLE microsoft_shared (
     // Old cursors describe the smaller set of contact fields. Keep the
     // cached cards until a complete read of the expanded fields succeeds.
     "UPDATE contact_books SET sync_token = NULL, synced_at = 0;",
-    // Read category lists and dates again with the corrected vCard parser.
-    "UPDATE contact_books SET sync_token = NULL, synced_at = 0;",
 ];
 
 /// How long the copy taken before a migration stays once the store has
