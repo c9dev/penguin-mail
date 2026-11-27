@@ -2133,35 +2133,35 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail 無法更新郵件資料庫，已保留舊資料庫。"
 
-#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
-#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
-#: app/src/core.rs:1445 app/src/core.rs:1697
+#: app/src/core.rs:994 app/src/core.rs:1067 app/src/core.rs:1143
+#: app/src/core.rs:1272 app/src/core.rs:1286 app/src/core.rs:1351
+#: app/src/core.rs:1447 app/src/core.rs:1699
 msgid "Demo mode cannot add real accounts."
 msgstr "示範模式無法新增真實帳號。"
 
-#: app/src/core.rs:1010 app/src/core.rs:1721 app/src/core.rs:1762
-#: app/src/core.rs:2018
+#: app/src/core.rs:1012 app/src/core.rs:1723 app/src/core.rs:1764
+#: app/src/core.rs:2020
 msgid "Canceled."
 msgstr "已取消。"
 
-#: app/src/core.rs:1617 app/src/core.rs:1642
+#: app/src/core.rs:1619 app/src/core.rs:1644
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr "此帳號沒有保存行事曆或聯絡人伺服器接受的密碼。"
 
-#: app/src/core.rs:1766
+#: app/src/core.rs:1768
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr "請先移除此帳號的共用信箱，再移除用於登入的帳號。"
 
-#: app/src/core.rs:1944 app/src/core.rs:2044
+#: app/src/core.rs:1946 app/src/core.rs:2046
 msgid "The demo cannot switch accounts."
 msgstr "示範模式無法切換帳號。"
 
-#: app/src/core.rs:1998
+#: app/src/core.rs:2000
 msgid "The demo cannot connect a calendar."
 msgstr "示範模式下無法連接行事曆。"
 
-#: app/src/core.rs:2064
+#: app/src/core.rs:2066
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "已等候瀏覽器五分鐘，停止等候。"
 

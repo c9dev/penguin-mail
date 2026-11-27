@@ -2250,39 +2250,39 @@ msgstr ""
 "Penguin Mail tidak dapat memperbarui penyimpanan email dan mempertahankan "
 "salinan lama."
 
-#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
-#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
-#: app/src/core.rs:1445 app/src/core.rs:1697
+#: app/src/core.rs:994 app/src/core.rs:1067 app/src/core.rs:1143
+#: app/src/core.rs:1272 app/src/core.rs:1286 app/src/core.rs:1351
+#: app/src/core.rs:1447 app/src/core.rs:1699
 msgid "Demo mode cannot add real accounts."
 msgstr "Mode demo tidak dapat menambahkan akun sungguhan."
 
-#: app/src/core.rs:1010 app/src/core.rs:1721 app/src/core.rs:1762
-#: app/src/core.rs:2018
+#: app/src/core.rs:1012 app/src/core.rs:1723 app/src/core.rs:1764
+#: app/src/core.rs:2020
 msgid "Canceled."
 msgstr "Dibatalkan."
 
-#: app/src/core.rs:1617 app/src/core.rs:1642
+#: app/src/core.rs:1619 app/src/core.rs:1644
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Akun ini tidak menyimpan sandi yang dapat digunakan server kalender atau "
 "kontak."
 
-#: app/src/core.rs:1766
+#: app/src/core.rs:1768
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Hapus kotak surat bersama akun ini sebelum menghapus akun yang digunakan "
 "untuk masuk."
 
-#: app/src/core.rs:1944 app/src/core.rs:2044
+#: app/src/core.rs:1946 app/src/core.rs:2046
 msgid "The demo cannot switch accounts."
 msgstr "Demo tidak dapat beralih akun."
 
-#: app/src/core.rs:1998
+#: app/src/core.rs:2000
 msgid "The demo cannot connect a calendar."
 msgstr "Mode demo tidak dapat menghubungkan kalender."
 
-#: app/src/core.rs:2064
+#: app/src/core.rs:2066
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Berhenti menunggu peramban setelah lima menit."
 

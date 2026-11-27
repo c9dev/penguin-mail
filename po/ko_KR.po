@@ -2179,37 +2179,37 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "메일 저장소를 업데이트할 수 없어 기존 저장소를 유지했습니다."
 
-#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
-#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
-#: app/src/core.rs:1445 app/src/core.rs:1697
+#: app/src/core.rs:994 app/src/core.rs:1067 app/src/core.rs:1143
+#: app/src/core.rs:1272 app/src/core.rs:1286 app/src/core.rs:1351
+#: app/src/core.rs:1447 app/src/core.rs:1699
 msgid "Demo mode cannot add real accounts."
 msgstr "데모 모드에서는 실제 계정을 추가할 수 없습니다."
 
-#: app/src/core.rs:1010 app/src/core.rs:1721 app/src/core.rs:1762
-#: app/src/core.rs:2018
+#: app/src/core.rs:1012 app/src/core.rs:1723 app/src/core.rs:1764
+#: app/src/core.rs:2020
 msgid "Canceled."
 msgstr "취소했습니다."
 
-#: app/src/core.rs:1617 app/src/core.rs:1642
+#: app/src/core.rs:1619 app/src/core.rs:1644
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "이 계정에는 캘린더나 연락처 서버에서 사용할 수 있는 비밀번호가 저장되어 있지 "
 "않습니다."
 
-#: app/src/core.rs:1766
+#: app/src/core.rs:1768
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr "로그인 계정을 제거하기 전에 이 계정의 공유 사서함을 제거하세요."
 
-#: app/src/core.rs:1944 app/src/core.rs:2044
+#: app/src/core.rs:1946 app/src/core.rs:2046
 msgid "The demo cannot switch accounts."
 msgstr "데모에서는 계정을 전환할 수 없습니다."
 
-#: app/src/core.rs:1998
+#: app/src/core.rs:2000
 msgid "The demo cannot connect a calendar."
 msgstr "데모에서는 캘린더를 연결할 수 없습니다."
 
-#: app/src/core.rs:2064
+#: app/src/core.rs:2066
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "5분 동안 브라우저를 기다린 후 중단했습니다."
 
