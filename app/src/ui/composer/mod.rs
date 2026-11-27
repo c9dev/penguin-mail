@@ -2322,6 +2322,7 @@ impl Composer {
             || self.handed.get()
             || self.closing.get()
             || self.prompting.get() > 0
+            || self.send_queued.get()
             || self.holding.get()
             || self.work.is_busy()
             || !self.dirty.get()

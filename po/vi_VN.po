@@ -4039,8 +4039,8 @@ msgstr ""
 "Chưa lưu thư nháp. Thư mã hóa được lưu trong Thư nháp với mã hóa bằng khóa "
 "của bạn nhưng máy tính này không có khóa hay chứng chỉ cho {address}."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2367
-#: app/src/ui/composer/mod.rs:2370
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2368
+#: app/src/ui/composer/mod.rs:2371
 msgid "That account is not connected."
 msgstr "Tài khoản đó chưa kết nối."
 
@@ -4168,7 +4168,7 @@ msgstr "Mã hóa tiêu chuẩn (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Không mã hóa khi truyền"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2471
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2472
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} tệp đính kèm"
@@ -5075,8 +5075,8 @@ msgstr "Sao chép liên kết"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
-#: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2384
-#: app/src/ui/composer/mod.rs:2749 app/src/ui/composer/mod.rs:3171
+#: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5642,7 +5642,7 @@ msgid "No models found."
 msgstr "Không tìm thấy mô hình."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2528
+#: app/src/ui/composer/mod.rs:2529
 msgid "Remove {file}"
 msgstr "Xóa {file}"
 
@@ -5682,7 +5682,7 @@ msgid "Edit {server}"
 msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2524 app/src/ui/composer/recipients.rs:591
+#: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3529
 msgid "Remove"
 msgstr "Xóa"
@@ -5723,7 +5723,7 @@ msgstr ""
 "thiết lập môi trường. URL kết nối tới máy chủ qua HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:3166 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:3167 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Tên"
@@ -5759,7 +5759,7 @@ msgstr "Thử"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3171
+#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -7848,197 +7848,197 @@ msgstr "Đã lưu thư nháp, mã hóa bằng khóa của bạn"
 msgid "Draft saved"
 msgstr "Đã lưu thư nháp"
 
-#: app/src/ui/composer/mod.rs:2379
+#: app/src/ui/composer/mod.rs:2380
 msgid "Save as Draft?"
 msgstr "Lưu làm thư nháp?"
 
-#: app/src/ui/composer/mod.rs:2383
+#: app/src/ui/composer/mod.rs:2384
 msgid "Discard"
 msgstr "Bỏ"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2386
 msgid "Save Draft"
 msgstr "Lưu thư nháp"
 
-#: app/src/ui/composer/mod.rs:2427
+#: app/src/ui/composer/mod.rs:2428
 msgid "Attach Files"
 msgstr "Đính kèm tệp"
 
-#: app/src/ui/composer/mod.rs:2466
+#: app/src/ui/composer/mod.rs:2467
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2512
+#: app/src/ui/composer/mod.rs:2513
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "Mở {file}, {size}"
 
-#: app/src/ui/composer/mod.rs:2565
+#: app/src/ui/composer/mod.rs:2566
 msgid "Bold (Ctrl+B)"
 msgstr "Đậm (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2566
+#: app/src/ui/composer/mod.rs:2567
 msgid "Italic (Ctrl+I)"
 msgstr "Nghiêng (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2569
+#: app/src/ui/composer/mod.rs:2570
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Gạch ngang (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2572
+#: app/src/ui/composer/mod.rs:2573
 msgid "Code (Ctrl+E)"
 msgstr "Mã (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2610
 msgid "Link (Ctrl+K)"
 msgstr "Liên kết (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2619
+#: app/src/ui/composer/mod.rs:2620
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Danh sách dấu đầu dòng (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2624
+#: app/src/ui/composer/mod.rs:2625
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Danh sách đánh số (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2629
+#: app/src/ui/composer/mod.rs:2630
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Trích dẫn (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2646
+#: app/src/ui/composer/mod.rs:2647
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Chèn hình ảnh (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2656
+#: app/src/ui/composer/mod.rs:2657
 msgid "Paragraph"
 msgstr "Đoạn văn"
 
-#: app/src/ui/composer/mod.rs:2657
+#: app/src/ui/composer/mod.rs:2658
 msgid "Heading 1"
 msgstr "Tiêu đề 1"
 
-#: app/src/ui/composer/mod.rs:2658
+#: app/src/ui/composer/mod.rs:2659
 msgid "Heading 2"
 msgstr "Tiêu đề 2"
 
-#: app/src/ui/composer/mod.rs:2659
+#: app/src/ui/composer/mod.rs:2660
 msgid "Heading 3"
 msgstr "Tiêu đề 3"
 
-#: app/src/ui/composer/mod.rs:2660
+#: app/src/ui/composer/mod.rs:2661
 msgid "Code Block"
 msgstr "Khối mã"
 
-#: app/src/ui/composer/mod.rs:2674
+#: app/src/ui/composer/mod.rs:2675
 msgid "Turn Markdown into Formatting"
 msgstr "Chuyển Markdown thành văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:2678
+#: app/src/ui/composer/mod.rs:2679
 msgid "Clear Formatting"
 msgstr "Xóa định dạng"
 
-#: app/src/ui/composer/mod.rs:2684
+#: app/src/ui/composer/mod.rs:2685
 msgid "Write in Markdown"
 msgstr "Viết bằng Markdown"
 
-#: app/src/ui/composer/mod.rs:2691 app/src/ui/composer/mod.rs:2695
+#: app/src/ui/composer/mod.rs:2692 app/src/ui/composer/mod.rs:2696
 msgid "More Formatting"
 msgstr "Thêm định dạng"
 
-#: app/src/ui/composer/mod.rs:2732
+#: app/src/ui/composer/mod.rs:2733
 msgid "Add a Link"
 msgstr "Thêm liên kết"
 
-#: app/src/ui/composer/mod.rs:2738
+#: app/src/ui/composer/mod.rs:2739
 msgid "Text"
 msgstr "Văn bản"
 
-#: app/src/ui/composer/mod.rs:2750
+#: app/src/ui/composer/mod.rs:2751
 msgid "Add Link"
 msgstr "Thêm liên kết"
 
-#: app/src/ui/composer/mod.rs:2786
+#: app/src/ui/composer/mod.rs:2787
 msgid "Markdown formatted"
 msgstr "Đã định dạng Markdown"
 
-#: app/src/ui/composer/mod.rs:2905
+#: app/src/ui/composer/mod.rs:2906
 msgid "Pasted as rich text"
 msgstr "Đã dán dưới dạng văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:2906
+#: app/src/ui/composer/mod.rs:2907
 msgid "Paste as Plain Text"
 msgstr "Dán dưới dạng văn bản thuần"
 
-#: app/src/ui/composer/mod.rs:2940
+#: app/src/ui/composer/mod.rs:2941
 msgid "Editing as Markdown"
 msgstr "Đang sửa bằng Markdown"
 
-#: app/src/ui/composer/mod.rs:2976
+#: app/src/ui/composer/mod.rs:2977
 msgid "Images"
 msgstr "Hình ảnh"
 
-#: app/src/ui/composer/mod.rs:2981
+#: app/src/ui/composer/mod.rs:2982
 msgid "Insert Image"
 msgstr "Chèn hình ảnh"
 
-#: app/src/ui/composer/mod.rs:3028
+#: app/src/ui/composer/mod.rs:3029
 msgid "Could not read the file: {reason}"
 msgstr "Không thể đọc tệp: {reason}"
 
-#: app/src/ui/composer/mod.rs:3110
+#: app/src/ui/composer/mod.rs:3111
 msgid "No Templates Yet"
 msgstr "Chưa có mẫu thư"
 
-#: app/src/ui/composer/mod.rs:3160
+#: app/src/ui/composer/mod.rs:3161
 msgid "Save as Template"
 msgstr "Lưu làm mẫu thư"
 
-#: app/src/ui/composer/mod.rs:3162
+#: app/src/ui/composer/mod.rs:3163
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Các chỗ giữ chỗ như {{first_name}} được điền mỗi khi bạn dùng mẫu."
 
-#: app/src/ui/composer/mod.rs:3190 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:3191 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Đặt tên cho mẫu thư"
 
-#: app/src/ui/composer/mod.rs:3198
+#: app/src/ui/composer/mod.rs:3199
 msgid "Template saved"
 msgstr "Đã lưu mẫu thư"
 
-#: app/src/ui/composer/mod.rs:3201
+#: app/src/ui/composer/mod.rs:3202
 msgid "Template not saved: {reason}"
 msgstr "Chưa lưu mẫu thư: {reason}"
 
-#: app/src/ui/composer/mod.rs:3324
+#: app/src/ui/composer/mod.rs:3325
 msgid "This looks like Markdown"
 msgstr "Nội dung này có vẻ là Markdown"
 
-#: app/src/ui/composer/mod.rs:3330
+#: app/src/ui/composer/mod.rs:3331
 msgid "Format"
 msgstr "Định dạng"
 
-#: app/src/ui/composer/mod.rs:3331
+#: app/src/ui/composer/mod.rs:3332
 msgid "Turn the Markdown into rich text"
 msgstr "Chuyển Markdown thành văn bản có định dạng"
 
-#: app/src/ui/composer/mod.rs:3337 app/src/ui/composer/mod.rs:3341
+#: app/src/ui/composer/mod.rs:3338 app/src/ui/composer/mod.rs:3342
 msgid "Dismiss"
 msgstr "Bỏ qua"
 
-#: app/src/ui/composer/mod.rs:3424
+#: app/src/ui/composer/mod.rs:3425
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr ""
 "Thư nháp được giữ trên máy tính này để bạn có thể hoàn tất sau tại đây."
 
-#: app/src/ui/composer/mod.rs:3428
+#: app/src/ui/composer/mod.rs:3429
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Thư nháp được giữ trong {provider} để bạn có thể hoàn tất sau trên mọi thiết "
 "bị."
 
-#: app/src/ui/composer/mod.rs:3432
+#: app/src/ui/composer/mod.rs:3433
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -9673,7 +9673,8 @@ msgstr "Lưu thư nháp khi đang soạn"
 #: app/src/ui/preferences.rs:803
 msgid ""
 "Keep an open message in Drafts as you write, so closing early loses nothing"
-msgstr "Giữ thư đang mở trong Thư nháp khi bạn soạn, để không mất gì nếu đóng sớm"
+msgstr ""
+"Giữ thư đang mở trong Thư nháp khi bạn soạn, để không mất gì nếu đóng sớm"
 
 #: app/src/ui/preferences.rs:837
 msgid "Signing and Encryption"
@@ -13881,4 +13882,3 @@ msgstr "Chuyển vào {folder}"
 #~ msgid "{count} Gmail account needs a new way to sign in"
 #~ msgid_plural "{count} Gmail accounts need a new way to sign in"
 #~ msgstr[0] "{count} tài khoản Gmail cần một cách đăng nhập mới"
-

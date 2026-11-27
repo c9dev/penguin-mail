@@ -4065,8 +4065,8 @@ msgstr ""
 "書きに保存しますが、このコンピューターには {address} の鍵も証明書もありませ"
 "ん。"
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2367
-#: app/src/ui/composer/mod.rs:2370
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2368
+#: app/src/ui/composer/mod.rs:2371
 msgid "That account is not connected."
 msgstr "そのアカウントは接続されていません。"
 
@@ -4194,7 +4194,7 @@ msgstr "標準の暗号化（TLS）"
 msgid "Not encrypted in transit"
 msgstr "転送中の暗号化なし"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2471
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2472
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} 個の添付ファイル"
@@ -5115,8 +5115,8 @@ msgstr "リンクをコピー"
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
-#: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2384
-#: app/src/ui/composer/mod.rs:2749 app/src/ui/composer/mod.rs:3171
+#: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5681,7 +5681,7 @@ msgid "No models found."
 msgstr "モデルが見つかりません。"
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2528
+#: app/src/ui/composer/mod.rs:2529
 msgid "Remove {file}"
 msgstr "{file} を削除"
 
@@ -5721,7 +5721,7 @@ msgid "Edit {server}"
 msgstr "{server} を編集"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2524 app/src/ui/composer/recipients.rs:591
+#: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
 #: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3529
 msgid "Remove"
 msgstr "削除"
@@ -5762,7 +5762,7 @@ msgstr ""
 "NAME=value を付けて設定します。URL は HTTP でサーバーに接続します。"
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:3166 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:3167 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "名前"
@@ -5798,7 +5798,7 @@ msgstr "テスト"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3171
+#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -7888,194 +7888,194 @@ msgstr "自分の鍵で暗号化して下書きを保存しました"
 msgid "Draft saved"
 msgstr "下書きを保存しました"
 
-#: app/src/ui/composer/mod.rs:2379
+#: app/src/ui/composer/mod.rs:2380
 msgid "Save as Draft?"
 msgstr "下書きとして保存しますか？"
 
-#: app/src/ui/composer/mod.rs:2383
+#: app/src/ui/composer/mod.rs:2384
 msgid "Discard"
 msgstr "破棄"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2386
 msgid "Save Draft"
 msgstr "下書きを保存"
 
-#: app/src/ui/composer/mod.rs:2427
+#: app/src/ui/composer/mod.rs:2428
 msgid "Attach Files"
 msgstr "ファイルを添付"
 
-#: app/src/ui/composer/mod.rs:2466
+#: app/src/ui/composer/mod.rs:2467
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2512
+#: app/src/ui/composer/mod.rs:2513
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "{file} を開く、{size}"
 
-#: app/src/ui/composer/mod.rs:2565
+#: app/src/ui/composer/mod.rs:2566
 msgid "Bold (Ctrl+B)"
 msgstr "太字（Ctrl+B）"
 
-#: app/src/ui/composer/mod.rs:2566
+#: app/src/ui/composer/mod.rs:2567
 msgid "Italic (Ctrl+I)"
 msgstr "斜体（Ctrl+I）"
 
-#: app/src/ui/composer/mod.rs:2569
+#: app/src/ui/composer/mod.rs:2570
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "取り消し線（Ctrl+Shift+X）"
 
-#: app/src/ui/composer/mod.rs:2572
+#: app/src/ui/composer/mod.rs:2573
 msgid "Code (Ctrl+E)"
 msgstr "コード（Ctrl+E）"
 
-#: app/src/ui/composer/mod.rs:2609
+#: app/src/ui/composer/mod.rs:2610
 msgid "Link (Ctrl+K)"
 msgstr "リンク（Ctrl+K）"
 
-#: app/src/ui/composer/mod.rs:2619
+#: app/src/ui/composer/mod.rs:2620
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "箇条書き（Ctrl+Shift+8）"
 
-#: app/src/ui/composer/mod.rs:2624
+#: app/src/ui/composer/mod.rs:2625
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "番号付きリスト（Ctrl+Shift+7）"
 
-#: app/src/ui/composer/mod.rs:2629
+#: app/src/ui/composer/mod.rs:2630
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "引用（Ctrl+Shift+9）"
 
-#: app/src/ui/composer/mod.rs:2646
+#: app/src/ui/composer/mod.rs:2647
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "画像を挿入（Ctrl+Shift+P）"
 
-#: app/src/ui/composer/mod.rs:2656
+#: app/src/ui/composer/mod.rs:2657
 msgid "Paragraph"
 msgstr "段落"
 
-#: app/src/ui/composer/mod.rs:2657
+#: app/src/ui/composer/mod.rs:2658
 msgid "Heading 1"
 msgstr "見出し 1"
 
-#: app/src/ui/composer/mod.rs:2658
+#: app/src/ui/composer/mod.rs:2659
 msgid "Heading 2"
 msgstr "見出し 2"
 
-#: app/src/ui/composer/mod.rs:2659
+#: app/src/ui/composer/mod.rs:2660
 msgid "Heading 3"
 msgstr "見出し 3"
 
-#: app/src/ui/composer/mod.rs:2660
+#: app/src/ui/composer/mod.rs:2661
 msgid "Code Block"
 msgstr "コードブロック"
 
-#: app/src/ui/composer/mod.rs:2674
+#: app/src/ui/composer/mod.rs:2675
 msgid "Turn Markdown into Formatting"
 msgstr "Markdown を書式に変換"
 
-#: app/src/ui/composer/mod.rs:2678
+#: app/src/ui/composer/mod.rs:2679
 msgid "Clear Formatting"
 msgstr "書式をクリア"
 
-#: app/src/ui/composer/mod.rs:2684
+#: app/src/ui/composer/mod.rs:2685
 msgid "Write in Markdown"
 msgstr "Markdown で作成"
 
-#: app/src/ui/composer/mod.rs:2691 app/src/ui/composer/mod.rs:2695
+#: app/src/ui/composer/mod.rs:2692 app/src/ui/composer/mod.rs:2696
 msgid "More Formatting"
 msgstr "その他の書式"
 
-#: app/src/ui/composer/mod.rs:2732
+#: app/src/ui/composer/mod.rs:2733
 msgid "Add a Link"
 msgstr "リンクを追加"
 
-#: app/src/ui/composer/mod.rs:2738
+#: app/src/ui/composer/mod.rs:2739
 msgid "Text"
 msgstr "テキスト"
 
-#: app/src/ui/composer/mod.rs:2750
+#: app/src/ui/composer/mod.rs:2751
 msgid "Add Link"
 msgstr "リンクを追加"
 
-#: app/src/ui/composer/mod.rs:2786
+#: app/src/ui/composer/mod.rs:2787
 msgid "Markdown formatted"
 msgstr "Markdown の書式を適用しました"
 
-#: app/src/ui/composer/mod.rs:2905
+#: app/src/ui/composer/mod.rs:2906
 msgid "Pasted as rich text"
 msgstr "リッチテキストとして貼り付けました"
 
-#: app/src/ui/composer/mod.rs:2906
+#: app/src/ui/composer/mod.rs:2907
 msgid "Paste as Plain Text"
 msgstr "プレーンテキストとして貼り付け"
 
-#: app/src/ui/composer/mod.rs:2940
+#: app/src/ui/composer/mod.rs:2941
 msgid "Editing as Markdown"
 msgstr "Markdown として編集中"
 
-#: app/src/ui/composer/mod.rs:2976
+#: app/src/ui/composer/mod.rs:2977
 msgid "Images"
 msgstr "画像"
 
-#: app/src/ui/composer/mod.rs:2981
+#: app/src/ui/composer/mod.rs:2982
 msgid "Insert Image"
 msgstr "画像を挿入"
 
-#: app/src/ui/composer/mod.rs:3028
+#: app/src/ui/composer/mod.rs:3029
 msgid "Could not read the file: {reason}"
 msgstr "ファイルを読み取れませんでした: {reason}"
 
-#: app/src/ui/composer/mod.rs:3110
+#: app/src/ui/composer/mod.rs:3111
 msgid "No Templates Yet"
 msgstr "テンプレートはまだありません"
 
-#: app/src/ui/composer/mod.rs:3160
+#: app/src/ui/composer/mod.rs:3161
 msgid "Save as Template"
 msgstr "テンプレートとして保存"
 
-#: app/src/ui/composer/mod.rs:3162
+#: app/src/ui/composer/mod.rs:3163
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "{{first_name}} などのプレースホルダーは、使用するたびに置き換えます。"
 
-#: app/src/ui/composer/mod.rs:3190 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:3191 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "テンプレート名を入力"
 
-#: app/src/ui/composer/mod.rs:3198
+#: app/src/ui/composer/mod.rs:3199
 msgid "Template saved"
 msgstr "テンプレートを保存しました"
 
-#: app/src/ui/composer/mod.rs:3201
+#: app/src/ui/composer/mod.rs:3202
 msgid "Template not saved: {reason}"
 msgstr "テンプレートを保存できませんでした: {reason}"
 
-#: app/src/ui/composer/mod.rs:3324
+#: app/src/ui/composer/mod.rs:3325
 msgid "This looks like Markdown"
 msgstr "Markdown 形式のようです"
 
-#: app/src/ui/composer/mod.rs:3330
+#: app/src/ui/composer/mod.rs:3331
 msgid "Format"
 msgstr "書式を適用"
 
-#: app/src/ui/composer/mod.rs:3331
+#: app/src/ui/composer/mod.rs:3332
 msgid "Turn the Markdown into rich text"
 msgstr "Markdown をリッチテキストに変換"
 
-#: app/src/ui/composer/mod.rs:3337 app/src/ui/composer/mod.rs:3341
+#: app/src/ui/composer/mod.rs:3338 app/src/ui/composer/mod.rs:3342
 msgid "Dismiss"
 msgstr "閉じる"
 
-#: app/src/ui/composer/mod.rs:3424
+#: app/src/ui/composer/mod.rs:3425
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "下書きはこのコンピューターに保存するため、後でここで続きを書けます。"
 
-#: app/src/ui/composer/mod.rs:3428
+#: app/src/ui/composer/mod.rs:3429
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr "下書きは {provider} に保存するため、後でどの端末でも続きを書けます。"
 
-#: app/src/ui/composer/mod.rs:3432
+#: app/src/ui/composer/mod.rs:3433
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr "下書きはアカウントに保存するため、後でどの端末でも続きを書けます。"
@@ -9704,7 +9704,9 @@ msgstr "入力中に下書きを保存"
 #: app/src/ui/preferences.rs:803
 msgid ""
 "Keep an open message in Drafts as you write, so closing early loses nothing"
-msgstr "入力中のメッセージを下書きに保存しておき、途中で閉じても何も失われないようにします"
+msgstr ""
+"入力中のメッセージを下書きに保存しておき、途中で閉じても何も失われないように"
+"します"
 
 #: app/src/ui/preferences.rs:837
 msgid "Signing and Encryption"
@@ -13938,4 +13940,3 @@ msgstr "{folder}に移動"
 #~ msgid "{count} Gmail account needs a new way to sign in"
 #~ msgid_plural "{count} Gmail accounts need a new way to sign in"
 #~ msgstr[0] "Gmail アカウント {count} 件に新しいログイン方法が必要です"
-
