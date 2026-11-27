@@ -9473,7 +9473,7 @@ msgstr "Akun ini belum menyinkronkan"
 msgid "Could not change the subscription: {reason}"
 msgstr "Tidak dapat mengubah warna: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Abu-Abu"
 
@@ -11843,19 +11843,19 @@ msgstr "Buka"
 msgid "Open in Another Program"
 msgstr "Buka di Program Lain"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Buka pesan dari pengirim terlebih dahulu"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Email dari {sender} kini masuk ke {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Email dari {sender} dipindahkan ke {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

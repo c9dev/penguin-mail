@@ -9611,7 +9611,7 @@ msgstr "Dieses Konto wird noch nicht abgeglichen"
 msgid "Could not change the subscription: {reason}"
 msgstr "Die Farbe konnte nicht geändert werden: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Grau"
 
@@ -11995,19 +11995,19 @@ msgstr "Öffnen"
 msgid "Open in Another Program"
 msgstr "In einem anderen Programm öffnen"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Öffnen Sie zuerst eine Nachricht des Absenders"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "E-Mails von {sender} landen jetzt in {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "E-Mails von {sender} nach {category} verschoben"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

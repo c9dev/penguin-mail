@@ -9419,7 +9419,7 @@ msgstr "Bu hesap henüz eşitlenmiyor"
 msgid "Could not change the subscription: {reason}"
 msgstr "Renk değiştirilemedi: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Gri"
 
@@ -11785,21 +11785,21 @@ msgstr "Aç"
 msgid "Open in Another Program"
 msgstr "Başka Programda Aç"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Önce gönderenden gelen bir iletiyi açın"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr ""
 "{sender} göndericisinden gelen postalar artık {category} kategorisine gidiyor"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr ""
 "{sender} göndericisinden gelen postalar {category} kategorisine taşındı"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

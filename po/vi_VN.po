@@ -9248,7 +9248,7 @@ msgstr "Tài khoản này chưa đồng bộ"
 msgid "Could not change the subscription: {reason}"
 msgstr "Không thể đổi màu: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Xám"
 
@@ -11561,19 +11561,19 @@ msgstr "Mở"
 msgid "Open in Another Program"
 msgstr "Mở bằng chương trình khác"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Mở thư từ người gửi trước"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Thư từ {sender} hiện vào {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Đã chuyển thư từ {sender} vào {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

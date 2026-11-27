@@ -9622,7 +9622,7 @@ msgstr "Acest cont nu se sincronizează încă"
 msgid "Could not change the subscription: {reason}"
 msgstr "Nu s-a putut schimba culoarea: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Gri"
 
@@ -12033,19 +12033,19 @@ msgstr "Deschide"
 msgid "Open in Another Program"
 msgstr "Deschide în alt program"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Deschideți mai întâi un mesaj de la expeditor"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Corespondența de la {sender} ajunge acum în {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Corespondența de la {sender} a fost mutată în {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

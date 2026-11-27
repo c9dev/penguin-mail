@@ -9571,7 +9571,7 @@ msgstr "Цей обліковий запис ще не синхронізуєт�
 msgid "Could not change the subscription: {reason}"
 msgstr "Не вдалося змінити колір: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "Сірий"
 
@@ -11975,19 +11975,19 @@ msgstr "Відкрити"
 msgid "Open in Another Program"
 msgstr "Відкрити в іншій програмі"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Спочатку відкрийте повідомлення від цього відправника"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Пошта від {sender} тепер надходить до {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Пошту від {sender} переміщено до {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

@@ -9223,7 +9223,7 @@ msgstr "이 계정은 아직 동기화 중이 아닙니다"
 msgid "Could not change the subscription: {reason}"
 msgstr "색을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "회색"
 
@@ -11535,19 +11535,19 @@ msgstr "열기"
 msgid "Open in Another Program"
 msgstr "다른 프로그램에서 열기"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "먼저 해당 발신자의 메시지를 여세요"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "앞으로 {sender}의 메일을 {category}(으)로 분류합니다"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "{sender}의 메일을 {category}(으)로 이동했습니다"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""

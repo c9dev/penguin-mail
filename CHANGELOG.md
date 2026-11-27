@@ -8,6 +8,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - A recipient chip no longer runs its background past its Remove button when a longer chip sits beside it.
+- Large unread counts are centered and easier to read on the inbox categories and the Mail and Calendar switch.
 - Closing Customize Mailboxes releases its folder lists.
 - An open mail list updates its dates ("Yesterday", the weekday) when the day changes.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
