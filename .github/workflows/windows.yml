@@ -215,7 +215,7 @@ jobs:
           rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
           rustup toolchain install "$rust-x86_64-pc-windows-gnu" --profile minimal
           export RUSTUP_TOOLCHAIN=$rust-x86_64-pc-windows-gnu
-          scripts/build-windows.sh --msys2 "$(cygpath -m /ucrt64)" --busybox busybox64u.exe
+          scripts/build-windows.sh --msys2 "$(cygpath -m /ucrt64)" --busybox "$PWD/busybox64u.exe"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.version.outputs.artifact }}
