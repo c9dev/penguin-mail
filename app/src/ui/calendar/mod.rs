@@ -12,6 +12,10 @@
 //! `adw::Carousel` slides between, so a swipe follows the fingers and
 //! settles on a neighbour.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
+
+use crate::ui::safe_popover::safe_popup;
 pub mod agenda;
 pub mod attachments;
 pub mod block;
@@ -951,7 +955,7 @@ impl CalendarView {
             }
             closing.popdown();
         });
-        popover.popup();
+        let _ = safe_popup(&popover);
     }
 
     /// Moves `by` ranges forward, or back when negative. One step slides
@@ -2316,14 +2320,15 @@ impl CalendarView {
         if let Some(parent) = self.more.parent()
             && let Some(bounds) = anchor.compute_bounds(&parent)
         {
-            self.more.set_pointing_to(Some(&gdk::Rectangle::new(
+            let rect = gdk::Rectangle::new(
                 bounds.x().round() as i32,
                 bounds.y().round() as i32,
                 bounds.width().round().max(1.0) as i32,
                 bounds.height().round().max(1.0) as i32,
-            )));
+            );
+            self.more.set_pointing_to(Some(&rect));
         }
-        self.more.popup();
+        let _ = safe_popup(&self.more);
     }
 
     /// Sends a guest's answer, with `note` for the organizer. An

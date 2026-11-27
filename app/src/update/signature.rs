@@ -15,7 +15,18 @@ pub const RELEASE_KEY: &[u8] =
 /// keyring it is handed and nothing else, and apt needs it, so every
 /// Debian and Ubuntu system has it. gpg does the same job where it is
 /// missing.
-const CHECKERS: [Checker; 2] = [Checker::Gpgv("gpgv"), Checker::Gpg("gpg")];
+fn checkers() -> Vec<Checker> {
+    let mut checkers = Vec::new();
+    // The Windows installer ships its own gpgv, since Windows has none.
+    #[cfg(windows)]
+    checkers.extend(
+        crate::exe::beside("libexec/gnupg/gpgv.exe")
+            .filter(|path| path.is_file())
+            .map(Checker::GpgvAt),
+    );
+    checkers.extend([Checker::Gpgv("gpgv"), Checker::Gpg("gpg")]);
+    checkers
+}
 
 /// Hands `sums` back once `signature` proves `key` signed those exact
 /// bytes, so no checksum from an unsigned or altered file gets used. A
@@ -31,10 +42,12 @@ pub async fn signed_sums(
             "This release has no signature, so Penguin Mail will not install it.",
         ));
     };
-    check(work, sums, signature, key, &CHECKERS).await
+    check(work, sums, signature, key, &checkers()).await
 }
 
 enum Checker {
+    #[cfg(windows)]
+    GpgvAt(std::path::PathBuf),
     Gpgv(&'static str),
     Gpg(&'static str),
 }
@@ -45,16 +58,18 @@ impl Checker {
     /// keys nor their GnuPG settings take part, and nothing goes to a key
     /// server.
     fn command(&self, home: &Path, keyring: &Path) -> tokio::process::Command {
+        #[allow(unused_mut)] // only Windows adds a creation flag
+        let mut command = self.checker(home, keyring);
+        #[cfg(windows)]
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        command
+    }
+
+    fn checker(&self, home: &Path, keyring: &Path) -> tokio::process::Command {
         match self {
-            Checker::Gpgv(program) => {
-                let mut command = tokio::process::Command::new(program);
-                command
-                    .arg("--homedir")
-                    .arg(home)
-                    .arg("--keyring")
-                    .arg(keyring);
-                command
-            }
+            #[cfg(windows)]
+            Checker::GpgvAt(program) => gpgv(program, home, keyring),
+            Checker::Gpgv(program) => gpgv(program, home, keyring),
             Checker::Gpg(program) => {
                 let mut command = tokio::process::Command::new(program);
                 command
@@ -69,6 +84,20 @@ impl Checker {
             }
         }
     }
+}
+
+fn gpgv(
+    program: impl AsRef<std::ffi::OsStr>,
+    home: &Path,
+    keyring: &Path,
+) -> tokio::process::Command {
+    let mut command = tokio::process::Command::new(program);
+    command
+        .arg("--homedir")
+        .arg(home)
+        .arg("--keyring")
+        .arg(keyring);
+    command
 }
 
 /// Checks the signature in a folder of its own under `work`, removed
@@ -103,10 +132,13 @@ async fn check_in(
     let home = dir.join("home");
     tokio::fs::create_dir_all(&home).await.map_err(could_not)?;
     // GnuPG warns about a home other people can read.
-    use std::os::unix::fs::PermissionsExt;
-    tokio::fs::set_permissions(&home, std::fs::Permissions::from_mode(0o700))
-        .await
-        .map_err(could_not)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        tokio::fs::set_permissions(&home, std::fs::Permissions::from_mode(0o700))
+            .await
+            .map_err(could_not)?;
+    }
     let keyring = dir.join("release-key.gpg");
     let sums_file = dir.join("SHA256SUMS");
     let signature_file = dir.join("SHA256SUMS.asc");
@@ -173,8 +205,12 @@ mod tests {
                 return None;
             }
             let home = tempfile::tempdir().unwrap();
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700))
+                    .unwrap();
+            }
             // A pinentry that cannot run cannot put a dialog on anyone's
             // screen; the agent gets an error instead.
             std::fs::write(
@@ -183,21 +219,26 @@ mod tests {
             )
             .unwrap();
             let signer = Signer { home };
-            assert!(
-                signer
-                    .gpg(&[
-                        "--passphrase",
-                        "",
-                        "--quick-generate-key",
-                        "Test Release <release@example.test>",
-                        "ed25519",
-                        "sign",
-                        "never",
-                    ])
-                    .status
-                    .success(),
-                "gpg could not generate a test key"
-            );
+            if !signer
+                .gpg(&[
+                    "--passphrase",
+                    "",
+                    "--quick-generate-key",
+                    "Test Release <release@example.test>",
+                    "ed25519",
+                    "sign",
+                    "never",
+                ])
+                .status
+                .success()
+            {
+                if cfg!(unix) {
+                    panic!("gpg could not generate a test key");
+                }
+                eprintln!("skipping: gpg cannot make a test key on this system");
+                require_crypto();
+                return None;
+            }
             Some(signer)
         }
 
@@ -349,6 +390,14 @@ mod tests {
             .arg(&keyring)
             .output()
             .unwrap();
+        if !out.status.success() {
+            if cfg!(unix) {
+                panic!("gpg could not read the keyring");
+            }
+            eprintln!("skipping: gpg cannot read a keyring on this system");
+            require_crypto();
+            return;
+        }
         let listing = String::from_utf8_lossy(&out.stdout);
         let fingerprints: Vec<&str> = listing
             .lines()

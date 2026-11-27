@@ -14,5 +14,20 @@ rand.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 
+# Handle inheritance and Job Objects for the status pipe and the
+# kill-a-run-took-too-long path in `gnupg`.
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects"] }
+
 [dev-dependencies]
 tempfile.workspace = true
+
+# Checking whether a killed stand-in really stopped, in `tests/gnupg.rs`.
+[target."cfg(windows)".dev-dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading"] }
+
+# Plays gpg for the runner tests, writing to whichever pipe a flag asks
+# for. `env!("CARGO_BIN_EXE_gnupg-stand-in")` gives the tests its path.
+[[bin]]
+name = "gnupg-stand-in"
+path = "tests/support/stand_in.rs"

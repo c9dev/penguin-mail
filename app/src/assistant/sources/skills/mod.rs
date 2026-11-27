@@ -7,7 +7,7 @@
 //! here too. Each one is off until the person turns it on. The skills
 //! source lists the enabled ones in the system prompt and hands the model a
 //! skill's text and files when it asks; the shell source in [`shell`] runs
-//! a skill's scripts under bubblewrap.
+//! a skill's scripts inside the sandbox in [`sandbox`].
 
 mod front_matter;
 pub mod sandbox;
@@ -214,8 +214,18 @@ fn walk(dir: &Path, prefix: &str, depth: usize, files: &mut Vec<Entry>) {
 }
 
 fn is_script(path: &str, meta: &std::fs::Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    let executable = meta.permissions().mode() & 0o111 != 0;
+    #[cfg(unix)]
+    let executable = {
+        use std::os::unix::fs::PermissionsExt;
+        meta.permissions().mode() & 0o111 != 0
+    };
+    // Windows marks nothing executable; the extension list below covers
+    // the script kinds it runs.
+    #[cfg(windows)]
+    let executable = {
+        let _ = meta;
+        false
+    };
     let extension = Path::new(path)
         .extension()
         .and_then(|ext| ext.to_str())
@@ -424,7 +434,7 @@ fn use_skill(skill: &Skill) -> Result<Value, String> {
     });
     if skill.has_scripts {
         answer["scripts"] = json!(
-            "Run this skill's scripts with run_command. The folder is at /skill inside the sandbox."
+            "Run this skill's scripts with run_command. The folder is at $SKILL inside the sandbox."
         );
     }
     Ok(answer)
@@ -455,7 +465,7 @@ pub fn sources(settings: &Settings) -> Vec<Arc<dyn Source>> {
     let mut sources: Vec<Arc<dyn Source>> = vec![Arc::new(Skills::new(enabled))];
     if !scripted.is_empty() {
         match sandbox::check() {
-            Ok(bwrap) => sources.push(Arc::new(shell::Shell::new(bwrap, scripted))),
+            Ok(program) => sources.push(Arc::new(shell::Shell::new(program, scripted))),
             Err(reason) => tracing::info!(%reason, "skill scripts cannot run"),
         }
     }

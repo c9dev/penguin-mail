@@ -134,23 +134,36 @@ async fn probe_one(client: &reqwest::Client, probe: &Probe) -> Option<Detected> 
 
 /// The Claude Code CLI on `PATH`, or where its installers put it.
 fn find_claude() -> Option<PathBuf> {
+    // The npm install is a batch shim on Windows; the native installer
+    // drops claude.exe under ~/.local/bin on every platform.
+    let names: &[&str] = if cfg!(windows) {
+        &["claude.exe", "claude.cmd", "claude.bat"]
+    } else {
+        &["claude"]
+    };
     let on_path = std::env::var_os("PATH")
         .into_iter()
         .flat_map(|path| std::env::split_paths(&path).collect::<Vec<_>>())
-        .map(|dir| dir.join("claude"));
-    let home = std::env::var_os("HOME").map(PathBuf::from);
-    let installed = home.into_iter().flat_map(|home| {
-        [
-            home.join(".local/bin/claude"),
-            home.join(".claude/local/claude"),
-        ]
+        .flat_map(|dir| names.iter().map(move |name| dir.join(name)));
+    let installed = std::env::home_dir().into_iter().flat_map(|home| {
+        [home.join(".local/bin"), home.join(".claude/local")]
+            .into_iter()
+            .flat_map(|dir| names.iter().map(move |name| dir.join(name)))
     });
     on_path.chain(installed).find(|p| is_executable(p))
 }
 
 fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path)
-        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
+    let metadata = std::fs::metadata(path);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        metadata
+            .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    }
+    #[cfg(windows)]
+    {
+        metadata.map(|m| m.is_file()).unwrap_or(false)
+    }
 }

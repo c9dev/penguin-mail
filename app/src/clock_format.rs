@@ -7,6 +7,9 @@
 //! locale's own convention where the schema is missing, as in the
 //! Flatpak or on a desktop that is not GNOME.
 
+// windows-gnu's clippy misses that the initializer is already const.
+#![cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
+
 use std::cell::Cell;
 
 use crate::settings::CalendarClock;

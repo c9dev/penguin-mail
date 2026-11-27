@@ -118,8 +118,15 @@ impl Dictionaries {
     }
 }
 
+/// Where a Windows user puts a dictionary the installer does not ship.
+#[cfg(windows)]
+pub fn own_folder() -> Option<PathBuf> {
+    crate::exe::local_data().map(|dir| dir.join("dictionaries"))
+}
+
 /// Where dictionaries live: `$DICPATH` first, then the user's own, then the
-/// two directories Debian and Fedora put Hunspell files in.
+/// two directories Debian and Fedora put Hunspell files in. On Windows the
+/// user's own folder and the installer's `share/hunspell` take their place.
 fn dictionary_paths() -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = std::env::var_os("DICPATH")
         .iter()
@@ -128,6 +135,10 @@ fn dictionary_paths() -> Vec<PathBuf> {
     if let Some(home) = std::env::var_os("HOME") {
         paths.push(Path::new(&home).join(".local/share/hunspell"));
     }
+    #[cfg(windows)]
+    paths.extend(own_folder());
+    #[cfg(windows)]
+    paths.extend(crate::exe::beside("share/hunspell"));
     paths.push(PathBuf::from("/usr/share/hunspell"));
     paths.push(PathBuf::from("/usr/share/myspell/dicts"));
     paths

@@ -1,4 +1,9 @@
 [env]
+# pkg-config refuses to probe for a target that differs from the host
+# triple; on Windows the host toolchain is MSVC while the dev builds
+# target GNU (GTK comes from MSYS2 UCRT64). Harmless on native builds —
+# it is only consulted when host and target actually differ.
+PKG_CONFIG_ALLOW_CROSS = "1"
 # SQLite keeps process-wide memory statistics unless told not to, and takes
 # one global mutex on every allocation and free to keep them. Nothing here
 # reads them. The app holds several connections on several threads, and the

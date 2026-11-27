@@ -816,6 +816,7 @@ mod tests {
     #[test]
     fn a_timed_occurrence_reads_the_date_and_the_clock() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let start = Utc
             .with_ymd_and_hms(2026, 9, 23, 15, 0, 0)
             .unwrap()
@@ -834,6 +835,7 @@ mod tests {
     #[test]
     fn a_bar_names_the_days_an_all_day_event_covers() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let mut o = occurrence(true, midnight(d(2026, 10, 2)), midnight(d(2026, 10, 5)));
         Arc::make_mut(&mut o.event).title = "Lisbon offsite".into();
         assert_eq!(
@@ -845,6 +847,7 @@ mod tests {
     #[test]
     fn a_bar_names_both_days_and_clocks_of_a_timed_event() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let start = Utc
             .with_ymd_and_hms(2026, 10, 2, 22, 0, 0)
             .unwrap()
@@ -864,6 +867,7 @@ mod tests {
     #[test]
     fn a_move_to_one_whole_day_names_the_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let (start, end) = (midnight(d(2026, 9, 29)), midnight(d(2026, 9, 30)));
         assert_eq!(
             landing_words(start, end, true, &Utc),
@@ -874,6 +878,7 @@ mod tests {
     #[test]
     fn a_move_to_several_days_or_to_a_time_reads_as_the_popover_does() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let (start, end) = (midnight(d(2026, 10, 2)), midnight(d(2026, 10, 5)));
         assert_eq!(
             landing_words(start, end, true, &Utc),
@@ -884,6 +889,7 @@ mod tests {
     #[test]
     fn an_agenda_row_times_a_timed_occurrence_with_no_date() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let start = Utc
             .with_ymd_and_hms(2026, 9, 23, 15, 0, 0)
             .unwrap()
@@ -925,6 +931,7 @@ mod tests {
     #[test]
     fn a_single_day_all_day_occurrence_just_says_all_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let o = occurrence(true, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 24)));
         assert_eq!(when_words(&o, &Utc), "All day");
     }
@@ -932,6 +939,7 @@ mod tests {
     #[test]
     fn an_out_of_office_from_midnight_to_midnight_reads_as_all_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let one = occurrence(false, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 24)));
         assert_eq!(agenda_span_words(&one, &Utc), "All day");
         assert_eq!(when_words(&one, &Utc), "All day");
@@ -945,6 +953,7 @@ mod tests {
     #[test]
     fn a_multi_day_all_day_occurrence_names_both_ends() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let o = occurrence(true, midnight(d(2026, 9, 24)), midnight(d(2026, 9, 26)));
         assert_eq!(when_words(&o, &Utc), "Thursday 24 – Friday 25 September");
     }
@@ -1047,6 +1056,7 @@ mod tests {
     #[test]
     fn month_more_words_names_the_day_and_takes_a_plural() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             month_more_words(1, d(2026, 9, 23)),
             "1 more event on Wednesday 23 September"
@@ -1060,6 +1070,7 @@ mod tests {
     #[test]
     fn mini_day_words_adds_has_events_only_for_a_busy_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             mini_day_words(d(2026, 9, 23), false),
             "Wednesday 23 September"
@@ -1160,6 +1171,7 @@ mod tests {
     fn a_repeat_reads_as_a_short_sentence() {
         use chrono::Weekday;
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(repeat_words(&Repeat::EveryWeekday), "Every weekday");
         let two_weeks = Repeat::Custom(Custom {
             every: 2,
@@ -1191,6 +1203,7 @@ mod tests {
     fn a_monthly_ordinal_choice_reads_as_the_nth_or_the_last_weekday() {
         use chrono::Weekday;
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             repeat_words(&Repeat::MonthlyByDay(2, Weekday::Tue)),
             "Every month on the second Tuesday"
@@ -1310,6 +1323,7 @@ mod tests {
     #[test]
     fn series_words_names_a_weekly_repeat() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let rules = vec!["RRULE:FREQ=WEEKLY;BYDAY=MO,WE".to_string()];
         assert_eq!(
             series_words(&rules, wednesday_at(15), Tz::UTC),
@@ -1331,6 +1345,7 @@ mod tests {
     #[test]
     fn waiting_when_words_gives_the_short_day_and_time() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             waiting_when_words(wednesday_at(15), false, &Utc),
             "Wed 15:00"
@@ -1340,6 +1355,7 @@ mod tests {
     #[test]
     fn waiting_when_words_for_an_all_day_occurrence_gives_just_the_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             waiting_when_words(midnight(d(2026, 9, 23)), true, &Utc),
             "Wed"
@@ -1349,6 +1365,7 @@ mod tests {
     #[test]
     fn waiting_card_detail_gives_the_full_day_and_time() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             waiting_card_detail(wednesday_at(15), false, &Utc),
             "Wednesday 23, 15:00"
@@ -1358,6 +1375,7 @@ mod tests {
     #[test]
     fn waiting_card_detail_for_an_all_day_occurrence_gives_just_the_day() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         assert_eq!(
             waiting_card_detail(midnight(d(2026, 9, 23)), true, &Utc),
             "Wednesday 23"
@@ -1367,6 +1385,7 @@ mod tests {
     #[test]
     fn own_zone_words_names_the_event_s_own_zone_when_it_differs() {
         mailrs_domain::translate::set_date_locale("en_US");
+        crate::locale_time::set_prefers_12_hour_for_test(false);
         let start = Utc
             .with_ymd_and_hms(2026, 9, 23, 15, 0, 0)
             .unwrap()

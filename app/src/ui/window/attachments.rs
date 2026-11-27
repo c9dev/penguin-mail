@@ -174,7 +174,12 @@ impl MainWindow {
                     .call_for(account_id, async move {
                         let data = s.attachment(&m, &attachment_id).await?;
                         let path = super::unique_path(&folder, &name);
-                        tokio::task::spawn_blocking(move || std::fs::write(&path, data)).await??;
+                        tokio::task::spawn_blocking(move || {
+                            std::fs::write(&path, data)?;
+                            super::previews::mark_from_internet(&path);
+                            Ok::<(), std::io::Error>(())
+                        })
+                        .await??;
                         Ok::<(), anyhow::Error>(())
                     })
                     .await;
@@ -302,8 +307,14 @@ impl MainWindow {
                 }
             };
             let target = file.clone();
-            let saved = gio::spawn_blocking(move || write(&target))
-                .await
+            let saved = gio::spawn_blocking(move || {
+                write(&target)?;
+                if let Some(path) = target.path() {
+                    super::previews::mark_from_internet(&path);
+                }
+                Ok::<(), glib::Error>(())
+            })
+            .await
                 .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
             match saved {
                 Ok(()) => {
@@ -547,6 +558,7 @@ fn save_under_free_name(
 ) -> io::Result<PathBuf> {
     let path = super::unique_path(folder, name);
     write(&path)?;
+    super::previews::mark_from_internet(&path);
     Ok(path)
 }
 

@@ -992,6 +992,23 @@ impl MainWindow {
             {
                 window.set_default_size(width, height);
             }
+            // A Linux window manager fits a new window to the screen; on
+            // Windows nothing does, so a 1280x800 laptop would lose the
+            // window's right edge and its buttons under the taskbar.
+            #[cfg(windows)]
+            if let Some(monitor) = gtk::gdk::Display::default()
+                .and_then(|display| display.monitors().item(0))
+                .and_downcast::<gtk::gdk::Monitor>()
+            {
+                // Windows lists the primary monitor first, and places a new
+                // window a little in from the corner, so a tenth is kept free.
+                let area = gdk4_win32::Win32Monitor::workarea(&monitor);
+                let (width, height) = window.default_size();
+                window.set_default_size(
+                    width.min(area.width() * 9 / 10),
+                    height.min(area.height() * 9 / 10),
+                );
+            }
 
             let actions = gio::SimpleActionGroup::new();
             window.insert_action_group("win", Some(&actions));
@@ -4017,7 +4034,9 @@ impl MainWindow {
     /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search,
     /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread,
     /// `MAILRS_DEMO_MESSAGE_MENU` right-clicks the message at that
-    /// position in the open thread, `MAILRS_DEMO_OFFLINE` shows the
+    /// position in the open thread, `MAILRS_DEMO_LOAD_IMAGES` presses the
+    /// remote-image banner's button for the open thread,
+    /// `MAILRS_DEMO_OFFLINE` shows the
     /// calendar's offline line as if a sync just failed,
     /// `MAILRS_DEMO_ADD_ACCOUNT` opens Add Account on one of its stages
     /// (see `ui::add_account::preview`), `MAILRS_DEMO_FIRST_RUN` shows the
@@ -4068,6 +4087,9 @@ impl MainWindow {
                                     && let Ok(position) = position.parse()
                                 {
                                     replier.conversation.ask_message_menu(position);
+                                }
+                                if std::env::var_os("MAILRS_DEMO_LOAD_IMAGES").is_some() {
+                                    replier.load_images_once(&replier.conversation);
                                 }
                                 if let Ok(index) = std::env::var("MAILRS_DEMO_OPEN_ATTACHMENT")
                                     && let Ok(index) = index.parse::<usize>()
@@ -4770,16 +4792,49 @@ fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
         .unwrap_or(false)
 }
 
-/// An attachment name that stays within the chosen folder.
+/// An attachment name that stays within the chosen folder on every
+/// system. The sender picks the name, so anything a path or a Windows
+/// file name cannot hold becomes `_`, a reserved device name such as
+/// `CON.txt` gets a `_` in front, and trailing dots and spaces go.
 fn attachment_name(name: &str) -> String {
-    let clean: String = name
+    if !cfg!(windows) {
+        let clean: String = name
+            .chars()
+            .map(|c| if c == '/' || c == '\0' { '_' } else { c })
+            .collect();
+        return if clean.trim().is_empty() || clean == "." || clean == ".." {
+            "attachment".into()
+        } else {
+            clean
+        };
+    }
+    // Windows reads a backslash and a drive colon as path, refuses the
+    // other five, drops trailing dots and spaces, and keeps device names.
+    let mapped: String = name
         .chars()
-        .map(|c| if c == '/' || c == '\0' { '_' } else { c })
+        .map(|c| {
+            if c.is_control() || "/\\:*?\"<>|".contains(c) {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect();
-    if clean.trim().is_empty() || clean == "." || clean == ".." {
-        "attachment".into()
+    let clean = mapped.trim_end_matches(['.', ' ']);
+    if clean.trim().is_empty() {
+        return "attachment".into();
+    }
+    let stem = clean.split('.').next().unwrap_or_default().trim_end();
+    let reserved = matches!(
+        stem.to_ascii_uppercase().as_str(),
+        "CON" | "PRN" | "AUX" | "NUL"
+    ) || matches!(stem.as_bytes(), [a, b, c, b'1'..=b'9']
+        if [a, b, c].map(u8::to_ascii_uppercase) == *b"COM"
+            || [a, b, c].map(u8::to_ascii_uppercase) == *b"LPT");
+    if reserved {
+        format!("_{clean}")
     } else {
-        clean
+        clean.to_string()
     }
 }
 
@@ -4875,6 +4930,42 @@ fn arranged_room(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(windows))]
+    #[test]
+    fn attachment_names_stay_inside_the_folder_on_unix() {
+        for (given, kept) in [
+            ("a/b", "a_b"),
+            ("..\\x:y?", "..\\x:y?"),
+            (".", "attachment"),
+            ("..", "attachment"),
+            ("", "attachment"),
+        ] {
+            assert_eq!(attachment_name(given), kept, "{given}");
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn attachment_names_stay_inside_the_folder() {
+        for (given, kept) in [
+            ("..\\..\\x.bat", ".._.._x.bat"),
+            ("C:\\Windows\\x.bat", "C__Windows_x.bat"),
+            ("CON.txt", "_CON.txt"),
+            ("com1", "_com1"),
+            ("Lpt9.tar.gz", "_Lpt9.tar.gz"),
+            ("COM0.txt", "COM0.txt"),
+            ("abé", "abé"),
+            ("Re: Invoice?", "Re_ Invoice_"),
+            ("a/b", "a_b"),
+            (".", "attachment"),
+            ("..", "attachment"),
+            ("name. ", "name"),
+            ("", "attachment"),
+        ] {
+            assert_eq!(attachment_name(given), kept, "{given}");
+        }
+    }
 
     #[test]
     fn a_folder_on_a_folder_account_is_followed_when_opened() {
