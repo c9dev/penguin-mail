@@ -581,3 +581,86 @@ impl<J: JmapApi> ContactsService for Jmap<J> {
         Ok(person_of(&card))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::contact::{Changes, Field};
+
+    use super::*;
+
+    fn every_field() -> ContactFields {
+        ContactFields {
+            name: Some("Priya Raman".into()),
+            emails: Some(vec!["priya@fernwood.example".into()]),
+            phones: Some(vec!["+351 910 000 000".into()]),
+            organization: Some("Fernwood".into()),
+            photo: Some(vec![0x89, b'P', b'N', b'G']),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                addresses: Some(vec![[
+                    "Box 7".into(),
+                    "Floor 2".into(),
+                    "1 Main Street".into(),
+                    "Lisbon".into(),
+                    "LX".into(),
+                    "1000-001".into(),
+                    "Portugal".into(),
+                ]]),
+                urls: Some(vec!["https://example.org".into()]),
+                groups: Some(vec!["Friends".into(), "Work".into()]),
+                dates: Some(vec![Field {
+                    label: "Anniversary".into(),
+                    value: "2015-06-20".into(),
+                }]),
+                custom: Some(vec![Field {
+                    label: "Badge".into(),
+                    value: "42".into(),
+                }]),
+            },
+            ..ContactFields::default()
+        }
+    }
+
+    #[test]
+    fn a_card_holds_and_gives_back_every_contact_field() {
+        let mut card = card_of(&every_field(), Some("b1"));
+        card.insert("id".into(), json!("c1"));
+        let person = person_of(&Value::Object(card));
+        let d = &person.details;
+        assert_eq!(person.name.as_deref(), Some("Priya Raman"));
+        assert_eq!(d.birthday, "1990-04-12");
+        assert_eq!(d.notes, "Met in March");
+        assert_eq!(d.addresses[0][2], "1 Main Street");
+        assert_eq!(d.addresses[0][0], "Box 7");
+        assert_eq!(d.urls, ["https://example.org"]);
+        assert_eq!(d.groups, ["Friends", "Work"]);
+        assert_eq!(d.dates[0].label, "Anniversary");
+        assert_eq!(d.custom[0].value, "42");
+        assert!(person.photo_url.as_deref().unwrap().starts_with("data:image/png;base64,"));
+    }
+
+    #[test]
+    fn an_edit_patches_only_the_fields_that_changed() {
+        let mut card = card_of(&every_field(), Some("b1"));
+        card.insert("id".into(), json!("c1"));
+        let card = Value::Object(card);
+        let same = patch_of(&card, &every_field());
+        assert!(
+            same.keys().all(|k| k == "media"),
+            "an unchanged card sends nothing but its photo: {same:?}"
+        );
+        let edit = ContactFields {
+            details: Changes {
+                notes: Some("Changed".into()),
+                groups: Some(vec!["Friends".into()]),
+                ..Changes::default()
+            },
+            ..ContactFields::default()
+        };
+        let patch = patch_of(&card, &edit);
+        assert_eq!(patch["notes"]["n1"]["note"], "Changed");
+        assert_eq!(patch["categories"], json!({ "Friends": true }));
+        assert_eq!(patch.len(), 2);
+    }
+}

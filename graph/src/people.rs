@@ -9,7 +9,7 @@ use crate::http::{DeltaPage, Graph, Method, Page};
 use crate::model::{EmailAddress, Removed};
 
 const PAGE_PREFER: &str = "odata.maxpagesize=50";
-const CONTACT_FIELDS: &str = "id,displayName,givenName,surname,emailAddresses,companyName,mobilePhone,businessPhones,homePhones,parentFolderId";
+const CONTACT_FIELDS: &str = "id,displayName,givenName,surname,emailAddresses,companyName,mobilePhone,businessPhones,homePhones,parentFolderId,birthday,personalNotes,businessHomePage,categories,homeAddress,businessAddress,otherAddress";
 
 #[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
@@ -31,8 +31,26 @@ pub struct GraphContact {
     pub business_phones: Vec<String>,
     pub home_phones: Vec<String>,
     pub parent_folder_id: Option<String>,
+    pub birthday: Option<String>,
+    pub personal_notes: Option<String>,
+    pub business_home_page: Option<String>,
+    pub categories: Vec<String>,
+    pub home_address: Option<PhysicalAddress>,
+    pub business_address: Option<PhysicalAddress>,
+    pub other_address: Option<PhysicalAddress>,
     #[serde(rename = "@removed")]
     pub removed: Option<Removed>,
+}
+
+/// Graph's postal address: one street line, and the rest by name.
+#[derive(Debug, Clone, Default, Deserialize, serde::Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PhysicalAddress {
+    pub street: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country_or_region: Option<String>,
+    pub postal_code: Option<String>,
 }
 
 impl Graph {

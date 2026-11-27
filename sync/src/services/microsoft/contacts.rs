@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use mailrs_gmail::{ConnectionsPage, ContactFields, Person};
-use mailrs_graph::GraphContact;
+use mailrs_graph::{GraphContact, PhysicalAddress};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -40,6 +40,66 @@ fn lost<T>(parsed: serde_json::Result<T>) -> Result<T, BackendError> {
     parsed.map_err(|_| BackendError::StateLost)
 }
 
+/// Graph keeps three postal addresses, by the place they stand for.
+fn address_of(a: &PhysicalAddress) -> mailrs_domain::contact::Address {
+    let part = |v: &Option<String>| v.clone().unwrap_or_default();
+    [
+        String::new(),
+        String::new(),
+        part(&a.street),
+        part(&a.city),
+        part(&a.state),
+        part(&a.postal_code),
+        part(&a.country_or_region),
+    ]
+}
+
+fn physical(a: &mailrs_domain::contact::Address) -> Value {
+    let part = |s: &String| (!s.is_empty()).then(|| s.clone());
+    // Graph has one street line, so a PO box and an extended address join it.
+    let street: Vec<&str> = [&a[0], &a[1], &a[2]]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .map(String::as_str)
+        .collect();
+    json!({
+        "street": (!street.is_empty()).then(|| street.join("\n")),
+        "city": part(&a[3]),
+        "state": part(&a[4]),
+        "postalCode": part(&a[5]),
+        "countryOrRegion": part(&a[6]),
+    })
+}
+
+fn details_of(c: &GraphContact) -> mailrs_domain::contact::Details {
+    mailrs_domain::contact::Details {
+        phones: c
+            .mobile_phone
+            .iter()
+            .chain(&c.business_phones)
+            .chain(&c.home_phones)
+            .cloned()
+            .collect(),
+        // Graph answers a birthday as a date and time at midnight UTC.
+        birthday: c
+            .birthday
+            .as_deref()
+            .and_then(|b| b.get(..10))
+            .filter(|b| !b.starts_with("0001"))
+            .unwrap_or_default()
+            .to_string(),
+        notes: c.personal_notes.clone().unwrap_or_default(),
+        urls: c.business_home_page.iter().cloned().collect(),
+        groups: c.categories.clone(),
+        addresses: [&c.home_address, &c.business_address, &c.other_address]
+            .into_iter()
+            .flatten()
+            .map(address_of)
+            .collect(),
+        ..Default::default()
+    }
+}
+
 fn person_of(c: &GraphContact) -> Person {
     let name = c.display_name.clone().or_else(|| {
         let joined = [c.given_name.as_deref(), c.surname.as_deref()]
@@ -55,16 +115,7 @@ fn person_of(c: &GraphContact) -> Person {
         .or_else(|| c.business_phones.first().cloned())
         .or_else(|| c.home_phones.first().cloned());
     Person {
-        details: mailrs_domain::contact::Details {
-            phones: c
-                .mobile_phone
-                .iter()
-                .chain(&c.business_phones)
-                .chain(&c.home_phones)
-                .cloned()
-                .collect(),
-            ..Default::default()
-        },
+        details: details_of(c),
         resource: c.id.clone(),
         name,
         emails: c
@@ -103,6 +154,36 @@ fn body_of(fields: &ContactFields, home: &[String]) -> Value {
     if let Some(company) = &fields.organization {
         body.insert("companyName".into(), json!(company));
     }
+    let d = &fields.details;
+    if let Some(birthday) = &d.birthday {
+        body.insert(
+            "birthday".into(),
+            match mailrs_domain::contact::date_parts(birthday) {
+                // Graph wants a year; a birthday without one keeps 1604, as Apple writes it.
+                Some((year, month, day)) => {
+                    json!(format!("{:04}-{month:02}-{day:02}T00:00:00Z", year.unwrap_or(1604)))
+                }
+                None => Value::Null,
+            },
+        );
+    }
+    if let Some(notes) = &d.notes {
+        body.insert("personalNotes".into(), json!(notes));
+    }
+    if let Some(urls) = &d.urls {
+        body.insert("businessHomePage".into(), json!(urls.first()));
+    }
+    if let Some(groups) = &d.groups {
+        body.insert("categories".into(), json!(groups));
+    }
+    if let Some(addresses) = &d.addresses {
+        for (at, key) in ["homeAddress", "businessAddress", "otherAddress"]
+            .into_iter()
+            .enumerate()
+        {
+            body.insert(key.into(), addresses.get(at).map_or(Value::Null, physical));
+        }
+    }
     Value::Object(body)
 }
 
@@ -129,6 +210,13 @@ impl<G: GraphApi> Microsoft<G> {
 }
 
 impl<G: GraphApi> ContactsService for Microsoft<G> {
+    /// Graph holds a birthday, notes, one website, categories and three
+    /// postal addresses. Other dates, custom fields, further websites and
+    /// addresses, and a photo have no home there.
+    fn edits_details(&self) -> bool {
+        true
+    }
+
     async fn connections(
         &self,
         page_token: Option<&str>,
@@ -261,5 +349,58 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
             .await
             .map_err(|e| self.service_error(Service::Contacts, e))?;
         Ok(person_of(&changed))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::contact::Changes;
+
+    use super::*;
+
+    #[test]
+    fn graph_holds_birthday_notes_website_categories_and_three_addresses() {
+        let fields = ContactFields {
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                urls: Some(vec!["https://example.org".into(), "https://two.example".into()]),
+                groups: Some(vec!["Friends".into()]),
+                addresses: Some(vec![
+                    [
+                        String::new(),
+                        String::new(),
+                        "1 Main Street".into(),
+                        "Lisbon".into(),
+                        "LX".into(),
+                        "1000-001".into(),
+                        "Portugal".into(),
+                    ],
+                    Default::default(),
+                ]),
+                ..Changes::default()
+            },
+            ..ContactFields::default()
+        };
+        let body = body_of(&fields, &[]);
+        assert_eq!(body["birthday"], "1990-04-12T00:00:00Z");
+        assert_eq!(body["businessHomePage"], "https://example.org");
+        assert_eq!(body["homeAddress"]["city"], "Lisbon");
+        assert_eq!(body["otherAddress"], Value::Null);
+        let read: GraphContact = serde_json::from_value(json!({
+            "id": "c1",
+            "birthday": "1990-04-12T00:00:00Z",
+            "personalNotes": "Met in March",
+            "businessHomePage": "https://example.org",
+            "categories": ["Friends"],
+            "homeAddress": body["homeAddress"],
+        }))
+        .unwrap();
+        let d = person_of(&read).details;
+        assert_eq!(d.birthday, "1990-04-12");
+        assert_eq!(d.notes, "Met in March");
+        assert_eq!(d.groups, ["Friends"]);
+        assert_eq!(d.addresses[0][3], "Lisbon");
+        assert_eq!(d.addresses[0][6], "Portugal");
     }
 }

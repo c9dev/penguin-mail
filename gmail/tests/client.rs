@@ -888,6 +888,31 @@ async fn an_api_switched_off_in_the_project_says_which_and_where() {
     }
 }
 
+/// The body Google sent for a token of GNOME's own project, saved as it came.
+#[tokio::test]
+async fn the_real_service_disabled_answer_names_the_people_api_and_its_page() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/me/connections"))
+        .respond_with(
+            ResponseTemplate::new(403)
+                .set_body_string(include_str!("golden/people_service_disabled.json")),
+        )
+        .mount(&server)
+        .await;
+    match client(&server).connections(None, None).await {
+        Err(GmailError::ApiDisabled {
+            service,
+            enable_url,
+        }) => {
+            assert_eq!(service, "People API");
+            assert!(enable_url.ends_with("overview?project=44438659992"), "{enable_url}");
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
+}
+
 #[tokio::test]
 async fn an_answer_over_the_json_cap_is_refused_not_read_whole() {
     let server = MockServer::start().await;
