@@ -154,8 +154,10 @@ gettext is fixed:
 ### Web view (done)
 
 `app/src/web/windows.rs` adapts WebView2 (`webview2-com` 0.39,
-`windows` 0.62): an environment and controller per page, the child HWND
-overlaid on a GTK anchor widget via `frame::follow`, all requests routed
+`windows` 0.62): an environment and controller per page, inside a host
+child HWND that `frame::follow` keeps over a GTK anchor widget and hides
+when the anchor unmaps. GTK widgets drawn over the page, such as the event
+card, are cut out of the host's window region. All requests are routed
 through `WebResourceRequested` so `mailrs:`/`mailrs-cid:` serve from the
 app and remote loads hit the compiled filter. Injected scripts run
 after each `NavigationCompleted` (WebView2's
