@@ -25,8 +25,9 @@ use super::{Inner, Request};
 /// The items of WebKit's context menu a page keeps, as on Linux: copying
 /// what is selected, a link or a picture. Everything else either leaves
 /// the app (Look Up, Search, Share, Translate) or navigates the page.
+const COPY: &str = "WKMenuItemIdentifierCopy";
 const KEPT: [&str; 3] = [
-    "WKMenuItemIdentifierCopy",
+    COPY,
     "WKMenuItemIdentifierCopyLink",
     "WKMenuItemIdentifierCopyImage",
 ];
@@ -182,12 +183,10 @@ define_class!(
         fn will_open_menu(&self, menu: &NSMenu, event: &NSEvent) {
             let items: Vec<_> = menu.itemArray().iter().collect();
             for item in items.into_iter().rev() {
-                let kept = item
-                    .identifier()
-                    .is_some_and(|id| KEPT.contains(&id.to_string().as_str()));
-                if !kept {
+                let id = item.identifier().map(|id| id.to_string());
+                if !id.as_deref().is_some_and(|id| KEPT.contains(&id)) {
                     menu.removeItem(&item);
-                } else if item.identifier().is_some_and(|id| id.to_string() == KEPT[0]) {
+                } else if id.as_deref() == Some(COPY) {
                     item.setKeyEquivalent(&NSString::from_str("c"));
                     item.setKeyEquivalentModifierMask(NSEventModifierFlags::Command);
                 }

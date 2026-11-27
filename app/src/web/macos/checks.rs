@@ -191,7 +191,7 @@ async fn copy_selected_text(unmodified: &str) {
     }
     assert!(selected.get());
 
-    // Keep every clipboard format, and restore it before asserting the result.
+    // Keep every clipboard format, and restore it whenever the key changed it, before asserting.
     let clipboard = NSPasteboard::generalPasteboard();
     let saved: Vec<Retained<ProtocolObject<dyn NSPasteboardWriting>>> = clipboard
         .pasteboardItems()
@@ -227,7 +227,7 @@ async fn copy_selected_text(unmodified: &str) {
         && clipboard
             .stringForType(unsafe { NSPasteboardTypeString })
             .is_some_and(|text| text.to_string() == "Copy this message text");
-    if copied {
+    if clipboard.changeCount() != before {
         clipboard.clearContents();
         assert!(clipboard.writeObjects(&NSArray::from_retained_slice(&saved)));
     }
