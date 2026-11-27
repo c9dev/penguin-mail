@@ -922,6 +922,7 @@ impl MainWindow {
                 // The window's buttons show in one header at a time, so
                 // the widest seen stands for them wherever they are.
                 let buttons = Cell::new(0);
+                let contacts_on = Rc::downgrade(app);
                 // The space needs the wider of the mail and the calendar,
                 // so switching between them leaves the panes where they
                 // are. The mail needs its list beside the conversation's
@@ -944,7 +945,13 @@ impl MainWindow {
                                 .upgrade()
                                 .map_or(0, |split| split.min_sidebar_width() as i32),
                         ),
-                        space: mail.max(calendar),
+                        // Contacts folds to its list alone, so it asks for
+                        // little and leaves the mailboxes in view.
+                        space: match contacts_on.upgrade().is_some_and(|a| a.contacts_visible.get())
+                        {
+                            true => 340,
+                            false => mail.max(calendar),
+                        },
                         columns: mail,
                         controls: buttons.get(),
                         panel: panel

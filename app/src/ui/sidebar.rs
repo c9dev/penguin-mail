@@ -544,8 +544,11 @@ impl Sidebar {
         // Measure both layouts in this locale, including the largest off-screen badge.
         switch.set_visible(true);
         title.set_visible(false);
-        badges[1].1.set_label(&gettext("99+"));
-        badges[1].1.set_visible(true);
+        // Both idle spaces count what waits in them while a third shows.
+        for badge in [&badges[0].1, &badges[1].1] {
+            badge.set_label("99");
+            badge.set_visible(true);
+        }
         // Only the space on screen shows its name, so the widest layout is
         // the one with the longest name open.
         let mut wide = 0;
@@ -558,6 +561,7 @@ impl Sidebar {
         for label in &labels {
             label.set_label("");
         }
+        badges[0].1.set_visible(false);
         badges[1].1.set_visible(false);
         switch.add_css_class("compact");
         let compact = titles.measure(gtk::Orientation::Horizontal, -1).0;

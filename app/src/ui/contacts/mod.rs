@@ -144,6 +144,8 @@ pub struct Contacts {
     pub(super) state: RefCell<State>,
     pub(super) quiet: Cell<bool>,
     pub(super) back: gtk::Button,
+    /// Says the People API is off in the person's Google project.
+    pub(super) banner: adw::Banner,
     pub(super) new_message: RefCell<Option<gtk::Button>>,
 }
 
@@ -270,6 +272,11 @@ impl Contacts {
             .css_classes(["cts-page"])
             .build();
         bin.set_vexpand(true);
+        let banner = adw::Banner::builder()
+            .title(gettext("Turn on Contacts for your Google project"))
+            .button_label(gettext("Open Google Cloud"))
+            .build();
+        page.append(&banner);
         page.append(&bin);
         page.append(&lane);
         let side_box = gtk::Box::builder()
@@ -304,6 +311,7 @@ impl Contacts {
             state: RefCell::default(),
             quiet: Cell::new(false),
             back,
+            banner,
             new_message: RefCell::new(None),
         });
         this.wire(&factory);
@@ -395,7 +403,7 @@ impl Contacts {
                 );
             }
             if !row.accounts.is_empty() {
-                let chips = parts::chips(&row.accounts);
+                let chips = parts::chips(&row.accounts, 4);
                 chips.add_css_class("cts-rowchips");
                 text.append(&chips);
             }
@@ -460,6 +468,28 @@ impl Contacts {
             if let Some(this) = weak.upgrade() {
                 this.undo();
             }
+        });
+        let weak = Rc::downgrade(self);
+        let opened = Rc::new(Cell::new(false));
+        self.banner.connect_button_clicked(move |banner| {
+            let Some(this) = weak.upgrade() else { return };
+            let Some(app) = this.app.upgrade() else { return };
+            if opened.replace(true) {
+                // The second press asks Google again.
+                banner.set_revealed(false);
+                opened.set(false);
+                banner.set_button_label(Some(&gettext("Open Google Cloud")));
+                app.refresh_contacts(true);
+                return;
+            }
+            if let Some((_, url)) = app.contacts_api_off.borrow().clone() {
+                gtk::UriLauncher::new(&url).launch(
+                    banner.root().and_downcast_ref::<gtk::Window>(),
+                    gio::Cancellable::NONE,
+                    |_| {},
+                );
+            }
+            banner.set_button_label(Some(&gettext("Try Again")));
         });
         // Keys: / and Ctrl+F search, C goes to New Message. Typing in a
         // field keeps its own keys.
@@ -803,6 +833,8 @@ impl Contacts {
                 pick.retain(|id| ids.contains(id));
             }
         }
+        self.banner
+            .set_revealed(app.contacts_api_off.borrow().is_some());
         self.draw_side();
         self.draw_list();
         self.show_pane();

@@ -2202,7 +2202,8 @@ list.own-paste { margin-top: 12px; }
    its name, so three spaces fit the 240 px card. */
 toggle-group.space-switch > toggle:not(:checked) buttoncontent > box { border-spacing: 0; }
 toggle-group.space-switch > toggle:not(:checked) buttoncontent label { font-size: 0; min-width: 0; }
-toggle-group.space-switch > toggle:not(:checked) { padding-left: 6px; padding-right: 6px; min-width: 16px; }
+toggle-group.space-switch > toggle:not(:checked) { padding-left: 4px; padding-right: 4px; min-width: 16px; }
+toggle-group.space-switch > toggle:checked { padding-left: 10px; padding-right: 10px; }
 
 .cts-side { padding: 0 8px 12px; }
 .cts-kicker { margin: 14px 12px 4px; font-size: 0.82em; font-weight: 700; color: alpha(currentColor, 0.75); }
@@ -2252,6 +2253,7 @@ searchentry.cts-search { min-height: 32px; border-radius: 999px; border: none; b
 .cts-subline { font-size: 0.85em; color: alpha(currentColor, 0.75); margin-top: 1px; }
 .app-dark .cts-subline { color: alpha(currentColor, 0.64); }
 .cts-rowchips { margin-top: 4px; }
+.cts-rowchips flowboxchild, .cts-who-chips flowboxchild { padding: 0; min-height: 0; min-width: 0; }
 .cts-rowchips .cts-chip { min-height: 20px; padding: 0 7px 0 6px; font-size: 0.78em; }
 .cts-tick { border: 1.6px solid #8e8e98; border-radius: 999px; color: #fff; }
 .cts-tick.on { background: var(--accent-fill); border-color: var(--accent-fill); }

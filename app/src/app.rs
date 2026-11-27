@@ -138,6 +138,12 @@ pub struct App {
     /// list reloads only after new mail arrives.
     contacts: Contacts,
     pub(crate) contacts_stale: Cell<bool>,
+    /// The People API is off in the person's Google project: the service
+    /// and the address that turns it on, until a read works again.
+    pub contacts_api_off: RefCell<Option<(String, String)>>,
+    /// Whether the Contacts space shows, which answers that with its own
+    /// banner in place of a dialog.
+    pub contacts_visible: Cell<bool>,
     /// The person heard this run that the Calendar API is off in their
     /// own project. A read that works clears it, so a later switch-off
     /// is told again.
@@ -236,6 +242,8 @@ impl App {
             settings_broken: RefCell::new(opened.broken),
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
+            contacts_api_off: RefCell::new(None),
+            contacts_visible: Cell::new(false),
             calendar_api_off_told: Cell::new(false),
             photos: Rc::new(crate::photos::ContactPhotos::new()),
             pending_sends: Cell::new(0),
@@ -1271,6 +1279,9 @@ impl App {
                             );
                         }
                     }
+                    if this.contacts_api_off.borrow_mut().take().is_some() {
+                        this.tell_window(Notice::ContactsLoaded);
+                    }
                     this.contacts_added();
                     if refreshed.contacts == 0 && refreshed.photos == 0 {
                         return;
@@ -1285,11 +1296,16 @@ impl App {
                     // A People API switched off in the Google Cloud project
                     // refuses before Google can ask for the permission, so
                     // the person has to hear what to turn on.
-                    if let (true, Some((service, url))) = (ask, api_off(&err)) {
-                        this.tell_window(Notice::ApiOff {
-                            service: &service,
-                            enable_url: &url,
-                        });
+                    if let Some((service, url)) = api_off(&err) {
+                        // Contacts says so in a banner of its own.
+                        if ask && !this.contacts_visible.get() {
+                            this.tell_window(Notice::ApiOff {
+                                service: &service,
+                                enable_url: &url,
+                            });
+                        }
+                        *this.contacts_api_off.borrow_mut() = Some((service, url));
+                        this.tell_window(Notice::ContactsLoaded);
                     }
                     tracing::warn!(error = %err, "could not read the address book");
                 }

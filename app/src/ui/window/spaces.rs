@@ -117,6 +117,13 @@ impl MainWindow {
             }
         }
         self.set_calendar_only_actions_enabled(space == Space::Calendar);
+        if let Some(app) = self.app.upgrade() {
+            app.contacts_visible.set(space == Space::Contacts);
+        }
+        // What the space asks for changes the window's arrangement.
+        if let Some(room) = self.split.parent().and_downcast::<super::room::Room>() {
+            room.rearrange();
+        }
         if let Some(app) = self.app.upgrade()
             && app.settings_with(|s| s.space) != space
         {

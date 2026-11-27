@@ -10,14 +10,14 @@ publish.workspace = true
 [features]
 # Ships `fake::FakeGmail`, the in-memory Gmail, to other crates. Sync's own
 # tests always have it; `penguin-mail` turns it on for `--demo`.
-fake = ["dep:base64", "dep:mail-parser", "mailrs-dav/fake", "mailrs-sieve/fake"]
+fake = ["dep:mail-parser", "mailrs-dav/fake", "mailrs-sieve/fake"]
 # Reaches IMAP passwords through the Secret portal instead of the
 # desktop keyring; only a Flatpak build turns this on.
 packaging-flatpak = ["mailrs-gmail/packaging-flatpak"]
 
 [dependencies]
-# Only the fake encodes or decodes base64 outside a test.
-base64 = { workspace = true, optional = true }
+# The fake, and the photo of a JMAP card, which travels as a data URI.
+base64 = { workspace = true }
 mailrs-dav.workspace = true
 mailrs-discover.workspace = true
 mailrs-domain.workspace = true

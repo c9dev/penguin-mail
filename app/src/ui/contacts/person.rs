@@ -272,7 +272,7 @@ impl Contacts {
         actions.append(&write);
         *self.new_message.borrow_mut() = Some(write);
 
-        let chips = (!person.accounts.is_empty()).then(|| parts::chips(&person.accounts));
+        let chips = (!person.accounts.is_empty()).then(|| parts::chips(&person.accounts, 6));
         let who = self.photo_avatar(&person.name, 72, Some(shown));
         let header = self.ident(&who, &person.name, &person.email, chips, &actions);
         self.pane.append(&header);
@@ -366,8 +366,11 @@ impl Contacts {
                 let words = mailrs_domain::contact::birthday_label(&d.birthday, chrono::Local::now().date_naive());
                 details.push(parts::line(Some("cake"), &words, &gettext("Birthday"), None).upcast());
             }
-            for f in d.dates.iter().chain(&d.custom) {
-                details.push(parts::line(None, &f.value, &f.label, None).upcast());
+            for f in &d.dates {
+                details.push(parts::line(Some("cake"), &f.value, &f.label, None).upcast());
+            }
+            for f in &d.custom {
+                details.push(parts::line(Some("note"), &f.value, &f.label, None).upcast());
             }
         }
         let mut groups: Vec<String> = Vec::new();
@@ -829,7 +832,7 @@ impl Contacts {
         let text = gtk::Box::builder().orientation(gtk::Orientation::Vertical).valign(gtk::Align::Center).build();
         text.append(&parts::label(shown.display(), &["cts-keep-name"]));
         text.append(&parts::label(&gettext("One row, two accounts"), &["cts-who-sub"]));
-        let chips = parts::chips(&[a.account_id, b.account_id]);
+        let chips = parts::chips(&[a.account_id, b.account_id], 6);
         chips.add_css_class("cts-who-chips");
         text.append(&chips);
         who.append(&text);

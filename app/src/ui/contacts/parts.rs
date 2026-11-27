@@ -55,13 +55,13 @@ pub fn chip(account: AccountId) -> gtk::Widget {
     chip.upcast()
 }
 
-pub fn chips(accounts: &[AccountId]) -> gtk::Box {
+pub fn chips(accounts: &[AccountId], gap: u32) -> gtk::Box {
     let row = gtk::FlowBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .orientation(gtk::Orientation::Horizontal)
         .homogeneous(false)
-        .column_spacing(6)
-        .row_spacing(6)
+        .column_spacing(gap)
+        .row_spacing(gap)
         .min_children_per_line(1)
         .max_children_per_line(8)
         .halign(gtk::Align::Start)

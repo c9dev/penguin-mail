@@ -44,23 +44,207 @@ pub(crate) fn person_of(card: &Value) -> Person {
                 .collect();
             (!parts.is_empty()).then(|| parts.join(" "))
         });
+    let mut details = details_of(card);
+    details.phones = values(card, "phones")
+        .filter_map(|p| p["number"].as_str().map(str::to_string))
+        .collect();
     Person {
-        details: mailrs_domain::contact::Details {
-            phones: values(card, "phones")
-                .filter_map(|p| p["number"].as_str().map(str::to_string))
-                .collect(),
-            ..Default::default()
-        },
+        photo_url: values(card, "media")
+            .find(|m| m["kind"] == "photo")
+            .and_then(|m| m["uri"].as_str().map(str::to_string)),
+        details,
         resource: card["id"].as_str().unwrap_or_default().to_string(),
         name,
         emails: values(card, "emails")
             .filter_map(|e| e["address"].as_str().map(str::to_string))
             .collect(),
-        photo_url: None,
         organization: values(card, "organizations")
             .find_map(|o| o["name"].as_str().map(str::to_string)),
         phone: values(card, "phones").find_map(|p| p["number"].as_str().map(str::to_string)),
     }
+}
+
+
+/// The vendor property that holds what JSContact has no home for: other
+/// dates with their labels, and custom fields.
+const VENDOR: &str = "mail.penguin:fields";
+
+/// A contact date as a JSContact `PartialDate`.
+fn date_json(value: &str) -> Option<Value> {
+    let (year, month, day) = mailrs_domain::contact::date_parts(value)?;
+    let mut date = json!({ "@type": "PartialDate", "month": month, "day": day });
+    if let Some(year) = year {
+        date["year"] = json!(year);
+    }
+    Some(date)
+}
+
+/// A `PartialDate` or `Timestamp` as `YYYY-MM-DD`, or `--MM-DD`.
+fn date_text(date: &Value) -> Option<String> {
+    if let Some(utc) = date["utc"].as_str() {
+        return utc.get(..10).map(str::to_string);
+    }
+    let (month, day) = (date["month"].as_u64()?, date["day"].as_u64()?);
+    Some(match date["year"].as_u64() {
+        Some(year) => format!("{year:04}-{month:02}-{day:02}"),
+        None => format!("--{month:02}-{day:02}"),
+    })
+}
+
+/// The ADR parts a JSContact address component kind stands for.
+const ADDRESS_KINDS: [&str; 7] = [
+    "postOfficeBox",
+    "apartment",
+    "name",
+    "locality",
+    "region",
+    "postcode",
+    "country",
+];
+
+fn details_of(card: &Value) -> mailrs_domain::contact::Details {
+    use mailrs_domain::contact::{Details, Field};
+    let mut d = Details {
+        uid: card["uid"].as_str().unwrap_or_default().to_string(),
+        ..Default::default()
+    };
+    for a in values(card, "anniversaries") {
+        if let Some(text) = date_text(&a["date"]) {
+            if a["kind"] == "birth" && d.birthday.is_empty() {
+                d.birthday = text;
+            }
+        }
+    }
+    d.notes = values(card, "notes")
+        .filter_map(|n| n["note"].as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    d.addresses = values(card, "addresses")
+        .map(|a| {
+            std::array::from_fn(|i| {
+                a["components"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|c| c["kind"] == ADDRESS_KINDS[i])
+                    .and_then(|c| c["value"].as_str())
+                    .unwrap_or_default()
+                    .to_string()
+            })
+        })
+        .collect();
+    d.urls = values(card, "links")
+        .filter_map(|l| l["uri"].as_str().map(str::to_string))
+        .collect();
+    let mut groups: Vec<String> = card
+        .get("categories")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flat_map(|m| m.iter().filter(|(_, on)| on.as_bool() == Some(true)))
+        .map(|(k, _)| k.clone())
+        .collect();
+    groups.sort();
+    d.groups = groups;
+    let field = |v: &Value| Field {
+        label: v["label"].as_str().unwrap_or_default().to_string(),
+        value: v["value"].as_str().unwrap_or_default().to_string(),
+    };
+    d.dates = values(&card[VENDOR], "dates").map(field).collect();
+    d.custom = values(&card[VENDOR], "custom").map(field).collect();
+    d
+}
+
+/// The JSContact properties that carry the detail fields `fields` names,
+/// each as the whole map it replaces. Only a field the person changed is
+/// named, so the rest of a card stays as the server holds it.
+fn details_patch(fields: &ContactFields) -> Map<String, Value> {
+    let c = &fields.details;
+    let mut out = Map::new();
+    let keyed = |prefix: &str, items: Vec<Value>| -> Value {
+        Value::Object(
+            items
+                .into_iter()
+                .enumerate()
+                .map(|(i, v)| (format!("{prefix}{}", i + 1), v))
+                .collect(),
+        )
+    };
+    if c.birthday.is_some() || c.dates.is_some() {
+        // A card's birth date and its other dates share one property
+        // only when read; the other dates live in the vendor map.
+    }
+    if let Some(birthday) = &c.birthday {
+        let value = match date_json(birthday) {
+            Some(date) => json!({ "a1": { "@type": "Anniversary", "kind": "birth", "date": date } }),
+            None => Value::Null,
+        };
+        out.insert("anniversaries".into(), value);
+    }
+    if let Some(notes) = &c.notes {
+        let value = match notes.is_empty() {
+            true => Value::Null,
+            false => json!({ "n1": { "@type": "Note", "note": notes } }),
+        };
+        out.insert("notes".into(), value);
+    }
+    if let Some(addresses) = &c.addresses {
+        let items = addresses
+            .iter()
+            .map(|a| {
+                let components: Vec<Value> = a
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| !v.is_empty())
+                    .map(|(i, v)| json!({ "@type": "AddressComponent", "kind": ADDRESS_KINDS[i], "value": v }))
+                    .collect();
+                json!({ "@type": "Address", "components": components, "isOrdered": false })
+            })
+            .collect();
+        out.insert("addresses".into(), keyed("a", items));
+    }
+    if let Some(urls) = &c.urls {
+        let items = urls
+            .iter()
+            .map(|u| json!({ "@type": "Link", "kind": "generic", "uri": u }))
+            .collect();
+        out.insert("links".into(), keyed("l", items));
+    }
+    if let Some(groups) = &c.groups {
+        let map: Map<String, Value> = groups.iter().map(|g| (g.clone(), json!(true))).collect();
+        out.insert("categories".into(), Value::Object(map));
+    }
+    if c.dates.is_some() || c.custom.is_some() {
+        let list = |fields: &Vec<mailrs_domain::contact::Field>| {
+            keyed(
+                "f",
+                fields
+                    .iter()
+                    .map(|f| json!({ "label": f.label, "value": f.value }))
+                    .collect(),
+            )
+        };
+        if let Some(dates) = &c.dates {
+            out.insert(format!("{VENDOR}/dates"), list(dates));
+        }
+        if let Some(custom) = &c.custom {
+            out.insert(format!("{VENDOR}/custom"), list(custom));
+        }
+    }
+    if let Some(photo) = &fields.photo {
+        let value = match photo.is_empty() {
+            true => Value::Null,
+            false => {
+                use base64::Engine;
+                let uri = format!(
+                    "data:image/png;base64,{}",
+                    base64::engine::general_purpose::STANDARD.encode(photo)
+                );
+                json!({ "m1": { "@type": "Media", "kind": "photo", "uri": uri } })
+            }
+        };
+        out.insert("media".into(), value);
+    }
+    out
 }
 
 /// The JSContact fields `fields` sets on a new card, each map keyed `e1`,
@@ -89,6 +273,23 @@ fn fields_of(fields: &ContactFields) -> Map<String, Value> {
             "organizations".into(),
             json!({ "o1": { "name": organization } }),
         );
+    }
+    // On a new card the vendor maps nest under one property; a patch names
+    // each by its path.
+    let mut vendor = Map::new();
+    for (key, value) in details_patch(fields) {
+        match key.strip_prefix(&format!("{VENDOR}/")) {
+            Some(part) => {
+                vendor.insert(part.to_string(), value);
+            }
+            None if value.is_null() => {}
+            None => {
+                card.insert(key, value);
+            }
+        }
+    }
+    if !vendor.is_empty() {
+        card.insert(VENDOR.into(), Value::Object(vendor));
     }
     card
 }
@@ -211,6 +412,15 @@ fn patch_of(card: &Value, fields: &ContactFields) -> Map<String, Value> {
             }
         }
     }
+    for (key, value) in details_patch(fields) {
+        let held = match key.split_once('/') {
+            Some((a, b)) => &card[a][b],
+            None => &card[key.as_str()],
+        };
+        if *held != value && !(held.is_null() && value.is_null()) {
+            patch.insert(key, value);
+        }
+    }
     patch
 }
 
@@ -315,9 +525,21 @@ impl<J: JmapApi> ContactsService for Jmap<J> {
         }
     }
 
-    /// Cards carry no photo URL this adapter hands out.
-    async fn contact_photo(&self, _: &str) -> Result<Vec<u8>, BackendError> {
-        Err(BackendError::NotFound)
+    /// A card's photo travels inside it as a data URI.
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, BackendError> {
+        use base64::Engine;
+        let encoded = url
+            .strip_prefix("data:")
+            .and_then(|rest| rest.split_once(";base64,"))
+            .map(|(_, data)| data)
+            .ok_or(BackendError::NotFound)?;
+        base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .map_err(|_| BackendError::NotFound)
+    }
+
+    fn edits_details(&self) -> bool {
+        true
     }
 
     async fn create_contact(&self, fields: &ContactFields) -> Result<Person, BackendError> {
