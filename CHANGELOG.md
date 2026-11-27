@@ -7,17 +7,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
-- Contact cards identify their account in the upper-right corner, separate from the person's email addresses.
-
-- Open a contact's websites by clicking their links.
-
-- Contact birthdays show the day, month and current age, and dates without a year stay yearless.
-- CardDAV contacts split comma-separated groups and refresh previously cached group lists.
-
-- Contacts hides accounts whose contacts are disabled.
-- Existing address books reload their full details, including groups, additional phone numbers and birthdays.
-- Google contacts load when the contact window opens and support editing groups, dates, custom fields and photos.
-
 - Closing Customize Mailboxes releases its folder lists.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
 - Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
@@ -29,9 +18,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
-- Show contact birthdays in the calendar with a Birthdays switch, including the age reached when the birth year is known.
-
-- Open Contacts from the menu to search and edit address books, manage CardDAV groups, dates and custom fields, crop photos, write mail, and open phone or SMS links.
+- Open Contacts from the menu to search, add, edit and delete contacts on Google and CardDAV accounts, with their groups, birthdays, addresses, websites, custom fields and photos.
+- See your contacts' birthdays in the calendar, with the age they turn when the year is known.
 - Penguin Mail runs on Windows 10 and later: mail pages draw with WebView2, a tray icon keeps it working in the background, toast notifications carry their action buttons, the taskbar button shows the unread count, Preferences can start it at sign-in, and PGP and S/MIME work with Gpg4win installed.
 - On Windows, a per-user installer sets up the app, its Start Menu entry and its mail and calendar file associations, and removes all of it on uninstall.
 - On Windows, Penguin Mail updates itself from About, like on Linux, and brings its own spell checking dictionaries.
