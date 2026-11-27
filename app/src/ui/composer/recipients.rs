@@ -733,6 +733,12 @@ impl Recipients {
                         if let Some(stage) = field.ghost_stage.borrow().as_ref() {
                             let ghost = ghost_pill(&carried);
                             ghost.set_can_target(false);
+                            // A Fixed gives its child the minimum size, which
+                            // an ellipsized label shrinks to a dot.
+                            ghost.set_size_request(
+                                ghost.measure(gtk::Orientation::Horizontal, -1).1,
+                                -1,
+                            );
                             stage.put(&ghost, 0., 0.);
                             *lift.ghost.borrow_mut() = Some(ghost);
                         }
@@ -1156,7 +1162,11 @@ pub(super) mod checks {
             chip.has_css_class("dragging"),
             "a throw left the chip bright"
         );
-        assert!(stage.first_child().is_some(), "a throw showed no ghost");
+        let ghost = stage.first_child().expect("a throw showed no ghost");
+        assert!(
+            ghost.width_request() > 40,
+            "the ghost shrank to its ellipsis"
+        );
         drag.emit_by_name::<()>("drag-end", &[&12.0f64, &0.0f64]);
         assert!(!chip.has_css_class("dragging"), "the chip stayed dimmed");
         assert!(
