@@ -990,15 +990,25 @@ impl Contacts {
             _ => false,
         };
         let weak = Rc::downgrade(self);
-        if account_off {
+        // An account with nothing to list shows its address in the head,
+        // as the mockup does for an account turned off or newly on.
+        let account_empty = matches!(list, List::Account(_)) && count == 0 && _query.is_empty();
+        if account_off || account_empty {
             if let List::Account(id) = list {
-                self.head.append(&parts::dot(*id));
+                let grey = gtk::Box::builder()
+                    .valign(gtk::Align::Start)
+                    .margin_top(6)
+                    .css_classes(["account-dot", "account-8"])
+                    .build();
+                let _ = id;
+                self.head.append(&grey);
                 let heading = gtk::Box::builder()
                     .orientation(gtk::Orientation::Vertical)
                     .build();
                 heading.append(&parts::label(&title, &["cts-h2"]));
                 heading.append(&parts::label(&sub, &["cts-count"]));
                 self.head.append(&heading);
+                let _ = sub;
                 self.head.add_css_class("accounthead");
             }
             return;
@@ -1148,7 +1158,7 @@ impl Contacts {
                     .find(|a| a.id == *id)
                     .is_some_and(|a| !self.reads(a));
                 let sub = if off || query.is_empty() {
-                    if off { name.full.clone() } else { people(count) }
+                    if off || count == 0 { name.full.clone() } else { people(count) }
                 } else {
                     sub_for(count, count)
                 };

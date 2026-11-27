@@ -2334,8 +2334,9 @@ button.cts-danger:hover { background: alpha(#a51d2d, 0.06); }
 .cts-photo { padding: 4px 0; }
 .cts-seg { background: #e3e3e7; border-radius: 10px; padding: 3px; margin: 14px 0 0; }
 .app-dark .cts-seg { background: #3a3a40; }
-.cts-seg > togglebutton { min-height: 32px; border-radius: 8px; border: none; background: none; box-shadow: none; font-size: 0.89em; font-weight: 600; color: alpha(currentColor, 0.75); }
-.cts-seg > togglebutton:checked { background: var(--view-bg-color); color: inherit; font-weight: 700; }
+.cts-seg > button { min-height: 32px; border-radius: 8px; border: none; background: none; box-shadow: none; font-size: 0.89em; font-weight: 600; color: alpha(currentColor, 0.75); }
+.cts-seg > button:checked { background: var(--view-bg-color); color: inherit; font-weight: 700; }
+.cts-seg > button:hover:not(:checked) { background: alpha(black, 0.05); }
 
 /* Status pages in the list pane, and the Undo lane */
 .cts-status { padding: 24px 32px 48px; border-spacing: 0; }
