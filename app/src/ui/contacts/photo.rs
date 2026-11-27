@@ -43,7 +43,7 @@ async fn read(path: &std::path::Path) -> Option<gdk::Texture> {
     {
         return None;
     }
-    let texture = super::super::texture::decode(glib::Bytes::from_owned(bytes.to_vec())).await?;
+    let texture = super::super::texture::decode(glib::Bytes::from_owned(bytes)).await?;
     (texture.width() > 0
         && texture.height() > 0
         && i64::from(texture.width()) * i64::from(texture.height()) <= 32_000_000)
@@ -68,7 +68,17 @@ pub(super) fn choose(parent: &adw::Dialog, selected: impl Fn(Vec<u8>, gdk::Textu
         let Some(path) = file.path() else {
             return;
         };
-        let texture = read(&path).await;
+        // The crop needs no more than about 1024 pixels a side, so the
+        // dialog never holds a camera-sized picture.
+        let texture = match read(&path).await {
+            Some(texture) => {
+                super::super::texture::off_thread(super::super::texture::WAIT, move || {
+                    crate::photos::shrunk_to(&texture, 1024)
+                })
+                .await
+            }
+            None => None,
+        };
         let Some(parent) = weak.upgrade() else {
             return;
         };
@@ -122,7 +132,7 @@ fn crop_dialog(
     let x = slider(&gettext("Horizontal Position"), 0.0, 1.0, 0.5);
     let y = slider(&gettext("Vertical Position"), 0.0, 1.0, 0.5);
     let mut downloader = gdk::TextureDownloader::new(&texture);
-    downloader.set_format(gdk::MemoryFormat::R8g8b8a8);
+    downloader.set_format(gdk::MemoryFormat::R8g8b8a8Premultiplied);
     let (bytes, stride) = downloader.download_bytes();
     let pixels = Rc::new((
         bytes,
@@ -151,7 +161,7 @@ fn crop_dialog(
             gdk::MemoryTexture::new(
                 256,
                 256,
-                gdk::MemoryFormat::R8g8b8a8,
+                gdk::MemoryFormat::R8g8b8a8Premultiplied,
                 &glib::Bytes::from_owned(out),
                 256 * 4,
             )

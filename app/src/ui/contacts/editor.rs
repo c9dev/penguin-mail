@@ -140,7 +140,7 @@ impl Form {
                     .addresses
                     .values()
                     .into_iter()
-                    .map(|r| r.join("\n"))
+                    .map(|r| std::array::from_fn(|i| r[i].clone()))
                     .collect(),
                 urls: self.urls.strings(),
                 groups: self.groups.strings(),
@@ -366,7 +366,7 @@ pub(super) fn present(window: &Rc<Window>, contact: Option<Contact>) {
             .details
             .addresses
             .iter()
-            .map(|s| s.split('\n').map(str::to_string).collect())
+            .map(|parts| parts.to_vec())
             .collect(),
     );
     let fields = |title: &str, values: &[Field]| {
@@ -397,7 +397,12 @@ pub(super) fn present(window: &Rc<Window>, contact: Option<Contact>) {
     super::super::name(&notes_view, &gettext("Notes"));
     rich_box.append(&gtk::Label::new(Some(&gettext("Notes"))));
     rich_box.append(&notes_view);
-    let capabilities = gtk::Label::builder().label(gettext("This account supports editing names, email addresses, phone numbers, and organizations. Full contact editing requires CardDAV.")).wrap(true).build();
+    let capabilities = gtk::Label::builder()
+        .label(gettext(
+            "This account supports editing names, email addresses, phone numbers, and organizations only.",
+        ))
+        .wrap(true)
+        .build();
     content.append(&capabilities);
     let update_capabilities = {
         let owners = owners.clone();
@@ -722,10 +727,21 @@ pub(super) fn present(window: &Rc<Window>, contact: Option<Contact>) {
                 }
                 Err(err) => {
                     if let Some(e) = error.upgrade() {
-                        e.set_text(&fill(
-                            &gettext("Could not save contact: {reason}"),
-                            &[("reason", &err.to_string())],
-                        ));
+                        // A change refused before sending already says what to fix.
+                        let invalid = matches!(
+                            err.downcast_ref::<mailrs_sync::SyncError>(),
+                            Some(mailrs_sync::SyncError::Backend(
+                                mailrs_sync::BackendError::Invalid(_)
+                            ))
+                        );
+                        e.set_text(&if invalid {
+                            err.to_string()
+                        } else {
+                            fill(
+                                &gettext("Could not save contact: {reason}"),
+                                &[("reason", &err.to_string())],
+                            )
+                        });
                         e.set_visible(true);
                     }
                     if let Some(s) = save.upgrade() {

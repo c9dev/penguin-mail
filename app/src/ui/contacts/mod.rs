@@ -14,19 +14,30 @@ mod photo;
 pub struct Window {
     pub window: adw::Window,
     app: Weak<App>,
-    list: gtk::ListBox,
+    /// Every contact, one `Contact` per item. Rows are made only for the
+    /// ones scrolled into view, and a search filters without rebuilding.
+    store: gio::ListStore,
+    filter: gtk::CustomFilter,
+    filtered: gtk::FilterListModel,
+    selection: gtk::SingleSelection,
+    list: gtk::Stack,
     detail: gtk::Box,
     search: gtk::SearchEntry,
     account: gtk::DropDown,
     group: gtk::DropDown,
     groups: RefCell<Vec<String>>,
+    /// The search text, lower-cased once per change rather than per contact.
+    query: RefCell<String>,
     owners: Vec<mailrs_domain::Account>,
-    contacts: RefCell<Vec<Contact>>,
-    shown: RefCell<Vec<Contact>>,
     toast: adw::ToastOverlay,
     refreshing: Cell<bool>,
     generation: Cell<u64>,
     search_mail: Box<dyn Fn(String)>,
+}
+
+fn contact_of(item: &glib::Object) -> Option<std::cell::Ref<'_, Contact>> {
+    item.downcast_ref::<glib::BoxedAnyObject>()
+        .map(|object| object.borrow::<Contact>())
 }
 
 impl Window {
@@ -63,30 +74,91 @@ impl Window {
             .placeholder_text(gettext("Search Contacts"))
             .build();
         super::name(&search, &gettext("Search Contacts"));
-        let list = gtk::ListBox::builder()
-            .selection_mode(gtk::SelectionMode::Single)
+        let store = gio::ListStore::new::<glib::BoxedAnyObject>();
+        let filter = gtk::CustomFilter::new(|_| true);
+        let filtered = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
+        let selection = gtk::SingleSelection::new(Some(filtered.clone()));
+        let factory = gtk::SignalListItemFactory::new();
+        factory.connect_setup(|_, item| {
+            let item = item
+                .downcast_ref::<gtk::ListItem>()
+                .expect("list items are ListItems");
+            let row = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .spacing(2)
+                .margin_top(6)
+                .margin_bottom(6)
+                .build();
+            row.append(
+                &gtk::Label::builder()
+                    .xalign(0.0)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .build(),
+            );
+            row.append(
+                &gtk::Label::builder()
+                    .xalign(0.0)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .css_classes(["caption", "dim-label"])
+                    .build(),
+            );
+            item.set_child(Some(&row));
+        });
+        factory.connect_bind(|_, item| {
+            let item = item
+                .downcast_ref::<gtk::ListItem>()
+                .expect("list items are ListItems");
+            let (Some(object), Some(row)) = (item.item(), item.child()) else {
+                return;
+            };
+            let Some(contact) = contact_of(&object) else {
+                return;
+            };
+            let title = row.first_child().and_downcast::<gtk::Label>();
+            let subtitle = title
+                .as_ref()
+                .and_then(|t| t.next_sibling())
+                .and_downcast::<gtk::Label>();
+            if let (Some(title), Some(subtitle)) = (title, subtitle) {
+                title.set_label(contact.display());
+                let email = contact.email().unwrap_or_default();
+                subtitle.set_label(email);
+                subtitle.set_visible(!email.is_empty());
+            }
+        });
+        let view = gtk::ListView::builder()
+            .model(&selection)
+            .factory(&factory)
             .css_classes(["navigation-sidebar"])
+            .tab_behavior(gtk::ListTabBehavior::Item)
             .build();
-        super::name(&list, &gettext("Contacts"));
-        let empty = gtk::Label::new(Some(&gettext("No Matching Contacts")));
-        empty.set_margin_top(24);
-        list.set_placeholder(Some(&empty));
+        super::name(&view, &gettext("Contacts"));
+        let empty = gtk::Label::builder()
+            .label(gettext("No Matching Contacts"))
+            .valign(gtk::Align::Start)
+            .margin_top(24)
+            .css_classes(["dim-label"])
+            .build();
+        let list = gtk::Stack::new();
+        list.add_named(
+            &gtk::ScrolledWindow::builder()
+                .child(&view)
+                .vexpand(true)
+                .hscrollbar_policy(gtk::PolicyType::Never)
+                .build(),
+            Some("list"),
+        );
+        list.add_named(&empty, Some("empty"));
         let left = gtk::Box::new(gtk::Orientation::Vertical, 8);
         left.set_width_request(260);
         for widget in [
             search.clone().upcast::<gtk::Widget>(),
             account.clone().upcast(),
             group.clone().upcast(),
+            list.clone().upcast(),
         ] {
             left.append(&widget);
         }
-        left.append(
-            &gtk::ScrolledWindow::builder()
-                .child(&list)
-                .vexpand(true)
-                .hscrollbar_policy(gtk::PolicyType::Never)
-                .build(),
-        );
         let detail = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(18)
@@ -131,19 +203,29 @@ impl Window {
         let this = Rc::new(Self {
             window,
             app: Rc::downgrade(app),
+            store,
+            filter,
+            filtered,
+            selection,
             list,
             detail,
             search,
             account,
             group,
             groups: RefCell::default(),
+            query: RefCell::default(),
             owners,
-            contacts: RefCell::default(),
-            shown: RefCell::default(),
             toast,
             refreshing: Cell::new(false),
             generation: Cell::new(0),
             search_mail: Box::new(search_mail),
+        });
+        let weak = Rc::downgrade(&this);
+        this.filter.set_filter_func(move |item| {
+            let Some(w) = weak.upgrade() else {
+                return true;
+            };
+            contact_of(item).is_some_and(|c| w.wanted(&c))
         });
         let weak = Rc::downgrade(&this);
         this.search.connect_search_changed(move |_| {
@@ -164,9 +246,11 @@ impl Window {
             }
         });
         let weak = Rc::downgrade(&this);
-        this.list.connect_row_selected(move |_, row| {
+        this.selection.connect_selected_item_notify(move |selection| {
             if let Some(w) = weak.upgrade() {
-                let contact = row.and_then(|r| w.shown.borrow().get(r.index() as usize).cloned());
+                let contact = selection
+                    .selected_item()
+                    .and_then(|item| contact_of(&item).map(|c| c.clone()));
                 w.show(contact);
             }
         });
@@ -182,6 +266,7 @@ impl Window {
                 w.refresh();
             }
         });
+        this.show(None);
         this.reload();
         this.window.present();
         this.refresh();
@@ -214,18 +299,35 @@ impl Window {
                     });
                     let mut groups: Vec<_> = contacts
                         .iter()
-                        .flat_map(|c| c.details.groups.clone())
+                        .flat_map(|c| c.details.groups.iter().cloned())
                         .collect();
                     groups.sort();
                     groups.dedup();
                     let mut names = vec![gettext("All Groups")];
-                    names.extend(groups.clone());
+                    names.extend(groups.iter().cloned());
                     *this.groups.borrow_mut() = groups;
-                    *this.contacts.borrow_mut() = contacts;
+                    let kept = this
+                        .selection
+                        .selected_item()
+                        .and_then(|item| contact_of(&item).map(|c| (c.account_id, c.resource.clone())));
+                    let items: Vec<glib::BoxedAnyObject> =
+                        contacts.into_iter().map(glib::BoxedAnyObject::new).collect();
+                    this.store.splice(0, this.store.n_items(), &items);
                     this.group.set_model(Some(&gtk::StringList::new(
                         &names.iter().map(String::as_str).collect::<Vec<_>>(),
                     )));
                     this.filter();
+                    // Stay on the contact that was open, as it reads after an edit.
+                    if let Some((id, resource)) = kept
+                        && let Some(at) = (0..this.filtered.n_items()).find(|&at| {
+                            this.filtered.item(at).is_some_and(|item| {
+                                contact_of(&item)
+                                    .is_some_and(|c| c.account_id == id && c.resource == resource)
+                            })
+                        })
+                    {
+                        this.selection.set_selected(at);
+                    }
                 }
                 Err(err) => this.say(&fill(
                     &gettext("Could not load contacts: {reason}"),
@@ -235,63 +337,31 @@ impl Window {
         });
     }
 
-    fn filter(self: &Rc<Self>) {
+    /// Whether `contact` passes the account, group and search choices.
+    fn wanted(&self, contact: &Contact) -> bool {
         let owner = self
             .account
             .selected()
             .checked_sub(1)
             .and_then(|i| self.owners.get(i as usize))
             .map(|a| a.id);
-        let group = self
-            .group
-            .selected()
-            .checked_sub(1)
-            .and_then(|i| self.groups.borrow().get(i as usize).cloned());
-        let query = self.search.text().to_lowercase();
-        let shown: Vec<_> = self
-            .contacts
-            .borrow()
-            .iter()
-            .filter(|c| {
-                owner.is_none_or(|id| c.account_id == id)
-                    && group.as_ref().is_none_or(|g| c.details.groups.contains(g))
-                    && matches(c, &query)
-            })
-            .cloned()
-            .collect();
-        let selected = self.list.selected_row().and_then(|r| {
-            self.shown
-                .borrow()
-                .get(r.index() as usize)
-                .map(|c| (c.account_id, c.resource.clone()))
+        let group = self.group.selected().checked_sub(1);
+        let groups = self.groups.borrow();
+        owner.is_none_or(|id| contact.account_id == id)
+            && group
+                .and_then(|i| groups.get(i as usize))
+                .is_none_or(|g| contact.details.groups.contains(g))
+            && matches(contact, &self.query.borrow())
+    }
+
+    fn filter(self: &Rc<Self>) {
+        *self.query.borrow_mut() = self.search.text().to_lowercase();
+        self.filter.changed(gtk::FilterChange::Different);
+        self.list.set_visible_child_name(if self.filtered.n_items() == 0 {
+            "empty"
+        } else {
+            "list"
         });
-        while let Some(child) = self.list.first_child() {
-            self.list.remove(&child);
-        }
-        *self.shown.borrow_mut() = shown.clone();
-        for contact in shown {
-            let row = adw::ActionRow::builder()
-                .use_markup(false)
-                .title(contact.display())
-                .subtitle(contact.email().unwrap_or_default())
-                .build();
-            self.list.append(&row);
-        }
-        let index = self
-            .shown
-            .borrow()
-            .iter()
-            .position(|c| {
-                selected
-                    .as_ref()
-                    .is_some_and(|(id, resource)| c.account_id == *id && c.resource == *resource)
-            })
-            .unwrap_or(0);
-        self.list
-            .select_row(self.list.row_at_index(index as i32).as_ref());
-        if self.shown.borrow().is_empty() {
-            self.show(None);
-        }
     }
 
     fn show(self: &Rc<Self>, contact: Option<Contact>) {
@@ -385,8 +455,22 @@ impl Window {
             .spacing(8)
             .halign(gtk::Align::Center)
             .build();
-        let edit = gtk::Button::with_label(&gettext("Edit…"));
-        actions.append(&edit);
+        let (demo, rich) = self.app.upgrade().map_or((false, false), |a| {
+            (
+                a.core.demo,
+                a.core.demo || a.core.contacts().edits_details(contact.account_id),
+            )
+        });
+        // A card read before the app kept every field has no revision, and
+        // its fields here may be empty: saving it would overwrite the
+        // server's. The window's own refresh fills them in.
+        let stale = !demo && rich && contact.details.revision.is_empty();
+        let edit = gtk::Button::with_label(&if stale {
+            gettext("Refresh Contacts First")
+        } else {
+            gettext("Edit…")
+        });
+        edit.set_sensitive(!stale);
         let weak = Rc::downgrade(self);
         let selected = contact.clone();
         edit.connect_clicked(move |_| {
@@ -394,11 +478,11 @@ impl Window {
                 editor::present(&w, Some(selected.clone()));
             }
         });
-        if self
-            .app
-            .upgrade()
-            .is_some_and(|a| a.core.demo || a.core.contacts().edits_details(contact.account_id))
-        {
+        // A book the account may only read offers neither.
+        if !contact.details.read_only {
+            actions.append(&edit);
+        }
+        if rich && !contact.details.read_only {
             let delete = gtk::Button::with_label(&gettext("Delete"));
             delete.add_css_class("destructive-action");
             actions.append(&delete);
@@ -506,7 +590,21 @@ impl Window {
                 ),
             ),
             (gettext("Groups"), d.groups.join(", ")),
-            (gettext("Postal Addresses"), d.addresses.join("\n\n")),
+            (
+                gettext("Postal Addresses"),
+                d.addresses
+                    .iter()
+                    .map(|parts| {
+                        parts
+                            .iter()
+                            .filter(|p| !p.is_empty())
+                            .map(String::as_str)
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n\n"),
+            ),
             (gettext("Notes"), d.notes.clone()),
         ] {
             if !value.is_empty() {
