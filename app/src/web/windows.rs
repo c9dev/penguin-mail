@@ -937,6 +937,18 @@ impl WebView {
                 inner.placed();
             }
         });
+        // follow stops at unmap, and the child HWND would stay over
+        // whatever replaced its anchor, such as the calendar.
+        let weak = Rc::downgrade(&inner);
+        inner.anchor.connect_unmap(move |_| {
+            if let Some(inner) = weak.upgrade()
+                && let Some(core) = inner.core.borrow().as_ref()
+            {
+                unsafe {
+                    let _ = core.controller.SetIsVisible(false);
+                }
+            }
+        });
         // Focus entering the anchor enters the page, and focus leaving
         // the anchor for anything but the page's own child HWND takes it
         // back out. Moving it into the child makes the window lose the

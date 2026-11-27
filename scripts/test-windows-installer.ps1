@@ -14,7 +14,7 @@ param(
     [string]$Screenshots = 'screenshots'
 )
 $ErrorActionPreference = 'Stop'
-$work = Join-Path ($env:RUNNER_TEMP ?? $env:TEMP) 'penguin-installer-test'
+$work = Join-Path $(if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }) 'penguin-installer-test'
 Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $work | Out-Null
 
