@@ -124,6 +124,13 @@ impl Window {
                 let email = contact.email().unwrap_or_default();
                 subtitle.set_label(email);
                 subtitle.set_visible(!email.is_empty());
+                // Focus sits on the list item GTK wraps the row in, so the
+                // item carries the words a screen reader says.
+                item.set_accessible_label(&if email.is_empty() {
+                    contact.display().to_string()
+                } else {
+                    format!("{}, {email}", contact.display())
+                });
             }
         });
         let view = gtk::ListView::builder()
@@ -139,7 +146,7 @@ impl Window {
             .margin_top(24)
             .css_classes(["dim-label"])
             .build();
-        let list = gtk::Stack::new();
+        let list = gtk::Stack::builder().vexpand(true).build();
         list.add_named(
             &gtk::ScrolledWindow::builder()
                 .child(&view)

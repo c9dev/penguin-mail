@@ -2607,7 +2607,7 @@ msgstr "읽음으로 표시"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:340
 #: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
 #: app/src/ui/calendar/popover.rs:763 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:486 app/src/ui/contacts/mod.rs:713
+#: app/src/ui/contacts/mod.rs:493 app/src/ui/contacts/mod.rs:720
 #: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -4106,7 +4106,7 @@ msgid ""
 msgstr ""
 "이 메시지에 속임수로 의심되는 링크가 있습니다. 열기 전에 목적지를 확인하세요."
 
-#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:577
+#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:584
 msgid "Details"
 msgstr "세부 정보"
 
@@ -4441,7 +4441,7 @@ msgid "Calendar"
 msgstr "캘린더"
 
 #: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:50
-#: app/src/ui/contacts/mod.rs:135 app/src/ui/contacts_prefs.rs:256
+#: app/src/ui/contacts/mod.rs:142 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/window.rs:3775
@@ -4866,7 +4866,7 @@ msgstr "Penguin Mail 열기"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1567
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:507
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:514
 #: app/src/ui/thread_list.rs:495
 msgid "New Message"
 msgstr "새 메시지"
@@ -5070,7 +5070,7 @@ msgstr "링크 복사"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:712
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:719
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -6448,7 +6448,7 @@ msgstr "알림 제거"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:397
-#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:609
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:616
 msgid "Notes"
 msgstr "메모"
 
@@ -6783,7 +6783,7 @@ msgid "Working location"
 msgstr "근무 장소"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:587
+#: app/src/ui/contacts/mod.rs:594
 msgid "Birthday"
 msgstr "생일"
 
@@ -8073,7 +8073,7 @@ msgid "Ignore"
 msgstr "무시"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:307
-#: app/src/ui/contacts/mod.rs:499
+#: app/src/ui/contacts/mod.rs:506
 msgid "Email"
 msgstr "이메일"
 
@@ -8082,7 +8082,7 @@ msgid "Other email"
 msgstr "다른 이메일"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:313
-#: app/src/ui/contacts/mod.rs:534
+#: app/src/ui/contacts/mod.rs:541
 msgid "Phone"
 msgstr "전화"
 
@@ -8118,12 +8118,12 @@ msgstr "먼저 환경설정에서 이 계정의 연락처를 켜세요."
 msgid "Edit Contact"
 msgstr "연락처 편집"
 
-#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:188
-#: app/src/ui/contacts/mod.rs:190
+#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:195
+#: app/src/ui/contacts/mod.rs:197
 msgid "New Contact"
 msgstr "새 연락처"
 
-#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:403
+#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:410
 #: app/src/ui/hide_my_email.rs:657
 msgid "Account"
 msgstr "계정"
@@ -8136,7 +8136,7 @@ msgstr "사진 변경…"
 msgid "Remove Photo"
 msgstr "사진 제거"
 
-#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:583
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:590
 msgid "Organization"
 msgstr "조직"
 
@@ -8144,15 +8144,15 @@ msgstr "조직"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "날짜는 YYYY-MM-DD 형식으로, 연도를 모르면 --MM-DD 형식으로 입력하세요."
 
-#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:593
+#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:600
 msgid "Groups"
 msgstr "그룹"
 
-#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:635
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:642
 msgid "Websites"
 msgstr "웹사이트"
 
-#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:595
+#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:602
 msgid "Postal Addresses"
 msgstr "우편 주소"
 
@@ -8261,7 +8261,7 @@ msgstr "계속 편집"
 msgid "All Accounts"
 msgstr "모든 계정"
 
-#: app/src/ui/contacts/mod.rs:71 app/src/ui/contacts/mod.rs:306
+#: app/src/ui/contacts/mod.rs:71 app/src/ui/contacts/mod.rs:313
 msgid "All Groups"
 msgstr "모든 그룹"
 
@@ -8273,69 +8273,69 @@ msgstr "그룹"
 msgid "Search Contacts"
 msgstr "연락처 검색"
 
-#: app/src/ui/contacts/mod.rs:137
+#: app/src/ui/contacts/mod.rs:144
 msgid "No Matching Contacts"
 msgstr "일치하는 연락처 없음"
 
-#: app/src/ui/contacts/mod.rs:184
+#: app/src/ui/contacts/mod.rs:191
 msgid "Contact List Width"
 msgstr "연락처 목록 너비"
 
-#: app/src/ui/contacts/mod.rs:193 app/src/ui/contacts/mod.rs:195
+#: app/src/ui/contacts/mod.rs:200 app/src/ui/contacts/mod.rs:202
 msgid "Refresh Contacts"
 msgstr "연락처 새로 고침"
 
-#: app/src/ui/contacts/mod.rs:333
+#: app/src/ui/contacts/mod.rs:340
 msgid "Could not load contacts: {reason}"
 msgstr "연락처를 불러올 수 없습니다: {reason}"
 
-#: app/src/ui/contacts/mod.rs:374
+#: app/src/ui/contacts/mod.rs:381
 msgid "Select a Contact"
 msgstr "연락처 선택"
 
-#: app/src/ui/contacts/mod.rs:377
+#: app/src/ui/contacts/mod.rs:384
 msgid "Choose a contact or add someone to an address book."
 msgstr "연락처를 고르거나 주소록에 새 사람을 추가하세요."
 
-#: app/src/ui/contacts/mod.rs:435
+#: app/src/ui/contacts/mod.rs:442
 msgid "View Photo"
 msgstr "사진 보기"
 
-#: app/src/ui/contacts/mod.rs:469
+#: app/src/ui/contacts/mod.rs:476
 msgid "Refresh Contacts First"
 msgstr "먼저 연락처를 새로 고치세요"
 
-#: app/src/ui/contacts/mod.rs:471 app/src/ui/contacts_prefs.rs:175
+#: app/src/ui/contacts/mod.rs:478 app/src/ui/contacts_prefs.rs:175
 #: app/src/ui/conversation.rs:610 app/src/ui/queued.rs:60
 #: app/src/ui/sidebar.rs:2124
 msgid "Edit…"
 msgstr "편집…"
 
-#: app/src/ui/contacts/mod.rs:519
+#: app/src/ui/contacts/mod.rs:526
 msgid "Mail to or from This Address"
 msgstr "이 주소와 주고받은 메일"
 
-#: app/src/ui/contacts/mod.rs:548
+#: app/src/ui/contacts/mod.rs:555
 msgid "Call"
 msgstr "전화 걸기"
 
-#: app/src/ui/contacts/mod.rs:549
+#: app/src/ui/contacts/mod.rs:556
 msgid "Send SMS"
 msgstr "SMS 보내기"
 
-#: app/src/ui/contacts/mod.rs:687
+#: app/src/ui/contacts/mod.rs:694
 msgid "Allow contacts access in Preferences, then try again."
 msgstr "환경설정에서 연락처 접근을 허용한 다음 다시 시도하세요."
 
-#: app/src/ui/contacts/mod.rs:705
+#: app/src/ui/contacts/mod.rs:712
 msgid "Delete Contact?"
 msgstr "연락처를 삭제할까요?"
 
-#: app/src/ui/contacts/mod.rs:707
+#: app/src/ui/contacts/mod.rs:714
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr "계정에서 {name}을(를) 삭제할까요? 되돌릴 수 없습니다."
 
-#: app/src/ui/contacts/mod.rs:778 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:785 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "복사"
@@ -13461,7 +13461,7 @@ msgstr ""
 "같은 이름의 그룹이 여러 개 있습니다. 이 연락처를 추가하기 전에 계정에서 이름"
 "을 바꾸세요."
 
-#: sync/src/services/carddav.rs:529
+#: sync/src/services/carddav.rs:533
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -13469,7 +13469,7 @@ msgstr ""
 "연락처는 만들었지만 일부 그룹을 저장할 수 없습니다. 이 편집기에서 다시 시도하"
 "면 연락처를 하나 더 만들지 않고 마칠 수 있습니다: {reason}"
 
-#: sync/src/services/carddav.rs:584
+#: sync/src/services/carddav.rs:588
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"

@@ -2739,7 +2739,7 @@ msgstr "Позначити як прочитане"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:340
 #: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
 #: app/src/ui/calendar/popover.rs:763 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:486 app/src/ui/contacts/mod.rs:713
+#: app/src/ui/contacts/mod.rs:493 app/src/ui/contacts/mod.rs:720
 #: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -4307,7 +4307,7 @@ msgstr ""
 "Це повідомлення містить посилання, що можуть вводити в оману. Перевірте "
 "адресу, перш ніж їх відкривати."
 
-#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:577
+#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:584
 msgid "Details"
 msgstr "Подробиці"
 
@@ -4650,7 +4650,7 @@ msgid "Calendar"
 msgstr "Календар"
 
 #: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:50
-#: app/src/ui/contacts/mod.rs:135 app/src/ui/contacts_prefs.rs:256
+#: app/src/ui/contacts/mod.rs:142 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/window.rs:3775
@@ -5088,7 +5088,7 @@ msgstr "Відкрити Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1567
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:507
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:514
 #: app/src/ui/thread_list.rs:495
 msgid "New Message"
 msgstr "Нове повідомлення"
@@ -5295,7 +5295,7 @@ msgstr "Копіювати посилання"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:712
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:719
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -6698,7 +6698,7 @@ msgstr "Прибрати нагадування"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:397
-#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:609
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:616
 msgid "Notes"
 msgstr "Нотатки"
 
@@ -7041,7 +7041,7 @@ msgid "Working location"
 msgstr "Місце роботи"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:587
+#: app/src/ui/contacts/mod.rs:594
 msgid "Birthday"
 msgstr "День народження"
 
@@ -8368,7 +8368,7 @@ msgid "Ignore"
 msgstr "Пропустити"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:307
-#: app/src/ui/contacts/mod.rs:499
+#: app/src/ui/contacts/mod.rs:506
 msgid "Email"
 msgstr "Ел. пошта"
 
@@ -8377,7 +8377,7 @@ msgid "Other email"
 msgstr "Інша ел. пошта"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:313
-#: app/src/ui/contacts/mod.rs:534
+#: app/src/ui/contacts/mod.rs:541
 msgid "Phone"
 msgstr "Телефон"
 
@@ -8413,12 +8413,12 @@ msgstr "Спершу увімкніть контакти цього обліко
 msgid "Edit Contact"
 msgstr "Змінити контакт"
 
-#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:188
-#: app/src/ui/contacts/mod.rs:190
+#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:195
+#: app/src/ui/contacts/mod.rs:197
 msgid "New Contact"
 msgstr "Новий контакт"
 
-#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:403
+#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:410
 #: app/src/ui/hide_my_email.rs:657
 msgid "Account"
 msgstr "Обліковий запис"
@@ -8431,7 +8431,7 @@ msgstr "Змінити фото…"
 msgid "Remove Photo"
 msgstr "Вилучити фото"
 
-#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:583
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:590
 msgid "Organization"
 msgstr "Організація"
 
@@ -8439,15 +8439,15 @@ msgstr "Організація"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "Вводьте дати як РРРР-ММ-ДД або як --ММ-ДД, якщо рік невідомий."
 
-#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:593
+#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:600
 msgid "Groups"
 msgstr "Групи"
 
-#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:635
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:642
 msgid "Websites"
 msgstr "Сайти"
 
-#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:595
+#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:602
 msgid "Postal Addresses"
 msgstr "Поштові адреси"
 
@@ -8559,7 +8559,7 @@ msgstr "Продовжити"
 msgid "All Accounts"
 msgstr "Усі облікові записи"
 
-#: app/src/ui/contacts/mod.rs:71 app/src/ui/contacts/mod.rs:306
+#: app/src/ui/contacts/mod.rs:71 app/src/ui/contacts/mod.rs:313
 msgid "All Groups"
 msgstr "Усі групи"
 
@@ -8571,69 +8571,69 @@ msgstr "Група"
 msgid "Search Contacts"
 msgstr "Пошук контактів"
 
-#: app/src/ui/contacts/mod.rs:137
+#: app/src/ui/contacts/mod.rs:144
 msgid "No Matching Contacts"
 msgstr "Немає відповідних контактів"
 
-#: app/src/ui/contacts/mod.rs:184
+#: app/src/ui/contacts/mod.rs:191
 msgid "Contact List Width"
 msgstr "Ширина списку контактів"
 
-#: app/src/ui/contacts/mod.rs:193 app/src/ui/contacts/mod.rs:195
+#: app/src/ui/contacts/mod.rs:200 app/src/ui/contacts/mod.rs:202
 msgid "Refresh Contacts"
 msgstr "Оновити контакти"
 
-#: app/src/ui/contacts/mod.rs:333
+#: app/src/ui/contacts/mod.rs:340
 msgid "Could not load contacts: {reason}"
 msgstr "Не вдалося завантажити контакти: {reason}"
 
-#: app/src/ui/contacts/mod.rs:374
+#: app/src/ui/contacts/mod.rs:381
 msgid "Select a Contact"
 msgstr "Виберіть контакт"
 
-#: app/src/ui/contacts/mod.rs:377
+#: app/src/ui/contacts/mod.rs:384
 msgid "Choose a contact or add someone to an address book."
 msgstr "Виберіть контакт або додайте когось до адресної книги."
 
-#: app/src/ui/contacts/mod.rs:435
+#: app/src/ui/contacts/mod.rs:442
 msgid "View Photo"
 msgstr "Переглянути фото"
 
-#: app/src/ui/contacts/mod.rs:469
+#: app/src/ui/contacts/mod.rs:476
 msgid "Refresh Contacts First"
 msgstr "Спершу оновіть контакти"
 
-#: app/src/ui/contacts/mod.rs:471 app/src/ui/contacts_prefs.rs:175
+#: app/src/ui/contacts/mod.rs:478 app/src/ui/contacts_prefs.rs:175
 #: app/src/ui/conversation.rs:610 app/src/ui/queued.rs:60
 #: app/src/ui/sidebar.rs:2124
 msgid "Edit…"
 msgstr "Змінити…"
 
-#: app/src/ui/contacts/mod.rs:519
+#: app/src/ui/contacts/mod.rs:526
 msgid "Mail to or from This Address"
 msgstr "Листи на цю адресу або з неї"
 
-#: app/src/ui/contacts/mod.rs:548
+#: app/src/ui/contacts/mod.rs:555
 msgid "Call"
 msgstr "Зателефонувати"
 
-#: app/src/ui/contacts/mod.rs:549
+#: app/src/ui/contacts/mod.rs:556
 msgid "Send SMS"
 msgstr "Надіслати SMS"
 
-#: app/src/ui/contacts/mod.rs:687
+#: app/src/ui/contacts/mod.rs:694
 msgid "Allow contacts access in Preferences, then try again."
 msgstr "Дозвольте доступ до контактів у Параметрах і спробуйте ще раз."
 
-#: app/src/ui/contacts/mod.rs:705
+#: app/src/ui/contacts/mod.rs:712
 msgid "Delete Contact?"
 msgstr "Вилучити контакт?"
 
-#: app/src/ui/contacts/mod.rs:707
+#: app/src/ui/contacts/mod.rs:714
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr "Вилучити {name} з облікового запису? Це не можна скасувати."
 
-#: app/src/ui/contacts/mod.rs:778 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:785 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Копіювати"
@@ -13984,7 +13984,7 @@ msgstr ""
 "Кілька груп мають однакову назву. Перейменуйте їх в обліковому записі, перш "
 "ніж додавати цей контакт."
 
-#: sync/src/services/carddav.rs:529
+#: sync/src/services/carddav.rs:533
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -13992,7 +13992,7 @@ msgstr ""
 "Контакт створено, але деякі групи не вдалося зберегти. Спробуйте ще раз у "
 "цьому редакторі, щоб завершити без другого контакту: {reason}"
 
-#: sync/src/services/carddav.rs:584
+#: sync/src/services/carddav.rs:588
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"

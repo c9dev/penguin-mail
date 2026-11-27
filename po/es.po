@@ -2713,7 +2713,7 @@ msgstr "Marcar como leído"
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:340
 #: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
 #: app/src/ui/calendar/popover.rs:763 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/contacts/mod.rs:486 app/src/ui/contacts/mod.rs:713
+#: app/src/ui/contacts/mod.rs:493 app/src/ui/contacts/mod.rs:720
 #: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -4282,7 +4282,7 @@ msgstr ""
 "Este mensaje contiene enlaces potencialmente engañosos. Compruebe el destino "
 "antes de abrirlos."
 
-#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:577
+#: app/src/render.rs:503 app/src/ui/contacts/mod.rs:584
 msgid "Details"
 msgstr "Detalles"
 
@@ -4623,7 +4623,7 @@ msgid "Calendar"
 msgstr "Calendario"
 
 #: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:50
-#: app/src/ui/contacts/mod.rs:135 app/src/ui/contacts_prefs.rs:256
+#: app/src/ui/contacts/mod.rs:142 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/window.rs:3775
@@ -5060,7 +5060,7 @@ msgstr "Abrir Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:372
 #: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1567
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:507
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/mod.rs:514
 #: app/src/ui/thread_list.rs:495
 msgid "New Message"
 msgstr "Mensaje nuevo"
@@ -5266,7 +5266,7 @@ msgstr "Copiar el enlace"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
 #: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:712
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/mod.rs:719
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -6674,7 +6674,7 @@ msgstr "Quitar recordatorio"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:397
-#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:609
+#: app/src/ui/contacts/editor.rs:398 app/src/ui/contacts/mod.rs:616
 msgid "Notes"
 msgstr "Notas"
 
@@ -7013,7 +7013,7 @@ msgid "Working location"
 msgstr "Lugar de trabajo"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:328
-#: app/src/ui/contacts/mod.rs:587
+#: app/src/ui/contacts/mod.rs:594
 msgid "Birthday"
 msgstr "Cumpleaños"
 
@@ -8326,7 +8326,7 @@ msgid "Ignore"
 msgstr "Ignorar"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:307
-#: app/src/ui/contacts/mod.rs:499
+#: app/src/ui/contacts/mod.rs:506
 msgid "Email"
 msgstr "Correo electrónico"
 
@@ -8335,7 +8335,7 @@ msgid "Other email"
 msgstr "Otro correo electrónico"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:313
-#: app/src/ui/contacts/mod.rs:534
+#: app/src/ui/contacts/mod.rs:541
 msgid "Phone"
 msgstr "Teléfono"
 
@@ -8371,12 +8371,12 @@ msgstr "Primero activa los contactos de esta cuenta en Preferencias."
 msgid "Edit Contact"
 msgstr "Editar contacto"
 
-#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:188
-#: app/src/ui/contacts/mod.rs:190
+#: app/src/ui/contacts/editor.rs:221 app/src/ui/contacts/mod.rs:195
+#: app/src/ui/contacts/mod.rs:197
 msgid "New Contact"
 msgstr "Contacto nuevo"
 
-#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:403
+#: app/src/ui/contacts/editor.rs:235 app/src/ui/contacts/mod.rs:410
 #: app/src/ui/hide_my_email.rs:657
 msgid "Account"
 msgstr "Cuenta"
@@ -8389,7 +8389,7 @@ msgstr "Cambiar foto…"
 msgid "Remove Photo"
 msgstr "Quitar foto"
 
-#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:583
+#: app/src/ui/contacts/editor.rs:296 app/src/ui/contacts/mod.rs:590
 msgid "Organization"
 msgstr "Organización"
 
@@ -8397,15 +8397,15 @@ msgstr "Organización"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "Escribe las fechas como AAAA-MM-DD, o --MM-DD si no se sabe el año."
 
-#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:593
+#: app/src/ui/contacts/editor.rs:351 app/src/ui/contacts/mod.rs:600
 msgid "Groups"
 msgstr "Grupos"
 
-#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:635
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/mod.rs:642
 msgid "Websites"
 msgstr "Sitios web"
 
-#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:595
+#: app/src/ui/contacts/editor.rs:354 app/src/ui/contacts/mod.rs:602
 msgid "Postal Addresses"
 msgstr "Direcciones postales"
 
@@ -8517,7 +8517,7 @@ msgstr "Seguir editando"
 msgid "All Accounts"
 msgstr "Todas las cuentas"
 
-#: app/src/ui/contacts/mod.rs:71 app/src/ui/contacts/mod.rs:306
+#: app/src/ui/contacts/mod.rs:71 app/src/ui/contacts/mod.rs:313
 msgid "All Groups"
 msgstr "Todos los grupos"
 
@@ -8529,70 +8529,70 @@ msgstr "Grupo"
 msgid "Search Contacts"
 msgstr "Buscar contactos"
 
-#: app/src/ui/contacts/mod.rs:137
+#: app/src/ui/contacts/mod.rs:144
 msgid "No Matching Contacts"
 msgstr "Ningún contacto coincide"
 
-#: app/src/ui/contacts/mod.rs:184
+#: app/src/ui/contacts/mod.rs:191
 msgid "Contact List Width"
 msgstr "Ancho de la lista de contactos"
 
-#: app/src/ui/contacts/mod.rs:193 app/src/ui/contacts/mod.rs:195
+#: app/src/ui/contacts/mod.rs:200 app/src/ui/contacts/mod.rs:202
 msgid "Refresh Contacts"
 msgstr "Actualizar contactos"
 
-#: app/src/ui/contacts/mod.rs:333
+#: app/src/ui/contacts/mod.rs:340
 msgid "Could not load contacts: {reason}"
 msgstr "No se han podido cargar los contactos: {reason}"
 
-#: app/src/ui/contacts/mod.rs:374
+#: app/src/ui/contacts/mod.rs:381
 msgid "Select a Contact"
 msgstr "Selecciona un contacto"
 
-#: app/src/ui/contacts/mod.rs:377
+#: app/src/ui/contacts/mod.rs:384
 msgid "Choose a contact or add someone to an address book."
 msgstr "Elige un contacto o añade a alguien a una libreta de direcciones."
 
-#: app/src/ui/contacts/mod.rs:435
+#: app/src/ui/contacts/mod.rs:442
 msgid "View Photo"
 msgstr "Ver foto"
 
-#: app/src/ui/contacts/mod.rs:469
+#: app/src/ui/contacts/mod.rs:476
 msgid "Refresh Contacts First"
 msgstr "Actualiza los contactos primero"
 
-#: app/src/ui/contacts/mod.rs:471 app/src/ui/contacts_prefs.rs:175
+#: app/src/ui/contacts/mod.rs:478 app/src/ui/contacts_prefs.rs:175
 #: app/src/ui/conversation.rs:610 app/src/ui/queued.rs:60
 #: app/src/ui/sidebar.rs:2124
 msgid "Edit…"
 msgstr "Editar…"
 
-#: app/src/ui/contacts/mod.rs:519
+#: app/src/ui/contacts/mod.rs:526
 msgid "Mail to or from This Address"
 msgstr "Correo enviado a esta dirección o recibido de ella"
 
-#: app/src/ui/contacts/mod.rs:548
+#: app/src/ui/contacts/mod.rs:555
 msgid "Call"
 msgstr "Llamar"
 
-#: app/src/ui/contacts/mod.rs:549
+#: app/src/ui/contacts/mod.rs:556
 msgid "Send SMS"
 msgstr "Enviar SMS"
 
-#: app/src/ui/contacts/mod.rs:687
+#: app/src/ui/contacts/mod.rs:694
 msgid "Allow contacts access in Preferences, then try again."
 msgstr ""
 "Permite el acceso a los contactos en Preferencias y vuelve a intentarlo."
 
-#: app/src/ui/contacts/mod.rs:705
+#: app/src/ui/contacts/mod.rs:712
 msgid "Delete Contact?"
 msgstr "¿Eliminar el contacto?"
 
-#: app/src/ui/contacts/mod.rs:707
+#: app/src/ui/contacts/mod.rs:714
 msgid "Delete {name} from its account? This cannot be undone."
 msgstr "¿Eliminar a {name} de su cuenta? No se puede deshacer."
 
-#: app/src/ui/contacts/mod.rs:778 app/src/ui/goa_page.rs:124
+#: app/src/ui/contacts/mod.rs:785 app/src/ui/goa_page.rs:124
 #: app/src/ui/goa_page.rs:371 app/src/ui/hide_my_email.rs:828
 msgid "Copy"
 msgstr "Copiar"
@@ -13883,7 +13883,7 @@ msgstr ""
 "Varios grupos tienen el mismo nombre. Cámbiales el nombre en la cuenta antes "
 "de añadir este contacto."
 
-#: sync/src/services/carddav.rs:529
+#: sync/src/services/carddav.rs:533
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -13892,7 +13892,7 @@ msgstr ""
 "Vuelve a intentarlo en este editor para terminar sin crear otro contacto: "
 "{reason}"
 
-#: sync/src/services/carddav.rs:584
+#: sync/src/services/carddav.rs:588
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
