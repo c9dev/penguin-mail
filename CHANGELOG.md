@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A recipient chip no longer runs its background past its Remove button when a longer chip sits beside it.
 - Closing Customize Mailboxes releases its folder lists.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
 - Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
@@ -37,6 +38,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - IMAP accounts show only the folders you subscribe to, as Thunderbird does. Turn off Show Only Subscribed Folders in Preferences → Accounts to see every folder.
 - Subscribe to IMAP folders and unsubscribe from them in Manage Folders, in the account's menu in the sidebar.
 - Moving mail on an IMAP account offers the folders the sidebar shows, and its search finds every other folder on the server.
+- Drag a recipient from To, Cc or Bcc onto one of the other rows to move them there, or press the Menu key on a chip and choose Move to To, Cc or Bcc.
 - Drag a message onto a collapsed account and hold it there: the account opens so the message can be dropped on a folder that was out of sight.
 
 ### Improved
