@@ -1,11 +1,11 @@
 //! The Windows adapter: a WebView2 page over an empty GTK anchor.
 //!
 //! GTK 4 cannot hold a native view in its widget tree, so the page is a
-//! child HWND of the window's surface, and [`frame::follow`] moves it over
-//! the anchor, a focusable `gtk::Box` that takes the page's room in the
-//! layout, after GTK paints each frame. A GTK widget drawn over the page,
-//! such as the event card, cannot show through a child HWND, so the page
-//! hides itself for as long as one covers it.
+//! child of a host HWND in the window's surface, and [`frame::follow`]
+//! moves the host over the anchor, a focusable `gtk::Box` that takes the
+//! page's room in the layout, after GTK paints each frame. A GTK widget
+//! drawn over the page, such as the event card, is cut out of the host's
+//! region, so it shows through.
 //!
 //! The engine lives on the GTK thread the same way COM objects do: the
 //! environment and each controller are created through asynchronous calls
@@ -28,9 +28,16 @@ use webview2_com::{
     WebResourceRequestedEventHandler,
 };
 use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::Graphics::Gdi::{
+    CombineRgn, CreateRectRgn, DeleteObject, RGN_DIFF, SetWindowRgn,
+};
 use windows::Win32::System::Com::StructuredStorage::CreateStreamOnHGlobal;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetFocus, SetFocus};
-use windows::core::{BOOL, HSTRING, Interface};
+use windows::Win32::UI::WindowsAndMessaging::{
+    CreateWindowExW, DestroyWindow, GA_ROOT, GetAncestor, SW_HIDE, SW_SHOWNA, SWP_NOACTIVATE,
+    SWP_NOZORDER, SetParent, SetWindowPos, ShowWindow, WINDOW_EX_STYLE, WS_CHILD, WS_CLIPCHILDREN,
+};
+use windows::core::{BOOL, HSTRING, Interface, w};
 
 use super::frame;
 use super::owned_text::OwnedText;
@@ -164,6 +171,11 @@ struct Inner {
     heard: RefCell<HashMap<String, Message>>,
     /// GTK widgets drawn over the page, such as the event card's holder.
     covers: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
+    /// The child window the page lives in. A child HWND cannot give way to
+    /// part of itself, so the covers are cut out of this one's region.
+    host: Cell<HWND>,
+    /// The host's size and the holes last cut in it.
+    cut: RefCell<Option<(i32, i32, Vec<RECT>)>>,
     /// The HWND the page holds the keyboard with, recorded after a
     /// `MoveFocus`, so a GTK focus-out that really is the page's own
     /// taking over is not mistaken for the page losing it.
@@ -180,6 +192,11 @@ impl Drop for Inner {
         if let Some(core) = self.core.borrow().as_ref() {
             unsafe {
                 let _ = core.controller.Close();
+            }
+        }
+        if !self.host.get().is_invalid() {
+            unsafe {
+                let _ = DestroyWindow(self.host.get());
             }
         }
     }
@@ -299,25 +316,49 @@ impl Inner {
         }
     }
 
-    /// Whether a covering GTK widget intersects the anchor, meaning the
-    /// page must hide since a child HWND cannot give way to part of itself.
-    fn covered(&self) -> bool {
+    /// Cuts the covers out of the host's region, so the GTK widgets drawn
+    /// over the page show through it and take their own clicks. `at` is
+    /// where the host now sits in the client area.
+    fn cut(&self, at: RECT) {
         let Some(native) = self.anchor.native() else {
-            return false;
+            return;
         };
-        let root: gtk::Widget = native.clone().upcast();
-        let Some(own) = self.anchor.compute_bounds(&root) else {
-            return false;
-        };
-        self.covers.borrow().iter().any(|weak| {
-            let Some(widget) = weak.upgrade() else {
-                return false;
-            };
-            widget.is_visible()
-                && widget
-                    .compute_bounds(&root)
-                    .is_some_and(|rect| rect.intersection(&own).is_some())
-        })
+        let root: gtk::Widget = native.upcast();
+        let (width, height) = (at.right - at.left, at.bottom - at.top);
+        let holes: Vec<RECT> = self
+            .covers
+            .borrow()
+            .iter()
+            .filter_map(|weak| weak.upgrade())
+            .filter(|widget| widget.is_mapped())
+            .filter_map(|widget| self.client(widget.compute_bounds(&root)?))
+            .map(|hole| RECT {
+                left: hole.left.max(at.left) - at.left,
+                top: hole.top.max(at.top) - at.top,
+                right: hole.right.min(at.right) - at.left,
+                bottom: hole.bottom.min(at.bottom) - at.top,
+            })
+            .filter(|hole| hole.left < hole.right && hole.top < hole.bottom)
+            .collect();
+        let key = Some((width, height, holes));
+        if *self.cut.borrow() == key {
+            return;
+        }
+        let holes = &key.as_ref().expect("just built").2;
+        unsafe {
+            let region = (!holes.is_empty()).then(|| {
+                let region = CreateRectRgn(0, 0, width, height);
+                for hole in holes {
+                    let cut = CreateRectRgn(hole.left, hole.top, hole.right, hole.bottom);
+                    CombineRgn(Some(region), Some(region), Some(cut), RGN_DIFF);
+                    let _ = DeleteObject(cut.into());
+                }
+                region
+            });
+            // The window owns the region from here on.
+            SetWindowRgn(self.host.get(), region, true);
+        }
+        *self.cut.borrow_mut() = key;
     }
 
     /// Moves the page over its anchor, called after GTK paints each frame.
@@ -325,7 +366,7 @@ impl Inner {
         let Some(core) = self.core.borrow().as_ref().cloned() else {
             return;
         };
-        let mut visible = self.anchor.is_mapped() && !self.covered() && !self.dialog_up();
+        let mut visible = self.anchor.is_mapped() && !self.dialog_up();
         let full = self.rect();
         let mut rect = full;
         if visible
@@ -354,10 +395,28 @@ impl Inner {
             });
         }
 
+        let host = self.host.get();
         unsafe {
             let _ = core.controller.SetIsVisible(visible);
+            let _ = ShowWindow(host, if visible { SW_SHOWNA } else { SW_HIDE });
             if let Some(rect) = rect {
-                let _ = core.controller.SetBounds(rect);
+                let (width, height) = (rect.right - rect.left, rect.bottom - rect.top);
+                let _ = SetWindowPos(
+                    host,
+                    None,
+                    rect.left,
+                    rect.top,
+                    width,
+                    height,
+                    SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+                let _ = core.controller.SetBounds(RECT {
+                    left: 0,
+                    top: 0,
+                    right: width,
+                    bottom: height,
+                });
+                self.cut(rect);
             }
         }
     }
@@ -633,6 +692,42 @@ fn create(inner: &Weak<Inner>) {
     };
     let Some(window) = hwnd(page.anchor.upcast_ref()) else {
         return;
+    };
+    // A STATIC child answers hit tests with HTTRANSPARENT, so what the
+    // page does not cover still reaches the GTK window beneath.
+    let host = page.host.get();
+    let window = if host.is_invalid() {
+        let made = unsafe {
+            CreateWindowExW(
+                WINDOW_EX_STYLE::default(),
+                w!("STATIC"),
+                None,
+                WS_CHILD | WS_CLIPCHILDREN,
+                0,
+                0,
+                0,
+                0,
+                Some(window),
+                None,
+                None,
+                None,
+            )
+        };
+        match made {
+            Ok(host) => {
+                page.host.set(host);
+                host
+            }
+            Err(err) => {
+                tracing::warn!(error = %err, "could not make the page's window");
+                return;
+            }
+        }
+    } else {
+        unsafe {
+            let _ = SetParent(host, Some(window));
+        }
+        host
     };
     let inner = inner.clone();
     with_environment(move |env| {
@@ -919,6 +1014,8 @@ impl WebView {
             crashed: RefCell::new(Vec::new()),
             heard: RefCell::new(HashMap::new()),
             covers: RefCell::new(Vec::new()),
+            host: Cell::new(HWND::default()),
+            cut: RefCell::new(None),
             focused: Cell::new(HWND::default()),
             me: RefCell::new(Weak::new()),
             retry: Cell::new(false),
@@ -987,8 +1084,10 @@ impl WebView {
                     inner.focused.set(HWND::default());
                     inner.with_core(|core| unsafe {
                         let mut parent = HWND::default();
+                        // The parent is the page's host; the keyboard goes
+                        // back to the GTK window that holds it.
                         if core.controller.ParentWindow(&mut parent).is_ok() {
-                            let _ = SetFocus(Some(parent));
+                            let _ = SetFocus(Some(GetAncestor(parent, GA_ROOT)));
                         }
                     });
                 });
@@ -1183,9 +1282,8 @@ impl WebView {
                 .contains(gtk::StateFlags::FOCUS_WITHIN)
     }
 
-    /// Says `widget` is drawn over the page, as the event card is. A
-    /// child HWND cannot give way to part of itself, so the page hides
-    /// for as long as a cover intersects its anchor.
+    /// Says `widget` is drawn over the page, as the event card is. Its
+    /// rectangle is cut out of the page's host window while it is mapped.
     pub fn cover(&self, widget: &impl IsA<gtk::Widget>) {
         self.0.covers.borrow_mut().push(widget.as_ref().downgrade());
         self.0.placed();
