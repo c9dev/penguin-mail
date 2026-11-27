@@ -348,7 +348,7 @@ fn a_street_with_a_newline_keeps_every_address_part_in_place() {
     use mailrs_domain::contact::Changes;
     let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nADR;TYPE=HOME:;;12 Main St\\nFlat 4;Lisbon;;1000-001;Portugal\r\nEND:VCARD\r\n";
     let home = ["", "", "12 Main St\nFlat 4", "Lisbon", "", "1000-001", "Portugal"].map(String::from);
-    assert_eq!(read_card(text).unwrap().details.addresses, [home.clone()]);
+    assert_eq!(read_card(text).unwrap().details.addresses, std::slice::from_ref(&home));
     let work = ["", "", "1 Work Road", "Porto", "", "", "Portugal"].map(String::from);
     let saved = patch_card(
         text,
