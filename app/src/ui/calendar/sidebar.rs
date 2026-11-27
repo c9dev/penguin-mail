@@ -1205,11 +1205,19 @@ impl CalendarSidebar {
             .button(gdk::BUTTON_SECONDARY)
             .build();
         let menu = options.clone();
-        click.connect_pressed(move |_, _, _, _| menu.popup());
+        click.connect_pressed(move |_, _, _, _| {
+            if crate::ui::safe_popover::may_present(&menu) {
+                menu.popup();
+            }
+        });
         row.add_controller(click);
         let press = gtk::GestureLongPress::new();
         let menu = options.clone();
-        press.connect_pressed(move |_, _, _| menu.popup());
+        press.connect_pressed(move |_, _, _| {
+            if crate::ui::safe_popover::may_present(&menu) {
+                menu.popup();
+            }
+        });
         row.add_controller(press);
         let on_change = Rc::clone(&self.on_change);
         let calendar_id = calendar.id.clone();

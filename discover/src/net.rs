@@ -96,7 +96,12 @@ pub struct RealNet {
 
 impl RealNet {
     pub fn new() -> Result<RealNet, RealNetError> {
-        let resolver = TokioResolver::builder_tokio()?.build()?;
+        let mut builder = TokioResolver::builder_tokio()?;
+        // Windows Firewall asks the person to allow the app on public
+        // networks when a query socket binds a port hickory picked itself;
+        // a port the system picks raises no prompt.
+        builder.options_mut().os_port_selection = cfg!(windows);
+        let resolver = builder.build()?;
         let http = reqwest::Client::builder()
             .https_only(true)
             .redirect(reqwest::redirect::Policy::limited(3))

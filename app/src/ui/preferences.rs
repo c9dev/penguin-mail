@@ -990,6 +990,32 @@ fn named(program: &str, version: Option<String>) -> String {
     }
 }
 
+/// Tells the writer where to get a dictionary: a package on Linux and
+/// macOS, a folder on Windows, where no package manager reaches.
+#[cfg(not(windows))]
+fn no_dictionaries() -> String {
+    gettext(
+        "No dictionaries are installed, so Penguin Mail is not checking \
+         spelling. Install a Hunspell dictionary, such as hunspell-en-us \
+         or hunspell-pt-pt, and reopen the composer.",
+    )
+}
+
+#[cfg(windows)]
+fn no_dictionaries() -> String {
+    let folder = crate::ui::composer::spell::own_folder()
+        .map(|dir| dir.display().to_string())
+        .unwrap_or_default();
+    fill(
+        &gettext(
+            "No dictionaries are installed, so Penguin Mail is not checking \
+             spelling. Put a dictionary's .aff and .dic files in {folder} \
+             and reopen the composer.",
+        ),
+        &[("folder", &folder)],
+    )
+}
+
 /// Which dictionaries are installed, and which one each account writes in.
 ///
 /// With none installed the group says so rather than leaving the composer
@@ -1004,11 +1030,7 @@ fn spelling_group(
     if installed.is_empty() {
         return adw::PreferencesGroup::builder()
             .title(gettext("Spelling"))
-            .description(gettext(
-                "No dictionaries are installed, so Penguin Mail is not checking \
-                 spelling. Install a Hunspell dictionary, such as hunspell-en-us \
-                 or hunspell-pt-pt, and reopen the composer.",
-            ))
+            .description(no_dictionaries())
             .build();
     }
     // Each row is an account and its value the language, so the group

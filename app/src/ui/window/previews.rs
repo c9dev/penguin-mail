@@ -11,35 +11,69 @@
 use std::cell::RefCell;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
+#[cfg(unix)]
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 /// The folder under the cache the copies go in.
 pub(crate) fn folder() -> PathBuf {
+    // GLib's cache folder on Windows is INetCache, which the system cleans
+    // and scans on its own terms.
+    #[cfg(windows)]
+    if let Some(local) = crate::exe::local_data() {
+        return local.join("previews");
+    }
     gtk::glib::user_cache_dir()
         .join("penguin-mail")
         .join("previews")
 }
 
+/// Marks a file the mail brought as downloaded from the internet, so
+/// Windows warns before it runs a script or an installer. It does nothing
+/// elsewhere. A volume with no alternate streams (FAT, exFAT) refuses the
+/// mark and the file stays as written.
+pub(crate) fn mark_from_internet(path: &Path) {
+    #[cfg(windows)]
+    {
+        let mut stream = path.as_os_str().to_owned();
+        stream.push(":Zone.Identifier");
+        if let Err(err) = fs::write(&stream, "[ZoneTransfer]\r\nZoneId=3\r\n") {
+            tracing::debug!("could not mark {} as downloaded: {err}", path.display());
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = path;
+}
+
 /// Writes `data` under `dir` as `name`, or `name (2)` and so on when that
 /// is taken, readable by the person alone. Runs on any thread.
 pub(crate) fn write(dir: &Path, name: &str, data: &[u8]) -> io::Result<PathBuf> {
-    fs::DirBuilder::new()
-        .recursive(true)
-        .mode(0o700)
-        .create(dir)?;
-    // A folder an older version made carries the umask's permissions.
-    fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    #[cfg(unix)]
+    {
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir)?;
+        // A folder an older version made carries the umask's permissions.
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    }
+    #[cfg(windows)]
+    fs::create_dir_all(dir)?;
     loop {
         let path = super::unique_path(dir, name);
-        let opened = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(&path);
+        let options = {
+            let mut options = OpenOptions::new();
+            options.write(true).create_new(true);
+            #[cfg(unix)]
+            options.mode(0o600);
+            options
+        };
+        let opened = options.open(&path);
         match opened {
             Ok(mut file) => {
                 file.write_all(data)?;
+                drop(file);
+                mark_from_internet(&path);
                 return Ok(path);
             }
             // Another copy took the name between the look and the write.
@@ -109,10 +143,12 @@ fn remove(path: &Path) {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     fn mode(path: &Path) -> u32 {
         fs::metadata(path).unwrap().permissions().mode() & 0o777
     }
 
+    #[cfg(unix)]
     #[test]
     fn only_the_person_can_read_a_preview() {
         let home = tempfile::tempdir().unwrap();

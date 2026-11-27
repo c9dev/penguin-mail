@@ -1,5 +1,10 @@
 //! Penguin Mail: mail and calendar for Linux.
 
+// A release build owns no console: without this the Start Menu and
+// Explorer open one behind the window. Debug builds keep theirs for
+// the logs.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 #[cfg(test)]
 mod accent_contrast;
 mod add_account;
@@ -112,13 +117,113 @@ fn usage() -> String {
     )
 }
 
+/// A setenv the C runtime itself sees: Rust's env API writes only the
+/// Win32 environment block, while libraries reading plain getenv — pango
+/// for its backend choice, fontconfig for its config — snapshot the C
+/// runtime's own table before main runs. `_wputenv_s` updates that table;
+/// `set_var` still runs so children see the variable too.
+#[cfg(target_os = "windows")]
+fn putenv(name: &str, value: impl AsRef<std::ffi::OsStr>) {
+    use std::os::windows::ffi::OsStrExt;
+    unsafe { std::env::set_var(name, &value) };
+    let name: Vec<u16> = name.encode_utf16().chain([0]).collect();
+    let value: Vec<u16> = value.as_ref().encode_wide().chain([0]).collect();
+    unsafe { libc::wputenv_s(name.as_ptr(), value.as_ptr()) };
+}
+
+/// Release builds link without a console, so a copy launched from the
+/// Start Menu or Explorer owns none. One launched from a terminal
+/// should still show `--version`, usage and the logs, so when a std
+/// handle came in null — the GUI case — it is pointed at the parent's
+/// console. Handles the launch did inherit (a shell's own, or the
+/// pipes an MCP server speaks on) are left as they are.
+#[cfg(target_os = "windows")]
+fn attach_parent_console() {
+    use windows::Win32::Foundation::GENERIC_ACCESS_RIGHTS;
+    use windows::Win32::Storage::FileSystem::{
+        CreateFileW, FILE_FLAGS_AND_ATTRIBUTES, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
+    use windows::Win32::System::Console::{
+        ATTACH_PARENT_PROCESS, AttachConsole, GetStdHandle, STD_ERROR_HANDLE, STD_HANDLE,
+        STD_OUTPUT_HANDLE, SetStdHandle,
+    };
+    use windows::core::w;
+
+    const CONSOLE: &[STD_HANDLE] = &[STD_OUTPUT_HANDLE, STD_ERROR_HANDLE];
+    unsafe {
+        if CONSOLE.iter().all(|&h| GetStdHandle(h).is_ok()) {
+            return;
+        }
+        if AttachConsole(ATTACH_PARENT_PROCESS).is_err() {
+            return;
+        }
+        let Ok(conout) = CreateFileW(
+            w!("CONOUT$"),
+            GENERIC_ACCESS_RIGHTS(0x8000_0000 | 0x4000_0000).0,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            None,
+            OPEN_EXISTING,
+            FILE_FLAGS_AND_ATTRIBUTES(0),
+            None,
+        ) else {
+            return;
+        };
+        for &handle in CONSOLE {
+            if GetStdHandle(handle).is_err() {
+                let _ = SetStdHandle(handle, conout);
+            }
+        }
+    }
+}
+
 fn main() -> glib::ExitCode {
+    #[cfg(target_os = "windows")]
+    attach_parent_console();
+    // GLib's cache folder on Windows is Internet Explorer's INetCache, which
+    // Disk Cleanup and "delete browsing data" empty, downloaded updates
+    // included. The app's caches live in its own folder instead.
+    #[cfg(target_os = "windows")]
+    if std::env::var_os("XDG_CACHE_HOME").is_none()
+        && let Some(local) = exe::local_data()
+    {
+        putenv("XDG_CACHE_HOME", local.join("cache"));
+    }
+    // The installer's AppMutex names this; the handle lives until exit.
+    #[cfg(target_os = "windows")]
+    let _running = unsafe {
+        windows::Win32::System::Threading::CreateMutexW(
+            None,
+            false,
+            windows::core::w!("PenguinMailRunning"),
+        )
+    };
     #[cfg(feature = "packaging-appimage")]
     appimage::prepare().expect("could not prepare the AppImage");
     #[cfg(target_os = "macos")]
     bundle::prepare().expect("could not prepare the application bundle");
     // On macOS this has to come before GTK starts; see `web`.
     web::prepare();
+    // The win32 fontmap cannot satisfy color font descriptions; fontconfig
+    // can. Pango reads the variable with plain getenv, which a Rust
+    // set_var never reaches — its snapshot was taken before main ran —
+    // so the C runtime's own _wputenv_s writes it.
+    #[cfg(target_os = "windows")]
+    if std::env::var_os("PANGOCAIRO_BACKEND").is_none() {
+        putenv("PANGOCAIRO_BACKEND", "fc");
+    }
+    // Packaged builds ship fontconfig's etc/fonts beside bin/; builds with
+    // a compiled-in config path look only there unless FONTCONFIG_PATH
+    // names this tree instead. Pointing at the packaged copy only when it
+    // exists keeps a dev build on its own config.
+    #[cfg(target_os = "windows")]
+    if std::env::var_os("FONTCONFIG_PATH").is_none()
+        && let Some(fonts) = std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|bin| bin.join("../etc/fonts")))
+            .filter(|dir| dir.join("fonts.conf").is_file())
+    {
+        putenv("FONTCONFIG_PATH", fonts.as_os_str());
+    }
     #[cfg(all(target_os = "macos", debug_assertions))]
     drive::from_env();
     // async-imap logs passwords and mail at trace level; `quiet` drops
@@ -209,8 +314,14 @@ fn main() -> glib::ExitCode {
         println!("penguin-mail {}", env!("CARGO_PKG_VERSION"));
         return glib::ExitCode::SUCCESS;
     }
+    // Windows starts the program with `-Embedding` to deliver a click on a
+    // toast, after the app has quit. The click itself arrives through the
+    // COM class `notifications` registers.
+    let embedded = cfg!(windows) && args.iter().any(|a| a == "-Embedding");
     if let Some(unknown) = args.iter().skip(1).find(|a| {
-        a.starts_with('-') && !matches!(a.as_str(), "--background" | "--demo" | "--compose")
+        a.starts_with('-')
+            && !(embedded && *a == "-Embedding")
+            && !matches!(a.as_str(), "--background" | "--demo" | "--compose")
     }) {
         let line = fill(
             &gettext("penguin-mail: unknown option {option}"),
@@ -228,7 +339,8 @@ fn main() -> glib::ExitCode {
         .ok()
         .and_then(|here| named_file(&raw_args, &here));
     let demo = args.iter().any(|a| a == "--demo");
-    let background = args.iter().any(|a| a == "--background");
+    // A toast click opens its own window, so the start has none of its own.
+    let background = embedded || args.iter().any(|a| a == "--background");
     if !demo {
         old_id::carry_over_on_start();
     }
@@ -420,6 +532,8 @@ fn mailto_recipient(rest: &str) -> String {
 
 /// Starts GTK and libadwaita and loads the app's icons and stylesheet.
 /// Safe to call more than once.
+// windows-gnu's clippy misses that the initializer is already const.
+#[cfg_attr(windows, allow(clippy::missing_const_for_thread_local))]
 pub fn ensure_gtk() {
     // GtkApplication may have started GTK before our resources were
     // registered, so GTK being initialized does not mean our style is.
@@ -506,6 +620,7 @@ fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
     toolbar.add_top_bar(&adw::HeaderBar::new());
     toolbar.set_content(Some(&page));
     let window = adw::Window::builder()
+        .title(gettext("Penguin Mail"))
         .default_width(560)
         .default_height(420)
         .content(&toolbar)
@@ -524,7 +639,9 @@ mod tests {
     use std::ffi::OsString;
     use std::path::{Path, PathBuf};
 
-    use super::{FileKind, NamedFile, file_kind, mailto_recipient, named_file, path_from_variant};
+    #[cfg(unix)]
+    use super::path_from_variant;
+    use super::{FileKind, NamedFile, file_kind, mailto_recipient, named_file};
 
     fn args(list: &[&str]) -> Vec<OsString> {
         std::iter::once("penguin-mail")
@@ -601,6 +718,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_calendar_file_whose_name_is_not_utf8_reaches_the_running_copy_unchanged() {
         use std::os::unix::ffi::OsStrExt;

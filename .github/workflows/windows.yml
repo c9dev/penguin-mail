@@ -1,0 +1,251 @@
+name: Windows
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # The release workflow builds and smoke-tests the installer through this.
+  workflow_call:
+    inputs:
+      source_ref:
+        type: string
+        default: ""
+      release:
+        type: boolean
+        default: false
+    # Without the clients the app builds but cannot sign in to Google or
+    # Microsoft. Pull requests run without them.
+    secrets:
+      PENGUIN_MAIL_GOOGLE_CLIENT_ID:
+        required: false
+      PENGUIN_MAIL_GOOGLE_CLIENT_SECRET:
+        required: false
+      MICROSOFT_CLIENT_ID:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}-${{ inputs.release && 'release' || 'ci' }}
+  cancel-in-progress: ${{ !inputs.release }}
+
+jobs:
+  native:
+    name: Windows sandbox and platform regressions
+    # A release runs the installer jobs below; CI has already run these.
+    if: ${{ !inputs.release }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The same release as the prebuilt helper, built without its download host.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rmyorston/busybox-w32
+          ref: 5f09fb446adf81d005f0aad9dc47eca19ac3b74c # FRP-6354-g5f09fb446
+          path: .ci-busybox
+          persist-credentials: false
+      - uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-gettext-tools
+            mingw-w64-ucrt-x86_64-gettext-runtime
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-poppler
+      - name: Install the GNU Rust toolchain
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal
+      - name: Build the pinned BusyBox helper
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          make -C .ci-busybox CROSS_COMPILE= mingw64u_defconfig
+          make -C .ci-busybox CROSS_COMPILE= -j2 busybox.exe
+          cp .ci-busybox/busybox.exe busybox64u.exe
+          ./busybox64u.exe sh -c 'printf "BusyBox shell ready\n"'
+      - name: Exercise native Windows isolation, ownership and locale behavior
+        shell: msys2 {0}
+        env:
+          PENGUIN_MAIL_REQUIRE_SANDBOX: '1'
+          CARGO_BUILD_JOBS: '2'
+        run: |
+          set -euo pipefail
+          export PENGUIN_MAIL_BUSYBOX="$(cygpath -m "$PWD/busybox64u.exe")"
+          export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
+          export GETTEXT_SYSTEM=1
+          # The PDF test needs the poppler pdftotext the installer ships; the one
+          # the runner's own PATH offers could not read the test's PDF.
+          # The whole app suite, Windows-only tests included; one thread, since
+          # the sandbox tests change folder permissions the others read.
+          cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail -- --test-threads=1
+      # A test that aborts the process loses its captured output, so a failed
+      # suite runs the GTK checks again with their output shown. Run alone they
+      # crash often (0xc000041d) when a window is made after one was closed,
+      # which is still open; see docs/windows.md.
+      - name: Show the GTK checks' output
+        if: failure()
+        shell: msys2 {0}
+        env:
+          CARGO_BUILD_JOBS: '2'
+          RUST_BACKTRACE: '1'
+          RUST_LOG: 'debug'
+        run: |
+          set -euo pipefail
+          export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
+          export GETTEXT_SYSTEM=1
+          cargo +stable-x86_64-pc-windows-gnu test -p mailrs --bin penguin-mail ui::composer::richbuffer::tests::the_buffer_holds_a_rich_body_and_gives_it_back -- --exact --nocapture --test-threads=1
+      - name: Lint the Windows build
+        shell: msys2 {0}
+        env:
+          CARGO_BUILD_JOBS: '2'
+        run: |
+          set -euo pipefail
+          export X86_64_PC_WINDOWS_GNU_MSYSTEM_PREFIX="$(cygpath -m /ucrt64)"
+          export GETTEXT_SYSTEM=1
+          rustup component add clippy --toolchain stable-x86_64-pc-windows-gnu
+          cargo +stable-x86_64-pc-windows-gnu clippy -p mailrs --all-targets -- -D warnings
+      - name: Compile the installer and verify uninstall cleanup
+        shell: pwsh
+        run: scripts/test-windows-installer.ps1
+
+  # The release is the MSYS2 UCRT64 build the native job tests, with MSYS2's
+  # gtk4 package rebuilt from its pinned recipe plus the monitor patch.
+  installer:
+    name: Build the installer
+    # windows-2025 carries Inno Setup 6 and MSYS2; windows-latest moves to newer images.
+    runs-on: windows-2025
+    timeout-minutes: 180
+    outputs:
+      artifact: ${{ steps.version.outputs.artifact }}
+    env:
+      MINGW_PACKAGES_SHA: 250d5f562ec1587ec36100cf2c42fa6f1c170c4a # gtk4: 4.24.2
+      GTK4_PACKAGE: dist/gtk4-package
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source_ref || github.sha }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: msys2/MINGW-packages
+          ref: ${{ env.MINGW_PACKAGES_SHA }}
+          path: .ci-mingw-packages
+          sparse-checkout: mingw-w64-gtk4
+          persist-credentials: false
+      # frippery.org refuses downloads from the runners, so CI builds the same
+      # pinned BusyBox release from source.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rmyorston/busybox-w32
+          ref: 5f09fb446adf81d005f0aad9dc47eca19ac3b74c # FRP-6354-g5f09fb446
+          path: .ci-busybox
+          persist-credentials: false
+      - name: Read the version
+        id: version
+        shell: bash
+        run: |
+          version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "artifact=penguin-mail-$version-windows-x64" >> "$GITHUB_OUTPUT"
+      - uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          # base-devel and the toolchain build the gtk4 package; binutils gives
+          # objdump, gnupg and poppler the helpers the installer ships.
+          install: >-
+            base-devel
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-gettext-tools
+            mingw-w64-ucrt-x86_64-gettext-runtime
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-binutils
+            mingw-w64-ucrt-x86_64-gnupg
+            mingw-w64-ucrt-x86_64-poppler
+      # Only main writes the cache, so a release restores what a run on main
+      # built and no other run can plant a package inside a release.
+      - name: Restore the patched gtk4 package
+        id: gtk-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.GTK4_PACKAGE }}
+          key: gtk4-msys2-${{ env.MINGW_PACKAGES_SHA }}-${{ hashFiles('packaging/windows/gtk4-zero-monitor-popup.patch', 'scripts/build-gtk4-msys2.sh') }}
+      - name: Build and install the patched gtk4
+        shell: msys2 {0}
+        run: scripts/build-gtk4-msys2.sh .ci-mingw-packages "$GTK4_PACKAGE"
+      - name: Save the patched gtk4 package
+        if: steps.gtk-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.GTK4_PACKAGE }}
+          key: ${{ steps.gtk-cache.outputs.cache-primary-key }}
+      - name: Build the pinned BusyBox helper
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          make -C .ci-busybox CROSS_COMPILE= mingw64u_defconfig
+          make -C .ci-busybox CROSS_COMPILE= -j2 busybox.exe
+          cp .ci-busybox/busybox.exe busybox64u.exe
+      - name: Build the app and the installer
+        shell: msys2 {0}
+        env:
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          rustup toolchain install "$rust-x86_64-pc-windows-gnu" --profile minimal
+          export RUSTUP_TOOLCHAIN=$rust-x86_64-pc-windows-gnu
+          scripts/build-windows.sh --msys2 "$(cygpath -m /ucrt64)" --busybox "$PWD/busybox64u.exe"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.version.outputs.artifact }}
+          path: dist/*-setup.exe
+          if-no-files-found: error
+
+  # The installed app has to start, hand a second launch over to the first,
+  # update over itself and uninstall without leaving anything behind.
+  smoke:
+    name: Install and launch
+    needs: installer
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source_ref || github.sha }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.installer.outputs.artifact }}
+          path: setup
+      - name: Install, launch, update and uninstall
+        shell: pwsh
+        run: scripts/test-windows-installer.ps1 -Setup (Resolve-Path setup/*-setup.exe) -Launch -Screenshots screenshots
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: windows-smoke-screenshots
+          path: screenshots/
+          if-no-files-found: ignore

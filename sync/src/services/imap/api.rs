@@ -162,10 +162,14 @@ pub trait ImapApi: Send + Sync + 'static {
     ) -> impl Future<Output = Result<(), ImapError>> + Send;
 
     /// Files `raw` in `mailbox` with `flags`; its UID under UIDPLUS.
+    /// `at`, when given, becomes the copy's INTERNALDATE, so a message
+    /// carried in from another account arrives with the hour it first
+    /// came.
     fn append(
         &self,
         mailbox: &str,
         flags: &[String],
+        at: Option<i64>,
         raw: &[u8],
     ) -> impl Future<Output = Result<Option<AppendUid>, ImapError>> + Send;
 
@@ -318,9 +322,10 @@ impl ImapApi for ImapClient {
         &self,
         mailbox: &str,
         flags: &[String],
+        at: Option<i64>,
         raw: &[u8],
     ) -> Result<Option<AppendUid>, ImapError> {
-        ImapClient::append(self, mailbox, flags, raw).await
+        ImapClient::append(self, mailbox, flags, at, raw).await
     }
 
     async fn create(&self, mailbox: &str) -> Result<(), ImapError> {
@@ -404,7 +409,7 @@ mod tests {
         sendable(ImapApi::move_to(&client, "INBOX", &uids, "Archive"));
         sendable(ImapApi::copy_to(&client, "INBOX", &uids, "Archive"));
         sendable(ImapApi::expunge(&client, "INBOX", &uids));
-        sendable(ImapApi::append(&client, "INBOX", &[], b"raw"));
+        sendable(ImapApi::append(&client, "INBOX", &[], None, b"raw"));
         sendable(ImapApi::create(&client, "INBOX"));
         sendable(ImapApi::rename(&client, "INBOX", "Old"));
         sendable(ImapApi::delete(&client, "INBOX"));

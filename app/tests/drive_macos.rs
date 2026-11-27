@@ -1,14 +1,19 @@
 //! The driver must report the app's exit status and stop only its own process.
 
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
 use std::path::Path;
+#[cfg(unix)]
 use std::process::Command;
 
+#[cfg(unix)]
 fn executable(path: &Path, body: &str) {
     std::fs::write(path, body).unwrap();
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
 }
 
+#[cfg(unix)]
 #[test]
 fn the_driver_preserves_failure_and_limits_the_watchdog_to_its_child() {
     let dir = tempfile::tempdir().unwrap();

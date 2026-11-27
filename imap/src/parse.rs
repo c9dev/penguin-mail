@@ -664,6 +664,17 @@ pub(crate) fn internal_date(text: &str) -> Option<EpochMillis> {
         .map(|date| date.timestamp_millis())
 }
 
+/// `at` in the one shape APPEND takes an INTERNALDATE: quoted, with the
+/// zone as an offset. The time rides in UTC so a moved message says the
+/// hour its server received it, whatever machine copies it.
+pub(crate) fn internal_date_text(at: EpochMillis) -> String {
+    DateTime::from_timestamp_millis(at)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Utc)
+        .format("%d-%b-%Y %H:%M:%S %z")
+        .to_string()
+}
+
 /// One section of one message: the bytes of `BODY[<section>]` for `uid`.
 pub(crate) struct SectionReader {
     uid: u32,
