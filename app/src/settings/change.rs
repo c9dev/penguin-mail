@@ -74,6 +74,7 @@ pub enum Change {
     ComposeFormat(ComposeFormat),
     /// Ask before a message that promises a file goes without one.
     CheckAttachments(bool),
+    /// Keep an open message in Drafts as it is written, or only when saved.
     AutosaveDrafts(bool),
     /// Offer the read receipts senders ask for, or never ask.
     ReadReceipts(ReadReceipts),
@@ -1023,8 +1024,8 @@ impl Effects {
             send_as_checked,
             compose_format,
             check_attachments,
-            // The composer reads this on its own clock; a change takes
-            // effect on the next look, with nothing for the window to do.
+            // Each open composer asks for this at its next autosave tick,
+            // so there is nothing for the window to do.
             autosave_drafts,
             // The run reads this as each message opens.
             read_receipts,
