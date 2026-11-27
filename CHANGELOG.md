@@ -19,6 +19,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Penguin Mail runs on Windows 10 and later: mail pages draw with WebView2, a tray icon keeps it working in the background, toast notifications carry their action buttons, the taskbar button shows the unread count, Preferences can start it at sign-in, and PGP and S/MIME work with Gpg4win installed.
+- On Windows, a per-user installer sets up the app, its Start Menu entry and its mail and calendar file associations, and removes all of it on uninstall.
+- On Windows, Penguin Mail updates itself from About, like on Linux, and brings its own spell checking dictionaries.
+- On Windows, assistant skills run their scripts inside a sandbox that opens only the skill's folder and a scratch folder to them, not your files.
+
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
 
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.

@@ -1052,17 +1052,24 @@ msgstr "{provider}, tarayıcınız üzerinden oturum açar"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Devam, tarayıcınızda {provider} oturum açma sayfasını açar."
 
-#: app/src/app.rs:428
+#: app/src/app.rs:444
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Tüm postalar okundu olarak işaretlenemedi: {reason}"
 
-#: app/src/app.rs:475
+#: app/src/app.rs:491
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
 msgstr ""
 "Tercihleriniz okunamadığı için Penguin Mail varsayılan ayarlarla başladı. "
 "Eski dosya {file} olarak saklandı."
+
+#. The description is the overlay's alt text, read aloud.
+#: app/src/app/dock_badge/windows.rs:50
+msgid "{count} unread message"
+msgid_plural "{count} unread messages"
+msgstr[0] "{count} okunmamış ileti"
+msgstr[1] "{count} okunmamış ileti"
 
 #: app/src/app/mail_file.rs:77
 msgid "This file could not be read."
@@ -1651,15 +1658,15 @@ msgstr "Davet yanıtlanıyor"
 msgid "Working"
 msgstr "Çalışıyor"
 
-#: app/src/assistant/run/mail.rs:261
+#: app/src/assistant/run/mail.rs:271
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr "“{subject}” iletisi {recipients} alıcılarına {when} gönderilsin mi?"
 
-#: app/src/assistant/run/mail.rs:420
+#: app/src/assistant/run/mail.rs:432
 msgid "Each account's server"
 msgstr "Her hesabın sunucusu"
 
-#: app/src/assistant/run/mail.rs:423
+#: app/src/assistant/run/mail.rs:435
 msgid "Delete {count} conversation forever? {provider} cannot bring it back."
 msgid_plural ""
 "Delete {count} conversations forever? {provider} cannot bring them back."
@@ -1792,7 +1799,7 @@ msgstr "Bu adda bir dosya zaten var. Dışa aktarma onun üzerine yazar."
 msgid "the message “{subject}”"
 msgstr "“{subject}” iletisi"
 
-#: app/src/assistant/run/queue.rs:61 app/src/assistant/run/writing.rs:226
+#: app/src/assistant/run/queue.rs:61 app/src/assistant/run/writing.rs:283
 msgid "(no subject)"
 msgstr "(konu yok)"
 
@@ -1871,93 +1878,93 @@ msgstr "“{action}” geri alınsın mı?"
 msgid "this list"
 msgstr "bu liste"
 
-#: app/src/assistant/run/writing.rs:239
+#: app/src/assistant/run/writing.rs:296
 msgid "Signed with {standard}"
 msgstr "{standard} ile imzalı"
 
-#: app/src/assistant/run/writing.rs:240
+#: app/src/assistant/run/writing.rs:297
 msgid "Encrypted with {standard}"
 msgstr "{standard} ile şifreli"
 
-#: app/src/assistant/run/writing.rs:241
+#: app/src/assistant/run/writing.rs:298
 msgid "Signed and encrypted with {standard}"
 msgstr "{standard} ile imzalı ve şifreli"
 
-#: app/src/assistant/run/writing.rs:253
+#: app/src/assistant/run/writing.rs:310
 msgid "Blind copy to {recipients}"
 msgstr "{recipients} alıcılarına gizli kopya"
 
-#: app/src/assistant/run/writing.rs:259
+#: app/src/assistant/run/writing.rs:316
 msgid "Forwards “{subject}” from {sender}"
 msgstr "{sender} göndericisinden “{subject}” iletisini yönlendirir"
 
-#: app/src/assistant/run/writing.rs:269 app/src/assistant/run/writing.rs:1006
+#: app/src/assistant/run/writing.rs:326 app/src/assistant/run/writing.rs:1063
 msgid "Attached: {files}"
 msgstr "Ekler: {files}"
 
-#: app/src/assistant/run/writing.rs:285
+#: app/src/assistant/run/writing.rs:342
 msgid "From this computer: {files}"
 msgstr "Bu bilgisayardan: {files}"
 
-#: app/src/assistant/run/writing.rs:317
+#: app/src/assistant/run/writing.rs:374
 msgid "Put a file from this computer in a draft?"
 msgid_plural "Put {count} files from this computer in a draft?"
 msgstr[0] "Bu bilgisayardan bir dosya taslağa eklensin mi?"
 msgstr[1] "Bu bilgisayardan {count} dosya taslağa eklensin mi?"
 
-#: app/src/assistant/run/writing.rs:349
+#: app/src/assistant/run/writing.rs:406
 msgid "Send “{subject}” to {recipients}?"
 msgstr "“{subject}” iletisi {recipients} alıcılarına gönderilsin mi?"
 
-#: app/src/assistant/run/writing.rs:819
+#: app/src/assistant/run/writing.rs:876
 msgid "Change the draft “{subject}”?"
 msgstr "“{subject}” taslağı değiştirilsin mi?"
 
-#: app/src/assistant/run/writing.rs:974
+#: app/src/assistant/run/writing.rs:1031
 msgid "nobody"
 msgstr "kimse"
 
-#: app/src/assistant/run/writing.rs:980
+#: app/src/assistant/run/writing.rs:1037
 msgid "To: {recipients}"
 msgstr "Kime: {recipients}"
 
-#: app/src/assistant/run/writing.rs:983
+#: app/src/assistant/run/writing.rs:1040
 msgid "Cc: {recipients}"
 msgstr "Bilgi: {recipients}"
 
-#: app/src/assistant/run/writing.rs:986
+#: app/src/assistant/run/writing.rs:1043
 msgid "Bcc: {recipients}"
 msgstr "Gizli: {recipients}"
 
-#: app/src/assistant/run/writing.rs:990
+#: app/src/assistant/run/writing.rs:1047
 msgid "Subject: {subject}"
 msgstr "Konu: {subject}"
 
-#: app/src/assistant/run/writing.rs:995
+#: app/src/assistant/run/writing.rs:1052
 msgid "New text in place of the old"
 msgstr "Eski metnin yerine yeni metin"
 
-#: app/src/assistant/run/writing.rs:999
+#: app/src/assistant/run/writing.rs:1056
 msgid "Takes out: {files}"
 msgstr "Çıkarılacaklar: {files}"
 
-#: app/src/assistant/run/writing.rs:1014
+#: app/src/assistant/run/writing.rs:1071
 msgid "Goes out encrypted"
 msgstr "Şifreli gönderilir"
 
-#: app/src/assistant/run/writing.rs:1015
+#: app/src/assistant/run/writing.rs:1072
 msgid "Goes out unencrypted"
 msgstr "Şifresiz gönderilir"
 
-#: app/src/assistant/run/writing.rs:1019
+#: app/src/assistant/run/writing.rs:1076
 msgid "Goes out signed"
 msgstr "İmzalı gönderilir"
 
-#: app/src/assistant/run/writing.rs:1020
+#: app/src/assistant/run/writing.rs:1077
 msgid "Goes out unsigned"
 msgstr "İmzasız gönderilir"
 
-#: app/src/assistant/run/writing.rs:1030
+#: app/src/assistant/run/writing.rs:1087
 msgid "Delete the draft “{subject}”? {provider} cannot bring it back."
 msgstr "“{subject}” taslağı silinsin mi? {provider} bunu geri getiremez."
 
@@ -1973,7 +1980,7 @@ msgstr "Penguin Mail"
 msgid "Claude Code"
 msgstr "Claude Code"
 
-#: app/src/assistant/sources/skills/sandbox.rs:250
+#: app/src/assistant/sources/skills/sandbox/unix.rs:185
 msgid ""
 "Skill scripts need bubblewrap, which is not installed. Install the "
 "bubblewrap package to run them."
@@ -1981,23 +1988,38 @@ msgstr ""
 "Beceri betikleri için bubblewrap gerekir, ancak kurulu değil. Çalıştırmak "
 "için bubblewrap paketini kurun."
 
-#: app/src/assistant/sources/skills/sandbox.rs:269
-#: app/src/assistant/sources/skills/sandbox.rs:275
+#: app/src/assistant/sources/skills/sandbox/unix.rs:204
+#: app/src/assistant/sources/skills/sandbox/unix.rs:210
 msgid ""
 "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr ""
 "Beceri betikleri çalıştırılamıyor: bubblewrap korumalı alan başlatamadı "
 "({reason})."
 
-#: app/src/assistant/sources/skills/shell.rs:183
+#: app/src/assistant/sources/skills/sandbox/windows.rs:582
+msgid ""
+"Skill scripts need busybox for Windows, which is not installed. Install it "
+"next to the app or set the PENGUIN_MAIL_BUSYBOX variable to it."
+msgstr ""
+"Beceri betikleri için Windows sürümü busybox gerekir, ancak kurulu değil. "
+"Uygulamanın yanına koyun veya PENGUIN_MAIL_BUSYBOX değişkenini ona ayarlayın."
+
+#: app/src/assistant/sources/skills/sandbox/windows.rs:592
+#: app/src/assistant/sources/skills/sandbox/windows.rs:607
+#: app/src/assistant/sources/skills/sandbox/windows.rs:611
+msgid "Skill scripts cannot run: the sandbox failed to start ({reason})."
+msgstr ""
+"Beceri betikleri çalıştırılamıyor: korumalı alan başlatılamadı ({reason})."
+
+#: app/src/assistant/sources/skills/shell.rs:187
 msgid "It can reach the internet."
 msgstr "İnternete erişebilir."
 
-#: app/src/assistant/sources/skills/shell.rs:185
+#: app/src/assistant/sources/skills/shell.rs:189
 msgid "It cannot reach the internet."
 msgstr "İnternete erişemez."
 
-#: app/src/assistant/sources/skills/shell.rs:188
+#: app/src/assistant/sources/skills/shell.rs:192
 msgid ""
 "Standard input:\n"
 "{stdin}"
@@ -2005,11 +2027,11 @@ msgstr ""
 "Standart girdi:\n"
 "{stdin}"
 
-#: app/src/assistant/sources/skills/shell.rs:189
+#: app/src/assistant/sources/skills/shell.rs:193
 msgid "No standard input."
 msgstr "Standart girdi yok."
 
-#: app/src/assistant/sources/skills/shell.rs:193
+#: app/src/assistant/sources/skills/shell.rs:197
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
@@ -2157,7 +2179,7 @@ msgstr "Birincil"
 msgid "Focused"
 msgstr "Odaklanmış"
 
-#: app/src/autostart.rs:52
+#: app/src/autostart.rs:80
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail, açık pencere olmasa da eşitlemeyi sürdürür"
 
@@ -2189,7 +2211,7 @@ msgstr "Penguin Mail iletiyi oluşturamadı."
 msgid "The list did not give one address to write to."
 msgstr "Liste, yazılabilecek tek bir adres vermedi."
 
-#: app/src/compose/html_signature.rs:168
+#: app/src/compose/html_signature.rs:173
 #, fuzzy
 #| msgid "Signature"
 msgid "[Signature picture]"
@@ -2612,7 +2634,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language} ({country})"
 
-#: app/src/main.rs:104
+#: app/src/main.rs:109
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2634,43 +2656,43 @@ msgstr ""
 "  mailto:...     --compose mailto:... ile aynı\n"
 "  FILE.ics       etkinliklerini takvime eklemek için takvim dosyası aç"
 
-#: app/src/main.rs:216
+#: app/src/main.rs:327
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: bilinmeyen seçenek {option}"
 
-#: app/src/main.rs:494
+#: app/src/main.rs:608
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Başlatılamadı"
 
-#: app/src/main.rs:499 app/src/ui/about.rs:181
+#: app/src/main.rs:613 app/src/ui/about.rs:192
 msgid "Report a Problem"
 msgstr "Sorun Bildir"
 
-#: app/src/notify.rs:61 app/src/ui/conversation.rs:467
-#: app/src/ui/conversation.rs:625 app/src/ui/conversation.rs:1124
+#: app/src/notify.rs:61 app/src/ui/conversation.rs:468
+#: app/src/ui/conversation.rs:626 app/src/ui/conversation.rs:1128
 #: app/src/ui/smart_editor.rs:119 app/src/ui/toolbar/customize.rs:20
 #: app/src/ui/window/message_menu.rs:132 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Arşivle"
 
-#: app/src/notify.rs:62 app/src/ui/conversation.rs:468
-#: app/src/ui/conversation.rs:1168 app/src/ui/preferences.rs:194
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:469
+#: app/src/ui/conversation.rs:1172 app/src/ui/preferences.rs:194
 #: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:135
 msgid "Mark as Read"
 msgstr "Okundu İşaretle"
 
 #: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
-#: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
-#: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
-#: app/src/ui/conversation.rs:611 app/src/ui/hide_my_email.rs:574
+#: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
+#: app/src/ui/calendar/popover.rs:757 app/src/ui/calendar/scope.rs:151
+#: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
 #: app/src/ui/window/organize.rs:217
 msgid "Delete"
 msgstr "Sil"
 
-#: app/src/notify.rs:64 app/src/ui/conversation.rs:269
-#: app/src/ui/conversation.rs:619 app/src/ui/toolbar/customize.rs:16
+#: app/src/notify.rs:64 app/src/ui/conversation.rs:270
+#: app/src/ui/conversation.rs:620 app/src/ui/toolbar/customize.rs:16
 #: app/src/ui/window/message_menu.rs:129 app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Yanıtla"
@@ -3760,65 +3782,65 @@ msgstr "Etkinliklere eklenen dosyalar"
 msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr "{account}, Penguin Mail'e şu izni vermedi: {missing}"
 
-#: app/src/pgp.rs:114
+#: app/src/pgp.rs:116
 msgid "Add a recipient whose key gpg holds."
 msgstr "gpg'de anahtarı bulunan bir alıcı ekleyin."
 
-#: app/src/pgp.rs:123
+#: app/src/pgp.rs:125
 msgid "gpg holds no key for {addresses}."
 msgstr "gpg'de {addresses} için anahtar yok."
 
-#: app/src/pgp.rs:140
+#: app/src/pgp.rs:142
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr "gpg'de gönderim yaptığınız adreslerin hiçbiri için anahtar yok."
 
-#: app/src/pgp.rs:142
+#: app/src/pgp.rs:144
 msgid "gpg holds a key for {addresses}."
 msgstr "gpg'de {addresses} için anahtar var."
 
-#: app/src/pgp.rs:146
+#: app/src/pgp.rs:148
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "gpg'de {addresses} için anahtar var, {without} için yok."
 
-#: app/src/pgp.rs:250
+#: app/src/pgp.rs:252
 msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
 msgstr ""
 "Bu bilgisayarda gpg yok. OpenPGP postalarını okumak veya göndermek için "
 "GnuPG kurun."
 
-#: app/src/pgp.rs:253 app/src/smime.rs:258
+#: app/src/pgp.rs:255 app/src/smime.rs:257
 msgid "Could not run {program}: {reason}"
 msgstr "{program} çalıştırılamadı: {reason}"
 
-#: app/src/pgp.rs:257 app/src/smime.rs:262
+#: app/src/pgp.rs:259 app/src/smime.rs:261
 msgid "Could not write a temporary file: {reason}"
 msgstr "Geçici dosya yazılamadı: {reason}"
 
-#: app/src/pgp.rs:261
+#: app/src/pgp.rs:263
 msgid "This message is encrypted to a key this computer does not hold."
 msgstr "Bu ileti, bu bilgisayarda bulunmayan bir anahtarla şifrelenmiş."
 
-#: app/src/pgp.rs:264
+#: app/src/pgp.rs:266
 msgid "gpg holds no secret key to sign as {address}."
 msgstr "gpg'de {address} olarak imzalamak için gizli anahtar yok."
 
-#: app/src/pgp.rs:268
+#: app/src/pgp.rs:270
 msgid "gpg holds no key it can encrypt to for {address}."
 msgstr "gpg'de {address} için şifreleme yapabilecek bir anahtar yok."
 
-#: app/src/pgp.rs:271
+#: app/src/pgp.rs:273
 msgid "This text holds no OpenPGP block."
 msgstr "Bu metinde OpenPGP bloğu yok."
 
-#: app/src/pgp.rs:272
+#: app/src/pgp.rs:274
 msgid "This file holds no OpenPGP key."
 msgstr "Bu dosyada OpenPGP anahtarı yok."
 
-#: app/src/pgp.rs:273 app/src/smime.rs:278
+#: app/src/pgp.rs:275 app/src/smime.rs:277
 msgid "This message is too large to open."
 msgstr "Bu ileti açılamayacak kadar büyük."
 
-#: app/src/pgp.rs:274
+#: app/src/pgp.rs:276
 msgid "gpg failed: {reason}"
 msgstr "gpg başarısız oldu: {reason}"
 
@@ -4118,8 +4140,8 @@ msgstr ""
 "şifrelenmiş olarak bekler, ancak bu bilgisayarda {address} için anahtar veya "
 "sertifika yok."
 
-#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2100
-#: app/src/ui/composer/mod.rs:2103
+#: app/src/protection/draft.rs:147 app/src/ui/composer/mod.rs:2102
+#: app/src/ui/composer/mod.rs:2105
 msgid "That account is not connected."
 msgstr "Bu hesap bağlı değil."
 
@@ -4127,8 +4149,8 @@ msgstr "Bu hesap bağlı değil."
 msgid "Could not save: {reason}"
 msgstr "Kaydedilemedi: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3003
-#: app/src/ui/window.rs:3026
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3020
+#: app/src/ui/window.rs:3043
 msgid "Could not open the draft: {reason}"
 msgstr "Taslak açılamadı: {reason}"
 
@@ -4182,8 +4204,8 @@ msgstr "Bu ileti yüklenemedi: {reason}"
 msgid "This message could not be displayed"
 msgstr "Bu ileti gösterilemedi"
 
-#: app/src/render.rs:433 app/src/ui/conversation.rs:275
-#: app/src/ui/conversation.rs:546 app/src/ui/conversation.rs:652
+#: app/src/render.rs:433 app/src/ui/conversation.rs:276
+#: app/src/ui/conversation.rs:547 app/src/ui/conversation.rs:653
 #: app/src/ui/toolbar/customize.rs:28
 msgid "View Source"
 msgstr "Kaynağı Görüntüle"
@@ -4248,7 +4270,7 @@ msgstr "Standart şifreleme (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Aktarım sırasında şifrelenmemiş"
 
-#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2200
+#: app/src/render.rs:611 app/src/ui/composer/mod.rs:2202
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} ek"
@@ -4258,8 +4280,8 @@ msgstr[1] "{count} ek"
 msgid "Quick Look"
 msgstr "Hızlı Bakış"
 
-#: app/src/render.rs:644 app/src/ui/window/attachments.rs:284
-#: app/src/ui/window/attachments.rs:450 app/src/ui/window/attachments.rs:456
+#: app/src/render.rs:644 app/src/ui/window/attachments.rs:289
+#: app/src/ui/window/attachments.rs:461 app/src/ui/window/attachments.rs:467
 #: app/src/ui/window/detached.rs:303
 msgid "Save As…"
 msgstr "Farklı Kaydet…"
@@ -4393,7 +4415,7 @@ msgid "Set up a different project"
 msgstr "Başka bir proje kurun"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3356
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3373
 msgid "Set up your own Google project"
 msgstr "Kendi Google projenizi kurun"
 
@@ -4534,8 +4556,8 @@ msgstr "{host} oturum açmayı reddetti: {reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:549
-#: app/src/ui/sidebar.rs:1904 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:499 app/src/ui/sidebar.rs:550
+#: app/src/ui/sidebar.rs:1907 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Takvim"
 
@@ -4559,7 +4581,7 @@ msgstr "Sunucuda"
 
 #: app/src/settings/mod.rs:229 app/src/settings/mod.rs:438
 #: app/src/settings/mod.rs:872 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1154
+#: app/src/ui/preferences.rs:1176
 msgid "Off"
 msgstr "Kapalı"
 
@@ -4575,8 +4597,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude Aboneliği"
 
-#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3748
-#: app/src/ui/window.rs:3836
+#: app/src/settings/mod.rs:257 app/src/ui/window.rs:3765
+#: app/src/ui/window.rs:3853
 msgid "Assistant"
 msgstr "Asistan"
 
@@ -4805,11 +4827,11 @@ msgstr "1 GB"
 msgid "4 GB"
 msgstr "4 GB"
 
-#: app/src/smime.rs:93
+#: app/src/smime.rs:92
 msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr "gpgsm'nin sertifikasına güvendiği bir alıcı ekleyin."
 
-#: app/src/smime.rs:103
+#: app/src/smime.rs:102
 msgid ""
 "gpgsm holds no trusted certificate for {addresses}. A certificate that only "
 "arrived in mail does not count."
@@ -4817,55 +4839,55 @@ msgstr ""
 "gpgsm'de {addresses} için güvenilir sertifika yok. Yalnızca postayla gelen "
 "bir sertifika yeterli değildir."
 
-#: app/src/smime.rs:123
+#: app/src/smime.rs:122
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr "gpgsm'de gönderim yaptığınız adreslerin hiçbiri için sertifika yok."
 
-#: app/src/smime.rs:125
+#: app/src/smime.rs:124
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr "gpgsm'de {addresses} için sertifika var."
 
-#: app/src/smime.rs:129
+#: app/src/smime.rs:128
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "gpgsm'de {addresses} için sertifika var, {without} için yok."
 
-#: app/src/smime.rs:255
+#: app/src/smime.rs:254
 msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
 msgstr ""
 "Bu bilgisayarda gpgsm yok. S/MIME postalarını okumak veya göndermek için "
 "GnuPG kurun."
 
-#: app/src/smime.rs:266
+#: app/src/smime.rs:265
 msgid "This message is encrypted to a certificate this computer does not hold."
 msgstr "Bu ileti, bu bilgisayarda bulunmayan bir sertifikayla şifrelenmiş."
 
-#: app/src/smime.rs:269
+#: app/src/smime.rs:268
 msgid "gpgsm holds no secret key to sign as {address}."
 msgstr "gpgsm'de {address} olarak imzalamak için gizli anahtar yok."
 
-#: app/src/smime.rs:273
+#: app/src/smime.rs:272
 msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
 msgstr "gpgsm'de {address} için şifreleme yapabilecek güvenilir sertifika yok."
 
-#: app/src/smime.rs:276
+#: app/src/smime.rs:275
 msgid "This part holds no S/MIME data."
 msgstr "Bu bölümde S/MIME verisi yok."
 
-#: app/src/smime.rs:277
+#: app/src/smime.rs:276
 msgid "This file holds no certificate."
 msgstr "Bu dosyada sertifika yok."
 
-#: app/src/smime.rs:280
+#: app/src/smime.rs:279
 msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Bu parola dosyayı açmıyor. Hiçbir şey içe aktarılmadı."
 
-#: app/src/smime.rs:283
+#: app/src/smime.rs:282
 msgid ""
 "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr ""
 "Dosyanın parolası gerekiyor ancak girilmedi. Hiçbir şey içe aktarılmadı."
 
-#: app/src/smime.rs:286
+#: app/src/smime.rs:285
 msgid "gpgsm failed: {reason}"
 msgstr "gpgsm başarısız oldu: {reason}"
 
@@ -4948,142 +4970,136 @@ msgstr ""
 "İleti, aboneliğiniz üzerinden Claude tarafından okunmak üzere Anthropic'e "
 "gider."
 
-#: app/src/tray.rs:25
+#: app/src/tray.rs:26
 msgid "No unread mail"
 msgstr "Okunmamış posta yok"
 
-#: app/src/tray.rs:27
-msgid "{count} unread message"
-msgid_plural "{count} unread messages"
-msgstr[0] "{count} okunmamış ileti"
-msgstr[1] "{count} okunmamış ileti"
-
-#: app/src/tray.rs:41 app/src/ui/sidebar.rs:1928
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1931
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} okunmamış ileti"
 msgstr[1] "{account}, {count} okunmamış ileti"
 
-#: app/src/tray.rs:148 app/src/tray.rs:186
-msgid "Penguin Mail: {summary}"
-msgstr "Penguin Mail: {summary}"
-
-#: app/src/tray.rs:239
+#: app/src/tray.rs:189
 msgid "Mark All as Read"
 msgstr "Tümünü Okundu Olarak İşaretle"
 
-#: app/src/tray.rs:248
+#: app/src/tray.rs:193
 msgid "Open Penguin Mail"
 msgstr "Penguin Mail'i Aç"
 
-#: app/src/tray.rs:249 app/src/ui/composer/mod.rs:372
-#: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1565
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:494
+#: app/src/tray.rs:194 app/src/ui/composer/mod.rs:372
+#: app/src/ui/composer/mod.rs:675 app/src/ui/composer/mod.rs:1567
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:495
 msgid "New Message"
 msgstr "Yeni İleti"
 
-#: app/src/tray.rs:250 app/src/ui/sidebar.rs:2521 app/src/ui/window.rs:3754
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2524 app/src/ui/window.rs:3771
 msgid "Check for Mail"
 msgstr "Postaları Kontrol Et"
 
-#: app/src/tray.rs:254 app/src/update/mod.rs:98
+#: app/src/tray.rs:200 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr "{version} Güncellemesini Kur"
 
-#: app/src/tray.rs:257
+#: app/src/tray.rs:206
 msgid "What's New in {version}"
 msgstr "{version} Sürümündeki Yenilikler"
 
-#: app/src/tray.rs:261 app/src/ui/about.rs:119 app/src/ui/about.rs:227
-#: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1214 app/src/update/mod.rs:108
+#: app/src/tray.rs:211 app/src/ui/about.rs:130 app/src/ui/about.rs:238
+#: app/src/ui/about.rs:246 app/src/ui/about.rs:253
+#: app/src/ui/preferences.rs:1236 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Güncellemeleri Kontrol Et"
 
-#: app/src/tray.rs:266 app/src/ui/window.rs:3775
+#: app/src/tray.rs:216 app/src/ui/window.rs:3792
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Çık"
 
-#: app/src/ui/about.rs:61
+#: app/src/tray.rs:228 app/src/tray.rs:266 app/src/tray/windows.rs:179
+msgid "Penguin Mail: {summary}"
+msgstr "Penguin Mail: {summary}"
+
+#: app/src/ui/about.rs:71
 msgid "Version {version}"
 msgstr "Sürüm {version}"
 
-#: app/src/ui/about.rs:78
-msgid "Mail and calendar for Linux. Your mail stays on your computer."
-msgstr "Linux için posta ve takvim. Postalarınız bilgisayarınızda kalır."
+#: app/src/ui/about.rs:88
+msgid "Mail and calendar for {os}. Your mail stays on your computer."
+msgstr "{os} için posta ve takvim. Postalarınız bilgisayarınızda kalır."
 
-#: app/src/ui/about.rs:174
+#: app/src/ui/about.rs:185
 msgid "What's New"
 msgstr "Yenilikler"
 
-#: app/src/ui/about.rs:178 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/about.rs:189 app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Web Sitesi"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3774
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3791
 msgid "Donate"
 msgstr "Bağış Yap"
 
-#: app/src/ui/about.rs:186
+#: app/src/ui/about.rs:197
 msgid "License"
 msgstr "Lisans"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3773
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3790
 msgid "About Penguin Mail"
 msgstr "Penguin Mail Hakkında"
 
-#: app/src/ui/about.rs:233 app/src/ui/preferences/shared_mailbox.rs:116
+#: app/src/ui/about.rs:244 app/src/ui/preferences/shared_mailbox.rs:116
 msgid "Checking…"
 msgstr "Kontrol ediliyor…"
 
-#: app/src/ui/about.rs:239
+#: app/src/ui/about.rs:250
 msgid "Penguin Mail is up to date"
 msgstr "Penguin Mail güncel"
 
-#: app/src/ui/about.rs:247
+#: app/src/ui/about.rs:258
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr "GitHub'a erişilemedi. Bağlantınızı kontrol edip tekrar deneyin."
 
-#: app/src/ui/about.rs:252
+#: app/src/ui/about.rs:263
 msgid "Install {version}"
 msgstr "{version} Kur"
 
-#: app/src/ui/about.rs:259
+#: app/src/ui/about.rs:270
 msgid "Version {version} is available"
 msgstr "{version} sürümü mevcut"
 
-#: app/src/ui/about.rs:264
+#: app/src/ui/about.rs:275
 msgid "Installing…"
 msgstr "Kuruluyor…"
 
-#: app/src/ui/about.rs:269
+#: app/src/ui/about.rs:280
 msgid "Installing version {version}"
 msgstr "{version} sürümü kuruluyor"
 
-#: app/src/ui/about.rs:274 app/src/update/mod.rs:104
+#: app/src/ui/about.rs:285 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr "Güncellemek İçin Yeniden Başlat"
 
-#: app/src/ui/about.rs:279
+#: app/src/ui/about.rs:290
 msgid "Version {version} is installed"
 msgstr "{version} sürümü kuruldu"
 
-#: app/src/ui/about.rs:284 app/src/update/mod.rs:137
+#: app/src/ui/about.rs:295 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr "Günlüğü Göster"
 
-#: app/src/ui/about.rs:289 app/src/update/mod.rs:134
+#: app/src/ui/about.rs:300 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr "{version} güncellemesi başarısız oldu"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1575
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1592
 msgid "Copy Command"
 msgstr "Komutu Kopyala"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1580
+#: app/src/ui/window.rs:1597
 msgid "Command copied"
 msgstr "Komut kopyalandı"
 
@@ -5174,9 +5190,9 @@ msgstr "Bağlantıyı Kopyala"
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
-#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
-#: app/src/ui/composer/mod.rs:1995 app/src/ui/composer/mod.rs:2117
-#: app/src/ui/composer/mod.rs:2478 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
+#: app/src/ui/composer/mod.rs:1997 app/src/ui/composer/mod.rs:2119
+#: app/src/ui/composer/mod.rs:2480 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5193,7 +5209,7 @@ msgstr "İptal"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1519
+#: app/src/ui/window.rs:1536
 msgid "Sign In"
 msgstr "Oturum Aç"
 
@@ -5316,8 +5332,8 @@ msgstr "Şimdi Değil"
 
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
-#: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1652
+#: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1669
 msgid "Grant Access"
 msgstr "Erişim Ver"
 
@@ -5338,7 +5354,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail indirdiği tüm iletileri bu bilgisayarda tutar."
 
 #: app/src/ui/add_account.rs:1589 app/src/ui/add_account.rs:1590
-#: app/src/ui/preferences.rs:1575
+#: app/src/ui/preferences.rs:1597
 msgid "Days"
 msgstr "Gün"
 
@@ -5418,8 +5434,8 @@ msgstr ""
 "Nextcloud gibi bir CalDAV sunucusu. İki adımlı oturum açma kullanıyorsa "
 "Penguin Mail için uygulama parolası oluşturun."
 
-#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1460
-#: app/src/ui/calendar/sidebar.rs:1471
+#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1468
+#: app/src/ui/calendar/sidebar.rs:1479
 msgid "Add Calendar"
 msgstr "Takvim Ekle"
 
@@ -5461,12 +5477,12 @@ msgstr "Parolanız gönderilmedi."
 msgid "Looking Up…"
 msgstr "Aranıyor…"
 
-#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1287
 msgid "Sign In Again"
 msgstr "Yeniden Oturum Aç"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2263
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2280
 msgid "Open Google Cloud"
 msgstr "Google Cloud'u Aç"
 
@@ -5556,13 +5572,13 @@ msgstr "Açık yazışmaya bir yanıt taslağı hazırla"
 msgid "Choose a Model"
 msgstr "Model Seç"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3883
-#: app/src/ui/window.rs:3884
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3900
+#: app/src/ui/window.rs:3901
 msgid "Detach"
 msgstr "Ayır"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4563
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4585
 msgid "Close"
 msgstr "Kapat"
 
@@ -5581,7 +5597,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183 app/src/ui/assistant.rs:188
 #: app/src/ui/assistant.rs:589 app/src/ui/calendar/scope.rs:152
-#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1930
+#: app/src/ui/composer/mod.rs:387 app/src/ui/composer/mod.rs:1932
 #: app/src/ui/window/shortcuts.rs:496
 msgid "Send"
 msgstr "Gönder"
@@ -5637,7 +5653,7 @@ msgid "What it did"
 msgstr "Yaptıkları"
 
 #: app/src/ui/assistant.rs:682 app/src/ui/calendar/words.rs:634
-#: app/src/ui/invitation.rs:1323
+#: app/src/ui/invitation.rs:1326
 msgid "You"
 msgstr "Siz"
 
@@ -5744,7 +5760,7 @@ msgid "No models found."
 msgstr "Model bulunamadı."
 
 #: app/src/ui/assistant/files.rs:69 app/src/ui/calendar/editor.rs:1734
-#: app/src/ui/composer/mod.rs:2257
+#: app/src/ui/composer/mod.rs:2259
 msgid "Remove {file}"
 msgstr "{file} dosyasını kaldır"
 
@@ -5775,8 +5791,8 @@ msgstr[1] "{count} sunucu"
 msgid "Use {server}"
 msgstr "{server} kullan"
 
-#: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:209
-#: app/src/ui/calendar/popover.rs:211
+#: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
+#: app/src/ui/calendar/popover.rs:212
 msgid "Edit"
 msgstr "Düzenle"
 
@@ -5785,8 +5801,8 @@ msgid "Edit {server}"
 msgstr "{server} düzenle"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
-#: app/src/ui/composer/mod.rs:2253 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3512
+#: app/src/ui/composer/mod.rs:2255 app/src/ui/composer/recipients.rs:319
+#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3529
 msgid "Remove"
 msgstr "Kaldır"
 
@@ -5828,7 +5844,7 @@ msgstr ""
 "erişir."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:2892 app/src/ui/smart_editor.rs:41
+#: app/src/ui/composer/mod.rs:2894 app/src/ui/smart_editor.rs:41
 #: app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Ad"
@@ -5863,8 +5879,8 @@ msgid "Test"
 msgstr "Sına"
 
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
-#: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
-#: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2897
+#: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
+#: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:2899
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6013,7 +6029,7 @@ msgstr "Asistan sohbetleri"
 msgid "Email Translations"
 msgstr "E-posta çevirileri"
 
-#: app/src/ui/assistant_prefs.rs:223 app/src/ui/conversation.rs:721
+#: app/src/ui/assistant_prefs.rs:223 app/src/ui/conversation.rs:726
 #: app/src/ui/window/detached.rs:70
 msgid "Conversation"
 msgstr "Yazışma"
@@ -6339,7 +6355,7 @@ msgstr "Konuklarla paylaşılmadı"
 msgid "Open {file} in the browser"
 msgstr "{file} dosyasını tarayıcıda aç"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:930
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
 msgid "Open in Browser"
 msgstr "Tarayıcıda Aç"
 
@@ -6347,7 +6363,7 @@ msgstr "Tarayıcıda Aç"
 msgid "Waiting to be sent"
 msgstr "Gönderilmeyi bekliyor"
 
-#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:819
+#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:820
 msgid "Not answered yet"
 msgstr "Henüz yanıtlanmadı"
 
@@ -6356,7 +6372,7 @@ msgid "Declined"
 msgstr "Reddedildi"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1381
+#: app/src/ui/preferences.rs:1403
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -6406,11 +6422,11 @@ msgstr ""
 "Bu etkinliği {organizer} düzenliyor, bu nedenle zaman, yer ve konuklar onun "
 "belirlediği gibi kalır."
 
-#: app/src/ui/calendar/editor.rs:429 app/src/ui/calendar/quick.rs:190
+#: app/src/ui/calendar/editor.rs:429 app/src/ui/calendar/quick.rs:191
 msgid "Title"
 msgstr "Başlık"
 
-#: app/src/ui/calendar/editor.rs:464 app/src/ui/calendar/quick.rs:196
+#: app/src/ui/calendar/editor.rs:464 app/src/ui/calendar/quick.rs:197
 msgid "Type"
 msgstr "Tür"
 
@@ -6470,11 +6486,11 @@ msgstr "Bitiş tarihi"
 msgid "End time"
 msgstr "Bitiş saati"
 
-#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1527
+#: app/src/ui/calendar/editor.rs:753 app/src/ui/preferences.rs:1549
 msgid "Starts"
 msgstr "Başlangıç"
 
-#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1529
+#: app/src/ui/calendar/editor.rs:756 app/src/ui/preferences.rs:1551
 msgid "Ends"
 msgstr "Bitiş"
 
@@ -6534,7 +6550,7 @@ msgid "Place"
 msgstr "Yer"
 
 #. Named for the moment Show all hands it the focus.
-#: app/src/ui/calendar/editor.rs:1324 app/src/ui/calendar/popover.rs:291
+#: app/src/ui/calendar/editor.rs:1324 app/src/ui/calendar/popover.rs:292
 msgid "Guests"
 msgstr "Konuklar"
 
@@ -6567,7 +6583,7 @@ msgid "Remove reminder"
 msgstr "Hatırlatıcıyı kaldır"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:272
+#: app/src/ui/calendar/popover.rs:273
 msgid "Notes"
 msgstr "Notlar"
 
@@ -6616,7 +6632,7 @@ msgid "Could not attach {file}: {reason}"
 msgstr "{file} eklenemedi: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:416
-#: app/src/ui/thread_list.rs:351 app/src/ui/thread_list.rs:357
+#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
 #: app/src/ui/thread_list.rs:1153
 msgid "More"
 msgstr "Diğer"
@@ -6638,8 +6654,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Yalnızca bu takvimi değiştirebilen kişiler ayrıntıları görebilir"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:2238
-#: app/src/ui/sidebar.rs:2539
+#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/sidebar.rs:2241
+#: app/src/ui/sidebar.rs:2542
 msgid "Color"
 msgstr "Renk"
 
@@ -6651,8 +6667,8 @@ msgstr "Takvim rengi"
 msgid "Add Google Meet"
 msgstr "Google Meet Ekle"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2436
-#: app/src/ui/calendar/quick.rs:54
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
+#: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "Etkinlik"
 
@@ -7019,7 +7035,7 @@ msgstr ""
 "Tüm cihazlarda Google Takvim listenizden çıkar. Daha sonra tekrar abone "
 "olabilirsiniz."
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:456
+#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:457
 #: app/src/ui/unsubscribe.rs:143
 msgid "Unsubscribe"
 msgstr "Abonelikten Çık"
@@ -7093,106 +7109,106 @@ msgstr "{region} tatillerini ekle"
 msgid "Could not add the holidays: {reason}"
 msgstr "Tatiller eklenemedi: {reason}"
 
-#: app/src/ui/calendar/mod.rs:337 app/src/ui/calendar/mod.rs:357
+#: app/src/ui/calendar/mod.rs:341 app/src/ui/calendar/mod.rs:361
 msgid "View"
 msgstr "Görünüm"
 
-#: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2421
+#: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
+#: app/src/ui/calendar/mod.rs:2426
 msgid "New Event (N)"
 msgstr "Yeni Etkinlik (N)"
 
-#: app/src/ui/calendar/mod.rs:377
+#: app/src/ui/calendar/mod.rs:381
 msgid "New Focus Time or Out of Office"
 msgstr "Yeni Odaklanma Zamanı veya Ofis Dışında"
 
-#: app/src/ui/calendar/mod.rs:386 app/src/ui/calendar/mod.rs:388
+#: app/src/ui/calendar/mod.rs:390 app/src/ui/calendar/mod.rs:392
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Takvimde Ara (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:391 app/src/ui/calendar/mod.rs:394
+#: app/src/ui/calendar/mod.rs:395 app/src/ui/calendar/mod.rs:398
 msgid "Show Calendars"
 msgstr "Takvimleri Göster"
 
-#: app/src/ui/calendar/mod.rs:400 app/src/ui/calendar/mod.rs:404
-#: app/src/ui/conversation.rs:599 app/src/ui/conversation.rs:603
+#: app/src/ui/calendar/mod.rs:404 app/src/ui/calendar/mod.rs:408
+#: app/src/ui/conversation.rs:600 app/src/ui/conversation.rs:604
 msgid "Assistant (Ctrl+J)"
 msgstr "Asistan (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:437 app/src/ui/calendar/mod.rs:439
+#: app/src/ui/calendar/mod.rs:441 app/src/ui/calendar/mod.rs:443
 msgid "Search the Calendar"
 msgstr "Takvimde Ara"
 
-#: app/src/ui/calendar/mod.rs:506 app/src/ui/calendar/ports.rs:470
+#: app/src/ui/calendar/mod.rs:510 app/src/ui/calendar/ports.rs:470
 msgid "Loading older events"
 msgstr "Eski etkinlikler yükleniyor"
 
-#: app/src/ui/calendar/mod.rs:935 app/src/ui/window/shortcuts.rs:575
+#: app/src/ui/calendar/mod.rs:939 app/src/ui/window/shortcuts.rs:575
 msgid "Go to date"
 msgstr "Tarihe git"
 
-#: app/src/ui/calendar/mod.rs:1377
+#: app/src/ui/calendar/mod.rs:1381
 msgid "Moved “{title}”"
 msgstr "“{title}” taşındı"
 
-#: app/src/ui/calendar/mod.rs:1378
+#: app/src/ui/calendar/mod.rs:1382
 msgid "Could not move the event: {reason}"
 msgstr "Etkinlik taşınamadı: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1509
+#: app/src/ui/calendar/mod.rs:1513
 msgid "All-day events"
 msgstr "Tüm gün süren etkinlikler"
 
-#: app/src/ui/calendar/mod.rs:1511
+#: app/src/ui/calendar/mod.rs:1515
 msgid "All-day"
 msgstr "Tüm gün"
 
-#: app/src/ui/calendar/mod.rs:1816 app/src/ui/calendar/mod.rs:3068
+#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1395 app/src/ui/preferences.rs:1583
+#: app/src/ui/preferences.rs:1417 app/src/ui/preferences.rs:1605
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2139
+#: app/src/ui/calendar/mod.rs:2143
 msgid "Removed “{title}” from your calendar"
 msgstr "“{title}” takviminizden kaldırıldı"
 
-#: app/src/ui/calendar/mod.rs:2140
+#: app/src/ui/calendar/mod.rs:2144
 msgid "Deleted “{title}”"
 msgstr "“{title}” silindi"
 
-#: app/src/ui/calendar/mod.rs:2153
+#: app/src/ui/calendar/mod.rs:2157
 msgid "Could not delete the event: {reason}"
 msgstr "Etkinlik silinemedi: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2206 app/src/ui/composer/mod.rs:1402
+#: app/src/ui/calendar/mod.rs:2210 app/src/ui/composer/mod.rs:1404
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Geri Al"
 
-#: app/src/ui/calendar/mod.rs:2362
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not send your answer: {reason}"
 msgstr "Yanıtınız gönderilemedi: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2425
+#: app/src/ui/calendar/mod.rs:2430
 msgid "None of your calendars take new events"
 msgstr "Takvimlerinizin hiçbiri yeni etkinlik kabul etmiyor"
 
-#: app/src/ui/calendar/mod.rs:2437 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "Odaklanma Zamanı"
 
-#: app/src/ui/calendar/mod.rs:2438 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "Ofis Dışında"
 
-#: app/src/ui/calendar/mod.rs:2807
+#: app/src/ui/calendar/mod.rs:2812
 msgid "Could not save the event: {reason}"
 msgstr "Etkinlik kaydedilemedi: {reason}"
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:850
-#: app/src/ui/invitation.rs:995 app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:853
+#: app/src/ui/invitation.rs:998 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr "Adsız etkinlik"
 
@@ -7220,32 +7236,32 @@ msgstr "Sıradaki · {hours} sa {minutes} dk sonra"
 msgid "{when}: {what}"
 msgstr "{when}: {what}"
 
-#: app/src/ui/calendar/popover.rs:246
+#: app/src/ui/calendar/popover.rs:247
 msgid "Open in Maps"
 msgstr "Haritalar'da Aç"
 
-#: app/src/ui/calendar/popover.rs:274
+#: app/src/ui/calendar/popover.rs:275
 msgid "Show more"
 msgstr "Daha fazla göster"
 
-#: app/src/ui/calendar/popover.rs:280
+#: app/src/ui/calendar/popover.rs:281
 msgid "Show more of the notes"
 msgstr "Notların devamını göster"
 
-#: app/src/ui/calendar/popover.rs:293
+#: app/src/ui/calendar/popover.rs:294
 msgid "Show all"
 msgstr "Tümünü göster"
 
-#: app/src/ui/calendar/popover.rs:299 app/src/ui/calendar/popover.rs:899
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
 msgid "Show all guests"
 msgstr "Tüm konukları göster"
 
-#: app/src/ui/calendar/popover.rs:318 app/src/ui/calendar/popover.rs:821
-#: app/src/ui/invitation.rs:323
+#: app/src/ui/calendar/popover.rs:319 app/src/ui/calendar/popover.rs:822
+#: app/src/ui/invitation.rs:326
 msgid "Answer"
 msgstr "Yanıtla"
 
-#: app/src/ui/calendar/popover.rs:333
+#: app/src/ui/calendar/popover.rs:334
 msgid ""
 "This calendar's server sends no replies, so the organizer will not hear your "
 "answer."
@@ -7253,36 +7269,36 @@ msgstr ""
 "Bu takvimin sunucusu yanıt göndermiyor, bu yüzden düzenleyici yanıtınızı "
 "alamayacak."
 
-#: app/src/ui/calendar/popover.rs:342 app/src/ui/invitation.rs:334
+#: app/src/ui/calendar/popover.rs:343 app/src/ui/invitation.rs:337
 msgid "Add a note"
 msgstr "Not ekle"
 
-#: app/src/ui/calendar/popover.rs:348 app/src/ui/invitation.rs:341
+#: app/src/ui/calendar/popover.rs:349 app/src/ui/invitation.rs:344
 msgid "Note with your answer"
 msgstr "Yanıtınıza eklenecek not"
 
-#: app/src/ui/calendar/popover.rs:349 app/src/ui/invitation.rs:342
+#: app/src/ui/calendar/popover.rs:350 app/src/ui/invitation.rs:345
 msgid "The organizer reads it with your answer"
 msgstr "Düzenleyici bunu yanıtınızla birlikte okur"
 
-#: app/src/ui/calendar/popover.rs:356 app/src/ui/calendar/popover.rs:367
-#: app/src/ui/invitation.rs:376
+#: app/src/ui/calendar/popover.rs:357 app/src/ui/calendar/popover.rs:368
+#: app/src/ui/invitation.rs:379
 msgid "Propose New Time"
 msgstr "Yeni Zaman Öner"
 
-#: app/src/ui/calendar/popover.rs:376 app/src/ui/calendar/popover.rs:383
+#: app/src/ui/calendar/popover.rs:377 app/src/ui/calendar/popover.rs:384
 msgid "Open the invitation in Mail"
 msgstr "Daveti Posta'da aç"
 
-#: app/src/ui/calendar/popover.rs:735
+#: app/src/ui/calendar/popover.rs:736
 msgid "{when}, {zone}"
 msgstr "{when}, {zone}"
 
-#: app/src/ui/calendar/popover.rs:757
+#: app/src/ui/calendar/popover.rs:758
 msgid "Remove from My Calendar"
 msgstr "Takvimimden Kaldır"
 
-#: app/src/ui/calendar/popover.rs:835
+#: app/src/ui/calendar/popover.rs:836
 msgid "Your answer"
 msgstr "Yanıtınız"
 
@@ -7290,19 +7306,19 @@ msgstr "Yanıtınız"
 msgid "Older events can't load while offline"
 msgstr "Çevrimdışıyken eski etkinlikler yüklenemez"
 
-#: app/src/ui/calendar/quick.rs:85
+#: app/src/ui/calendar/quick.rs:86
 msgid "{name}, {account}"
 msgstr "{name}, {account}"
 
-#: app/src/ui/calendar/quick.rs:186
+#: app/src/ui/calendar/quick.rs:187
 msgid "Add title"
 msgstr "Başlık ekle"
 
-#: app/src/ui/calendar/quick.rs:221
+#: app/src/ui/calendar/quick.rs:222
 msgid "More Details"
 msgstr "Diğer Ayrıntılar"
 
-#: app/src/ui/calendar/quick.rs:441
+#: app/src/ui/calendar/quick.rs:443
 msgid "Calendar: {name}"
 msgstr "Takvim: {name}"
 
@@ -7485,87 +7501,87 @@ msgstr "Takvim seçenekleri"
 msgid "Options for {calendar}"
 msgstr "{calendar} seçenekleri"
 
-#: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:387
+#: app/src/ui/calendar/sidebar.rs:1238 app/src/ui/contacts_prefs.rs:387
 #: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "Bağlan"
 
-#: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:393
+#: app/src/ui/calendar/sidebar.rs:1245 app/src/ui/contacts_prefs.rs:393
 #: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "{account} için takvimi bağla"
 
-#: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:503
+#: app/src/ui/calendar/sidebar.rs:1267 app/src/ui/contacts_prefs.rs:503
 msgid "Grant Access for {account}"
 msgstr "{account} için Erişim Ver"
 
-#: app/src/ui/calendar/sidebar.rs:1288
+#: app/src/ui/calendar/sidebar.rs:1296
 msgid "Sign in again to {account}"
 msgstr "{account} hesabında yeniden oturum aç"
 
-#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:2544
+#: app/src/ui/calendar/sidebar.rs:1309 app/src/ui/sidebar.rs:2547
 msgid "Sign In Again…"
 msgstr "Yeniden Oturum Aç…"
 
-#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:2552
+#: app/src/ui/calendar/sidebar.rs:1310 app/src/ui/sidebar.rs:2555
 msgid "Remove Account…"
 msgstr "Hesabı Kaldır…"
 
-#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:2559
+#: app/src/ui/calendar/sidebar.rs:1324 app/src/ui/sidebar.rs:2562
 msgid "Account options"
 msgstr "Hesap seçenekleri"
 
-#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:2564
+#: app/src/ui/calendar/sidebar.rs:1329 app/src/ui/sidebar.rs:2567
 msgid "Options for {account}"
 msgstr "{account} seçenekleri"
 
-#: app/src/ui/calendar/sidebar.rs:1416
+#: app/src/ui/calendar/sidebar.rs:1424
 msgid "{address}. You can only read this calendar"
 msgstr "{address}. Bu takvimi yalnızca okuyabilirsiniz"
 
-#: app/src/ui/calendar/sidebar.rs:1440
+#: app/src/ui/calendar/sidebar.rs:1448
 msgid "New Calendar…"
 msgstr "Yeni Takvim…"
 
-#: app/src/ui/calendar/sidebar.rs:1441
+#: app/src/ui/calendar/sidebar.rs:1449
 msgid "Subscribe to Calendar…"
 msgstr "Takvime Abone Ol…"
 
-#: app/src/ui/calendar/sidebar.rs:1442
+#: app/src/ui/calendar/sidebar.rs:1450
 msgid "Holiday Calendars…"
 msgstr "Tatil Takvimleri…"
 
-#: app/src/ui/calendar/sidebar.rs:1490
+#: app/src/ui/calendar/sidebar.rs:1498
 msgid "Hide from the List"
 msgstr "Listeden Gizle"
 
-#: app/src/ui/calendar/sidebar.rs:1503
+#: app/src/ui/calendar/sidebar.rs:1511
 msgid "Original Color"
 msgstr "Özgün Renk"
 
-#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:2226
-#: app/src/ui/sidebar.rs:2529
+#: app/src/ui/calendar/sidebar.rs:1523 app/src/ui/sidebar.rs:2229
+#: app/src/ui/sidebar.rs:2532
 msgid "Rename…"
 msgstr "Yeniden Adlandır…"
 
-#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:2127
-#: app/src/ui/sidebar.rs:2254
+#: app/src/ui/calendar/sidebar.rs:1524 app/src/ui/sidebar.rs:2130
+#: app/src/ui/sidebar.rs:2257
 msgid "Delete…"
 msgstr "Sil…"
 
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:661
+#: app/src/ui/calendar/sidebar.rs:1527 app/src/ui/conversation.rs:662
 msgid "Unsubscribe…"
 msgstr "Abonelikten Çık…"
 
-#: app/src/ui/calendar/sidebar.rs:1546
+#: app/src/ui/calendar/sidebar.rs:1554
 msgid "Show {calendar}"
 msgstr "{calendar} göster"
 
-#: app/src/ui/calendar/sidebar.rs:1564
+#: app/src/ui/calendar/sidebar.rs:1572
 msgid "Hidden Calendars"
 msgstr "Gizli Takvimler"
 
-#: app/src/ui/calendar/sidebar.rs:1584
+#: app/src/ui/calendar/sidebar.rs:1592
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] "{count} gizli takvim"
@@ -7605,7 +7621,7 @@ msgstr[1] "{count} kişiden {yes} kişi evet dedi"
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:263 app/src/ui/calendar/words.rs:638
-#: app/src/ui/invitation.rs:1245
+#: app/src/ui/invitation.rs:1248
 msgid "{name}, organizer"
 msgstr "{name}, düzenleyici"
 
@@ -7671,7 +7687,7 @@ msgstr "{date}, etkinlik var"
 msgid "Offline, last updated {time}"
 msgstr "Çevrimdışı, son güncelleme {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2624
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2627
 msgid "Offline"
 msgstr "Çevrimdışı"
 
@@ -7739,15 +7755,15 @@ msgstr "{time} {city}"
 msgid "Could not paste the image"
 msgstr "Resim yapıştırılamadı"
 
-#: app/src/ui/composer/editor.rs:301
+#: app/src/ui/composer/editor.rs:302
 msgid "Describe Picture…"
 msgstr "Resmi Açıkla…"
 
-#: app/src/ui/composer/editor.rs:334
+#: app/src/ui/composer/editor.rs:333
 msgid "Describe Picture"
 msgstr "Resmi Açıkla"
 
-#: app/src/ui/composer/editor.rs:336
+#: app/src/ui/composer/editor.rs:335
 msgid ""
 "Screen readers read these words in place of the picture, and they show where "
 "the picture does not load."
@@ -7755,20 +7771,20 @@ msgstr ""
 "Ekran okuyucular resim yerine bu sözcükleri okur. Resim yüklenemediğinde de "
 "bu metin gösterilir."
 
-#: app/src/ui/composer/editor.rs:340 app/src/ui/composer/editor.rs:344
+#: app/src/ui/composer/editor.rs:339 app/src/ui/composer/editor.rs:343
 msgid "Description"
 msgstr "Açıklama"
 
-#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:461
+#: app/src/ui/composer/files.rs:24 app/src/ui/window/attachments.rs:472
 msgid "{file}, preview"
 msgstr "{file}, önizleme"
 
-#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:398
+#: app/src/ui/composer/files.rs:55 app/src/ui/window/attachments.rs:409
 msgid "Could not open {file}"
 msgstr "{file} açılamadı"
 
 #: app/src/ui/composer/files.rs:81 app/src/ui/window/attachments.rs:79
-#: app/src/ui/window/attachments.rs:355
+#: app/src/ui/window/attachments.rs:366
 msgid "Could not open {file}: {reason}"
 msgstr "{file} açılamadı: {reason}"
 
@@ -7799,16 +7815,16 @@ msgstr "Şifrele"
 msgid "Request Read Receipt"
 msgstr "Okundu Bildirimi İste"
 
-#: app/src/ui/composer/mod.rs:381 app/src/ui/conversation.rs:1804
+#: app/src/ui/composer/mod.rs:381 app/src/ui/conversation.rs:1808
 msgid "Choose a Time…"
 msgstr "Zaman Seç…"
 
-#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2010
-#: app/src/ui/sidebar.rs:1477 app/src/ui/sidebar.rs:2007
+#: app/src/ui/composer/mod.rs:392 app/src/ui/composer/mod.rs:2012
+#: app/src/ui/sidebar.rs:1480 app/src/ui/sidebar.rs:2010
 msgid "Send Later"
 msgstr "Daha Sonra Gönder"
 
-#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1609
+#: app/src/ui/composer/mod.rs:394 app/src/ui/composer/mod.rs:1611
 msgid "Send (Ctrl+Enter)"
 msgstr "Gönder (Ctrl+Enter)"
 
@@ -7840,7 +7856,7 @@ msgstr "Gizli bilgi kopyası"
 msgid "Cc/Bcc"
 msgstr "Bilgi/Gizli"
 
-#: app/src/ui/composer/mod.rs:482 app/src/ui/composer/mod.rs:1203
+#: app/src/ui/composer/mod.rs:482 app/src/ui/composer/mod.rs:1205
 msgid "Show Cc and Bcc"
 msgstr "Bilgi ve Gizli'yi Göster"
 
@@ -7886,291 +7902,291 @@ msgstr "Konu"
 msgid "Formatting"
 msgstr "Biçimlendirme"
 
-#: app/src/ui/composer/mod.rs:663 app/src/ui/composer/mod.rs:1368
+#: app/src/ui/composer/mod.rs:663 app/src/ui/composer/mod.rs:1370
 msgid "Forwarded Message"
 msgstr "Yönlendirilen İleti"
 
-#: app/src/ui/composer/mod.rs:1201
+#: app/src/ui/composer/mod.rs:1203
 msgid "Hide Cc and Bcc"
 msgstr "Bilgi ve Gizli'yi Gizle"
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1288
 msgid "Remove Quoted Text"
 msgstr "Alıntılanan Metni Kaldır"
 
-#: app/src/ui/composer/mod.rs:1287
+#: app/src/ui/composer/mod.rs:1289
 msgid "Do Not Forward the Original"
 msgstr "Özgün İletiyi Yönlendirme"
 
-#: app/src/ui/composer/mod.rs:1397
+#: app/src/ui/composer/mod.rs:1399
 msgid "Quoted text removed"
 msgstr "Alıntılanan metin kaldırıldı"
 
-#: app/src/ui/composer/mod.rs:1398
+#: app/src/ui/composer/mod.rs:1400
 msgid "Forwarded message removed"
 msgstr "Yönlendirilen ileti kaldırıldı"
 
-#: app/src/ui/composer/mod.rs:1503
+#: app/src/ui/composer/mod.rs:1505
 msgid "Sending from {address}"
 msgstr "Gönderen: {address}"
 
-#: app/src/ui/composer/mod.rs:1509
+#: app/src/ui/composer/mod.rs:1511
 msgid "Could not make a masked address: {reason}"
 msgstr "Maskeli adres oluşturulamadı: {reason}"
 
-#: app/src/ui/composer/mod.rs:1573
+#: app/src/ui/composer/mod.rs:1575
 msgid "Scheduled to send {when}"
 msgstr "Gönderim zamanı: {when}"
 
-#: app/src/ui/composer/mod.rs:1597 app/src/ui/composer/mod.rs:2032
+#: app/src/ui/composer/mod.rs:1599 app/src/ui/composer/mod.rs:2034
 msgid "Choose a sender and enter a permitted address suffix."
 msgstr "Bir gönderen seçip izin verilen bir adres soneki girin."
 
-#: app/src/ui/composer/mod.rs:1769 app/src/ui/queued.rs:65
+#: app/src/ui/composer/mod.rs:1771 app/src/ui/queued.rs:65
 #: app/src/ui/window/press.rs:489
 msgid "Cancel Send"
 msgstr "Göndermeyi İptal Et"
 
-#: app/src/ui/composer/mod.rs:1922 app/src/ui/window/scheduled.rs:97
+#: app/src/ui/composer/mod.rs:1924 app/src/ui/window/scheduled.rs:97
 msgid "Sending…"
 msgstr "Gönderiliyor…"
 
-#: app/src/ui/composer/mod.rs:1962
+#: app/src/ui/composer/mod.rs:1964
 msgid "Attachment Missing?"
 msgstr "Ek Eksik mi?"
 
-#: app/src/ui/composer/mod.rs:1964
+#: app/src/ui/composer/mod.rs:1966
 msgid "The message says “{sentence}” and carries no file."
 msgstr "İleti “{sentence}” diyor ancak dosya içermiyor."
 
-#: app/src/ui/composer/mod.rs:1969
+#: app/src/ui/composer/mod.rs:1971
 msgid "Add Attachment"
 msgstr "Ek Ekle"
 
-#: app/src/ui/composer/mod.rs:1970
+#: app/src/ui/composer/mod.rs:1972
 msgid "Send Anyway"
 msgstr "Yine de Gönder"
 
-#: app/src/ui/composer/mod.rs:1988
+#: app/src/ui/composer/mod.rs:1990
 msgid "Send Without Encryption?"
 msgstr "Şifrelemeden Gönderilsin mi?"
 
-#: app/src/ui/composer/mod.rs:1990
+#: app/src/ui/composer/mod.rs:1992
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Bu iletinin şifreli gönderilmesi istendi ancak şifrelenemiyor. {reason}"
 
-#: app/src/ui/composer/mod.rs:1996
+#: app/src/ui/composer/mod.rs:1998
 msgid "Send Readable"
 msgstr "Okunabilir Gönder"
 
-#: app/src/ui/composer/mod.rs:2011
+#: app/src/ui/composer/mod.rs:2013
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "Penguin Mail, sistem tepsisinde olsa bile çalışırken bu saatte gönderir."
 
-#: app/src/ui/composer/mod.rs:2012
+#: app/src/ui/composer/mod.rs:2014
 msgid "Schedule"
 msgstr "Zamanla"
 
-#: app/src/ui/composer/mod.rs:2074
+#: app/src/ui/composer/mod.rs:2076
 msgid "Draft saved, encrypted to your own key"
 msgstr "Taslak, kendi anahtarınızla şifrelenerek kaydedildi"
 
-#: app/src/ui/composer/mod.rs:2076
+#: app/src/ui/composer/mod.rs:2078
 msgid "Draft saved"
 msgstr "Taslak kaydedildi"
 
-#: app/src/ui/composer/mod.rs:2112
+#: app/src/ui/composer/mod.rs:2114
 msgid "Save as Draft?"
 msgstr "Taslak Olarak Kaydedilsin mi?"
 
-#: app/src/ui/composer/mod.rs:2116
+#: app/src/ui/composer/mod.rs:2118
 msgid "Discard"
 msgstr "Vazgeç"
 
-#: app/src/ui/composer/mod.rs:2118
+#: app/src/ui/composer/mod.rs:2120
 msgid "Save Draft"
 msgstr "Taslağı Kaydet"
 
-#: app/src/ui/composer/mod.rs:2159
+#: app/src/ui/composer/mod.rs:2161
 msgid "Attach Files"
 msgstr "Dosya Ekle"
 
-#: app/src/ui/composer/mod.rs:2195
+#: app/src/ui/composer/mod.rs:2197
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:2241
+#: app/src/ui/composer/mod.rs:2243
 #, fuzzy
 #| msgid "Open {file}, {size}"
 msgid "Open {file}"
 msgstr "{file} dosyasını aç, {size}"
 
-#: app/src/ui/composer/mod.rs:2294
+#: app/src/ui/composer/mod.rs:2296
 msgid "Bold (Ctrl+B)"
 msgstr "Kalın (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:2295
+#: app/src/ui/composer/mod.rs:2297
 msgid "Italic (Ctrl+I)"
 msgstr "İtalik (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:2298
+#: app/src/ui/composer/mod.rs:2300
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Üstü Çizili (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:2301
+#: app/src/ui/composer/mod.rs:2303
 msgid "Code (Ctrl+E)"
 msgstr "Kod (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:2338
+#: app/src/ui/composer/mod.rs:2340
 msgid "Link (Ctrl+K)"
 msgstr "Bağlantı (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:2348
+#: app/src/ui/composer/mod.rs:2350
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Madde İşaretli Liste (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:2353
+#: app/src/ui/composer/mod.rs:2355
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Numaralı Liste (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:2358
+#: app/src/ui/composer/mod.rs:2360
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Alıntı (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:2375
+#: app/src/ui/composer/mod.rs:2377
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Resim Ekle (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:2385
+#: app/src/ui/composer/mod.rs:2387
 msgid "Paragraph"
 msgstr "Paragraf"
 
-#: app/src/ui/composer/mod.rs:2386
+#: app/src/ui/composer/mod.rs:2388
 msgid "Heading 1"
 msgstr "Başlık 1"
 
-#: app/src/ui/composer/mod.rs:2387
+#: app/src/ui/composer/mod.rs:2389
 msgid "Heading 2"
 msgstr "Başlık 2"
 
-#: app/src/ui/composer/mod.rs:2388
+#: app/src/ui/composer/mod.rs:2390
 msgid "Heading 3"
 msgstr "Başlık 3"
 
-#: app/src/ui/composer/mod.rs:2389
+#: app/src/ui/composer/mod.rs:2391
 msgid "Code Block"
 msgstr "Kod Bloğu"
 
-#: app/src/ui/composer/mod.rs:2403
+#: app/src/ui/composer/mod.rs:2405
 msgid "Turn Markdown into Formatting"
 msgstr "Markdown'ı Biçimlendirmeye Dönüştür"
 
-#: app/src/ui/composer/mod.rs:2407
+#: app/src/ui/composer/mod.rs:2409
 msgid "Clear Formatting"
 msgstr "Biçimlendirmeyi Temizle"
 
-#: app/src/ui/composer/mod.rs:2413
+#: app/src/ui/composer/mod.rs:2415
 msgid "Write in Markdown"
 msgstr "Markdown ile Yaz"
 
-#: app/src/ui/composer/mod.rs:2420 app/src/ui/composer/mod.rs:2424
+#: app/src/ui/composer/mod.rs:2422 app/src/ui/composer/mod.rs:2426
 msgid "More Formatting"
 msgstr "Diğer Biçimlendirmeler"
 
-#: app/src/ui/composer/mod.rs:2461
+#: app/src/ui/composer/mod.rs:2463
 msgid "Add a Link"
 msgstr "Bağlantı Ekle"
 
-#: app/src/ui/composer/mod.rs:2467
+#: app/src/ui/composer/mod.rs:2469
 msgid "Text"
 msgstr "Metin"
 
-#: app/src/ui/composer/mod.rs:2479
+#: app/src/ui/composer/mod.rs:2481
 msgid "Add Link"
 msgstr "Bağlantı Ekle"
 
-#: app/src/ui/composer/mod.rs:2515
+#: app/src/ui/composer/mod.rs:2517
 msgid "Markdown formatted"
 msgstr "Markdown biçimlendirildi"
 
-#: app/src/ui/composer/mod.rs:2634
+#: app/src/ui/composer/mod.rs:2636
 msgid "Pasted as rich text"
 msgstr "Zengin metin olarak yapıştırıldı"
 
-#: app/src/ui/composer/mod.rs:2635
+#: app/src/ui/composer/mod.rs:2637
 msgid "Paste as Plain Text"
 msgstr "Düz Metin Olarak Yapıştır"
 
-#: app/src/ui/composer/mod.rs:2669
+#: app/src/ui/composer/mod.rs:2671
 msgid "Editing as Markdown"
 msgstr "Markdown olarak düzenleniyor"
 
-#: app/src/ui/composer/mod.rs:2705
+#: app/src/ui/composer/mod.rs:2707
 msgid "Images"
 msgstr "Resimler"
 
-#: app/src/ui/composer/mod.rs:2710
+#: app/src/ui/composer/mod.rs:2712
 msgid "Insert Image"
 msgstr "Resim Ekle"
 
-#: app/src/ui/composer/mod.rs:2754
+#: app/src/ui/composer/mod.rs:2756
 msgid "Could not read the file: {reason}"
 msgstr "Dosya okunamadı: {reason}"
 
-#: app/src/ui/composer/mod.rs:2836
+#: app/src/ui/composer/mod.rs:2838
 msgid "No Templates Yet"
 msgstr "Henüz Şablon Yok"
 
-#: app/src/ui/composer/mod.rs:2886
+#: app/src/ui/composer/mod.rs:2888
 msgid "Save as Template"
 msgstr "Şablon Olarak Kaydet"
 
-#: app/src/ui/composer/mod.rs:2888
+#: app/src/ui/composer/mod.rs:2890
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "{{first_name}} gibi yer tutucular her kullanımda doldurulur."
 
-#: app/src/ui/composer/mod.rs:2911 app/src/ui/templates.rs:281
+#: app/src/ui/composer/mod.rs:2913 app/src/ui/templates.rs:281
 msgid "Give the template a name"
 msgstr "Şablona bir ad verin"
 
-#: app/src/ui/composer/mod.rs:2919
+#: app/src/ui/composer/mod.rs:2921
 msgid "Template saved"
 msgstr "Şablon kaydedildi"
 
-#: app/src/ui/composer/mod.rs:2922
+#: app/src/ui/composer/mod.rs:2924
 msgid "Template not saved: {reason}"
 msgstr "Şablon kaydedilmedi: {reason}"
 
-#: app/src/ui/composer/mod.rs:3045
+#: app/src/ui/composer/mod.rs:3047
 msgid "This looks like Markdown"
 msgstr "Bu metin Markdown gibi görünüyor"
 
-#: app/src/ui/composer/mod.rs:3051
+#: app/src/ui/composer/mod.rs:3053
 msgid "Format"
 msgstr "Biçimlendir"
 
-#: app/src/ui/composer/mod.rs:3052
+#: app/src/ui/composer/mod.rs:3054
 msgid "Turn the Markdown into rich text"
 msgstr "Markdown'ı zengin metne dönüştür"
 
-#: app/src/ui/composer/mod.rs:3058 app/src/ui/composer/mod.rs:3062
+#: app/src/ui/composer/mod.rs:3060 app/src/ui/composer/mod.rs:3064
 msgid "Dismiss"
 msgstr "Kapat"
 
-#: app/src/ui/composer/mod.rs:3145
+#: app/src/ui/composer/mod.rs:3147
 msgid "The draft is kept on this computer, so you can finish it later here."
 msgstr "Taslak bu bilgisayarda tutulur. Daha sonra burada tamamlayabilirsiniz."
 
-#: app/src/ui/composer/mod.rs:3149
+#: app/src/ui/composer/mod.rs:3151
 msgid ""
 "The draft is kept in {provider}, so you can finish it later on any device."
 msgstr ""
 "Taslak {provider} üzerinde tutulur. Daha sonra herhangi bir cihazda "
 "tamamlayabilirsiniz."
 
-#: app/src/ui/composer/mod.rs:3153
+#: app/src/ui/composer/mod.rs:3155
 msgid ""
 "The draft is kept in your account, so you can finish it later on any device."
 msgstr ""
@@ -8181,11 +8197,11 @@ msgstr ""
 msgid "{recipient}, not an address"
 msgstr "{recipient}, adres değil"
 
-#: app/src/ui/composer/recipients.rs:323
+#: app/src/ui/composer/recipients.rs:324
 msgid "Remove {recipient}"
 msgstr "{recipient} kaldır"
 
-#: app/src/ui/composer/recipients.rs:337
+#: app/src/ui/composer/recipients.rs:338
 msgid "Press Delete to remove"
 msgstr "Kaldırmak için Delete tuşuna basın"
 
@@ -8193,15 +8209,15 @@ msgstr "Kaldırmak için Delete tuşuna basın"
 msgid "Picture"
 msgstr "Resim"
 
-#: app/src/ui/composer/spell.rs:653
+#: app/src/ui/composer/spell.rs:664
 msgid "No Suggestions"
 msgstr "Öneri Yok"
 
-#: app/src/ui/composer/spell.rs:665
+#: app/src/ui/composer/spell.rs:676
 msgid "Add to Dictionary"
 msgstr "Sözlüğe Ekle"
 
-#: app/src/ui/composer/spell.rs:666
+#: app/src/ui/composer/spell.rs:677
 msgid "Ignore"
 msgstr "Yoksay"
 
@@ -8217,7 +8233,7 @@ msgstr "Diğer e-posta"
 msgid "Phone"
 msgstr "Telefon"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1440
+#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1443
 msgid "Remove from VIPs"
 msgstr "VIP'lerden Kaldır"
 
@@ -8253,8 +8269,8 @@ msgstr "{account} için {host} kullan"
 msgid "Find Again"
 msgstr "Tekrar Bul"
 
-#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:609
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2121
+#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2124
 msgid "Edit…"
 msgstr "Düzenle…"
 
@@ -8317,232 +8333,232 @@ msgstr "{account} hesabını GNOME Çevrimiçi Hesaplar'a ekle"
 msgid "Not allowed when you signed in"
 msgstr "Oturum açarken izin verilmedi"
 
-#: app/src/ui/conversation.rs:270 app/src/ui/conversation.rs:620
+#: app/src/ui/conversation.rs:271 app/src/ui/conversation.rs:621
 #: app/src/ui/toolbar/customize.rs:17 app/src/ui/window/message_menu.rs:130
 msgid "Reply All"
 msgstr "Tümünü Yanıtla"
 
-#: app/src/ui/conversation.rs:271 app/src/ui/conversation.rs:621
+#: app/src/ui/conversation.rs:272 app/src/ui/conversation.rs:622
 #: app/src/ui/toolbar/customize.rs:18 app/src/ui/window/message_menu.rs:131
 #: app/src/ui/window/shortcuts.rs:488
 msgid "Forward"
 msgstr "Yönlendir"
 
-#: app/src/ui/conversation.rs:274 app/src/ui/conversation.rs:545
-#: app/src/ui/conversation.rs:651 app/src/ui/toolbar/customize.rs:27
+#: app/src/ui/conversation.rs:275 app/src/ui/conversation.rs:546
+#: app/src/ui/conversation.rs:652 app/src/ui/toolbar/customize.rs:27
 msgid "Print…"
 msgstr "Yazdır…"
 
-#: app/src/ui/conversation.rs:276 app/src/ui/conversation.rs:653
+#: app/src/ui/conversation.rs:277 app/src/ui/conversation.rs:654
 #: app/src/ui/window/message_menu.rs:143
 msgid "Export…"
 msgstr "Dışa Aktar…"
 
-#: app/src/ui/conversation.rs:279 app/src/ui/conversation.rs:656
-#: app/src/ui/window.rs:3764
+#: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
+#: app/src/ui/window.rs:3781
 msgid "Customize Toolbar…"
 msgstr "Araç Çubuğunu Özelleştir…"
 
-#: app/src/ui/conversation.rs:284 app/src/ui/conversation.rs:663
+#: app/src/ui/conversation.rs:285 app/src/ui/conversation.rs:664
 msgid "Always Load Images…"
 msgstr "Resimleri Her Zaman Yükle…"
 
-#: app/src/ui/conversation.rs:444
+#: app/src/ui/conversation.rs:445
 msgid "No Conversation Selected"
 msgstr "Yazışma Seçilmedi"
 
-#: app/src/ui/conversation.rs:450
+#: app/src/ui/conversation.rs:451
 msgid "Remote images are hidden to protect your privacy"
 msgstr "Gizliliğinizi korumak için uzak resimler gizlendi"
 
-#: app/src/ui/conversation.rs:451 app/src/ui/window/images.rs:88
+#: app/src/ui/conversation.rs:452 app/src/ui/window/images.rs:88
 msgid "Load Images"
 msgstr "Resimleri Yükle"
 
-#: app/src/ui/conversation.rs:455
+#: app/src/ui/conversation.rs:456
 msgid "This message is from a mailing list"
 msgstr "Bu ileti bir posta listesinden geliyor"
 
-#: app/src/ui/conversation.rs:469 app/src/ui/conversation.rs:1175
+#: app/src/ui/conversation.rs:470 app/src/ui/conversation.rs:1179
 #: app/src/ui/toolbar/customize.rs:24 app/src/ui/window/message_menu.rs:137
 msgid "Flag"
 msgstr "Bayrak Ekle"
 
-#: app/src/ui/conversation.rs:470 app/src/ui/conversation.rs:635
-#: app/src/ui/conversation.rs:941 app/src/ui/conversation.rs:1180
+#: app/src/ui/conversation.rs:471 app/src/ui/conversation.rs:636
+#: app/src/ui/conversation.rs:946 app/src/ui/conversation.rs:1184
 msgid "Mute"
 msgstr "Sessize Al"
 
-#: app/src/ui/conversation.rs:472 app/src/ui/conversation.rs:626
-#: app/src/ui/conversation.rs:1112 app/src/ui/toolbar/customize.rs:21
+#: app/src/ui/conversation.rs:473 app/src/ui/conversation.rs:627
+#: app/src/ui/conversation.rs:1116 app/src/ui/toolbar/customize.rs:21
 #: app/src/ui/window/message_menu.rs:133 app/src/ui/window/smart_trash.rs:82
 msgid "Move to Trash"
 msgstr "Çöp Kutusu'na Taşı"
 
-#: app/src/ui/conversation.rs:499
+#: app/src/ui/conversation.rs:500
 msgid "Several Conversations Selected"
 msgstr "Birden Fazla Yazışma Seçildi"
 
-#: app/src/ui/conversation.rs:501
+#: app/src/ui/conversation.rs:502
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr "İşlemler ve kısayollar tümüne uygulanır. Esc seçimi temizler."
 
-#: app/src/ui/conversation.rs:549
+#: app/src/ui/conversation.rs:550
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr "Arşivle (E veya Ctrl+Alt+A)"
 
-#: app/src/ui/conversation.rs:551 app/src/ui/conversation.rs:1095
+#: app/src/ui/conversation.rs:552 app/src/ui/conversation.rs:1099
 msgid "Move to Trash (Delete)"
 msgstr "Çöp Kutusu'na Taşı (Delete)"
 
-#: app/src/ui/conversation.rs:552 app/src/ui/conversation.rs:1105
+#: app/src/ui/conversation.rs:553 app/src/ui/conversation.rs:1109
 msgid "Junk (Ctrl+Shift+J)"
 msgstr "Gereksiz (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:555
+#: app/src/ui/conversation.rs:556
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "Okunmadı İşaretle (Ctrl+Shift+U)"
 
-#: app/src/ui/conversation.rs:560 app/src/ui/conversation.rs:564
-#: app/src/ui/conversation.rs:1845
+#: app/src/ui/conversation.rs:561 app/src/ui/conversation.rs:565
+#: app/src/ui/conversation.rs:1849
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "Bayrak Ekle (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:561 app/src/ui/conversation.rs:567
+#: app/src/ui/conversation.rs:562 app/src/ui/conversation.rs:568
 msgid "Choose Flag Color"
 msgstr "Bayrak Rengi Seç"
 
-#: app/src/ui/conversation.rs:568
+#: app/src/ui/conversation.rs:569
 msgid "Flags it in the color you chose last, or takes the flag off"
 msgstr "Son seçtiğiniz renkte bayrak ekler veya bayrağı kaldırır"
 
-#: app/src/ui/conversation.rs:572
+#: app/src/ui/conversation.rs:573
 msgid "Reply (Ctrl+R)"
 msgstr "Yanıtla (Ctrl+R)"
 
-#: app/src/ui/conversation.rs:575
+#: app/src/ui/conversation.rs:576
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr "Tümünü Yanıtla (Ctrl+Shift+R)"
 
-#: app/src/ui/conversation.rs:577
+#: app/src/ui/conversation.rs:578
 msgid "Forward (Ctrl+Shift+F)"
 msgstr "Yönlendir (Ctrl+Shift+F)"
 
-#: app/src/ui/conversation.rs:579 app/src/ui/toolbar/customize.rs:19
+#: app/src/ui/conversation.rs:580 app/src/ui/toolbar/customize.rs:19
 msgid "Edit Draft"
 msgstr "Taslağı Düzenle"
 
-#: app/src/ui/conversation.rs:586 app/src/ui/conversation.rs:589
+#: app/src/ui/conversation.rs:587 app/src/ui/conversation.rs:590
 msgid "More Actions"
 msgstr "Diğer İşlemler"
 
-#: app/src/ui/conversation.rs:610 app/src/ui/queued.rs:56
+#: app/src/ui/conversation.rs:611 app/src/ui/queued.rs:56
 msgid "Send Now"
 msgstr "Şimdi Gönder"
 
-#: app/src/ui/conversation.rs:630
+#: app/src/ui/conversation.rs:631
 msgid "Flag or Unflag"
 msgstr "Bayrak Ekle veya Kaldır"
 
-#: app/src/ui/conversation.rs:632 app/src/ui/toolbar/customize.rs:23
+#: app/src/ui/conversation.rs:633 app/src/ui/toolbar/customize.rs:23
 msgid "Mark Read or Unread"
 msgstr "Okundu veya Okunmadı İşaretle"
 
-#: app/src/ui/conversation.rs:640 app/src/ui/window/message_menu.rs:142
+#: app/src/ui/conversation.rs:641 app/src/ui/window/message_menu.rs:142
 msgid "Tags…"
 msgstr "İşaret Etiketleri…"
 
-#: app/src/ui/conversation.rs:644 app/src/ui/sidebar.rs:1485
-#: app/src/ui/sidebar.rs:2013 app/src/ui/window/reminders.rs:25
+#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1488
+#: app/src/ui/sidebar.rs:2016 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Bana Hatırlat"
 
-#: app/src/ui/conversation.rs:648
+#: app/src/ui/conversation.rs:649
 msgid "Open in New Window"
 msgstr "Yeni Pencerede Aç"
 
-#: app/src/ui/conversation.rs:660 app/src/ui/conversation.rs:908
+#: app/src/ui/conversation.rs:661 app/src/ui/conversation.rs:913
 msgid "Add Sender to VIPs"
 msgstr "Göndereni VIP'lere Ekle"
 
 #. Both sender items leave a rule on the server, so an account
 #. without rules turns them off, and the menu leaves them out.
-#: app/src/ui/conversation.rs:668
+#: app/src/ui/conversation.rs:669
 msgid "Block Sender…"
 msgstr "Göndereni Engelle…"
 
-#: app/src/ui/conversation.rs:676 app/src/ui/conversation.rs:928
+#: app/src/ui/conversation.rs:677 app/src/ui/conversation.rs:933
 msgid "Categorize Sender"
 msgstr "Göndereni Kategorilendir"
 
-#: app/src/ui/conversation.rs:704 app/src/ui/conversation.rs:706
+#: app/src/ui/conversation.rs:709 app/src/ui/conversation.rs:711
 #: app/src/ui/toolbar/customize.rs:26
 msgid "Tags"
 msgstr "İşaret Etiketleri"
 
-#: app/src/ui/conversation.rs:906
+#: app/src/ui/conversation.rs:911
 msgid "Remove Sender from VIPs"
 msgstr "Göndereni VIP'lerden Kaldır"
 
-#: app/src/ui/conversation.rs:939 app/src/ui/conversation.rs:1178
+#: app/src/ui/conversation.rs:944 app/src/ui/conversation.rs:1182
 msgid "Unmute"
 msgstr "Sesi Aç"
 
-#: app/src/ui/conversation.rs:1094
+#: app/src/ui/conversation.rs:1098
 msgid "Delete Forever (Delete)"
 msgstr "Kalıcı Olarak Sil (Delete)"
 
-#: app/src/ui/conversation.rs:1103
+#: app/src/ui/conversation.rs:1107
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Gereksiz Değil (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:1111 app/src/ui/window/message_menu.rs:134
+#: app/src/ui/conversation.rs:1115 app/src/ui/window/message_menu.rs:134
 #: app/src/ui/window/press.rs:475
 msgid "Delete Forever"
 msgstr "Kalıcı Olarak Sil"
 
-#: app/src/ui/conversation.rs:1116
+#: app/src/ui/conversation.rs:1120
 msgid "Not Junk"
 msgstr "Gereksiz Değil"
 
-#: app/src/ui/conversation.rs:1170 app/src/ui/window/message_menu.rs:136
+#: app/src/ui/conversation.rs:1174 app/src/ui/window/message_menu.rs:136
 msgid "Mark as Unread"
 msgstr "Okunmadı İşaretle"
 
-#: app/src/ui/conversation.rs:1173 app/src/ui/window/message_menu.rs:138
+#: app/src/ui/conversation.rs:1177 app/src/ui/window/message_menu.rs:138
 msgid "Unflag"
 msgstr "Bayrağı Kaldır"
 
-#: app/src/ui/conversation.rs:1189
+#: app/src/ui/conversation.rs:1193
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "{count} Yazışma Seçildi"
 msgstr[1] "{count} Yazışma Seçildi"
 
-#: app/src/ui/conversation.rs:1195
+#: app/src/ui/conversation.rs:1199
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "{count} İleti Seçildi"
 msgstr[1] "{count} İleti Seçildi"
 
-#: app/src/ui/conversation.rs:1844
+#: app/src/ui/conversation.rs:1848
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Bayrağı Kaldır (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:1857
+#: app/src/ui/conversation.rs:1861
 msgid "Mark as Read (U)"
 msgstr "Okundu İşaretle (U)"
 
-#: app/src/ui/conversation.rs:1858
+#: app/src/ui/conversation.rs:1862
 msgid "Mark as Unread (U)"
 msgstr "Okunmadı İşaretle (U)"
 
-#: app/src/ui/conversation.rs:2156
+#: app/src/ui/conversation.rs:2160
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:2173 app/src/ui/window/message_menu.rs:269
+#: app/src/ui/conversation.rs:2177 app/src/ui/window/message_menu.rs:269
 msgid "Clear Flag"
 msgstr "Bayrağı Temizle"
 
@@ -8902,7 +8918,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "E-postamı Gizle'ye İzin Ver"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3977
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3994
 msgid "Add an account first"
 msgstr "Önce bir hesap ekleyin"
 
@@ -9012,70 +9028,70 @@ msgstr ""
 msgid "Could not add to your calendar: {reason}"
 msgstr "Takviminize eklenemedi: {reason}"
 
-#: app/src/ui/invitation.rs:76
+#: app/src/ui/invitation.rs:79
 msgid "{calendar} ({account})"
 msgstr "{calendar} ({account})"
 
-#: app/src/ui/invitation.rs:350
+#: app/src/ui/invitation.rs:353
 msgid "What the answer covers"
 msgstr "Yanıtın kapsamı"
 
-#: app/src/ui/invitation.rs:352
+#: app/src/ui/invitation.rs:355
 msgid "This Event"
 msgstr "Bu Etkinlik"
 
-#: app/src/ui/invitation.rs:357
+#: app/src/ui/invitation.rs:360
 msgid "All Events"
 msgstr "Tüm Etkinlikler"
 
-#: app/src/ui/invitation.rs:368
+#: app/src/ui/invitation.rs:371
 msgid "Add a Note"
 msgstr "Not Ekle"
 
-#: app/src/ui/invitation.rs:391 app/src/ui/invitation.rs:396
+#: app/src/ui/invitation.rs:394 app/src/ui/invitation.rs:399
 msgid "More Answers"
 msgstr "Diğer Yanıtlar"
 
-#: app/src/ui/invitation.rs:402 app/src/ui/invitation.rs:407
+#: app/src/ui/invitation.rs:405 app/src/ui/invitation.rs:410
 msgid "Add to Calendar"
 msgstr "Takvime Ekle"
 
-#: app/src/ui/invitation.rs:415
+#: app/src/ui/invitation.rs:418
 msgid "Calendar to add to"
 msgstr "Eklenecek takvim"
 
-#: app/src/ui/invitation.rs:416
+#: app/src/ui/invitation.rs:419
 msgid "The calendar the events go on"
 msgstr "Etkinliklerin ekleneceği takvim"
 
-#: app/src/ui/invitation.rs:425
+#: app/src/ui/invitation.rs:428
 msgid "Events to add"
 msgstr "Eklenecek etkinlikler"
 
-#: app/src/ui/invitation.rs:430 app/src/ui/invitation.rs:436
-#: app/src/ui/sidebar.rs:143
+#: app/src/ui/invitation.rs:433 app/src/ui/invitation.rs:439
+#: app/src/ui/sidebar.rs:144
 msgid "Show in Calendar"
 msgstr "Takvimde Göster"
 
-#: app/src/ui/invitation.rs:486
+#: app/src/ui/invitation.rs:489
 msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr "Penguin Mail'in bu etkinliği Takvim'de göstermesi için izin gerekiyor."
 
-#: app/src/ui/invitation.rs:906
+#: app/src/ui/invitation.rs:909
 msgid "Added to your calendar"
 msgstr "Takviminize eklendi"
 
-#: app/src/ui/invitation.rs:908
+#: app/src/ui/invitation.rs:911
 msgid "Added {count} events to your calendar"
 msgid_plural "Added {count} events to your calendar"
 msgstr[0] "Takviminize {count} etkinlik eklendi"
 msgstr[1] "Takviminize {count} etkinlik eklendi"
 
-#: app/src/ui/invitation.rs:913
+#: app/src/ui/invitation.rs:916
 msgid "Added to {calendar}"
 msgstr "{calendar} takvimine eklendi"
 
-#: app/src/ui/invitation.rs:915
+#: app/src/ui/invitation.rs:918
 msgid "Added {count} events to {calendar}"
 msgid_plural "Added {count} events to {calendar}"
 msgstr[0] "{calendar} takvimine {count} etkinlik eklendi"
@@ -9083,101 +9099,101 @@ msgstr[1] "{calendar} takvimine {count} etkinlik eklendi"
 
 #. A file with several events names none of them on the card's
 #. head: the list below does, one row each.
-#: app/src/ui/invitation.rs:1005
+#: app/src/ui/invitation.rs:1008
 msgid "{count} events"
 msgid_plural "{count} events"
 msgstr[0] "{count} etkinlik"
 msgstr[1] "{count} etkinlik"
 
-#: app/src/ui/invitation.rs:1085
+#: app/src/ui/invitation.rs:1088
 msgid "Pick a Time…"
 msgstr "Zaman Seç…"
 
-#: app/src/ui/invitation.rs:1128
+#: app/src/ui/invitation.rs:1131
 msgid "No reply yet"
 msgstr "Henüz yanıt yok"
 
-#: app/src/ui/invitation.rs:1198
+#: app/src/ui/invitation.rs:1201
 msgid "Half an Hour Later"
 msgstr "Yarım Saat Sonra"
 
-#: app/src/ui/invitation.rs:1201
+#: app/src/ui/invitation.rs:1204
 msgid "An Hour Later"
 msgstr "Bir Saat Sonra"
 
-#: app/src/ui/invitation.rs:1203
+#: app/src/ui/invitation.rs:1206
 msgid "Same Time Tomorrow"
 msgstr "Yarın Aynı Saatte"
 
-#: app/src/ui/invitation.rs:1207
+#: app/src/ui/invitation.rs:1210
 msgid "Same Time Next Week"
 msgstr "Gelecek Hafta Aynı Saatte"
 
-#: app/src/ui/invitation.rs:1222
+#: app/src/ui/invitation.rs:1225
 msgid "You have {event} then"
 msgstr "O sırada {event} var"
 
-#: app/src/ui/invitation.rs:1224
+#: app/src/ui/invitation.rs:1227
 msgid "You have {event} and {other} then"
 msgstr "O sırada {event} ve {other} var"
 
-#: app/src/ui/invitation.rs:1228
+#: app/src/ui/invitation.rs:1231
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] "O sırada {event} ve {count} etkinlik daha var"
 msgstr[1] "O sırada {event} ve {count} etkinlik daha var"
 
-#: app/src/ui/invitation.rs:1241
+#: app/src/ui/invitation.rs:1244
 msgid "Reply to the invitation from {organizer}"
 msgstr "{organizer} tarafından gönderilen daveti yanıtla"
 
-#: app/src/ui/invitation.rs:1349
+#: app/src/ui/invitation.rs:1352
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] "{count} evet"
 msgstr[1] "{count} evet"
 
-#: app/src/ui/invitation.rs:1357
+#: app/src/ui/invitation.rs:1360
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] "{count} hayır"
 msgstr[1] "{count} hayır"
 
-#: app/src/ui/invitation.rs:1365
+#: app/src/ui/invitation.rs:1368
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] "{count} belki"
 msgstr[1] "{count} belki"
 
-#: app/src/ui/invitation.rs:1373
+#: app/src/ui/invitation.rs:1376
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] "{count} bekleniyor"
 msgstr[1] "{count} bekleniyor"
 
-#: app/src/ui/invitation.rs:1381
+#: app/src/ui/invitation.rs:1384
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] "{count} konuk"
 msgstr[1] "{count} konuk"
 
-#: app/src/ui/invitation.rs:1387
+#: app/src/ui/invitation.rs:1390
 msgid "{guests} · {answers}"
 msgstr "{guests} · {answers}"
 
-#: app/src/ui/invitation.rs:1397
+#: app/src/ui/invitation.rs:1400
 msgid "This meeting moved from {when}"
 msgstr "Bu toplantı {when} zamanından taşındı"
 
-#: app/src/ui/invitation.rs:1400
+#: app/src/ui/invitation.rs:1403
 msgid "The organizer changed this meeting"
 msgstr "Düzenleyici bu toplantıyı değiştirdi"
 
-#: app/src/ui/invitation.rs:1401
+#: app/src/ui/invitation.rs:1404
 msgid "The organizer canceled this meeting"
 msgstr "Düzenleyici bu toplantıyı iptal etti"
 
-#: app/src/ui/invitation.rs:1402
+#: app/src/ui/invitation.rs:1405
 msgid "This meeting is canceled"
 msgstr "Bu toplantı iptal edildi"
 
@@ -9391,7 +9407,7 @@ msgstr "Bu hesap henüz eşitlenmiyor"
 msgid "Could not change the subscription: {reason}"
 msgstr "Renk değiştirilemedi: {reason}"
 
-#: app/src/ui/mod.rs:557
+#: app/src/ui/mod.rs:558
 msgid "Gray"
 msgstr "Gri"
 
@@ -9796,8 +9812,8 @@ msgstr ""
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:783 app/src/ui/sidebar.rs:66
-#: app/src/ui/sidebar.rs:79
+#: app/src/ui/preferences.rs:783 app/src/ui/sidebar.rs:67
+#: app/src/ui/sidebar.rs:80
 msgid "Undo Send"
 msgstr "Göndermeyi Geri Al"
 
@@ -9882,11 +9898,7 @@ msgstr[1] ""
 "Penguin Mail, anahtarlarınızı tutan ve parolanızı kendisi soran {programs} "
 "üzerinden imzalar ve şifreler."
 
-#: app/src/ui/preferences.rs:1006 app/src/ui/preferences.rs:1019
-msgid "Spelling"
-msgstr "Yazım Denetimi"
-
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:998
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -9896,65 +9908,78 @@ msgstr ""
 "veya hunspell-pt-pt gibi bir Hunspell sözlüğü kurup ileti düzenleyicisini "
 "yeniden açın."
 
-#: app/src/ui/preferences.rs:1021
+#: app/src/ui/preferences.rs:1011
+msgid ""
+"No dictionaries are installed, so Penguin Mail is not checking spelling. Put "
+"a dictionary's .aff and .dic files in {folder} and reopen the composer."
+msgstr ""
+"Sözlük kurulu olmadığından Penguin Mail yazımı denetlemiyor. Bir "
+"sözlüğün .aff ve .dic dosyalarını {folder} klasörüne koyup ileti "
+"düzenleyicisini yeniden açın."
+
+#: app/src/ui/preferences.rs:1032 app/src/ui/preferences.rs:1041
+msgid "Spelling"
+msgstr "Yazım Denetimi"
+
+#: app/src/ui/preferences.rs:1043
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
 msgstr "Her hesabın yazım denetimi dili. Kurulu sözlükler: {languages}."
 
-#: app/src/ui/preferences.rs:1033
+#: app/src/ui/preferences.rs:1055
 msgid "System: {language}"
 msgstr "Sistem: {language}"
 
-#: app/src/ui/preferences.rs:1048
+#: app/src/ui/preferences.rs:1070
 msgid "All Installed Languages"
 msgstr "Kurulu Tüm Diller"
 
-#: app/src/ui/preferences.rs:1091
+#: app/src/ui/preferences.rs:1113
 msgid "Sync"
 msgstr "Eşitleme"
 
-#: app/src/ui/preferences.rs:1099
+#: app/src/ui/preferences.rs:1121
 msgid "Checking"
 msgstr "Kontrol"
 
-#: app/src/ui/preferences.rs:1105
+#: app/src/ui/preferences.rs:1127
 msgid "Check for New Mail"
 msgstr "Yeni Postaları Kontrol Et"
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1136
 msgid "Storage"
 msgstr "Depolama"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1144
 msgid "Keep Mail on This Computer For"
 msgstr "Bu Bilgisayarda Posta Saklama Süresi"
 
-#: app/src/ui/preferences.rs:1143
+#: app/src/ui/preferences.rs:1165
 msgid "Message text kept for opening offline"
 msgstr "Çevrimdışı açmak için saklanan ileti metni"
 
-#: app/src/ui/preferences.rs:1146
+#: app/src/ui/preferences.rs:1168
 msgid "Message Cache"
 msgstr "İleti Önbelleği"
 
-#: app/src/ui/preferences.rs:1155
+#: app/src/ui/preferences.rs:1177
 msgid "100 messages"
 msgstr "100 ileti"
 
-#: app/src/ui/preferences.rs:1156
+#: app/src/ui/preferences.rs:1178
 msgid "300 messages"
 msgstr "300 ileti"
 
-#: app/src/ui/preferences.rs:1157
+#: app/src/ui/preferences.rs:1179
 msgid "1,000 messages"
 msgstr "1.000 ileti"
 
-#: app/src/ui/preferences.rs:1161
+#: app/src/ui/preferences.rs:1183
 msgid "Download Recent Inbox Messages"
 msgstr "Gelen Kutusundaki Son İletileri İndir"
 
-#: app/src/ui/preferences.rs:1162
+#: app/src/ui/preferences.rs:1184
 msgid ""
 "Download message text in each account for faster opening and offline "
 "reading. Attachments and remote images aren't downloaded."
@@ -9962,149 +9987,149 @@ msgstr ""
 "Daha hızlı açmak ve çevrimdışı okumak için her hesaptaki ileti metnini "
 "indirir. Ekler ve uzak görseller indirilmez."
 
-#: app/src/ui/preferences.rs:1189
+#: app/src/ui/preferences.rs:1211
 msgid "Startup"
 msgstr "Başlangıç"
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1214
 msgid "Start in the Tray at Login"
 msgstr "Oturum Açıldığında Sistem Tepsisinde Başlat"
 
-#: app/src/ui/preferences.rs:1207
+#: app/src/ui/preferences.rs:1229
 msgid "Not available in demo mode"
 msgstr "Demo kipinde kullanılamaz"
 
-#: app/src/ui/preferences.rs:1215
+#: app/src/ui/preferences.rs:1237
 msgid "Look for a new release once a day"
 msgstr "Günde bir kez yeni sürüm ara"
 
-#: app/src/ui/preferences.rs:1256
+#: app/src/ui/preferences.rs:1278
 msgid "{used} of {limit}"
 msgstr "{used} / {limit}"
 
-#: app/src/ui/preferences.rs:1268
+#: app/src/ui/preferences.rs:1290
 msgid "{amount} · Full"
 msgstr "{amount} · Dolu"
 
-#: app/src/ui/preferences.rs:1270
+#: app/src/ui/preferences.rs:1292
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Neredeyse dolu"
 
-#: app/src/ui/preferences.rs:1282
+#: app/src/ui/preferences.rs:1304
 msgid "Senders Who May Load Images"
 msgstr "Resim Yükleyebilen Gönderenler"
 
-#: app/src/ui/preferences.rs:1283 app/src/ui/preferences.rs:1292
+#: app/src/ui/preferences.rs:1305 app/src/ui/preferences.rs:1314
 msgid "Nobody yet"
 msgstr "Henüz kimse yok"
 
-#: app/src/ui/preferences.rs:1294
+#: app/src/ui/preferences.rs:1316
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} gönderen"
 msgstr[1] "{count} gönderen"
 
-#: app/src/ui/preferences.rs:1304
+#: app/src/ui/preferences.rs:1326
 msgid "Anyone at this domain"
 msgstr "Bu alan adındaki herkes"
 
-#: app/src/ui/preferences.rs:1306
+#: app/src/ui/preferences.rs:1328
 msgid "This address"
 msgstr "Bu adres"
 
-#: app/src/ui/preferences.rs:1311
+#: app/src/ui/preferences.rs:1333
 msgid "Stop Loading Images from This Sender"
 msgstr "Bu Gönderenin Resimlerini Yüklemeyi Durdur"
 
-#: app/src/ui/preferences.rs:1318
+#: app/src/ui/preferences.rs:1340
 msgid "Stop loading images from {sender}"
 msgstr "{sender} göndericisinden resim yüklemeyi durdur"
 
-#: app/src/ui/preferences.rs:1388
+#: app/src/ui/preferences.rs:1410
 msgid "Monday to Friday"
 msgstr "Pazartesiden Cumaya"
 
-#: app/src/ui/preferences.rs:1389
+#: app/src/ui/preferences.rs:1411
 msgid "Every day of the week"
 msgstr "Haftanın her günü"
 
-#: app/src/ui/preferences.rs:1390
+#: app/src/ui/preferences.rs:1412
 msgid "No days"
 msgstr "Hiçbir gün"
 
-#: app/src/ui/preferences.rs:1397
+#: app/src/ui/preferences.rs:1419
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1400
+#: app/src/ui/preferences.rs:1422
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1463
+#: app/src/ui/preferences.rs:1485
 msgid "Time Format"
 msgstr "Saat Biçimi"
 
-#: app/src/ui/preferences.rs:1467
+#: app/src/ui/preferences.rs:1489
 msgid "Automatic follows the system clock format"
 msgstr "Otomatik, sistemin saat biçimini izler"
 
-#: app/src/ui/preferences.rs:1481
+#: app/src/ui/preferences.rs:1503
 msgid "Week Starts On"
 msgstr "Haftanın İlk Günü"
 
-#: app/src/ui/preferences.rs:1486
+#: app/src/ui/preferences.rs:1508
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Otomatik, yerel ayarın haftanın ilk gününü izler"
 
-#: app/src/ui/preferences.rs:1500
+#: app/src/ui/preferences.rs:1522
 msgid "Working Hours"
 msgstr "Çalışma Saatleri"
 
-#: app/src/ui/preferences.rs:1519
+#: app/src/ui/preferences.rs:1541
 msgid "Hours"
 msgstr "Saatler"
 
-#: app/src/ui/preferences.rs:1570
+#: app/src/ui/preferences.rs:1592
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1628
+#: app/src/ui/preferences.rs:1650
 msgid "Show Only Subscribed Folders"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1630
+#: app/src/ui/preferences.rs:1652
 msgid ""
 "Folders you do not subscribe to stay out of the sidebar. Choose them in "
 "Manage Folders, in the account's menu."
 msgstr ""
 
-#: app/src/ui/preferences.rs:1674
+#: app/src/ui/preferences.rs:1696
 #, fuzzy
 #| msgid "Could not change the color: {reason}"
 msgid "Could not change the folders: {reason}"
 msgstr "Renk değiştirilemedi: {reason}"
 
-#: app/src/ui/preferences.rs:1718
+#: app/src/ui/preferences.rs:1740
 msgid "Never Translate"
 msgstr "Asla Çevirme"
 
-#: app/src/ui/preferences.rs:1720
+#: app/src/ui/preferences.rs:1742
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Bu dillerdeki iletiler için çeviri önerilmez"
 
-#: app/src/ui/preferences.rs:1749
+#: app/src/ui/preferences.rs:1771
 msgid "Follow System"
 msgstr "Sistemi İzle"
 
-#: app/src/ui/preferences.rs:1753
+#: app/src/ui/preferences.rs:1775
 msgid "Language"
 msgstr "Dil"
 
-#: app/src/ui/preferences.rs:1754
+#: app/src/ui/preferences.rs:1776
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail yeni dili yeniden başlatıldıktan sonra gösterir"
 
-#: app/src/ui/preferences.rs:1835 app/src/ui/sender_prefs/signature.rs:28
+#: app/src/ui/preferences.rs:1857 app/src/ui/sender_prefs/signature.rs:28
 msgid "No signature"
 msgstr "İmza yok"
 
@@ -10180,7 +10205,7 @@ msgstr "Son Kullanılan Takvim Hesabı"
 msgid "Same as New Messages"
 msgstr "Yeni İletilerle Aynı"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:275
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
 msgid "All Inboxes"
 msgstr "Tüm Gelen Kutuları"
 
@@ -10199,7 +10224,7 @@ msgstr "{account} Hesabını Aşağı Taşı"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3771 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3788 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Tercihler"
 
@@ -10576,7 +10601,7 @@ msgstr "Adres Ekle"
 msgid "Default sender"
 msgstr "Varsayılan gönderen"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2430
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2433
 msgid "Signature…"
 msgstr "İmza…"
 
@@ -10636,159 +10661,159 @@ msgstr ""
 "Markdown desteklenir. <email> eki dahil gönderen adresine, <domain> ise onun "
 "alan adına dönüşür."
 
-#: app/src/ui/sidebar.rs:75
+#: app/src/ui/sidebar.rs:76
 msgid "Stop the message from going out"
 msgstr "İletinin gönderilmesini durdur"
 
-#: app/src/ui/sidebar.rs:482 app/src/ui/sidebar.rs:908
+#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:911
 #: app/src/ui/sidebar/sections.rs:26
 #: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "Posta Kutuları"
 
-#: app/src/ui/sidebar.rs:494 app/src/ui/sidebar.rs:548
-#: app/src/ui/sidebar.rs:1903 app/src/ui/thread_list.rs:372
+#: app/src/ui/sidebar.rs:495 app/src/ui/sidebar.rs:549
+#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:373
 msgid "Mail"
 msgstr "Posta"
 
-#: app/src/ui/sidebar.rs:537 app/src/ui/sidebar.rs:1894
-#: app/src/ui/sidebar.rs:3122
+#: app/src/ui/sidebar.rs:538 app/src/ui/sidebar.rs:1897
+#: app/src/ui/sidebar.rs:3125
 msgid "99+"
 msgstr "99+"
 
-#: app/src/ui/sidebar.rs:899
+#: app/src/ui/sidebar.rs:902
 msgid "Calendars"
 msgstr "Takvimler"
 
-#: app/src/ui/sidebar.rs:1427 app/src/ui/sidebar.rs:1429
-#: app/src/ui/sidebar.rs:2030 app/src/ui/sidebar.rs:2032
+#: app/src/ui/sidebar.rs:1430 app/src/ui/sidebar.rs:1432
+#: app/src/ui/sidebar.rs:2033 app/src/ui/sidebar.rs:2035
 msgid "VIPs"
 msgstr "VIP'ler"
 
-#: app/src/ui/sidebar.rs:1469 app/src/ui/sidebar.rs:2001
+#: app/src/ui/sidebar.rs:1472 app/src/ui/sidebar.rs:2004
 msgid "Outbox"
 msgstr "Giden Kutusu"
 
-#: app/src/ui/sidebar.rs:1532
+#: app/src/ui/sidebar.rs:1535
 msgid "Holds folders, not mail"
 msgstr "Posta değil, klasör içerir"
 
-#: app/src/ui/sidebar.rs:1761
+#: app/src/ui/sidebar.rs:1764
 msgid "Approximate unread message count from downloaded mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1764
+#: app/src/ui/sidebar.rs:1767
 #, fuzzy
 #| msgid "The message is larger than the server sends."
 msgid "Unread messages counted on the server"
 msgstr "İleti sunucunun gönderebileceğinden büyük."
 
-#: app/src/ui/sidebar.rs:1767
+#: app/src/ui/sidebar.rs:1770
 #, fuzzy
 #| msgid "{count} unread message"
 #| msgid_plural "{count} unread messages"
 msgid "Counting unread messages on the server…"
 msgstr "{count} okunmamış ileti"
 
-#: app/src/ui/sidebar.rs:1770
+#: app/src/ui/sidebar.rs:1773
 msgid ""
 "Unread count unavailable. The account may be offline or the server may not "
 "support these conditions."
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1853
+#: app/src/ui/sidebar.rs:1856
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} okunmamış ileti"
 msgstr[1] "{mailbox}, {count} okunmamış ileti"
 
-#: app/src/ui/sidebar.rs:1859
+#: app/src/ui/sidebar.rs:1862
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} ileti"
 msgstr[1] "{mailbox}, {count} ileti"
 
-#: app/src/ui/sidebar.rs:1906
+#: app/src/ui/sidebar.rs:1909
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Posta, {count} okunmamış"
 msgstr[1] "Posta, {count} okunmamış"
 
-#: app/src/ui/sidebar.rs:1912
+#: app/src/ui/sidebar.rs:1915
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Takvim, {count} davet yanıtınızı bekliyor"
 msgstr[1] "Takvim, {count} davet yanıtınızı bekliyor"
 
-#: app/src/ui/sidebar.rs:2123 app/src/ui/sidebar.rs:2245
-#: app/src/ui/sidebar.rs:2540
+#: app/src/ui/sidebar.rs:2126 app/src/ui/sidebar.rs:2248
+#: app/src/ui/sidebar.rs:2543
 msgid "Move Up"
 msgstr "Yukarı Taşı"
 
-#: app/src/ui/sidebar.rs:2124 app/src/ui/sidebar.rs:2248
-#: app/src/ui/sidebar.rs:2541
+#: app/src/ui/sidebar.rs:2127 app/src/ui/sidebar.rs:2251
+#: app/src/ui/sidebar.rs:2544
 msgid "Move Down"
 msgstr "Aşağı Taşı"
 
-#: app/src/ui/sidebar.rs:2276
+#: app/src/ui/sidebar.rs:2279
 msgid "Empty Trash…"
 msgstr "Çöp Kutusunu Boşalt…"
 
-#: app/src/ui/sidebar.rs:2429
+#: app/src/ui/sidebar.rs:2432
 msgid "Automatic Reply…"
 msgstr "Otomatik Yanıt…"
 
-#: app/src/ui/sidebar.rs:2431
+#: app/src/ui/sidebar.rs:2434
 msgid "Rules…"
 msgstr "Kurallar…"
 
-#: app/src/ui/sidebar.rs:2432 app/src/ui/window.rs:3757
+#: app/src/ui/sidebar.rs:2435 app/src/ui/window.rs:3774
 msgid "Hide My Email…"
 msgstr "E-postamı Gizle…"
 
-#: app/src/ui/sidebar.rs:2441
+#: app/src/ui/sidebar.rs:2444
 msgid "On this computer"
 msgstr "Bu bilgisayarda"
 
-#: app/src/ui/sidebar.rs:2449
+#: app/src/ui/sidebar.rs:2452
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "Bu bilgisayarda. Bu hesabın posta kutularını göster veya gizle"
 
-#: app/src/ui/sidebar.rs:2450
+#: app/src/ui/sidebar.rs:2453
 msgid "Show or hide this account's mailboxes"
 msgstr "Bu hesabın posta kutularını göster veya gizle"
 
-#: app/src/ui/sidebar.rs:2526
+#: app/src/ui/sidebar.rs:2529
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Yeni Klasör…"
 
-#: app/src/ui/sidebar.rs:2545
+#: app/src/ui/sidebar.rs:2548
 msgid "Switch to JMAP…"
 msgstr "JMAP'e Geç…"
 
-#: app/src/ui/sidebar.rs:2547
+#: app/src/ui/sidebar.rs:2550
 msgid "Messages That Will Not Download…"
 msgstr "İndirilemeyen İletiler…"
 
-#: app/src/ui/sidebar.rs:2622
+#: app/src/ui/sidebar.rs:2625
 msgid "Sign in again to keep syncing"
 msgstr "Eşitlemeyi sürdürmek için yeniden oturum açın"
 
-#: app/src/ui/sidebar.rs:2628
+#: app/src/ui/sidebar.rs:2631
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} yanıt vermiyor; tekrar deneniyor"
 
-#: app/src/ui/sidebar.rs:2639
+#: app/src/ui/sidebar.rs:2642
 msgid "The keyring is not responding; retrying"
 msgstr "Anahtarlık yanıt vermiyor; tekrar deneniyor"
 
-#: app/src/ui/sidebar.rs:2642
+#: app/src/ui/sidebar.rs:2645
 msgid "Downloading mail"
 msgstr "Postalar indiriliyor"
 
-#: app/src/ui/sidebar.rs:2646
+#: app/src/ui/sidebar.rs:2649
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Hatadan sonra eşitleme durdu; tekrar denemek için Penguin Mail'i yeniden "
@@ -10796,7 +10821,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2653
+#: app/src/ui/sidebar.rs:2656
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11002,30 +11027,30 @@ msgstr "Gövde"
 msgid "New Template"
 msgstr "Yeni Şablon"
 
-#: app/src/ui/thread_list.rs:238
+#: app/src/ui/thread_list.rs:239
 msgid "No Mail"
 msgstr "Posta Yok"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:256
+#: app/src/ui/thread_list.rs:257
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Posta ara, ör. from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:295 app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
 msgid "Show Mailboxes"
 msgstr "Posta Kutularını Göster"
 
-#: app/src/ui/thread_list.rs:300
+#: app/src/ui/thread_list.rs:301
 msgid "New Message (C)"
 msgstr "Yeni İleti (C)"
 
-#: app/src/ui/thread_list.rs:305
+#: app/src/ui/thread_list.rs:306
 msgid "Search (/)"
 msgstr "Ara (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:314
+#: app/src/ui/thread_list.rs:315
 msgid "Search mail"
 msgstr "Posta ara"
 
@@ -11377,7 +11402,7 @@ msgstr "Postalar yüklenemedi: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} eklendi. Postalar indiriliyor…"
 
-#: app/src/ui/window.rs:366 app/src/ui/window.rs:3118
+#: app/src/ui/window.rs:366 app/src/ui/window.rs:3135
 msgid "{account} is signed in again."
 msgstr "{account} hesabında yeniden oturum açıldı."
 
@@ -11520,66 +11545,66 @@ msgstr[1] "{count} ileti Gelen Kutusu'na taşındı"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:1395
+#: app/src/ui/window.rs:1412
 msgid "Could not read accounts: {reason}"
 msgstr "Hesaplar okunamadı: {reason}"
 
-#: app/src/ui/window.rs:2154
+#: app/src/ui/window.rs:2171
 msgid "Could not delete the mail: {reason}"
 msgstr "Postalar silinemedi: {reason}"
 
-#: app/src/ui/window.rs:2261
+#: app/src/ui/window.rs:2278
 msgid "Turn On the {service}"
 msgstr "{service} Hizmetini Aç"
 
-#: app/src/ui/window.rs:2446 app/src/ui/window.rs:2449
+#: app/src/ui/window.rs:2463 app/src/ui/window.rs:2466
 msgid "Move to Inbox"
 msgstr "Gelen Kutusu'na taşı"
 
-#: app/src/ui/window.rs:2617 app/src/ui/window.rs:2622
+#: app/src/ui/window.rs:2634 app/src/ui/window.rs:2639
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Model ara"
 
-#: app/src/ui/window.rs:2691
+#: app/src/ui/window.rs:2708
 msgid "Select mail from one account to tag it."
 msgstr "İşaret etiketi eklemek için tek bir hesaptan posta seçin."
 
-#: app/src/ui/window.rs:2703
+#: app/src/ui/window.rs:2720
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Bu hesapta henüz işaret etiketi yok. Outlook'ta bir tane oluşturun."
 
-#: app/src/ui/window.rs:2796
+#: app/src/ui/window.rs:2813
 msgid "Add an account to reply or forward"
 msgstr "Yanıtlamak veya iletmek için bir hesap ekleyin"
 
-#: app/src/ui/window.rs:2901
+#: app/src/ui/window.rs:2918
 msgid "Could not include {file}: {reason}"
 msgstr "{file} eklenemedi: {reason}"
 
-#: app/src/ui/window.rs:2982
+#: app/src/ui/window.rs:2999
 msgid "The server had already sent this message."
 msgstr "Sunucu bu iletiyi zaten göndermişti."
 
-#: app/src/ui/window.rs:2987
+#: app/src/ui/window.rs:3004
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Bu ileti başka bir uygulamada iptal edildi ve artık Taslaklar'da değil."
 
-#: app/src/ui/window.rs:3303
+#: app/src/ui/window.rs:3320
 msgid "Continue in your browser"
 msgstr "Tarayıcınızda devam edin"
 
-#: app/src/ui/window.rs:3353
+#: app/src/ui/window.rs:3370
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Penguin Mail'in bu derlemesinde Google ile oturum açma yok."
 
-#: app/src/ui/window.rs:3375
+#: app/src/ui/window.rs:3392
 msgid "Get a Release"
 msgstr "Sürüm İndir"
 
-#: app/src/ui/window.rs:3498
+#: app/src/ui/window.rs:3515
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11587,86 +11612,86 @@ msgstr ""
 "Sunucunun daha sonra göndermek üzere tuttuğu iletiler kontrol edilemedi, bu "
 "yüzden {account} kaldırılmadı: {reason}"
 
-#: app/src/ui/window.rs:3509
+#: app/src/ui/window.rs:3526
 msgid "Remove {account}?"
 msgstr "{account} kaldırılsın mı?"
 
-#: app/src/ui/window.rs:3528
+#: app/src/ui/window.rs:3545
 msgid "Remove Anyway"
 msgstr "Yine de Kaldır"
 
-#: app/src/ui/window.rs:3541
+#: app/src/ui/window.rs:3558
 msgid "Removed {account}"
 msgstr "{account} kaldırıldı"
 
-#: app/src/ui/window.rs:3543
+#: app/src/ui/window.rs:3560
 msgid "Could not remove {account}: {reason}"
 msgstr "{account} kaldırılamadı: {reason}"
 
-#: app/src/ui/window.rs:3735
+#: app/src/ui/window.rs:3752
 msgid "Refresh"
 msgstr "Yenile"
 
-#: app/src/ui/window.rs:3739
+#: app/src/ui/window.rs:3756
 msgid "Show Declined Events"
 msgstr "Reddedilen Etkinlikleri Göster"
 
-#: app/src/ui/window.rs:3755
+#: app/src/ui/window.rs:3772
 msgid "Add Account…"
 msgstr "Hesap Ekle…"
 
-#: app/src/ui/window.rs:3756
+#: app/src/ui/window.rs:3773
 msgid "New Smart Mailbox…"
 msgstr "Yeni Akıllı Posta Kutusu…"
 
-#: app/src/ui/window.rs:3768
+#: app/src/ui/window.rs:3785
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Araç Çubuğunu Özelleştir…"
 
-#: app/src/ui/window.rs:3772 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3789 app/src/ui/window/shortcuts.rs:813
 msgid "Keyboard Shortcuts"
 msgstr "Klavye Kısayolları"
 
-#: app/src/ui/window.rs:3781 app/src/ui/window.rs:3783
+#: app/src/ui/window.rs:3798 app/src/ui/window.rs:3800
 msgid "Main Menu"
 msgstr "Ana Menü"
 
-#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3849
+#: app/src/ui/window.rs:3865 app/src/ui/window.rs:3866
 msgid "Dock"
 msgstr "Sabitle"
 
-#: app/src/ui/window.rs:3978
+#: app/src/ui/window.rs:3995
 msgid "Add a mail account first"
 msgstr "Önce bir posta hesabı ekleyin"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4229
+#: app/src/ui/window.rs:4251
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} hesabının takvimi ve kişileri bağlandı."
 
-#: app/src/ui/window.rs:4345
+#: app/src/ui/window.rs:4367
 msgid "Open a message from the person first"
 msgstr "Önce bu kişiden gelen bir iletiyi açın"
 
-#: app/src/ui/window.rs:4446
+#: app/src/ui/window.rs:4468
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail yeni dili yeniden başlatıldıktan sonra gösterir"
 
-#: app/src/ui/window.rs:4448 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4470 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Yeniden Başlat"
 
-#: app/src/ui/window.rs:4512
+#: app/src/ui/window.rs:4534
 msgid "Show Rules"
 msgstr "Kuralları Göster"
 
-#: app/src/ui/window.rs:4538
+#: app/src/ui/window.rs:4560
 msgid "Messages That Will Not Download"
 msgstr "İndirilemeyen İletiler"
 
-#: app/src/ui/window.rs:4540
+#: app/src/ui/window.rs:4562
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11705,35 +11730,35 @@ msgid_plural "Saving {count} attachments…"
 msgstr[0] "{count} ek kaydediliyor…"
 msgstr[1] "{count} ek kaydediliyor…"
 
-#: app/src/ui/window/attachments.rs:192
+#: app/src/ui/window/attachments.rs:197
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} ek {folder} klasörüne kaydedildi"
 msgstr[1] "{count} ek {folder} klasörüne kaydedildi"
 
-#: app/src/ui/window/attachments.rs:199
+#: app/src/ui/window/attachments.rs:204
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} ek {folder} klasörüne kaydedildi. {files} kaydedilemedi"
 
-#: app/src/ui/window/attachments.rs:245
+#: app/src/ui/window/attachments.rs:250
 msgid "Downloading {file}…"
 msgstr "{file} indiriliyor…"
 
-#: app/src/ui/window/attachments.rs:269 app/src/ui/window/attachments.rs:298
-#: app/src/ui/window/attachments.rs:331
+#: app/src/ui/window/attachments.rs:274 app/src/ui/window/attachments.rs:303
+#: app/src/ui/window/attachments.rs:342
 msgid "Could not save {file}: {reason}"
 msgstr "{file} kaydedilemedi: {reason}"
 
-#: app/src/ui/window/attachments.rs:316 app/src/ui/window/export.rs:111
+#: app/src/ui/window/attachments.rs:327 app/src/ui/window/export.rs:111
 #: app/src/ui/window/export.rs:153 app/src/ui/window/export.rs:214
 msgid "Saved {file}"
 msgstr "{file} kaydedildi"
 
-#: app/src/ui/window/attachments.rs:319
+#: app/src/ui/window/attachments.rs:330
 msgid "Open"
 msgstr "Aç"
 
-#: app/src/ui/window/attachments.rs:454 app/src/ui/window/attachments.rs:457
+#: app/src/ui/window/attachments.rs:465 app/src/ui/window/attachments.rs:468
 msgid "Open in Another Program"
 msgstr "Başka Programda Aç"
 
@@ -12648,19 +12673,19 @@ msgid_plural "Deleted {count} messages from Trash for {account}"
 msgstr[0] "{account} için Çöp Kutusundan {count} ileti silindi"
 msgstr[1] "{account} için Çöp Kutusundan {count} ileti silindi"
 
-#: app/src/unsubscribe_page.rs:183
+#: app/src/unsubscribe_page.rs:188
 msgid "the page took longer than 20 seconds"
 msgstr "sayfa 20 saniyeden uzun sürdü"
 
-#: app/src/unsubscribe_page.rs:185
+#: app/src/unsubscribe_page.rs:190
 msgid "the page did not load: {reason}"
 msgstr "sayfa yüklenmedi: {reason}"
 
-#: app/src/unsubscribe_page.rs:189
+#: app/src/unsubscribe_page.rs:194
 msgid "the page could not be read: {reason}"
 msgstr "sayfa okunamadı: {reason}"
 
-#: app/src/unsubscribe_page.rs:192
+#: app/src/unsubscribe_page.rs:197
 msgid "the page changed while it was waiting to be asked"
 msgstr "sayfa onay istenmesini beklerken değişti"
 
@@ -12684,11 +12709,13 @@ msgstr "Güncelleme Günlüğünü Göster"
 msgid "Checking for Updates…"
 msgstr "Güncellemeler Kontrol Ediliyor…"
 
-#: app/src/update/mod.rs:116 app/src/update/mod.rs:206
+#: app/src/update/mod.rs:116 app/src/update/mod.rs:209
+#: app/src/update/mod.rs:223
 msgid "Penguin Mail {version} is available"
 msgstr "Penguin Mail {version} mevcut"
 
-#: app/src/update/mod.rs:119 app/src/update/mod.rs:211
+#: app/src/update/mod.rs:119 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:228
 msgid "Install"
 msgstr "Kur"
 
@@ -12700,19 +12727,19 @@ msgstr "Penguin Mail {version} kuruluyor"
 msgid "Restart to finish updating"
 msgstr "Güncellemeyi tamamlamak için yeniden başlatın"
 
-#: app/src/update/mod.rs:209
+#: app/src/update/mod.rs:212 app/src/update/mod.rs:226
 msgid "Install it now, or later from the tray."
 msgstr "Şimdi veya daha sonra sistem tepsisinden kurun."
 
-#: app/src/update/signature.rs:31
+#: app/src/update/signature.rs:42
 msgid "This release has no signature, so Penguin Mail will not install it."
 msgstr "Bu sürümün imzası yok, bu yüzden Penguin Mail onu kurmayacak."
 
-#: app/src/update/signature.rs:99
+#: app/src/update/signature.rs:128
 msgid "Penguin Mail could not check the release's signature: {reason}"
 msgstr "Penguin Mail sürümün imzasını doğrulayamadı: {reason}"
 
-#: app/src/update/signature.rs:147
+#: app/src/update/signature.rs:179
 msgid ""
 "This release is not signed with Penguin Mail's key, so Penguin Mail will not "
 "install it."
@@ -12720,7 +12747,7 @@ msgstr ""
 "Bu sürüm Penguin Mail'in anahtarıyla imzalanmamış, bu yüzden Penguin Mail "
 "onu kurmayacak."
 
-#: app/src/update/signature.rs:151
+#: app/src/update/signature.rs:183
 msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr ""
@@ -13935,6 +13962,9 @@ msgstr "Gereksiz değil işaretle"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder} klasörüne taşı"
+
+#~ msgid "Mail and calendar for Linux. Your mail stays on your computer."
+#~ msgstr "Linux için posta ve takvim. Postalarınız bilgisayarınızda kalır."
 
 #~ msgid "Drop mail on its own account's mailboxes"
 #~ msgstr "Postayı kendi hesabının posta kutularına bırakın"

@@ -79,7 +79,7 @@ impl Recipients {
             .placeholder_text(placeholder)
             .hexpand(true)
             // Small enough to share a line with a chip in a 360 px
-            // composer; it grows into whatever room the line has left.
+            // composer; an empty field widens it in rebuild().
             .width_chars(8)
             .max_width_chars(8)
             .has_frame(false)
@@ -270,14 +270,15 @@ impl Recipients {
     }
 
     fn rebuild(self: &Rc<Self>) {
+        let empty = self.addresses.borrow().is_empty();
         // The placeholder only has to say what the row is for while it is
         // empty; chips say it afterwards.
-        self.entry.set_placeholder_text(
-            self.addresses
-                .borrow()
-                .is_empty()
-                .then_some(self.placeholder.as_str()),
-        );
+        self.entry
+            .set_placeholder_text(empty.then_some(self.placeholder.as_str()));
+        // A lone entry takes the whole line, so its placeholder is never
+        // clipped; with chips it wraps and shares lines like the rest.
+        self.field
+            .set_max_children_per_line(if empty { 1 } else { 30 });
         let typing = self
             .entry
             .state_flags()

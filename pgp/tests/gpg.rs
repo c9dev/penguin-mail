@@ -7,6 +7,9 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_pgp::inline::{Armor, armor};
 use mailrs_pgp::{Pgp, Readers, Verdict};
 
@@ -72,7 +75,7 @@ impl Drop for Home {
     fn drop(&mut self) {
         // The agent and dirmngr gpg started hold sockets open under the temp
         // directory. Killing them leaves nothing running once it goes.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf::gpgconf(self.pgp.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "all"])

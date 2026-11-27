@@ -8,6 +8,9 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_pgp::gnupg::{Change, Import, import_counts, imports};
 use mailrs_pgp::{Pgp, PgpError};
 
@@ -154,7 +157,7 @@ impl Home {
 impl Drop for Home {
     fn drop(&mut self) {
         // The agent gpg started holds sockets open under the temp directory.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf::gpgconf(self.pgp.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "gpg-agent"])

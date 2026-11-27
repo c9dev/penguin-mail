@@ -230,7 +230,7 @@ impl Core {
             .with_context(|| format!("could not create {}", dir.display()))?;
         // The demo's store is its own and new each run, so nothing else
         // could be syncing it.
-        let sync_lock = match (!demo).then(|| SyncLock::take(&dir)).transpose() {
+        let sync_lock = match (!demo).then(|| take_sync_lock(&dir)).transpose() {
             Ok(lock) => lock,
             Err(LockError::Held) => bail!(gettext(
                 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your \
@@ -3003,5 +3003,39 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(stored.provider, mailrs_domain::Provider::Imap);
+    }
+}
+
+/// The lock on the store in `dir`, waiting a few seconds for a copy that
+/// is handing over to this one: a restart on Windows starts the new copy
+/// before the old one has quit and let go of the lock. A copy that keeps
+/// syncing still stops this one.
+fn take_sync_lock(dir: &Path) -> Result<SyncLock, LockError> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        match SyncLock::take(dir) {
+            Err(LockError::Held) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            taken => return taken,
+        }
+    }
+}
+
+#[cfg(test)]
+mod sync_lock_tests {
+    use super::take_sync_lock;
+    use mailrs_sync::lock::SyncLock;
+
+    #[test]
+    fn a_copy_handing_over_lets_the_new_one_start() {
+        let dir = tempfile::tempdir().unwrap();
+        let old = SyncLock::take(dir.path()).unwrap();
+        let leaving = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            drop(old);
+        });
+        assert!(take_sync_lock(dir.path()).is_ok());
+        leaving.join().unwrap();
     }
 }

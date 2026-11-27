@@ -102,7 +102,9 @@ pub fn open(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Resu
 /// What gpg says it is, for Preferences. The version is the last word of
 /// its first line, as in `gpg (GnuPG) 2.4.8`.
 pub fn version(pgp: &Pgp) -> Option<String> {
-    let run = Command::new(pgp.program()).arg("--version").output().ok()?;
+    let mut command = Command::new(pgp.program());
+    mailrs_pgp::gnupg::hide_console(&mut command);
+    let run = command.arg("--version").output().ok()?;
     protection::version_of(&String::from_utf8_lossy(&run.stdout))
 }
 

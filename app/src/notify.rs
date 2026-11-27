@@ -235,6 +235,18 @@ pub fn parameter(token: &str, key: &str) -> String {
     format!("{token}/{key}")
 }
 
+/// The `show-thread` parameter for `target`: its account and thread.
+pub fn thread_shown_for(target: &Target) -> String {
+    format!("{}:{}", target.account_id, target.thread_id)
+}
+
+/// The account and thread a `show-thread` parameter names.
+pub fn thread_shown(parameter: &str) -> Option<(AccountId, String)> {
+    let (account, thread) = parameter.split_once(':')?;
+    let account_id = account.parse().ok()?;
+    (!thread.is_empty()).then(|| (account_id, thread.to_string()))
+}
+
 /// The key a click on the notification itself sends.
 pub const OPEN_KEY: &str = "default";
 
@@ -407,6 +419,15 @@ fn choice_of(key: &str, buttons: &[Button]) -> Option<Choice> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_shown_thread_reads_back_its_account_and_thread() {
+        let target = Target::thread(7, "a:b");
+        assert_eq!(thread_shown(&thread_shown_for(&target)), Some((7, "a:b".to_string())));
+        assert_eq!(thread_shown("x:y"), None);
+        assert_eq!(thread_shown("7:"), None);
+        assert_eq!(thread_shown("7"), None);
+    }
 
     #[test]
     fn message_text_requires_both_switches_and_is_bounded_plain_text() {
