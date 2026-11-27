@@ -1,5 +1,7 @@
 //! Gmail REST client: OAuth, quota limiting, and conversion to Penguin Mail domain types.
 
+#[cfg(any(windows, test))]
+pub mod chunked;
 pub mod calendar;
 mod calendar_list;
 mod client;

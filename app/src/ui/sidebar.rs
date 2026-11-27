@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Duration;
 
+use crate::ui::safe_popover::{may_present, safe_popup_at};
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
@@ -854,7 +855,9 @@ impl Sidebar {
         let mut stack: Vec<gtk::Widget> = row.first_child().into_iter().collect();
         while let Some(widget) = stack.pop() {
             if let Some(button) = widget.downcast_ref::<gtk::MenuButton>() {
-                button.popup();
+                if may_present(button) {
+                    button.popup();
+                }
                 return true;
             }
             stack.extend(widget.next_sibling());
@@ -2340,8 +2343,8 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
                 return;
             };
             let popover = popover.get_or_init(|| context_popover(&row, &menu));
-            popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
-            popover.popup();
+            let rect = gdk::Rectangle::new(x as i32, y as i32, 1, 1);
+            let _ = safe_popup_at(popover, &rect);
         }
     };
     let click = gtk::GestureClick::builder()

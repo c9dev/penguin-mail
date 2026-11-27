@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 
@@ -8,6 +9,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use super::FakeHost;
 use crate::bridge::{serve, serve_mcp};
 
+#[cfg(unix)]
 fn mode(path: &std::path::Path) -> u32 {
     std::fs::metadata(path).unwrap().permissions().mode() & 0o777
 }
@@ -17,8 +19,11 @@ async fn mcp_server_relays_tools_over_the_socket() {
     let dir = tempfile::tempdir().unwrap();
     let host = Arc::new(FakeHost::default());
     let bridge = serve(dir.path(), host.clone()).await.unwrap();
-    assert_eq!(mode(&bridge.socket), 0o600);
-    assert_eq!(mode(bridge.socket.parent().unwrap()), 0o700);
+    #[cfg(unix)]
+    {
+        assert_eq!(mode(&bridge.socket), 0o600);
+        assert_eq!(mode(bridge.socket.parent().unwrap()), 0o700);
+    }
 
     let (mut client, server_side) = tokio::io::duplex(64 * 1024);
     let (server_read, server_write) = tokio::io::split(server_side);
@@ -91,10 +96,18 @@ async fn mcp_server_relays_tools_over_the_socket() {
     drop(lines);
     server.await.unwrap().unwrap();
 
+    #[cfg(unix)]
     let socket = bridge.socket.clone();
     drop(bridge);
-    assert!(!socket.exists());
-    assert!(!socket.parent().unwrap().exists());
+    #[cfg(unix)]
+    {
+        assert!(!socket.exists());
+        assert!(!socket.parent().unwrap().exists());
+    }
+    // The Windows pipe lives outside the filesystem; what cleanup leaves
+    // is the private dir under the parent the bridge was served on.
+    #[cfg(windows)]
+    assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
 }
 
 #[tokio::test]

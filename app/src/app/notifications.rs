@@ -11,9 +11,15 @@ use crate::notify;
 mod macos;
 #[cfg(target_os = "macos")]
 use macos::Desktop;
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+use windows::Desktop;
+#[cfg(windows)]
+pub(crate) use windows::post_action_notice;
+#[cfg(not(any(target_os = "macos", windows)))]
 mod linux;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 use linux::Desktop;
 
 pub(super) struct Notifications(Desktop);
@@ -31,6 +37,7 @@ impl Notifications {
             &notice.body,
             Actions {
                 open: notice.target.as_ref().map(|_| Action::OpenMail),
+                shows: notice.target.as_ref().map(notify::thread_shown_for),
                 target: id.to_string(),
                 buttons: notify::Button::ALL
                     .into_iter()
@@ -49,6 +56,7 @@ impl Notifications {
             &notice.body,
             Actions {
                 open: Some(Action::OpenEvent),
+                shows: None,
                 target: notice.target.clone(),
                 buttons: notice
                     .buttons
@@ -100,6 +108,11 @@ impl Action {
 #[derive(Debug, Serialize, Deserialize)]
 struct Actions {
     open: Option<Action>,
+    /// The thread the mail notice is about, as `show-thread` takes it. A
+    /// Windows toast opens it straight from this, so a click after the
+    /// app restarted still opens that mail.
+    #[serde(default)]
+    shows: Option<String>,
     target: String,
     buttons: Vec<Action>,
 }

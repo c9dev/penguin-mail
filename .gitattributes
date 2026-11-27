@@ -1,0 +1,2 @@
+# The Windows build reads its lists and patches from bash, which keeps a CR as part of the line.
+* text=auto eol=lf

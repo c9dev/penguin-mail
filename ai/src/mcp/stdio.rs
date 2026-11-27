@@ -47,15 +47,32 @@ impl Stdio {
         env: &[(String, String)],
         notifications: mpsc::UnboundedSender<Value>,
     ) -> Result<Stdio, Failure> {
-        let mut child = Command::new(command)
-            .args(args)
-            .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
-            .stdin(Piped::piped())
-            .stdout(Piped::piped())
-            .stderr(Piped::piped())
-            .kill_on_drop(true)
-            .spawn()
-            .map_err(|e| Failure::Other(format!("could not start {command}: {e}")))?;
+        let start = |program: &str| {
+            let mut command = Command::new(program);
+            command
+                .args(args)
+                .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+                .stdin(Piped::piped())
+                .stdout(Piped::piped())
+                .stderr(Piped::piped())
+                .kill_on_drop(true);
+            #[cfg(windows)]
+            command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+            command.spawn()
+        };
+        #[allow(unused_mut)]
+        let mut started = start(command);
+        // npm installs `npx` as `npx.cmd`, which Windows only runs by its full name.
+        #[cfg(windows)]
+        if matches!(&started, Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+            && let Some(script) = script_for(command)
+        {
+            // std runs a .cmd through cmd.exe, which starts even when the
+            // script is missing, so only a script that exists is tried.
+            started = start(&script);
+        }
+        let mut child =
+            started.map_err(|e| Failure::Other(format!("could not start {command}: {e}")))?;
         let stdout = child.stdout.take().expect("stdout is piped");
         let stderr_pipe = child.stderr.take().expect("stderr is piped");
         let stdin: Writer = Arc::new(tokio::sync::Mutex::new(child.stdin.take()));
@@ -316,4 +333,25 @@ async fn read_stderr(
         kept.push_back(line);
     }
     let _ = done.send(true);
+}
+
+/// `command.cmd` or `command.bat`, beside the path it names or on PATH, for
+/// a command given without an extension.
+#[cfg(windows)]
+fn script_for(command: &str) -> Option<String> {
+    use std::path::{Path, PathBuf};
+    if Path::new(command).extension().is_some() {
+        return None;
+    }
+    let dirs: Vec<PathBuf> = if command.contains(['/', '\\']) {
+        vec![PathBuf::new()]
+    } else {
+        std::env::split_paths(&std::env::var_os("PATH")?).collect()
+    };
+    ["cmd", "bat"].iter().find_map(|extension| {
+        dirs.iter()
+            .map(|dir| dir.join(format!("{command}.{extension}")))
+            .find(|path| path.is_file())
+            .map(|path| path.display().to_string())
+    })
 }

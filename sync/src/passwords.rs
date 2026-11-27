@@ -102,7 +102,7 @@ impl KeyringPasswords {
         }
     }
 
-    #[cfg(not(feature = "packaging-flatpak"))]
+    #[cfg(all(not(windows), not(feature = "packaging-flatpak")))]
     fn entry(&self, user: &str) -> Result<keyring::Entry, PasswordError> {
         keyring::Entry::new(&self.service, user).map_err(keyring_error)
     }
@@ -126,7 +126,27 @@ fn outgoing_user(account_id: AccountId) -> String {
     format!("{account_id}/smtp")
 }
 
-#[cfg(not(feature = "packaging-flatpak"))]
+/// Windows keeps at most 1280 characters per credential, so a long token
+/// goes in parts (see `mailrs_gmail::chunked`).
+#[cfg(all(windows, not(feature = "packaging-flatpak")))]
+impl KeyringPasswords {
+    fn load_as(&self, user: &str) -> Result<Option<String>, PasswordError> {
+        mailrs_gmail::chunked::load(&mailrs_gmail::chunked::Native(&self.service), user)
+            .map_err(PasswordError::Keyring)
+    }
+
+    fn save_as(&self, user: &str, password: &str) -> Result<(), PasswordError> {
+        mailrs_gmail::chunked::save(&mailrs_gmail::chunked::Native(&self.service), user, password)
+            .map_err(PasswordError::Keyring)
+    }
+
+    fn delete_as(&self, user: &str) -> Result<(), PasswordError> {
+        mailrs_gmail::chunked::delete(&mailrs_gmail::chunked::Native(&self.service), user)
+            .map_err(PasswordError::Keyring)
+    }
+}
+
+#[cfg(all(not(windows), not(feature = "packaging-flatpak")))]
 impl KeyringPasswords {
     fn load_as(&self, user: &str) -> Result<Option<String>, PasswordError> {
         match self.entry(user)?.get_password() {
@@ -192,7 +212,7 @@ impl PasswordStore for KeyringPasswords {
     }
 }
 
-#[cfg(not(feature = "packaging-flatpak"))]
+#[cfg(all(not(windows), not(feature = "packaging-flatpak")))]
 fn keyring_error(err: keyring::Error) -> PasswordError {
     PasswordError::Keyring(err.to_string())
 }
