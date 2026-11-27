@@ -96,9 +96,12 @@ impl Graph {
             .ok_or_else(|| GraphError::Decode("no contact in the answer".into()))
     }
 
-    /// One contact, with only its display name filled in.
+    /// One contact, with only its display name and home numbers filled in.
     pub async fn contact_name(&self, id: &str) -> Result<GraphContact, GraphError> {
-        self.get(&format!("me/contacts/{id}"), &[("$select", "displayName")])
+        self.get(
+            &format!("me/contacts/{id}"),
+            &[("$select", "displayName,homePhones")],
+        )
             .await
     }
 

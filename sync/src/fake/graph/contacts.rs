@@ -63,6 +63,17 @@ fn read_body(contact: &mut GraphContact, body: &Value) {
     if let Some(phone) = body["mobilePhone"].as_str() {
         contact.mobile_phone = Some(phone.into());
     }
+    for (key, numbers) in [
+        ("businessPhones", &mut contact.business_phones),
+        ("homePhones", &mut contact.home_phones),
+    ] {
+        if let Some(read) = body
+            .get(key)
+            .and_then(|v| serde_json::from_value::<Vec<String>>(v.clone()).ok())
+        {
+            *numbers = read;
+        }
+    }
     if let Some(company) = body["companyName"].as_str() {
         contact.company_name = Some(company.into());
     }
@@ -158,6 +169,7 @@ pub(super) fn contact_name(s: &mut GraphState, id: &str) -> Answer<GraphContact>
     Ok(GraphContact {
         id: id.into(),
         display_name: contact.display_name.clone(),
+        home_phones: contact.home_phones.clone(),
         ..GraphContact::default()
     })
 }

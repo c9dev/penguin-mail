@@ -79,8 +79,9 @@ fn person_of(c: &GraphContact) -> Person {
 }
 
 /// Graph's body for the fields set; a field left `None` stays out, so a
-/// change touches only what it names.
-fn body_of(fields: &ContactFields) -> Value {
+/// change touches only what it names. A number in `home` stays a home
+/// number; the first other one is the mobile and the rest are business.
+fn body_of(fields: &ContactFields, home: &[String]) -> Value {
     let mut body = serde_json::Map::new();
     if let Some(name) = &fields.name {
         body.insert("displayName".into(), json!(name));
@@ -90,11 +91,13 @@ fn body_of(fields: &ContactFields) -> Value {
         body.insert("emailAddresses".into(), json!(addresses));
     }
     if let Some(phones) = &fields.phones {
-        body.insert("mobilePhone".into(), json!(phones.first()));
-        body.insert("homePhones".into(), json!([]));
+        let (home, other): (Vec<&String>, Vec<&String>) =
+            phones.iter().partition(|p| home.contains(p));
+        body.insert("mobilePhone".into(), json!(other.first()));
+        body.insert("homePhones".into(), json!(home));
         body.insert(
             "businessPhones".into(),
-            json!(phones.iter().skip(1).collect::<Vec<_>>()),
+            json!(other.iter().skip(1).collect::<Vec<_>>()),
         );
     }
     if let Some(company) = &fields.organization {
@@ -225,7 +228,7 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
     async fn create_contact(&self, fields: &ContactFields) -> Result<Person, BackendError> {
         let made = self
             .graph
-            .create_contact(&body_of(fields))
+            .create_contact(&body_of(fields, &[]))
             .await
             .map_err(|e| self.service_error(Service::Contacts, e))?;
         Ok(person_of(&made))
@@ -237,16 +240,20 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
         fields: &ContactFields,
     ) -> Result<Person, BackendError> {
         let err = |e| self.service_error(Service::Contacts, e);
-        let mut body = body_of(fields);
         // Outlook.com rebuilds a display name a change leaves out, from the
         // name parts or else the company, so a new company would become the
         // contact's name. Graph's contact reference says to send the name
         // with every update.
-        if fields.name.is_none() {
-            let current = self.graph.contact_name(resource).await.map_err(err)?;
-            if let Some(name) = current.display_name {
-                body["displayName"] = json!(name);
-            }
+        let current = match fields.name.is_none() || fields.phones.is_some() {
+            true => Some(self.graph.contact_name(resource).await.map_err(err)?),
+            false => None,
+        };
+        let home = current.as_ref().map_or(&[][..], |c| &c.home_phones[..]);
+        let mut body = body_of(fields, home);
+        if fields.name.is_none()
+            && let Some(name) = current.and_then(|c| c.display_name)
+        {
+            body["displayName"] = json!(name);
         }
         let changed = self
             .graph

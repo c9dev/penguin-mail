@@ -173,3 +173,34 @@ async fn a_delta_link_graph_refuses_reads_the_book_whole_once() {
     ids.sort_unstable();
     assert_eq!(ids, ["c1", "c2"]);
 }
+
+#[tokio::test]
+async fn editing_the_numbers_keeps_a_home_number_at_home() {
+    let h = outlook().await;
+    h.fake.put_contact(
+        "contacts-1",
+        GraphContact {
+            home_phones: vec!["+351 210 000 000".into()],
+            ..ann()
+        },
+    );
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    let changed = contacts
+        .update_contact(
+            "c1",
+            &ContactFields {
+                phones: Some(vec![
+                    "+351 900 000 000".into(),
+                    "+351 210 000 000".into(),
+                    "+351 220 000 000".into(),
+                ]),
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    let held = h.fake.with(|s| s.contacts.get("c1").unwrap().1.clone());
+    assert_eq!(held.home_phones, ["+351 210 000 000"]);
+    assert_eq!(held.business_phones, ["+351 220 000 000"]);
+    assert_eq!(changed.details.phones.len(), 3);
+}
