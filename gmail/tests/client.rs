@@ -998,7 +998,7 @@ async fn expanded_google_contacts_keep_all_fields_and_resolve_group_names() {
     assert_eq!(p.details.custom[0].label, "Customer ID");
     assert_eq!(p.details.revision, "v1");
     assert_eq!(p.details.urls, ["https://example.org"]);
-    assert!(p.details.addresses[0].contains("Example City"));
+    assert_eq!(p.details.addresses[0][3], "Example City");
 }
 
 #[tokio::test]
@@ -1168,6 +1168,56 @@ async fn a_google_photo_retry_does_not_create_a_second_contact() {
                 ..Default::default()
             },
         )
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn deleting_the_first_google_address_keeps_the_second_one_as_google_holds_it() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceName": "people/c1", "etag": "v1",
+            "addresses": [
+                {"type": "home", "formattedValue": "1 Home Street\nLisbon",
+                 "streetAddress": "1 Home Street", "city": "Lisbon"},
+                {"type": "work", "formattedValue": "2 Work Road\nFloor 3\nPorto",
+                 "streetAddress": "2 Work Road\nFloor 3", "city": "Porto"}
+            ]
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContact"))
+        .and(query_param("updatePersonFields", "addresses"))
+        .and(body_json(json!({
+            "etag": "v1",
+            "addresses": [{
+                "type": "work", "formattedValue": "2 Work Road\nFloor 3\nPorto",
+                "poBox": "", "extendedAddress": "", "streetAddress": "2 Work Road\nFloor 3",
+                "city": "Porto", "region": "", "postalCode": "", "country": ""
+            }]
+        })))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"resourceName": "people/c1", "etag": "v2"})),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    let fields = mailrs_gmail::ContactFields {
+        details: mailrs_domain::contact::Changes {
+            addresses: Some(vec![
+                ["", "", "2 Work Road\nFloor 3", "Porto", "", "", ""].map(String::from),
+            ]),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    client(&server)
+        .update_contact("people/c1", &fields)
         .await
         .unwrap();
 }

@@ -28,6 +28,17 @@ pub const PEOPLE_API_BASE: &str = "https://people.googleapis.com/v1";
 /// so the request says exactly what the app stores and no more.
 pub const PERSON_FIELDS: &str = "names,emailAddresses,photos,organizations,phoneNumbers,metadata,birthdays,biographies,addresses,urls,events,userDefined,memberships";
 
+/// Google's names for the seven parts of an address, in vCard's ADR order.
+const ADDRESS_KEYS: [&str; 7] = [
+    "poBox",
+    "extendedAddress",
+    "streetAddress",
+    "city",
+    "region",
+    "postalCode",
+    "country",
+];
+
 /// People per page. Google's ceiling is 1000; a smaller page costs one
 /// more call on a large address book and keeps each reply small.
 pub const PAGE_SIZE: u32 = 200;
@@ -138,11 +149,17 @@ impl ContactFields {
             );
         }
         if let Some(values) = &d.addresses {
-            body.insert("addresses".into(), json!(values.iter().map(|v| {
-                let parts: Vec<_> = v.split('\n').collect();
-                let get = |i| parts.get(i).copied().unwrap_or_default();
-                json!({"poBox":get(0),"extendedAddress":get(1),"streetAddress":get(2),"city":get(3),"region":get(4),"postalCode":get(5),"country":get(6)})
-            }).collect::<Vec<_>>()));
+            let addresses: Vec<_> = values
+                .iter()
+                .map(|parts| {
+                    ADDRESS_KEYS
+                        .iter()
+                        .zip(parts)
+                        .map(|(key, part)| (key.to_string(), json!(part)))
+                        .collect::<serde_json::Map<_, _>>()
+                })
+                .collect();
+            body.insert("addresses".into(), json!(addresses));
         }
         if let Some(values) = &d.dates {
             body.insert(
@@ -268,19 +285,7 @@ fn flatten(person: Connection) -> Person {
                 .collect(),
             addresses: values(&person.extra, "addresses")
                 .iter()
-                .map(|v| {
-                    [
-                        "poBox",
-                        "extendedAddress",
-                        "streetAddress",
-                        "city",
-                        "region",
-                        "postalCode",
-                        "country",
-                    ]
-                    .map(|k| v[k].as_str().unwrap_or_default())
-                    .join("\n")
-                })
+                .map(|v| ADDRESS_KEYS.map(|k| v[k].as_str().unwrap_or_default().to_string()))
                 .collect(),
             dates: values(&person.extra, "events")
                 .iter()
@@ -591,44 +596,14 @@ fn date_text(date: &serde_json::Value) -> String {
 }
 
 fn date_value(text: &str) -> serde_json::Value {
-    let full = if text.starts_with("--") {
-        format!("2000{}", &text[1..])
-    } else {
-        text.to_owned()
-    };
-    let date = chrono::NaiveDate::parse_from_str(&full, "%Y-%m-%d")
-        .or_else(|_| chrono::NaiveDate::parse_from_str(&full.replace('-', ""), "%Y%m%d"));
-    match date {
-        Ok(date) => {
-            use chrono::Datelike;
-            json!({"year":if text.starts_with("--") {0} else {date.year()},"month":date.month(),"day":date.day()})
-        }
-        Err(_) => serde_json::Value::Null,
+    match mailrs_domain::contact::date_parts(text) {
+        Some((year, month, day)) => json!({"year": year.unwrap_or(0), "month": month, "day": day}),
+        None => serde_json::Value::Null,
     }
 }
 
 pub(crate) fn validate(fields: &ContactFields) -> Result<(), GmailError> {
-    use mailrs_domain::translate::gettext;
-    for date in fields
-        .details
-        .birthday
-        .iter()
-        .chain(fields.details.dates.iter().flatten().map(|v| &v.value))
-    {
-        if !date.is_empty() && date_value(date).is_null() {
-            return Err(GmailError::Decode(gettext(
-                "Enter a valid date as YYYY-MM-DD or --MM-DD.",
-            )));
-        }
-    }
-    if fields.photo.as_ref().is_some_and(|p| {
-        p.len() > 512 * 1024 || (!p.is_empty() && !p.starts_with(b"\x89PNG\r\n\x1a\n"))
-    }) {
-        return Err(GmailError::Decode(gettext(
-            "Choose a PNG contact photo smaller than 512 KB.",
-        )));
-    }
-    Ok(())
+    mailrs_domain::contact::check(&fields.details, fields.photo.as_deref()).map_err(GmailError::Invalid)
 }
 
 /// Retain labels and structured names when an edit changes only their values.
@@ -648,26 +623,47 @@ pub(crate) fn preserve_fields(body: &mut serde_json::Value, current: &serde_json
         let Some(old) = current[key].as_array() else {
             continue;
         };
+        // Google leaves empty parts out of its answers, so a missing key
+        // matches an empty value.
+        let same = |value: &serde_json::Value, held: &serde_json::Value| {
+            value.as_object().is_some_and(|v| {
+                v.iter()
+                    .all(|(k, v)| held.get(k).map_or(*v == "", |h| h == v))
+            })
+        };
         let mut used = vec![false; old.len()];
-        for (i, value) in changed.iter_mut().enumerate() {
-            let matching = old.iter().enumerate().position(|(j, candidate)| {
-                !used[j]
-                    && value
-                        .as_object()
-                        .is_some_and(|v| v.iter().all(|(k, v)| candidate.get(k) == Some(v)))
-            });
-            let index = matching.or_else(|| (i < old.len() && !used[i]).then_some(i));
-            if let Some(index) = index {
-                used[index] = true;
-                let mut kept = old[index].clone();
-                if let Some(object) = kept.as_object_mut() {
-                    object.remove("metadata");
-                    if key == "addresses" && value.get("country") != object.get("country") {
+        let mut kept: Vec<Option<(usize, bool)>> = vec![None; changed.len()];
+        for (i, value) in changed.iter().enumerate() {
+            if let Some(j) = (0..old.len()).find(|&j| !used[j] && same(value, &old[j])) {
+                used[j] = true;
+                kept[i] = Some((j, true));
+            }
+        }
+        // A list of the same length was edited in place, so a changed
+        // value keeps the label of the one it replaced.
+        if changed.len() == old.len() {
+            for (i, slot) in kept.iter_mut().enumerate() {
+                if slot.is_none() && !used[i] {
+                    used[i] = true;
+                    *slot = Some((i, false));
+                }
+            }
+        }
+        for (value, slot) in changed.iter_mut().zip(kept) {
+            let Some((index, exact)) = slot else {
+                continue;
+            };
+            let mut held = old[index].clone();
+            if let Some(object) = held.as_object_mut() {
+                object.remove("metadata");
+                if key == "addresses" && !exact {
+                    object.remove("formattedValue");
+                    if value.get("country") != object.get("country") {
                         object.remove("countryCode");
                     }
-                    object.extend(value.as_object().cloned().unwrap_or_default());
-                    *value = kept;
                 }
+                object.extend(value.as_object().cloned().unwrap_or_default());
+                *value = held;
             }
         }
     }
@@ -705,5 +701,16 @@ mod address_tests {
             json!({"addresses":[{"country":"Czechia","city":"Prague","type":"work"}]})
         );
         assert!(body.get("phoneNumbers").is_none());
+    }
+
+    #[test]
+    fn an_address_edited_in_place_keeps_its_type_and_drops_googles_old_text() {
+        let current = json!({"addresses":[{"type":"home","formattedValue":"1 Old Street\nLisbon",
+            "streetAddress":"1 Old Street","city":"Lisbon"}]});
+        let mut body = json!({"addresses":[{"poBox":"","extendedAddress":"","streetAddress":"2 New Street",
+            "city":"Lisbon","region":"","postalCode":"","country":""}]});
+        preserve_fields(&mut body, &current);
+        assert_eq!(body["addresses"][0]["type"], "home");
+        assert!(body["addresses"][0].get("formattedValue").is_none(), "{body}");
     }
 }

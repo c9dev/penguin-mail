@@ -47,6 +47,9 @@ pub enum GmailError {
     TooLarge { limit: usize },
     #[error("could not decode Gmail response: {0}")]
     Decode(String),
+    /// A change the app refused before sending, in the reader's language.
+    #[error("{0}")]
+    Invalid(String),
     #[error("OAuth flow failed: {0}")]
     OAuth(String),
     #[error("keyring error: {0}")]
