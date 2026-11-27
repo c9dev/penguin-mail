@@ -252,12 +252,12 @@ impl Contacts {
         }
         let write = parts::button(&gettext("New Message"), &["yes"]);
         write.set_tooltip_text(Some(&gettext("New Message (C)")));
-        write.set_child(Some(&{
-            let row = gtk::Box::builder().spacing(6).build();
-            row.append(&parts::icon("mail"));
-            row.append(&gtk::Label::new(Some(&gettext("New Message"))));
-            row
-        }));
+        write.set_child(Some(
+            &adw::ButtonContent::builder()
+                .icon_name("penguin-mail-ct-mail-symbolic")
+                .label(gettext("New Message"))
+                .build(),
+        ));
         super::super::name(&write, &gettext("New Message"));
         {
             let (weak, to, account) = (weak.clone(), person.email.clone(), shown.account_id);
