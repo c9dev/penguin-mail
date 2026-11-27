@@ -22,6 +22,10 @@ Mail and calendar for Linux, macOS and Windows, written in Rust.
 
 </div>
 
+> [!NOTE]
+> The next version is taking longer than usual because it brings a lot of
+> changes. It will be worth the wait.
+
 Penguin Mail is mail and calendar for Linux, macOS and Windows. It reads
 Gmail accounts, Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft
 365) and any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and

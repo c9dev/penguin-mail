@@ -158,9 +158,12 @@ last chip, Left and Right move between chips, and Right from the last one
 goes back to the entry; Home and End go to the first chip and to the
 entry. Delete or Backspace removes the chip with the focus. Backspace
 moves the focus to the chip before it and Delete to the one after, and
-the focus goes back to the entry once no chip is left. Each chip reads as
-its name and address with "Press Delete to remove" after it, and carries
-a `recipient.remove` action a screen reader can run; its close button
+the focus goes back to the entry once no chip is left. Menu or Shift+F10
+on a chip lists Move to To, Cc and Bcc, minus the row it is in, which is
+the keyboard way to do what dragging does. A hidden Cc or Bcc row is
+shown first, and the focus lands on the moved chip. Each chip reads as
+its name and address with "Press Delete to remove, or the Menu key to
+move" after it, and carries a `recipient.remove` action a screen reader can run; its close button
 runs the same action.
 
 ## The thread list from the keyboard
