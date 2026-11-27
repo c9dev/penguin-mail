@@ -514,7 +514,19 @@ Mailbox placements report their committed old-to-new IDs and sibling order throu
 
 **Pull to check for mail**: an optional touchpad overscroll at the top of the message list. Reading preferences enable it, off by default. A pull must travel 140 logical pixels over at least 350 milliseconds at the top; reversing direction or leaving the top resets both. It runs the same Check for Mail action as the menu. `ui::thread_list::pull`.
 
-**Contact group**: a named set of contacts within an address book. CardDAV stores these as vCard categories, or as separate group cards with member UIDs on iCloud. The contacts window joins those memberships from the stored cards and writes changes back to the account. A group card is not a person and is never offered as a recipient. Google stores user groups as People API contact groups; system memberships such as Starred stay separate from editable labels.
+**Contacts space**: the third space of the main window, beside Mail and Calendar. Its sidebar lists the lists, the groups and the accounts; the list pane holds one row per person; the person pane shows or edits the selected one. `mailrs::ui::contacts::Contacts`. Contacts is always one of the spaces, so Turn On for an account with contacts off is reachable from it. _Avoid_: contacts window, address book window.
+
+**Person**: one row of All contacts, VIPs or a group: every stored contact that shares an address, or that a link joins, across accounts. An account's own list shows its contacts one by one instead. `ui::contacts::people::Person`. _Avoid_: contact (which is one account's record), identity.
+
+**Same address**: a list of pairs of contacts in one account that share an address. Merging keeps one and deletes the other in that account only. _Avoid_: duplicates.
+
+**Same person**: a list of pairs of contacts in two accounts whose names are close ("Owen Mercer", "Owen M.") and whose addresses differ. _Avoid_: duplicates.
+
+**Link**: the person's word that two contacts in different accounts are one human. Neither contact changes and nothing is deleted; All contacts shows one row, with the name the link picked. `mailrs_store::address_book::Link`, kept in `contact_links` and dropped with either contact. Undo removes it. _Avoid_: merge (which deletes).
+
+**From mail**: the list of correspondents who are in no address book. Its one write is Save to Contacts into an account the person picks. _Avoid_: suggestions.
+
+**Contact group**: a named set of contacts within an address book. CardDAV stores these as vCard categories, or as separate group cards with member UIDs on iCloud. Contacts joins those memberships from the stored cards and writes changes back to the account. A group card is not a person and is never offered as a recipient. Google stores user groups as People API contact groups; system memberships such as Starred stay separate from editable labels.
 
 **Contact details**: a contact's phone numbers, postal addresses, websites, birthday, other dates, notes and custom vCard fields. `mailrs_domain::contact::Details` is the stored view; `Changes` names only edited fields. The CardDAV or Google revision belongs to that view so saving an old editor cannot overwrite a newer card. Google fields are written with their contact source metadata; untouched values and labels stay with the account. A postal address keeps vCard's seven parts apart, so a street of two lines stays one part. A card in an address book the account may only read offers no Edit or Delete.
 

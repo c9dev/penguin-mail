@@ -1026,12 +1026,7 @@ impl Contacts {
         );
         if let Some(n) = picking {
             self.head.append(&parts::label(
-                &fill_plural(
-                    "{count} selected",
-                    "{count} selected",
-                    n,
-                    &[("count", &n.to_string())],
-                ),
+                &fill(&gettext("{count} selected"), &[("count", &n.to_string())]),
                 &["cts-h2"],
             ));
             let grow = gtk::Box::builder().hexpand(true).build();
@@ -1044,12 +1039,7 @@ impl Contacts {
                 }
             });
             let delete = parts::button(
-                &fill_plural(
-                    "Delete {count}",
-                    "Delete {count}",
-                    n,
-                    &[("count", &n.to_string())],
-                ),
+                &fill(&gettext("Delete {count}"), &[("count", &n.to_string())]),
                 &["dangerfill"],
             );
             delete.set_sensitive(n > 0);
