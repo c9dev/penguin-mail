@@ -210,23 +210,7 @@ impl<A: Accounts> ContactBook<A> {
             return Err(BackendError::Unsupported.into());
         }
         let made = service.create_contact(fields).await;
-        let saved = self.stored(account_id, made, keep).await?;
-        if keep {
-            if let Some(groups) = &fields.details.groups {
-                if let Permitted::Done(contact) = &saved {
-                    let (contact, groups) = (contact.clone(), groups.clone());
-                    self.db
-                        .write(move |c| address_book::set_memberships(c, &contact, &groups))
-                        .await?;
-                }
-                if let Err(err) = self.refresh(account_id).await {
-                    tracing::warn!(%err, "saved contact but could not refresh address book");
-                }
-            } else {
-                let _ = self.fetch_photos(&service, account_id).await;
-            }
-        }
-        Ok(saved)
+        self.saved(&service, account_id, made, fields, keep).await
     }
 
     /// Changes the fields `fields` names on the contact `resource`, and
@@ -246,21 +230,35 @@ impl<A: Accounts> ContactBook<A> {
             return Err(BackendError::Unsupported.into());
         }
         let changed = service.update_contact(resource, fields).await;
-        let saved = self.stored(account_id, changed, keep).await?;
-        if keep {
-            if let Some(groups) = &fields.details.groups {
-                if let Permitted::Done(contact) = &saved {
-                    let (contact, groups) = (contact.clone(), groups.clone());
-                    self.db
-                        .write(move |c| address_book::set_memberships(c, &contact, &groups))
-                        .await?;
-                }
-                if let Err(err) = self.refresh(account_id).await {
-                    tracing::warn!(%err, "saved contact but could not refresh address book");
-                }
-            } else {
-                let _ = self.fetch_photos(&service, account_id).await;
-            }
+        self.saved(&service, account_id, changed, fields, keep).await
+    }
+
+    /// What a create or an update answered, stored when `keep` says so,
+    /// with the group cards and photos that change brought up to date.
+    async fn saved(
+        &self,
+        service: &AnyContacts,
+        account_id: AccountId,
+        answer: Result<Person, BackendError>,
+        fields: &ContactFields,
+        keep: bool,
+    ) -> Result<Permitted<Contact>, SyncError> {
+        let saved = self.stored(account_id, answer, keep).await?;
+        if !keep {
+            return Ok(saved);
+        }
+        let Some(groups) = &fields.details.groups else {
+            let _ = self.fetch_photos(service, account_id).await;
+            return Ok(saved);
+        };
+        if let Permitted::Done(contact) = &saved {
+            let (contact, groups) = (contact.clone(), groups.clone());
+            self.db
+                .write(move |c| address_book::set_memberships(c, &contact, &groups))
+                .await?;
+        }
+        if let Err(err) = self.refresh(account_id).await {
+            tracing::warn!(%err, "saved contact but could not refresh address book");
         }
         Ok(saved)
     }
@@ -496,14 +494,12 @@ impl<A: Accounts> ContactBook<A> {
                             .write(move |c| {
                                 if whole {
                                     // Whoever the new read left out has gone.
-                                    let stale: Vec<String> = address_book::list(c)?
-                                        .into_iter()
-                                        .filter(|held| held.account_id == account_id)
-                                        .filter(|held| {
-                                            read.iter().all(|r| r.resource != held.resource)
-                                        })
-                                        .map(|held| held.resource)
-                                        .collect();
+                                    // Group cards too, which `list` leaves out.
+                                    let stale: Vec<String> =
+                                        address_book::resources(c, account_id)?
+                                            .into_iter()
+                                            .filter(|held| read.iter().all(|r| r.resource != *held))
+                                            .collect();
                                     address_book::forget(c, account_id, &stale)?;
                                 }
                                 address_book::save(c, &read)?;

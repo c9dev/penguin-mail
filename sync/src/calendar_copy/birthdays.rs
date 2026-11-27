@@ -46,6 +46,7 @@ fn occurrence(contact: &Contact, year: i32) -> Option<Occurrence> {
         start,
         end: start + DAY,
         all_day: true,
+        zone: "UTC".into(),
         title,
         kind: Kind::Birthday,
         reminders: Some(Vec::new()),
@@ -104,7 +105,7 @@ impl<A: Accounts> CalendarCopy<A> {
         let accounts = accounts.to_vec();
         Ok(self
             .db
-            .read(move |c| Ok(in_range(&address_book::list(c)?, &accounts, from, to)))
+            .read(move |c| Ok(in_range(&address_book::birthdays(c)?, &accounts, from, to)))
             .await?)
     }
 
@@ -120,10 +121,8 @@ impl<A: Accounts> CalendarCopy<A> {
         Ok(self
             .db
             .read(move |c| {
-                Ok(address_book::list(c)?
-                    .iter()
-                    .find(|c| c.account_id == account && c.resource == resource)
-                    .and_then(|c| occurrence(c, year))
+                Ok(address_book::one(c, account, &resource)?
+                    .and_then(|c| occurrence(&c, year))
                     .map(|o| (*o.event).clone()))
             })
             .await?)
@@ -168,6 +167,7 @@ mod tests {
         assert_eq!(o.start, midnight("2027-07-27"));
         assert_eq!(o.end - o.start, DAY);
         assert!(o.event.all_day);
+        assert_eq!(o.event.zone, "UTC");
         assert_eq!(o.event.kind, Kind::Birthday);
         assert!(!calendar().access.can_write());
         assert_eq!(o.event.reminders, Some(vec![]));

@@ -516,3 +516,31 @@ async fn resetting_a_cursor_replaces_cached_groups_and_keeps_the_photo() {
     assert_eq!(updated.photo, old.photo);
     assert_eq!(std::fs::read(updated.photo.unwrap()).unwrap(), b"jpeg");
 }
+
+#[tokio::test]
+async fn a_full_refresh_forgets_a_group_card_the_server_no_longer_holds() {
+    let h = harness().await;
+    let b = book(&h);
+    h.fake.with(|s| {
+        let mut group = person("people/g1", "Friends", &[], None);
+        group.details.members = Some(vec!["demo".into()]);
+        s.contacts = vec![
+            person("people/c1", "Demo", &["demo@example.org"], None),
+            group,
+        ];
+    });
+    b.book.refresh(h.account_id).await.unwrap();
+    let rows = || {
+        h.db.read(|c| {
+            Ok(c.query_row("SELECT count(*) FROM contacts", [], |r| r.get::<_, i64>(0))?)
+        })
+    };
+    assert_eq!(rows().await.unwrap(), 2);
+    let account = h.account_id;
+    h.db.write(move |c| address_book::set_book(c, account, None, 0))
+        .await
+        .unwrap();
+    h.fake.with(|s| s.contacts.retain(|p| p.resource != "people/g1"));
+    b.book.refresh(h.account_id).await.unwrap();
+    assert_eq!(rows().await.unwrap(), 1);
+}

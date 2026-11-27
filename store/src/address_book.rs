@@ -159,6 +159,34 @@ pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
         .collect())
 }
 
+/// The people who have a birthday, for the birthdays calendar, without
+/// the group names `list` joins in.
+pub fn birthdays(conn: &Connection) -> Result<Vec<Contact>> {
+    read(
+        conn,
+        "json_extract(c.details, '$.birthday') <> '' AND json_extract(c.details, '$.members') IS NULL",
+        [],
+    )
+}
+
+/// The account's contact `resource`, if it holds one.
+pub fn one(conn: &Connection, account_id: AccountId, resource: &str) -> Result<Option<Contact>> {
+    Ok(read(
+        conn,
+        "c.account_id = ?1 AND c.resource = ?2",
+        params![account_id, resource],
+    )?
+    .into_iter()
+    .next())
+}
+
+/// The resource of every row the account holds, group cards included.
+pub fn resources(conn: &Connection, account_id: AccountId) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare("SELECT resource FROM contacts WHERE account_id = ?1")?;
+    let rows = stmt.query_map([account_id], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
 /// Keep native group cards in step with a successful edit until the next refresh.
 pub fn set_memberships(conn: &Connection, contact: &Contact, names: &[String]) -> Result<()> {
     if contact.details.uid.is_empty() {
