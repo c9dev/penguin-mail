@@ -492,6 +492,9 @@ impl Composer {
             .valign(gtk::Align::Start)
             .active(!draft.cc.is_empty() || !draft.bcc.is_empty())
             .build();
+        // A chip sent to Cc or Bcc from the keyboard may find them hidden.
+        let reveal = more_button.clone();
+        moves.on_reveal(move || reveal.set_active(true));
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
         // One size group holds the label column to a single width, so every
         // field starts at the same edge whichever labels are on show.
