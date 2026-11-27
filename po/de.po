@@ -2305,39 +2305,39 @@ msgstr ""
 "Penguin Mail konnte seinen E-Mail-Speicher nicht aktualisieren und hat den "
 "alten behalten."
 
-#: app/src/core.rs:992 app/src/core.rs:1065 app/src/core.rs:1141
-#: app/src/core.rs:1270 app/src/core.rs:1284 app/src/core.rs:1349
-#: app/src/core.rs:1445 app/src/core.rs:1697
+#: app/src/core.rs:994 app/src/core.rs:1067 app/src/core.rs:1143
+#: app/src/core.rs:1272 app/src/core.rs:1286 app/src/core.rs:1351
+#: app/src/core.rs:1447 app/src/core.rs:1699
 msgid "Demo mode cannot add real accounts."
 msgstr "Im Demo-Modus können keine echten Konten hinzugefügt werden."
 
-#: app/src/core.rs:1010 app/src/core.rs:1721 app/src/core.rs:1762
-#: app/src/core.rs:2018
+#: app/src/core.rs:1012 app/src/core.rs:1723 app/src/core.rs:1764
+#: app/src/core.rs:2020
 msgid "Canceled."
 msgstr "Abgebrochen."
 
-#: app/src/core.rs:1617 app/src/core.rs:1642
+#: app/src/core.rs:1619 app/src/core.rs:1644
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Dieses Konto speichert kein Passwort, das ein Kalender- oder Kontaktserver "
 "annimmt."
 
-#: app/src/core.rs:1766
+#: app/src/core.rs:1768
 msgid ""
 "Remove this account's shared mailboxes before removing its sign-in account."
 msgstr ""
 "Entfernen Sie die freigegebenen Postfächer dieses Kontos, bevor Sie das zur "
 "Anmeldung verwendete Konto entfernen."
 
-#: app/src/core.rs:1944 app/src/core.rs:2044
+#: app/src/core.rs:1946 app/src/core.rs:2046
 msgid "The demo cannot switch accounts."
 msgstr "Im Demo-Modus lassen sich keine Konten umstellen."
 
-#: app/src/core.rs:1998
+#: app/src/core.rs:2000
 msgid "The demo cannot connect a calendar."
 msgstr "Im Demo-Modus lässt sich kein Kalender verbinden."
 
-#: app/src/core.rs:2064
+#: app/src/core.rs:2066
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Nach fünf Minuten Warten auf den Browser aufgegeben."
 

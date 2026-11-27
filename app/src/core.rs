@@ -653,9 +653,11 @@ impl Core {
         ) {
             return Err(err);
         }
+        // This runs on the GTK loop, which has no tokio context, and a store
+        // read starts a blocking task there: the lookup goes to the runtime.
+        let db = self.db.clone();
         let provider = self
-            .db
-            .read(move |c| accounts::account(c, account_id))
+            .call(async move { db.read(move |c| accounts::account(c, account_id)).await })
             .await
             .ok()
             .flatten()
@@ -2683,6 +2685,23 @@ mod tests {
             }))
             .unwrap_err();
         assert_eq!(unknown.to_string(), "The server asked Penguin Mail to wait");
+    }
+
+    /// The GTK loop polls `call_for` with no tokio context. A rate-limited
+    /// answer used to read the store from there, and that read panicked
+    /// with "there is no reactor running", so the mail never opened.
+    #[test]
+    fn a_rate_limited_call_keeps_its_provider_outside_the_runtime() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        let account = running_fastmail(&core);
+        let err = futures::executor::block_on(core.call_for(account.id, async {
+            Err::<(), _>(mailrs_sync::SyncError::Backend(
+                mailrs_sync::BackendError::RateLimited(None),
+            ))
+        }))
+        .unwrap_err();
+        assert_eq!(err.to_string(), "Fastmail asked Penguin Mail to wait");
     }
 
     #[tokio::test]
