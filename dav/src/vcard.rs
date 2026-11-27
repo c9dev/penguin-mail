@@ -12,7 +12,7 @@ use mailrs_domain::translate::gettext;
 use crate::{DavError, MOST_RESOURCE_BYTES};
 
 /// The largest photo kept. A contact photo shows at 64 pixels.
-pub const MOST_PHOTO_BYTES: usize = 512 * 1024;
+pub const MOST_PHOTO_BYTES: usize = mailrs_domain::contact::MOST_PHOTO_BYTES;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Card {
@@ -72,7 +72,10 @@ fn parse(text: &str) -> Result<VCard, DavError> {
         if matches!(entry.name, VCardProperty::Bday | VCardProperty::Anniversary)
             && let Some((property, value)) = dates.next()
             && property == entry.name
-            && valid_date(value)
+            && mailrs_domain::contact::is_date(value)
+            // Apple writes year 1604 for a birthday without one. Keep its
+            // line as written so an unrelated edit does not rewrite it.
+            && !value.starts_with("1604")
         {
             let mut value = mailrs_domain::contact::date_for_edit(value);
             if v4 {
@@ -418,6 +421,7 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
     use mailrs_domain::contact::{Details, Field};
     Details {
         revision: String::new(),
+        read_only: false,
         uid: card.uid().unwrap_or_default().to_string(),
         members: is_group(card).then(|| {
             card.entries
@@ -438,14 +442,11 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
         notes: listed(card, VCardProperty::Note).join("\n"),
         addresses: of(card, VCardProperty::Adr)
             .map(|e| {
-                e.values
-                    .iter()
-                    .map(|v| match v {
-                        VCardValue::Component(parts) => parts.join(", "),
-                        value => value.as_text().unwrap_or_default().to_string(),
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n")
+                std::array::from_fn(|i| match e.values.get(i) {
+                    Some(VCardValue::Component(parts)) => parts.join(", "),
+                    Some(value) => value.as_text().unwrap_or_default().to_string(),
+                    None => String::new(),
+                })
             })
             .collect(),
         urls: listed(card, VCardProperty::Url),
@@ -530,11 +531,7 @@ fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>)
             VCardProperty::Adr,
             values
                 .iter()
-                .map(|s| {
-                    let mut components: Vec<_> = s.lines().map(escape).collect();
-                    components.resize(7, String::new());
-                    format!("ADR:{}", components.join(";"))
-                })
+                .map(|parts| format!("ADR:{}", parts.each_ref().map(|p| escape(p)).join(";")))
                 .collect(),
         ));
     }
@@ -584,16 +581,19 @@ fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>)
         ));
     }
     if let Some(values) = &d.custom {
+        // One entry per name, since each entry replaces every line of its
+        // property: a card may carry two X-SOCIALPROFILE lines.
+        let mut by_name: Vec<(&str, Vec<String>)> = Vec::new();
         for field in values {
-            let property = VCardProperty::Other(field.label.clone());
-            out.push((
-                property,
-                if field.value.is_empty() {
-                    vec![]
-                } else {
-                    vec![format!("{}:{}", field.label, escape(&field.value))]
-                },
-            ));
+            let line = (!field.value.is_empty())
+                .then(|| format!("{}:{}", field.label, escape(&field.value)));
+            match by_name.iter_mut().find(|(name, _)| *name == field.label) {
+                Some((_, lines)) => lines.extend(line),
+                None => by_name.push((&field.label, line.into_iter().collect())),
+            }
+        }
+        for (name, lines) in by_name {
+            out.push((VCardProperty::Other(name.to_string()), lines));
         }
     }
     if let Some(bytes) = &fields.photo {
@@ -617,74 +617,27 @@ fn editable_custom(name: &str) -> bool {
 
 /// Reject property-name injection and malformed dates before a network write.
 pub fn validate(fields: &CardFields) -> Result<(), DavError> {
-    let bad = |reason: &str| DavError::Parse(reason.to_string());
-    if let Some(custom) = &fields.details.custom {
-        let mut names = std::collections::HashSet::new();
-        for field in custom {
-            if !editable_custom(&field.label)
-                || field.label.len() < 3
-                || !field
-                    .label
-                    .bytes()
-                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'-')
-                || !names.insert(&field.label)
-            {
-                return Err(bad(&gettext(
-                    "Custom field names must be unique uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved",
-                )));
-            }
-        }
-    }
-    for date in fields
-        .details
-        .birthday
-        .iter()
-        .chain(fields.details.dates.iter().flatten().map(|f| &f.value))
-    {
-        if !date.is_empty() && !valid_date(date) {
-            return Err(bad(&gettext("Use YYYY-MM-DD or --MM-DD for dates")));
-        }
-    }
-    if fields.details.dates.as_ref().is_some_and(|dates| {
-        dates
-            .iter()
-            .any(|d| d.label.is_empty() || d.value.is_empty())
-    }) {
-        return Err(bad(&gettext("A date needs a label and a value")));
-    }
-    if fields.photo.as_ref().is_some_and(|p| {
-        p.len() > MOST_PHOTO_BYTES || (!p.is_empty() && !p.starts_with(b"\x89PNG\r\n\x1a\n"))
-    }) {
-        return Err(bad(&gettext(
-            "Contact photos must be PNG images no larger than 512 KB",
-        )));
-    }
+    mailrs_domain::contact::check(&fields.details, fields.photo.as_deref())
+        .map_err(DavError::Invalid)?;
+    let bad_name = |name: &str| {
+        !editable_custom(name)
+            || name.len() < 3
+            || !name
+                .bytes()
+                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'-')
+    };
     if fields
         .details
-        .addresses
-        .as_ref()
-        .is_some_and(|a| a.iter().any(|v| v.split('\n').count() > 7))
+        .custom
+        .iter()
+        .flatten()
+        .any(|field| bad_name(&field.label))
     {
-        return Err(bad(&gettext("A postal address has seven components")));
+        return Err(DavError::Invalid(gettext(
+            "Custom field names must be uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved.",
+        )));
     }
     Ok(())
-}
-fn valid_date(date: &str) -> bool {
-    let full = if let Some(rest) = date.strip_prefix("--") {
-        format!(
-            "2000-{}",
-            if rest.len() == 4 && rest.is_ascii() {
-                format!("{}-{}", &rest[..2], &rest[2..])
-            } else {
-                rest.to_string()
-            }
-        )
-    } else {
-        date.to_string()
-    };
-    ["%Y-%m-%d", "%Y%m%d"]
-        .iter()
-        .any(|format| chrono::NaiveDate::parse_from_str(&full, format).is_ok())
 }
 
 fn is_group(card: &VCard) -> bool {

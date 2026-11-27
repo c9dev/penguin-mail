@@ -133,7 +133,7 @@ fn extended_fields_and_photos_round_trip_in_both_versions() {
                 notes: Some("line one\nline two; comma, slash\\".into()),
                 groups: Some(vec!["Work".into(), "Friends, family".into()]),
                 addresses: Some(vec![
-                    "\n\n1 Demo Street\nLisbon\n\n1000-001\nPortugal".into(),
+                    ["", "", "1 Demo Street", "Lisbon", "", "1000-001", "Portugal"].map(String::from),
                 ]),
                 urls: Some(vec!["https://example.org/profile".into()]),
                 dates: Some(vec![Field {
@@ -341,4 +341,68 @@ fn editing_another_field_preserves_full_and_yearless_birthdays() {
             assert_eq!(read_card(&saved).unwrap().details.birthday, expected);
         }
     }
+}
+
+#[test]
+fn a_street_with_a_newline_keeps_every_address_part_in_place() {
+    use mailrs_domain::contact::Changes;
+    let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nADR;TYPE=HOME:;;12 Main St\\nFlat 4;Lisbon;;1000-001;Portugal\r\nEND:VCARD\r\n";
+    let home = ["", "", "12 Main St\nFlat 4", "Lisbon", "", "1000-001", "Portugal"].map(String::from);
+    assert_eq!(read_card(text).unwrap().details.addresses, [home.clone()]);
+    let work = ["", "", "1 Work Road", "Porto", "", "", "Portugal"].map(String::from);
+    let saved = patch_card(
+        text,
+        &CardFields {
+            details: Changes {
+                addresses: Some(vec![home.clone(), work.clone()]),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(read_card(&saved).unwrap().details.addresses, [home, work]);
+}
+
+#[test]
+fn an_apple_birthday_without_a_year_reads_as_yearless_and_stays_as_written() {
+    let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nBDAY;X-APPLE-OMIT-YEAR=1604:1604-03-15\r\nEND:VCARD\r\n";
+    assert_eq!(read_card(text).unwrap().details.birthday, "--03-15");
+    let saved = patch_card(
+        text,
+        &CardFields {
+            name: Some("Changed".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(
+        saved.contains("BDAY;X-APPLE-OMIT-YEAR=1604:1604-03-15"),
+        "{saved}"
+    );
+}
+
+#[test]
+fn custom_fields_save_on_a_card_with_two_social_profiles() {
+    use mailrs_domain::contact::{Changes, Field};
+    let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nX-SOCIALPROFILE;TYPE=twitter:x-apple:demo\r\nX-SOCIALPROFILE;TYPE=mastodon:x-apple:demo2\r\nEND:VCARD\r\n";
+    let mut custom = read_card(text).unwrap().details.custom;
+    assert_eq!(custom.len(), 2);
+    custom.push(Field {
+        label: "X-CUSTOMER-ID".into(),
+        value: "7".into(),
+    });
+    let saved = patch_card(
+        text,
+        &CardFields {
+            details: Changes {
+                custom: Some(custom.clone()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(read_card(&saved).unwrap().details.custom, custom);
+    assert!(saved.contains("TYPE=twitter"), "{saved}");
 }
