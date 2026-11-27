@@ -21,6 +21,23 @@ pub fn path() -> io::Result<PathBuf> {
     }
 }
 
+/// `relative` under the folder above the program's own, where the Windows
+/// installer puts `share/` and `libexec/`. `None` when the program's path
+/// is unknown.
+#[cfg(windows)]
+pub fn beside(relative: &str) -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    Some(exe.parent()?.join("..").join(relative))
+}
+
+/// The app's own folder under `%LOCALAPPDATA%`, which holds what is local
+/// to this computer: the log, the attachment previews and extra
+/// dictionaries.
+#[cfg(windows)]
+pub fn local_data() -> Option<PathBuf> {
+    Some(PathBuf::from(std::env::var_os("LOCALAPPDATA")?).join("penguin-mail"))
+}
+
 /// The command that starts Penguin Mail again: what a restart runs and
 /// what the login item names. Every relaunch goes through here, so a
 /// package that starts the app some other way changes this one function.

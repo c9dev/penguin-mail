@@ -13,6 +13,9 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 
+#[path = "support/gpgconf.rs"]
+mod gpgconf;
+
 use mailrs_pgp::gnupg::Change;
 use mailrs_smime::{Smime, SmimeError};
 
@@ -74,7 +77,7 @@ impl Drop for Home {
     fn drop(&mut self) {
         // The agent gpgsm started holds sockets open under the temp
         // directory.
-        let _ = Command::new("gpgconf")
+        let _ = Command::new(gpgconf::gpgconf(self.smime.program()))
             .arg("--homedir")
             .arg(self.dir.path())
             .args(["--kill", "gpg-agent"])
@@ -149,16 +152,22 @@ fn make() -> Option<Files> {
         .expect("gpgsm runs");
     assert!(imported.success(), "gpgsm could not import it");
     // The export asks the pinentry for a passphrase to put on the file,
-    // and the script types it.
+    // and the script types it. The script is a shell script, which only
+    // Unix runs, so the tests that need the file skip here rather than
+    // fail.
     let p12 = maker
         .gpgsm()
         .args(["--export-secret-key-p12", "ada@example.test"])
         .output()
         .expect("gpgsm runs");
-    assert!(
-        p12.status.success() && !p12.stdout.is_empty(),
-        "gpgsm could not export a PKCS#12 file"
-    );
+    if !(p12.status.success() && !p12.stdout.is_empty()) {
+        // The script needs a shell, so only off Unix is a failed export a skip.
+        if cfg!(unix) {
+            panic!("gpgsm could not export a PKCS#12 file");
+        }
+        eprintln!("skipping: the pinentry script cannot answer, so no PKCS#12 file");
+        return None;
+    }
     Some(Files {
         pem: std::fs::read(&pem).expect("read"),
         p12: p12.stdout,

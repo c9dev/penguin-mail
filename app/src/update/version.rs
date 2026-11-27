@@ -63,6 +63,9 @@ pub enum Method {
     Deb,
     /// From a tarball or `scripts/install.sh`, into a prefix the person owns.
     Local { prefix: PathBuf },
+    /// From the Windows installer. The new installer replaces the files
+    /// once this copy has quit.
+    WindowsInstaller,
 }
 
 /// The files an update downloads.
@@ -83,6 +86,7 @@ pub fn pick<'a>(release: &'a Release, method: &Method) -> Option<Download<'a>> {
     let wanted = match method {
         Method::Deb => format!("penguin-mail_{v}_amd64.deb"),
         Method::Local { .. } => format!("penguin-mail-{v}-x86_64.tar.gz"),
+        Method::WindowsInstaller => format!("penguin-mail-{v}-setup.exe"),
     };
     let find = |name: &str| release.assets.iter().find(|a| a.name == name);
     Some(Download {
@@ -130,6 +134,17 @@ mod tests {
     #[test]
     fn the_running_version_is_the_one_cargo_built() {
         assert_eq!(Version::running().to_string(), env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn the_windows_installer_fetches_its_setup_program() {
+        let r = release(
+            "0.2.0",
+            &["penguin-mail-0.2.0-setup.exe", "SHA256SUMS", "SHA256SUMS.asc"],
+        );
+        let files = pick(&r, &Method::WindowsInstaller).unwrap();
+        assert_eq!(files.package.name, "penguin-mail-0.2.0-setup.exe");
+        assert!(files.signature.is_some());
     }
 
     #[test]
