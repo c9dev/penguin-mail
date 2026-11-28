@@ -214,7 +214,68 @@ pub(crate) async fn goa_services(
         return Ok(Ok(without_mail(connector, account).await?));
     }
     let sign_in = goa_imap_sign_in(connector, account, found);
-    imap_services(connector, account, sign_in).await
+    let mut services = imap_services(connector, account, sign_in).await?;
+    // Online Accounts' token belongs to GNOME's Google project, where the
+    // People API is off. Google's CardDAV answers that token, so an account
+    // with no People client of its own keeps its contacts there.
+    if let Ok(services) = services.as_mut()
+        && services.contacts.is_none()
+    {
+        services.contacts = google_carddav(connector, account, found);
+    }
+    Ok(services)
+}
+
+/// Where Google serves an account's contacts to a CardDAV client.
+const GOOGLE_CARDDAV: &str = "https://www.googleapis.com/carddav/v1/principals";
+
+/// Online Accounts' token as a CardDAV bearer. A refused token asks Online
+/// Accounts to check the account's credentials once.
+struct GoaDavTokens(GoaTokens);
+
+impl mailrs_dav::TokenSource for GoaDavTokens {
+    fn token<'a>(
+        &'a self,
+        refused: Option<&'a str>,
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send + 'a>> {
+        Box::pin(async move {
+            let token = match refused {
+                Some(_) => self.0.renew().await,
+                None => self.0.token().await,
+            };
+            token.map_err(|e| e.to_string())
+        })
+    }
+}
+
+/// The address book of a Google account at `GOOGLE_CARDDAV`, signed in with
+/// Online Accounts' token, or `None` when the client cannot be built.
+fn google_carddav(
+    connector: &Connector,
+    account: &Account,
+    goa_account: &GoaAccount,
+) -> Option<AnyContacts> {
+    let url = format!("{GOOGLE_CARDDAV}/{}/lists/default/", account.email);
+    let tokens = GoaTokens::new(Arc::clone(&connector.goa), goa_account.id.clone());
+    let client = mailrs_dav::DavClient::new(
+        &url,
+        mailrs_dav::Kind::AddressBook,
+        mailrs_dav::Login::new(account.email.clone(), String::new()),
+    )
+    .map(|client| {
+        client
+            .with_bearer(Arc::new(GoaDavTokens(tokens)))
+            .with_sync_depth_one()
+    });
+    match client {
+        Ok(client) => Some(AnyContacts::Dav(
+            crate::services::CardDav::new(Arc::new(crate::services::AnyDav::from(client))).google(),
+        )),
+        Err(err) => {
+            tracing::warn!(account = account.id, %err, "could not set up Google's CardDAV");
+            None
+        }
+    }
 }
 
 /// The calendar and contacts of `account` with no mail.

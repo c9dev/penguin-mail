@@ -173,3 +173,201 @@ async fn a_delta_link_graph_refuses_reads_the_book_whole_once() {
     ids.sort_unstable();
     assert_eq!(ids, ["c1", "c2"]);
 }
+
+#[tokio::test]
+async fn editing_the_numbers_keeps_a_home_number_at_home() {
+    let h = outlook().await;
+    h.fake.put_contact(
+        "contacts-1",
+        GraphContact {
+            home_phones: vec!["+351 210 000 000".into()],
+            ..ann()
+        },
+    );
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    let changed = contacts
+        .update_contact(
+            "c1",
+            &ContactFields {
+                phones: Some(vec![
+                    "+351 900 000 000".into(),
+                    "+351 210 000 000".into(),
+                    "+351 220 000 000".into(),
+                ]),
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    let held = h.fake.with(|s| s.contacts.get("c1").unwrap().1.clone());
+    assert_eq!(held.home_phones, ["+351 210 000 000"]);
+    assert_eq!(held.business_phones, ["+351 220 000 000"]);
+    assert_eq!(changed.details.phones.len(), 3);
+}
+
+#[tokio::test]
+async fn every_contact_field_goes_to_graph_and_comes_back() {
+    use mailrs_domain::contact::{Changes, Field};
+    let h = outlook().await;
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    let address = |street: &str, city: &str| -> [String; 7] {
+        [
+            "Box 7".into(),
+            "Floor 2".into(),
+            street.into(),
+            city.into(),
+            "LX".into(),
+            "1000-001".into(),
+            "Portugal".into(),
+        ]
+    };
+    let made = contacts
+        .create_contact(&ContactFields {
+            name: Some("Priya Raman".into()),
+            emails: Some(vec!["priya@fernwood.example".into()]),
+            photo: Some(b"\x89PNG-bytes".to_vec()),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                urls: Some(vec![
+                    "https://one.example".into(),
+                    "https://two.example".into(),
+                ]),
+                groups: Some(vec!["Friends".into()]),
+                dates: Some(vec![Field {
+                    label: "Anniversary".into(),
+                    value: "2015-06-20".into(),
+                }]),
+                custom: Some(vec![Field {
+                    label: "Badge".into(),
+                    value: "42".into(),
+                }]),
+                addresses: Some(vec![
+                    address("1 Main Street", "Lisbon"),
+                    address("2 Side Street", "Porto"),
+                    address("3 Back Street", "Faro"),
+                    address("4 Far Street", "Braga"),
+                ]),
+            },
+            ..ContactFields::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        h.fake.with(|s| s.photos.get(&made.resource).cloned()),
+        Some(b"\x89PNG-bytes".to_vec())
+    );
+    let (people, _, _) = read_whole(&contacts).await;
+    let read = people.iter().find(|p| p.resource == made.resource).unwrap();
+    let d = &read.details;
+    assert_eq!(d.birthday, "1990-04-12");
+    assert_eq!(d.notes, "Met in March");
+    assert_eq!(d.urls, ["https://one.example", "https://two.example"]);
+    assert_eq!(d.groups, ["Friends"]);
+    assert_eq!(d.dates[0].value, "2015-06-20");
+    assert_eq!(d.custom[0].label, "Badge");
+    assert_eq!(
+        d.addresses.len(),
+        4,
+        "three in Graph's slots and one in the extras"
+    );
+    assert_eq!(d.addresses[0][0], "Box 7", "the PO box rides in the extras");
+    assert_eq!(d.addresses[0][1], "Floor 2");
+    assert_eq!(
+        d.addresses[0][2], "1 Main Street",
+        "the box is not in the street twice"
+    );
+    // Saving the addresses as read writes the same street line again.
+    let again = contacts
+        .update_contact(
+            &made.resource,
+            &ContactFields {
+                details: Changes {
+                    addresses: Some(d.addresses.clone()),
+                    ..Changes::default()
+                },
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(again.details.addresses[0][2], "1 Main Street");
+    assert_eq!(d.addresses[2][3], "Faro");
+    assert_eq!(d.addresses[3][3], "Braga");
+    // An edit of one field keeps the others, extras included.
+    let edited = contacts
+        .update_contact(
+            &made.resource,
+            &ContactFields {
+                details: Changes {
+                    custom: Some(vec![]),
+                    ..Changes::default()
+                },
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(edited.details.custom.is_empty());
+    assert_eq!(edited.details.dates[0].label, "Anniversary");
+    assert_eq!(edited.details.urls.len(), 2);
+    assert_eq!(edited.details.addresses.len(), 4);
+    contacts.delete_contact(&made.resource, None).await.unwrap();
+    let (after, _, _) = read_whole(&contacts).await;
+    assert!(after.iter().all(|p| p.resource != made.resource));
+}
+
+#[tokio::test]
+async fn a_failed_extras_read_fails_the_page_instead_of_storing_a_partial_contact() {
+    let h = outlook().await;
+    h.fake.put_contact("contacts-1", ann());
+    h.fake
+        .with(|s| s.extras_error = Some(mailrs_graph::GraphError::Throttled { retry_after: None }));
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    assert!(contacts.connections(None, None).await.is_err());
+}
+
+#[tokio::test]
+async fn a_change_against_an_old_etag_is_refused_and_a_photo_keeps_the_new_one() {
+    let h = outlook().await;
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    let made = contacts
+        .create_contact(&ContactFields {
+            name: Some("Cy".into()),
+            photo: Some(b"\x89PNG-bytes".to_vec()),
+            ..ContactFields::default()
+        })
+        .await
+        .unwrap();
+    let held = h
+        .fake
+        .with(|s| s.contacts.get(&made.resource).unwrap().1.etag.clone());
+    assert_eq!(
+        Some(made.details.revision.as_str()),
+        held.as_deref(),
+        "the photo upload moved the etag and the person carries the new one"
+    );
+    let edit = |revision: &str| ContactFields {
+        organization: Some("Fabrikam".into()),
+        expected_revision: Some(revision.into()),
+        ..ContactFields::default()
+    };
+    let stale = contacts
+        .update_contact(&made.resource, &edit("W/\"0\""))
+        .await;
+    assert!(matches!(stale, Err(BackendError::Changed)));
+    let changed = contacts
+        .update_contact(&made.resource, &edit(&made.details.revision))
+        .await
+        .unwrap();
+    assert!(matches!(
+        contacts
+            .delete_contact(&made.resource, Some(&made.details.revision))
+            .await,
+        Err(BackendError::Changed)
+    ));
+    contacts
+        .delete_contact(&made.resource, Some(&changed.details.revision))
+        .await
+        .unwrap();
+}

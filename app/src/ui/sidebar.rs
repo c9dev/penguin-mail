@@ -306,6 +306,9 @@ pub struct Sidebar {
     foot: gtk::Box,
     /// Whether the Mail space shows, which the next-event card needs.
     mail_showing: Cell<bool>,
+    /// Whether the Contacts space shows.
+    contacts_showing: Cell<bool>,
+    calendar_offered: Cell<bool>,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
@@ -313,7 +316,7 @@ pub struct Sidebar {
     /// too while no account has mail, and "Calendars" shows in its place.
     pub switch: adw::ToggleGroup,
     /// The badge on the Mail toggle and on the Calendar one.
-    badges: [(Space, CountBadge); 2],
+    badges: [(Space, CountBadge); 3],
     /// Unread mail in the unified inbox, for the Mail toggle's badge.
     unread: Cell<i64>,
     /// Invitations waiting for an answer, for the Calendar toggle's.
@@ -445,17 +448,11 @@ fn align_header_title(header: &adw::HeaderBar, titles: &gtk::Box) {
             let (Some(header), Some(titles)) = (header.upgrade(), titles.upgrade()) else {
                 return;
             };
-            let center = controls.is_empty() || !controls.get_visible();
-            titles.set_halign(if center {
-                gtk::Align::Center
-            } else {
-                gtk::Align::Fill
-            });
-            header.set_centering_policy(if center {
-                adw::CenteringPolicy::Strict
-            } else {
-                adw::CenteringPolicy::Loose
-            });
+            // The switch takes the room up to the menu button, and sits in
+            // the middle of it, so the active space keeps its name.
+            let _ = controls;
+            titles.set_halign(gtk::Align::Fill);
+            header.set_centering_policy(adw::CenteringPolicy::Loose);
         });
         update(&controls);
         let changed = update.clone();
@@ -488,6 +485,8 @@ impl Sidebar {
             .css_classes(["round", "space-switch"])
             .homogeneous(false)
             .valign(gtk::Align::Center)
+            .halign(gtk::Align::Center)
+            .hexpand(true)
             .visible(false)
             .build();
         let mut labels = Vec::new();
@@ -499,22 +498,31 @@ impl Sidebar {
                 gettext("Calendar"),
                 "x-office-calendar-symbolic",
             ),
+            (
+                Space::Contacts,
+                "contacts",
+                gettext("Contacts"),
+                "penguin-mail-ct-person-symbolic",
+            ),
         ]
         .map(|(space, name, label, icon)| {
             let content = adw::ButtonContent::builder()
                 .icon_name(icon)
                 .label(&label)
                 .build();
+            content.set_halign(gtk::Align::Center);
             // Each toggle counts what waits in the other space, in a small
-            // accent pill after its name, while that space is away.
+            // accent pill on the corner of its icon while that space is away,
+            // so the count takes no width from the switch.
             let badge = glib::Object::builder::<CountBadge>()
                 .property("css-classes", ["space-badge"].as_slice())
-                .property("valign", gtk::Align::Center)
+                .property("halign", gtk::Align::End)
+                .property("valign", gtk::Align::Start)
+                .property("can-target", false)
                 .property("visible", false)
                 .build();
-            let child = gtk::Box::builder().spacing(6).build();
-            child.append(&content);
-            child.append(&badge);
+            let child = gtk::Overlay::builder().child(&content).build();
+            child.add_overlay(&badge);
             labels.push(content);
             let toggle = adw::Toggle::builder()
                 .name(name)
@@ -528,26 +536,34 @@ impl Sidebar {
         let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         titles.append(&title);
         titles.append(&switch);
+        // Loose centring lets the switch use the room up to the menu button,
+        // enough for the active space's name beside the badges.
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
             .show_title(true)
+            .centering_policy(adw::CenteringPolicy::Loose)
             .build();
-        // Measure both layouts in this locale, including the largest off-screen badge.
+        // Measure both layouts in this locale.
         switch.set_visible(true);
         title.set_visible(false);
-        badges[1].1.set_label(gettext("99+"));
-        badges[1].1.set_visible(true);
-        let wide = titles.measure(gtk::Orientation::Horizontal, -1).1;
+        // Only the space on screen shows its name, so the widest layout is
+        // the one with the longest name open.
+        let mut wide = 0;
+        for name in ["mail", "calendar", "contacts"] {
+            switch.set_active_name(Some(name));
+            wide = wide.max(titles.measure(gtk::Orientation::Horizontal, -1).1);
+        }
+        switch.set_active_name(Some("mail"));
         let height = titles.measure(gtk::Orientation::Vertical, -1).1;
         for label in &labels {
             label.set_label("");
         }
-        badges[1].1.set_visible(false);
         switch.add_css_class("compact");
         let compact = titles.measure(gtk::Orientation::Horizontal, -1).0;
         switch.remove_css_class("compact");
         labels[0].set_label(&gettext("Mail"));
         labels[1].set_label(&gettext("Calendar"));
+        labels[2].set_label(&gettext("Contacts"));
         switch.set_visible(false);
         title.set_visible(true);
         let adaptive = adw::BreakpointBin::builder()
@@ -569,37 +585,22 @@ impl Sidebar {
             "css-classes",
             Some(&["round", "space-switch", "compact"].to_value()),
         );
-        // The compact width follows the rooted widgets and the badges actually shown.
+        // The compact width follows the rooted widgets.
         let resize: Rc<dyn Fn()> = {
             let adaptive = adaptive.downgrade();
             let switch = switch.downgrade();
-            let badges = badges.each_ref().map(|(_, badge)| badge.downgrade());
             let icons = Cell::new(compact);
             Rc::new(move || {
                 let (Some(adaptive), Some(switch)) = (adaptive.upgrade(), switch.upgrade()) else {
                     return;
                 };
-                let extra: i32 = badges
-                    .iter()
-                    .filter_map(glib::WeakRef::upgrade)
-                    .filter(|badge| badge.is_visible())
-                    .map(|badge| badge.measure(gtk::Orientation::Horizontal, -1).0 + 6)
-                    .sum();
                 if switch.root().is_some() && switch.is_visible() && switch.has_css_class("compact")
                 {
-                    icons.set(switch.measure(gtk::Orientation::Horizontal, -1).0 - extra);
+                    icons.set(switch.measure(gtk::Orientation::Horizontal, -1).0);
                 }
-                adaptive.set_width_request(icons.get() + extra);
+                adaptive.set_width_request(icons.get());
             })
         };
-        for (_, badge) in &badges {
-            let resize = resize.clone();
-            badge.connect_notify_local(None, move |_, property| {
-                if matches!(property.name(), "label" | "visible") {
-                    resize();
-                }
-            });
-        }
         let resized = resize.clone();
         narrow.connect_apply(move |_| {
             let resize = resized.clone();
@@ -647,6 +648,8 @@ impl Sidebar {
             undo,
             foot,
             mail_showing: Cell::new(true),
+            contacts_showing: Cell::new(false),
+            calendar_offered: Cell::new(false),
             switch,
             badges,
             unread: Cell::new(0),
@@ -889,6 +892,34 @@ impl Sidebar {
         self.title.set_visible(!visible);
     }
 
+    /// Shows or hides the Calendar toggle: no account offering a calendar
+    /// leaves nothing for it to show.
+    pub fn set_calendar_offered(&self, offered: bool) {
+        self.calendar_offered.set(offered);
+        if let Some(toggle) = self.switch.toggle_by_name("calendar") {
+            toggle.set_enabled(offered);
+        }
+    }
+
+    /// Whether some account offers a calendar.
+    pub fn calendar_offered(&self) -> bool {
+        self.calendar_offered.get()
+    }
+
+    /// Puts the contacts' own sidebar, `content`, in place of the
+    /// mailbox list, with no next-event card, as the calendar has none.
+    pub fn show_contacts(&self, content: &gtk::Widget) {
+        if self.content.child_by_name("contacts").is_none() {
+            self.content.add_named(content, Some("contacts"));
+        }
+        self.content.set_visible_child_name("contacts");
+        self.contacts_showing.set(true);
+        self.mail_showing.set(false);
+        self.title.set_label(&gettext("Contacts"));
+        self.sync_foot();
+        self.sync_badges();
+    }
+
     /// Puts the calendar's own sidebar, `content`, in place of the
     /// mailbox list. The foot, shared by both spaces, stays below it, but
     /// the next-event card belongs to Mail alone: the calendar shows the
@@ -898,6 +929,7 @@ impl Sidebar {
             self.content.add_named(content, Some("calendar"));
         }
         self.content.set_visible_child_name("calendar");
+        self.contacts_showing.set(false);
         self.mail_showing.set(false);
         self.title.set_label(&gettext("Calendars"));
         self.sync_foot();
@@ -907,6 +939,7 @@ impl Sidebar {
     /// Puts the mailbox list back.
     pub fn show_mail(&self) {
         self.content.set_visible_child_name("mail");
+        self.contacts_showing.set(false);
         self.mail_showing.set(true);
         self.title.set_label(&gettext("Mailboxes"));
         self.sync_foot();
@@ -930,6 +963,8 @@ impl Sidebar {
     fn sync_badges(&self) {
         let on_screen = if self.mail_showing.get() {
             Space::Mail
+        } else if self.contacts_showing.get() {
+            Space::Contacts
         } else {
             Space::Calendar
         };
@@ -945,6 +980,7 @@ impl Sidebar {
             let count = match space {
                 Space::Mail => badges.mail,
                 Space::Calendar => badges.calendar,
+                Space::Contacts => 0,
             };
             let text = badge_text(count);
             badge.set_label(text.as_deref().unwrap_or_default());
@@ -1438,7 +1474,7 @@ impl Sidebar {
                         emails: vec![email.clone()],
                         name: name.clone(),
                     };
-                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let row = self.add_mailbox(person, name, "penguin-mail-ct-person-symbolic", 1);
                     let menu = gio::Menu::new();
                     let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
                     item.set_action_and_target_value(
@@ -1880,12 +1916,12 @@ pub struct SpaceBadges {
 
 pub fn space_badges(on_screen: Space, unread: i64, waiting: i64) -> SpaceBadges {
     SpaceBadges {
-        mail: if on_screen == Space::Calendar {
-            unread
+        mail: if on_screen != Space::Mail { unread } else { 0 },
+        calendar: if on_screen != Space::Calendar {
+            waiting
         } else {
             0
         },
-        calendar: if on_screen == Space::Mail { waiting } else { 0 },
     }
 }
 
@@ -1905,6 +1941,7 @@ pub fn toggle_name(space: Space, count: i64) -> String {
     match (space, count > 0) {
         (Space::Mail, false) => gettext("Mail"),
         (Space::Calendar, false) => gettext("Calendar"),
+        (Space::Contacts, _) => gettext("Contacts"),
         (Space::Mail, true) => fill_plural(
             "Mail, {count} unread",
             "Mail, {count} unread",
@@ -3113,7 +3150,9 @@ pub(crate) mod checks {
         let without_badge = bin.width_request();
         sidebar.set_waiting(100);
         let least = bin.width_request();
-        assert!(least > without_badge);
+        // The badge sits over the icon's corner, as in the mockup, so the
+        // switch keeps its width.
+        assert_eq!(least, without_badge);
         sidebar.set_waiting(0);
         assert_eq!(bin.width_request(), without_badge);
         sidebar.set_waiting(100);
@@ -3163,26 +3202,20 @@ pub(crate) mod checks {
         let titles = sidebar.switch.parent().unwrap();
         for layout in [":close", "close:", ":", ":minimize,maximize,close"] {
             sidebar.header.set_decoration_layout(Some(layout));
-            let centered = layout.starts_with(':');
             for width in [240, 360] {
                 sidebar.header.allocate(width, 48, -1, None);
-                if centered {
-                    assert_eq!(titles.halign(), gtk::Align::Center);
-                    let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
-                    // GTK keeps the menu reachable when the full title cannot fit.
-                    if bounds.width() + 2.0 * (menu.width() + 12) as f32
-                        <= sidebar.header.width() as f32
-                    {
-                        assert!(
-                            (bounds.x() + bounds.width() / 2.0
-                                - sidebar.header.width() as f32 / 2.0)
-                                .abs()
-                                <= 1.0,
-                            "{layout} at {width}: {bounds:?}"
-                        );
-                    }
-                } else {
-                    assert_eq!(titles.halign(), gtk::Align::Fill);
+                // The switch takes the room up to the menu button, whatever
+                // the window controls, and never runs under the button.
+                assert_eq!(titles.halign(), gtk::Align::Fill, "{layout}");
+                let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
+                let button = menu.compute_bounds(&sidebar.header).unwrap();
+                // Without the stylesheet the toggles are wider than the card;
+                // GTK then keeps the menu reachable and clips the switch.
+                if bounds.width() + button.width() <= sidebar.header.width() as f32 {
+                    assert!(
+                        bounds.x() + bounds.width() <= button.x() + 1.0,
+                        "{layout} at {width}: {bounds:?} against {button:?}"
+                    );
                 }
             }
         }

@@ -57,7 +57,7 @@ windows and persist across starts. Narrow windows keep secondary actions in More
 The mailbox sidebar and message list have named, focusable dividers.
 Drag either divider, or Tab to it and use Left and Right to resize in
 12-pixel steps. Home and End select its minimum and maximum width.
-The Mail and Calendar buttons switch to icons when the sidebar is narrow.
+The Mail, Calendar and Contacts buttons switch to icons when the sidebar is narrow.
 Their tooltips and accessible names keep the space name and unread or
 invitation count. Expanding the sidebar restores the labels.
 The widths are remembered between starts. In a narrow window, the
@@ -329,3 +329,22 @@ when Show Message Preview is on. The desktop controls the displayed line count.
 On macOS, Bold Subject puts the subject on a separate native subtitle line. It
 requires Notify About New Mail and Show Sender and Subject. Disabling either
 keeps both choices for later. Linux notifications keep the subject in plain text.
+
+## Contacts
+
+Open Contacts with the Contacts button at the top of the sidebar or Alt+3. Tab
+reaches the sidebar's lists, groups and accounts, then search, the contact list,
+and the selected person's actions. Arrow keys select a contact. In Select, each
+picked row says "Selected". Email and phone rows have named compose, mail search,
+copy, call and SMS buttons, and the photo and website lines are buttons too. A
+button that redraws its pane, such as Add to VIPs, keeps the keyboard on its
+place. Edit opens a keyboard-accessible form. Add and Remove Field buttons manage
+repeatable fields. Crop Photo uses named zoom and position sliders; dragging is
+not required. Leaving an edited form by Cancel, another row, another list, New
+contact or another account asks whether to discard its changes. A sync while the
+form is open leaves it as typed. The Undo lane under the list announces what it
+says.
+
+Phone and SMS actions open the system's `tel:` and `sms:` handlers. On Linux,
+KDE Connect can provide these handlers and let the person choose a paired phone.
+Penguin Mail does not place a call or send an SMS by itself.

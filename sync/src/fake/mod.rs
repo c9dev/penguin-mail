@@ -2102,6 +2102,26 @@ impl GmailApi for FakeGmail {
         })
     }
 
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), GmailError> {
+        self.needs(CONTACTS_WRITE_SCOPE)?;
+        self.with(|s| {
+            let index = s
+                .contacts
+                .iter()
+                .position(|p| p.resource == resource)
+                .ok_or(GmailError::NotFound)?;
+            if revision.is_some_and(|r| r != s.contacts[index].details.revision) {
+                return Err(GmailError::Changed);
+            }
+            s.contacts.remove(index);
+            Ok(())
+        })
+    }
+
     async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
         self.call("people.createContact", cost::CONTACT_WRITE)
             .await?;
@@ -2131,6 +2151,13 @@ impl GmailApi for FakeGmail {
                 .iter_mut()
                 .find(|p| p.resource == resource)
                 .ok_or(GmailError::NotFound)?;
+            if fields
+                .expected_revision
+                .as_ref()
+                .is_some_and(|v| v != &person.details.revision)
+            {
+                return Err(GmailError::Changed);
+            }
             fill_person(person, fields);
             Ok(person.clone())
         })
@@ -2154,9 +2181,32 @@ fn fill_person(person: &mut Person, fields: &ContactFields) {
     }
     if let Some(phones) = &fields.phones {
         person.phone = phones.first().cloned();
+        person.details.phones = phones.clone();
     }
     if let Some(organization) = &fields.organization {
         person.organization = Some(organization.clone()).filter(|o| !o.is_empty());
+    }
+    let d = &fields.details;
+    if let Some(v) = &d.birthday {
+        person.details.birthday = v.clone();
+    }
+    if let Some(v) = &d.notes {
+        person.details.notes = v.clone();
+    }
+    if let Some(v) = &d.addresses {
+        person.details.addresses = v.clone();
+    }
+    if let Some(v) = &d.urls {
+        person.details.urls = v.clone();
+    }
+    if let Some(v) = &d.groups {
+        person.details.groups = v.clone();
+    }
+    if let Some(v) = &d.dates {
+        person.details.dates = v.clone();
+    }
+    if let Some(v) = &d.custom {
+        person.details.custom = v.clone();
     }
 }
 

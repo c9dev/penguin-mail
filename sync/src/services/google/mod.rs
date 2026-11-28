@@ -16,8 +16,8 @@ use std::time::Duration;
 
 use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::mailbox::keyword;
 use mailrs_domain::mailbox::Membership;
+use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
@@ -301,7 +301,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
     ) -> Result<Vec<Relocated>, Unapplied> {
         self.write(messages, ops).await.map(|()| Vec::new())
     }
-
 
     /// Destroys a carried copy only while it still wears the label it
     /// landed under and sits in no system folder. Trashing a message
@@ -860,6 +859,25 @@ fn calendar_write_error(err: GmailError) -> BackendError {
 }
 
 impl<G: GmailApi> ContactsService for Google<G> {
+    fn edits_details(&self) -> bool {
+        true
+    }
+
+    async fn address_books(&self) -> Result<Vec<(String, String)>, BackendError> {
+        Ok(vec![(
+            "people/me".into(),
+            mailrs_domain::translate::gettext("Contacts"),
+        )])
+    }
+
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        Ok(paced(self.gmail.delete_contact(resource, revision)).await?)
+    }
+
     async fn connections(
         &self,
         page_token: Option<&str>,

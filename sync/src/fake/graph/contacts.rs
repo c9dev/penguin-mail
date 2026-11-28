@@ -10,10 +10,11 @@ impl FakeGraph {
     pub fn put_contact(&self, folder: &str, contact: GraphContact) {
         self.with(|s| {
             let id = contact.id.clone();
-            let contact = GraphContact {
+            let mut contact = GraphContact {
                 parent_folder_id: Some(folder.to_string()),
                 ..contact
             };
+            tagged(s, &mut contact);
             s.contacts.insert(id.clone(), (folder.to_string(), contact));
             log(s, folder, &id);
         });
@@ -26,6 +27,22 @@ impl FakeGraph {
                 log(s, &folder, id);
             }
         });
+    }
+}
+
+/// Gives the contact a new etag, as Graph does with every change.
+fn tagged(s: &mut GraphState, contact: &mut GraphContact) {
+    let seq = s.next_seq();
+    contact.etag = Some(format!("W/\"{seq}\""));
+}
+
+/// Refuses a change made against an etag that is no longer the contact's.
+fn check_etag(contact: &GraphContact, etag: Option<&str>) -> Answer<()> {
+    match etag {
+        Some(given) if contact.etag.as_deref() != Some(given) => {
+            Err(GraphError::PreconditionFailed)
+        }
+        _ => Ok(()),
     }
 }
 
@@ -43,7 +60,8 @@ fn default_folder(s: &GraphState) -> Option<&ContactFolder> {
     s.contact_folders.first()
 }
 
-/// Writes the fields a create or update body sets onto `contact`.
+/// Writes the fields a create or update body sets onto `contact`, and the
+/// app's extended property onto `extras`.
 fn read_body(contact: &mut GraphContact, body: &Value) {
     if let Some(name) = body["displayName"].as_str() {
         contact.display_name = Some(name.into());
@@ -63,9 +81,93 @@ fn read_body(contact: &mut GraphContact, body: &Value) {
     if let Some(phone) = body["mobilePhone"].as_str() {
         contact.mobile_phone = Some(phone.into());
     }
+    for (key, numbers) in [
+        ("businessPhones", &mut contact.business_phones),
+        ("homePhones", &mut contact.home_phones),
+    ] {
+        if let Some(read) = body
+            .get(key)
+            .and_then(|v| serde_json::from_value::<Vec<String>>(v.clone()).ok())
+        {
+            *numbers = read;
+        }
+    }
     if let Some(company) = body["companyName"].as_str() {
         contact.company_name = Some(company.into());
     }
+    // A key sent as null clears the field, as Graph does.
+    let text = |key: &str| body.get(key).map(|v| v.as_str().map(str::to_string));
+    if let Some(v) = text("birthday") {
+        contact.birthday = v;
+    }
+    if let Some(v) = text("personalNotes") {
+        contact.personal_notes = v;
+    }
+    if let Some(v) = text("businessHomePage") {
+        contact.business_home_page = v;
+    }
+    if let Some(v) = body
+        .get("categories")
+        .and_then(|v| serde_json::from_value::<Vec<String>>(v.clone()).ok())
+    {
+        contact.categories = v;
+    }
+    for (key, slot) in [
+        ("homeAddress", &mut contact.home_address),
+        ("businessAddress", &mut contact.business_address),
+        ("otherAddress", &mut contact.other_address),
+    ] {
+        if let Some(v) = body.get(key) {
+            *slot = serde_json::from_value(v.clone()).ok();
+        }
+    }
+}
+
+/// The value of the app's extended property in a body, if it names one.
+fn extras_in(body: &Value) -> Option<String> {
+    body.get("singleValueExtendedProperties")?
+        .as_array()?
+        .iter()
+        .find(|p| {
+            p["id"]
+                .as_str()
+                .is_some_and(|id| id.eq_ignore_ascii_case(mailrs_graph::EXTRAS_ID))
+        })
+        .and_then(|p| p["value"].as_str().map(str::to_string))
+}
+
+pub(super) fn contact_extras(s: &mut GraphState, id: &str) -> Answer<Option<String>> {
+    s.refuses(Area::Contacts)?;
+    if let Some(err) = &s.extras_error {
+        return Err(err.clone());
+    }
+    if !s.contacts.contains_key(id) {
+        return Err(GraphError::NotFound);
+    }
+    Ok(s.contact_extras.get(id).cloned())
+}
+
+pub(super) fn set_contact_photo(s: &mut GraphState, id: &str, bytes: Vec<u8>) -> Answer<()> {
+    s.refuses(Area::Contacts)?;
+    if !s.contacts.contains_key(id) {
+        return Err(GraphError::NotFound);
+    }
+    s.photos.insert(id.to_string(), bytes);
+    // A photo change moves the etag on Graph too.
+    let mut contact = s.contacts[id].1.clone();
+    tagged(s, &mut contact);
+    s.contacts.get_mut(id).expect("checked above").1 = contact;
+    Ok(())
+}
+
+pub(super) fn delete_contact(s: &mut GraphState, id: &str, etag: Option<&str>) -> Answer<()> {
+    s.refuses(Area::Contacts)?;
+    check_etag(&s.contacts.get(id).ok_or(GraphError::NotFound)?.1, etag)?;
+    let (folder, _) = s.contacts.remove(id).ok_or(GraphError::NotFound)?;
+    s.contact_extras.remove(id);
+    s.photos.remove(id);
+    log(s, &folder, id);
+    Ok(())
 }
 
 pub(super) fn contact_folders(s: &mut GraphState) -> Answer<Vec<ContactFolder>> {
@@ -146,6 +248,10 @@ pub(super) fn create_contact(s: &mut GraphState, body: &Value) -> Answer<GraphCo
         ..GraphContact::default()
     };
     read_body(&mut contact, body);
+    tagged(s, &mut contact);
+    if let Some(extras) = extras_in(body) {
+        s.contact_extras.insert(id.clone(), extras);
+    }
     s.contacts
         .insert(id.clone(), (folder.clone(), contact.clone()));
     log(s, &folder, &id);
@@ -158,13 +264,26 @@ pub(super) fn contact_name(s: &mut GraphState, id: &str) -> Answer<GraphContact>
     Ok(GraphContact {
         id: id.into(),
         display_name: contact.display_name.clone(),
+        home_phones: contact.home_phones.clone(),
+        etag: contact.etag.clone(),
         ..GraphContact::default()
     })
 }
 
-pub(super) fn update_contact(s: &mut GraphState, id: &str, body: &Value) -> Answer<GraphContact> {
+pub(super) fn update_contact(
+    s: &mut GraphState,
+    id: &str,
+    body: &Value,
+    etag: Option<&str>,
+) -> Answer<GraphContact> {
     s.refuses(Area::Contacts)?;
+    check_etag(&s.contacts.get(id).ok_or(GraphError::NotFound)?.1, etag)?;
+    if let Some(extras) = extras_in(body) {
+        s.contact_extras.insert(id.to_string(), extras);
+    }
+    let seq = s.next_seq();
     let (folder, contact) = s.contacts.get_mut(id).ok_or(GraphError::NotFound)?;
+    contact.etag = Some(format!("W/\"{seq}\""));
     read_body(contact, body);
     // Outlook.com rebuilds the display name from the name parts, or the
     // company when there are none, on a change that leaves it out. Graph's

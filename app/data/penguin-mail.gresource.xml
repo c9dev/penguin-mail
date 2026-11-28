@@ -39,6 +39,25 @@
     <file>band/stamped.svg</file>
     <file>band/browser.svg</file>
     <file>band/lookup.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-mail-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-star-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-search-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-edit-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-phone-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-key-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-image-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-plus-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-building-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-chat-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-ok-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-x-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-person-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-back-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-pin-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-note-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-globe-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-cake-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-ct-tag-symbolic.svg</file>
     <file>band/error.svg</file>
     <file>band/unreachable.svg</file>
     <file>band/success.svg</file>

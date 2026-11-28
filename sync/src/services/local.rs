@@ -19,6 +19,11 @@ impl LocalRules {
     pub fn new(db: Db, account_id: AccountId) -> LocalRules {
         LocalRules { db, account_id }
     }
+
+    /// The address book kept on this computer beside these rules.
+    pub fn contacts(&self) -> super::LocalContacts {
+        super::LocalContacts::new(self.db.clone(), self.account_id)
+    }
 }
 
 fn stored(err: mailrs_store::StoreError) -> BackendError {

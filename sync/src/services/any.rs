@@ -20,6 +20,7 @@ use mailrs_mime::Parts;
 use super::beside::RulesBeside;
 use super::clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyJmap, AnyPop3, AnySieve, AnySmtp};
 use super::local::LocalRules;
+use super::local_contacts::LocalContacts;
 use super::{
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, Claimed,
     ContactsService, Found, GmailImap, Google, Held, IdentityService, Imap, Jmap, JmapSieve,
@@ -143,6 +144,8 @@ pub enum AnyContacts {
     Microsoft(MicrosoftAdapter),
     Dav(CardDav<AnyDav>),
     Jmap(JmapAdapter),
+    /// A book kept on this computer, for an account whose server has none.
+    Local(LocalContacts),
 }
 
 /// The rules an account's server runs, or this computer does.
@@ -664,11 +667,39 @@ macro_rules! forward_contacts {
             AnyContacts::Microsoft(adapter) => adapter.$method($($arg),*).await,
             AnyContacts::Dav(adapter) => adapter.$method($($arg),*).await,
             AnyContacts::Jmap(adapter) => adapter.$method($($arg),*).await,
+            AnyContacts::Local(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
 
 impl ContactsService for AnyContacts {
+    async fn address_books(&self) -> Result<Vec<(String, String)>, BackendError> {
+        forward_contacts!(self, address_books())
+    }
+
+    fn edits_details(&self) -> bool {
+        match self {
+            Self::Google(adapter) => adapter.edits_details(),
+            Self::Microsoft(adapter) => adapter.edits_details(),
+            Self::Dav(adapter) => adapter.edits_details(),
+            Self::Jmap(adapter) => adapter.edits_details(),
+            Self::Local(adapter) => adapter.edits_details(),
+        }
+    }
+    fn keeps_groups_here(&self) -> bool {
+        match self {
+            Self::Dav(adapter) => adapter.keeps_groups_here(),
+            _ => false,
+        }
+    }
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        forward_contacts!(self, delete_contact(resource, revision))
+    }
+
     async fn connections(
         &self,
         page_token: Option<&str>,

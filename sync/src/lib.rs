@@ -92,7 +92,7 @@ pub use services::{
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, Claimed,
     ContactsService, Found, GmailImap, GmailImapParts, Google, GraphApi, Held, ID_PAGE_SIZE,
     IdentityService, Imap, ImapApi, ImapSettings, Jmap, JmapApi, JmapSettings, JmapSieve,
-    KeywordsOf, KeywordsPage, LIST_PAGE_SIZE, LocalRules, Look, Looked, MailBackend,
+    KeywordsOf, KeywordsPage, LIST_PAGE_SIZE, LocalContacts, LocalRules, Look, Looked, MailBackend,
     MailCapabilities, Microsoft, MicrosoftSettings, Missing, NoMail, Offers, Pop3, Pop3Settings,
     Priority, RAW_LIMIT, RawMessage, ReceiptOut, Refused, Relocated, RemoteChange, RemoteRef,
     RulesBeside, RulesPlace, RulesService, SERVER_REPLY_SCRIPT, SearchQuery, SendAsAddress,

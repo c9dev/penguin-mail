@@ -167,10 +167,22 @@ pub trait GraphApi: Send + Sync + 'static {
     ) -> impl Future<Output = Answer<Option<Vec<u8>>>> + Send;
     fn create_contact(&self, body: &Value) -> impl Future<Output = Answer<GraphContact>> + Send;
     fn contact_name(&self, id: &str) -> impl Future<Output = Answer<GraphContact>> + Send;
+    fn contact_extras(&self, id: &str) -> impl Future<Output = Answer<Option<String>>> + Send;
+    fn set_contact_photo(
+        &self,
+        id: &str,
+        bytes: Vec<u8>,
+    ) -> impl Future<Output = Answer<()>> + Send;
+    fn delete_contact(
+        &self,
+        id: &str,
+        etag: Option<&str>,
+    ) -> impl Future<Output = Answer<()>> + Send;
     fn update_contact(
         &self,
         id: &str,
         body: &Value,
+        etag: Option<&str>,
     ) -> impl Future<Output = Answer<GraphContact>> + Send;
 
     fn rules(&self) -> impl Future<Output = Answer<Vec<MessageRule>>> + Send;
@@ -396,8 +408,25 @@ impl GraphApi for Graph {
         Graph::contact_name(self, id).await
     }
 
-    async fn update_contact(&self, id: &str, body: &Value) -> Answer<GraphContact> {
-        Graph::update_contact(self, id, body).await
+    async fn contact_extras(&self, id: &str) -> Answer<Option<String>> {
+        Graph::contact_extras(self, id).await
+    }
+
+    async fn set_contact_photo(&self, id: &str, bytes: Vec<u8>) -> Answer<()> {
+        Graph::set_contact_photo(self, id, bytes).await
+    }
+
+    async fn delete_contact(&self, id: &str, etag: Option<&str>) -> Answer<()> {
+        Graph::delete_contact(self, id, etag).await
+    }
+
+    async fn update_contact(
+        &self,
+        id: &str,
+        body: &Value,
+        etag: Option<&str>,
+    ) -> Answer<GraphContact> {
+        Graph::update_contact(self, id, body, etag).await
     }
 
     async fn rules(&self) -> Answer<Vec<MessageRule>> {

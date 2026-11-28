@@ -72,6 +72,7 @@ async fn a_new_contact_goes_into_the_default_book() {
         emails: Some(vec!["ada@example.com".into()]),
         phones: Some(vec!["+44 20".into()]),
         organization: Some("Engines".into()),
+        ..Default::default()
     };
     let made = contacts.create_contact(&fields).await.unwrap();
     assert_eq!(made.organization.as_deref(), Some("Engines"));
@@ -212,4 +213,110 @@ async fn an_unchanged_name_keeps_its_parts() {
     contacts.update_contact(&id, &fields).await.unwrap();
     let card = h.fake.with(|s| s.cards["K9"].clone());
     assert_eq!(card["name"]["components"][0]["value"], "Ada", "{card}");
+}
+
+#[tokio::test]
+async fn every_contact_field_goes_to_the_server_and_comes_back() {
+    use mailrs_domain::contact::{Changes, Field};
+    let (_h, contacts) = contacts().await;
+    let made = contacts
+        .create_contact(&ContactFields {
+            name: Some("Priya Raman".into()),
+            emails: Some(vec!["priya@fernwood.example".into()]),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                urls: Some(vec!["https://example.org".into()]),
+                groups: Some(vec!["Friends".into()]),
+                dates: Some(vec![Field {
+                    label: "Anniversary".into(),
+                    value: "2015-06-20".into(),
+                }]),
+                custom: Some(vec![Field {
+                    label: "Badge".into(),
+                    value: "42".into(),
+                }]),
+                addresses: Some(vec![[
+                    String::new(),
+                    String::new(),
+                    "1 Main Street".into(),
+                    "Lisbon".into(),
+                    String::new(),
+                    "1000-001".into(),
+                    "Portugal".into(),
+                ]]),
+            },
+            photo: Some(vec![1, 2, 3]),
+            ..ContactFields::default()
+        })
+        .await
+        .unwrap();
+    let page = contacts.connections(None, None).await.unwrap();
+    let read = page
+        .people
+        .iter()
+        .find(|p| p.resource == made.resource)
+        .expect("the card is listed");
+    assert_eq!(read.details.birthday, "1990-04-12");
+    assert_eq!(read.details.groups, ["Friends"]);
+    assert_eq!(read.details.dates[0].value, "2015-06-20");
+    assert_eq!(read.details.custom[0].label, "Badge");
+    assert_eq!(read.details.addresses[0][3], "Lisbon");
+    assert!(
+        read.photo_url.as_deref().unwrap().len() < 80,
+        "the database holds a key, not the photo"
+    );
+    let photo = contacts
+        .contact_photo(read.photo_url.as_deref().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(photo, [1, 2, 3]);
+    let edited = contacts
+        .update_contact(
+            &made.resource,
+            &ContactFields {
+                details: Changes {
+                    notes: Some(String::new()),
+                    groups: Some(vec![]),
+                    ..Changes::default()
+                },
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(edited.details.notes, "");
+    assert!(edited.details.groups.is_empty());
+    assert_eq!(edited.details.birthday, "1990-04-12", "the rest stays");
+    contacts.delete_contact(&made.resource, None).await.unwrap();
+    let after = contacts.connections(None, None).await.unwrap();
+    assert!(after.people.iter().all(|p| p.resource != made.resource));
+}
+
+#[tokio::test]
+async fn a_change_or_delete_against_an_old_revision_is_refused() {
+    let (h, contacts) = contacts().await;
+    let id = h.fake.add_card("Ada", "ada@example.com");
+    let listed = contacts.connections(None, None).await.unwrap().people;
+    let old = listed[0].details.revision.clone();
+    assert!(!old.is_empty());
+    let edit = |revision: &str| ContactFields {
+        organization: Some("Engines".into()),
+        expected_revision: Some(revision.into()),
+        ..ContactFields::default()
+    };
+    let changed = contacts.update_contact(&id, &edit(&old)).await.unwrap();
+    assert_ne!(changed.details.revision, old);
+    assert!(matches!(
+        contacts.update_contact(&id, &edit(&old)).await,
+        Err(crate::BackendError::Changed)
+    ));
+    assert!(matches!(
+        contacts.delete_contact(&id, Some(&old)).await,
+        Err(crate::BackendError::Changed)
+    ));
+    contacts
+        .delete_contact(&id, Some(&changed.details.revision))
+        .await
+        .unwrap();
 }

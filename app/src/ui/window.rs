@@ -157,6 +157,8 @@ pub struct MainWindow {
     /// The About window while it is open, so an update's progress reaches
     /// its button.
     about: RefCell<Option<Rc<crate::ui::about::About>>>,
+    /// The Contacts space.
+    pub contacts: Rc<super::contacts::Contacts>,
     /// Preferences while it is open, so another press brings it back
     /// rather than stacking a second one.
     preferences: RefCell<Option<Rc<super::preferences::dialog::Dialog>>>,
@@ -721,6 +723,41 @@ impl MainWindow {
                 .build();
             spaces.add_named(&nav, Some("mail"));
             spaces.add_named(&calendar.page, Some("calendar"));
+            let contacts = {
+                let (search, open) = (weak.clone(), weak.clone());
+                super::contacts::Contacts::new(
+                    app,
+                    super::contacts::Hooks {
+                        search_mail: Box::new(move |addresses| {
+                            if let Some(win) = search.upgrade() {
+                                let terms: Vec<String> = addresses
+                                    .iter()
+                                    .map(|a| {
+                                        let a = a.replace('\\', "\\\\").replace('"', "\\\"");
+                                        format!("from:\"{a}\" OR to:\"{a}\"")
+                                    })
+                                    .collect();
+                                win.show_space(crate::settings::Space::Mail);
+                                win.search(terms.join(" OR "));
+                            }
+                        }),
+                        open_thread: Box::new(move |account_id, thread_id| {
+                            if let Some(win) = open.upgrade() {
+                                win.open_invitation_mail(account_id, thread_id);
+                            }
+                        }),
+                        birthdays_changed: Box::new({
+                            let calendar = Rc::downgrade(&calendar);
+                            move || {
+                                if let Some(calendar) = calendar.upgrade() {
+                                    calendar.contacts_changed();
+                                }
+                            }
+                        }),
+                    },
+                )
+            };
+            spaces.add_named(&contacts.page, Some("contacts"));
             let split = adw::OverlaySplitView::builder()
                 .sidebar_width_unit(adw::LengthUnit::Px)
                 .sidebar(&sidebar.page)
@@ -893,6 +930,7 @@ impl MainWindow {
                 // The window's buttons show in one header at a time, so
                 // the widest seen stands for them wherever they are.
                 let buttons = Cell::new(0);
+                let contacts_on = Rc::downgrade(app);
                 // The space needs the wider of the mail and the calendar,
                 // so switching between them leaves the panes where they
                 // are. The mail needs its list beside the conversation's
@@ -915,7 +953,15 @@ impl MainWindow {
                                 .upgrade()
                                 .map_or(0, |split| split.min_sidebar_width() as i32),
                         ),
-                        space: mail.max(calendar),
+                        // Contacts folds to its list alone, so it asks for
+                        // little and leaves the mailboxes in view.
+                        space: match contacts_on
+                            .upgrade()
+                            .is_some_and(|a| a.contacts_visible.get())
+                        {
+                            true => 340,
+                            false => mail.max(calendar),
+                        },
                         columns: mail,
                         controls: buttons.get(),
                         panel: panel
@@ -1032,6 +1078,7 @@ impl MainWindow {
                 storage_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
+                contacts,
                 preferences: RefCell::new(None),
                 stack,
                 split,
@@ -2297,6 +2344,8 @@ impl MainWindow {
     /// Draws the rows and open conversations again once the contact photos
     /// on disk are known, so they show faces instead of initials.
     fn contacts_loaded(self: &Rc<Self>) {
+        // Contacts tells the calendar itself when a birthday changed.
+        self.contacts.reload();
         self.list.photos_changed();
         self.reopen_for_photos();
     }
@@ -3769,6 +3818,7 @@ impl MainWindow {
         );
         first.append_item(&assistant);
         first.append(Some(&gettext("Check for Mail")), Some("win.check"));
+        first.append(Some(&gettext("Contacts")), Some("win.contacts"));
         first.append(Some(&gettext("Add Account…")), Some("win.add-account"));
         first.append(Some(&gettext("New Smart Mailbox…")), Some("win.smart-new"));
         first.append(Some(&gettext("Hide My Email…")), Some("win.hide-my-email"));
@@ -4140,6 +4190,16 @@ impl MainWindow {
         }
     }
 
+    /// Shows the Contacts space.
+    fn show_contacts(self: &Rc<Self>) {
+        self.show_space(crate::settings::Space::Contacts);
+    }
+
+    /// A search key while Contacts shows: the contacts search takes it.
+    pub(super) fn contacts_page_key(self: &Rc<Self>, _name: &str) {
+        self.contacts.focus_search();
+    }
+
     fn show_preferences(self: &Rc<Self>) {
         self.show_preferences_for(None);
     }
@@ -4441,6 +4501,11 @@ impl MainWindow {
                 }
             }
             Effect::Contacts => {
+                if let Some(app) = self.app.upgrade() {
+                    self.accounts_for_calendar(&app.accounts());
+                }
+                self.contacts.reload();
+                self.calendar.contacts_changed();
                 self.list.photos_changed();
                 self.reopen_for_photos();
             }

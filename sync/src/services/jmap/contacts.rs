@@ -31,6 +31,32 @@ fn values<'a>(card: &'a Value, field: &str) -> impl Iterator<Item = &'a Value> +
         .flat_map(|m| m.values())
 }
 
+/// FNV-1a over `text`. `DefaultHasher` may change between Rust versions, and
+/// these values are stored and compared across runs.
+fn fnv1a(text: &str) -> u64 {
+    text.bytes().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+    })
+}
+
+/// JMAP has no per-card etag and `ifInState` covers the whole account, so
+/// the revision is a hash of the card as the server sends it. Every call
+/// that returns a card returns it whole, so the hashes agree.
+fn revision_of(card: &Value) -> String {
+    format!("{:016x}", fnv1a(&card.to_string()))
+}
+
+/// The name `Person::photo_url` carries; the key holds the card id and a
+/// hash of the photo, so a changed photo is fetched again and no photo
+/// bytes sit in the database.
+const PHOTO_PREFIX: &str = "jmap-photo:";
+
+fn photo_uri(card: &Value) -> Option<&str> {
+    values(card, "media")
+        .find(|m| m["kind"] == "photo")
+        .and_then(|m| m["uri"].as_str())
+}
+
 pub(crate) fn person_of(card: &Value) -> Person {
     let name = card["name"]["full"]
         .as_str()
@@ -44,17 +70,282 @@ pub(crate) fn person_of(card: &Value) -> Person {
                 .collect();
             (!parts.is_empty()).then(|| parts.join(" "))
         });
+    let mut details = details_of(card);
+    details.revision = revision_of(card);
+    details.phones = values(card, "phones")
+        .filter_map(|p| p["number"].as_str().map(str::to_string))
+        .collect();
     Person {
+        photo_url: photo_uri(card).map(|uri| {
+            let id = card["id"].as_str().unwrap_or_default();
+            format!("{PHOTO_PREFIX}{id}#{:016x}", fnv1a(uri))
+        }),
+        details,
         resource: card["id"].as_str().unwrap_or_default().to_string(),
         name,
         emails: values(card, "emails")
             .filter_map(|e| e["address"].as_str().map(str::to_string))
             .collect(),
-        photo_url: None,
         organization: values(card, "organizations")
             .find_map(|o| o["name"].as_str().map(str::to_string)),
         phone: values(card, "phones").find_map(|p| p["number"].as_str().map(str::to_string)),
     }
+}
+
+/// The label of the link that holds what JSContact has no home for: other
+/// dates with their labels, and custom fields, as a JSON data URI. Seen
+/// live: Cyrus and Stalwart both refuse a vendor property, so the extras
+/// ride in a standard `links` entry.
+const EXTRAS: &str = "mail.penguin:fields";
+
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+#[serde(default)]
+struct Extras {
+    dates: Vec<mailrs_domain::contact::Field>,
+    custom: Vec<mailrs_domain::contact::Field>,
+}
+
+fn extras_of(card: &Value) -> Extras {
+    use base64::Engine;
+    values(card, "links")
+        .filter(|l| l["label"] == EXTRAS)
+        .find_map(|l| {
+            let data = l["uri"].as_str()?.split_once(";base64,")?.1;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(data)
+                .ok()?;
+            serde_json::from_slice(&bytes).ok()
+        })
+        .unwrap_or_default()
+}
+
+/// A contact date as a JSContact `PartialDate`.
+fn date_json(value: &str) -> Option<Value> {
+    let (year, month, day) = mailrs_domain::contact::date_parts(value)?;
+    let mut date = json!({ "@type": "PartialDate", "month": month, "day": day });
+    if let Some(year) = year {
+        date["year"] = json!(year);
+    }
+    Some(date)
+}
+
+/// A `PartialDate` or `Timestamp` as `YYYY-MM-DD`, or `--MM-DD`.
+fn date_text(date: &Value) -> Option<String> {
+    if let Some(utc) = date["utc"].as_str() {
+        return utc.get(..10).map(str::to_string);
+    }
+    let (month, day) = (date["month"].as_u64()?, date["day"].as_u64()?);
+    Some(match date["year"].as_u64() {
+        Some(year) => format!("{year:04}-{month:02}-{day:02}"),
+        None => format!("--{month:02}-{day:02}"),
+    })
+}
+
+/// The ADR parts a JSContact address component kind stands for.
+const ADDRESS_KINDS: [&str; 7] = [
+    "postOfficeBox",
+    "apartment",
+    "name",
+    "locality",
+    "region",
+    "postcode",
+    "country",
+];
+
+fn details_of(card: &Value) -> mailrs_domain::contact::Details {
+    use mailrs_domain::contact::Details;
+    let mut d = Details {
+        uid: card["uid"].as_str().unwrap_or_default().to_string(),
+        ..Default::default()
+    };
+    for a in values(card, "anniversaries") {
+        if a["kind"] == "birth"
+            && d.birthday.is_empty()
+            && let Some(text) = date_text(&a["date"])
+        {
+            d.birthday = text;
+        }
+    }
+    d.notes = values(card, "notes")
+        .filter_map(|n| n["note"].as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    d.addresses = values(card, "addresses")
+        .map(|a| {
+            std::array::from_fn(|i| {
+                a["components"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|c| c["kind"] == ADDRESS_KINDS[i])
+                    .and_then(|c| c["value"].as_str())
+                    .unwrap_or_default()
+                    .to_string()
+            })
+        })
+        .collect();
+    d.urls = values(card, "links")
+        .filter(|l| l["label"] != EXTRAS)
+        .filter_map(|l| l["uri"].as_str().map(str::to_string))
+        .collect();
+    let mut groups: Vec<String> = card
+        .get("keywords")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flat_map(|m| m.iter().filter(|(_, on)| on.as_bool() == Some(true)))
+        .map(|(k, _)| k.clone())
+        .collect();
+    groups.sort();
+    d.groups = groups;
+    let extras = extras_of(card);
+    d.dates = extras.dates;
+    d.custom = extras.custom;
+    d
+}
+
+/// The JSContact properties that carry the detail fields `fields` names,
+/// each as the whole map it replaces. Only a field the person changed is
+/// named, so the rest of a card stays as the server holds it.
+fn details_patch(fields: &ContactFields, held: Option<&Value>) -> Map<String, Value> {
+    let c = &fields.details;
+    let mut out = Map::new();
+    let keyed = |prefix: &str, items: Vec<Value>| -> Value {
+        Value::Object(
+            items
+                .into_iter()
+                .enumerate()
+                .map(|(i, v)| (format!("{prefix}{}", i + 1), v))
+                .collect(),
+        )
+    };
+    let none = Value::Null;
+    let card = held.unwrap_or(&none);
+    let held_map = |field: &str| card[field].as_object().cloned().unwrap_or_default();
+    if let Some(birthday) = &c.birthday {
+        // The app shows only the birthday; the card's other anniversaries stay.
+        let mut map = held_map("anniversaries");
+        let birth = map
+            .iter()
+            .find(|(_, a)| a["kind"] == "birth")
+            .map(|(k, _)| k.clone());
+        match (date_json(birthday), birth) {
+            (Some(date), Some(k)) => map[&k]["date"] = date,
+            (Some(date), None) => {
+                let k = free_key(card, "anniversaries", "a", &[]);
+                map.insert(
+                    k,
+                    json!({ "@type": "Anniversary", "kind": "birth", "date": date }),
+                );
+            }
+            (None, Some(k)) => {
+                map.remove(&k);
+            }
+            (None, None) => {}
+        }
+        let value = match map.is_empty() {
+            true => Value::Null,
+            false => Value::Object(map),
+        };
+        out.insert("anniversaries".into(), value);
+    }
+    if let Some(notes) = &c.notes {
+        let value = match notes.is_empty() {
+            true => Value::Null,
+            false => json!({ "n1": { "@type": "Note", "note": notes } }),
+        };
+        out.insert("notes".into(), value);
+    }
+    if let Some(addresses) = &c.addresses {
+        // Each address goes back over the one it was read from, so its
+        // contexts and the component kinds the app does not show stay.
+        let before = held.map(details_of).unwrap_or_default().addresses;
+        let held_entries: Vec<(String, Value)> = held_map("addresses").into_iter().collect();
+        let mut taken = Vec::new();
+        let mut map = Map::new();
+        for (i, a) in addresses.iter().enumerate() {
+            let (key, mut entry) = match held_entries.get(i) {
+                Some((k, v)) => (k.clone(), v.clone()),
+                None => {
+                    let k = free_key(card, "addresses", "a", &taken);
+                    (k, json!({ "@type": "Address" }))
+                }
+            };
+            taken.push(key.clone());
+            if before.get(i) != Some(a) {
+                let kept = entry["components"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|c| !ADDRESS_KINDS.iter().any(|k| c["kind"] == *k))
+                    .cloned();
+                let components: Vec<Value> = kept
+                    .chain(a.iter().enumerate().filter(|(_, v)| !v.is_empty()).map(|(i, v)| {
+                        json!({ "@type": "AddressComponent", "kind": ADDRESS_KINDS[i], "value": v })
+                    }))
+                    .collect();
+                if let Some(object) = entry.as_object_mut() {
+                    object.remove("full");
+                    object.insert("components".into(), json!(components));
+                    object.insert("isOrdered".into(), json!(false));
+                }
+            }
+            map.insert(key, entry);
+        }
+        let value = match map.is_empty() {
+            true => Value::Null,
+            false => Value::Object(map),
+        };
+        out.insert("addresses".into(), value);
+    }
+    if c.urls.is_some() || c.dates.is_some() || c.custom.is_some() {
+        // Websites and the extras share the `links` map, so a change to
+        // either writes both, the other as the card holds it.
+        let before = held.map(details_of).unwrap_or_default();
+        let urls = c.urls.clone().unwrap_or(before.urls);
+        let extras = Extras {
+            dates: c.dates.clone().unwrap_or(before.dates),
+            custom: c.custom.clone().unwrap_or(before.custom),
+        };
+        let mut items: Vec<Value> = urls
+            .iter()
+            .map(|u| json!({ "@type": "Link", "kind": "generic", "uri": u }))
+            .collect();
+        if !extras.dates.is_empty() || !extras.custom.is_empty() {
+            use base64::Engine;
+            let uri = format!(
+                "data:application/json;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(json!(extras).to_string())
+            );
+            items.push(json!({ "@type": "Link", "kind": "other", "label": EXTRAS, "uri": uri }));
+        }
+        out.insert(
+            "links".into(),
+            if items.is_empty() {
+                Value::Null
+            } else {
+                keyed("l", items)
+            },
+        );
+    }
+    if let Some(groups) = &c.groups {
+        let map: Map<String, Value> = groups.iter().map(|g| (g.clone(), json!(true))).collect();
+        out.insert("keywords".into(), Value::Object(map));
+    }
+    if let Some(photo) = &fields.photo {
+        let value = match photo.is_empty() {
+            true => Value::Null,
+            false => {
+                use base64::Engine;
+                let uri = format!(
+                    "data:image/png;base64,{}",
+                    base64::engine::general_purpose::STANDARD.encode(photo)
+                );
+                json!({ "m1": { "@type": "Media", "kind": "photo", "uri": uri } })
+            }
+        };
+        out.insert("media".into(), value);
+    }
+    out
 }
 
 /// The JSContact fields `fields` sets on a new card, each map keyed `e1`,
@@ -83,6 +374,11 @@ fn fields_of(fields: &ContactFields) -> Map<String, Value> {
             "organizations".into(),
             json!({ "o1": { "name": organization } }),
         );
+    }
+    for (key, value) in details_patch(fields, None) {
+        if !value.is_null() {
+            card.insert(key, value);
+        }
     }
     card
 }
@@ -205,6 +501,12 @@ fn patch_of(card: &Value, fields: &ContactFields) -> Map<String, Value> {
             }
         }
     }
+    for (key, value) in details_patch(fields, Some(card)) {
+        let held = &card[key.as_str()];
+        if *held != value && !(held.is_null() && value.is_null()) {
+            patch.insert(key, value);
+        }
+    }
     patch
 }
 
@@ -309,9 +611,51 @@ impl<J: JmapApi> ContactsService for Jmap<J> {
         }
     }
 
-    /// Cards carry no photo URL this adapter hands out.
-    async fn contact_photo(&self, _: &str) -> Result<Vec<u8>, BackendError> {
-        Err(BackendError::NotFound)
+    /// A card's photo travels inside it as a data URI, so the card is read.
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, BackendError> {
+        use base64::Engine;
+        let (id, _) = url
+            .strip_prefix(PHOTO_PREFIX)
+            .and_then(|key| key.split_once('#'))
+            .ok_or(BackendError::NotFound)?;
+        let card = self
+            .api()
+            .card(id)
+            .await
+            .map_err(backend)?
+            .ok_or(BackendError::NotFound)?;
+        let encoded = photo_uri(&card)
+            .and_then(|uri| uri.strip_prefix("data:"))
+            .and_then(|rest| rest.split_once(";base64,"))
+            .map(|(_, data)| data)
+            .ok_or(BackendError::NotFound)?;
+        base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .map_err(|_| BackendError::NotFound)
+    }
+
+    fn edits_details(&self) -> bool {
+        true
+    }
+
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        if let Some(expected) = revision.filter(|r| !r.is_empty())
+            && let Some(card) = self.api().card(resource).await.map_err(backend)?
+            && revision_of(&card) != expected
+        {
+            return Err(BackendError::Changed);
+        }
+        self.api()
+            .set_card(&CardWrite::Destroy {
+                id: resource.to_string(),
+            })
+            .await
+            .map_err(backend)?;
+        Ok(())
     }
 
     async fn create_contact(&self, fields: &ContactFields) -> Result<Person, BackendError> {
@@ -341,6 +685,14 @@ impl<J: JmapApi> ContactsService for Jmap<J> {
             .await
             .map_err(backend)?
             .ok_or(BackendError::NotFound)?;
+        if let Some(expected) = fields
+            .expected_revision
+            .as_deref()
+            .filter(|r| !r.is_empty())
+            && revision_of(&card) != expected
+        {
+            return Err(BackendError::Changed);
+        }
         let patch = patch_of(&card, fields);
         if patch.is_empty() {
             return Ok(person_of(&card));
@@ -351,5 +703,151 @@ impl<J: JmapApi> ContactsService for Jmap<J> {
         };
         let card = self.api().set_card(&write).await.map_err(backend)?;
         Ok(person_of(&card))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::contact::{Changes, Field};
+
+    use super::*;
+
+    fn every_field() -> ContactFields {
+        ContactFields {
+            name: Some("Priya Raman".into()),
+            emails: Some(vec!["priya@fernwood.example".into()]),
+            phones: Some(vec!["+351 910 000 000".into()]),
+            organization: Some("Fernwood".into()),
+            photo: Some(vec![0x89, b'P', b'N', b'G']),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                addresses: Some(vec![[
+                    "Box 7".into(),
+                    "Floor 2".into(),
+                    "1 Main Street".into(),
+                    "Lisbon".into(),
+                    "LX".into(),
+                    "1000-001".into(),
+                    "Portugal".into(),
+                ]]),
+                urls: Some(vec!["https://example.org".into()]),
+                groups: Some(vec!["Friends".into(), "Work".into()]),
+                dates: Some(vec![Field {
+                    label: "Anniversary".into(),
+                    value: "2015-06-20".into(),
+                }]),
+                custom: Some(vec![Field {
+                    label: "Badge".into(),
+                    value: "42".into(),
+                }]),
+            },
+            ..ContactFields::default()
+        }
+    }
+
+    #[test]
+    fn a_card_holds_and_gives_back_every_contact_field() {
+        let mut card = card_of(&every_field(), Some("b1"));
+        card.insert("id".into(), json!("c1"));
+        let person = person_of(&Value::Object(card));
+        let d = &person.details;
+        assert_eq!(person.name.as_deref(), Some("Priya Raman"));
+        assert_eq!(d.birthday, "1990-04-12");
+        assert_eq!(d.notes, "Met in March");
+        assert_eq!(d.addresses[0][2], "1 Main Street");
+        assert_eq!(d.addresses[0][0], "Box 7");
+        assert_eq!(d.urls, ["https://example.org"]);
+        assert_eq!(d.groups, ["Friends", "Work"]);
+        assert_eq!(d.dates[0].label, "Anniversary");
+        assert_eq!(d.custom[0].value, "42");
+        let key = person.photo_url.as_deref().unwrap();
+        assert!(key.starts_with("jmap-photo:c1#"), "{key}");
+        assert!(key.len() < 40, "no photo bytes in the key");
+    }
+
+    #[test]
+    fn an_edit_patches_only_the_fields_that_changed() {
+        let mut card = card_of(&every_field(), Some("b1"));
+        card.insert("id".into(), json!("c1"));
+        let card = Value::Object(card);
+        let same = patch_of(&card, &every_field());
+        assert!(
+            same.keys().all(|k| k == "media"),
+            "an unchanged card sends nothing but its photo: {same:?}"
+        );
+        let edit = ContactFields {
+            details: Changes {
+                notes: Some("Changed".into()),
+                groups: Some(vec!["Friends".into()]),
+                ..Changes::default()
+            },
+            ..ContactFields::default()
+        };
+        let patch = patch_of(&card, &edit);
+        assert_eq!(patch["notes"]["n1"]["note"], "Changed");
+        assert_eq!(patch["keywords"], json!({ "Friends": true }));
+        assert_eq!(patch.len(), 2);
+    }
+
+    #[test]
+    fn an_edit_keeps_the_card_s_other_anniversaries_and_address_parts() {
+        let card = json!({
+            "id": "c1",
+            "anniversaries": {
+                "w": { "@type": "Anniversary", "kind": "wedding", "date": { "@type": "PartialDate", "year": 2015, "month": 6, "day": 20 } },
+                "b": { "@type": "Anniversary", "kind": "birth", "date": { "@type": "PartialDate", "year": 1990, "month": 4, "day": 12 } }
+            },
+            "addresses": {
+                "home": {
+                    "@type": "Address",
+                    "contexts": { "private": true },
+                    "full": "1 Main Street, Lisbon",
+                    "components": [
+                        { "kind": "number", "value": "1" },
+                        { "kind": "name", "value": "Main Street" },
+                        { "kind": "locality", "value": "Lisbon" }
+                    ]
+                }
+            }
+        });
+        let mut address = person_of(&card).details.addresses[0].clone();
+        address[3] = "Porto".into();
+        let edit = |birthday: &str| ContactFields {
+            details: Changes {
+                birthday: Some(birthday.into()),
+                addresses: Some(vec![address.clone()]),
+                ..Changes::default()
+            },
+            ..ContactFields::default()
+        };
+        let patch = patch_of(&card, &edit("1991-05-01"));
+        assert_eq!(patch["anniversaries"]["w"]["kind"], "wedding");
+        assert_eq!(patch["anniversaries"]["b"]["date"]["year"], 1991);
+        let home = &patch["addresses"]["home"];
+        assert_eq!(home["contexts"], json!({ "private": true }));
+        assert!(
+            home.get("full").is_none(),
+            "the old full text would be stale"
+        );
+        let kinds: Vec<&str> = home["components"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["kind"].as_str().unwrap())
+            .collect();
+        assert!(kinds.contains(&"number"), "{kinds:?}");
+        assert!(
+            home["components"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|c| c["value"] == "Porto")
+        );
+        let cleared = patch_of(&card, &edit(""));
+        assert_eq!(
+            cleared["anniversaries"],
+            json!({ "w": card["anniversaries"]["w"] })
+        );
     }
 }

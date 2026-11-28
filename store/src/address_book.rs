@@ -16,6 +16,7 @@ pub struct Contact {
     pub account_id: AccountId,
     /// What the People API calls this person, such as `people/c17`.
     pub resource: String,
+    pub details: mailrs_domain::contact::Details,
     pub name: Option<String>,
     /// Every address Google holds, the primary one first.
     pub emails: Vec<String>,
@@ -66,11 +67,11 @@ pub fn save(conn: &Connection, contacts: &[Contact]) -> Result<()> {
             _ => contact.photo_file.clone(),
         };
         conn.execute(
-            "INSERT INTO contacts (account_id, resource, name, organization, phone, photo_url, photo_file) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) \
+            "INSERT INTO contacts (account_id, resource, name, organization, phone, photo_url, photo_file, details) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) \
              ON CONFLICT (account_id, resource) DO UPDATE SET \
              name = excluded.name, organization = excluded.organization, phone = excluded.phone, \
-             photo_url = excluded.photo_url, photo_file = excluded.photo_file",
+             photo_url = excluded.photo_url, photo_file = excluded.photo_file, details = excluded.details",
             params![
                 contact.account_id,
                 contact.resource,
@@ -79,6 +80,7 @@ pub fn save(conn: &Connection, contacts: &[Contact]) -> Result<()> {
                 contact.phone,
                 contact.photo_url,
                 photo_file,
+                serde_json::to_string(&contact.details).expect("contact details serialize"),
             ],
         )?;
         conn.execute(
@@ -112,14 +114,28 @@ pub fn forget(conn: &Connection, account_id: AccountId, resources: &[String]) ->
             "DELETE FROM contacts WHERE account_id = ?1 AND resource = ?2",
             params![account_id, resource],
         )?;
+        conn.execute(
+            "DELETE FROM contact_links WHERE (account_a = ?1 AND resource_a = ?2) OR (account_b = ?1 AND resource_b = ?2)",
+            params![account_id, resource],
+        )?;
+        conn.execute(
+            "DELETE FROM contact_local_groups WHERE account_id = ?1 AND resource = ?2",
+            params![account_id, resource],
+        )?;
     }
     Ok(())
 }
 
-/// Drops everything stored for an account, for when the owner turns
-/// contacts off.
+/// Drops the copy of the server's book for an account, for when the owner
+/// turns contacts off. Groups the server cannot keep stay: this computer
+/// holds their only copy, and they rejoin their contacts when the book
+/// comes back. Removing the account removes them.
 pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
     conn.execute("DELETE FROM contacts WHERE account_id = ?1", [account_id])?;
+    conn.execute(
+        "DELETE FROM contact_links WHERE account_a = ?1 OR account_b = ?1",
+        [account_id],
+    )?;
     conn.execute(
         "DELETE FROM contact_books WHERE account_id = ?1",
         [account_id],
@@ -127,9 +143,146 @@ pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
     Ok(())
 }
 
+/// Whether the account has a contact kept on this computer alone. The
+/// local book names its contacts `local/...`; no server does.
+pub fn holds_local(conn: &Connection, account_id: AccountId) -> Result<bool> {
+    Ok(conn
+        .prepare_cached(
+            "SELECT 1 FROM contacts WHERE account_id = ?1 AND resource LIKE 'local/%' LIMIT 1",
+        )?
+        .exists([account_id])?)
+}
+
 /// Every contact of every account, by name.
 pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
-    read(conn, "1 = 1", [])
+    let all = read(conn, "1 = 1", [])?;
+    let local = local_groups(conn)?;
+    let groups: Vec<_> = all.iter().filter(|c| c.details.members.is_some()).collect();
+    Ok(all
+        .iter()
+        .filter(|c| c.details.members.is_none())
+        .cloned()
+        .map(|mut contact| {
+            for group in &groups {
+                if group.account_id == contact.account_id
+                    && group.resource.rsplit_once('/').map(|(p, _)| p)
+                        == contact.resource.rsplit_once('/').map(|(p, _)| p)
+                    && group
+                        .details
+                        .members
+                        .as_ref()
+                        .is_some_and(|members| members.contains(&contact.details.uid))
+                {
+                    let name = group.display().to_string();
+                    if !contact.details.groups.contains(&name) {
+                        contact.details.groups.push(name);
+                    }
+                }
+            }
+            if let Some(names) = local.get(&(contact.account_id, contact.resource.clone())) {
+                for name in names {
+                    if !contact.details.groups.contains(name) {
+                        contact.details.groups.push(name.clone());
+                    }
+                }
+            }
+            contact
+        })
+        .collect())
+}
+
+/// The groups held on this computer for contacts whose server keeps none.
+fn local_groups(
+    conn: &Connection,
+) -> Result<std::collections::HashMap<(AccountId, String), Vec<String>>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT account_id, resource, name FROM contact_local_groups ORDER BY name",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, AccountId>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+        ))
+    })?;
+    let mut out: std::collections::HashMap<(AccountId, String), Vec<String>> = Default::default();
+    for row in rows {
+        let (account, resource, name) = row?;
+        out.entry((account, resource)).or_default().push(name);
+    }
+    Ok(out)
+}
+
+/// Replaces the groups kept on this computer for one contact.
+pub fn set_local_groups(
+    conn: &Connection,
+    account_id: AccountId,
+    resource: &str,
+    names: &[String],
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM contact_local_groups WHERE account_id = ?1 AND resource = ?2",
+        params![account_id, resource],
+    )?;
+    for name in names {
+        conn.execute(
+            "INSERT OR IGNORE INTO contact_local_groups (account_id, resource, name) VALUES (?1, ?2, ?3)",
+            params![account_id, resource, name],
+        )?;
+    }
+    Ok(())
+}
+
+/// The people who have a birthday, for the birthdays calendar, without
+/// the group names `list` joins in.
+pub fn birthdays(conn: &Connection) -> Result<Vec<Contact>> {
+    read(
+        conn,
+        "json_extract(c.details, '$.birthday') <> '' AND json_extract(c.details, '$.members') IS NULL",
+        [],
+    )
+}
+
+/// The account's contact `resource`, if it holds one.
+pub fn one(conn: &Connection, account_id: AccountId, resource: &str) -> Result<Option<Contact>> {
+    Ok(read(
+        conn,
+        "c.account_id = ?1 AND c.resource = ?2",
+        params![account_id, resource],
+    )?
+    .into_iter()
+    .next())
+}
+
+/// The resource of every row the account holds, group cards included.
+pub fn resources(conn: &Connection, account_id: AccountId) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare("SELECT resource FROM contacts WHERE account_id = ?1")?;
+    let rows = stmt.query_map([account_id], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// Keep native group cards in step with a successful edit until the next refresh.
+pub fn set_memberships(conn: &Connection, contact: &Contact, names: &[String]) -> Result<()> {
+    if contact.details.uid.is_empty() {
+        return Ok(());
+    }
+    let mut groups = read(conn, "1 = 1", [])?;
+    groups.retain(|g| {
+        g.account_id == contact.account_id
+            && g.details.members.is_some()
+            && g.resource.rsplit_once('/').map(|(p, _)| p)
+                == contact.resource.rsplit_once('/').map(|(p, _)| p)
+    });
+    for group in &mut groups {
+        let include = names.iter().any(|name| name == group.display());
+        if let Some(members) = &mut group.details.members {
+            members.retain(|uid| uid != &contact.details.uid);
+            if include {
+                members.push(contact.details.uid.clone());
+            }
+        }
+    }
+    save(conn, &groups)
 }
 
 /// The contacts every word of `query` finds in a name, an address or an
@@ -244,13 +397,142 @@ pub fn set_book(
     Ok(())
 }
 
+/// Two contacts in different accounts the person said are one human.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Link {
+    pub a: (AccountId, String),
+    pub b: (AccountId, String),
+    /// Whether All contacts shows `a`'s name for the pair rather than `b`'s.
+    pub shown_a: bool,
+}
+
+/// Links two contacts. Neither contact changes.
+pub fn link(conn: &Connection, link: &Link) -> Result<()> {
+    conn.execute(
+        "INSERT OR REPLACE INTO contact_links (account_a, resource_a, account_b, resource_b, shown_a) \
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![link.a.0, link.a.1, link.b.0, link.b.1, link.shown_a],
+    )?;
+    Ok(())
+}
+
+/// Takes a link away, in whichever order it was made.
+pub fn unlink(
+    conn: &Connection,
+    one: &(AccountId, String),
+    other: &(AccountId, String),
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM contact_links WHERE (account_a = ?1 AND resource_a = ?2 AND account_b = ?3 AND resource_b = ?4) \
+         OR (account_a = ?3 AND resource_a = ?4 AND account_b = ?1 AND resource_b = ?2)",
+        params![one.0, one.1, other.0, other.1],
+    )?;
+    Ok(())
+}
+
+/// Every link, for contacts that are still stored.
+pub fn links(conn: &Connection) -> Result<Vec<Link>> {
+    let mut stmt = conn.prepare(
+        "SELECT l.account_a, l.resource_a, l.account_b, l.resource_b, l.shown_a FROM contact_links l \
+         WHERE EXISTS (SELECT 1 FROM contacts c WHERE c.account_id = l.account_a AND c.resource = l.resource_a) \
+         AND EXISTS (SELECT 1 FROM contacts c WHERE c.account_id = l.account_b AND c.resource = l.resource_b)",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(Link {
+            a: (row.get(0)?, row.get(1)?),
+            b: (row.get(2)?, row.get(3)?),
+            shown_a: row.get(4)?,
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// What the mailbox holds about some addresses, for a person's Mail section.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MailWith {
+    /// The newest message to or from them: account, thread, subject, date.
+    pub last: Option<(AccountId, String, String, EpochMillis)>,
+    /// Whether one of the accounts sent that message.
+    pub last_mine: bool,
+    /// How many conversations include them.
+    pub conversations: i64,
+    /// The newest message one of the accounts sent them.
+    pub last_wrote: Option<EpochMillis>,
+}
+
+/// How many messages each of `emails` sent, by lower-case address.
+pub fn message_counts(
+    conn: &Connection,
+    emails: &[String],
+) -> Result<std::collections::HashMap<String, i64>> {
+    let wanted: Vec<String> = emails.iter().map(|e| e.to_lowercase()).collect();
+    // The index on lower(from_addr) serves the lookup, so the query reads
+    // only the senders asked for.
+    let mut stmt = conn.prepare_cached(
+        "SELECT lower(from_addr), count(*) FROM messages \
+         WHERE lower(from_addr) IN (SELECT value FROM json_each(?1)) GROUP BY 1",
+    )?;
+    let rows = stmt.query_map(
+        [serde_json::to_string(&wanted).unwrap_or_else(|_| "[]".into())],
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
+    )?;
+    let mut out = std::collections::HashMap::new();
+    for row in rows {
+        let (email, count) = row?;
+        out.insert(email, count);
+    }
+    Ok(out)
+}
+
+/// The mail to or from any of `emails`, in any account.
+pub fn mail_with(conn: &Connection, emails: &[String]) -> Result<MailWith> {
+    let mut out = MailWith::default();
+    let mut threads = std::collections::HashSet::new();
+    for email in emails {
+        let email = email.to_lowercase();
+        let like = format!("%{}%", email.replace('%', "").replace('_', "\\_"));
+        let mut stmt = conn.prepare_cached(
+            "SELECT account_id, thread_id, subject, date, \
+                    lower(from_addr) IN (SELECT lower(email) FROM accounts) \
+             FROM messages WHERE lower(from_addr) = ?1 \
+             OR (lower(to_addrs) LIKE ?2 ESCAPE '\\' AND EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(to_addrs) THEN to_addrs ELSE '[]' END) r \
+                 WHERE lower(json_extract(r.value, '$.email')) = ?1)) \
+             OR (lower(cc_addrs) LIKE ?2 ESCAPE '\\' AND EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(cc_addrs) THEN cc_addrs ELSE '[]' END) r \
+                 WHERE lower(json_extract(r.value, '$.email')) = ?1)) \
+             ORDER BY date DESC",
+        )?;
+        let rows = stmt.query_map(params![email, like], |row| {
+            Ok((
+                row.get::<_, AccountId>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, EpochMillis>(3)?,
+                row.get::<_, bool>(4)?,
+            ))
+        })?;
+        for row in rows {
+            let (account, thread, subject, date, mine) = row?;
+            threads.insert((account, thread.clone()));
+            if out.last.as_ref().is_none_or(|l| date > l.3) {
+                out.last_mine = mine;
+                out.last = Some((account, thread, subject, date));
+            }
+            if mine && out.last_wrote.is_none_or(|w| date > w) {
+                out.last_wrote = Some(date);
+            }
+        }
+    }
+    out.conversations = threads.len() as i64;
+    Ok(out)
+}
+
 /// The contacts `filter` keeps, each with its addresses, by name.
 fn query(filter: &str) -> String {
     format!(
         "SELECT c.account_id, c.resource, c.name, c.organization, c.phone, c.photo_url, NULLIF(c.photo_file, ''), \
          (SELECT group_concat(a.email, char(10)) FROM (SELECT email FROM contact_addresses \
           WHERE account_id = c.account_id AND resource = c.resource ORDER BY rank) a) \
-         FROM contacts c WHERE {filter} ORDER BY c.name IS NULL, c.name COLLATE NOCASE, c.resource"
+         , c.details FROM contacts c WHERE {filter} ORDER BY c.name IS NULL, c.name COLLATE NOCASE, c.resource"
     )
 }
 
@@ -259,6 +541,13 @@ fn read<P: rusqlite::Params>(conn: &Connection, filter: &str, params: P) -> Resu
     let rows = stmt.query_map(params, |row| {
         let emails: Option<String> = row.get(7)?;
         Ok(Contact {
+            details: serde_json::from_str(&row.get::<_, String>(8)?).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    8,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })?,
             account_id: row.get(0)?,
             resource: row.get(1)?,
             name: row.get(2)?,
@@ -290,6 +579,52 @@ mod tests {
             emails: emails.iter().map(|e| e.to_string()).collect(),
             ..Contact::default()
         }
+    }
+
+    #[test]
+    fn native_groups_are_joined_only_with_contacts_in_the_same_book() {
+        let conn = open_in_memory().unwrap();
+        let account = accounts::insert_account(&conn, "owner@example.org", 0).unwrap();
+        let mut person = contact(account, "/book/one.vcf", "Demo", &["demo@example.org"]);
+        person.details.uid = "person".into();
+        person.details.birthday = "2000-02-29".into();
+        let mut group = contact(account, "/book/group.vcf", "Friends", &[]);
+        group.details.members = Some(vec!["person".into()]);
+        let mut elsewhere = person.clone();
+        elsewhere.resource = "/other/one.vcf".into();
+        save(&conn, &[person, group.clone(), elsewhere]).unwrap();
+        let people = list(&conn).unwrap();
+        assert_eq!(people.len(), 2);
+        let one = people
+            .iter()
+            .find(|c| c.resource == "/book/one.vcf")
+            .unwrap();
+        assert_eq!(one.details.groups, ["Friends"]);
+        assert_eq!(one.details.birthday, "2000-02-29");
+        assert!(
+            people
+                .iter()
+                .find(|c| c.resource == "/other/one.vcf")
+                .unwrap()
+                .details
+                .groups
+                .is_empty()
+        );
+        set_memberships(&conn, one, &[]).unwrap();
+        assert!(
+            list(&conn)
+                .unwrap()
+                .iter()
+                .all(|c| c.details.groups.is_empty())
+        );
+        group.details.members = Some(vec![]);
+        save(&conn, &[group]).unwrap();
+        assert!(
+            list(&conn)
+                .unwrap()
+                .iter()
+                .all(|c| c.details.groups.is_empty())
+        );
     }
 
     #[test]
@@ -468,5 +803,159 @@ mod tests {
         );
         set_book(&conn, id, None, 9_000).unwrap();
         assert_eq!(book(&conn, id).unwrap(), Some((None, 9_000)));
+    }
+
+    #[test]
+    fn a_link_joins_two_contacts_and_goes_with_either() {
+        let conn = open_in_memory().unwrap();
+        let work = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let home = accounts::insert_account(&conn, "dana@fernwood.example", 0).unwrap();
+        save(
+            &conn,
+            &[contact(work, "a", "Owen Mercer", &["o@a.example"])],
+        )
+        .unwrap();
+        save(&conn, &[contact(home, "b", "Owen M.", &["o@b.example"])]).unwrap();
+        let ends = ((work, "a".to_string()), (home, "b".to_string()));
+        link(
+            &conn,
+            &Link {
+                a: ends.0.clone(),
+                b: ends.1.clone(),
+                shown_a: false,
+            },
+        )
+        .unwrap();
+        let found = links(&conn).unwrap();
+        assert_eq!(found.len(), 1);
+        assert!(!found[0].shown_a);
+        // Unlinking works in the other order, too.
+        unlink(&conn, &ends.1, &ends.0).unwrap();
+        assert!(links(&conn).unwrap().is_empty());
+        link(
+            &conn,
+            &Link {
+                a: ends.0.clone(),
+                b: ends.1.clone(),
+                shown_a: true,
+            },
+        )
+        .unwrap();
+        forget(&conn, home, &["b".to_string()]).unwrap();
+        assert!(links(&conn).unwrap().is_empty());
+        let count: i64 = conn
+            .query_row("SELECT count(*) FROM contact_links", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0, "deleting a contact takes its link");
+    }
+
+    #[test]
+    fn groups_a_server_cannot_keep_stay_with_the_contact() {
+        let conn = open_in_memory().unwrap();
+        let id = accounts::insert_account(&conn, "dana@gmail.example", 0).unwrap();
+        let card = contact(id, "/lists/default/g1", "Priya", &["p@x.example"]);
+        save(&conn, std::slice::from_ref(&card)).unwrap();
+        set_local_groups(
+            &conn,
+            id,
+            "/lists/default/g1",
+            &["Friends".into(), "Work".into()],
+        )
+        .unwrap();
+        // A refresh replaces the card and leaves the groups.
+        save(&conn, std::slice::from_ref(&card)).unwrap();
+        assert_eq!(list(&conn).unwrap()[0].details.groups, ["Friends", "Work"]);
+        // Turning contacts off and on again brings them back with the card.
+        clear(&conn, id).unwrap();
+        save(&conn, &[card]).unwrap();
+        assert_eq!(list(&conn).unwrap()[0].details.groups, ["Friends", "Work"]);
+        forget(&conn, id, &["/lists/default/g1".to_string()]).unwrap();
+        let held: i64 = conn
+            .query_row("SELECT count(*) FROM contact_local_groups", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(held, 0);
+    }
+
+    #[test]
+    fn a_link_survives_a_refresh_that_replaces_its_contacts() {
+        let conn = open_in_memory().unwrap();
+        let work = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let home = accounts::insert_account(&conn, "dana@fernwood.example", 0).unwrap();
+        let (a, b) = (
+            contact(work, "a", "Owen Mercer", &["o@a.example"]),
+            contact(home, "b", "Owen M.", &["o@b.example"]),
+        );
+        save(&conn, &[a.clone(), b.clone()]).unwrap();
+        link(
+            &conn,
+            &Link {
+                a: (work, "a".into()),
+                b: (home, "b".into()),
+                shown_a: true,
+            },
+        )
+        .unwrap();
+        save(&conn, &[a, b]).unwrap();
+        assert_eq!(links(&conn).unwrap().len(), 1);
+    }
+
+    fn mail(conn: &Connection, account: AccountId, id: &str, from: &str, to: &str, date: i64) {
+        conn.execute(
+            "INSERT INTO messages (account_id, id, thread_id, from_addr, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) \
+             VALUES (?1, ?2, ?3, ?4, ?5, '[]', 'Re', ?6, '', 1, 0, 0)",
+            params![
+                account,
+                id,
+                id.split('/').next().unwrap(),
+                from,
+                serde_json::json!([{ "name": null, "email": to }]).to_string(),
+                date
+            ],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn mail_with_counts_conversations_and_finds_what_the_owner_wrote() {
+        let conn = open_in_memory().unwrap();
+        let me = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        mail(&conn, me, "t1/1", "ana@x.example", "dana@example.com", 100);
+        mail(&conn, me, "t1/2", "dana@example.com", "Ana@X.example", 200);
+        mail(&conn, me, "t2/1", "ana@x.example", "dana@example.com", 300);
+        mail(
+            &conn,
+            me,
+            "t3/1",
+            "other@x.example",
+            "dana@example.com",
+            400,
+        );
+        let found = mail_with(&conn, &["ana@x.example".into()]).unwrap();
+        assert_eq!(found.conversations, 2);
+        assert_eq!(found.last.as_ref().map(|l| l.3), Some(300));
+        assert!(!found.last_mine);
+        assert_eq!(found.last_wrote, Some(200));
+        let counts = message_counts(&conn, &["ANA@x.example".into()]).unwrap();
+        assert_eq!(counts.get("ana@x.example"), Some(&2));
+        assert_eq!(counts.get("other@x.example"), None);
+    }
+
+    #[test]
+    fn mail_with_matches_whole_addresses_only() {
+        let conn = open_in_memory().unwrap();
+        let me = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        mail(&conn, me, "t1/1", "dana@example.com", "joann@x.org", 100);
+        assert_eq!(
+            mail_with(&conn, &["ann@x.org".into()])
+                .unwrap()
+                .conversations,
+            0
+        );
+        mail(&conn, me, "t2/1", "dana@example.com", "Ann@x.org", 200);
+        let found = mail_with(&conn, &["ann@x.org".into()]).unwrap();
+        assert_eq!(found.conversations, 1);
+        assert_eq!(found.last.map(|l| l.1), Some("t2".into()));
     }
 }

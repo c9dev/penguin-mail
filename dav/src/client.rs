@@ -151,6 +151,22 @@ pub trait DavApi: Send + Sync + 'static {
         kind: Kind,
         when: Precondition,
     ) -> impl Future<Output = Result<Option<String>, DavError>> + Send;
+    /// As `put`, and the `Location` the server answered a create with. A
+    /// server that stores the resource under a name of its own, as Google's
+    /// CardDAV does, says where in it.
+    fn put_at(
+        &self,
+        href: &str,
+        body: &str,
+        kind: Kind,
+        when: Precondition,
+    ) -> impl Future<Output = Result<(Option<String>, Option<String>), DavError>> + Send {
+        async move {
+            self.put(href, body, kind, when)
+                .await
+                .map(|etag| (etag, None))
+        }
+    }
     fn delete(
         &self,
         href: &str,
@@ -261,6 +277,8 @@ pub struct DavClient {
     login: Login,
     /// Set for an OAuth account: the token goes where the password would.
     bearer: Option<Arc<dyn TokenSource>>,
+    /// See [`DavClient::with_sync_depth_one`].
+    sync_depth_one: bool,
     http: reqwest::Client,
 }
 
@@ -302,6 +320,7 @@ impl DavClient {
             kind,
             login,
             bearer: None,
+            sync_depth_one: false,
             http: http_client(true)?,
         })
     }
@@ -316,8 +335,17 @@ impl DavClient {
             kind,
             login,
             bearer: None,
+            sync_depth_one: false,
             http: http_client(false)?,
         })
+    }
+
+    /// Sends `sync-collection` with `Depth: 1`. Google's CardDAV answers a
+    /// request without it with a new token and no changes (seen live on
+    /// 2026-11-28), while sabre/dav servers refuse any depth but 0.
+    pub fn with_sync_depth_one(mut self) -> DavClient {
+        self.sync_depth_one = true;
+        self
     }
 
     /// Signs in with tokens from `source` in place of the password.
@@ -693,7 +721,7 @@ impl DavApi for DavClient {
             .send(
                 "REPORT",
                 collection,
-                None,
+                self.sync_depth_one.then_some("1"),
                 Some(body::sync_collection(token)),
                 &[],
             )
@@ -818,6 +846,18 @@ impl DavApi for DavClient {
         kind: Kind,
         when: Precondition,
     ) -> Result<Option<String>, DavError> {
+        self.put_at(href, body, kind, when)
+            .await
+            .map(|(etag, _)| etag)
+    }
+
+    async fn put_at(
+        &self,
+        href: &str,
+        body: &str,
+        kind: Kind,
+        when: Precondition,
+    ) -> Result<(Option<String>, Option<String>), DavError> {
         if body.len() > MOST_RESOURCE_BYTES {
             return Err(DavError::TooLarge(MOST_RESOURCE_BYTES));
         }
@@ -869,6 +909,14 @@ impl DavApi for DavClient {
             .get("ETag")
             .and_then(|e| e.to_str().ok())
             .map(str::to_string);
+        // Where the server put it, in the form a listing gives its hrefs.
+        let location = response
+            .headers()
+            .get("Location")
+            .and_then(|l| l.to_str().ok())
+            .and_then(|l| url.join(l).ok())
+            .filter(|l| l.host_str() == url.host_str())
+            .map(|l| canonical_href(l.as_str()));
         // The body of a success is never read, and what explains a failure
         // is a few lines at the start.
         let text = if status.is_success() {
@@ -884,7 +932,7 @@ impl DavApi for DavClient {
             dav: None,
             body: text,
         })?;
-        Ok(etag)
+        Ok((etag, location))
     }
 
     async fn delete(&self, href: &str, etag: Option<&str>) -> Result<(), DavError> {

@@ -55,6 +55,7 @@ impl MainWindow {
     pub(super) fn space(&self) -> Space {
         match self.spaces.visible_child_name().as_deref() {
             Some("calendar") => Space::Calendar,
+            Some("contacts") => Space::Contacts,
             _ => Space::Mail,
         }
     }
@@ -69,12 +70,13 @@ impl MainWindow {
     /// remembers it, unless the accounts leave it nothing to show
     /// (`offered::may_show`).
     pub(super) fn show_space(self: &Rc<Self>, space: Space) {
-        if !crate::offered::may_show(space, self.sidebar.switch.is_visible(), &self.accounts()) {
+        if !crate::offered::may_show(space, self.sidebar.calendar_offered(), &self.accounts()) {
             return;
         }
         let name = match space {
             Space::Mail => "mail",
             Space::Calendar => "calendar",
+            Space::Contacts => "contacts",
         };
         self.sidebar.switch.set_active_name(Some(name));
     }
@@ -83,6 +85,7 @@ impl MainWindow {
     fn space_picked(self: &Rc<Self>) {
         let space = match self.sidebar.switch.active_name().as_deref() {
             Some("calendar") => Space::Calendar,
+            Some("contacts") => Space::Contacts,
             _ => Space::Mail,
         };
         if space == self.space() {
@@ -101,8 +104,26 @@ impl MainWindow {
                 // the list that had the focus is gone.
                 self.calendar.take_focus();
             }
+            Space::Contacts => {
+                self.spaces.set_visible_child_name("contacts");
+                self.sidebar.show_contacts(&self.contacts.sidebar);
+                self.contacts.reload();
+                // Reading is where Google asks for a missing permission, or
+                // says the People API is off in the person's project, so
+                // opening Contacts names the step that fixes either.
+                if let Some(app) = self.app.upgrade() {
+                    app.refresh_contacts(true);
+                }
+            }
         }
         self.set_calendar_only_actions_enabled(space == Space::Calendar);
+        if let Some(app) = self.app.upgrade() {
+            app.contacts_visible.set(space == Space::Contacts);
+        }
+        // What the space asks for changes the window's arrangement.
+        if let Some(room) = self.split.parent().and_downcast::<super::room::Room>() {
+            room.rearrange();
+        }
         if let Some(app) = self.app.upgrade()
             && app.settings_with(|s| s.space) != space
         {
@@ -211,12 +232,16 @@ impl MainWindow {
         // With calendar accounts alone there is no mail to switch to: the
         // calendar shows, and the switch stays away.
         let only_calendars = crate::offered::only_calendars(accounts);
-        let visible =
-            !only_calendars && crate::offered::shows_space_switch(&started, waiting, remembered);
+        // Contacts is always one of the spaces, so the switch shows with
+        // any account that has mail; the Calendar toggle waits for an
+        // account that offers one.
+        let calendar = crate::offered::offers_calendar_toggle(&started, waiting, remembered);
+        self.sidebar.set_calendar_offered(calendar);
+        let visible = !only_calendars && !accounts.is_empty();
         self.sidebar.set_switch_visible(visible);
         if only_calendars {
             self.show_space(Space::Calendar);
-        } else if !visible && self.space() == Space::Calendar {
+        } else if !calendar && self.space() == Space::Calendar {
             self.show_space(Space::Mail);
         }
         if visible && !self.space_restored.get() {

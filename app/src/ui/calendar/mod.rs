@@ -806,10 +806,13 @@ impl CalendarView {
     /// at once rather than at the next navigation.
     pub fn preferences_changed(self: &Rc<Self>) {
         self.calendar_sidebar.week_start_changed();
+        self.calendar_sidebar
+            .set_birthdays((self.settings)().show_contact_birthdays);
         self.rebuild_pages();
         self.show_range();
         self.run.fill_all();
-        self.run.read_sidebar(false);
+        self.run.read_sidebar(true);
+        self.run.search(self.search_entry.text().trim());
     }
 
     /// Redraws everything that shows a time after GNOME's clock format
@@ -2841,6 +2844,11 @@ impl CalendarView {
     /// when the account allows it.
     fn list_changed(self: &Rc<Self>, change: ListChange) {
         match change {
+            ListChange::Birthdays(on) => {
+                if on != (self.settings)().show_contact_birthdays {
+                    (self.hooks.change)(Change::ShowContactBirthdays(on));
+                }
+            }
             ListChange::Shown {
                 account,
                 calendar,
@@ -2885,6 +2893,25 @@ impl CalendarView {
         });
     }
 
+    fn birthday_accounts(&self) -> Vec<AccountId> {
+        let settings = (self.settings)();
+        self.accounts
+            .borrow()
+            .iter()
+            .filter(|(account, _, _)| {
+                settings.show_contact_birthdays
+                    && (self.core.demo || settings.reads_contacts(&account.email))
+            })
+            .map(|(account, _, _)| account.id)
+            .collect()
+    }
+
+    pub fn contacts_changed(self: &Rc<Self>) {
+        if (self.settings)().show_contact_birthdays {
+            self.preferences_changed();
+        }
+    }
+
     /// Redraws the calendar list and the mini month from what the copy
     /// lists and the busy days of the month `mini`.
     fn show_sidebar(&self, listed: Vec<Listed>, busy: &[Occurrence], mini: Range) {
@@ -2894,6 +2921,12 @@ impl CalendarView {
                 by_key.insert((one.account_id, calendar.id.clone()), calendar.clone());
             }
         }
+        for account in self.birthday_accounts() {
+            let calendar = mailrs_sync::calendar_copy::birthdays::calendar();
+            by_key.insert((account, calendar.id.clone()), calendar);
+        }
+        self.calendar_sidebar
+            .set_birthdays((self.settings)().show_contact_birthdays);
         ensure_tints(by_key.values().map(|c| c.color.as_str()));
         self.calendars.replace(by_key);
         let rows: Vec<(Account, Offers, Withheld, Vec<Calendar>)> = self

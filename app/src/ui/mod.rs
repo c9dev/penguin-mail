@@ -15,6 +15,7 @@ pub mod combo_value;
 pub mod composer;
 pub mod confirm;
 pub mod contact_card;
+mod contacts;
 pub mod contacts_prefs;
 pub mod conversation;
 pub mod copied;

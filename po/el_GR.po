@@ -1087,11 +1087,11 @@ msgstr ""
 "Η «Συνέχεια» ανοίγει τη σελίδα σύνδεσης του {provider} στο πρόγραμμα "
 "περιήγησης."
 
-#: app/src/app.rs:444
+#: app/src/app.rs:452
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Δεν ήταν δυνατή η σήμανση όλων των μηνυμάτων ως αναγνωσμένων: {reason}"
 
-#: app/src/app.rs:491
+#: app/src/app.rs:499
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1288,7 +1288,7 @@ msgstr "Διαγραφή κανόνα από το {account};"
 msgid "Load remote images from every sender?"
 msgstr "Φόρτωση απομακρυσμένων εικόνων από κάθε αποστολέα;"
 
-#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:653
+#: app/src/assistant/run.rs:1615 app/src/assistant/run/manage.rs:654
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 "Η φόρτωση μιας απομακρυσμένης εικόνας ενημερώνει τον αποστολέα πότε ανοίξατε "
@@ -1738,7 +1738,7 @@ msgstr "Τηλέφωνα: {phones}"
 msgid "Organization: {organisation}"
 msgstr "Οργανισμός: {organisation}"
 
-#: app/src/assistant/run/manage.rs:233
+#: app/src/assistant/run/manage.rs:234
 msgid ""
 "Rename the label “{label}” in {account} to “{name}”? Labels nested under it "
 "move along."
@@ -1746,12 +1746,12 @@ msgstr ""
 "Μετονομασία της ετικέτας «{label}» στον λογαριασμό {account} σε «{name}»; Οι "
 "ετικέτες που βρίσκονται κάτω από αυτήν μετακινούνται μαζί της."
 
-#: app/src/assistant/run/manage.rs:268
+#: app/src/assistant/run/manage.rs:269
 msgid "Color the label “{label}” in {account} {color}?"
 msgstr ""
 "Αλλαγή χρώματος της ετικέτας «{label}» στον λογαριασμό {account} σε {color};"
 
-#: app/src/assistant/run/manage.rs:308
+#: app/src/assistant/run/manage.rs:309
 msgid ""
 "Delete the label “{label}” from {account}? {count} conversation carries it. "
 "The mail stays in the account, without the label."
@@ -1767,7 +1767,7 @@ msgstr[1] ""
 "{count} συζητήσεις. Η αλληλογραφία παραμένει στον λογαριασμό, χωρίς την "
 "ετικέτα."
 
-#: app/src/assistant/run/manage.rs:319
+#: app/src/assistant/run/manage.rs:320
 msgid ""
 "Delete the label “{label}” from {account}? {count} conversation carries it. "
 "The mail stays in {provider}, without the label."
@@ -1782,7 +1782,7 @@ msgstr[1] ""
 "{count} συζητήσεις. Η αλληλογραφία παραμένει στο {provider}, χωρίς την "
 "ετικέτα."
 
-#: app/src/assistant/run/manage.rs:332
+#: app/src/assistant/run/manage.rs:333
 msgid ""
 "Delete the folder “{label}” from {account}? {count} conversation is in it. "
 "The mail in the folder is deleted with it."
@@ -1796,58 +1796,58 @@ msgstr[1] ""
 "Διαγραφή του φακέλου «{label}» από τον λογαριασμό {account}; Περιέχει "
 "{count} συζητήσεις. Η αλληλογραφία του φακέλου διαγράφεται μαζί του."
 
-#: app/src/assistant/run/manage.rs:406
+#: app/src/assistant/run/manage.rs:407
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr ""
 "Διαγραφή του έξυπνου γραμματοκιβωτίου «{name}»; Η αλληλογραφία που εμφανίζει "
 "μένει εκεί που είναι."
 
-#: app/src/assistant/run/manage.rs:467
+#: app/src/assistant/run/manage.rs:468
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr "Αντικατάσταση του προτύπου «{name}» με αυτό; Το αποθηκευμένο θα χαθεί."
 
-#: app/src/assistant/run/manage.rs:471
+#: app/src/assistant/run/manage.rs:472
 msgid "Save a template called “{name}”?"
 msgstr "Αποθήκευση προτύπου με όνομα «{name}»;"
 
-#: app/src/assistant/run/manage.rs:509
+#: app/src/assistant/run/manage.rs:510
 msgid "Delete the template “{name}”?"
 msgstr "Διαγραφή του προτύπου «{name}»;"
 
-#: app/src/assistant/run/manage.rs:540
+#: app/src/assistant/run/manage.rs:541
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "Προσθήκη επαφής στον λογαριασμό {account}: {contact};"
 
-#: app/src/assistant/run/manage.rs:584
+#: app/src/assistant/run/manage.rs:585
 msgid "this contact"
 msgstr "αυτή η επαφή"
 
-#: app/src/assistant/run/manage.rs:596
+#: app/src/assistant/run/manage.rs:597
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "Αλλαγή επαφής στον λογαριασμό {account}: {contact};"
 
-#: app/src/assistant/run/manage.rs:643
+#: app/src/assistant/run/manage.rs:644
 msgid "Always load images from anyone at {domain}?"
 msgstr "Να φορτώνονται πάντα εικόνες από οποιονδήποτε στο {domain};"
 
-#: app/src/assistant/run/manage.rs:647
+#: app/src/assistant/run/manage.rs:648
 msgid "Always load images from {sender}?"
 msgstr "Να φορτώνονται πάντα εικόνες από {sender};"
 
-#: app/src/assistant/run/manage.rs:678
+#: app/src/assistant/run/manage.rs:679
 msgid "Stop loading images from {sender}?"
 msgstr "Διακοπή φόρτωσης εικόνων από {sender};"
 
-#: app/src/assistant/run/manage.rs:713
+#: app/src/assistant/run/manage.rs:714
 msgid "Export {what} to {file}?"
 msgstr "Να εξαχθεί {what} στο {file};"
 
-#: app/src/assistant/run/manage.rs:719
+#: app/src/assistant/run/manage.rs:720
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr ""
 "Υπάρχει ήδη αρχείο με αυτό το όνομα και η εξαγωγή θα το αντικαταστήσει."
 
-#: app/src/assistant/run/manage.rs:799
+#: app/src/assistant/run/manage.rs:800
 msgid "the message “{subject}”"
 msgstr "το μήνυμα «{subject}»"
 
@@ -2763,9 +2763,9 @@ msgstr "Αρχειοθέτηση"
 msgid "Mark as Read"
 msgstr "Σήμανση ως αναγνωσμένο"
 
-#: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
+#: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:340
 #: app/src/ui/calendar/popover.rs:218 app/src/ui/calendar/popover.rs:220
-#: app/src/ui/calendar/popover.rs:757 app/src/ui/calendar/scope.rs:151
+#: app/src/ui/calendar/popover.rs:763 app/src/ui/calendar/scope.rs:151
 #: app/src/ui/conversation.rs:612 app/src/ui/hide_my_email.rs:574
 #: app/src/ui/hide_my_email.rs:604 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:150 app/src/ui/window/arrange.rs:129
@@ -2793,203 +2793,203 @@ msgstr "Νέο μήνυμα"
 msgid "From {senders}"
 msgstr "Από {senders}"
 
-#: app/src/offered.rs:286 app/src/ui/window/shortcuts.rs:454
+#: app/src/offered.rs:291 app/src/ui/window/shortcuts.rs:454
 msgid "Labels"
 msgstr "Ετικέτες"
 
-#: app/src/offered.rs:287
+#: app/src/offered.rs:292
 msgid "Move to folder"
 msgstr "Μετακίνηση σε φάκελο"
 
-#: app/src/offered.rs:293
+#: app/src/offered.rs:298
 msgid "Labels…"
 msgstr "Ετικέτες…"
 
-#: app/src/offered.rs:294
+#: app/src/offered.rs:299
 msgid "Move to Folder…"
 msgstr "Μετακίνηση σε φάκελο…"
 
-#: app/src/offered.rs:303
+#: app/src/offered.rs:308
 msgid "Choose Labels"
 msgstr "Επιλογή ετικετών"
 
-#: app/src/offered.rs:304
+#: app/src/offered.rs:309
 msgid "Choose a Folder"
 msgstr "Επιλογή φακέλου"
 
-#: app/src/offered.rs:311
+#: app/src/offered.rs:316
 msgid "Labels (L)"
 msgstr "Ετικέτες (L)"
 
-#: app/src/offered.rs:312
+#: app/src/offered.rs:317
 msgid "Move to Folder (L)"
 msgstr "Μετακίνηση σε φάκελο (L)"
 
-#: app/src/offered.rs:329
+#: app/src/offered.rs:334
 msgid "New Label…"
 msgstr "Νέα ετικέτα…"
 
-#: app/src/offered.rs:330
+#: app/src/offered.rs:335
 msgid "New Folder…"
 msgstr "Νέος φάκελος…"
 
-#: app/src/offered.rs:338
+#: app/src/offered.rs:343
 msgid "New Label Inside…"
 msgstr "Νέα ετικέτα μέσα…"
 
-#: app/src/offered.rs:339
+#: app/src/offered.rs:344
 msgid "New Folder Inside…"
 msgstr "Νέος φάκελος μέσα…"
 
-#: app/src/offered.rs:346
+#: app/src/offered.rs:351
 msgid "Label Options for {name}"
 msgstr "Επιλογές της ετικέτας {name}"
 
-#: app/src/offered.rs:347
+#: app/src/offered.rs:352
 msgid "Folder Options for {name}"
 msgstr "Επιλογές του φακέλου {name}"
 
-#: app/src/offered.rs:354
+#: app/src/offered.rs:359
 msgid "Label options"
 msgstr "Επιλογές ετικέτας"
 
-#: app/src/offered.rs:355
+#: app/src/offered.rs:360
 msgid "Folder options"
 msgstr "Επιλογές φακέλου"
 
-#: app/src/offered.rs:362
+#: app/src/offered.rs:367
 msgid "A label cannot go inside a label nested under it"
 msgstr ""
 "Μια ετικέτα δεν μπορεί να μπει μέσα σε ετικέτα που βρίσκεται κάτω από αυτήν"
 
-#: app/src/offered.rs:363
+#: app/src/offered.rs:368
 msgid "A folder cannot go inside a folder nested under it"
 msgstr ""
 "Ένας φάκελος δεν μπορεί να μπει μέσα σε φάκελο που βρίσκεται κάτω από αυτόν"
 
-#: app/src/offered.rs:372
+#: app/src/offered.rs:377
 msgid "There is a label called “{name}” already"
 msgstr "Υπάρχει ήδη ετικέτα με όνομα «{name}»"
 
-#: app/src/offered.rs:376
+#: app/src/offered.rs:381
 msgid "There is a folder called “{name}” already"
 msgstr "Υπάρχει ήδη φάκελος με όνομα «{name}»"
 
-#: app/src/offered.rs:385
+#: app/src/offered.rs:390
 msgid "New Label"
 msgstr "Νέα ετικέτα"
 
-#: app/src/offered.rs:386
+#: app/src/offered.rs:391
 msgid "New Folder"
 msgstr "Νέος φάκελος"
 
-#: app/src/offered.rs:394
+#: app/src/offered.rs:399
 msgid "Could not create the label: {reason}"
 msgstr "Δεν ήταν δυνατή η δημιουργία της ετικέτας: {reason}"
 
-#: app/src/offered.rs:395
+#: app/src/offered.rs:400
 msgid "Could not create the folder: {reason}"
 msgstr "Δεν ήταν δυνατή η δημιουργία του φακέλου: {reason}"
 
-#: app/src/offered.rs:402
+#: app/src/offered.rs:407
 msgid "Open or select mail to label it."
 msgstr "Ανοίξτε ή επιλέξτε αλληλογραφία για να της βάλετε ετικέτα."
 
-#: app/src/offered.rs:403
+#: app/src/offered.rs:408
 msgid "Open or select mail to move it."
 msgstr "Ανοίξτε ή επιλέξτε αλληλογραφία για να τη μετακινήσετε."
 
-#: app/src/offered.rs:411
+#: app/src/offered.rs:416
 msgid "Select mail from one account to label it."
 msgstr "Επιλέξτε αλληλογραφία από έναν λογαριασμό για να της βάλετε ετικέτα."
 
-#: app/src/offered.rs:412
+#: app/src/offered.rs:417
 msgid "Select mail from one account to move it."
 msgstr "Επιλέξτε αλληλογραφία από έναν λογαριασμό για να τη μετακινήσετε."
 
-#: app/src/offered.rs:418
+#: app/src/offered.rs:423
 msgid "Rename Label"
 msgstr "Μετονομασία ετικέτας"
 
-#: app/src/offered.rs:419
+#: app/src/offered.rs:424
 msgid "Rename Folder"
 msgstr "Μετονομασία φακέλου"
 
-#: app/src/offered.rs:425
+#: app/src/offered.rs:430
 msgid "Labels nested under it move along."
 msgstr "Οι ετικέτες που βρίσκονται κάτω από αυτήν μετακινούνται μαζί της."
 
-#: app/src/offered.rs:426
+#: app/src/offered.rs:431
 msgid "Folders nested under it move along."
 msgstr "Οι φάκελοι που βρίσκονται μέσα του μετακινούνται μαζί του."
 
-#: app/src/offered.rs:434
+#: app/src/offered.rs:439
 msgid "Could not rename the label: {reason}"
 msgstr "Δεν ήταν δυνατή η μετονομασία της ετικέτας: {reason}"
 
-#: app/src/offered.rs:435
+#: app/src/offered.rs:440
 msgid "Could not rename the folder: {reason}"
 msgstr "Δεν ήταν δυνατή η μετονομασία του φακέλου: {reason}"
 
-#: app/src/offered.rs:446
+#: app/src/offered.rs:451
 msgid ""
 "Its mail stays in {provider}, without the label. Nested labels stay too."
 msgstr ""
 "Η αλληλογραφία της παραμένει στο {provider}, χωρίς την ετικέτα. Οι ένθετες "
 "ετικέτες παραμένουν επίσης."
 
-#: app/src/offered.rs:451
+#: app/src/offered.rs:456
 msgid ""
 "Its mail stays in the account, without the label. Nested labels stay too."
 msgstr ""
 "Η αλληλογραφία της παραμένει στον λογαριασμό, χωρίς την ετικέτα. Οι ένθετες "
 "ετικέτες παραμένουν επίσης."
 
-#: app/src/offered.rs:453
+#: app/src/offered.rs:458
 msgid "The mail in the folder is deleted with it."
 msgstr "Η αλληλογραφία του φακέλου διαγράφεται μαζί του."
 
-#: app/src/offered.rs:461
+#: app/src/offered.rs:466
 msgid "Could not delete the label: {reason}"
 msgstr "Δεν ήταν δυνατή η διαγραφή της ετικέτας: {reason}"
 
-#: app/src/offered.rs:462
+#: app/src/offered.rs:467
 msgid "Could not delete the folder: {reason}"
 msgstr "Δεν ήταν δυνατή η διαγραφή του φακέλου: {reason}"
 
-#: app/src/offered.rs:469
+#: app/src/offered.rs:474
 msgid "This account has no labels yet."
 msgstr "Αυτός ο λογαριασμός δεν έχει ακόμη ετικέτες."
 
-#: app/src/offered.rs:470
+#: app/src/offered.rs:475
 msgid "This account has no folders yet."
 msgstr "Αυτός ο λογαριασμός δεν έχει ακόμη φακέλους."
 
-#: app/src/offered.rs:486
+#: app/src/offered.rs:491
 msgid "Your organization does not allow Penguin Mail to use this calendar."
 msgstr ""
 "Ο οργανισμός σας δεν επιτρέπει στο Penguin Mail να χρησιμοποιεί αυτό το "
 "ημερολόγιο."
 
-#: app/src/offered.rs:489
+#: app/src/offered.rs:494
 msgid "Your organization does not allow Penguin Mail to read these contacts."
 msgstr ""
 "Ο οργανισμός σας δεν επιτρέπει στο Penguin Mail να διαβάζει αυτές τις επαφές."
 
-#: app/src/offered.rs:492
+#: app/src/offered.rs:497
 msgid "Your organization does not allow Penguin Mail to change these rules."
 msgstr ""
 "Ο οργανισμός σας δεν επιτρέπει στο Penguin Mail να αλλάζει αυτούς τους "
 "κανόνες."
 
-#: app/src/offered.rs:495
+#: app/src/offered.rs:500
 msgid ""
 "Your organization does not allow Penguin Mail to change the automatic reply."
 msgstr ""
 "Ο οργανισμός σας δεν επιτρέπει στο Penguin Mail να αλλάζει την αυτόματη "
 "απάντηση."
 
-#: app/src/offered.rs:499
+#: app/src/offered.rs:504
 msgid ""
 "{provider} refused the password for calendars. Some providers need an app "
 "password with access to calendars and contacts."
@@ -2998,18 +2998,18 @@ msgstr ""
 "Ορισμένοι πάροχοι απαιτούν κωδικό εφαρμογής με πρόσβαση σε ημερολόγια και "
 "επαφές."
 
-#: app/src/offered.rs:503
+#: app/src/offered.rs:508
 msgid "Penguin Mail could not reach the calendar server for {provider}."
 msgstr ""
 "Το Penguin Mail δεν μπόρεσε να συνδεθεί με τον διακομιστή ημερολογίου του "
 "παρόχου {provider}."
 
-#: app/src/offered.rs:506
+#: app/src/offered.rs:511
 msgid "Penguin Mail found no calendar server for {provider}."
 msgstr ""
 "Το Penguin Mail δεν βρήκε διακομιστή ημερολογίου για τον πάροχο {provider}."
 
-#: app/src/offered.rs:511
+#: app/src/offered.rs:516
 msgid ""
 "{provider} refused the password for contacts. Some providers need an app "
 "password with access to calendars and contacts."
@@ -3017,28 +3017,28 @@ msgstr ""
 "Ο πάροχος {provider} απέρριψε τον κωδικό πρόσβασης για τις επαφές. Ορισμένοι "
 "πάροχοι απαιτούν κωδικό εφαρμογής με πρόσβαση σε ημερολόγια και επαφές."
 
-#: app/src/offered.rs:515
+#: app/src/offered.rs:520
 msgid "Penguin Mail could not reach the contacts server for {provider}."
 msgstr ""
 "Το Penguin Mail δεν μπόρεσε να συνδεθεί με τον διακομιστή επαφών του παρόχου "
 "{provider}."
 
-#: app/src/offered.rs:518
+#: app/src/offered.rs:523
 msgid "Penguin Mail found no contacts server for {provider}."
 msgstr "Το Penguin Mail δεν βρήκε διακομιστή επαφών για τον πάροχο {provider}."
 
-#: app/src/offered.rs:522
+#: app/src/offered.rs:527
 msgid "{provider} cannot send automatic replies over POP3."
 msgstr ""
 "Ο πάροχος {provider} δεν μπορεί να στέλνει αυτόματες απαντήσεις μέσω POP3."
 
-#: app/src/offered.rs:525
+#: app/src/offered.rs:530
 msgid "{provider} cannot send automatic replies."
 msgstr "Ο πάροχος {provider} δεν μπορεί να στέλνει αυτόματες απαντήσεις."
 
 #. A calendar or contacts server beside a browser sign-in that
 #. refused its token waits for an app password.
-#: app/src/offered.rs:530
+#: app/src/offered.rs:535
 msgid ""
 "{provider}'s calendar server refused the browser sign-in. Choose Sign In "
 "Again and give an app password for the calendar."
@@ -3047,7 +3047,7 @@ msgstr ""
 "του προγράμματος περιήγησης. Επιλέξτε «Νέα σύνδεση» και δώστε έναν κωδικό "
 "εφαρμογής για το ημερολόγιο."
 
-#: app/src/offered.rs:533
+#: app/src/offered.rs:538
 msgid ""
 "{provider}'s contacts server refused the browser sign-in. Choose Sign In "
 "Again and give an app password for the calendar."
@@ -3056,86 +3056,86 @@ msgstr ""
 "προγράμματος περιήγησης. Επιλέξτε «Νέα σύνδεση» και δώστε έναν κωδικό "
 "εφαρμογής για το ημερολόγιο."
 
-#: app/src/offered.rs:538
+#: app/src/offered.rs:543
 msgid "Penguin Mail cannot show {provider}'s calendar over JMAP yet."
 msgstr ""
 "Το Penguin Mail δεν μπορεί ακόμη να εμφανίσει το ημερολόγιο του παρόχου "
 "{provider} μέσω JMAP."
 
-#: app/src/offered.rs:541
+#: app/src/offered.rs:546
 msgid "Penguin Mail cannot read {provider}'s contacts over JMAP yet."
 msgstr ""
 "Το Penguin Mail δεν μπορεί ακόμη να διαβάσει τις επαφές του παρόχου "
 "{provider} μέσω JMAP."
 
-#: app/src/offered.rs:544
+#: app/src/offered.rs:549
 msgid "Penguin Mail cannot change {provider}'s rules over JMAP yet."
 msgstr ""
 "Το Penguin Mail δεν μπορεί ακόμη να αλλάξει τους κανόνες του παρόχου "
 "{provider} μέσω JMAP."
 
-#: app/src/offered.rs:547
+#: app/src/offered.rs:552
 msgid "Penguin Mail cannot change {provider}'s automatic reply over JMAP yet."
 msgstr ""
 "Το Penguin Mail δεν μπορεί ακόμη να αλλάξει την αυτόματη απάντηση του "
 "παρόχου {provider} μέσω JMAP."
 
-#: app/src/offered.rs:549
+#: app/src/offered.rs:554
 msgid "{provider} has no calendar that other apps can reach."
 msgstr ""
 "Ο πάροχος {provider} δεν έχει ημερολόγιο στο οποίο μπορούν να έχουν πρόσβαση "
 "άλλες εφαρμογές."
 
-#: app/src/offered.rs:551
+#: app/src/offered.rs:556
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr ""
 "Ο πάροχος {provider} δεν διατηρεί επαφές στις οποίες μπορούν να έχουν "
 "πρόσβαση άλλες εφαρμογές."
 
-#: app/src/offered.rs:553
+#: app/src/offered.rs:558
 msgid "{provider} has no rules that other apps can change."
 msgstr ""
 "Ο πάροχος {provider} δεν έχει κανόνες που μπορούν να αλλάξουν άλλες "
 "εφαρμογές."
 
-#: app/src/offered.rs:555
+#: app/src/offered.rs:560
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr ""
 "Ο πάροχος {provider} δεν έχει αυτόματη απάντηση που μπορούν να αλλάξουν "
 "άλλες εφαρμογές."
 
-#: app/src/offered.rs:558
+#: app/src/offered.rs:563
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 "Ο πάροχος {provider} δεν μπορεί να διαγράψει οριστικά αλληλογραφία. Η "
 "διαγραφή τη μετακινεί στον Κάδο απορριμμάτων."
 
-#: app/src/offered.rs:560
+#: app/src/offered.rs:565
 msgid "{provider} does not sort the inbox into categories."
 msgstr "Ο πάροχος {provider} δεν ταξινομεί τα εισερχόμενα σε κατηγορίες."
 
 #. Translators: Gmail and gmail.com are names; keep them as they are.
-#: app/src/offered.rs:574
+#: app/src/offered.rs:579
 msgid "Your Gmail filters still run. Change them on gmail.com."
 msgstr ""
 "Τα φίλτρα του Gmail εξακολουθούν να λειτουργούν. Αλλάξτε τα στο gmail.com."
 
 #. Translators: gmail.com is a name; keep it as it is.
-#: app/src/offered.rs:580
+#: app/src/offered.rs:585
 msgid "Set your automatic reply on gmail.com."
 msgstr "Ορίστε την αυτόματη απάντηση στο gmail.com."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/offered.rs:586
+#: app/src/offered.rs:591
 msgid "Open Gmail Filters"
 msgstr "Άνοιγμα των Φίλτρων του Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/offered.rs:592
+#: app/src/offered.rs:597
 msgid "Open Gmail Settings"
 msgstr "Άνοιγμα των Ρυθμίσεων του Gmail"
 
-#: app/src/offered.rs:688
+#: app/src/offered.rs:693
 msgid ""
 "{provider} does not let an API token change the automatic reply. Sign in "
 "again through the browser to change it here."
@@ -3144,43 +3144,43 @@ msgstr ""
 "αυτόματη απάντηση. Συνδεθείτε ξανά μέσω του προγράμματος περιήγησης για να "
 "την αλλάξετε εδώ."
 
-#: app/src/offered.rs:698
+#: app/src/offered.rs:703
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
-#: app/src/offered.rs:713
+#: app/src/offered.rs:718
 msgid "The server would not hand it over."
 msgstr "Ο διακομιστής αρνήθηκε να το παραδώσει."
 
-#: app/src/offered.rs:715
+#: app/src/offered.rs:720
 msgid "The message is larger than Penguin Mail downloads."
 msgstr "Το μήνυμα είναι μεγαλύτερο από όσο κατεβάζει το Penguin Mail."
 
-#: app/src/offered.rs:718
+#: app/src/offered.rs:723
 msgid "Penguin Mail could not read the server's answer."
 msgstr "Το Penguin Mail δεν μπόρεσε να διαβάσει την απάντηση του διακομιστή."
 
-#: app/src/offered.rs:721
+#: app/src/offered.rs:726
 msgid "The connection closed while the message downloaded."
 msgstr "Η σύνδεση έκλεισε ενώ γινόταν λήψη του μηνύματος."
 
-#: app/src/offered.rs:727
+#: app/src/offered.rs:732
 msgid "“{subject}” from {sender}: {words}"
 msgstr "«{subject}» από {sender}: {words}"
 
-#: app/src/offered.rs:731
+#: app/src/offered.rs:736
 msgid "“{subject}”: {words}"
 msgstr "«{subject}»: {words}"
 
-#: app/src/offered.rs:735
+#: app/src/offered.rs:740
 msgid "A message from {sender}: {words}"
 msgstr "Ένα μήνυμα από {sender}: {words}"
 
-#: app/src/offered.rs:739
+#: app/src/offered.rs:744
 msgid "Message {number}: {words}"
 msgstr "Μήνυμα {number}: {words}"
 
-#: app/src/offered.rs:755
+#: app/src/offered.rs:760
 msgid ""
 "Removing the account deletes this computer's copy of its mail and the saved "
 "sign-in. Mail still on the server stays there."
@@ -3189,7 +3189,7 @@ msgstr ""
 "αυτόν τον υπολογιστή και τα αποθηκευμένα στοιχεία σύνδεσης. Η αλληλογραφία "
 "που βρίσκεται ακόμη στον διακομιστή παραμένει εκεί."
 
-#: app/src/offered.rs:759
+#: app/src/offered.rs:764
 msgid ""
 "Mail already removed from the server exists only on this computer, and "
 "removing the account deletes it with the saved sign-in. Mail still on the "
@@ -3200,7 +3200,7 @@ msgstr ""
 "αποθηκευμένα στοιχεία σύνδεσης. Η αλληλογραφία που βρίσκεται ακόμη στον "
 "διακομιστή παραμένει εκεί."
 
-#: app/src/offered.rs:764
+#: app/src/offered.rs:769
 msgid ""
 "Its calendars and saved sign-in are deleted from this computer. Nothing "
 "changes on the server."
@@ -3208,7 +3208,7 @@ msgstr ""
 "Τα ημερολόγιά του και τα αποθηκευμένα στοιχεία σύνδεσης διαγράφονται από "
 "αυτόν τον υπολογιστή. Τίποτα δεν αλλάζει στον διακομιστή."
 
-#: app/src/offered.rs:769
+#: app/src/offered.rs:774
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in {provider}."
@@ -3216,7 +3216,7 @@ msgstr ""
 "Η ληφθείσα αλληλογραφία του και τα αποθηκευμένα στοιχεία σύνδεσης "
 "διαγράφονται από αυτόν τον υπολογιστή. Τίποτα δεν αλλάζει στο {provider}."
 
-#: app/src/offered.rs:783
+#: app/src/offered.rs:788
 msgid ""
 "{count} message waiting in Send Later on the server goes back to Drafts "
 "first."
@@ -3229,7 +3229,7 @@ msgstr[1] ""
 "{count} μηνύματα που περιμένουν στην «Αποστολή αργότερα» στον διακομιστή "
 "επιστρέφουν πρώτα στα Πρόχειρα."
 
-#: app/src/offered.rs:795
+#: app/src/offered.rs:800
 msgid ""
 "Penguin Mail could not call back {count} message waiting on the server. The "
 "server may still send it at its hour."
@@ -3245,7 +3245,7 @@ msgstr[1] ""
 "στον διακομιστή. Ο διακομιστής μπορεί να τα στείλει ακόμη την "
 "προγραμματισμένη ώρα."
 
-#: app/src/offered.rs:810
+#: app/src/offered.rs:815
 msgid ""
 "Mail from {address} is kept only on this computer. To keep a copy, quit "
 "Penguin Mail, then back up this file."
@@ -3254,21 +3254,21 @@ msgstr ""
 "κρατήσετε αντίγραφο, κλείστε το Penguin Mail και μετά δημιουργήστε αντίγραφο "
 "ασφαλείας αυτού του αρχείου."
 
-#: app/src/offered.rs:861
+#: app/src/offered.rs:866
 msgid "New mail arrives as it is sent"
 msgstr "Η νέα αλληλογραφία φτάνει μόλις σταλεί"
 
-#: app/src/offered.rs:863
+#: app/src/offered.rs:868
 msgid "{provider} pushes it over JMAP, and you can send from your aliases."
 msgstr ""
 "Το {provider} την προωθεί μέσω JMAP και μπορείτε να στέλνετε από τα "
 "ψευδώνυμά σας."
 
-#: app/src/offered.rs:869
+#: app/src/offered.rs:874
 msgid "Mail is matched over JMAP"
 msgstr "Η αλληλογραφία αντιστοιχίζεται μέσω JMAP"
 
-#: app/src/offered.rs:871
+#: app/src/offered.rs:876
 msgid ""
 "Penguin Mail keeps the mail on this computer and downloads again only the "
 "messages it cannot match."
@@ -3276,115 +3276,115 @@ msgstr ""
 "Το Penguin Mail κρατά την αλληλογραφία σε αυτόν τον υπολογιστή και κατεβάζει "
 "ξανά μόνο τα μηνύματα που δεν μπορεί να αντιστοιχίσει."
 
-#: app/src/offered.rs:878
+#: app/src/offered.rs:883
 msgid "Name, color and place"
 msgstr "Όνομα, χρώμα και θέση"
 
-#: app/src/offered.rs:880
+#: app/src/offered.rs:885
 msgid "{address} keeps its spot in the sidebar."
 msgstr "Το {address} διατηρεί τη θέση του στην πλευρική στήλη."
 
-#: app/src/offered.rs:886
+#: app/src/offered.rs:891
 msgid "Your own data"
 msgstr "Τα δικά σας δεδομένα"
 
-#: app/src/offered.rs:887
+#: app/src/offered.rs:892
 msgid "Reminders, follow-ups, flags, rules, VIPs, signatures and drafts."
 msgstr ""
 "Υπενθυμίσεις, παρακολουθήσεις, σημαίες, κανόνες, επαφές VIP, υπογραφές και "
 "πρόχειρα."
 
-#: app/src/offered.rs:893
+#: app/src/offered.rs:898
 msgid "Calendars are read again where JMAP serves them"
 msgstr "Τα ημερολόγια διαβάζονται ξανά όπου τα παρέχει το JMAP"
 
-#: app/src/offered.rs:896
+#: app/src/offered.rs:901
 msgid ""
 "If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
 msgstr ""
 "Αν το {provider} προσφέρει ημερολόγια μέσω JMAP, το Penguin Mail τα διαβάζει "
 "από εκεί."
 
-#: app/src/offered.rs:905
+#: app/src/offered.rs:910
 msgid "Calendar sign-in"
 msgstr "Σύνδεση ημερολογίου"
 
-#: app/src/offered.rs:906
+#: app/src/offered.rs:911
 msgid "The app password you use for calendars stays as it is."
 msgstr ""
 "Ο κωδικός πρόσβασης εφαρμογής που χρησιμοποιείτε για τα ημερολόγια μένει ως "
 "έχει."
 
-#: app/src/offered.rs:937
+#: app/src/offered.rs:942
 msgid "Could not switch to JMAP: {reason}"
 msgstr "Δεν ήταν δυνατή η μετάβαση σε JMAP: {reason}"
 
-#: app/src/offered.rs:938
+#: app/src/offered.rs:943
 msgid "Your IMAP account is unchanged."
 msgstr "Ο λογαριασμός σας IMAP δεν άλλαξε."
 
-#: app/src/offered.rs:950
+#: app/src/offered.rs:955
 msgid "Something unexpected stopped it."
 msgstr "Κάτι απρόβλεπτο τη διέκοψε."
 
-#: app/src/offered.rs:955
+#: app/src/offered.rs:960
 msgid "{provider} does not answer."
 msgstr "Το {provider} δεν απαντά."
 
-#: app/src/offered.rs:977
+#: app/src/offered.rs:982
 msgid "This account uses JMAP already."
 msgstr "Αυτός ο λογαριασμός χρησιμοποιεί ήδη JMAP."
 
-#: app/src/offered.rs:983
+#: app/src/offered.rs:988
 msgid "{provider} did not accept the token."
 msgstr "Το {provider} δεν δέχτηκε το διακριτικό."
 
-#: app/src/offered.rs:984
+#: app/src/offered.rs:989
 msgid "{provider} did not accept the password."
 msgstr "Το {provider} δεν δέχτηκε τον κωδικό πρόσβασης."
 
-#: app/src/offered.rs:989
+#: app/src/offered.rs:994
 msgid "You can choose Sign In With Browser instead."
 msgstr ""
 "Μπορείτε να επιλέξετε «Σύνδεση μέσω προγράμματος περιήγησης» εναλλακτικά."
 
-#: app/src/offered.rs:995
+#: app/src/offered.rs:1000
 msgid "{provider} signed in to another account, not {address}."
 msgstr "Το {provider} συνδέθηκε σε άλλον λογαριασμό, όχι στο {address}."
 
-#: app/src/offered.rs:999
+#: app/src/offered.rs:1004
 msgid "The token holds a character that cannot be sent."
 msgstr "Το διακριτικό περιέχει χαρακτήρα που δεν μπορεί να σταλεί."
 
-#: app/src/offered.rs:1000
+#: app/src/offered.rs:1005
 msgid "The password holds a character that cannot be sent."
 msgstr "Ο κωδικός πρόσβασης περιέχει χαρακτήρα που δεν μπορεί να σταλεί."
 
-#: app/src/offered.rs:1005
+#: app/src/offered.rs:1010
 msgid "{provider} did not give the draft of a message waiting in Send Later."
 msgstr ""
 "Το {provider} δεν έδωσε το πρόχειρο ενός μηνύματος που περιμένει στην "
 "«Αποστολή αργότερα»."
 
-#: app/src/offered.rs:1011
+#: app/src/offered.rs:1016
 msgid "The mail on {provider} kept changing while Penguin Mail matched it."
 msgstr ""
 "Η αλληλογραφία στο {provider} άλλαζε συνεχώς ενώ το Penguin Mail την "
 "αντιστοίχιζε."
 
-#: app/src/offered.rs:1037
+#: app/src/offered.rs:1042
 msgid "{provider} refused the sign-in in the browser."
 msgstr "Το {provider} απέρριψε τη σύνδεση στο πρόγραμμα περιήγησης."
 
-#: app/src/offered.rs:1041 app/src/own_project.rs:356
+#: app/src/offered.rs:1046 app/src/own_project.rs:356
 msgid "You did not allow Penguin Mail on {provider}'s page."
 msgstr "Δεν επιτρέψατε το Penguin Mail στη σελίδα του {provider}."
 
-#: app/src/offered.rs:1059
+#: app/src/offered.rs:1064
 msgid "{address} now uses JMAP"
 msgstr "Το {address} χρησιμοποιεί πλέον JMAP"
 
-#: app/src/offered.rs:1063
+#: app/src/offered.rs:1068
 msgid ""
 "{address} now uses JMAP. {count} rule is off because its folder is not on "
 "the server."
@@ -4314,8 +4314,8 @@ msgstr "Αυτός ο λογαριασμός δεν είναι συνδεδεμ�
 msgid "Could not save: {reason}"
 msgstr "Δεν ήταν δυνατή η αποθήκευση: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3020
-#: app/src/ui/window.rs:3043
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3069
+#: app/src/ui/window.rs:3092
 msgid "Could not open the draft: {reason}"
 msgstr "Δεν ήταν δυνατό το άνοιγμα του πρόχειρου: {reason}"
 
@@ -4342,6 +4342,7 @@ msgid "Show or hide this message"
 msgstr "Εμφάνιση ή απόκρυψη αυτού του μηνύματος"
 
 #: app/src/render.rs:305 app/src/ui/contact_card.rs:43
+#: app/src/ui/contacts/mod.rs:253
 msgid "Contact"
 msgstr "Επαφή"
 
@@ -4387,7 +4388,8 @@ msgstr ""
 "Αυτό το μήνυμα περιέχει πιθανώς παραπλανητικούς συνδέσμους. Ελέγξτε τον "
 "προορισμό πριν τους ανοίξετε."
 
-#: app/src/render.rs:503
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:419
+#: app/src/ui/contacts/person.rs:465
 msgid "Details"
 msgstr "Λεπτομέρειες"
 
@@ -4580,7 +4582,7 @@ msgid "Set up a different project"
 msgstr "Ρύθμιση διαφορετικού έργου"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3373
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3422
 msgid "Set up your own Google project"
 msgstr "Ρύθμιση δικού σας έργου Google"
 
@@ -4649,7 +4651,7 @@ msgstr "Μικρότερο από {size}"
 msgid "Larger than {size}"
 msgstr "Μεγαλύτερο από {size}"
 
-#: app/src/rules.rs:251 app/src/settings/mod.rs:964
+#: app/src/rules.rs:251 app/src/settings/mod.rs:969
 msgid "All mail"
 msgstr "Όλη η αλληλογραφία"
 
@@ -4724,14 +4726,18 @@ msgstr "Το {host} απέρριψε τη σύνδεση: {reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:499 app/src/ui/sidebar.rs:550
-#: app/src/ui/sidebar.rs:1907 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:565
+#: app/src/ui/sidebar.rs:1943 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Ημερολόγιο"
 
-#: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:191
+#: app/src/ui/contacts/mod.rs:247 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
+#: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:566
+#: app/src/ui/sidebar.rs:918 app/src/ui/sidebar.rs:1944
+#: app/src/ui/window.rs:3821
 msgid "Contacts"
 msgstr "Επαφές"
 
@@ -4747,233 +4753,233 @@ msgstr "Σε αυτόν τον υπολογιστή, όσο το Penguin Mail ε
 msgid "On the server"
 msgstr "Στον διακομιστή"
 
-#: app/src/settings/mod.rs:232 app/src/settings/mod.rs:441
-#: app/src/settings/mod.rs:876 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/preferences.rs:1185
+#: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
+#: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
+#: app/src/ui/contacts/side.rs:169 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "Ανενεργό"
 
-#: app/src/settings/mod.rs:233
+#: app/src/settings/mod.rs:235
 msgid "Local Server"
 msgstr "Τοπικός διακομιστής"
 
-#: app/src/settings/mod.rs:234
+#: app/src/settings/mod.rs:236
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:235
+#: app/src/settings/mod.rs:237
 msgid "Claude Subscription"
 msgstr "Συνδρομή Claude"
 
-#: app/src/settings/mod.rs:260 app/src/ui/window.rs:3765
-#: app/src/ui/window.rs:3853
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3903
 msgid "Assistant"
 msgstr "Βοηθός"
 
-#: app/src/settings/mod.rs:261 app/src/ui/preferences.rs:233
+#: app/src/settings/mod.rs:263 app/src/ui/preferences.rs:233
 msgid "Translation"
 msgstr "Μετάφραση"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:265
+#: app/src/settings/mod.rs:267
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Κατάργηση εγγραφής"
 
-#: app/src/settings/mod.rs:271
+#: app/src/settings/mod.rs:273
 msgid "Answers questions and acts on your mail"
 msgstr "Απαντά σε ερωτήσεις και ενεργεί στην αλληλογραφία σας"
 
-#: app/src/settings/mod.rs:272
+#: app/src/settings/mod.rs:274
 msgid "Translates a message when you ask"
 msgstr "Μεταφράζει ένα μήνυμα όταν το ζητάτε"
 
-#: app/src/settings/mod.rs:274
+#: app/src/settings/mod.rs:276
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Διαβάζει τη σελίδα κατάργησης εγγραφής ενός ενημερωτικού δελτίου όταν οι "
 "κανόνες δεν μπορούν"
 
-#: app/src/settings/mod.rs:312
+#: app/src/settings/mod.rs:314
 msgid "Same as the Assistant"
 msgstr "Όπως ο Βοηθός"
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:444
 msgid "Claude's own only"
 msgstr "Μόνο η αναζήτηση του Claude"
 
-#: app/src/settings/mod.rs:443
+#: app/src/settings/mod.rs:445
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:444
+#: app/src/settings/mod.rs:446
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:445
+#: app/src/settings/mod.rs:447
 msgid "Keenable"
 msgstr "Keenable"
 
-#: app/src/settings/mod.rs:625
+#: app/src/settings/mod.rs:628
 msgid "Rich text"
 msgstr "Εμπλουτισμένο κείμενο"
 
-#: app/src/settings/mod.rs:626
+#: app/src/settings/mod.rs:629
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:645 app/src/settings/mod.rs:667
+#: app/src/settings/mod.rs:648 app/src/settings/mod.rs:670
 #: app/src/ui/preferences/accounts.rs:150
 msgid "Automatic"
 msgstr "Αυτόματα"
 
-#: app/src/settings/mod.rs:646 app/src/ui/calendar/editor.rs:2166
+#: app/src/settings/mod.rs:649 app/src/ui/calendar/editor.rs:2166
 msgid "Monday"
 msgstr "Δευτέρα"
 
-#: app/src/settings/mod.rs:647 app/src/ui/calendar/editor.rs:2172
+#: app/src/settings/mod.rs:650 app/src/ui/calendar/editor.rs:2172
 msgid "Sunday"
 msgstr "Κυριακή"
 
-#: app/src/settings/mod.rs:668
+#: app/src/settings/mod.rs:671
 msgid "12-hour (AM/PM)"
 msgstr "12ωρη (AM/PM)"
 
-#: app/src/settings/mod.rs:669
+#: app/src/settings/mod.rs:672
 msgid "24-hour"
 msgstr "24ωρη"
 
-#: app/src/settings/mod.rs:707
+#: app/src/settings/mod.rs:710
 msgid "When opened"
 msgstr "Μόλις ανοίξει"
 
-#: app/src/settings/mod.rs:708
+#: app/src/settings/mod.rs:711
 msgid "After 2 seconds"
 msgstr "Μετά από 2 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:709
+#: app/src/settings/mod.rs:712
 msgid "Only when I choose"
 msgstr "Μόνο όταν το επιλέγω"
 
-#: app/src/settings/mod.rs:725 app/src/settings/mod.rs:743
+#: app/src/settings/mod.rs:728 app/src/settings/mod.rs:746
 msgid "Ask each time"
 msgstr "Ερώτηση κάθε φορά"
 
-#: app/src/settings/mod.rs:726
+#: app/src/settings/mod.rs:729
 msgid "Always load"
 msgstr "Πάντα φόρτωση"
 
-#: app/src/settings/mod.rs:744
+#: app/src/settings/mod.rs:747
 msgid "Never ask"
 msgstr "Ποτέ ερώτηση"
 
-#: app/src/settings/mod.rs:771
+#: app/src/settings/mod.rs:774
 msgid "No Preview"
 msgstr "Χωρίς προεπισκόπηση"
 
-#: app/src/settings/mod.rs:772
+#: app/src/settings/mod.rs:775
 msgid "1 Line"
 msgstr "1 γραμμή"
 
-#: app/src/settings/mod.rs:773
+#: app/src/settings/mod.rs:776
 msgid "2 Lines"
 msgstr "2 γραμμές"
 
-#: app/src/settings/mod.rs:800
+#: app/src/settings/mod.rs:803
 msgid "Short (80 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:801
+#: app/src/settings/mod.rs:804
 msgid "Medium (140 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:802
+#: app/src/settings/mod.rs:805
 msgid "Long (280 Characters)"
 msgstr ""
 
-#: app/src/settings/mod.rs:836
+#: app/src/settings/mod.rs:839
 msgid "Small"
 msgstr "Μικρό"
 
-#: app/src/settings/mod.rs:837
+#: app/src/settings/mod.rs:840
 msgid "Default"
 msgstr "Προεπιλογή"
 
-#: app/src/settings/mod.rs:838
+#: app/src/settings/mod.rs:841
 msgid "Large"
 msgstr "Μεγάλο"
 
-#: app/src/settings/mod.rs:839
+#: app/src/settings/mod.rs:842
 msgid "Larger"
 msgstr "Μεγαλύτερο"
 
-#: app/src/settings/mod.rs:877
+#: app/src/settings/mod.rs:880
 msgid "5 seconds"
 msgstr "5 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:878
+#: app/src/settings/mod.rs:881
 msgid "10 seconds"
 msgstr "10 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:879
+#: app/src/settings/mod.rs:882
 msgid "20 seconds"
 msgstr "20 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:880
+#: app/src/settings/mod.rs:883
 msgid "30 seconds"
 msgstr "30 δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:897
+#: app/src/settings/mod.rs:900
 msgid "Follow system"
 msgstr "Όπως το σύστημα"
 
-#: app/src/settings/mod.rs:898
+#: app/src/settings/mod.rs:901
 msgid "Light"
 msgstr "Φωτεινό"
 
-#: app/src/settings/mod.rs:899
+#: app/src/settings/mod.rs:902
 msgid "Dark"
 msgstr "Σκοτεινό"
 
-#: app/src/settings/mod.rs:933
+#: app/src/settings/mod.rs:938
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Κάθε δευτερόλεπτο"
 msgstr[1] "Κάθε {count} δευτερόλεπτα"
 
-#: app/src/settings/mod.rs:941
+#: app/src/settings/mod.rs:946
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Κάθε λεπτό"
 msgstr[1] "Κάθε {count} λεπτά"
 
-#: app/src/settings/mod.rs:958
+#: app/src/settings/mod.rs:963
 msgid "2 weeks"
 msgstr "2 εβδομάδες"
 
-#: app/src/settings/mod.rs:959
+#: app/src/settings/mod.rs:964
 msgid "30 days"
 msgstr "30 ημέρες"
 
-#: app/src/settings/mod.rs:960
+#: app/src/settings/mod.rs:965
 msgid "90 days"
 msgstr "90 ημέρες"
 
-#: app/src/settings/mod.rs:961
+#: app/src/settings/mod.rs:966
 msgid "1 year"
 msgstr "1 έτος"
 
-#: app/src/settings/mod.rs:962
+#: app/src/settings/mod.rs:967
 msgid "2 years"
 msgstr "2 έτη"
 
-#: app/src/settings/mod.rs:963
+#: app/src/settings/mod.rs:968
 msgid "5 years"
 msgstr "5 έτη"
 
-#: app/src/settings/mod.rs:985
+#: app/src/settings/mod.rs:990
 msgid ""
 "Every message stays on this computer. A large account takes a lot of disk "
 "space and memory, and its older mail downloads in the background."
@@ -4982,21 +4988,21 @@ msgstr ""
 "καταλαμβάνει πολύ χώρο στον δίσκο και πολλή μνήμη, και η παλαιότερη "
 "αλληλογραφία του λαμβάνεται στο παρασκήνιο."
 
-#: app/src/settings/mod.rs:987
+#: app/src/settings/mod.rs:992
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Ό,τι υπάρχει στα Εισερχόμενα παραμένει επίσης, και η παλαιότερη αλληλογραφία "
 "μένει διαθέσιμη στην αναζήτηση"
 
-#: app/src/settings/mod.rs:994
+#: app/src/settings/mod.rs:999
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:995
+#: app/src/settings/mod.rs:1000
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:996
+#: app/src/settings/mod.rs:1001
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5155,7 +5161,7 @@ msgstr ""
 msgid "No unread mail"
 msgstr "Κανένα μη αναγνωσμένο μήνυμα"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1931
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1968
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} μη αναγνωσμένο μήνυμα"
@@ -5171,11 +5177,13 @@ msgstr "Άνοιγμα του Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:513
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:310
+#: app/src/ui/contacts/person.rs:315 app/src/ui/contacts/person.rs:318
+#: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "Νέο μήνυμα"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2524 app/src/ui/window.rs:3771
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3820
 msgid "Check for Mail"
 msgstr "Έλεγχος για αλληλογραφία"
 
@@ -5193,8 +5201,8 @@ msgstr "Τι νέο υπάρχει στην έκδοση {version}"
 msgid "Check for Updates"
 msgstr "Έλεγχος για ενημερώσεις"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3792
-#: app/src/ui/window/shortcuts.rs:644
+#: app/src/tray.rs:216 app/src/ui/window.rs:3842
+#: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "Έξοδος"
 
@@ -5216,11 +5224,13 @@ msgstr ""
 msgid "What's New"
 msgstr "Τι νέο υπάρχει"
 
-#: app/src/ui/about.rs:189 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:357
+#: app/src/ui/contacts/person.rs:1265 app/src/ui/contacts/person.rs:1275
+#: app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Ιστότοπος"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3791
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3841
 msgid "Donate"
 msgstr "Δωρεά"
 
@@ -5228,7 +5238,7 @@ msgstr "Δωρεά"
 msgid "License"
 msgstr "Άδεια χρήσης"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3790
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3840
 msgid "About Penguin Mail"
 msgstr "Σχετικά με το Penguin Mail"
 
@@ -5279,12 +5289,12 @@ msgid "The update to {version} failed"
 msgstr "Η ενημέρωση στην έκδοση {version} απέτυχε"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1592
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1639
 msgid "Copy Command"
 msgstr "Αντιγραφή εντολής"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1597
+#: app/src/ui/window.rs:1644
 msgid "Command copied"
 msgstr "Η εντολή αντιγράφηκε"
 
@@ -5374,12 +5384,15 @@ msgstr "Αντιγραφή συνδέσμου"
 
 #: app/src/ui/add_account.rs:945 app/src/ui/add_account.rs:4278
 #: app/src/ui/add_account.rs:4347 app/src/ui/assistant_mcp_prefs.rs:365
-#: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:287
-#: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
+#: app/src/ui/calendar/editor.rs:188 app/src/ui/calendar/manage.rs:290
+#: app/src/ui/calendar/manage.rs:440 app/src/ui/calendar/manage.rs:491
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:588
+#: app/src/ui/contacts/mod.rs:1182 app/src/ui/contacts/mod.rs:1296
+#: app/src/ui/contacts/person.rs:764 app/src/ui/contacts/person.rs:921
+#: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
 #: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
@@ -5395,7 +5408,7 @@ msgstr "Ακύρωση"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1536
+#: app/src/ui/window.rs:1583
 msgid "Sign In"
 msgstr "Σύνδεση"
 
@@ -5519,9 +5532,9 @@ msgid "Not Now"
 msgstr "Όχι τώρα"
 
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
-#: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:496
+#: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1669
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1716
 msgid "Grant Access"
 msgstr "Παραχώρηση πρόσβασης"
 
@@ -5623,8 +5636,8 @@ msgstr ""
 "Ένας διακομιστής CalDAV, όπως το Nextcloud. Αν χρησιμοποιεί σύνδεση δύο "
 "βημάτων, δημιουργήστε έναν κωδικό εφαρμογής για το Penguin Mail."
 
-#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1468
-#: app/src/ui/calendar/sidebar.rs:1479
+#: app/src/ui/add_account.rs:1841 app/src/ui/calendar/sidebar.rs:1493
+#: app/src/ui/calendar/sidebar.rs:1504
 msgid "Add Calendar"
 msgstr "Προσθήκη ημερολογίου"
 
@@ -5666,12 +5679,13 @@ msgstr "Ο κωδικός πρόσβασής σας δεν στάλθηκε."
 msgid "Looking Up…"
 msgstr "Αναζήτηση…"
 
-#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1287
+#: app/src/ui/add_account.rs:3710 app/src/ui/calendar/sidebar.rs:1312
 msgid "Sign In Again"
 msgstr "Νέα σύνδεση"
 
-#: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2280
+#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:304
+#: app/src/ui/contacts/mod.rs:541 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2327
 msgid "Open Google Cloud"
 msgstr "Άνοιγμα του Google Cloud"
 
@@ -5764,13 +5778,14 @@ msgstr "Σύνταξη πρόχειρης απάντησης στην ανοιχ
 msgid "Choose a Model"
 msgstr "Επιλογή μοντέλου"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3900
-#: app/src/ui/window.rs:3901
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:3951
 msgid "Detach"
 msgstr "Αποκόλληση"
 
-#: app/src/ui/assistant.rs:128 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4585
+#: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
+#: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
+#: app/src/ui/window.rs:4650
 msgid "Close"
 msgstr "Κλείσιμο"
 
@@ -5985,7 +6000,7 @@ msgid "Use {server}"
 msgstr "Χρήση του {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:300
 msgid "Edit"
 msgstr "Επεξεργασία"
 
@@ -5995,7 +6010,8 @@ msgstr "Επεξεργασία του {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/sender_prefs.rs:215 app/src/ui/window.rs:3529
+#: app/src/ui/contacts/editor.rs:770 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3578
 msgid "Remove"
 msgstr "Αφαίρεση"
 
@@ -6036,9 +6052,9 @@ msgstr ""
 "filesystem ~/Documents. Βάλτε NAME=value μπροστά για το περιβάλλον. Ένα URL "
 "συνδέεται σε διακομιστή μέσω HTTP."
 
-#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:404
-#: app/src/ui/composer/mod.rs:3167 app/src/ui/smart_editor.rs:41
-#: app/src/ui/templates.rs:191
+#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:407
+#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:299
+#: app/src/ui/smart_editor.rs:41 app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Όνομα"
 
@@ -6074,6 +6090,7 @@ msgstr "Δοκιμή"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
+#: app/src/ui/contacts/editor.rs:533 app/src/ui/contacts/editor.rs:609
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6082,7 +6099,7 @@ msgstr "Δοκιμή"
 msgid "Save"
 msgstr "Αποθήκευση"
 
-#: app/src/ui/assistant_mcp_prefs.rs:361 app/src/ui/calendar/manage.rs:567
+#: app/src/ui/assistant_mcp_prefs.rs:361 app/src/ui/calendar/manage.rs:570
 msgid "Add"
 msgstr "Προσθήκη"
 
@@ -6560,7 +6577,7 @@ msgstr "Δεν είναι κοινόχρηστο με τους προσκεκλ�
 msgid "Open {file} in the browser"
 msgstr "Άνοιγμα του {file} στο πρόγραμμα περιήγησης"
 
-#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:934
+#: app/src/ui/calendar/attachments.rs:153 app/src/ui/calendar/popover.rs:940
 msgid "Open in Browser"
 msgstr "Άνοιγμα στο πρόγραμμα περιήγησης"
 
@@ -6568,7 +6585,7 @@ msgstr "Άνοιγμα στο πρόγραμμα περιήγησης"
 msgid "Waiting to be sent"
 msgstr "Αναμονή για αποστολή"
 
-#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:820
+#: app/src/ui/calendar/block.rs:571 app/src/ui/calendar/popover.rs:826
 msgid "Not answered yet"
 msgstr "Δεν έχει απαντηθεί ακόμα"
 
@@ -6653,7 +6670,8 @@ msgstr "Συσκέψεις"
 msgid "Decline"
 msgstr "Απόρριψη"
 
-#: app/src/ui/calendar/editor.rs:627
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1398
+#: app/src/ui/contacts/mod.rs:1411
 msgid "None"
 msgstr "Καμία"
 
@@ -6717,7 +6735,7 @@ msgstr "Κάθε"
 msgid "Unit"
 msgstr "Μονάδα"
 
-#: app/src/ui/calendar/editor.rs:1009
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:171
 msgid "On"
 msgstr "Τις ημέρες"
 
@@ -6790,7 +6808,8 @@ msgid "Remove reminder"
 msgstr "Αφαίρεση υπενθύμισης"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:410
+#: app/src/ui/contacts/editor.rs:448 app/src/ui/contacts/person.rs:475
 msgid "Notes"
 msgstr "Σημειώσεις"
 
@@ -6863,9 +6882,9 @@ msgid "Only people who can change this calendar see the details"
 msgstr ""
 "Τις λεπτομέρειες βλέπουν μόνο όσοι μπορούν να αλλάξουν αυτό το ημερολόγιο"
 
-#: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/sidebar.rs:2241
-#: app/src/ui/sidebar.rs:2542
+#: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2278
+#: app/src/ui/sidebar.rs:2579
 msgid "Color"
 msgstr "Χρώμα"
 
@@ -6877,7 +6896,7 @@ msgstr "Χρώμα ημερολογίου"
 msgid "Add Google Meet"
 msgstr "Προσθήκη Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2441
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/calendar/mod.rs:2444
 #: app/src/ui/calendar/quick.rs:55
 msgid "Event"
 msgstr "Συμβάν"
@@ -7131,7 +7150,8 @@ msgstr "Βιετνάμ"
 msgid "Working location"
 msgstr "Τοποθεσία εργασίας"
 
-#: app/src/ui/calendar/kinds.rs:62
+#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:393
+#: app/src/ui/contacts/editor.rs:446 app/src/ui/contacts/person.rs:437
 msgid "Birthday"
 msgstr "Γενέθλια"
 
@@ -7197,47 +7217,47 @@ msgstr[1] ""
 msgid "A calendar of your own on {account}, on every device."
 msgstr "Ένα δικό σας ημερολόγιο στον λογαριασμό {account}, σε κάθε συσκευή."
 
-#: app/src/ui/calendar/manage.rs:153
+#: app/src/ui/calendar/manage.rs:156
 msgid "Could not change the calendar list: {reason}"
 msgstr "Αδυναμία αλλαγής της λίστας ημερολογίων: {reason}"
 
-#: app/src/ui/calendar/manage.rs:163 app/src/ui/window/organize.rs:270
+#: app/src/ui/calendar/manage.rs:166 app/src/ui/window/organize.rs:270
 msgid "Could not change the color: {reason}"
 msgstr "Αδυναμία αλλαγής του χρώματος: {reason}"
 
-#: app/src/ui/calendar/manage.rs:279
+#: app/src/ui/calendar/manage.rs:282
 msgid "Rename Calendar"
 msgstr "Μετονομασία ημερολογίου"
 
-#: app/src/ui/calendar/manage.rs:284 app/src/ui/calendar/manage.rs:407
+#: app/src/ui/calendar/manage.rs:287 app/src/ui/calendar/manage.rs:410
 msgid "Calendar name"
 msgstr "Όνομα ημερολογίου"
 
-#: app/src/ui/calendar/manage.rs:288 app/src/ui/window/organize.rs:128
+#: app/src/ui/calendar/manage.rs:291 app/src/ui/window/organize.rs:128
 msgid "Rename"
 msgstr "Μετονομασία"
 
-#: app/src/ui/calendar/manage.rs:309
+#: app/src/ui/calendar/manage.rs:312
 msgid "Could not rename the calendar: {reason}"
 msgstr "Αδυναμία μετονομασίας του ημερολογίου: {reason}"
 
-#: app/src/ui/calendar/manage.rs:333
+#: app/src/ui/calendar/manage.rs:336
 msgid "Delete “{calendar}”?"
 msgstr "Διαγραφή του «{calendar}»;"
 
-#: app/src/ui/calendar/manage.rs:345
+#: app/src/ui/calendar/manage.rs:348
 msgid "Deleted “{calendar}”"
 msgstr "Το «{calendar}» διαγράφηκε"
 
-#: app/src/ui/calendar/manage.rs:352
+#: app/src/ui/calendar/manage.rs:355
 msgid "Could not delete the calendar: {reason}"
 msgstr "Αδυναμία διαγραφής του ημερολογίου: {reason}"
 
-#: app/src/ui/calendar/manage.rs:370
+#: app/src/ui/calendar/manage.rs:373
 msgid "Unsubscribe from “{calendar}”?"
 msgstr "Κατάργηση εγγραφής από το «{calendar}»;"
 
-#: app/src/ui/calendar/manage.rs:374
+#: app/src/ui/calendar/manage.rs:377
 msgid ""
 "It leaves your calendar list in Google Calendar on every device. You can "
 "subscribe to it again later."
@@ -7245,35 +7265,35 @@ msgstr ""
 "Αφαιρείται από τη λίστα ημερολογίων σας στο Google Calendar σε κάθε συσκευή. "
 "Μπορείτε να εγγραφείτε ξανά αργότερα."
 
-#: app/src/ui/calendar/manage.rs:377 app/src/ui/conversation.rs:457
+#: app/src/ui/calendar/manage.rs:380 app/src/ui/conversation.rs:457
 #: app/src/ui/unsubscribe.rs:143
 msgid "Unsubscribe"
 msgstr "Κατάργηση εγγραφής"
 
-#: app/src/ui/calendar/manage.rs:387
+#: app/src/ui/calendar/manage.rs:390
 msgid "Could not unsubscribe: {reason}"
 msgstr "Αδυναμία κατάργησης εγγραφής: {reason}"
 
-#: app/src/ui/calendar/manage.rs:400
+#: app/src/ui/calendar/manage.rs:403
 msgid "New Calendar"
 msgstr "Νέο ημερολόγιο"
 
-#: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
+#: app/src/ui/calendar/manage.rs:441 app/src/ui/hide_my_email.rs:701
 #: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:322
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:363
 msgid "Create"
 msgstr "Δημιουργία"
 
-#: app/src/ui/calendar/manage.rs:462
+#: app/src/ui/calendar/manage.rs:465
 msgid "Could not make the calendar: {reason}"
 msgstr "Αδυναμία δημιουργίας του ημερολογίου: {reason}"
 
-#: app/src/ui/calendar/manage.rs:473
+#: app/src/ui/calendar/manage.rs:476
 msgid "Subscribe to Calendar"
 msgstr "Εγγραφή σε ημερολόγιο"
 
-#: app/src/ui/calendar/manage.rs:475
+#: app/src/ui/calendar/manage.rs:478
 msgid ""
 "Enter the address of a published calendar, starting with https or webcal. "
 "Google Calendar fetches it from then on and shows it on every device. You "
@@ -7283,43 +7303,43 @@ msgstr ""
 "ή webcal. Από εκεί και πέρα το Google Calendar το λαμβάνει και το εμφανίζει "
 "σε κάθε συσκευή. Μπορείτε να το διαβάζετε αλλά όχι να το αλλάζετε."
 
-#: app/src/ui/calendar/manage.rs:485
+#: app/src/ui/calendar/manage.rs:488
 msgid "Calendar address"
 msgstr "Διεύθυνση ημερολογίου"
 
-#: app/src/ui/calendar/manage.rs:489
+#: app/src/ui/calendar/manage.rs:492
 msgid "Subscribe"
 msgstr "Εγγραφή"
 
-#: app/src/ui/calendar/manage.rs:512
+#: app/src/ui/calendar/manage.rs:515
 msgid "Subscribed. The events arrive once Google Calendar reads the address."
 msgstr ""
 "Η εγγραφή ολοκληρώθηκε. Τα συμβάντα θα εμφανιστούν μόλις το Google Calendar "
 "διαβάσει τη διεύθυνση."
 
-#: app/src/ui/calendar/manage.rs:514
+#: app/src/ui/calendar/manage.rs:517
 msgid "Could not subscribe: {reason}"
 msgstr "Αδυναμία εγγραφής: {reason}"
 
-#: app/src/ui/calendar/manage.rs:527
+#: app/src/ui/calendar/manage.rs:530
 msgid "Public holidays from Google Calendar, added to {account}."
 msgstr ""
 "Επίσημες αργίες από το Google Calendar, που προστίθενται στον λογαριασμό "
 "{account}."
 
-#: app/src/ui/calendar/manage.rs:540
+#: app/src/ui/calendar/manage.rs:543
 msgid "Holiday Calendars"
 msgstr "Ημερολόγια αργιών"
 
-#: app/src/ui/calendar/manage.rs:555
+#: app/src/ui/calendar/manage.rs:558
 msgid "Added"
 msgstr "Προστέθηκε"
 
-#: app/src/ui/calendar/manage.rs:573
+#: app/src/ui/calendar/manage.rs:576
 msgid "Add holidays in {region}"
 msgstr "Προσθήκη αργιών: {region}"
 
-#: app/src/ui/calendar/manage.rs:591
+#: app/src/ui/calendar/manage.rs:594
 msgid "Could not add the holidays: {reason}"
 msgstr "Αδυναμία προσθήκης των αργιών: {reason}"
 
@@ -7328,7 +7348,7 @@ msgid "View"
 msgstr "Προβολή"
 
 #: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:384
-#: app/src/ui/calendar/mod.rs:2426
+#: app/src/ui/calendar/mod.rs:2429
 msgid "New Event (N)"
 msgstr "Νέο συμβάν (N)"
 
@@ -7353,71 +7373,72 @@ msgstr "Βοηθός (Ctrl+J)"
 msgid "Search the Calendar"
 msgstr "Αναζήτηση στο ημερολόγιο"
 
-#: app/src/ui/calendar/mod.rs:510 app/src/ui/calendar/ports.rs:470
+#: app/src/ui/calendar/mod.rs:510 app/src/ui/calendar/ports.rs:504
 msgid "Loading older events"
 msgstr "Φόρτωση παλαιότερων συμβάντων"
 
-#: app/src/ui/calendar/mod.rs:939 app/src/ui/window/shortcuts.rs:575
+#: app/src/ui/calendar/mod.rs:942 app/src/ui/window/shortcuts.rs:580
 msgid "Go to date"
 msgstr "Μετάβαση σε ημερομηνία"
 
-#: app/src/ui/calendar/mod.rs:1381
+#: app/src/ui/calendar/mod.rs:1384
 msgid "Moved “{title}”"
 msgstr "Το «{title}» μετακινήθηκε"
 
-#: app/src/ui/calendar/mod.rs:1382
+#: app/src/ui/calendar/mod.rs:1385
 msgid "Could not move the event: {reason}"
 msgstr "Αδυναμία μετακίνησης του συμβάντος: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1513
+#: app/src/ui/calendar/mod.rs:1516
 msgid "All-day events"
 msgstr "Ολοήμερα συμβάντα"
 
-#: app/src/ui/calendar/mod.rs:1515
+#: app/src/ui/calendar/mod.rs:1518
 msgid "All-day"
 msgstr "Ολοήμερα"
 
-#: app/src/ui/calendar/mod.rs:1820 app/src/ui/calendar/mod.rs:3073
+#: app/src/ui/calendar/mod.rs:1823 app/src/ui/calendar/mod.rs:3106
 #: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
 #: app/src/ui/preferences.rs:1426 app/src/ui/preferences.rs:1614
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2143
+#: app/src/ui/calendar/mod.rs:2146
 msgid "Removed “{title}” from your calendar"
 msgstr "Το «{title}» αφαιρέθηκε από το ημερολόγιό σας"
 
-#: app/src/ui/calendar/mod.rs:2144
+#: app/src/ui/calendar/mod.rs:2147
 msgid "Deleted “{title}”"
 msgstr "Το «{title}» διαγράφηκε"
 
-#: app/src/ui/calendar/mod.rs:2157
+#: app/src/ui/calendar/mod.rs:2160
 msgid "Could not delete the event: {reason}"
 msgstr "Αδυναμία διαγραφής του συμβάντος: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2210 app/src/ui/composer/mod.rs:1504
+#: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
+#: app/src/ui/contacts/mod.rs:282 app/src/ui/contacts/mod.rs:1449
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Αναίρεση"
 
-#: app/src/ui/calendar/mod.rs:2367
+#: app/src/ui/calendar/mod.rs:2370
 msgid "Could not send your answer: {reason}"
 msgstr "Αδυναμία αποστολής της απάντησής σας: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2430
+#: app/src/ui/calendar/mod.rs:2433
 msgid "None of your calendars take new events"
 msgstr "Κανένα από τα ημερολόγιά σας δεν δέχεται νέα συμβάντα"
 
-#: app/src/ui/calendar/mod.rs:2442 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2445 app/src/ui/calendar/quick.rs:56
 msgid "Focus Time"
 msgstr "Χρόνος συγκέντρωσης"
 
-#: app/src/ui/calendar/mod.rs:2443 app/src/ui/calendar/quick.rs:57
+#: app/src/ui/calendar/mod.rs:2446 app/src/ui/calendar/quick.rs:57
 msgid "Out of Office"
 msgstr "Εκτός γραφείου"
 
-#: app/src/ui/calendar/mod.rs:2812
+#: app/src/ui/calendar/mod.rs:2815
 msgid "Could not save the event: {reason}"
 msgstr "Αδυναμία αποθήκευσης του συμβάντος: {reason}"
 
@@ -7466,11 +7487,11 @@ msgstr "Εμφάνιση περισσότερων σημειώσεων"
 msgid "Show all"
 msgstr "Εμφάνιση όλων"
 
-#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:903
+#: app/src/ui/calendar/popover.rs:300 app/src/ui/calendar/popover.rs:909
 msgid "Show all guests"
 msgstr "Εμφάνιση όλων των προσκεκλημένων"
 
-#: app/src/ui/calendar/popover.rs:319 app/src/ui/calendar/popover.rs:822
+#: app/src/ui/calendar/popover.rs:319 app/src/ui/calendar/popover.rs:828
 #: app/src/ui/invitation.rs:326
 msgid "Answer"
 msgstr "Απάντηση"
@@ -7508,15 +7529,20 @@ msgstr "Άνοιγμα της πρόσκλησης στην Αλληλογραφ
 msgid "{when}, {zone}"
 msgstr "{when}, {zone}"
 
-#: app/src/ui/calendar/popover.rs:758
+#: app/src/ui/calendar/popover.rs:748
+msgid "Birthday from your contacts. Edit the contact to change it."
+msgstr ""
+"Γενέθλια από τις επαφές σας. Επεξεργαστείτε την επαφή για να τα αλλάξετε."
+
+#: app/src/ui/calendar/popover.rs:764
 msgid "Remove from My Calendar"
 msgstr "Αφαίρεση από το ημερολόγιό μου"
 
-#: app/src/ui/calendar/popover.rs:836
+#: app/src/ui/calendar/popover.rs:842
 msgid "Your answer"
 msgstr "Η απάντησή σας"
 
-#: app/src/ui/calendar/ports.rs:469
+#: app/src/ui/calendar/ports.rs:503
 msgid "Older events can't load while offline"
 msgstr "Τα παλαιότερα συμβάντα δεν μπορούν να φορτωθούν χωρίς σύνδεση"
 
@@ -7540,7 +7566,7 @@ msgstr "Ημερολόγιο: {name}"
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:115 app/src/ui/calendar/sidebar.rs:954
+#: app/src/ui/calendar/range.rs:115 app/src/ui/calendar/sidebar.rs:979
 msgid "%B %Y"
 msgstr "%b %Y"
 
@@ -7674,128 +7700,132 @@ msgstr "Επόμενη εβδομάδα"
 msgid "Previous Week"
 msgstr "Προηγούμενη εβδομάδα"
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:598
+#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:610
 msgid "Next Month"
 msgstr "Επόμενος μήνας"
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:597
+#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:609
 msgid "Previous Month"
 msgstr "Προηγούμενος μήνας"
 
-#: app/src/ui/calendar/sidebar.rs:690
+#: app/src/ui/calendar/sidebar.rs:692 app/src/ui/calendar/sidebar.rs:696
+msgid "Birthdays"
+msgstr "Γενέθλια"
+
+#: app/src/ui/calendar/sidebar.rs:714
 msgid "Waiting for your answer"
 msgstr "Αναμονή για την απάντησή σας"
 
-#: app/src/ui/calendar/sidebar.rs:851
+#: app/src/ui/calendar/sidebar.rs:876
 msgid "Open mail"
 msgstr "Άνοιγμα μηνύματος"
 
-#: app/src/ui/calendar/sidebar.rs:998
+#: app/src/ui/calendar/sidebar.rs:1023
 msgid "Grant Access to show shared calendars"
 msgstr "Παραχώρηση πρόσβασης για εμφάνιση των κοινόχρηστων ημερολογίων"
 
-#: app/src/ui/calendar/sidebar.rs:1004
+#: app/src/ui/calendar/sidebar.rs:1029
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Το Penguin Mail δεν έχει πρόσβαση στα ημερολόγια αυτού του λογαριασμού"
 
-#: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:384
+#: app/src/ui/calendar/sidebar.rs:1041 app/src/ui/contacts_prefs.rs:384
 #: app/src/ui/preferences/google_route.rs:287
 msgid "Not connected"
 msgstr "Δεν είναι συνδεδεμένο"
 
-#: app/src/ui/calendar/sidebar.rs:1110
+#: app/src/ui/calendar/sidebar.rs:1135
 msgid "Show or hide this account's calendars"
 msgstr "Εμφάνιση ή απόκρυψη των ημερολογίων αυτού του λογαριασμού"
 
-#: app/src/ui/calendar/sidebar.rs:1190
+#: app/src/ui/calendar/sidebar.rs:1215
 msgid "Calendar options"
 msgstr "Επιλογές ημερολογίου"
 
-#: app/src/ui/calendar/sidebar.rs:1195
+#: app/src/ui/calendar/sidebar.rs:1220
 msgid "Options for {calendar}"
 msgstr "Επιλογές για το {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1238 app/src/ui/contacts_prefs.rs:387
+#: app/src/ui/calendar/sidebar.rs:1263 app/src/ui/contacts_prefs.rs:387
 #: app/src/ui/preferences/google_route.rs:396
 msgid "Connect"
 msgstr "Σύνδεση"
 
-#: app/src/ui/calendar/sidebar.rs:1245 app/src/ui/contacts_prefs.rs:393
+#: app/src/ui/calendar/sidebar.rs:1270 app/src/ui/contacts_prefs.rs:393
 #: app/src/ui/preferences/google_route.rs:280
 msgid "Connect the calendar for {account}"
 msgstr "Σύνδεση του ημερολογίου για το {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1267 app/src/ui/contacts_prefs.rs:503
+#: app/src/ui/calendar/sidebar.rs:1292 app/src/ui/contacts_prefs.rs:503
 msgid "Grant Access for {account}"
 msgstr "Παραχώρηση πρόσβασης για {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1296
+#: app/src/ui/calendar/sidebar.rs:1321
 msgid "Sign in again to {account}"
 msgstr "Συνδεθείτε ξανά στο {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1309 app/src/ui/sidebar.rs:2547
+#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2584
 msgid "Sign In Again…"
 msgstr "Νέα σύνδεση…"
 
-#: app/src/ui/calendar/sidebar.rs:1310 app/src/ui/sidebar.rs:2555
+#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2592
 msgid "Remove Account…"
 msgstr "Αφαίρεση λογαριασμού…"
 
-#: app/src/ui/calendar/sidebar.rs:1324 app/src/ui/sidebar.rs:2562
+#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2599
 msgid "Account options"
 msgstr "Επιλογές λογαριασμού"
 
-#: app/src/ui/calendar/sidebar.rs:1329 app/src/ui/sidebar.rs:2567
+#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2604
 msgid "Options for {account}"
 msgstr "Επιλογές για {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1424
+#: app/src/ui/calendar/sidebar.rs:1449
 msgid "{address}. You can only read this calendar"
 msgstr "{address}. Μπορείτε μόνο να διαβάσετε αυτό το ημερολόγιο"
 
-#: app/src/ui/calendar/sidebar.rs:1448
+#: app/src/ui/calendar/sidebar.rs:1473
 msgid "New Calendar…"
 msgstr "Νέο ημερολόγιο…"
 
-#: app/src/ui/calendar/sidebar.rs:1449
+#: app/src/ui/calendar/sidebar.rs:1474
 msgid "Subscribe to Calendar…"
 msgstr "Εγγραφή σε ημερολόγιο…"
 
-#: app/src/ui/calendar/sidebar.rs:1450
+#: app/src/ui/calendar/sidebar.rs:1475
 msgid "Holiday Calendars…"
 msgstr "Ημερολόγια αργιών…"
 
-#: app/src/ui/calendar/sidebar.rs:1498
+#: app/src/ui/calendar/sidebar.rs:1523
 msgid "Hide from the List"
 msgstr "Απόκρυψη από τη λίστα"
 
-#: app/src/ui/calendar/sidebar.rs:1511
+#: app/src/ui/calendar/sidebar.rs:1536
 msgid "Original Color"
 msgstr "Αρχικό χρώμα"
 
-#: app/src/ui/calendar/sidebar.rs:1523 app/src/ui/sidebar.rs:2229
-#: app/src/ui/sidebar.rs:2532
+#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2266
+#: app/src/ui/sidebar.rs:2569
 msgid "Rename…"
 msgstr "Μετονομασία…"
 
-#: app/src/ui/calendar/sidebar.rs:1524 app/src/ui/sidebar.rs:2130
-#: app/src/ui/sidebar.rs:2257
+#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2167
+#: app/src/ui/sidebar.rs:2294
 msgid "Delete…"
 msgstr "Διαγραφή…"
 
-#: app/src/ui/calendar/sidebar.rs:1527 app/src/ui/conversation.rs:662
+#: app/src/ui/calendar/sidebar.rs:1552 app/src/ui/conversation.rs:662
 msgid "Unsubscribe…"
 msgstr "Κατάργηση εγγραφής…"
 
-#: app/src/ui/calendar/sidebar.rs:1554
+#: app/src/ui/calendar/sidebar.rs:1579
 msgid "Show {calendar}"
 msgstr "Εμφάνιση {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1572
+#: app/src/ui/calendar/sidebar.rs:1597
 msgid "Hidden Calendars"
 msgstr "Κρυφά ημερολόγια"
 
-#: app/src/ui/calendar/sidebar.rs:1592
+#: app/src/ui/calendar/sidebar.rs:1617
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] "{count} κρυφό ημερολόγιο"
@@ -7869,7 +7899,7 @@ msgstr "Google Meet"
 msgid "Microsoft Teams"
 msgstr "Microsoft Teams"
 
-#: app/src/ui/calendar/words.rs:321
+#: app/src/ui/calendar/words.rs:321 app/src/ui/contacts/photo.rs:116
 msgid "Zoom"
 msgstr "Zoom"
 
@@ -7901,7 +7931,7 @@ msgstr "{date}, έχει συμβάντα"
 msgid "Offline, last updated {time}"
 msgstr "Εκτός σύνδεσης, τελευταία ενημέρωση {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2627
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2664
 msgid "Offline"
 msgstr "Εκτός σύνδεσης"
 
@@ -8034,7 +8064,7 @@ msgid "Choose a Time…"
 msgstr "Επιλογή ώρας…"
 
 #: app/src/ui/composer/mod.rs:444 app/src/ui/composer/mod.rs:2178
-#: app/src/ui/sidebar.rs:1480 app/src/ui/sidebar.rs:2010
+#: app/src/ui/sidebar.rs:1516 app/src/ui/sidebar.rs:2047
 msgid "Send Later"
 msgstr "Αποστολή αργότερα"
 
@@ -8220,7 +8250,7 @@ msgstr "Το πρόχειρο αποθηκεύτηκε"
 msgid "Save as Draft?"
 msgstr "Αποθήκευση ως πρόχειρο;"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2384 app/src/ui/contacts/mod.rs:1629
 msgid "Discard"
 msgstr "Απόρριψη"
 
@@ -8456,29 +8486,816 @@ msgstr "Προσθήκη στο λεξικό"
 msgid "Ignore"
 msgstr "Παράβλεψη"
 
-#: app/src/ui/contact_card.rs:115
+#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:319
+#: app/src/ui/contacts/person.rs:369 app/src/ui/contacts/person.rs:850
 msgid "Email"
 msgstr "Email"
 
-#: app/src/ui/contact_card.rs:117
+#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:320
+#: app/src/ui/contacts/person.rs:371
 msgid "Other email"
 msgstr "Άλλο email"
 
-#: app/src/ui/contact_card.rs:138
+#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:333
+#: app/src/ui/contacts/person.rs:396 app/src/ui/contacts/person.rs:856
 msgid "Phone"
 msgstr "Τηλέφωνο"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/sidebar.rs:1443
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:242
+#: app/src/ui/sidebar.rs:1479
 msgid "Remove from VIPs"
 msgstr "Αφαίρεση από τις επαφές VIP"
 
-#: app/src/ui/contact_card.rs:180
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:244
 msgid "Add to VIPs"
 msgstr "Προσθήκη στις επαφές VIP"
 
-#: app/src/ui/contact_card.rs:191
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:282
+#: app/src/ui/contacts/person.rs:1107
 msgid "All Their Mail"
 msgstr "Όλη η αλληλογραφία της επαφής"
+
+#: app/src/ui/contacts/editor.rs:121
+msgid "Remove Field"
+msgstr "Αφαίρεση πεδίου"
+
+#: app/src/ui/contacts/editor.rs:302
+msgid "Full name"
+msgstr "Πλήρες όνομα"
+
+#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:853
+msgid "Organization"
+msgstr "Οργανισμός"
+
+#: app/src/ui/contacts/editor.rs:310
+msgid "Add organization"
+msgstr "Προσθήκη οργανισμού"
+
+#: app/src/ui/contacts/editor.rs:318
+msgid "Add email"
+msgstr "Προσθήκη email"
+
+#: app/src/ui/contacts/editor.rs:327
+msgid "name@example.com"
+msgstr "onoma@paradeigma.gr"
+
+#: app/src/ui/contacts/editor.rs:331
+msgid "Add phone"
+msgstr "Προσθήκη τηλεφώνου"
+
+#: app/src/ui/contacts/editor.rs:339
+msgid "Add postal address"
+msgstr "Προσθήκη ταχυδρομικής διεύθυνσης"
+
+#: app/src/ui/contacts/editor.rs:342
+msgid "PO box"
+msgstr "Ταχυδρομική θυρίδα"
+
+#: app/src/ui/contacts/editor.rs:343
+msgid "Extended address"
+msgstr "Επιπλέον διεύθυνση"
+
+#: app/src/ui/contacts/editor.rs:344
+msgid "Street"
+msgstr "Οδός"
+
+#: app/src/ui/contacts/editor.rs:345
+msgid "City"
+msgstr "Πόλη"
+
+#: app/src/ui/contacts/editor.rs:346
+msgid "Region"
+msgstr "Περιοχή"
+
+#: app/src/ui/contacts/editor.rs:347
+msgid "Postal code"
+msgstr "Ταχυδρομικός κώδικας"
+
+#: app/src/ui/contacts/editor.rs:348
+msgid "Country"
+msgstr "Χώρα"
+
+#: app/src/ui/contacts/editor.rs:355
+msgid "Add website"
+msgstr "Προσθήκη ιστότοπου"
+
+#: app/src/ui/contacts/editor.rs:363
+msgid "Add group"
+msgstr "Προσθήκη ομάδας"
+
+#: app/src/ui/contacts/editor.rs:365
+msgid "Group"
+msgstr "Ομάδα"
+
+#: app/src/ui/contacts/editor.rs:371
+msgid "Add date"
+msgstr "Προσθήκη ημερομηνίας"
+
+#: app/src/ui/contacts/editor.rs:373
+msgid "Date"
+msgstr "Ημερομηνία"
+
+#: app/src/ui/contacts/editor.rs:373 app/src/ui/contacts/editor.rs:384
+msgid "Label"
+msgstr "Ετικέτα"
+
+#: app/src/ui/contacts/editor.rs:382
+msgid "Add custom field"
+msgstr "Προσθήκη προσαρμοσμένου πεδίου"
+
+#: app/src/ui/contacts/editor.rs:384
+msgid "Value"
+msgstr "Τιμή"
+
+#: app/src/ui/contacts/editor.rs:395
+msgid "YYYY-MM-DD"
+msgstr "ΕΕΕΕ-ΜΜ-ΗΗ"
+
+#: app/src/ui/contacts/editor.rs:437
+msgid "Postal addresses"
+msgstr "Ταχυδρομικές διευθύνσεις"
+
+#: app/src/ui/contacts/editor.rs:438
+msgid "Websites"
+msgstr "Ιστότοποι"
+
+#: app/src/ui/contacts/editor.rs:439 app/src/ui/contacts/person.rs:461
+#: app/src/ui/contacts/side.rs:121
+msgid "Groups"
+msgstr "Ομάδες"
+
+#: app/src/ui/contacts/editor.rs:440
+msgid "Other dates"
+msgstr "Άλλες ημερομηνίες"
+
+#: app/src/ui/contacts/editor.rs:441
+msgid "Custom fields"
+msgstr "Προσαρμοσμένα πεδία"
+
+#: app/src/ui/contacts/editor.rs:510
+msgid ""
+"A new contact is saved into one account. The other accounts do not get a "
+"copy. Add a name or an email. Save stays off until one of those is filled in."
+msgstr ""
+"Μια νέα επαφή αποθηκεύεται σε έναν λογαριασμό. Οι άλλοι λογαριασμοί δεν "
+"παίρνουν αντίγραφο. Προσθέστε όνομα ή email. Η Αποθήκευση μένει ανενεργή "
+"μέχρι να συμπληρωθεί ένα από τα δύο."
+
+#: app/src/ui/contacts/editor.rs:530
+msgid "Unsaved changes"
+msgstr "Μη αποθηκευμένες αλλαγές"
+
+#: app/src/ui/contacts/editor.rs:581 app/src/ui/contacts/mod.rs:1340
+msgid "New contact"
+msgstr "Νέα επαφή"
+
+#: app/src/ui/contacts/editor.rs:583
+msgid "Edit contact"
+msgstr "Επεξεργασία επαφής"
+
+#: app/src/ui/contacts/editor.rs:638 app/src/ui/contacts/mod.rs:1089
+#: app/src/ui/contacts/person.rs:1179
+msgid "Turn contacts on for an account first."
+msgstr "Ενεργοποιήστε πρώτα τις επαφές για έναν λογαριασμό."
+
+#: app/src/ui/contacts/editor.rs:642 app/src/ui/contacts/editor.rs:647
+#: app/src/ui/contacts/person.rs:1176 app/src/ui/contacts/person.rs:1183
+msgid "Save to"
+msgstr "Αποθήκευση σε"
+
+#: app/src/ui/contacts/editor.rs:667
+msgid "Which account"
+msgstr "Ποιος λογαριασμός"
+
+#: app/src/ui/contacts/editor.rs:706
+msgid "Replace Photo"
+msgstr "Αντικατάσταση φωτογραφίας"
+
+#: app/src/ui/contacts/editor.rs:708
+msgid "Add Photo"
+msgstr "Προσθήκη φωτογραφίας"
+
+#: app/src/ui/contacts/editor.rs:712
+msgid "Remove Photo"
+msgstr "Αφαίρεση φωτογραφίας"
+
+#: app/src/ui/contacts/editor.rs:773 app/src/ui/contacts/person.rs:775
+msgid "Delete {name} from {account}"
+msgstr "Διαγραφή του {name} από το {account}"
+
+#: app/src/ui/contacts/editor.rs:829
+msgid "Enter a name or an email address."
+msgstr "Εισαγάγετε ένα όνομα ή μια διεύθυνση email."
+
+#: app/src/ui/contacts/editor.rs:835
+msgid "Enter a valid email address."
+msgstr "Εισαγάγετε μια έγκυρη διεύθυνση email."
+
+#: app/src/ui/contacts/editor.rs:838
+msgid "Contacts access for this account was turned off."
+msgstr "Η πρόσβαση στις επαφές αυτού του λογαριασμού απενεργοποιήθηκε."
+
+#: app/src/ui/contacts/editor.rs:882
+msgid "Could not save the contact: {reason}"
+msgstr "Δεν ήταν δυνατή η αποθήκευση της επαφής: {reason}"
+
+#: app/src/ui/contacts/editor.rs:927
+msgid ""
+"Editing the {account} contact. The All contacts row uses this name. "
+"{other_account} still has {other}, and linking does not change that record. "
+"Nothing is written until you press Save."
+msgstr ""
+"Επεξεργάζεστε την επαφή του {account}. Η γραμμή στις Όλες οι επαφές "
+"χρησιμοποιεί αυτό το όνομα. Το {other_account} εξακολουθεί να έχει το "
+"{other} και η σύνδεση δεν αλλάζει αυτή την εγγραφή. Τίποτα δεν γράφεται "
+"μέχρι να πατήσετε Αποθήκευση."
+
+#: app/src/ui/contacts/editor.rs:938
+msgid ""
+"Editing the {account} contact for {name}. {other_account} keeps {other}. "
+"Nothing is written until you press Save."
+msgstr ""
+"Επεξεργάζεστε την επαφή του {account} για το {name}. Το {other_account} "
+"κρατά το {other}. Τίποτα δεν γράφεται μέχρι να πατήσετε Αποθήκευση."
+
+#: app/src/ui/contacts/editor.rs:961
+msgid "Editing the {account} contact. Nothing is written until you press Save."
+msgstr ""
+"Επεξεργάζεστε την επαφή του {account}. Τίποτα δεν γράφεται μέχρι να πατήσετε "
+"Αποθήκευση."
+
+#: app/src/ui/contacts/editor.rs:967
+msgid ""
+"Editing the {account} contact. {others} keeps its own. Nothing is written "
+"until you press Save."
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
+"Επεξεργάζεστε την επαφή του {account}. Το {others} κρατά τη δική του. Τίποτα "
+"δεν γράφεται μέχρι να πατήσετε Αποθήκευση."
+msgstr[1] ""
+"Επεξεργάζεστε την επαφή του {account}. Τα {others} κρατούν τις δικές τους. "
+"Τίποτα δεν γράφεται μέχρι να πατήσετε Αποθήκευση."
+
+#: app/src/ui/contacts/mod.rs:227 app/src/ui/contacts/side.rs:193
+msgid "Turn Off Contacts"
+msgstr "Απενεργοποίηση επαφών"
+
+#: app/src/ui/contacts/mod.rs:303
+msgid "Turn on Contacts for your Google project"
+msgstr "Ενεργοποιήστε τις Επαφές για το έργο σας στο Google"
+
+#: app/src/ui/contacts/mod.rs:448
+msgid "Selected"
+msgstr "Επιλεγμένο"
+
+#: app/src/ui/contacts/mod.rs:710
+msgid "Could not load contacts: {reason}"
+msgstr "Δεν ήταν δυνατή η φόρτωση των επαφών: {reason}"
+
+#: app/src/ui/contacts/mod.rs:851
+msgid "Deletes {name} in {account}"
+msgstr "Διαγράφει το {name} στο {account}"
+
+#: app/src/ui/contacts/mod.rs:877
+msgid "Keeps both contacts. Nothing is deleted."
+msgstr "Και οι δύο επαφές διατηρούνται. Τίποτα δεν διαγράφεται."
+
+#: app/src/ui/contacts/mod.rs:910
+msgid "Seen in {count} message"
+msgid_plural "Seen in {count} messages"
+msgstr[0] "Εμφανίστηκε σε {count} μήνυμα"
+msgstr[1] "Εμφανίστηκε σε {count} μηνύματα"
+
+#: app/src/ui/contacts/mod.rs:1036 app/src/ui/contacts/mod.rs:1088
+msgid "Contacts are off"
+msgstr "Οι επαφές είναι ανενεργές"
+
+#: app/src/ui/contacts/mod.rs:1040
+msgid ""
+"{account} keeps its address book on this computer. Turn contacts on to show "
+"it here."
+msgstr ""
+"Ο λογαριασμός {account} κρατά το βιβλίο διευθύνσεών του σε αυτόν τον "
+"υπολογιστή. Ενεργοποιήστε τις επαφές για να εμφανιστεί εδώ."
+
+#: app/src/ui/contacts/mod.rs:1044
+msgid ""
+"{account} can keep an address book. That book is on the server, not on this "
+"computer. Turn contacts on to copy it here. Turning contacts off later "
+"deletes that copy."
+msgstr ""
+"Το {account} μπορεί να κρατά βιβλίο διευθύνσεων. Αυτό το βιβλίο βρίσκεται "
+"στον διακομιστή, όχι σε αυτόν τον υπολογιστή. Ενεργοποιήστε τις επαφές για "
+"να το αντιγράψετε εδώ. Η απενεργοποίησή τους αργότερα διαγράφει αυτό το "
+"αντίγραφο."
+
+#: app/src/ui/contacts/mod.rs:1057
+msgid "No Matching Contacts"
+msgstr "Καμία επαφή δεν ταιριάζει"
+
+#: app/src/ui/contacts/mod.rs:1058
+msgid "Nothing matches that search."
+msgstr "Τίποτα δεν ταιριάζει με αυτή την αναζήτηση."
+
+#: app/src/ui/contacts/mod.rs:1064
+msgid "No shared addresses"
+msgstr "Καμία κοινή διεύθυνση"
+
+#: app/src/ui/contacts/mod.rs:1066
+msgid ""
+"No two contacts in one account share an address. Nothing is waiting to be "
+"deleted."
+msgstr ""
+"Δύο επαφές του ίδιου λογαριασμού δεν έχουν κοινή διεύθυνση. Τίποτα δεν "
+"περιμένει διαγραφή."
+
+#: app/src/ui/contacts/mod.rs:1071
+msgid "No close names"
+msgstr "Κανένα παρόμοιο όνομα"
+
+#: app/src/ui/contacts/mod.rs:1072
+msgid "No two accounts hold a close name that is not linked yet."
+msgstr ""
+"Κανένας λογαριασμός δεν έχει παρόμοιο όνομα που να μην είναι ήδη συνδεδεμένο."
+
+#: app/src/ui/contacts/mod.rs:1076
+msgid "Everyone is a contact"
+msgstr "Όλοι είναι επαφές"
+
+#: app/src/ui/contacts/mod.rs:1077
+msgid "Everyone the mailbox has seen is saved as a contact already."
+msgstr "Όσοι έχει δει το γραμματοκιβώτιο είναι ήδη αποθηκευμένοι ως επαφές."
+
+#: app/src/ui/contacts/mod.rs:1081
+msgid "No VIPs yet"
+msgstr "Κανένα VIP ακόμη"
+
+#: app/src/ui/contacts/mod.rs:1083
+msgid ""
+"Add a person to VIPs from their page, so you can open them from this list."
+msgstr ""
+"Προσθέστε ένα άτομο στα VIP από τη σελίδα του, για να το ανοίγετε από αυτή "
+"τη λίστα."
+
+#: app/src/ui/contacts/mod.rs:1093
+msgid "No contacts yet"
+msgstr "Καμία επαφή ακόμη"
+
+#: app/src/ui/contacts/mod.rs:1095
+msgid ""
+"Contacts are on for this account. Nothing has been copied onto this computer."
+msgstr ""
+"Οι επαφές είναι ενεργές για αυτόν τον λογαριασμό. Τίποτα δεν έχει αντιγραφεί "
+"ακόμη σε αυτόν τον υπολογιστή."
+
+#: app/src/ui/contacts/mod.rs:1120
+msgid "Turn On"
+msgstr "Ενεργοποίηση"
+
+#: app/src/ui/contacts/mod.rs:1148
+msgid "Contacts are on for {account}."
+msgstr "Οι επαφές είναι ενεργές για τον λογαριασμό {account}."
+
+#: app/src/ui/contacts/mod.rs:1149
+msgid "Contacts are on for {account}. The book on this computer is empty."
+msgstr ""
+"Οι επαφές είναι ενεργές για το {account}. Το βιβλίο σε αυτόν τον υπολογιστή "
+"είναι κενό."
+
+#: app/src/ui/contacts/mod.rs:1171
+msgid "Turn Off Contacts?"
+msgstr "Απενεργοποίηση επαφών;"
+
+#: app/src/ui/contacts/mod.rs:1174
+msgid ""
+"Turn off contacts for {account}? Its contacts stay saved on this computer "
+"and come back when you turn them on."
+msgstr ""
+"Απενεργοποίηση των επαφών για το {account}; Οι επαφές μένουν αποθηκευμένες "
+"σε αυτόν τον υπολογιστή και επιστρέφουν όταν τις ενεργοποιήσετε."
+
+#: app/src/ui/contacts/mod.rs:1176
+msgid ""
+"Turn off contacts for {account}? Its contacts are removed from this "
+"computer; the server keeps them."
+msgstr ""
+"Απενεργοποίηση των επαφών για το {account}; Οι επαφές αφαιρούνται από αυτόν "
+"τον υπολογιστή· ο διακομιστής τις κρατά."
+
+#: app/src/ui/contacts/mod.rs:1183
+msgid "Turn Off"
+msgstr "Απενεργοποίηση"
+
+#: app/src/ui/contacts/mod.rs:1210
+msgid "Contacts are off for {account}."
+msgstr "Οι επαφές του {account} είναι απενεργοποιημένες."
+
+#: app/src/ui/contacts/mod.rs:1275
+msgid "Search same address"
+msgstr "Αναζήτηση ίδιας διεύθυνσης"
+
+#: app/src/ui/contacts/mod.rs:1276
+msgid "Search same person"
+msgstr "Αναζήτηση ίδιου ατόμου"
+
+#: app/src/ui/contacts/mod.rs:1277
+msgid "Search correspondents"
+msgstr "Αναζήτηση αλληλογράφων"
+
+#: app/src/ui/contacts/mod.rs:1278
+msgid "Search contacts"
+msgstr "Αναζήτηση επαφών"
+
+#: app/src/ui/contacts/mod.rs:1287
+msgid "{count} selected"
+msgid_plural "{count} selected"
+msgstr[0] "{count} επιλεγμένο"
+msgstr[1] "{count} επιλεγμένα"
+
+#: app/src/ui/contacts/mod.rs:1304
+msgid "Delete {count}"
+msgstr "Διαγραφή {count}"
+
+#: app/src/ui/contacts/mod.rs:1327
+msgid "Select several contacts"
+msgstr "Επιλογή πολλών επαφών"
+
+#: app/src/ui/contacts/mod.rs:1364 app/src/ui/contacts/mod.rs:1388
+msgid "{count} person"
+msgid_plural "{count} people"
+msgstr[0] "{count} άτομο"
+msgstr[1] "{count} άτομα"
+
+#: app/src/ui/contacts/mod.rs:1375
+msgid "{count} of {total}"
+msgstr "{count} από {total}"
+
+#: app/src/ui/contacts/mod.rs:1384 app/src/ui/contacts/side.rs:90
+msgid "All contacts"
+msgstr "Όλες οι επαφές"
+
+#: app/src/ui/contacts/mod.rs:1386 app/src/ui/contacts/side.rs:92
+#: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
+#: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
+msgid "VIPs"
+msgstr "Επαφές VIP"
+
+#: app/src/ui/contacts/mod.rs:1394 app/src/ui/contacts/side.rs:98
+msgid "From mail"
+msgstr "Από την αλληλογραφία"
+
+#: app/src/ui/contacts/mod.rs:1394
+msgid "Not contacts yet"
+msgstr "Δεν είναι επαφές ακόμη"
+
+#: app/src/ui/contacts/mod.rs:1396 app/src/ui/contacts/side.rs:104
+msgid "Same address"
+msgstr "Ίδια διεύθυνση"
+
+#: app/src/ui/contacts/mod.rs:1401 app/src/ui/contacts/mod.rs:1414
+msgid "{count} pair"
+msgid_plural "{count} pairs"
+msgstr[0] "{count} ζεύγος"
+msgstr[1] "{count} ζεύγη"
+
+#: app/src/ui/contacts/mod.rs:1409 app/src/ui/contacts/person.rs:919
+#: app/src/ui/contacts/side.rs:110
+msgid "Same person"
+msgstr "Ίδιο άτομο"
+
+#: app/src/ui/contacts/mod.rs:1624
+msgid "Discard Contact Changes?"
+msgstr "Απόρριψη των αλλαγών στην επαφή;"
+
+#: app/src/ui/contacts/mod.rs:1625
+msgid "Your changes have not been saved to the account."
+msgstr "Οι αλλαγές σας δεν αποθηκεύτηκαν στον λογαριασμό."
+
+#: app/src/ui/contacts/mod.rs:1628
+msgid "Keep Editing"
+msgstr "Συνέχεια επεξεργασίας"
+
+#: app/src/ui/contacts/mod.rs:1692
+msgid "{name} from {account}"
+msgstr "{name} από το {account}"
+
+#: app/src/ui/contacts/mod.rs:1701
+msgid "Deleted {list}."
+msgstr "Διαγράφηκαν: {list}."
+
+#: app/src/ui/contacts/ops.rs:105
+msgid "Grant contacts permission in Preferences, then try again."
+msgstr "Δώστε άδεια για τις επαφές στις Προτιμήσεις και δοκιμάστε ξανά."
+
+#: app/src/ui/contacts/person.rs:74
+msgid "View Photo"
+msgstr "Προβολή φωτογραφίας"
+
+#: app/src/ui/contacts/person.rs:250
+msgid "{name} is in VIPs. Remove them from that list."
+msgstr "Το {name} είναι στα VIP. Αφαιρέστε το από αυτή τη λίστα."
+
+#: app/src/ui/contacts/person.rs:252
+msgid "Add {name} to VIPs"
+msgstr "Προσθήκη του {name} στα VIP"
+
+#: app/src/ui/contacts/person.rs:283 app/src/ui/contacts/person.rs:1108
+msgid "Every conversation with this person"
+msgstr "Κάθε συζήτηση με αυτό το άτομο"
+
+#: app/src/ui/contacts/person.rs:311 app/src/ui/thread_list.rs:305
+msgid "New Message (C)"
+msgstr "Νέο μήνυμα (C)"
+
+#: app/src/ui/contacts/person.rs:343
+msgid "Reach"
+msgstr "Επικοινωνία"
+
+#: app/src/ui/contacts/person.rs:422 app/src/ui/contacts/person.rs:1188
+msgid "Address"
+msgstr "Διεύθυνση"
+
+#: app/src/ui/contacts/person.rs:494
+msgid "You wrote {date}. Waiting on a reply."
+msgstr "Γράψατε στις {date}. Αναμένεται απάντηση."
+
+#: app/src/ui/contacts/person.rs:499
+msgid "Last message, {date}"
+msgstr "Τελευταίο μήνυμα, {date}"
+
+#: app/src/ui/contacts/person.rs:518
+msgid "You last wrote {date}"
+msgstr "Τελευταία φορά γράψατε στις {date}"
+
+#: app/src/ui/contacts/person.rs:520
+msgid "You have not written to them."
+msgstr "Δεν του/της έχετε γράψει."
+
+#: app/src/ui/contacts/person.rs:542 app/src/ui/sidebar.rs:494
+#: app/src/ui/sidebar.rs:564 app/src/ui/sidebar.rs:1942
+#: app/src/ui/thread_list.rs:377
+msgid "Mail"
+msgstr "Αλληλογραφία"
+
+#: app/src/ui/contacts/person.rs:548 app/src/ui/sidebar.rs:2481
+msgid "On this computer"
+msgstr "Σε αυτόν τον υπολογιστή"
+
+#: app/src/ui/contacts/person.rs:593
+msgid "A key for {email} is on this computer."
+msgstr "Υπάρχει κλειδί για το {email} σε αυτόν τον υπολογιστή."
+
+#: app/src/ui/contacts/person.rs:596
+msgid "A key for these addresses is on this computer."
+msgstr "Υπάρχει κλειδί για αυτές τις διευθύνσεις σε αυτόν τον υπολογιστή."
+
+#: app/src/ui/contacts/person.rs:598
+msgid "No key for {email} is on this computer."
+msgstr "Δεν υπάρχει κλειδί για το {email} σε αυτόν τον υπολογιστή."
+
+#: app/src/ui/contacts/person.rs:601
+msgid "No key for these addresses is on this computer."
+msgstr "Δεν υπάρχει κλειδί για αυτές τις διευθύνσεις σε αυτόν τον υπολογιστή."
+
+#: app/src/ui/contacts/person.rs:603
+msgid "OpenPGP key"
+msgstr "Κλειδί OpenPGP"
+
+#: app/src/ui/contacts/person.rs:610
+msgid "Remote images"
+msgstr "Απομακρυσμένες εικόνες"
+
+#: app/src/ui/contacts/person.rs:612
+msgid "Allowed for this sender."
+msgstr "Επιτρέπονται για αυτόν τον αποστολέα."
+
+#: app/src/ui/contacts/person.rs:614
+msgid "Blocked until you allow them."
+msgstr "Αποκλείονται μέχρι να τις επιτρέψετε."
+
+#: app/src/ui/contacts/person.rs:617
+msgid "Remote images, allowed for this sender"
+msgstr "Απομακρυσμένες εικόνες, επιτρέπονται για αυτόν τον αποστολέα"
+
+#: app/src/ui/contacts/person.rs:619
+msgid "Remote images, blocked until you allow them"
+msgstr "Απομακρυσμένες εικόνες, αποκλείονται μέχρι να τις επιτρέψετε"
+
+#: app/src/ui/contacts/person.rs:697
+msgid "Deleted {name} from {account}."
+msgstr "Το {name} διαγράφηκε από το {account}."
+
+#: app/src/ui/contacts/person.rs:705
+msgid "{base} {other} still has this person."
+msgstr "{base} Το {other} εξακολουθεί να έχει αυτό το άτομο."
+
+#: app/src/ui/contacts/person.rs:759
+msgid "Merge in {account}"
+msgstr "Συγχώνευση στο {account}"
+
+#: app/src/ui/contacts/person.rs:808
+msgid ""
+"Both contacts use {email}. {account} keeps one contact and deletes the "
+"other. Other accounts are not changed."
+msgstr ""
+"Και οι δύο επαφές χρησιμοποιούν το {email}. Το {account} κρατά μία επαφή και "
+"διαγράφει την άλλη. Οι άλλοι λογαριασμοί δεν αλλάζουν."
+
+#: app/src/ui/contacts/person.rs:811
+msgid "Which contact"
+msgstr "Ποια επαφή"
+
+#: app/src/ui/contacts/person.rs:839
+msgid "{account} keeps"
+msgstr "Το {account} κρατά"
+
+#: app/src/ui/contacts/person.rs:869
+msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
+msgstr ""
+"Το {name} διαγράφηκε από το {account}. Το {kept} είναι η επαφή που κρατά το "
+"{account}."
+
+#: app/src/ui/contacts/person.rs:930
+msgid "Link"
+msgstr "Σύνδεση"
+
+#: app/src/ui/contacts/person.rs:952
+msgid ""
+"{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
+"addresses differ. Linking keeps both contacts. All contacts shows one row."
+msgstr ""
+"Το {a} είναι στο {account_a}. Το {b} είναι στο {account_b}. Τα ονόματα "
+"διαφέρουν και οι διευθύνσεις διαφέρουν. Η σύνδεση κρατά και τις δύο επαφές. "
+"Οι Όλες οι επαφές δείχνουν μία γραμμή."
+
+#: app/src/ui/contacts/person.rs:960
+msgid "The two contacts"
+msgstr "Οι δύο επαφές"
+
+#: app/src/ui/contacts/person.rs:975
+msgid "Name in All contacts"
+msgstr "Όνομα στις Όλες οι επαφές"
+
+#: app/src/ui/contacts/person.rs:999
+msgid "All contacts will show"
+msgstr "Οι Όλες οι επαφές θα δείχνουν"
+
+#: app/src/ui/contacts/person.rs:1011
+msgid "One row, two accounts"
+msgstr "Μία γραμμή, δύο λογαριασμοί"
+
+#: app/src/ui/contacts/person.rs:1074
+msgid "All contacts now shows one row for {name}. Nothing was deleted."
+msgstr ""
+"Οι Όλες οι επαφές δείχνουν τώρα μία γραμμή για το {name}. Τίποτα δεν "
+"διαγράφηκε."
+
+#: app/src/ui/contacts/person.rs:1120
+msgid "Save to Contacts"
+msgstr "Αποθήκευση στις Επαφές"
+
+#: app/src/ui/contacts/person.rs:1138
+msgid "Not a contact"
+msgstr "Όχι επαφή"
+
+#: app/src/ui/contacts/person.rs:1142
+msgid ""
+"From mail lists people the mailbox has seen who are not saved as contacts. "
+"Seen in {count} message. Saving writes a contact into the account you pick."
+msgid_plural ""
+"From mail lists people the mailbox has seen who are not saved as contacts. "
+"Seen in {count} messages. Saving writes a contact into the account you pick."
+msgstr[0] ""
+"Το «Από την αλληλογραφία» παραθέτει άτομα που έχει δει το γραμματοκιβώτιο "
+"και δεν είναι αποθηκευμένα ως επαφές. Εμφανίστηκε σε {count} μήνυμα. Η "
+"αποθήκευση γράφει μια επαφή στον λογαριασμό που θα επιλέξετε."
+msgstr[1] ""
+"Το «Από την αλληλογραφία» παραθέτει άτομα που έχει δει το γραμματοκιβώτιο "
+"και δεν είναι αποθηκευμένα ως επαφές. Εμφανίστηκε σε {count} μηνύματα. Η "
+"αποθήκευση γράφει μια επαφή στον λογαριασμό που θα επιλέξετε."
+
+#: app/src/ui/contacts/person.rs:1160
+msgid "Latest message"
+msgstr "Τελευταίο μήνυμα"
+
+#: app/src/ui/contacts/person.rs:1192
+msgid "From the messages"
+msgstr "Από τα μηνύματα"
+
+#: app/src/ui/contacts/person.rs:1223
+msgid "Saved {name} to {account}."
+msgstr "Το {name} αποθηκεύτηκε στο {account}."
+
+#: app/src/ui/contacts/person.rs:1299
+msgid "No organization, no phone"
+msgstr "Χωρίς οργανισμό, χωρίς τηλέφωνο"
+
+#: app/src/ui/contacts/person.rs:1301
+msgid "Organization {value}"
+msgstr "Οργανισμός {value}"
+
+#: app/src/ui/contacts/person.rs:1302
+msgid "Phone {value}"
+msgstr "Τηλέφωνο {value}"
+
+#: app/src/ui/contacts/person.rs:1367
+msgid ""
+"All contacts uses the name {name}. {account_a} still has its contact, and "
+"{account_b} still has {other}."
+msgstr ""
+"Οι Όλες οι επαφές χρησιμοποιούν το όνομα {name}. Το {account_a} εξακολουθεί "
+"να έχει την επαφή του και το {account_b} εξακολουθεί να έχει το {other}."
+
+#: app/src/ui/contacts/person.rs:1398
+msgid ""
+"The chip is the account. {others} has its own contact for this person, and "
+"editing here changes {account}."
+msgstr ""
+"Το chip είναι ο λογαριασμός. Το {others} έχει δική του επαφή για αυτό το "
+"άτομο και η επεξεργασία εδώ αλλάζει το {account}."
+
+#: app/src/ui/contacts/person.rs:1406
+msgid ""
+"VIPs are people you mark, so you can open them from this list. {name} is "
+"also stored in {accounts}."
+msgstr ""
+"Τα VIP είναι άτομα που σημειώνετε, ώστε να τα ανοίγετε από αυτή τη λίστα. Το "
+"{name} είναι αποθηκευμένο και στο {accounts}."
+
+#: app/src/ui/contacts/person.rs:1414
+msgid "VIPs are people you mark, so you can open them from this list."
+msgstr ""
+"Τα VIP είναι άτομα που σημειώνετε, ώστε να τα ανοίγετε από αυτή τη λίστα."
+
+#: app/src/ui/contacts/person.rs:1417
+msgid "One person, stored in {accounts}. Each account keeps its own contact."
+msgstr ""
+"Ένα άτομο, αποθηκευμένο στο {accounts}. Κάθε λογαριασμός κρατά τη δική του "
+"επαφή."
+
+#: app/src/ui/contacts/photo.rs:40
+msgid "Choose Contact Photo"
+msgstr "Επιλογή φωτογραφίας επαφής"
+
+#: app/src/ui/contacts/photo.rs:72 app/src/ui/contacts/photo.rs:231
+msgid "Could Not Open Photo"
+msgstr "Δεν ήταν δυνατό το άνοιγμα της φωτογραφίας"
+
+#: app/src/ui/contacts/photo.rs:74
+msgid "Choose an image smaller than 16 MB with no more than 32 million pixels."
+msgstr ""
+"Επιλέξτε μια εικόνα μικρότερη από 16 MB με έως 32 εκατομμύρια εικονοστοιχεία."
+
+#: app/src/ui/contacts/photo.rs:91
+msgid "Crop Photo"
+msgstr "Περικοπή φωτογραφίας"
+
+#: app/src/ui/contacts/photo.rs:117
+msgid "Horizontal Position"
+msgstr "Οριζόντια θέση"
+
+#: app/src/ui/contacts/photo.rs:118
+msgid "Vertical Position"
+msgstr "Κατακόρυφη θέση"
+
+#: app/src/ui/contacts/photo.rs:165
+msgid "Use Photo"
+msgstr "Χρήση φωτογραφίας"
+
+#: app/src/ui/contacts/photo.rs:219
+msgid "Contact Photo"
+msgstr "Φωτογραφία επαφής"
+
+#: app/src/ui/contacts/side.rs:88
+msgid "Lists"
+msgstr "Λίστες"
+
+#: app/src/ui/contacts/side.rs:94
+msgid "People you mark, so you can open them from here"
+msgstr "Άτομα που σημειώνετε, ώστε να τα ανοίγετε από εδώ"
+
+#: app/src/ui/contacts/side.rs:100
+msgid "People found in mail. They are not contacts yet."
+msgstr "Άτομα που βρέθηκαν στην αλληλογραφία. Δεν είναι ακόμη επαφές."
+
+#: app/src/ui/contacts/side.rs:106
+msgid "Two contacts in one account share an address. Merging deletes one."
+msgstr ""
+"Δύο επαφές του ίδιου λογαριασμού έχουν κοινή διεύθυνση. Η συγχώνευση "
+"διαγράφει τη μία."
+
+#: app/src/ui/contacts/side.rs:112
+msgid "A close name in two accounts. Linking deletes nothing."
+msgstr "Παρόμοιο όνομα σε δύο λογαριασμούς. Η σύνδεση δεν διαγράφει τίποτα."
+
+#: app/src/ui/contacts/side.rs:133 app/src/ui/preferences.rs:476
+#: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
+#: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
+msgid "Accounts"
+msgstr "Λογαριασμοί"
 
 #: app/src/ui/contacts_prefs.rs:57
 msgid "Calendar, Contacts and Rules Servers"
@@ -8506,7 +9323,7 @@ msgid "Find Again"
 msgstr "Νέα αναζήτηση"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2124
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2161
 msgid "Edit…"
 msgstr "Επεξεργασία…"
 
@@ -8592,7 +9409,7 @@ msgid "Export…"
 msgstr "Εξαγωγή…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3781
+#: app/src/ui/window.rs:3831
 msgid "Customize Toolbar…"
 msgstr "Προσαρμογή γραμμής εργαλείων…"
 
@@ -8709,8 +9526,8 @@ msgstr "Σήμανση ως αναγνωσμένο ή μη αναγνωσμέν�
 msgid "Tags…"
 msgstr "Ετικέτες…"
 
-#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1488
-#: app/src/ui/sidebar.rs:2016 app/src/ui/window/reminders.rs:25
+#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1524
+#: app/src/ui/sidebar.rs:2053 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Υπενθύμιση"
@@ -9172,7 +9989,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Να επιτραπεί το Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3994
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4044
 msgid "Add an account first"
 msgstr "Προσθέστε πρώτα έναν λογαριασμό"
 
@@ -9674,7 +10491,7 @@ msgstr "Αυτός ο λογαριασμός δεν συγχρονίζεται �
 msgid "Could not change the subscription: {reason}"
 msgstr "Αδυναμία αλλαγής του χρώματος: {reason}"
 
-#: app/src/ui/mod.rs:559
+#: app/src/ui/mod.rs:560
 msgid "Gray"
 msgstr "Γκρι"
 
@@ -9986,12 +10803,6 @@ msgid ""
 msgstr ""
 "Ειδοποίηση πριν από κάθε συμβάν, τις ώρες που ορίζει το συμβάν ή το "
 "ημερολόγιό του"
-
-#: app/src/ui/preferences.rs:476 app/src/ui/preferences.rs:483
-#: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:47
-#: app/src/ui/window/customize_mailboxes.rs:638
-msgid "Accounts"
-msgstr "Λογαριασμοί"
 
 #: app/src/ui/preferences.rs:484
 msgid ""
@@ -10524,7 +11335,7 @@ msgstr "Μετακίνηση του {account} κάτω"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3788 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3838 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "Προτιμήσεις"
 
@@ -10907,7 +11718,7 @@ msgstr "Προσθήκη διεύθυνσης"
 msgid "Default sender"
 msgstr "Προεπιλεγμένος αποστολέας"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2433
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2470
 msgid "Signature…"
 msgstr "Υπογραφή…"
 
@@ -10971,157 +11782,142 @@ msgstr ""
 msgid "Stop the message from going out"
 msgstr "Διακοπή της αποστολής του μηνύματος"
 
-#: app/src/ui/sidebar.rs:483 app/src/ui/sidebar.rs:911
+#: app/src/ui/sidebar.rs:480 app/src/ui/sidebar.rs:944
 #: app/src/ui/sidebar/sections.rs:26
 #: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "Αλληλογραφία"
 
-#: app/src/ui/sidebar.rs:495 app/src/ui/sidebar.rs:549
-#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:377
-msgid "Mail"
-msgstr "Αλληλογραφία"
-
-#: app/src/ui/sidebar.rs:538 app/src/ui/sidebar.rs:1897
-#: app/src/ui/sidebar.rs:3125
-msgid "99+"
-msgstr "99+"
-
-#: app/src/ui/sidebar.rs:902
+#: app/src/ui/sidebar.rs:934
 msgid "Calendars"
 msgstr "Ημερολόγια"
 
-#: app/src/ui/sidebar.rs:1430 app/src/ui/sidebar.rs:1432
-#: app/src/ui/sidebar.rs:2033 app/src/ui/sidebar.rs:2035
-msgid "VIPs"
-msgstr "Επαφές VIP"
-
-#: app/src/ui/sidebar.rs:1472 app/src/ui/sidebar.rs:2004
+#: app/src/ui/sidebar.rs:1508 app/src/ui/sidebar.rs:2041
 msgid "Outbox"
 msgstr "Εξερχόμενα"
 
-#: app/src/ui/sidebar.rs:1535
+#: app/src/ui/sidebar.rs:1571
 msgid "Holds folders, not mail"
 msgstr "Περιέχει φακέλους, όχι μηνύματα"
 
-#: app/src/ui/sidebar.rs:1764
+#: app/src/ui/sidebar.rs:1800
 msgid "Approximate unread message count from downloaded mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1767
+#: app/src/ui/sidebar.rs:1803
 #, fuzzy
 #| msgid "The message is larger than the server sends."
 msgid "Unread messages counted on the server"
 msgstr "Το μήνυμα είναι μεγαλύτερο από όσο στέλνει ο διακομιστής."
 
-#: app/src/ui/sidebar.rs:1770
+#: app/src/ui/sidebar.rs:1806
 #, fuzzy
 #| msgid "{count} unread message"
 #| msgid_plural "{count} unread messages"
 msgid "Counting unread messages on the server…"
 msgstr "{count} μη αναγνωσμένο μήνυμα"
 
-#: app/src/ui/sidebar.rs:1773
+#: app/src/ui/sidebar.rs:1809
 msgid ""
 "Unread count unavailable. The account may be offline or the server may not "
 "support these conditions."
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1856
+#: app/src/ui/sidebar.rs:1892
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} μη αναγνωσμένο μήνυμα"
 msgstr[1] "{mailbox}, {count} μη αναγνωσμένα μηνύματα"
 
-#: app/src/ui/sidebar.rs:1862
+#: app/src/ui/sidebar.rs:1898
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} μήνυμα"
 msgstr[1] "{mailbox}, {count} μηνύματα"
 
-#: app/src/ui/sidebar.rs:1909
+#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3164
+msgid "99+"
+msgstr "99+"
+
+#: app/src/ui/sidebar.rs:1946
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Αλληλογραφία, {count} μη αναγνωσμένο"
 msgstr[1] "Αλληλογραφία, {count} μη αναγνωσμένα"
 
-#: app/src/ui/sidebar.rs:1915
+#: app/src/ui/sidebar.rs:1952
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Ημερολόγιο, {count} αναμένει την απάντησή σας"
 msgstr[1] "Ημερολόγιο, {count} αναμένουν την απάντησή σας"
 
-#: app/src/ui/sidebar.rs:2126 app/src/ui/sidebar.rs:2248
-#: app/src/ui/sidebar.rs:2543
+#: app/src/ui/sidebar.rs:2163 app/src/ui/sidebar.rs:2285
+#: app/src/ui/sidebar.rs:2580
 msgid "Move Up"
 msgstr "Μετακίνηση πάνω"
 
-#: app/src/ui/sidebar.rs:2127 app/src/ui/sidebar.rs:2251
-#: app/src/ui/sidebar.rs:2544
+#: app/src/ui/sidebar.rs:2164 app/src/ui/sidebar.rs:2288
+#: app/src/ui/sidebar.rs:2581
 msgid "Move Down"
 msgstr "Μετακίνηση κάτω"
 
-#: app/src/ui/sidebar.rs:2279
+#: app/src/ui/sidebar.rs:2316
 msgid "Empty Trash…"
 msgstr "Άδειασμα κάδου…"
 
-#: app/src/ui/sidebar.rs:2432
+#: app/src/ui/sidebar.rs:2469
 msgid "Automatic Reply…"
 msgstr "Αυτόματη απάντηση…"
 
-#: app/src/ui/sidebar.rs:2434
+#: app/src/ui/sidebar.rs:2471
 msgid "Rules…"
 msgstr "Κανόνες…"
 
-#: app/src/ui/sidebar.rs:2435 app/src/ui/window.rs:3774
+#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3824
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
-#: app/src/ui/sidebar.rs:2444
-msgid "On this computer"
-msgstr "Σε αυτόν τον υπολογιστή"
-
-#: app/src/ui/sidebar.rs:2452
+#: app/src/ui/sidebar.rs:2489
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "Σε αυτόν τον υπολογιστή. Εμφάνιση ή απόκρυψη των γραμματοκιβωτίων αυτού του "
 "λογαριασμού"
 
-#: app/src/ui/sidebar.rs:2453
+#: app/src/ui/sidebar.rs:2490
 msgid "Show or hide this account's mailboxes"
 msgstr "Εμφάνιση ή απόκρυψη των γραμματοκιβωτίων αυτού του λογαριασμού"
 
-#: app/src/ui/sidebar.rs:2529
+#: app/src/ui/sidebar.rs:2566
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Νέος φάκελος…"
 
-#: app/src/ui/sidebar.rs:2548
+#: app/src/ui/sidebar.rs:2585
 msgid "Switch to JMAP…"
 msgstr "Μετάβαση σε JMAP…"
 
-#: app/src/ui/sidebar.rs:2550
+#: app/src/ui/sidebar.rs:2587
 msgid "Messages That Will Not Download…"
 msgstr "Μηνύματα που δεν λαμβάνονται…"
 
-#: app/src/ui/sidebar.rs:2625
+#: app/src/ui/sidebar.rs:2662
 msgid "Sign in again to keep syncing"
 msgstr "Συνδεθείτε ξανά για να συνεχιστεί ο συγχρονισμός"
 
-#: app/src/ui/sidebar.rs:2631
+#: app/src/ui/sidebar.rs:2668
 msgid "{provider} is not responding; retrying"
 msgstr "Το {provider} δεν αποκρίνεται· νέα προσπάθεια"
 
-#: app/src/ui/sidebar.rs:2642
+#: app/src/ui/sidebar.rs:2679
 msgid "The keyring is not responding; retrying"
 msgstr "Η κλειδοθήκη δεν αποκρίνεται· νέα προσπάθεια"
 
-#: app/src/ui/sidebar.rs:2645
+#: app/src/ui/sidebar.rs:2682
 msgid "Downloading mail"
 msgstr "Λήψη αλληλογραφίας"
 
-#: app/src/ui/sidebar.rs:2649
+#: app/src/ui/sidebar.rs:2686
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Ο συγχρονισμός σταμάτησε μετά από σφάλμα· επανεκκινήστε το Penguin Mail για "
@@ -11129,7 +11925,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2656
+#: app/src/ui/sidebar.rs:2693
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11349,10 +12145,6 @@ msgstr "Αναζήτηση αλληλογραφίας, π.χ. from:ann has:attac
 msgid "Show Mailboxes"
 msgstr "Εμφάνιση γραμματοκιβωτίων"
 
-#: app/src/ui/thread_list.rs:305
-msgid "New Message (C)"
-msgstr "Νέο μήνυμα (C)"
-
 #: app/src/ui/thread_list.rs:310
 msgid "Search (/)"
 msgstr "Αναζήτηση (/)"
@@ -11398,7 +12190,7 @@ msgstr "Φιλτράρισμα μηνυμάτων (ενεργό)"
 msgid "Pull to check for mail"
 msgstr "Έλεγχος για αλληλογραφία"
 
-#: app/src/ui/thread_list/pull.rs:126 app/src/ui/window/shortcuts.rs:852
+#: app/src/ui/thread_list/pull.rs:126 app/src/ui/window/shortcuts.rs:873
 msgid "Checking for mail"
 msgstr "Έλεγχος για νέα αλληλογραφία"
 
@@ -11406,7 +12198,7 @@ msgstr "Έλεγχος για νέα αλληλογραφία"
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:414
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:416
 msgid "Muted"
 msgstr "Σε σίγαση"
 
@@ -11678,248 +12470,248 @@ msgstr ""
 "Επιλέξτε πού βρίσκεται η αλληλογραφία σας. Μπορείτε να προσθέσετε κι άλλους "
 "αργότερα από το κύριο μενού."
 
-#: app/src/ui/window.rs:295
+#: app/src/ui/window.rs:297
 msgid "Deleted forever"
 msgstr "Διαγράφηκε οριστικά"
 
-#: app/src/ui/window.rs:297
+#: app/src/ui/window.rs:299
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "Διαγράφηκε οριστικά {count} συζήτηση"
 msgstr[1] "Διαγράφηκαν οριστικά {count} συζητήσεις"
 
-#: app/src/ui/window.rs:303
+#: app/src/ui/window.rs:305
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "Διαγράφηκε οριστικά {count} μήνυμα"
 msgstr[1] "Διαγράφηκαν οριστικά {count} μηνύματα"
 
-#: app/src/ui/window.rs:316
+#: app/src/ui/window.rs:318
 msgid "{label}, on this mail"
 msgstr "{label}, σε αυτή την αλληλογραφία"
 
-#: app/src/ui/window.rs:345
+#: app/src/ui/window.rs:347
 msgid "Added {person} to VIPs"
 msgstr "Ο/Η {person} προστέθηκε στις επαφές VIP"
 
-#: app/src/ui/window.rs:346
+#: app/src/ui/window.rs:348
 msgid "Removed {person} from VIPs"
 msgstr "Ο/Η {person} αφαιρέθηκε από τις επαφές VIP"
 
-#: app/src/ui/window.rs:352
+#: app/src/ui/window.rs:354
 msgid "Could not load mail: {reason}"
 msgstr "Δεν ήταν δυνατή η φόρτωση της αλληλογραφίας: {reason}"
 
-#: app/src/ui/window.rs:362
+#: app/src/ui/window.rs:364
 msgid "Added {account}. Downloading mail…"
 msgstr "Προστέθηκε ο λογαριασμός {account}. Λήψη αλληλογραφίας…"
 
-#: app/src/ui/window.rs:366 app/src/ui/window.rs:3135
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3184
 msgid "{account} is signed in again."
 msgstr "Ο λογαριασμός {account} συνδέθηκε ξανά."
 
-#: app/src/ui/window.rs:385
+#: app/src/ui/window.rs:387
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr ""
 "Δημιουργήθηκε φάκελος με όνομα «{name}» στο {provider} για την "
 "αρχειοθετημένη αλληλογραφία"
 
-#: app/src/ui/window.rs:394
+#: app/src/ui/window.rs:396
 msgid "Flagged red"
 msgstr "Σημαία κόκκινη"
 
-#: app/src/ui/window.rs:395
+#: app/src/ui/window.rs:397
 msgid "Flagged orange"
 msgstr "Σημαία πορτοκαλί"
 
-#: app/src/ui/window.rs:396
+#: app/src/ui/window.rs:398
 msgid "Flagged yellow"
 msgstr "Σημαία κίτρινη"
 
-#: app/src/ui/window.rs:397
+#: app/src/ui/window.rs:399
 msgid "Flagged green"
 msgstr "Σημαία πράσινη"
 
-#: app/src/ui/window.rs:398
+#: app/src/ui/window.rs:400
 msgid "Flagged blue"
 msgstr "Σημαία μπλε"
 
-#: app/src/ui/window.rs:399
+#: app/src/ui/window.rs:401
 msgid "Flagged purple"
 msgstr "Σημαία μωβ"
 
-#: app/src/ui/window.rs:400
+#: app/src/ui/window.rs:402
 msgid "Flagged gray"
 msgstr "Σημαία γκρι"
 
-#: app/src/ui/window.rs:411 app/src/ui/window.rs:511
+#: app/src/ui/window.rs:413 app/src/ui/window.rs:513
 msgid "Labels changed"
 msgstr "Οι ετικέτες άλλαξαν"
 
-#: app/src/ui/window.rs:415
+#: app/src/ui/window.rs:417
 msgid "Unmuted"
 msgstr "Η σίγαση καταργήθηκε"
 
-#: app/src/ui/window.rs:417
+#: app/src/ui/window.rs:419
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "Σίγαση {count} συζήτησης"
 msgstr[1] "Σίγαση {count} συζητήσεων"
 
-#: app/src/ui/window.rs:423
+#: app/src/ui/window.rs:425
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "Σίγαση {count} μηνύματος"
 msgstr[1] "Σίγαση {count} μηνυμάτων"
 
-#: app/src/ui/window.rs:429
+#: app/src/ui/window.rs:431
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "Κατάργηση σίγασης {count} συζήτησης"
 msgstr[1] "Κατάργηση σίγασης {count} συζητήσεων"
 
-#: app/src/ui/window.rs:435
+#: app/src/ui/window.rs:437
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "Κατάργηση σίγασης {count} μηνύματος"
 msgstr[1] "Κατάργηση σίγασης {count} μηνυμάτων"
 
-#: app/src/ui/window.rs:447
+#: app/src/ui/window.rs:449
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "Απορρίφθηκε {count} παρακολούθηση"
 msgstr[1] "Απορρίφθηκαν {count} παρακολουθήσεις"
 
-#: app/src/ui/window.rs:456
+#: app/src/ui/window.rs:458
 msgid "Archived"
 msgstr "Αρχειοθετήθηκε"
 
-#: app/src/ui/window.rs:458
+#: app/src/ui/window.rs:460
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "Αρχειοθετήθηκε {count} συζήτηση"
 msgstr[1] "Αρχειοθετήθηκαν {count} συζητήσεις"
 
-#: app/src/ui/window.rs:464
+#: app/src/ui/window.rs:466
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "Αρχειοθετήθηκε {count} μήνυμα"
 msgstr[1] "Αρχειοθετήθηκαν {count} μηνύματα"
 
-#: app/src/ui/window.rs:469
+#: app/src/ui/window.rs:471
 msgid "Moved to Trash"
 msgstr "Μετακινήθηκε στον Κάδο απορριμμάτων"
 
-#: app/src/ui/window.rs:471
+#: app/src/ui/window.rs:473
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "Μετακινήθηκε {count} συζήτηση στον Κάδο απορριμμάτων"
 msgstr[1] "Μετακινήθηκαν {count} συζητήσεις στον Κάδο απορριμμάτων"
 
-#: app/src/ui/window.rs:477
+#: app/src/ui/window.rs:479
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "Μετακινήθηκε {count} μήνυμα στον Κάδο απορριμμάτων"
 msgstr[1] "Μετακινήθηκαν {count} μηνύματα στον Κάδο απορριμμάτων"
 
-#: app/src/ui/window.rs:482
+#: app/src/ui/window.rs:484
 msgid "Marked as junk"
 msgstr "Σημάνθηκε ως ανεπιθύμητο"
 
-#: app/src/ui/window.rs:484
+#: app/src/ui/window.rs:486
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "Σημάνθηκε {count} συζήτηση ως ανεπιθύμητη"
 msgstr[1] "Σημάνθηκαν {count} συζητήσεις ως ανεπιθύμητες"
 
-#: app/src/ui/window.rs:490
+#: app/src/ui/window.rs:492
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "Σημάνθηκε {count} μήνυμα ως ανεπιθύμητο"
 msgstr[1] "Σημάνθηκαν {count} μηνύματα ως ανεπιθύμητα"
 
-#: app/src/ui/window.rs:495
+#: app/src/ui/window.rs:497
 msgid "Moved to the Inbox"
 msgstr "Μετακινήθηκε στα Εισερχόμενα"
 
-#: app/src/ui/window.rs:497
+#: app/src/ui/window.rs:499
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "Μετακινήθηκε {count} συζήτηση στα Εισερχόμενα"
 msgstr[1] "Μετακινήθηκαν {count} συζητήσεις στα Εισερχόμενα"
 
-#: app/src/ui/window.rs:503
+#: app/src/ui/window.rs:505
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Μετακινήθηκε {count} μήνυμα στα Εισερχόμενα"
 msgstr[1] "Μετακινήθηκαν {count} μηνύματα στα Εισερχόμενα"
 
-#: app/src/ui/window.rs:951
+#: app/src/ui/window.rs:997
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Επίδειξη)"
 
-#: app/src/ui/window.rs:1412
+#: app/src/ui/window.rs:1459
 msgid "Could not read accounts: {reason}"
 msgstr "Δεν ήταν δυνατή η ανάγνωση των λογαριασμών: {reason}"
 
-#: app/src/ui/window.rs:2171
+#: app/src/ui/window.rs:2218
 msgid "Could not delete the mail: {reason}"
 msgstr "Δεν ήταν δυνατή η διαγραφή της αλληλογραφίας: {reason}"
 
-#: app/src/ui/window.rs:2278
+#: app/src/ui/window.rs:2325
 msgid "Turn On the {service}"
 msgstr "Ενεργοποίηση του {service}"
 
-#: app/src/ui/window.rs:2463 app/src/ui/window.rs:2466
+#: app/src/ui/window.rs:2512 app/src/ui/window.rs:2515
 msgid "Move to Inbox"
 msgstr "Μετακίνηση στα Εισερχόμενα"
 
-#: app/src/ui/window.rs:2634 app/src/ui/window.rs:2639
+#: app/src/ui/window.rs:2683 app/src/ui/window.rs:2688
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Αναζήτηση μοντέλων"
 
-#: app/src/ui/window.rs:2708
+#: app/src/ui/window.rs:2757
 msgid "Select mail from one account to tag it."
 msgstr "Επιλέξτε αλληλογραφία από έναν λογαριασμό για να της βάλετε ετικέτα."
 
-#: app/src/ui/window.rs:2720
+#: app/src/ui/window.rs:2769
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr ""
 "Αυτός ο λογαριασμός δεν έχει ακόμη ετικέτες. Δημιουργήστε μία στο Outlook."
 
-#: app/src/ui/window.rs:2813
+#: app/src/ui/window.rs:2862
 msgid "Add an account to reply or forward"
 msgstr "Προσθέστε έναν λογαριασμό για απάντηση ή προώθηση"
 
-#: app/src/ui/window.rs:2918
+#: app/src/ui/window.rs:2967
 msgid "Could not include {file}: {reason}"
 msgstr "Δεν ήταν δυνατή η συμπερίληψη του {file}: {reason}"
 
-#: app/src/ui/window.rs:2999
+#: app/src/ui/window.rs:3048
 msgid "The server had already sent this message."
 msgstr "Ο διακομιστής είχε ήδη στείλει αυτό το μήνυμα."
 
-#: app/src/ui/window.rs:3004
+#: app/src/ui/window.rs:3053
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Η αποστολή αυτού του μηνύματος ακυρώθηκε σε άλλη εφαρμογή και δεν βρίσκεται "
 "πια στα Πρόχειρα."
 
-#: app/src/ui/window.rs:3320
+#: app/src/ui/window.rs:3369
 msgid "Continue in your browser"
 msgstr "Συνεχίστε στο πρόγραμμα περιήγησης"
 
-#: app/src/ui/window.rs:3370
+#: app/src/ui/window.rs:3419
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Αυτό το αντίγραφο του Penguin Mail δημιουργήθηκε χωρίς σύνδεση Google."
 
-#: app/src/ui/window.rs:3392
+#: app/src/ui/window.rs:3441
 msgid "Get a Release"
 msgstr "Λήψη έκδοσης"
 
-#: app/src/ui/window.rs:3515
+#: app/src/ui/window.rs:3564
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11927,86 +12719,86 @@ msgstr ""
 "Δεν ήταν δυνατός ο έλεγχος για μηνύματα που κρατά ο διακομιστής για αποστολή "
 "αργότερα, οπότε ο λογαριασμός {account} παραμένει: {reason}"
 
-#: app/src/ui/window.rs:3526
+#: app/src/ui/window.rs:3575
 msgid "Remove {account}?"
 msgstr "Αφαίρεση του {account};"
 
-#: app/src/ui/window.rs:3545
+#: app/src/ui/window.rs:3594
 msgid "Remove Anyway"
 msgstr "Αφαίρεση παρ' όλα αυτά"
 
-#: app/src/ui/window.rs:3558
+#: app/src/ui/window.rs:3607
 msgid "Removed {account}"
 msgstr "Αφαιρέθηκε ο λογαριασμός {account}"
 
-#: app/src/ui/window.rs:3560
+#: app/src/ui/window.rs:3609
 msgid "Could not remove {account}: {reason}"
 msgstr "Δεν ήταν δυνατή η αφαίρεση του {account}: {reason}"
 
-#: app/src/ui/window.rs:3752
+#: app/src/ui/window.rs:3801
 msgid "Refresh"
 msgstr "Ανανέωση"
 
-#: app/src/ui/window.rs:3756
+#: app/src/ui/window.rs:3805
 msgid "Show Declined Events"
 msgstr "Εμφάνιση απορριφθέντων συμβάντων"
 
-#: app/src/ui/window.rs:3772
+#: app/src/ui/window.rs:3822
 msgid "Add Account…"
 msgstr "Προσθήκη λογαριασμού…"
 
-#: app/src/ui/window.rs:3773
+#: app/src/ui/window.rs:3823
 msgid "New Smart Mailbox…"
 msgstr "Νέο έξυπνο γραμματοκιβώτιο…"
 
-#: app/src/ui/window.rs:3785
+#: app/src/ui/window.rs:3835
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Προσαρμογή γραμμής εργαλείων…"
 
-#: app/src/ui/window.rs:3789 app/src/ui/window/shortcuts.rs:813
+#: app/src/ui/window.rs:3839 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "Συντομεύσεις πληκτρολογίου"
 
-#: app/src/ui/window.rs:3798 app/src/ui/window.rs:3800
+#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3850
 msgid "Main Menu"
 msgstr "Κύριο μενού"
 
-#: app/src/ui/window.rs:3865 app/src/ui/window.rs:3866
+#: app/src/ui/window.rs:3915 app/src/ui/window.rs:3916
 msgid "Dock"
 msgstr "Προσάρτηση"
 
-#: app/src/ui/window.rs:3995
+#: app/src/ui/window.rs:4045
 msgid "Add a mail account first"
 msgstr "Προσθέστε πρώτα έναν λογαριασμό αλληλογραφίας"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4251
+#: app/src/ui/window.rs:4311
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Το ημερολόγιο και οι επαφές του {account} είναι συνδεδεμένα."
 
-#: app/src/ui/window.rs:4367
+#: app/src/ui/window.rs:4427
 msgid "Open a message from the person first"
 msgstr "Ανοίξτε πρώτα ένα μήνυμα από το άτομο"
 
-#: app/src/ui/window.rs:4468
+#: app/src/ui/window.rs:4533
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Το Penguin Mail θα εμφανίσει τη νέα γλώσσα μετά από επανεκκίνηση"
 
-#: app/src/ui/window.rs:4470 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4535 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Επανεκκίνηση"
 
-#: app/src/ui/window.rs:4534
+#: app/src/ui/window.rs:4599
 msgid "Show Rules"
 msgstr "Εμφάνιση κανόνων"
 
-#: app/src/ui/window.rs:4560
+#: app/src/ui/window.rs:4625
 msgid "Messages That Will Not Download"
 msgstr "Μηνύματα που δεν γίνεται λήψη τους"
 
-#: app/src/ui/window.rs:4562
+#: app/src/ui/window.rs:4627
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12823,74 +13615,78 @@ msgid "Show the calendar"
 msgstr "Εμφάνιση του ημερολογίου"
 
 #: app/src/ui/window/shortcuts.rs:535
+msgid "Show contacts"
+msgstr "Εμφάνιση επαφών"
+
+#: app/src/ui/window/shortcuts.rs:540
 msgid "Go to today"
 msgstr "Μετάβαση στη σημερινή ημέρα"
 
-#: app/src/ui/window/shortcuts.rs:540
+#: app/src/ui/window/shortcuts.rs:545
 msgid "Day, week, month or agenda"
 msgstr "Ημέρα, εβδομάδα, μήνας ή ατζέντα"
 
-#: app/src/ui/window/shortcuts.rs:545
+#: app/src/ui/window/shortcuts.rs:550
 msgid "Previous or next"
 msgstr "Προηγούμενο ή επόμενο"
 
-#: app/src/ui/window/shortcuts.rs:550
+#: app/src/ui/window/shortcuts.rs:555
 msgid "Edit the event"
 msgstr "Επεξεργασία του συμβάντος"
 
-#: app/src/ui/window/shortcuts.rs:555
+#: app/src/ui/window/shortcuts.rs:560
 msgid "Show the event"
 msgstr "Εμφάνιση του συμβάντος"
 
-#: app/src/ui/window/shortcuts.rs:560
+#: app/src/ui/window/shortcuts.rs:565
 msgid "Delete the event, with Undo"
 msgstr "Διαγραφή του συμβάντος, με δυνατότητα αναίρεσης"
 
-#: app/src/ui/window/shortcuts.rs:565
+#: app/src/ui/window/shortcuts.rs:570
 msgid "New event"
 msgstr "Νέο συμβάν"
 
-#: app/src/ui/window/shortcuts.rs:570
+#: app/src/ui/window/shortcuts.rs:575
 msgid "Search the calendar"
 msgstr "Αναζήτηση στο ημερολόγιο"
 
-#: app/src/ui/window/shortcuts.rs:580
+#: app/src/ui/window/shortcuts.rs:585
 msgid "Undo, while its toast is still up"
 msgstr "Αναίρεση, όσο εμφανίζεται ακόμη η ειδοποίηση"
 
-#: app/src/ui/window/shortcuts.rs:585
+#: app/src/ui/window/shortcuts.rs:590
 msgid "Move the focused event a day earlier or later"
 msgstr "Μετακίνηση του εστιασμένου συμβάντος μία ημέρα νωρίτερα ή αργότερα"
 
-#: app/src/ui/window/shortcuts.rs:590
+#: app/src/ui/window/shortcuts.rs:595
 msgid "Move the focused event by 15 minutes"
 msgstr "Μετακίνηση του εστιασμένου συμβάντος κατά 15 λεπτά"
 
-#: app/src/ui/window/shortcuts.rs:595
+#: app/src/ui/window/shortcuts.rs:600
 msgid "Change when the focused event ends"
 msgstr "Αλλαγή της ώρας λήξης του εστιασμένου συμβάντος"
 
-#: app/src/ui/window/shortcuts.rs:603
+#: app/src/ui/window/shortcuts.rs:608
 msgid "Change when the focused event starts"
 msgstr "Αλλαγή της ώρας έναρξης του εστιασμένου συμβάντος"
 
-#: app/src/ui/window/shortcuts.rs:611
+#: app/src/ui/window/shortcuts.rs:616
 msgid "Refresh the calendar"
 msgstr "Ανανέωση του ημερολογίου"
 
-#: app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window/shortcuts.rs:626
 msgid "Keyboard shortcuts"
 msgstr "Συντομεύσεις πληκτρολογίου"
 
-#: app/src/ui/window/shortcuts.rs:626
+#: app/src/ui/window/shortcuts.rs:631
 msgid "Show or hide mailboxes"
 msgstr "Εμφάνιση ή απόκρυψη γραμματοκιβωτίων"
 
-#: app/src/ui/window/shortcuts.rs:631
+#: app/src/ui/window/shortcuts.rs:636
 msgid "Show or hide the assistant"
 msgstr "Εμφάνιση ή απόκρυψη του βοηθού"
 
-#: app/src/ui/window/shortcuts.rs:636
+#: app/src/ui/window/shortcuts.rs:641
 msgid "Close window"
 msgstr "Κλείσιμο παραθύρου"
 
@@ -12941,7 +13737,7 @@ msgstr "Η αλλαγή σας στο «{title}» δεν αποθηκεύτηκ�
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Η αλλαγή σας στο «{title}» δεν αποθηκεύτηκε: {reason}"
 
-#: app/src/ui/window/spaces.rs:282
+#: app/src/ui/window/spaces.rs:307
 msgid "Show Event"
 msgstr "Εμφάνιση συμβάντος"
 
@@ -13113,6 +13909,30 @@ msgctxt "inbox"
 msgid "Other"
 msgstr "Άλλα"
 
+#: domain/src/contact.rs:93
+msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
+msgstr ""
+"Γράψτε τις ημερομηνίες ως ΕΕΕΕ-ΜΜ-ΗΗ ή ως --ΜΜ-ΗΗ όταν το έτος δεν είναι "
+"γνωστό."
+
+#: domain/src/contact.rs:100
+msgid "A date needs a label and a value."
+msgstr "Μια ημερομηνία χρειάζεται ετικέτα και τιμή."
+
+#: domain/src/contact.rs:106
+msgid "Contact photos must be PNG images no larger than 512 KB."
+msgstr "Οι φωτογραφίες επαφών πρέπει να είναι εικόνες PNG έως 512 KB."
+
+#: domain/src/contact.rs:146
+msgid "%-d %B"
+msgstr "%-d %B"
+
+#: domain/src/contact.rs:162
+msgid "{date} · {age} year old"
+msgid_plural "{date} · {age} years old"
+msgstr[0] "{date} · {age} έτους"
+msgstr[1] "{date} · {age} ετών"
+
 #: domain/src/invitation.rs:84
 msgid "Yes"
 msgstr "Ναι"
@@ -13259,10 +14079,6 @@ msgstr "την {day}η"
 #: domain/src/invitation/recurrence.rs:264
 msgid "the {day}rd"
 msgstr "την {day}η"
-
-#: domain/src/invitation/recurrence.rs:296
-msgid "%-d %B"
-msgstr "%-d %B"
 
 #: domain/src/sign_in_page.rs:36
 msgid "Signed in to Penguin Mail"
@@ -13489,7 +14305,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Το {accounts} θα αποκτήσει νέα ετικέτα."
 msgstr[1] "Τα {accounts} θα αποκτήσουν νέες ετικέτες."
 
-#: sync/src/calendar_copy.rs:1158
+#: sync/src/calendar_copy.rs:1159
 msgid ""
 "this account's calendars moved to another server, which does not have this "
 "event"
@@ -13497,16 +14313,16 @@ msgstr ""
 "τα ημερολόγια αυτού του λογαριασμού μεταφέρθηκαν σε άλλο διακομιστή, ο "
 "οποίος δεν έχει αυτό το συμβάν"
 
-#: sync/src/calendar_copy.rs:1327 sync/src/calendar_copy.rs:1468
-#: sync/src/calendar_copy.rs:1525
+#: sync/src/calendar_copy.rs:1328 sync/src/calendar_copy.rs:1469
+#: sync/src/calendar_copy.rs:1526
 msgid "deleted elsewhere"
 msgstr "διαγράφηκε από αλλού"
 
-#: sync/src/calendar_copy.rs:1335
+#: sync/src/calendar_copy.rs:1336
 msgid "the calendar is gone"
 msgstr "το ημερολόγιο δεν υπάρχει πια"
 
-#: sync/src/calendar_copy.rs:2360
+#: sync/src/calendar_copy.rs:2361
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"
@@ -13514,25 +14330,37 @@ msgstr ""
 "Το Google Calendar προσφέρει απουσία από το γραφείο και χρόνο συγκέντρωσης "
 "μόνο σε ορισμένους λογαριασμούς εργασίας και σχολείου ({reason})"
 
+#: sync/src/calendar_copy/birthdays.rs:31
+msgid "Unnamed Contact"
+msgstr "Επαφή χωρίς όνομα"
+
+#: sync/src/calendar_copy/birthdays.rs:37
+msgid "{name}'s birthday ({age})"
+msgstr "Γενέθλια του {name} ({age})"
+
+#: sync/src/calendar_copy/birthdays.rs:40
+msgid "{name}'s birthday"
+msgstr "Γενέθλια του {name}"
+
 #. A structure read left out required text. Background prefetch retries
 #. with backoff rather than keeping or abandoning the incomplete body.
 #: sync/src/error.rs:17
 msgid "Message text could not be fetched completely"
 msgstr "Δεν ήταν δυνατή η πλήρης λήψη του κειμένου του μηνύματος"
 
-#: sync/src/error.rs:179
+#: sync/src/error.rs:184
 msgid "{provider} asked Penguin Mail to wait"
 msgstr "Το {provider} ζήτησε από το Penguin Mail να περιμένει"
 
-#: sync/src/error.rs:189
+#: sync/src/error.rs:194
 msgid "The server asked Penguin Mail to wait"
 msgstr "Ο διακομιστής ζήτησε από το Penguin Mail να περιμένει"
 
-#: sync/src/error.rs:211
+#: sync/src/error.rs:216
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Το Gmail κρατά το «{name}» για δική του ετικέτα. Επιλέξτε άλλο όνομα."
 
-#: sync/src/error.rs:218
+#: sync/src/error.rs:223
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -13540,11 +14368,11 @@ msgstr ""
 "Το Google Calendar δημιουργεί μόνο του το «{title}», οπότε μόνο το Google "
 "Calendar μπορεί να το αλλάξει."
 
-#: sync/src/error.rs:226
+#: sync/src/error.rs:231
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "Το {host} απέρριψε το αίτημα κατάργησης εγγραφής (HTTP {status})"
 
-#: sync/src/error.rs:230
+#: sync/src/error.rs:235
 msgid "could not reach {host}"
 msgstr "δεν ήταν δυνατή η σύνδεση με το {host}"
 
@@ -13779,6 +14607,39 @@ msgstr ""
 "Το Penguin Mail δεν μπορεί να αλλάξει τη λίστα ημερολογίων ενός διακομιστή "
 "CalDAV."
 
+#: sync/src/services/carddav.rs:373
+msgid ""
+"Contact groups changed on another device. Refresh contacts and reopen the "
+"editor."
+msgstr ""
+"Οι ομάδες της επαφής άλλαξαν σε άλλη συσκευή. Ανανεώστε τις επαφές και "
+"ανοίξτε ξανά τον επεξεργαστή."
+
+#: sync/src/services/carddav.rs:380
+msgid ""
+"Several groups have the same name. Rename them in the account before adding "
+"this contact."
+msgstr ""
+"Πολλές ομάδες έχουν το ίδιο όνομα. Μετονομάστε τες στον λογαριασμό πριν "
+"προσθέσετε αυτήν την επαφή."
+
+#: sync/src/services/carddav.rs:625
+msgid ""
+"The contact was created, but some groups could not be saved. Retry in this "
+"editor to finish without creating another contact: {reason}"
+msgstr ""
+"Η επαφή δημιουργήθηκε, αλλά δεν ήταν δυνατή η αποθήκευση κάποιων ομάδων. "
+"Δοκιμάστε ξανά σε αυτόν τον επεξεργαστή για να ολοκληρωθεί χωρίς νέα επαφή: "
+"{reason}"
+
+#: sync/src/services/carddav.rs:684
+msgid ""
+"Some group changes could not be saved. Refresh contacts before trying again: "
+"{reason}"
+msgstr ""
+"Δεν ήταν δυνατή η αποθήκευση κάποιων αλλαγών στις ομάδες. Ανανεώστε τις "
+"επαφές πριν δοκιμάσετε ξανά: {reason}"
+
 #: sync/src/services/finding.rs:374
 msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgstr ""
@@ -13980,7 +14841,7 @@ msgstr ""
 "Ένα μήνυμα πρέπει να μένει σε τουλάχιστον ένα γραμματοκιβώτιο, και αυτός ο "
 "διακομιστής δεν έχει Αρχείο."
 
-#: sync/src/services/local.rs:30
+#: sync/src/services/local.rs:35
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 "Αυτός ο κανόνας είναι μόνο για ανάγνωση, οπότε το Penguin Mail τον αφήνει ως "
@@ -14356,6 +15217,24 @@ msgstr "Σήμανση ως μη ανεπιθύμητο"
 msgid "Move to {folder}"
 msgstr "Μετακίνηση σε {folder}"
 
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Τα ονόματα των προσαρμοσμένων πεδίων αρχίζουν με X- και έχουν μόνο "
+#~ "κεφαλαία γράμματα, αριθμούς και παύλες· τα ονόματα X-AB και X-"
+#~ "ADDRESSBOOKSERVER είναι δεσμευμένα."
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Η Google αποθηκεύει τα γενέθλια μόνο με το έτος. Προσθέστε το έτος ή "
+#~ "αφαιρέστε τα γενέθλια."
+
+#~ msgid "{date} ({year})"
+#~ msgstr "{date} ({year})"
+
 #~ msgid "Mail and calendar for Linux. Your mail stays on your computer."
 #~ msgstr ""
 #~ "Αλληλογραφία και ημερολόγιο για Linux. Η αλληλογραφία σας μένει στον "
@@ -14399,7 +15278,6 @@ msgstr "Μετακίνηση σε {folder}"
 #~ msgstr "Αργότερα"
 
 #, fuzzy
-#~| msgid "Mailboxes"
 #~ msgid "Mailbox"
 #~ msgstr "Αλληλογραφία"
 
@@ -14512,3 +15390,73 @@ msgstr "Μετακίνηση σε {folder}"
 #~ msgid_plural "{count} Gmail accounts need a new way to sign in"
 #~ msgstr[0] "Ο {count} λογαριασμός Gmail χρειάζεται νέο τρόπο σύνδεσης"
 #~ msgstr[1] "Οι {count} λογαριασμοί Gmail χρειάζονται νέο τρόπο σύνδεσης"
+
+#~ msgid "Press Delete to remove"
+#~ msgstr "Πατήστε Delete για αφαίρεση"
+
+#~ msgid "Add {field}"
+#~ msgstr "Προσθήκη: {field}"
+
+#~ msgid "Enable contacts for this account in Preferences first."
+#~ msgstr ""
+#~ "Ενεργοποιήστε πρώτα τις επαφές αυτού του λογαριασμού στις Προτιμήσεις."
+
+#~ msgid "Change Photo…"
+#~ msgstr "Αλλαγή φωτογραφίας…"
+
+#~ msgid "PO Box"
+#~ msgstr "Ταχυδρομική θυρίδα"
+
+#~ msgid ""
+#~ "For CardDAV, use a vCard field name beginning with X-, such as X-CUSTOMER-"
+#~ "ID."
+#~ msgstr ""
+#~ "Για CardDAV, χρησιμοποιήστε όνομα πεδίου vCard που αρχίζει με X-, όπως X-"
+#~ "CUSTOMER-ID."
+
+#~ msgid ""
+#~ "This account supports editing names, email addresses, phone numbers, and "
+#~ "organizations only."
+#~ msgstr ""
+#~ "Σε αυτόν τον λογαριασμό μπορείτε να επεξεργαστείτε μόνο ονόματα, "
+#~ "διευθύνσεις email, αριθμούς τηλεφώνου και οργανισμούς."
+
+#~ msgid "Address Book"
+#~ msgstr "Βιβλίο διευθύνσεων"
+
+#~ msgid "This account has no address books."
+#~ msgstr "Αυτός ο λογαριασμός δεν έχει βιβλία διευθύνσεων."
+
+#~ msgid "Choose an address book first."
+#~ msgstr "Επιλέξτε πρώτα ένα βιβλίο διευθύνσεων."
+
+#~ msgid "All Groups"
+#~ msgstr "Όλες οι ομάδες"
+
+#~ msgid "Contact List Width"
+#~ msgstr "Πλάτος λίστας επαφών"
+
+#~ msgid "Refresh Contacts"
+#~ msgstr "Ανανέωση επαφών"
+
+#~ msgid "Choose a contact or add someone to an address book."
+#~ msgstr "Επιλέξτε μια επαφή ή προσθέστε κάποιον σε ένα βιβλίο διευθύνσεων."
+
+#~ msgid "Refresh Contacts First"
+#~ msgstr "Ανανεώστε πρώτα τις επαφές"
+
+#~ msgid "Mail to or from This Address"
+#~ msgstr "Μηνύματα προς ή από αυτήν τη διεύθυνση"
+
+#~ msgid "Call"
+#~ msgstr "Κλήση"
+
+#~ msgid "Send SMS"
+#~ msgstr "Αποστολή SMS"
+
+#~ msgid "Allow contacts access in Preferences, then try again."
+#~ msgstr ""
+#~ "Επιτρέψτε την πρόσβαση στις επαφές στις Προτιμήσεις και δοκιμάστε ξανά."
+
+#~ msgid "Delete Contact?"
+#~ msgstr "Διαγραφή επαφής;"

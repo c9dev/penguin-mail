@@ -188,6 +188,7 @@ fn contact_fields(input: &Value) -> ContactFields {
         emails: strings(input, "emails"),
         phones: strings(input, "phones"),
         organization: given("organization"),
+        ..Default::default()
     }
 }
 

@@ -1499,8 +1499,7 @@ impl JmapApi for FakeJmap {
         received_at: Option<&str>,
     ) -> Answer<Saved> {
         self.called("Email/import");
-        let hour =
-            received_at.and_then(|hour| chrono::DateTime::parse_from_rfc3339(hour).ok());
+        let hour = received_at.and_then(|hour| chrono::DateTime::parse_from_rfc3339(hour).ok());
         self.with(|s| {
             // As the client does: the same bytes held by a message that is
             // no draft, and not the one being replaced, are not taken over.
@@ -1856,6 +1855,11 @@ impl JmapApi for FakeJmap {
                 let card = card.clone();
                 s.record("ContactCard", id, Op::Updated);
                 Ok(card)
+            }
+            CardWrite::Destroy { id } => {
+                s.cards.remove(id).ok_or(JmapError::NotFound)?;
+                s.record("ContactCard", id, Op::Destroyed);
+                Ok(Value::Null)
             }
         })
     }

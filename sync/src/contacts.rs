@@ -144,6 +144,11 @@ impl<A: Accounts> ContactBook<A> {
     /// contacts off runs this, so nothing of the address book is left on
     /// the computer.
     pub async fn forget(&self, account_id: AccountId) -> Result<(), SyncError> {
+        // A book kept on this computer has no server behind it: forgetting
+        // it would delete the only copy.
+        if self.keeps_book_here(account_id).await? {
+            return Ok(());
+        }
         let files = self
             .db
             .read(move |c| {
@@ -163,6 +168,61 @@ impl<A: Accounts> ContactBook<A> {
         Ok(())
     }
 
+    pub async fn address_books(
+        &self,
+        account_id: AccountId,
+    ) -> Result<Vec<(String, String)>, SyncError> {
+        Ok(self.contacts(account_id)?.address_books().await?)
+    }
+
+    /// Whether this account keeps its book on this computer alone.
+    pub fn is_local(&self, account_id: AccountId) -> bool {
+        matches!(self.contacts(account_id), Ok(AnyContacts::Local(_)))
+    }
+
+    /// Whether this account's book lives on this computer alone, also when
+    /// the account is not running (an IMAP account waiting for its
+    /// password has no services, but its local contacts are in the store).
+    pub async fn keeps_book_here(&self, account_id: AccountId) -> Result<bool, SyncError> {
+        if let Some(services) = self.accounts.services(account_id) {
+            return Ok(matches!(services.contacts, Some(AnyContacts::Local(_))));
+        }
+        Ok(self
+            .db
+            .read(move |c| address_book::holds_local(c, account_id))
+            .await?)
+    }
+
+    /// Whether this account's server drops the groups of a card, so they
+    /// are held on this computer.
+    pub fn keeps_groups_here(&self, account_id: AccountId) -> bool {
+        self.contacts(account_id)
+            .is_ok_and(|service| service.keeps_groups_here())
+    }
+
+    /// Whether this service can edit the full vCard, including its photo.
+    pub fn edits_details(&self, account_id: AccountId) -> bool {
+        self.contacts(account_id)
+            .is_ok_and(|service| service.edits_details())
+    }
+
+    pub async fn delete(
+        &self,
+        account_id: AccountId,
+        resource: String,
+        revision: Option<String>,
+    ) -> Result<(), SyncError> {
+        self.contacts(account_id)?
+            .delete_contact(&resource, revision.as_deref())
+            .await?;
+        let photo = self.photos.join(photo_file(account_id, &resource));
+        self.db
+            .write(move |c| address_book::forget(c, account_id, &[resource]))
+            .await?;
+        let _ = std::fs::remove_file(photo);
+        Ok(())
+    }
+
     /// Adds a contact to the account's Google contacts. With `keep`, the
     /// account's address book on this computer takes the new contact too,
     /// so it shows before the next refresh; an account whose contacts are
@@ -173,8 +233,14 @@ impl<A: Accounts> ContactBook<A> {
         fields: &ContactFields,
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
-        let made = self.contacts(account_id)?.create_contact(fields).await;
-        self.stored(account_id, made, keep).await
+        let service = self.contacts(account_id)?;
+        if !service.edits_details()
+            && (fields.details != Default::default() || fields.photo.is_some())
+        {
+            return Err(BackendError::Unsupported.into());
+        }
+        let made = service.create_contact(fields).await;
+        self.saved(&service, account_id, made, fields, keep).await
     }
 
     /// Changes the fields `fields` names on the contact `resource`, and
@@ -187,11 +253,58 @@ impl<A: Accounts> ContactBook<A> {
         fields: &ContactFields,
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
-        let changed = self
-            .contacts(account_id)?
-            .update_contact(resource, fields)
-            .await;
-        self.stored(account_id, changed, keep).await
+        let service = self.contacts(account_id)?;
+        if !service.edits_details()
+            && (fields.details != Default::default() || fields.photo.is_some())
+        {
+            return Err(BackendError::Unsupported.into());
+        }
+        let changed = service.update_contact(resource, fields).await;
+        self.saved(&service, account_id, changed, fields, keep)
+            .await
+    }
+
+    /// What a create or an update answered, stored when `keep` says so,
+    /// with the group cards and photos that change brought up to date.
+    async fn saved(
+        &self,
+        service: &AnyContacts,
+        account_id: AccountId,
+        answer: Result<Person, BackendError>,
+        fields: &ContactFields,
+        keep: bool,
+    ) -> Result<Permitted<Contact>, SyncError> {
+        let saved = self.stored(account_id, answer, keep).await?;
+        if !keep {
+            return Ok(saved);
+        }
+        let Some(groups) = &fields.details.groups else {
+            let _ = self.fetch_photos(service, account_id).await;
+            return Ok(saved);
+        };
+        // A server that drops groups keeps them here, beside the contact.
+        if service.keeps_groups_here() {
+            if let Permitted::Done(contact) = &saved {
+                let (resource, names) = (contact.resource.clone(), groups.clone());
+                self.db
+                    .write(move |c| {
+                        address_book::set_local_groups(c, account_id, &resource, &names)
+                    })
+                    .await?;
+            }
+            let _ = self.fetch_photos(service, account_id).await;
+            return Ok(saved);
+        }
+        if let Permitted::Done(contact) = &saved {
+            let (contact, groups) = (contact.clone(), groups.clone());
+            self.db
+                .write(move |c| address_book::set_memberships(c, &contact, &groups))
+                .await?;
+        }
+        if let Err(err) = self.refresh(account_id).await {
+            tracing::warn!(%err, "saved contact but could not refresh address book");
+        }
+        Ok(saved)
     }
 
     /// The contact Google sent back, stored when `keep` says so. A missing
@@ -211,6 +324,7 @@ impl<A: Accounts> ContactBook<A> {
         };
         let contact = Contact {
             account_id,
+            details: person.details,
             resource: person.resource,
             name: person.name,
             emails: person.emails,
@@ -404,6 +518,7 @@ impl<A: Accounts> ContactBook<A> {
                 };
                 read.extend(page.people.iter().map(|person| Contact {
                     account_id,
+                    details: person.details.clone(),
                     resource: person.resource.clone(),
                     name: person.name.clone(),
                     emails: person.emails.clone(),
@@ -423,14 +538,12 @@ impl<A: Accounts> ContactBook<A> {
                             .write(move |c| {
                                 if whole {
                                     // Whoever the new read left out has gone.
-                                    let stale: Vec<String> = address_book::list(c)?
-                                        .into_iter()
-                                        .filter(|held| held.account_id == account_id)
-                                        .filter(|held| {
-                                            read.iter().all(|r| r.resource != held.resource)
-                                        })
-                                        .map(|held| held.resource)
-                                        .collect();
+                                    // Group cards too, which `list` leaves out.
+                                    let stale: Vec<String> =
+                                        address_book::resources(c, account_id)?
+                                            .into_iter()
+                                            .filter(|held| read.iter().all(|r| r.resource != *held))
+                                            .collect();
                                     address_book::forget(c, account_id, &stale)?;
                                 }
                                 address_book::save(c, &read)?;

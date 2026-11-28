@@ -33,6 +33,9 @@ pub enum DavError {
     Http { status: u16, detail: String },
     #[error("could not read the server's answer: {0}")]
     Parse(String),
+    /// A change the app refused before sending, in the reader's language.
+    #[error("{0}")]
+    Invalid(String),
 }
 
 impl DavError {

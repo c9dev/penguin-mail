@@ -37,6 +37,7 @@ use crate::settings::Permitted;
 use crate::{AccountServices, Accounts, AnyCalendar, BackendError, CalendarService, SyncError};
 
 mod attach;
+pub mod birthdays;
 pub mod event_change;
 mod list;
 mod read;

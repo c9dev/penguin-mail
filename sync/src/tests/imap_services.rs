@@ -82,11 +82,13 @@ async fn an_account_with_no_servers_found_keeps_rules_here_and_has_no_reply() {
         services.rules.as_ref().map(AnyRules::place),
         Some(RulesPlace::ThisComputer)
     );
+    assert!(services.auto_reply.is_none() && services.calendar.is_none());
     assert!(
-        services.auto_reply.is_none() && services.calendar.is_none() && services.contacts.is_none()
+        matches!(services.contacts, Some(crate::AnyContacts::Local(_))),
+        "with no server, the address book stays on this computer"
     );
     let offers = services.offers();
-    assert!(offers.rules && !offers.auto_reply && !offers.calendar);
+    assert!(offers.rules && offers.contacts && !offers.auto_reply && !offers.calendar);
 }
 
 #[tokio::test]
@@ -551,4 +553,141 @@ async fn gmail_over_imap_withholds_no_mail_scope() {
         google: Some(google),
     });
     assert_eq!(services.withheld(), crate::Withheld::NONE);
+}
+
+/// The calls the editor makes, on an account whose book is kept on this
+/// computer: every field and a photo saved, a refresh that keeps them,
+/// turning contacts off that keeps the only copy, and a delete.
+#[tokio::test]
+async fn a_book_on_this_computer_takes_every_edit_the_app_makes() {
+    use mailrs_domain::contact::{Changes, Field};
+    let h = imap_harness().await;
+    let services = h.sync.services().clone().with_contacts(AnyContacts::Local(
+        crate::services::LocalContacts::new(h.db.clone(), h.account_id),
+    ));
+    let accounts = Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services));
+    let photos = tempfile::tempdir().unwrap();
+    let book = ContactBook::new(accounts, h.db.clone(), photos.path().to_path_buf());
+    assert!(book.is_local(h.account_id));
+    let made = match book
+        .create(
+            h.account_id,
+            &mailrs_gmail::ContactFields {
+                name: Some("Ana Lima".into()),
+                emails: Some(vec!["ana@example.pt".into()]),
+                ..Default::default()
+            },
+            true,
+        )
+        .await
+        .unwrap()
+    {
+        Permitted::Done(made) => made,
+        Permitted::NeedsPermission => panic!("a local book needs no permission"),
+    };
+    let every = mailrs_gmail::ContactFields {
+        organization: Some("Fernwood".into()),
+        phones: Some(vec!["+351 910 000 000".into()]),
+        photo: Some(vec![0x89, b'P', b'N', b'G', 13, 10, 26, 10]),
+        details: Changes {
+            birthday: Some("--04-12".into()),
+            notes: Some("Met in March".into()),
+            addresses: Some(vec![[
+                String::new(),
+                String::new(),
+                "1 Main Street".into(),
+                "Lisbon".into(),
+                String::new(),
+                "1000-001".into(),
+                "Portugal".into(),
+            ]]),
+            urls: Some(vec!["https://example.org".into()]),
+            groups: Some(vec!["Friends".into()]),
+            dates: Some(vec![Field {
+                label: "Anniversary".into(),
+                value: "2015-06-20".into(),
+            }]),
+            custom: Some(vec![Field {
+                label: "Badge".into(),
+                value: "42".into(),
+            }]),
+        },
+        ..Default::default()
+    };
+    book.update(h.account_id, &made.resource, &every, true)
+        .await
+        .unwrap();
+    book.refresh(h.account_id).await.unwrap();
+    let stored = |db: mailrs_store::Db| async move {
+        db.read(mailrs_store::address_book::list).await.unwrap()
+    };
+    let held = stored(h.db.clone()).await;
+    let ana = held
+        .iter()
+        .find(|c| c.resource == made.resource)
+        .expect("the refresh keeps the contact");
+    let d = &ana.details;
+    assert_eq!(ana.organization.as_deref(), Some("Fernwood"));
+    assert_eq!(d.phones, ["+351 910 000 000"]);
+    assert_eq!(d.birthday, "--04-12");
+    assert_eq!(d.notes, "Met in March");
+    assert_eq!(d.addresses[0][3], "Lisbon");
+    assert_eq!(d.urls, ["https://example.org"]);
+    assert_eq!(d.groups, ["Friends"]);
+    assert_eq!(d.dates[0].value, "2015-06-20");
+    assert_eq!(d.custom[0].label, "Badge");
+    assert!(ana.photo_file.is_some(), "{ana:?}");
+
+    // Turning contacts off keeps the only copy.
+    book.forget(h.account_id).await.unwrap();
+    assert_eq!(stored(h.db.clone()).await.len(), held.len());
+
+    book.delete(h.account_id, made.resource.clone(), None)
+        .await
+        .unwrap();
+    assert!(
+        stored(h.db.clone())
+            .await
+            .iter()
+            .all(|c| c.resource != made.resource)
+    );
+}
+
+#[tokio::test]
+async fn turning_contacts_off_keeps_a_local_book_of_an_account_that_is_not_running() {
+    use mailrs_store::address_book::{self, Contact};
+    let h = imap_harness().await;
+    let book = ContactBook::new(
+        Arc::new(crate::tests::Connected(Default::default())),
+        h.db.clone(),
+        tempfile::tempdir().unwrap().path().to_path_buf(),
+    );
+    let saved = |resource: &str| Contact {
+        account_id: h.account_id,
+        resource: resource.into(),
+        name: Some("Ana".into()),
+        ..Contact::default()
+    };
+    h.db.write({
+        let local = saved("local/0001");
+        move |c| address_book::save(c, &[local])
+    })
+    .await
+    .unwrap();
+    assert!(book.keeps_book_here(h.account_id).await.unwrap());
+    book.forget(h.account_id).await.unwrap();
+    assert_eq!(h.db.read(address_book::list).await.unwrap().len(), 1);
+    // A server's copy of the same account is removed as before.
+    h.db.write({
+        let server = saved("/card/ana.vcf");
+        move |c| {
+            address_book::clear(c, server.account_id)?;
+            address_book::save(c, &[server])
+        }
+    })
+    .await
+    .unwrap();
+    assert!(!book.keeps_book_here(h.account_id).await.unwrap());
+    book.forget(h.account_id).await.unwrap();
+    assert!(h.db.read(address_book::list).await.unwrap().is_empty());
 }

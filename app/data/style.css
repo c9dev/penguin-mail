@@ -2198,3 +2198,214 @@ list.own-paste { margin-top: 12px; }
 .column-resizer:hover, .column-resizer:focus-visible {
   background: alpha(@accent_color, 0.35);
 }
+
+/* ---- Contacts space. The sizes and colours are the contacts mockup's
+   (docs/superpowers/specs/contacts-mockup/index.html). 1em = 14.67px. ---- */
+
+/* The switch: an idle space is its icon alone and the active one opens to
+   its name, so three spaces fit the 240 px card. */
+toggle-group.space-switch > toggle:not(:checked) buttoncontent > box { border-spacing: 0; }
+toggle-group.space-switch > toggle:not(:checked) buttoncontent label { font-size: 0; min-width: 0; }
+/* The mockup's sizes: an idle space is a 28 px round button, and the open one
+   has 12 px each side and 6 px between its icon and name. */
+toggle-group.space-switch > toggle:not(:checked) { padding-left: 0; padding-right: 0; min-width: 28px; }
+toggle-group.space-switch > toggle:checked { padding-left: 12px; padding-right: 12px; }
+toggle-group.space-switch > toggle:checked buttoncontent > box { border-spacing: 6px; }
+/* The count sits on the idle icon's top corner, solid accent so it reads
+   over the icon; the mockup has no separators between the spaces. */
+toggle-group.space-switch .space-badge {
+  min-height: 14px; min-width: 8px; padding: 0 3px; font-size: 0.6em;
+  background: var(--accent-fill); color: var(--accent-fg-color);
+}
+toggle-group.space-switch > separator { background: none; min-width: 0; }
+
+.cts-side { padding: 0 8px 12px; }
+.cts-kicker { margin: 14px 12px 4px; font-size: 0.82em; font-weight: 700; color: alpha(currentColor, 0.75); }
+.app-dark .cts-kicker { color: alpha(currentColor, 0.64); }
+button.cts-nav {
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  font-size: 0.95em;
+  font-weight: 500;
+}
+button.cts-nav:hover { background: alpha(black, 0.06); }
+.app-dark button.cts-nav:hover { background: alpha(white, 0.08); }
+button.cts-nav:checked, button.cts-nav:checked:hover { background: alpha(var(--accent-bg-color), 0.18); font-weight: 700; }
+.app-dark button.cts-nav:checked, .app-dark button.cts-nav:checked:hover { background: alpha(var(--accent-bg-color), 0.28); }
+button.cts-nav.stack { padding-top: 6px; padding-bottom: 6px; }
+.cts-n { font-size: 0.85em; font-weight: 600; font-feature-settings: "tnum"; color: alpha(currentColor, 0.75); }
+.app-dark .cts-n { color: alpha(currentColor, 0.64); }
+.cts-small { font-size: 0.82em; font-weight: 450; color: alpha(currentColor, 0.75); }
+.app-dark .cts-small { color: alpha(currentColor, 0.64); }
+
+.cts-page { background: var(--view-bg-color); }
+.cts-split { background: var(--view-bg-color); }
+.cts-list { background: var(--view-bg-color); }
+.cts-person { background: var(--view-bg-color); border-left: 1px solid #ececef; }
+.app-dark .cts-person { border-left-color: #2c2c31; }
+.cts-listhead { min-height: 52px; padding: 8px 12px 8px 16px; }
+.cts-listhead.accounthead { padding-top: 14px; padding-bottom: 12px; border-bottom: 1px solid #ececef; }
+.app-dark .cts-listhead.accounthead { border-bottom-color: #2c2c31; }
+.cts-h2 { font-size: 1.02em; font-weight: 800; letter-spacing: -0.015em; }
+.cts-count { font-size: 0.85em; color: alpha(currentColor, 0.75); }
+.app-dark .cts-count { color: alpha(currentColor, 0.64); }
+.cts-searchrow { padding: 0 12px 10px; }
+searchentry.cts-search { min-height: 32px; border-radius: 999px; border: none; box-shadow: none; background: #e3e3e7; font-size: 0.92em; }
+.app-dark searchentry.cts-search { background: #3a3a40; }
+
+.cts-rows { background: none; padding: 0 6px 12px; }
+.cts-rows > row { border-radius: 10px; min-height: 56px; padding: 0; margin: 0; }
+.cts-rows > row:hover { background: alpha(black, 0.05); }
+.app-dark .cts-rows > row:hover { background: alpha(white, 0.06); }
+.cts-rows > row:selected, .cts-rows > row:selected:hover { background: #e3e3e7; color: inherit; }
+.app-dark .cts-rows > row:selected, .app-dark .cts-rows > row:selected:hover { background: #3a3a40; }
+.cts-row-box { padding: 8px 10px; border-spacing: 10px; }
+.cts-name { font-size: 0.95em; font-weight: 600; letter-spacing: -0.01em; }
+.cts-subline { font-size: 0.85em; color: alpha(currentColor, 0.75); margin-top: 1px; }
+.app-dark .cts-subline { color: alpha(currentColor, 0.64); }
+.cts-rowchips { margin-top: 4px; }
+.cts-rowchips flowboxchild, .cts-who-chips flowboxchild { padding: 0; min-height: 0; min-width: 0; }
+.cts-rowchips .cts-chip { min-height: 20px; padding: 0 7px 0 6px; font-size: 0.78em; }
+.cts-tick { border: 1.6px solid #8e8e98; border-radius: 999px; color: #fff; }
+.cts-tick.on { background: var(--accent-fill); border-color: var(--accent-fill); }
+
+.cts-chip { min-height: 24px; padding: 0 8px 0 7px; border-radius: 999px; background: #e3e3e7; font-size: 0.82em; font-weight: 600; }
+.app-dark .cts-chip { background: #3a3a40; }
+label.cts-avatar { border-radius: 999px; color: #fff; font-weight: 700; letter-spacing: 0.02em; }
+label.cts-avatar.lg { font-size: 1.5em; letter-spacing: -0.02em; }
+label.cts-avatar.sm { font-size: 0.85em; }
+.cts-hue-0 { background: #2f5f86; } .cts-hue-1 { background: #3d6b4a; } .cts-hue-2 { background: #8a4b2f; }
+.cts-hue-3 { background: #5c4d8a; } .cts-hue-4 { background: #6b3d55; } .cts-hue-5 { background: #3d5c58; }
+.cts-hue-6 { background: #3d4f6b; }
+
+/* Buttons the mockup draws as 32 px rounded rectangles. */
+button.cts-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #dedee3;
+  background: var(--view-bg-color);
+  box-shadow: none;
+  font-size: 0.89em;
+  font-weight: 600;
+}
+.app-dark button.cts-btn { border-color: #39393f; }
+button.cts-btn:hover { background: alpha(black, 0.06); }
+.app-dark button.cts-btn:hover { background: alpha(white, 0.08); }
+button.cts-btn.yes { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; font-weight: 700; }
+button.cts-btn.yes:hover { background: var(--accent-fill); }
+button.cts-btn.dangerfill { background: #a51d2d; border-color: #a51d2d; color: #fff; font-weight: 700; }
+button.cts-btn.dangerfill:hover { background: #8c1826; }
+button.cts-btn:disabled { background: #e3e3e7; border-color: #e3e3e7; color: #5c5c66; }
+.app-dark button.cts-btn:disabled { background: #3a3a40; border-color: #3a3a40; color: #a0a0aa; }
+button.cts-iconbtn { min-width: 32px; min-height: 32px; padding: 0; border-radius: 999px; background: none; box-shadow: none; }
+button.cts-iconbtn:hover { background: alpha(black, 0.06); }
+.app-dark button.cts-iconbtn:hover { background: alpha(white, 0.08); }
+.cts-icon { color: alpha(currentColor, 0.75); }
+.app-dark .cts-icon { color: alpha(currentColor, 0.64); }
+button.cts-btn .cts-icon { color: inherit; }
+
+/* The person */
+.cts-ident { padding: 20px 24px 18px 20px; border-bottom: 1px solid #ececef; }
+.app-dark .cts-ident { border-bottom-color: #2c2c31; }
+.cts-who { padding: 2px 0 0; }
+.cts-who-name { font-size: 1.5em; font-weight: 700; letter-spacing: -0.02em; }
+.cts-who-sub { font-size: 0.95em; color: alpha(currentColor, 0.75); margin-top: 3px; }
+.app-dark .cts-who-sub { color: alpha(currentColor, 0.64); }
+.cts-who-chips { margin-top: 8px; }
+.cts-actions { margin-top: 16px; }
+.cts-phead { min-height: 52px; padding: 8px 12px 8px 16px; border-bottom: 1px solid #ececef; }
+.app-dark .cts-phead { border-bottom-color: #2c2c31; }
+.cts-pbody { padding: 20px 32px 40px; }
+.cts-sec { margin: 22px 2px 8px; font-size: 0.89em; font-weight: 700; letter-spacing: -0.01em; }
+.cts-hint { font-size: 0.92em; color: alpha(currentColor, 0.75); margin: 4px 0 0; }
+.app-dark .cts-hint { color: alpha(currentColor, 0.64); }
+.cts-group { border: 1px solid #dedee3; border-radius: 12px; }
+.app-dark .cts-group { border-color: #39393f; }
+.cts-line { min-height: 36px; padding: 8px 14px; border-spacing: 12px; background: var(--view-bg-color); }
+.cts-line.after, .cts-entry.after, .cts-entryrow.after, .cts-choice.after, .cts-go.after, button.cts-line.after { border-top: 1px solid #ececef; border-radius: 0; }
+.app-dark .cts-line.after, .app-dark .cts-entry.after, .app-dark .cts-entryrow.after, .app-dark .cts-choice.after, .app-dark .cts-go.after, .app-dark button.cts-line.after { border-top-color: #2c2c31; }
+.cts-title { font-size: 0.95em; font-weight: 600; letter-spacing: -0.01em; }
+.cts-sub { font-size: 0.85em; color: alpha(currentColor, 0.75); margin-top: 1px; }
+.app-dark .cts-sub { color: alpha(currentColor, 0.64); }
+button.cts-go { padding: 0; background: none; box-shadow: none; border-radius: 0; min-height: 0; font-weight: normal; }
+button.cts-go.cts-photo { border-radius: 9999px; }
+button.cts-go:hover { background: alpha(black, 0.04); }
+.app-dark button.cts-go:hover { background: alpha(white, 0.05); }
+.cts-chev { color: alpha(currentColor, 0.75); }
+switch.cts-switch:checked { background: var(--accent-fill); }
+.cts-decide { padding: 0; }
+.cts-keepwho { padding: 16px 16px 14px; border-bottom: 1px solid #ececef; }
+.app-dark .cts-keepwho { border-bottom-color: #2c2c31; }
+.cts-keep-name { font-size: 1.36em; font-weight: 700; letter-spacing: -0.02em; }
+.cts-choice { min-height: 44px; padding: 8px 14px; border-spacing: 10px; }
+checkbutton.cts-radio check { border-radius: 999px; }
+checkbutton.cts-radio check:checked { background: var(--accent-fill); border-color: var(--accent-fill); }
+
+/* Forms */
+.cts-entry { padding: 8px 14px 10px; background: var(--view-bg-color); }
+.cts-entry:focus-within { background: #fff8f4; }
+.app-dark .cts-entry:focus-within { background: alpha(var(--accent-bg-color), 0.1); }
+.cts-entry-label { font-size: 0.82em; font-weight: 600; color: alpha(currentColor, 0.75); margin-bottom: 2px; }
+.app-dark .cts-entry-label { color: alpha(currentColor, 0.64); }
+entry.cts-entry-field { min-height: 24px; padding: 0; border: none; box-shadow: none; background: none; outline: none; font-size: 0.99em; letter-spacing: -0.01em; }
+.cts-entryrow { background: var(--view-bg-color); }
+box.cts-rowsbox.after { border-top: 1px solid #ececef; }
+.app-dark box.cts-rowsbox.after { border-top-color: #2c2c31; }
+.cts-notes { padding: 10px 14px; min-height: 80px; font-size: 0.99em; background: none; }
+.cts-dirty { font-size: 0.85em; font-weight: 600; color: alpha(currentColor, 0.75); }
+.cts-error { color: #a51d2d; padding: 8px 16px 0; font-size: 0.89em; }
+.app-dark .cts-error { color: #ff7b86; }
+button.cts-addline { margin-top: 6px; padding: 4px 8px; min-height: 28px; border-radius: 8px; background: none; box-shadow: none; font-size: 0.89em; font-weight: 600; color: var(--accent-color); }
+button.cts-addline .cts-icon { color: inherit; }
+button.cts-danger { color: #a51d2d; font-weight: 600; font-size: 0.95em; background: var(--view-bg-color); box-shadow: none; border: none; border-radius: 0; }
+.app-dark button.cts-danger { color: #ff7b86; }
+button.cts-danger:hover { background: alpha(#a51d2d, 0.06); }
+.cts-photo { padding: 22px 0 0; }
+.cts-seg { background: #e3e3e7; border-radius: 10px; padding: 3px; margin: 14px 0 0; }
+.app-dark .cts-seg { background: #3a3a40; }
+.cts-seg > button { min-height: 32px; border-radius: 8px; border: none; background: none; box-shadow: none; font-size: 0.89em; font-weight: 600; color: alpha(currentColor, 0.75); }
+.cts-seg > button:checked { background: var(--view-bg-color); color: inherit; font-weight: 700; }
+.cts-seg > button:hover:not(:checked) { background: alpha(black, 0.05); }
+
+/* Status pages in the list pane, and the Undo lane */
+.cts-status { padding: 24px 32px 48px; border-spacing: 0; }
+.cts-status-title { font-size: 1.36em; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+.cts-status-body { font-size: 0.95em; color: alpha(currentColor, 0.75); margin-bottom: 18px; }
+.app-dark .cts-status-body { color: alpha(currentColor, 0.64); }
+.cts-toast { margin: 8px 16px 16px; padding: 6px 6px 6px 16px; border-radius: 999px; background: #2a2623; color: #fff; font-size: 0.92em; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22); }
+.cts-toast button { color: #fff; font-weight: 700; min-height: 32px; padding: 0 10px; border-radius: 999px; }
+.cts-toast button:hover { background: alpha(white, 0.12); }
+button.cts-quiet { margin: 4px 12px 10px; min-height: 28px; padding: 0 8px; font-size: 0.85em; font-weight: 400; color: alpha(currentColor, 0.75); }
+.app-dark button.cts-quiet { color: alpha(currentColor, 0.64); }
+
+/* Contacts: hover and press answer at once. GTK drops the transition when
+   the user turns animations off. */
+.cts-chip-more { padding: 0 7px; min-height: 20px; font-size: 0.78em; font-weight: 600; color: alpha(currentColor, 0.75); }
+.cts-rows > row { transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1); }
+.cts-rows > row:active { background: alpha(black, 0.09); }
+.app-dark .cts-rows > row:active { background: alpha(white, 0.1); }
+.cts-rows > row:focus-visible { outline: 2px solid @accent_bg_color; outline-offset: -2px; }
+button.cts-btn { transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1); }
+button.cts-btn:active { background: alpha(black, 0.12); }
+button.cts-btn.yes:active { background: #a83a00; }
+/* A two-colour ring: the filled button hides an accent ring, so the gap shows the page. */
+button.cts-btn:focus-visible { outline: 2px solid #1c1c21; outline-offset: 2px; }
+.app-dark button.cts-btn:focus-visible { outline-color: #f2f2f5; }
+
+/* A pane that changes fades in over 200 ms; the Undo lane slides in its Revealer. */
+@keyframes cts-fade-a { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cts-fade-b { from { opacity: 0; } to { opacity: 1; } }
+.cts-fade-a { animation: cts-fade-a 200ms cubic-bezier(0.2, 0, 0, 1); }
+.cts-fade-b { animation: cts-fade-b 200ms cubic-bezier(0.2, 0, 0, 1); }
+
+/* The selected row is as dark as a chip, so its chips turn lighter to stay pills. */
+.cts-rows > row:selected .cts-chip { background: #ffffff; }
+.app-dark .cts-rows > row:selected .cts-chip { background: #4c4c54; }
+.cts-rows > row:selected .cts-chip-more { background: #ffffff; }
+.app-dark .cts-rows > row:selected .cts-chip-more { background: #4c4c54; }
+button.cts-nav:active { background: alpha(black, 0.12); }
+.app-dark button.cts-nav:active { background: alpha(white, 0.14); }

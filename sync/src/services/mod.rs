@@ -22,6 +22,7 @@ pub use google::withheld as withheld_by_grant;
 pub mod imap;
 pub mod jmap;
 pub(crate) mod local;
+pub(crate) mod local_contacts;
 pub mod microsoft;
 mod no_mail;
 mod pacing;
@@ -38,6 +39,7 @@ pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
 pub use imap::{GmailImap, Imap, ImapApi, ImapSettings, Submit};
 pub use jmap::{Jmap, JmapApi, JmapSettings, JmapSieve, SERVER_REPLY_SCRIPT};
 pub use local::LocalRules;
+pub use local_contacts::LocalContacts;
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
 pub use no_mail::NoMail;
 pub use pacing::{Priority, background, priority};
@@ -694,7 +696,10 @@ impl AccountServices {
         AccountServices {
             mail: AnyMail::Pop3(adapter.clone()),
             calendar: None,
-            contacts: None,
+            contacts: Some(AnyContacts::Local(LocalContacts::new(
+                db.clone(),
+                account_id,
+            ))),
             rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
             auto_reply: None,
             identities: AnyIdentities::Pop3(adapter),
@@ -1493,7 +1498,8 @@ pub trait MailBackend: Send + Sync + 'static {
     /// alone where they put it, and its original stays gone rather
     /// than meeting it as a duplicate. Adapters without a cheap read
     /// answer true here and leave the word to their checked destroy.
-    fn still_in(        &self,
+    fn still_in(
+        &self,
         _message: &str,
         _mailbox: &str,
     ) -> impl Future<Output = Result<bool, BackendError>> + Send {
@@ -1730,6 +1736,32 @@ pub trait CalendarService: Send + Sync + 'static {
 
 /// The account's address book.
 pub trait ContactsService: Send + Sync + 'static {
+    /// Address book ids and display names for choosing where to create a contact.
+    fn address_books(
+        &self,
+    ) -> impl Future<Output = Result<Vec<(String, String)>, BackendError>> + Send {
+        async { Ok(Vec::new()) }
+    }
+
+    fn edits_details(&self) -> bool {
+        false
+    }
+
+    /// Whether the server drops the groups of a card, so a contact's groups
+    /// are held on this computer beside it instead.
+    fn keeps_groups_here(&self) -> bool {
+        false
+    }
+
+    fn delete_contact(
+        &self,
+        resource: &str,
+        revision: Option<&str>,
+    ) -> impl Future<Output = Result<(), BackendError>> + Send {
+        let _ = (resource, revision);
+        async { Err(BackendError::Unsupported) }
+    }
+
     /// One page of the contacts. `sync_token` from the last read asks for
     /// changes alone. Answers `BackendError::NeedsPermission` until the
     /// account grants the contacts permission.

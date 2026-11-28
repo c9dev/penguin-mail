@@ -54,6 +54,10 @@ pub enum BackendError {
     /// The provider has no such service or cannot do this.
     #[error("the server cannot do that")]
     Unsupported,
+    /// A change refused before it reached the server, in the reader's
+    /// language, such as a malformed date.
+    #[error("{0}")]
+    Invalid(String),
     /// The provider has the service switched off for the app, as a Google
     /// Cloud project can for an API. Only turning it on at `enable_url`
     /// helps, so no permission prompt is worth showing.
@@ -95,6 +99,7 @@ impl From<GmailError> for BackendError {
             GmailError::Network(detail) => BackendError::Offline(detail),
             GmailError::RateLimited { retry_after } => BackendError::RateLimited(retry_after),
             GmailError::NotFound => BackendError::NotFound,
+            GmailError::Invalid(why) => BackendError::Invalid(why),
             GmailError::MissingScope => BackendError::NeedsPermission,
             GmailError::FileMissing(path) => BackendError::FileMissing(path),
             GmailError::ApiDisabled {

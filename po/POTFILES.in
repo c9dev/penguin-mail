@@ -195,6 +195,7 @@ sync/src/actions/labelling.rs
 sync/src/actions/carry.rs
 sync/src/actions.rs
 sync/src/calendar_copy.rs
+sync/src/calendar_copy/birthdays.rs
 sync/src/error.rs
 sync/src/mailbox.rs
 sync/src/outbox.rs
@@ -238,3 +239,16 @@ sync/src/account/space.rs
 app/src/ui/window/trash.rs
 app/src/ui/thread_list/filters.rs
 app/src/ui/toolbar/customize.rs
+app/src/ui/contacts/mod.rs
+app/src/ui/contacts/editor.rs
+app/src/ui/contacts/photo.rs
+sync/src/services/local_contacts.rs
+app/src/ui/contacts/side.rs
+app/src/ui/contacts/person.rs
+app/src/ui/contacts/ops.rs
+dav/src/vcard.rs
+sync/src/services/carddav.rs
+
+gmail/src/people.rs
+sync/src/services/google/mod.rs
+domain/src/contact.rs

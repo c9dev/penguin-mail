@@ -1581,8 +1581,8 @@ async fn a_dav_server_on_another_site_never_sees_the_oauth_token() {
         "a calendar server on another site is left out"
     );
     assert!(
-        services.contacts.is_none(),
-        "a contacts server on another site is left out"
+        matches!(services.contacts, Some(crate::AnyContacts::Local(_))),
+        "a contacts server on another site is left out, and the book stays on this computer"
     );
     db.write(move |c| {
         mailrs_store::services::save(

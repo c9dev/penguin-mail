@@ -59,22 +59,27 @@ pub fn only_calendars(accounts: &[Account]) -> bool {
 
 /// Whether the window may show `space`. With calendar accounts alone the
 /// calendar is the one space there is, shown though no switch offers it,
-/// and there is no mail to show. Otherwise the calendar shows only while
-/// the switch does.
-pub fn may_show(space: crate::settings::Space, switch_visible: bool, accounts: &[Account]) -> bool {
+/// and there is no mail to show, nor contacts. Otherwise the calendar shows
+/// only while an account offers one.
+pub fn may_show(
+    space: crate::settings::Space,
+    calendar_offered: bool,
+    accounts: &[Account],
+) -> bool {
     match space {
         crate::settings::Space::Mail => !only_calendars(accounts),
-        crate::settings::Space::Calendar => only_calendars(accounts) || switch_visible,
+        crate::settings::Space::Calendar => only_calendars(accounts) || calendar_offered,
+        crate::settings::Space::Contacts => !accounts.is_empty() && !only_calendars(accounts),
     }
 }
 
-/// Whether the sidebar offers the Mail / Calendar switch. `started` holds
+/// Whether the switch offers the Calendar toggle. `started` holds
 /// what each running account offers; `waiting` says some account has not
 /// started yet. Once one running account offers a calendar the switch
 /// shows. Until the accounts have started nobody knows, so the switch
 /// follows the space the window opened on last, which keeps it from
 /// blinking away and back for someone who uses the calendar.
-pub fn shows_space_switch(
+pub fn offers_calendar_toggle(
     started: &[Offers],
     waiting: bool,
     remembered: crate::settings::Space,
@@ -1076,8 +1081,8 @@ mod tests {
 
     use super::{
         Calendar, calendar_link, failing_lines, held_back_line, hides_addresses, kept_here_lines,
-        offers_for, reason, reason_on, remove_account_body, shows_space_switch, still_held_line,
-        withheld_for,
+        offers_calendar_toggle, offers_for, reason, reason_on, remove_account_body,
+        still_held_line, withheld_for,
     };
     use crate::settings::Space;
     use mailrs_domain::MailRoute;
@@ -1425,7 +1430,7 @@ mod tests {
 
     #[test]
     fn the_switch_shows_once_a_started_account_offers_a_calendar() {
-        assert!(shows_space_switch(
+        assert!(offers_calendar_toggle(
             &[NO_CALENDAR, Offers::EVERYTHING],
             false,
             Space::Mail
@@ -1434,14 +1439,22 @@ mod tests {
 
     #[test]
     fn the_switch_hides_when_no_started_account_offers_a_calendar() {
-        assert!(!shows_space_switch(&[NO_CALENDAR], false, Space::Calendar));
-        assert!(!shows_space_switch(&[], false, Space::Calendar));
+        assert!(!offers_calendar_toggle(
+            &[NO_CALENDAR],
+            false,
+            Space::Calendar
+        ));
+        assert!(!offers_calendar_toggle(&[], false, Space::Calendar));
     }
 
     #[test]
     fn before_the_accounts_start_the_switch_follows_the_last_space() {
-        assert!(shows_space_switch(&[NO_CALENDAR], true, Space::Calendar));
-        assert!(!shows_space_switch(&[], true, Space::Mail));
+        assert!(offers_calendar_toggle(
+            &[NO_CALENDAR],
+            true,
+            Space::Calendar
+        ));
+        assert!(!offers_calendar_toggle(&[], true, Space::Mail));
     }
 
     fn gmail() -> Account {

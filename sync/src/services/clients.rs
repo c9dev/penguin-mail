@@ -159,6 +159,7 @@ either_client! {
         fn set_vacation(vacation: &Vacation) -> Gmail<()>;
         fn connections(page_token: Option<&str>, sync_token: Option<&str>) -> Gmail<ConnectionsPage>;
         fn contact_photo(url: &str) -> Gmail<Vec<u8>>;
+        fn delete_contact(resource: &str, revision: Option<&str>) -> Gmail<()>;
         fn create_contact(fields: &ContactFields) -> Gmail<Person>;
         fn update_contact(resource: &str, fields: &ContactFields) -> Gmail<Person>;
         fn calendars() -> Gmail<Vec<calendar::Calendar>>;
@@ -228,7 +229,10 @@ either_client! {
         fn contact_photo(id: &str, limit: usize) -> Graphed<Option<Vec<u8>>>;
         fn create_contact(body: &Value) -> Graphed<GraphContact>;
         fn contact_name(id: &str) -> Graphed<GraphContact>;
-        fn update_contact(id: &str, body: &Value) -> Graphed<GraphContact>;
+        fn contact_extras(id: &str) -> Graphed<Option<String>>;
+        fn set_contact_photo(id: &str, bytes: Vec<u8>) -> Graphed<()>;
+        fn delete_contact(id: &str, etag: Option<&str>) -> Graphed<()>;
+        fn update_contact(id: &str, body: &Value, etag: Option<&str>) -> Graphed<GraphContact>;
         fn rules() -> Graphed<Vec<MessageRule>>;
         fn create_rule(rule: &MessageRule) -> Graphed<MessageRule>;
         fn delete_rule(id: &str) -> Graphed<()>;
@@ -316,6 +320,7 @@ either_client! {
         fn fetch(collection: &str, kind: Kind, hrefs: &[String]) -> Result<Vec<Fetched>, DavError>;
         fn get(href: &str) -> Result<Fetched, DavError>;
         fn put(href: &str, body: &str, kind: Kind, when: Precondition) -> Result<Option<String>, DavError>;
+        fn put_at(href: &str, body: &str, kind: Kind, when: Precondition) -> Result<(Option<String>, Option<String>), DavError>;
         fn delete(href: &str, etag: Option<&str>) -> Result<(), DavError>;
         fn find_uid(collection: &str, uid: &str) -> Result<Option<Fetched>, DavError>;
         fn auto_schedule(at: Option<&str>) -> Result<bool, DavError>;

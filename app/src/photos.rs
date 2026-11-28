@@ -192,15 +192,21 @@ fn face_at(path: &Path) -> Face {
 
 /// `texture`, or a copy of it no longer than [`EDGE`] on either side.
 fn shrunk(texture: &gdk::Texture) -> gdk::Texture {
+    shrunk_to(texture, EDGE)
+}
+
+/// `texture`, or a premultiplied copy of it no longer than `edge` on
+/// either side.
+pub(crate) fn shrunk_to(texture: &gdk::Texture, edge: usize) -> gdk::Texture {
     let (width, height) = (texture.width() as usize, texture.height() as usize);
-    if width.max(height) <= EDGE {
+    if width.max(height) <= edge {
         return texture.clone();
     }
     let format = gdk::MemoryFormat::R8g8b8a8Premultiplied;
     let mut downloader = gdk::TextureDownloader::new(texture);
     downloader.set_format(format);
     let (pixels, stride) = downloader.download_bytes();
-    let (small, width, height) = shrink(&pixels, width, height, stride, EDGE);
+    let (small, width, height) = shrink(&pixels, width, height, stride, edge);
     gdk::MemoryTexture::new(
         width as i32,
         height as i32,

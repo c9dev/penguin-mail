@@ -10,6 +10,7 @@ use crate::translate::gettext;
 
 pub mod calendar;
 pub mod category;
+pub mod contact;
 mod folder;
 pub mod invitation;
 mod location;

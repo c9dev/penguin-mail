@@ -31,5 +31,5 @@ pub use mail::{
     Message, MessageBody, MessagePatch, Override, SIZE_PROPERTY, Write,
 };
 pub use model::{DateTimeZone, EmailAddress, ItemBody, Recipient, Removed};
-pub use people::{ContactFolder, GraphContact};
+pub use people::{ContactFolder, EXTRAS_ID, GraphContact, PhysicalAddress};
 pub use settings::{AutomaticReplies, MessageRule, RuleActions, RulePredicates};

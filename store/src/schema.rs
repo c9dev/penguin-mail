@@ -1126,6 +1126,35 @@ CREATE TABLE microsoft_shared (
     // An IMAP account shows only the folders the person subscribes to,
     // as Thunderbird does, unless this asks for every folder.
     "ALTER TABLE accounts ADD COLUMN all_folders INTEGER NOT NULL DEFAULT 0;",
+    "ALTER TABLE contacts ADD COLUMN details TEXT NOT NULL DEFAULT '{}';",
+    // Old cursors describe the smaller set of contact fields. Keep the
+    // cached cards until a complete read of the expanded fields succeeds.
+    "UPDATE contact_books SET sync_token = NULL, synced_at = 0;",
+    // Two contacts in different accounts that the person said are one
+    // human. Neither contact changes; All contacts shows them as one row.
+    // `shown_a` says whose name the row uses. No foreign key to `contacts`:
+    // a refresh replaces those rows, and a link must outlive that.
+    r#"
+CREATE TABLE IF NOT EXISTS contact_links (
+    account_a  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource_a TEXT NOT NULL,
+    account_b  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource_b TEXT NOT NULL,
+    shown_a    INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (account_a, resource_a, account_b, resource_b)
+);
+"#,
+    // Groups a server cannot keep, held on this computer beside the
+    // contact. Google's CardDAV drops CATEGORIES, so its contacts' groups
+    // live here. No foreign key to `contacts`, for the reason of the links.
+    r#"
+CREATE TABLE IF NOT EXISTS contact_local_groups (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource   TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    PRIMARY KEY (account_id, resource, name)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
