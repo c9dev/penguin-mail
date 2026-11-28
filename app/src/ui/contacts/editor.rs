@@ -389,8 +389,12 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
         0,
         dirty.clone(),
     );
-    let (birthday_group, birthday) =
-        text_group(&gettext("Birthday"), &d.birthday, "YYYY-MM-DD", &dirty);
+    let (birthday_group, birthday) = text_group(
+        &gettext("Birthday"),
+        &d.birthday,
+        &gettext("YYYY-MM-DD"),
+        &dirty,
+    );
     let notes = gtk::TextBuffer::new(None);
     notes.set_text(&d.notes);
     {
@@ -532,9 +536,14 @@ impl Contacts {
         // Save waits for a first change on a saved contact; a new one waits
         // for a name or address instead, below.
         save.set_sensitive(new);
+        self.form_dirty.set(false);
         let dirty: Rc<dyn Fn()> = {
-            let (unsaved, save) = (unsaved.downgrade(), save.downgrade());
+            let (unsaved, save, this) =
+                (unsaved.downgrade(), save.downgrade(), Rc::downgrade(self));
             Rc::new(move || {
+                if let Some(this) = this.upgrade() {
+                    this.form_dirty.set(true);
+                }
                 if let Some(u) = unsaved.upgrade() {
                     u.set_visible(true);
                 }
@@ -581,8 +590,10 @@ impl Contacts {
             let weak = weak.clone();
             cancel.connect_clicked(move |_| {
                 if let Some(this) = weak.upgrade() {
-                    this.state.borrow_mut().pane = Some(Pane::View);
-                    this.show_pane();
+                    this.leave_form(|this| {
+                        this.state.borrow_mut().pane = Some(Pane::View);
+                        this.show_pane();
+                    });
                 }
             });
         }
@@ -651,17 +662,34 @@ impl Contacts {
                 })
                 .unwrap_or(0);
             let (weak, others) = (weak.clone(), others.clone());
-            top.append(&parts::seg(
-                &gettext("Which account"),
-                &names,
-                at,
-                move |to| {
-                    if let (Some(this), Some(next)) = (weak.upgrade(), others.get(to)) {
-                        this.state.borrow_mut().pane = Some(Pane::Edit(Box::new(next.clone())));
+            let seg_ref: Rc<glib::WeakRef<gtk::Box>> = Rc::default();
+            let held = seg_ref.clone();
+            let seg = parts::seg(&gettext("Which account"), &names, at, move |to| {
+                let (Some(this), Some(next)) = (weak.upgrade(), others.get(to).cloned()) else {
+                    return;
+                };
+                if to == at {
+                    return;
+                }
+                let held = held.clone();
+                this.leave_form_or(
+                    move |this| {
+                        this.state.borrow_mut().pane = Some(Pane::Edit(Box::new(next)));
                         this.show_pane();
-                    }
-                },
-            ));
+                    },
+                    // Kept: the seg goes back to the account being edited.
+                    move |_| {
+                        let toggle = held.upgrade().and_then(|seg| {
+                            std::iter::successors(seg.first_child(), |w| w.next_sibling()).nth(at)
+                        });
+                        if let Some(toggle) = toggle.and_downcast::<gtk::ToggleButton>() {
+                            toggle.set_active(true);
+                        }
+                    },
+                );
+            });
+            seg_ref.set(Some(&seg));
+            top.append(&seg);
         }
         body.prepend(&top);
 
@@ -844,7 +872,7 @@ impl Contacts {
                 let Some(this) = weak.upgrade() else { return };
                 b.set_sensitive(true);
                 match result {
-                    Ok(()) => {
+                    Ok(_) => {
                         app.contacts_added();
                         this.state.borrow_mut().pane = Some(Pane::View);
                         this.reload();

@@ -4074,8 +4074,8 @@ msgstr "そのアカウントは接続されていません。"
 msgid "Could not save: {reason}"
 msgstr "保存できませんでした: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3061
-#: app/src/ui/window.rs:3084
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3069
+#: app/src/ui/window.rs:3092
 msgid "Could not open the draft: {reason}"
 msgstr "下書きを開けませんでした: {reason}"
 
@@ -4101,7 +4101,7 @@ msgid "Show or hide this message"
 msgstr "このメッセージの表示を切り替え"
 
 #: app/src/render.rs:305 app/src/ui/contact_card.rs:43
-#: app/src/ui/contacts/mod.rs:238
+#: app/src/ui/contacts/mod.rs:253
 msgid "Contact"
 msgstr "連絡先"
 
@@ -4147,8 +4147,8 @@ msgstr ""
 "このメッセージには偽装の疑いがあるリンクが含まれています。開く前にリンク先を"
 "確認してください。"
 
-#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:415
-#: app/src/ui/contacts/person.rs:452
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:419
+#: app/src/ui/contacts/person.rs:465
 msgid "Details"
 msgstr "詳細"
 
@@ -4338,7 +4338,7 @@ msgid "Set up a different project"
 msgstr "別のプロジェクトを設定"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3414
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3422
 msgid "Set up your own Google project"
 msgstr "自分の Google プロジェクトを設定する"
 
@@ -4483,13 +4483,13 @@ msgstr "{host} がログインを拒否しました: {reason}"
 msgid "Calendar"
 msgstr "カレンダー"
 
-#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:176
-#: app/src/ui/contacts/mod.rs:232 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:191
+#: app/src/ui/contacts/mod.rs:247 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:566
 #: app/src/ui/sidebar.rs:918 app/src/ui/sidebar.rs:1944
-#: app/src/ui/window.rs:3813
+#: app/src/ui/window.rs:3821
 msgid "Contacts"
 msgstr "連絡先"
 
@@ -4507,7 +4507,7 @@ msgstr "サーバー上"
 
 #: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
 #: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/contacts/side.rs:161 app/src/ui/preferences.rs:1185
+#: app/src/ui/contacts/side.rs:169 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "無効"
 
@@ -4523,8 +4523,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude サブスクリプション"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3806
-#: app/src/ui/window.rs:3895
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3903
 msgid "Assistant"
 msgstr "アシスタント"
 
@@ -4919,13 +4919,13 @@ msgstr "Penguin Mail を開く"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:302 app/src/ui/contacts/person.rs:305
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:310
+#: app/src/ui/contacts/person.rs:315 app/src/ui/contacts/person.rs:318
 #: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "新規メッセージ"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3812
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3820
 msgid "Check for Mail"
 msgstr "メールを確認"
 
@@ -4943,7 +4943,7 @@ msgstr "{version} の新機能"
 msgid "Check for Updates"
 msgstr "更新を確認"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3834
+#: app/src/tray.rs:216 app/src/ui/window.rs:3842
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "終了"
@@ -4966,11 +4966,12 @@ msgid "What's New"
 msgstr "新機能"
 
 #: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:357
-#: app/src/ui/contacts/person.rs:1251 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/contacts/person.rs:1265 app/src/ui/contacts/person.rs:1275
+#: app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "ウェブサイト"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3833
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3841
 msgid "Donate"
 msgstr "寄付"
 
@@ -4978,7 +4979,7 @@ msgstr "寄付"
 msgid "License"
 msgstr "ライセンス"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3832
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3840
 msgid "About Penguin Mail"
 msgstr "Penguin Mail について"
 
@@ -5027,12 +5028,12 @@ msgid "The update to {version} failed"
 msgstr "{version} への更新に失敗しました"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1631
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1639
 msgid "Copy Command"
 msgstr "コマンドをコピー"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1636
+#: app/src/ui/window.rs:1644
 msgid "Command copied"
 msgstr "コマンドをコピーしました"
 
@@ -5126,9 +5127,9 @@ msgstr "リンクをコピー"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
-#: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:588
+#: app/src/ui/contacts/mod.rs:1182 app/src/ui/contacts/mod.rs:1296
+#: app/src/ui/contacts/person.rs:764 app/src/ui/contacts/person.rs:921
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5145,7 +5146,7 @@ msgstr "キャンセル"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1575
+#: app/src/ui/window.rs:1583
 msgid "Sign In"
 msgstr "ログイン"
 
@@ -5269,7 +5270,7 @@ msgstr "後で"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1708
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1716
 msgid "Grant Access"
 msgstr "アクセスを許可"
 
@@ -5417,9 +5418,9 @@ msgstr "検索中…"
 msgid "Sign In Again"
 msgstr "再ログイン"
 
-#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:289
-#: app/src/ui/contacts/mod.rs:513 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2319
+#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:304
+#: app/src/ui/contacts/mod.rs:541 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2327
 msgid "Open Google Cloud"
 msgstr "Google Cloudを開く"
 
@@ -5508,14 +5509,14 @@ msgstr "開いているスレッドへの返信を下書きして"
 msgid "Choose a Model"
 msgstr "モデルを選択"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3942
-#: app/src/ui/window.rs:3943
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:3951
 msgid "Detach"
 msgstr "切り離す"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4642
+#: app/src/ui/window.rs:4650
 msgid "Close"
 msgstr "閉じる"
 
@@ -5726,7 +5727,7 @@ msgid "Use {server}"
 msgstr "{server} を使う"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:287
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:300
 msgid "Edit"
 msgstr "編集"
 
@@ -5736,8 +5737,8 @@ msgstr "{server} を編集"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:742 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3570
+#: app/src/ui/contacts/editor.rs:770 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3578
 msgid "Remove"
 msgstr "削除"
 
@@ -5814,7 +5815,7 @@ msgstr "テスト"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:598
+#: app/src/ui/contacts/editor.rs:533 app/src/ui/contacts/editor.rs:609
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6377,8 +6378,8 @@ msgstr "会議"
 msgid "Decline"
 msgstr "辞退"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
-#: app/src/ui/contacts/mod.rs:1327
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1398
+#: app/src/ui/contacts/mod.rs:1411
 msgid "None"
 msgstr "なし"
 
@@ -6442,7 +6443,7 @@ msgstr "間隔"
 msgid "Unit"
 msgstr "単位"
 
-#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:163
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:171
 msgid "On"
 msgstr "曜日"
 
@@ -6514,8 +6515,8 @@ msgid "Remove reminder"
 msgstr "リマインダーを削除"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:406
-#: app/src/ui/contacts/editor.rs:444 app/src/ui/contacts/person.rs:462
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:410
+#: app/src/ui/contacts/editor.rs:448 app/src/ui/contacts/person.rs:475
 msgid "Notes"
 msgstr "メモ"
 
@@ -6850,7 +6851,7 @@ msgid "Working location"
 msgstr "勤務場所"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:393
-#: app/src/ui/contacts/editor.rs:442 app/src/ui/contacts/person.rs:424
+#: app/src/ui/contacts/editor.rs:446 app/src/ui/contacts/person.rs:437
 msgid "Birthday"
 msgstr "誕生日"
 
@@ -7105,7 +7106,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "予定を削除できませんでした: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
+#: app/src/ui/contacts/mod.rs:282 app/src/ui/contacts/mod.rs:1449
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7920,7 +7921,7 @@ msgstr "下書きを保存しました"
 msgid "Save as Draft?"
 msgstr "下書きとして保存しますか？"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2384 app/src/ui/contacts/mod.rs:1629
 msgid "Discard"
 msgstr "破棄"
 
@@ -8149,31 +8150,31 @@ msgid "Ignore"
 msgstr "無視"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:319
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:834
+#: app/src/ui/contacts/person.rs:369 app/src/ui/contacts/person.rs:850
 msgid "Email"
 msgstr "メール"
 
 #: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:320
-#: app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:371
 msgid "Other email"
 msgstr "その他のメール"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:333
-#: app/src/ui/contacts/person.rs:383 app/src/ui/contacts/person.rs:840
+#: app/src/ui/contacts/person.rs:396 app/src/ui/contacts/person.rs:856
 msgid "Phone"
 msgstr "電話"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:229
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:242
 #: app/src/ui/sidebar.rs:1479
 msgid "Remove from VIPs"
 msgstr "VIPから削除"
 
-#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:231
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:244
 msgid "Add to VIPs"
 msgstr "VIPに追加"
 
-#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:269
-#: app/src/ui/contacts/person.rs:1084
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:282
+#: app/src/ui/contacts/person.rs:1107
 msgid "All Their Mail"
 msgstr "この人のすべてのメール"
 
@@ -8185,8 +8186,8 @@ msgstr "項目を削除"
 msgid "Full name"
 msgstr "氏名"
 
-#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:345
-#: app/src/ui/contacts/person.rs:837
+#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:853
 msgid "Organization"
 msgstr "組織"
 
@@ -8270,28 +8271,32 @@ msgstr "カスタムフィールドを追加"
 msgid "Value"
 msgstr "値"
 
-#: app/src/ui/contacts/editor.rs:433
+#: app/src/ui/contacts/editor.rs:395
+msgid "YYYY-MM-DD"
+msgstr "YYYY-MM-DD"
+
+#: app/src/ui/contacts/editor.rs:437
 msgid "Postal addresses"
 msgstr "住所"
 
-#: app/src/ui/contacts/editor.rs:434
+#: app/src/ui/contacts/editor.rs:438
 msgid "Websites"
 msgstr "Web サイト"
 
-#: app/src/ui/contacts/editor.rs:435 app/src/ui/contacts/person.rs:448
-#: app/src/ui/contacts/side.rs:113
+#: app/src/ui/contacts/editor.rs:439 app/src/ui/contacts/person.rs:461
+#: app/src/ui/contacts/side.rs:121
 msgid "Groups"
 msgstr "グループ"
 
-#: app/src/ui/contacts/editor.rs:436
+#: app/src/ui/contacts/editor.rs:440
 msgid "Other dates"
 msgstr "その他の日付"
 
-#: app/src/ui/contacts/editor.rs:437
+#: app/src/ui/contacts/editor.rs:441
 msgid "Custom fields"
 msgstr "カスタムフィールド"
 
-#: app/src/ui/contacts/editor.rs:506
+#: app/src/ui/contacts/editor.rs:510
 msgid ""
 "A new contact is saved into one account. The other accounts do not get a "
 "copy. Add a name or an email. Save stays off until one of those is filled in."
@@ -8300,65 +8305,65 @@ msgstr ""
 "せん。名前またはメールアドレスを入力してください。どちらかを入力するまで保存"
 "はオフのままです。"
 
-#: app/src/ui/contacts/editor.rs:526
+#: app/src/ui/contacts/editor.rs:530
 msgid "Unsaved changes"
 msgstr "未保存の変更"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
+#: app/src/ui/contacts/editor.rs:581 app/src/ui/contacts/mod.rs:1340
 msgid "New contact"
 msgstr "新しい連絡先"
 
-#: app/src/ui/contacts/editor.rs:574
+#: app/src/ui/contacts/editor.rs:583
 msgid "Edit contact"
 msgstr "連絡先を編集"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
-#: app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:638 app/src/ui/contacts/mod.rs:1089
+#: app/src/ui/contacts/person.rs:1179
 msgid "Turn contacts on for an account first."
 msgstr "先にアカウントの連絡先をオンにしてください。"
 
-#: app/src/ui/contacts/editor.rs:631 app/src/ui/contacts/editor.rs:636
-#: app/src/ui/contacts/person.rs:1153 app/src/ui/contacts/person.rs:1160
+#: app/src/ui/contacts/editor.rs:642 app/src/ui/contacts/editor.rs:647
+#: app/src/ui/contacts/person.rs:1176 app/src/ui/contacts/person.rs:1183
 msgid "Save to"
 msgstr "保存先"
 
-#: app/src/ui/contacts/editor.rs:655
+#: app/src/ui/contacts/editor.rs:667
 msgid "Which account"
 msgstr "アカウント"
 
-#: app/src/ui/contacts/editor.rs:678
+#: app/src/ui/contacts/editor.rs:706
 msgid "Replace Photo"
 msgstr "写真を変更"
 
-#: app/src/ui/contacts/editor.rs:680
+#: app/src/ui/contacts/editor.rs:708
 msgid "Add Photo"
 msgstr "写真を追加"
 
-#: app/src/ui/contacts/editor.rs:684
+#: app/src/ui/contacts/editor.rs:712
 msgid "Remove Photo"
 msgstr "写真を削除"
 
-#: app/src/ui/contacts/editor.rs:745 app/src/ui/contacts/person.rs:759
+#: app/src/ui/contacts/editor.rs:773 app/src/ui/contacts/person.rs:775
 msgid "Delete {name} from {account}"
 msgstr "{account} から {name} を削除"
 
-#: app/src/ui/contacts/editor.rs:801
+#: app/src/ui/contacts/editor.rs:829
 msgid "Enter a name or an email address."
 msgstr "名前またはメールアドレスを入力してください。"
 
-#: app/src/ui/contacts/editor.rs:807
+#: app/src/ui/contacts/editor.rs:835
 msgid "Enter a valid email address."
 msgstr "有効なメールアドレスを入力してください。"
 
-#: app/src/ui/contacts/editor.rs:810
+#: app/src/ui/contacts/editor.rs:838
 msgid "Contacts access for this account was turned off."
 msgstr "このアカウントの連絡先へのアクセスはオフになりました。"
 
-#: app/src/ui/contacts/editor.rs:854
+#: app/src/ui/contacts/editor.rs:882
 msgid "Could not save the contact: {reason}"
 msgstr "連絡先を保存できませんでした: {reason}"
 
-#: app/src/ui/contacts/editor.rs:899
+#: app/src/ui/contacts/editor.rs:927
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8368,7 +8373,7 @@ msgstr ""
 "す。{other_account} には {other} が残り、リンクしてもその連絡先は変わりませ"
 "ん。「保存」を押すまで何も書き込まれません。"
 
-#: app/src/ui/contacts/editor.rs:910
+#: app/src/ui/contacts/editor.rs:938
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8376,12 +8381,12 @@ msgstr ""
 "{name} の {account} の連絡先を編集しています。{other_account} は {other} を保"
 "持します。「保存」を押すまで何も書き込まれません。"
 
-#: app/src/ui/contacts/editor.rs:933
+#: app/src/ui/contacts/editor.rs:961
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "{account} の連絡先を編集しています。「保存」を押すまで何も書き込まれません。"
 
-#: app/src/ui/contacts/editor.rs:939
+#: app/src/ui/contacts/editor.rs:967
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8392,36 +8397,48 @@ msgstr[0] ""
 "{account} の連絡先を編集しています。{others} は自分の連絡先を保持します。「保"
 "存」を押すまで何も書き込まれません。"
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
+#: app/src/ui/contacts/mod.rs:227 app/src/ui/contacts/side.rs:193
 msgid "Turn Off Contacts"
 msgstr "連絡先をオフにする"
 
-#: app/src/ui/contacts/mod.rs:288
+#: app/src/ui/contacts/mod.rs:303
 msgid "Turn on Contacts for your Google project"
 msgstr "Google プロジェクトで連絡先をオンにする"
 
-#: app/src/ui/contacts/mod.rs:656
+#: app/src/ui/contacts/mod.rs:448
+msgid "Selected"
+msgstr "選択済み"
+
+#: app/src/ui/contacts/mod.rs:710
 msgid "Could not load contacts: {reason}"
 msgstr "連絡先を読み込めませんでした: {reason}"
 
-#: app/src/ui/contacts/mod.rs:794
+#: app/src/ui/contacts/mod.rs:851
 msgid "Deletes {name} in {account}"
 msgstr "{account} の {name} を削除します"
 
-#: app/src/ui/contacts/mod.rs:820
+#: app/src/ui/contacts/mod.rs:877
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "両方の連絡先を残します。何も削除されません。"
 
-#: app/src/ui/contacts/mod.rs:853
+#: app/src/ui/contacts/mod.rs:910
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "{count} 件のメッセージで確認"
 
-#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1036 app/src/ui/contacts/mod.rs:1088
 msgid "Contacts are off"
 msgstr "連絡先はオフです"
 
-#: app/src/ui/contacts/mod.rs:976
+#: app/src/ui/contacts/mod.rs:1040
+msgid ""
+"{account} keeps its address book on this computer. Turn contacts on to show "
+"it here."
+msgstr ""
+"{account} はアドレス帳をこのコンピューターに保存しています。ここに表示するに"
+"は連絡先をオンにしてください。"
+
+#: app/src/ui/contacts/mod.rs:1044
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8431,19 +8448,19 @@ msgstr ""
 "ンピューターにはありません。連絡先をオンにするとここにコピーします。後でオフ"
 "にすると、そのコピーは削除されます。"
 
-#: app/src/ui/contacts/mod.rs:988
+#: app/src/ui/contacts/mod.rs:1057
 msgid "No Matching Contacts"
 msgstr "一致する連絡先はありません"
 
-#: app/src/ui/contacts/mod.rs:989
+#: app/src/ui/contacts/mod.rs:1058
 msgid "Nothing matches that search."
 msgstr "検索に一致するものはありません。"
 
-#: app/src/ui/contacts/mod.rs:995
+#: app/src/ui/contacts/mod.rs:1064
 msgid "No shared addresses"
 msgstr "共通のアドレスはありません"
 
-#: app/src/ui/contacts/mod.rs:997
+#: app/src/ui/contacts/mod.rs:1066
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8451,56 +8468,60 @@ msgstr ""
 "1つのアカウントで同じアドレスを持つ連絡先はありません。削除待ちのものはありま"
 "せん。"
 
-#: app/src/ui/contacts/mod.rs:1002
+#: app/src/ui/contacts/mod.rs:1071
 msgid "No close names"
 msgstr "似た名前はありません"
 
-#: app/src/ui/contacts/mod.rs:1003
+#: app/src/ui/contacts/mod.rs:1072
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "まだリンクされていない似た名前を持つアカウントはありません。"
 
-#: app/src/ui/contacts/mod.rs:1007
+#: app/src/ui/contacts/mod.rs:1076
 msgid "Everyone is a contact"
 msgstr "全員が連絡先です"
 
-#: app/src/ui/contacts/mod.rs:1008
+#: app/src/ui/contacts/mod.rs:1077
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr "メールボックスで見かけた人はすでに連絡先に保存されています。"
 
-#: app/src/ui/contacts/mod.rs:1012
+#: app/src/ui/contacts/mod.rs:1081
 msgid "No VIPs yet"
 msgstr "VIP はまだありません"
 
-#: app/src/ui/contacts/mod.rs:1014
+#: app/src/ui/contacts/mod.rs:1083
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr "その人のページから VIP に追加すると、この一覧から開けます。"
 
-#: app/src/ui/contacts/mod.rs:1024
+#: app/src/ui/contacts/mod.rs:1093
 msgid "No contacts yet"
 msgstr "連絡先はまだありません"
 
-#: app/src/ui/contacts/mod.rs:1026
+#: app/src/ui/contacts/mod.rs:1095
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "このアカウントの連絡先はオンです。このコンピューターにはまだ何もコピーされて"
 "いません。"
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1120
 msgid "Turn On"
 msgstr "オンにする"
 
-#: app/src/ui/contacts/mod.rs:1080
+#: app/src/ui/contacts/mod.rs:1148
+msgid "Contacts are on for {account}."
+msgstr "{account} の連絡先はオンです。"
+
+#: app/src/ui/contacts/mod.rs:1149
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr ""
 "{account} の連絡先をオンにしました。このコンピューターのアドレス帳は空です。"
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1171
 msgid "Turn Off Contacts?"
 msgstr "連絡先をオフにしますか？"
 
-#: app/src/ui/contacts/mod.rs:1107
+#: app/src/ui/contacts/mod.rs:1174
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8508,7 +8529,7 @@ msgstr ""
 "{account} の連絡先をオフにしますか？連絡先はこのコンピューターに保存されたま"
 "まで、オンにすると戻ります。"
 
-#: app/src/ui/contacts/mod.rs:1109
+#: app/src/ui/contacts/mod.rs:1176
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8516,202 +8537,215 @@ msgstr ""
 "{account} の連絡先をオフにしますか？連絡先はこのコンピューターから削除されま"
 "す。サーバーには残ります。"
 
-#: app/src/ui/contacts/mod.rs:1116
+#: app/src/ui/contacts/mod.rs:1183
 msgid "Turn Off"
 msgstr "オフにする"
 
-#: app/src/ui/contacts/mod.rs:1143
+#: app/src/ui/contacts/mod.rs:1210
 msgid "Contacts are off for {account}."
 msgstr "{account} の連絡先はオフです。"
 
-#: app/src/ui/contacts/mod.rs:1196
+#: app/src/ui/contacts/mod.rs:1275
 msgid "Search same address"
 msgstr "同じアドレスを検索"
 
-#: app/src/ui/contacts/mod.rs:1197
+#: app/src/ui/contacts/mod.rs:1276
 msgid "Search same person"
 msgstr "同じ人を検索"
 
-#: app/src/ui/contacts/mod.rs:1198
+#: app/src/ui/contacts/mod.rs:1277
 msgid "Search correspondents"
 msgstr "やり取りした相手を検索"
 
-#: app/src/ui/contacts/mod.rs:1199
+#: app/src/ui/contacts/mod.rs:1278
 msgid "Search contacts"
 msgstr "連絡先を検索"
 
-#: app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1287
 msgid "{count} selected"
-msgstr "{count} 件選択中"
+msgid_plural "{count} selected"
+msgstr[0] "{count} 件選択中"
 
-#: app/src/ui/contacts/mod.rs:1220
+#: app/src/ui/contacts/mod.rs:1304
 msgid "Delete {count}"
 msgstr "{count} 件を削除"
 
-#: app/src/ui/contacts/mod.rs:1243
+#: app/src/ui/contacts/mod.rs:1327
 msgid "Select several contacts"
 msgstr "複数の連絡先を選択"
 
-#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
+#: app/src/ui/contacts/mod.rs:1364 app/src/ui/contacts/mod.rs:1388
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} 人"
 
-#: app/src/ui/contacts/mod.rs:1291
+#: app/src/ui/contacts/mod.rs:1375
 msgid "{count} of {total}"
 msgstr "{total} 件中 {count} 件"
 
-#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1384 app/src/ui/contacts/side.rs:90
 msgid "All contacts"
 msgstr "すべての連絡先"
 
-#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1386 app/src/ui/contacts/side.rs:92
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1394 app/src/ui/contacts/side.rs:98
 msgid "From mail"
 msgstr "メールから"
 
-#: app/src/ui/contacts/mod.rs:1310
+#: app/src/ui/contacts/mod.rs:1394
 msgid "Not contacts yet"
 msgstr "まだ連絡先ではありません"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1396 app/src/ui/contacts/side.rs:104
 msgid "Same address"
 msgstr "同じアドレス"
 
-#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
+#: app/src/ui/contacts/mod.rs:1401 app/src/ui/contacts/mod.rs:1414
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} 組"
 
-#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
-#: app/src/ui/contacts/side.rs:102
+#: app/src/ui/contacts/mod.rs:1409 app/src/ui/contacts/person.rs:919
+#: app/src/ui/contacts/side.rs:110
 msgid "Same person"
 msgstr "同じ人"
 
-#: app/src/ui/contacts/mod.rs:1537
+#: app/src/ui/contacts/mod.rs:1624
+msgid "Discard Contact Changes?"
+msgstr "連絡先の変更を破棄しますか?"
+
+#: app/src/ui/contacts/mod.rs:1625
+msgid "Your changes have not been saved to the account."
+msgstr "変更はアカウントに保存されていません。"
+
+#: app/src/ui/contacts/mod.rs:1628
+msgid "Keep Editing"
+msgstr "編集を続ける"
+
+#: app/src/ui/contacts/mod.rs:1692
 msgid "{name} from {account}"
 msgstr "{account} の {name}"
 
-#: app/src/ui/contacts/mod.rs:1546
+#: app/src/ui/contacts/mod.rs:1701
 msgid "Deleted {list}."
 msgstr "{list} を削除しました。"
 
-#: app/src/ui/contacts/ops.rs:99
+#: app/src/ui/contacts/ops.rs:105
 msgid "Grant contacts permission in Preferences, then try again."
 msgstr "設定で連絡先へのアクセスを許可してから、もう一度お試しください。"
 
-#: app/src/ui/contacts/person.rs:71
+#: app/src/ui/contacts/person.rs:74
 msgid "View Photo"
 msgstr "写真を表示"
 
-#: app/src/ui/contacts/person.rs:237
+#: app/src/ui/contacts/person.rs:250
 msgid "{name} is in VIPs. Remove them from that list."
 msgstr "{name} は VIP です。この一覧から外します。"
 
-#: app/src/ui/contacts/person.rs:239
+#: app/src/ui/contacts/person.rs:252
 msgid "Add {name} to VIPs"
 msgstr "{name} を VIP に追加"
 
-#: app/src/ui/contacts/person.rs:270 app/src/ui/contacts/person.rs:1085
+#: app/src/ui/contacts/person.rs:283 app/src/ui/contacts/person.rs:1108
 msgid "Every conversation with this person"
 msgstr "この人とのすべての会話"
 
-#: app/src/ui/contacts/person.rs:298 app/src/ui/thread_list.rs:305
+#: app/src/ui/contacts/person.rs:311 app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "新規メッセージ（C）"
 
-#: app/src/ui/contacts/person.rs:330
+#: app/src/ui/contacts/person.rs:343
 msgid "Reach"
 msgstr "連絡先"
 
-#: app/src/ui/contacts/person.rs:409 app/src/ui/contacts/person.rs:1165
+#: app/src/ui/contacts/person.rs:422 app/src/ui/contacts/person.rs:1188
 msgid "Address"
 msgstr "住所"
 
-#: app/src/ui/contacts/person.rs:481
+#: app/src/ui/contacts/person.rs:494
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "{date} に送信しました。返信待ちです。"
 
-#: app/src/ui/contacts/person.rs:486
+#: app/src/ui/contacts/person.rs:499
 msgid "Last message, {date}"
 msgstr "最新のメッセージ、{date}"
 
-#: app/src/ui/contacts/person.rs:505
+#: app/src/ui/contacts/person.rs:518
 msgid "You last wrote {date}"
 msgstr "最後に送信したのは {date} です"
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:520
 msgid "You have not written to them."
 msgstr "まだ送信していません。"
 
-#: app/src/ui/contacts/person.rs:529 app/src/ui/sidebar.rs:494
+#: app/src/ui/contacts/person.rs:542 app/src/ui/sidebar.rs:494
 #: app/src/ui/sidebar.rs:564 app/src/ui/sidebar.rs:1942
 #: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "メール"
 
-#: app/src/ui/contacts/person.rs:535 app/src/ui/sidebar.rs:2481
+#: app/src/ui/contacts/person.rs:548 app/src/ui/sidebar.rs:2481
 msgid "On this computer"
 msgstr "このコンピューター上"
 
-#: app/src/ui/contacts/person.rs:580
+#: app/src/ui/contacts/person.rs:593
 msgid "A key for {email} is on this computer."
 msgstr "{email} の鍵がこのコンピューターにあります。"
 
-#: app/src/ui/contacts/person.rs:583
+#: app/src/ui/contacts/person.rs:596
 msgid "A key for these addresses is on this computer."
 msgstr "これらのアドレスの鍵がこのコンピューターにあります。"
 
-#: app/src/ui/contacts/person.rs:585
+#: app/src/ui/contacts/person.rs:598
 msgid "No key for {email} is on this computer."
 msgstr "{email} の鍵はこのコンピューターにありません。"
 
-#: app/src/ui/contacts/person.rs:588
+#: app/src/ui/contacts/person.rs:601
 msgid "No key for these addresses is on this computer."
 msgstr "これらのアドレスの鍵はこのコンピューターにありません。"
 
-#: app/src/ui/contacts/person.rs:590
+#: app/src/ui/contacts/person.rs:603
 msgid "OpenPGP key"
 msgstr "OpenPGP 鍵"
 
-#: app/src/ui/contacts/person.rs:597
+#: app/src/ui/contacts/person.rs:610
 msgid "Remote images"
 msgstr "外部画像"
 
-#: app/src/ui/contacts/person.rs:599
+#: app/src/ui/contacts/person.rs:612
 msgid "Allowed for this sender."
 msgstr "この送信者には許可されています。"
 
-#: app/src/ui/contacts/person.rs:601
+#: app/src/ui/contacts/person.rs:614
 msgid "Blocked until you allow them."
 msgstr "許可するまでブロックされます。"
 
-#: app/src/ui/contacts/person.rs:604
+#: app/src/ui/contacts/person.rs:617
 msgid "Remote images, allowed for this sender"
 msgstr "外部画像、この送信者には許可"
 
-#: app/src/ui/contacts/person.rs:606
+#: app/src/ui/contacts/person.rs:619
 msgid "Remote images, blocked until you allow them"
 msgstr "外部画像、許可するまでブロック"
 
-#: app/src/ui/contacts/person.rs:684
+#: app/src/ui/contacts/person.rs:697
 msgid "Deleted {name} from {account}."
 msgstr "{account} から {name} を削除しました。"
 
-#: app/src/ui/contacts/person.rs:692
+#: app/src/ui/contacts/person.rs:705
 msgid "{base} {other} still has this person."
 msgstr "{base} {other} にはこの人が残っています。"
 
-#: app/src/ui/contacts/person.rs:743
+#: app/src/ui/contacts/person.rs:759
 msgid "Merge in {account}"
 msgstr "{account} で統合"
 
-#: app/src/ui/contacts/person.rs:792
+#: app/src/ui/contacts/person.rs:808
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8719,24 +8753,24 @@ msgstr ""
 "両方の連絡先が {email} を使っています。{account} は一方を残し、もう一方を削除"
 "します。ほかのアカウントは変わりません。"
 
-#: app/src/ui/contacts/person.rs:795
+#: app/src/ui/contacts/person.rs:811
 msgid "Which contact"
 msgstr "どちらの連絡先か"
 
-#: app/src/ui/contacts/person.rs:823
+#: app/src/ui/contacts/person.rs:839
 msgid "{account} keeps"
 msgstr "{account} が残す連絡先"
 
-#: app/src/ui/contacts/person.rs:853
+#: app/src/ui/contacts/person.rs:869
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr ""
 "{account} から {name} を削除しました。{account} が残す連絡先は {kept} です。"
 
-#: app/src/ui/contacts/person.rs:907
+#: app/src/ui/contacts/person.rs:930
 msgid "Link"
 msgstr "リンク"
 
-#: app/src/ui/contacts/person.rs:929
+#: app/src/ui/contacts/person.rs:952
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8745,36 +8779,36 @@ msgstr ""
 "も異なります。リンクしても両方の連絡先は残り、「すべての連絡先」では1行で表示"
 "されます。"
 
-#: app/src/ui/contacts/person.rs:937
+#: app/src/ui/contacts/person.rs:960
 msgid "The two contacts"
 msgstr "2つの連絡先"
 
-#: app/src/ui/contacts/person.rs:952
+#: app/src/ui/contacts/person.rs:975
 msgid "Name in All contacts"
 msgstr "「すべての連絡先」での名前"
 
-#: app/src/ui/contacts/person.rs:976
+#: app/src/ui/contacts/person.rs:999
 msgid "All contacts will show"
 msgstr "「すべての連絡先」の表示"
 
-#: app/src/ui/contacts/person.rs:988
+#: app/src/ui/contacts/person.rs:1011
 msgid "One row, two accounts"
 msgstr "1行、2つのアカウント"
 
-#: app/src/ui/contacts/person.rs:1051
+#: app/src/ui/contacts/person.rs:1074
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr ""
 "「すべての連絡先」で {name} を1行にまとめました。何も削除されていません。"
 
-#: app/src/ui/contacts/person.rs:1097
+#: app/src/ui/contacts/person.rs:1120
 msgid "Save to Contacts"
 msgstr "連絡先に保存"
 
-#: app/src/ui/contacts/person.rs:1115
+#: app/src/ui/contacts/person.rs:1138
 msgid "Not a contact"
 msgstr "連絡先ではありません"
 
-#: app/src/ui/contacts/person.rs:1119
+#: app/src/ui/contacts/person.rs:1142
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -8786,31 +8820,31 @@ msgstr[0] ""
 "が並びます。{count} 件のメッセージで確認。保存すると、選んだアカウントに連絡"
 "先が作られます。"
 
-#: app/src/ui/contacts/person.rs:1137
+#: app/src/ui/contacts/person.rs:1160
 msgid "Latest message"
 msgstr "最新のメッセージ"
 
-#: app/src/ui/contacts/person.rs:1169
+#: app/src/ui/contacts/person.rs:1192
 msgid "From the messages"
 msgstr "メッセージから"
 
-#: app/src/ui/contacts/person.rs:1207
+#: app/src/ui/contacts/person.rs:1223
 msgid "Saved {name} to {account}."
 msgstr "{name} を {account} に保存しました。"
 
-#: app/src/ui/contacts/person.rs:1281
+#: app/src/ui/contacts/person.rs:1299
 msgid "No organization, no phone"
 msgstr "組織なし、電話なし"
 
-#: app/src/ui/contacts/person.rs:1283
+#: app/src/ui/contacts/person.rs:1301
 msgid "Organization {value}"
 msgstr "組織 {value}"
 
-#: app/src/ui/contacts/person.rs:1284
+#: app/src/ui/contacts/person.rs:1302
 msgid "Phone {value}"
 msgstr "電話 {value}"
 
-#: app/src/ui/contacts/person.rs:1364
+#: app/src/ui/contacts/person.rs:1367
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -8818,7 +8852,7 @@ msgstr ""
 "「すべての連絡先」では名前 {name} を使います。{account_a} には連絡先が残り、"
 "{account_b} には {other} が残ります。"
 
-#: app/src/ui/contacts/person.rs:1402
+#: app/src/ui/contacts/person.rs:1398
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -8826,7 +8860,7 @@ msgstr ""
 "チップはアカウントです。{others} にはこの人の連絡先が別にあり、ここでの編集"
 "は {account} を変更します。"
 
-#: app/src/ui/contacts/person.rs:1410
+#: app/src/ui/contacts/person.rs:1406
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -8834,11 +8868,11 @@ msgstr ""
 "VIP は、この一覧から開けるように印を付けた人です。{name} は {accounts} にも保"
 "存されています。"
 
-#: app/src/ui/contacts/person.rs:1418
+#: app/src/ui/contacts/person.rs:1414
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr "VIP は、この一覧から開けるように印を付けた人です。"
 
-#: app/src/ui/contacts/person.rs:1421
+#: app/src/ui/contacts/person.rs:1417
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr "1人、{accounts} に保存。各アカウントはそれぞれの連絡先を保持します。"
 
@@ -8874,29 +8908,29 @@ msgstr "この写真を使う"
 msgid "Contact Photo"
 msgstr "連絡先の写真"
 
-#: app/src/ui/contacts/side.rs:80
+#: app/src/ui/contacts/side.rs:88
 msgid "Lists"
 msgstr "一覧"
 
-#: app/src/ui/contacts/side.rs:86
+#: app/src/ui/contacts/side.rs:94
 msgid "People you mark, so you can open them from here"
 msgstr "ここから開けるように印を付けた人"
 
-#: app/src/ui/contacts/side.rs:92
+#: app/src/ui/contacts/side.rs:100
 msgid "People found in mail. They are not contacts yet."
 msgstr "メールで見つかった人。まだ連絡先ではありません。"
 
-#: app/src/ui/contacts/side.rs:98
+#: app/src/ui/contacts/side.rs:106
 msgid "Two contacts in one account share an address. Merging deletes one."
 msgstr ""
 "1つのアカウントの2つの連絡先が同じアドレスです。統合すると一方が削除されま"
 "す。"
 
-#: app/src/ui/contacts/side.rs:104
+#: app/src/ui/contacts/side.rs:112
 msgid "A close name in two accounts. Linking deletes nothing."
 msgstr "2つのアカウントにある似た名前。リンクしても何も削除されません。"
 
-#: app/src/ui/contacts/side.rs:125 app/src/ui/preferences.rs:476
+#: app/src/ui/contacts/side.rs:133 app/src/ui/preferences.rs:476
 #: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
 #: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
@@ -9009,7 +9043,7 @@ msgid "Export…"
 msgstr "エクスポート…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3823
+#: app/src/ui/window.rs:3831
 msgid "Customize Toolbar…"
 msgstr "ツールバーをカスタマイズ…"
 
@@ -9571,7 +9605,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "メールアドレスの非公開を許可"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4036
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4044
 msgid "Add an account first"
 msgstr "先にアカウントを追加してください"
 
@@ -10852,7 +10886,7 @@ msgstr "{account}を下に移動"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3830 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3838 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "設定"
 
@@ -11345,7 +11379,7 @@ msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}、{count}件のメッセージ"
 
-#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3162
+#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3164
 msgid "99+"
 msgstr "99+"
 
@@ -11381,7 +11415,7 @@ msgstr "自動返信…"
 msgid "Rules…"
 msgstr "ルール…"
 
-#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3816
+#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3824
 msgid "Hide My Email…"
 msgstr "メールアドレスを非公開…"
 
@@ -12003,7 +12037,7 @@ msgstr "メールを読み込めませんでした: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account}を追加しました。メールをダウンロード中…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3176
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3184
 msgid "{account} is signed in again."
 msgstr "{account}に再ログインしました。"
 
@@ -12128,69 +12162,69 @@ msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "{count}件のメッセージを受信トレイに移動しました"
 
-#: app/src/ui/window.rs:989
+#: app/src/ui/window.rs:997
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail（デモ）"
 
-#: app/src/ui/window.rs:1451
+#: app/src/ui/window.rs:1459
 msgid "Could not read accounts: {reason}"
 msgstr "アカウントを読み取れませんでした: {reason}"
 
-#: app/src/ui/window.rs:2210
+#: app/src/ui/window.rs:2218
 msgid "Could not delete the mail: {reason}"
 msgstr "メールを削除できませんでした: {reason}"
 
-#: app/src/ui/window.rs:2317
+#: app/src/ui/window.rs:2325
 msgid "Turn On the {service}"
 msgstr "{service}を有効にする"
 
-#: app/src/ui/window.rs:2504 app/src/ui/window.rs:2507
+#: app/src/ui/window.rs:2512 app/src/ui/window.rs:2515
 msgid "Move to Inbox"
 msgstr "受信トレイに移動"
 
-#: app/src/ui/window.rs:2675 app/src/ui/window.rs:2680
+#: app/src/ui/window.rs:2683 app/src/ui/window.rs:2688
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "モデルを検索"
 
-#: app/src/ui/window.rs:2749
+#: app/src/ui/window.rs:2757
 msgid "Select mail from one account to tag it."
 msgstr "タグを付けるには、1つのアカウントのメールを選んでください。"
 
-#: app/src/ui/window.rs:2761
+#: app/src/ui/window.rs:2769
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "このアカウントにはタグがありません。Outlookで作成してください。"
 
-#: app/src/ui/window.rs:2854
+#: app/src/ui/window.rs:2862
 msgid "Add an account to reply or forward"
 msgstr "返信や転送をするにはアカウントを追加してください"
 
-#: app/src/ui/window.rs:2959
+#: app/src/ui/window.rs:2967
 msgid "Could not include {file}: {reason}"
 msgstr "{file}を含められませんでした: {reason}"
 
-#: app/src/ui/window.rs:3040
+#: app/src/ui/window.rs:3048
 msgid "The server had already sent this message."
 msgstr "サーバーはこのメッセージを送信済みでした。"
 
-#: app/src/ui/window.rs:3045
+#: app/src/ui/window.rs:3053
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "このメッセージは別のアプリでキャンセルされ、下書きにも残っていません。"
 
-#: app/src/ui/window.rs:3361
+#: app/src/ui/window.rs:3369
 msgid "Continue in your browser"
 msgstr "ブラウザーで続けてください"
 
-#: app/src/ui/window.rs:3411
+#: app/src/ui/window.rs:3419
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "このPenguin Mailは、Googleログイン機能なしでビルドされています。"
 
-#: app/src/ui/window.rs:3433
+#: app/src/ui/window.rs:3441
 msgid "Get a Release"
 msgstr "リリース版を入手"
 
-#: app/src/ui/window.rs:3556
+#: app/src/ui/window.rs:3564
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12198,86 +12232,86 @@ msgstr ""
 "サーバーが保持する予約送信メッセージを確認できなかったため、{account}を削除し"
 "ません: {reason}"
 
-#: app/src/ui/window.rs:3567
+#: app/src/ui/window.rs:3575
 msgid "Remove {account}?"
 msgstr "{account}を削除しますか？"
 
-#: app/src/ui/window.rs:3586
+#: app/src/ui/window.rs:3594
 msgid "Remove Anyway"
 msgstr "確認せずに削除"
 
-#: app/src/ui/window.rs:3599
+#: app/src/ui/window.rs:3607
 msgid "Removed {account}"
 msgstr "{account}を削除しました"
 
-#: app/src/ui/window.rs:3601
+#: app/src/ui/window.rs:3609
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}を削除できませんでした: {reason}"
 
-#: app/src/ui/window.rs:3793
+#: app/src/ui/window.rs:3801
 msgid "Refresh"
 msgstr "更新"
 
-#: app/src/ui/window.rs:3797
+#: app/src/ui/window.rs:3805
 msgid "Show Declined Events"
 msgstr "辞退した予定を表示"
 
-#: app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3822
 msgid "Add Account…"
 msgstr "アカウントを追加…"
 
-#: app/src/ui/window.rs:3815
+#: app/src/ui/window.rs:3823
 msgid "New Smart Mailbox…"
 msgstr "新しいスマートメールボックス…"
 
-#: app/src/ui/window.rs:3827
+#: app/src/ui/window.rs:3835
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "ツールバーをカスタマイズ…"
 
-#: app/src/ui/window.rs:3831 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3839 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "キーボードショートカット"
 
-#: app/src/ui/window.rs:3840 app/src/ui/window.rs:3842
+#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3850
 msgid "Main Menu"
 msgstr "メインメニュー"
 
-#: app/src/ui/window.rs:3907 app/src/ui/window.rs:3908
+#: app/src/ui/window.rs:3915 app/src/ui/window.rs:3916
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:4037
+#: app/src/ui/window.rs:4045
 msgid "Add a mail account first"
 msgstr "先にメールアカウントを追加してください"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4303
+#: app/src/ui/window.rs:4311
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} のカレンダーと連絡先を接続しました。"
 
-#: app/src/ui/window.rs:4419
+#: app/src/ui/window.rs:4427
 msgid "Open a message from the person first"
 msgstr "先にその人からのメッセージを開いてください"
 
-#: app/src/ui/window.rs:4525
+#: app/src/ui/window.rs:4533
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "再起動後に新しい言語で表示します"
 
-#: app/src/ui/window.rs:4527 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4535 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "再起動"
 
-#: app/src/ui/window.rs:4591
+#: app/src/ui/window.rs:4599
 msgid "Show Rules"
 msgstr "ルールを表示"
 
-#: app/src/ui/window.rs:4617
+#: app/src/ui/window.rs:4625
 msgid "Messages That Will Not Download"
 msgstr "ダウンロードできないメッセージ"
 
-#: app/src/ui/window.rs:4619
+#: app/src/ui/window.rs:4627
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -14007,7 +14041,7 @@ msgstr "あなたはこの予定のゲストではありません。"
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin MailはCalDAVサーバーのカレンダー一覧を変更できません。"
 
-#: sync/src/services/carddav.rs:356
+#: sync/src/services/carddav.rs:373
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14015,7 +14049,7 @@ msgstr ""
 "連絡先のグループが別のデバイスで変更されました。連絡先を更新して、エディター"
 "を開き直してください。"
 
-#: sync/src/services/carddav.rs:363
+#: sync/src/services/carddav.rs:380
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14023,7 +14057,7 @@ msgstr ""
 "同じ名前のグループが複数あります。この連絡先を追加する前に、アカウントで名前"
 "を変更してください。"
 
-#: sync/src/services/carddav.rs:581
+#: sync/src/services/carddav.rs:625
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14031,7 +14065,7 @@ msgstr ""
 "連絡先は作成されましたが、一部のグループを保存できませんでした。このエディ"
 "ターでもう一度試すと、連絡先を増やさずに完了できます: {reason}"
 
-#: sync/src/services/carddav.rs:640
+#: sync/src/services/carddav.rs:684
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -14792,15 +14826,6 @@ msgstr "{folder}に移動"
 
 #~ msgid "Choose an address book first."
 #~ msgstr "先にアドレス帳を選んでください。"
-
-#~ msgid "Discard Contact Changes?"
-#~ msgstr "連絡先の変更を破棄しますか?"
-
-#~ msgid "Your changes have not been saved to the account."
-#~ msgstr "変更はアカウントに保存されていません。"
-
-#~ msgid "Keep Editing"
-#~ msgstr "編集を続ける"
 
 #~ msgid "All Groups"
 #~ msgstr "すべてのグループ"

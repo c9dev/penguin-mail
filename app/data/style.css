@@ -2332,12 +2332,14 @@ button.cts-btn .cts-icon { color: inherit; }
 .cts-sub { font-size: 0.85em; color: alpha(currentColor, 0.75); margin-top: 1px; }
 .app-dark .cts-sub { color: alpha(currentColor, 0.64); }
 button.cts-go { padding: 0; background: none; box-shadow: none; border-radius: 0; min-height: 0; font-weight: normal; }
+button.cts-go.cts-photo { border-radius: 9999px; }
 button.cts-go:hover { background: alpha(black, 0.04); }
 .app-dark button.cts-go:hover { background: alpha(white, 0.05); }
 .cts-chev { color: alpha(currentColor, 0.75); }
 switch.cts-switch:checked { background: var(--accent-fill); }
 .cts-decide { padding: 0; }
 .cts-keepwho { padding: 16px 16px 14px; border-bottom: 1px solid #ececef; }
+.app-dark .cts-keepwho { border-bottom-color: #2c2c31; }
 .cts-keep-name { font-size: 1.36em; font-weight: 700; letter-spacing: -0.02em; }
 .cts-choice { min-height: 44px; padding: 8px 14px; border-spacing: 10px; }
 checkbutton.cts-radio check { border-radius: 999px; }

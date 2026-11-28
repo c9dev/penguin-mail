@@ -58,17 +58,21 @@ impl Contacts {
             contact.and_then(|c| c.photo_file.clone()),
             contact,
         ) {
-            // A click on a photo shows it large.
-            let click = gtk::GestureClick::new();
+            // A photo opens large, from a click or the keyboard.
+            let button = gtk::Button::builder()
+                .halign(gtk::Align::Center)
+                .valign(gtk::Align::Center)
+                .css_classes(["cts-go", "cts-photo"])
+                .build();
             let (shown, app_weak) = (contact.clone(), Rc::downgrade(&app));
-            click.connect_released(move |gesture, _, _, _| {
-                if let (Some(widget), Some(app)) = (gesture.widget(), app_weak.upgrade()) {
-                    super::photo::view(&widget, &shown, &app);
+            button.connect_clicked(move |b| {
+                if let Some(app) = app_weak.upgrade() {
+                    super::photo::view(b.upcast_ref(), &shown, &app);
                 }
             });
-            holder.add_controller(click);
-            holder.set_cursor_from_name(Some("pointer"));
-            super::super::name(&holder, &gettext("View Photo"));
+            button.set_cursor_from_name(Some("pointer"));
+            super::super::name(&button, &gettext("View Photo"));
+            button.set_child(Some(&holder));
             let path = app.core.contacts().photo_dir().join(file);
             let (weak, name) = (holder.downgrade(), name.to_string());
             glib::spawn_future_local(async move {
@@ -81,12 +85,21 @@ impl Contacts {
                     holder.append(&parts::avatar(&name, size, Some(&texture)));
                 }
             });
+            return button.upcast();
         }
         holder.upcast()
     }
 
-    /// Draws the person pane for what is selected.
+    /// Draws the person pane for what is selected. A redraw of the same
+    /// pane, after a switch or a button in it, keeps the keyboard there.
     pub(super) fn show_pane(self: &Rc<Self>) {
+        let holder = self.pane.upcast_ref::<gtk::Widget>();
+        let at = parts::focus_path(holder);
+        self.show_pane_now();
+        parts::refocus(holder, at);
+    }
+
+    fn show_pane_now(self: &Rc<Self>) {
         while let Some(child) = self.pane.first_child() {
             self.pane.remove(&child);
         }
@@ -212,7 +225,7 @@ impl Contacts {
                 state.data.images.clone(),
             )
         };
-        let shown = &contacts[person.members[0]];
+        let shown = &contacts[person.shown];
         let emails = person.emails(&contacts);
         let linked = person_link(&person, &contacts, &links);
         let vip = self.is_vip(&person);
@@ -323,7 +336,7 @@ impl Contacts {
 
         // Body
         let body = body_box();
-        if let Some(words) = person_hint(self, &person, &contacts, list, linked.is_some()) {
+        if let Some(words) = person_hint(&person, &contacts, list, linked.is_some()) {
             body.append(&parts::hint(&words));
         }
         let by_account = linked.is_some();
@@ -695,25 +708,28 @@ impl Contacts {
                 None => base,
             }
         };
+        let shown = self.state.borrow().selected.clone();
+        let links = self.state.borrow().data.links.clone();
         glib::spawn_future_local(async move {
-            let photo = ops::photo_of(&app, &contact);
-            let result = ops::delete(&app, contact.clone()).await;
+            let gone = ops::gone(&app, contact.clone(), &links);
+            let result = ops::delete(&app, contact).await;
             let Some(this) = weak.upgrade() else { return };
             match result {
                 Ok(()) => {
                     app.contacts_added();
-                    {
+                    // The person may have opened someone else meanwhile.
+                    let still_here = this.state.borrow().selected == shown;
+                    if still_here {
                         let mut state = this.state.borrow_mut();
                         state.pane = Some(Pane::View);
                         state.selected = None;
+                        drop(state);
+                        this.nav.set_show_content(false);
                     }
-                    this.nav.set_show_content(false);
                     this.reload();
                     this.tell(
                         &words,
-                        Some(Box::new(move |this| {
-                            this.restore_all(vec![(contact, photo)])
-                        })),
+                        Some(Box::new(move |this| this.restore_all(vec![gone]))),
                     );
                 }
                 Err(err) => this.say_error(&err),
@@ -858,19 +874,26 @@ impl Contacts {
             ],
         );
         let weak = Rc::downgrade(self);
+        let shown = self.state.borrow().selected.clone();
+        let links = self.state.borrow().data.links.clone();
         glib::spawn_future_local(async move {
-            let photo = ops::photo_of(&app, &drop);
+            let gone = ops::gone(&app, drop.clone(), &links);
             let result = ops::delete(&app, drop.clone()).await;
             let Some(this) = weak.upgrade() else { return };
             match result {
                 Ok(()) => {
                     app.contacts_added();
-                    this.state.borrow_mut().selected = None;
-                    this.state.borrow_mut().list = Some(List::Account(drop.account_id));
+                    let mut state = this.state.borrow_mut();
+                    // The person may have opened someone else meanwhile.
+                    if state.selected == shown {
+                        state.selected = None;
+                        state.list = Some(List::Account(drop.account_id));
+                    }
+                    std::mem::drop(state);
                     this.reload();
                     this.tell(
                         &words,
-                        Some(Box::new(move |this| this.restore_all(vec![(drop, photo)]))),
+                        Some(Box::new(move |this| this.restore_all(vec![gone]))),
                     );
                 }
                 Err(err) => this.say_error(&err),
@@ -1191,38 +1214,29 @@ impl Contacts {
         };
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
-            let before: Vec<String> = app
-                .core
-                .read(move |c| address_book::resources(c, account.id))
-                .await
-                .unwrap_or_default();
             let result = ops::save(&app, account.id, None, fields, demo).await;
             let Some(this) = weak.upgrade() else { return };
             match result {
-                Ok(()) => {
+                Ok(made) => {
                     app.contacts_added();
-                    let account_id = account.id;
-                    let known = before;
                     let words = fill(
                         &gettext("Saved {name} to {account}."),
                         &[("name", &name), ("account", &short(account.id))],
                     );
                     this.reload();
-                    // Undo deletes the card the save made.
+                    // Undo deletes the card the save made, and only that one.
                     let undo: UndoRun = Box::new(move |this| {
                         let Some(app) = this.app.upgrade() else {
                             return;
                         };
-                        let (known, weak) = (known, Rc::downgrade(this));
+                        let weak = Rc::downgrade(this);
                         glib::spawn_future_local(async move {
-                            let now = app.core.read(address_book::list).await.unwrap_or_default();
-                            if let Some(made) = now.into_iter().find(|c| {
-                                c.account_id == account_id && !known.contains(&c.resource)
-                            }) {
-                                let _ = ops::delete(&app, made).await;
-                                app.contacts_added();
-                            }
+                            let result = ops::delete(&app, made).await;
+                            app.contacts_added();
                             if let Some(this) = weak.upgrade() {
+                                if let Err(err) = result {
+                                    this.say_error(&err);
+                                }
                                 this.reload();
                             }
                         });
@@ -1249,21 +1263,25 @@ fn email_line(email: &str, sub: &str) -> gtk::Widget {
 
 fn website_line(site: &str) -> gtk::Widget {
     let line = parts::line(Some("globe"), site, &gettext("Website"), None);
-    if let Some(uri) = super::website_uri(site) {
-        let click = gtk::GestureClick::new();
-        click.connect_released(move |gesture, _, _, _| {
-            if let Some(widget) = gesture.widget() {
-                gtk::UriLauncher::new(&uri).launch(
-                    widget.root().and_downcast_ref::<gtk::Window>(),
-                    gtk::gio::Cancellable::NONE,
-                    |_| {},
-                );
-            }
-        });
-        line.add_controller(click);
-        line.set_cursor_from_name(Some("pointer"));
-    }
-    line.upcast()
+    let Some(uri) = super::website_uri(site) else {
+        return line.upcast();
+    };
+    // A button, so the keyboard and screen readers reach the site too.
+    let button = gtk::Button::builder()
+        .child(&line)
+        .css_classes(["cts-go"])
+        .build();
+    parts::mark_unselectable(line.upcast_ref());
+    super::super::name(&button, &format!("{site}, {}", gettext("Website")));
+    button.connect_clicked(move |b| {
+        gtk::UriLauncher::new(&uri).launch(
+            b.root().and_downcast_ref::<gtk::Window>(),
+            gtk::gio::Cancellable::NONE,
+            |_| {},
+        );
+    });
+    button.set_cursor_from_name(Some("pointer"));
+    button.upcast()
 }
 
 pub(super) fn phone_of(c: &Contact) -> Option<String> {
@@ -1330,35 +1348,20 @@ pub(super) fn editable_members(
     out
 }
 
-fn person_hint(
-    this: &Contacts,
-    person: &Person,
-    contacts: &[Contact],
-    list: &List,
-    linked: bool,
-) -> Option<String> {
-    let _ = this;
+fn person_hint(person: &Person, contacts: &[Contact], list: &List, linked: bool) -> Option<String> {
     let names = |ids: &[AccountId]| {
         let words: Vec<String> = ids.iter().map(|a| short(*a)).collect();
         let refs: Vec<&str> = words.iter().map(String::as_str).collect();
         crate::protection::joined(&refs)
     };
     if linked {
-        let other: Vec<String> = person
+        // The shown contact keeps the name; the other one keeps its own.
+        let a = &contacts[person.shown];
+        let b = person
             .members
             .iter()
-            .skip(1)
-            .map(|&i| {
-                format!(
-                    "{} still has {}",
-                    short(contacts[i].account_id),
-                    contacts[i].display()
-                )
-            })
-            .collect();
-        let _ = other;
-        let a = &contacts[person.members[0]];
-        let b = person.members.get(1).map(|&i| &contacts[i])?;
+            .find(|&&i| i != person.shown)
+            .map(|&i| &contacts[i])?;
         return Some(fill(
             &gettext(
                 "All contacts uses the name {name}. {account_a} still has its contact, and {account_b} still has {other}.",
@@ -1367,14 +1370,7 @@ fn person_hint(
                 ("name", &person.name),
                 ("account_a", &short(a.account_id)),
                 ("account_b", &short(b.account_id)),
-                (
-                    "other",
-                    if a.display() == person.name {
-                        b.display()
-                    } else {
-                        a.display()
-                    },
-                ),
+                ("other", b.display()),
             ],
         ));
     }

@@ -4232,8 +4232,8 @@ msgstr "Цей обліковий запис не під'єднано."
 msgid "Could not save: {reason}"
 msgstr "Не вдалося зберегти: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3061
-#: app/src/ui/window.rs:3084
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3069
+#: app/src/ui/window.rs:3092
 msgid "Could not open the draft: {reason}"
 msgstr "Не вдалося відкрити чернетку: {reason}"
 
@@ -4261,7 +4261,7 @@ msgid "Show or hide this message"
 msgstr "Показати або сховати це повідомлення"
 
 #: app/src/render.rs:305 app/src/ui/contact_card.rs:43
-#: app/src/ui/contacts/mod.rs:238
+#: app/src/ui/contacts/mod.rs:253
 msgid "Contact"
 msgstr "Контакт"
 
@@ -4307,8 +4307,8 @@ msgstr ""
 "Це повідомлення містить посилання, що можуть вводити в оману. Перевірте "
 "адресу, перш ніж їх відкривати."
 
-#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:415
-#: app/src/ui/contacts/person.rs:452
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:419
+#: app/src/ui/contacts/person.rs:465
 msgid "Details"
 msgstr "Подробиці"
 
@@ -4503,7 +4503,7 @@ msgid "Set up a different project"
 msgstr "Налаштувати інший проєкт"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3414
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3422
 msgid "Set up your own Google project"
 msgstr "Налаштувати власний проєкт Google"
 
@@ -4650,13 +4650,13 @@ msgstr "{host} відхилив вхід: {reason}"
 msgid "Calendar"
 msgstr "Календар"
 
-#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:176
-#: app/src/ui/contacts/mod.rs:232 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:191
+#: app/src/ui/contacts/mod.rs:247 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:566
 #: app/src/ui/sidebar.rs:918 app/src/ui/sidebar.rs:1944
-#: app/src/ui/window.rs:3813
+#: app/src/ui/window.rs:3821
 msgid "Contacts"
 msgstr "Контакти"
 
@@ -4674,7 +4674,7 @@ msgstr "На сервері"
 
 #: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
 #: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/contacts/side.rs:161 app/src/ui/preferences.rs:1185
+#: app/src/ui/contacts/side.rs:169 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "Вимкнено"
 
@@ -4690,8 +4690,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Передплата Claude"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3806
-#: app/src/ui/window.rs:3895
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3903
 msgid "Assistant"
 msgstr "Асистент"
 
@@ -5091,13 +5091,13 @@ msgstr "Відкрити Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:302 app/src/ui/contacts/person.rs:305
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:310
+#: app/src/ui/contacts/person.rs:315 app/src/ui/contacts/person.rs:318
 #: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "Нове повідомлення"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3812
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3820
 msgid "Check for Mail"
 msgstr "Перевірити пошту"
 
@@ -5115,7 +5115,7 @@ msgstr "Що нового у {version}"
 msgid "Check for Updates"
 msgstr "Перевірити оновлення"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3834
+#: app/src/tray.rs:216 app/src/ui/window.rs:3842
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "Вийти"
@@ -5138,11 +5138,12 @@ msgid "What's New"
 msgstr "Що нового"
 
 #: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:357
-#: app/src/ui/contacts/person.rs:1251 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/contacts/person.rs:1265 app/src/ui/contacts/person.rs:1275
+#: app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Вебсайт"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3833
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3841
 msgid "Donate"
 msgstr "Пожертвувати"
 
@@ -5150,7 +5151,7 @@ msgstr "Пожертвувати"
 msgid "License"
 msgstr "Ліцензія"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3832
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3840
 msgid "About Penguin Mail"
 msgstr "Про Penguin Mail"
 
@@ -5200,12 +5201,12 @@ msgid "The update to {version} failed"
 msgstr "Не вдалося оновити до {version}"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1631
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1639
 msgid "Copy Command"
 msgstr "Копіювати команду"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1636
+#: app/src/ui/window.rs:1644
 msgid "Command copied"
 msgstr "Команду скопійовано"
 
@@ -5300,9 +5301,9 @@ msgstr "Копіювати посилання"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
-#: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:588
+#: app/src/ui/contacts/mod.rs:1182 app/src/ui/contacts/mod.rs:1296
+#: app/src/ui/contacts/person.rs:764 app/src/ui/contacts/person.rs:921
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5319,7 +5320,7 @@ msgstr "Скасувати"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1575
+#: app/src/ui/window.rs:1583
 msgid "Sign In"
 msgstr "Увійти"
 
@@ -5443,7 +5444,7 @@ msgstr "Не зараз"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1708
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1716
 msgid "Grant Access"
 msgstr "Надати доступ"
 
@@ -5592,9 +5593,9 @@ msgstr "Пошук…"
 msgid "Sign In Again"
 msgstr "Увійти знову"
 
-#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:289
-#: app/src/ui/contacts/mod.rs:513 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2319
+#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:304
+#: app/src/ui/contacts/mod.rs:541 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2327
 msgid "Open Google Cloud"
 msgstr "Відкрити Google Cloud"
 
@@ -5684,14 +5685,14 @@ msgstr "Написати чернетку відповіді на відкрит
 msgid "Choose a Model"
 msgstr "Вибрати модель"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3942
-#: app/src/ui/window.rs:3943
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:3951
 msgid "Detach"
 msgstr "Відкріпити"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4642
+#: app/src/ui/window.rs:4650
 msgid "Close"
 msgstr "Закрити"
 
@@ -5906,7 +5907,7 @@ msgid "Use {server}"
 msgstr "Використовувати {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:287
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:300
 msgid "Edit"
 msgstr "Змінити"
 
@@ -5916,8 +5917,8 @@ msgstr "Змінити {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:742 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3570
+#: app/src/ui/contacts/editor.rs:770 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3578
 msgid "Remove"
 msgstr "Прибрати"
 
@@ -5997,7 +5998,7 @@ msgstr "Перевірити"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:598
+#: app/src/ui/contacts/editor.rs:533 app/src/ui/contacts/editor.rs:609
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6569,8 +6570,8 @@ msgstr "Зустрічі"
 msgid "Decline"
 msgstr "Відхилити"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
-#: app/src/ui/contacts/mod.rs:1327
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1398
+#: app/src/ui/contacts/mod.rs:1411
 msgid "None"
 msgstr "Жодних"
 
@@ -6634,7 +6635,7 @@ msgstr "Кожні"
 msgid "Unit"
 msgstr "Одиниця"
 
-#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:163
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:171
 msgid "On"
 msgstr "У дні"
 
@@ -6708,8 +6709,8 @@ msgid "Remove reminder"
 msgstr "Прибрати нагадування"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:406
-#: app/src/ui/contacts/editor.rs:444 app/src/ui/contacts/person.rs:462
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:410
+#: app/src/ui/contacts/editor.rs:448 app/src/ui/contacts/person.rs:475
 msgid "Notes"
 msgstr "Нотатки"
 
@@ -7052,7 +7053,7 @@ msgid "Working location"
 msgstr "Місце роботи"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:393
-#: app/src/ui/contacts/editor.rs:442 app/src/ui/contacts/person.rs:424
+#: app/src/ui/contacts/editor.rs:446 app/src/ui/contacts/person.rs:437
 msgid "Birthday"
 msgstr "День народження"
 
@@ -7316,7 +7317,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Не вдалося вилучити подію: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
+#: app/src/ui/contacts/mod.rs:282 app/src/ui/contacts/mod.rs:1449
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8155,7 +8156,7 @@ msgstr "Чернетку збережено"
 msgid "Save as Draft?"
 msgstr "Зберегти як чернетку?"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2384 app/src/ui/contacts/mod.rs:1629
 msgid "Discard"
 msgstr "Відкинути"
 
@@ -8392,31 +8393,31 @@ msgid "Ignore"
 msgstr "Пропустити"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:319
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:834
+#: app/src/ui/contacts/person.rs:369 app/src/ui/contacts/person.rs:850
 msgid "Email"
 msgstr "Ел. пошта"
 
 #: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:320
-#: app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:371
 msgid "Other email"
 msgstr "Інша ел. пошта"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:333
-#: app/src/ui/contacts/person.rs:383 app/src/ui/contacts/person.rs:840
+#: app/src/ui/contacts/person.rs:396 app/src/ui/contacts/person.rs:856
 msgid "Phone"
 msgstr "Телефон"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:229
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:242
 #: app/src/ui/sidebar.rs:1479
 msgid "Remove from VIPs"
 msgstr "Прибрати з VIP-контактів"
 
-#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:231
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:244
 msgid "Add to VIPs"
 msgstr "Додати до VIP-контактів"
 
-#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:269
-#: app/src/ui/contacts/person.rs:1084
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:282
+#: app/src/ui/contacts/person.rs:1107
 msgid "All Their Mail"
 msgstr "Уся пошта від контакту"
 
@@ -8428,8 +8429,8 @@ msgstr "Вилучити поле"
 msgid "Full name"
 msgstr "Повне ім’я"
 
-#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:345
-#: app/src/ui/contacts/person.rs:837
+#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:853
 msgid "Organization"
 msgstr "Організація"
 
@@ -8513,28 +8514,32 @@ msgstr "Додати власне поле"
 msgid "Value"
 msgstr "Значення"
 
-#: app/src/ui/contacts/editor.rs:433
+#: app/src/ui/contacts/editor.rs:395
+msgid "YYYY-MM-DD"
+msgstr "РРРР-ММ-ДД"
+
+#: app/src/ui/contacts/editor.rs:437
 msgid "Postal addresses"
 msgstr "Поштові адреси"
 
-#: app/src/ui/contacts/editor.rs:434
+#: app/src/ui/contacts/editor.rs:438
 msgid "Websites"
 msgstr "Сайти"
 
-#: app/src/ui/contacts/editor.rs:435 app/src/ui/contacts/person.rs:448
-#: app/src/ui/contacts/side.rs:113
+#: app/src/ui/contacts/editor.rs:439 app/src/ui/contacts/person.rs:461
+#: app/src/ui/contacts/side.rs:121
 msgid "Groups"
 msgstr "Групи"
 
-#: app/src/ui/contacts/editor.rs:436
+#: app/src/ui/contacts/editor.rs:440
 msgid "Other dates"
 msgstr "Інші дати"
 
-#: app/src/ui/contacts/editor.rs:437
+#: app/src/ui/contacts/editor.rs:441
 msgid "Custom fields"
 msgstr "Власні поля"
 
-#: app/src/ui/contacts/editor.rs:506
+#: app/src/ui/contacts/editor.rs:510
 msgid ""
 "A new contact is saved into one account. The other accounts do not get a "
 "copy. Add a name or an email. Save stays off until one of those is filled in."
@@ -8543,65 +8548,65 @@ msgstr ""
 "потрапляє. Введіть ім’я або адресу ел. пошти. Кнопка «Зберегти» вимкнена, "
 "доки не заповнено щось одне."
 
-#: app/src/ui/contacts/editor.rs:526
+#: app/src/ui/contacts/editor.rs:530
 msgid "Unsaved changes"
 msgstr "Є незбережені зміни"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
+#: app/src/ui/contacts/editor.rs:581 app/src/ui/contacts/mod.rs:1340
 msgid "New contact"
 msgstr "Новий контакт"
 
-#: app/src/ui/contacts/editor.rs:574
+#: app/src/ui/contacts/editor.rs:583
 msgid "Edit contact"
 msgstr "Змінити контакт"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
-#: app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:638 app/src/ui/contacts/mod.rs:1089
+#: app/src/ui/contacts/person.rs:1179
 msgid "Turn contacts on for an account first."
 msgstr "Спершу ввімкніть контакти для облікового запису."
 
-#: app/src/ui/contacts/editor.rs:631 app/src/ui/contacts/editor.rs:636
-#: app/src/ui/contacts/person.rs:1153 app/src/ui/contacts/person.rs:1160
+#: app/src/ui/contacts/editor.rs:642 app/src/ui/contacts/editor.rs:647
+#: app/src/ui/contacts/person.rs:1176 app/src/ui/contacts/person.rs:1183
 msgid "Save to"
 msgstr "Зберегти в"
 
-#: app/src/ui/contacts/editor.rs:655
+#: app/src/ui/contacts/editor.rs:667
 msgid "Which account"
 msgstr "Який обліковий запис"
 
-#: app/src/ui/contacts/editor.rs:678
+#: app/src/ui/contacts/editor.rs:706
 msgid "Replace Photo"
 msgstr "Замінити фото"
 
-#: app/src/ui/contacts/editor.rs:680
+#: app/src/ui/contacts/editor.rs:708
 msgid "Add Photo"
 msgstr "Додати фото"
 
-#: app/src/ui/contacts/editor.rs:684
+#: app/src/ui/contacts/editor.rs:712
 msgid "Remove Photo"
 msgstr "Вилучити фото"
 
-#: app/src/ui/contacts/editor.rs:745 app/src/ui/contacts/person.rs:759
+#: app/src/ui/contacts/editor.rs:773 app/src/ui/contacts/person.rs:775
 msgid "Delete {name} from {account}"
 msgstr "Видалити {name} з {account}"
 
-#: app/src/ui/contacts/editor.rs:801
+#: app/src/ui/contacts/editor.rs:829
 msgid "Enter a name or an email address."
 msgstr "Введіть ім'я або адресу ел. пошти."
 
-#: app/src/ui/contacts/editor.rs:807
+#: app/src/ui/contacts/editor.rs:835
 msgid "Enter a valid email address."
 msgstr "Введіть правильну адресу ел. пошти."
 
-#: app/src/ui/contacts/editor.rs:810
+#: app/src/ui/contacts/editor.rs:838
 msgid "Contacts access for this account was turned off."
 msgstr "Доступ до контактів цього облікового запису вимкнено."
 
-#: app/src/ui/contacts/editor.rs:854
+#: app/src/ui/contacts/editor.rs:882
 msgid "Could not save the contact: {reason}"
 msgstr "Не вдалося зберегти контакт: {reason}"
 
-#: app/src/ui/contacts/editor.rs:899
+#: app/src/ui/contacts/editor.rs:927
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8611,7 +8616,7 @@ msgstr ""
 "ім’я. У {other_account} досі є {other}, а зв’язування цей запис не змінює. "
 "Нічого не записується, доки ви не натиснете «Зберегти»."
 
-#: app/src/ui/contacts/editor.rs:910
+#: app/src/ui/contacts/editor.rs:938
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8619,13 +8624,13 @@ msgstr ""
 "Ви змінюєте контакт {name} у {account}. У {other_account} лишається {other}. "
 "Нічого не записується, доки ви не натиснете «Зберегти»."
 
-#: app/src/ui/contacts/editor.rs:933
+#: app/src/ui/contacts/editor.rs:961
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "Ви змінюєте контакт у {account}. Нічого не записується, доки ви не натиснете "
 "«Зберегти»."
 
-#: app/src/ui/contacts/editor.rs:939
+#: app/src/ui/contacts/editor.rs:967
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8642,38 +8647,50 @@ msgstr[2] ""
 "Ви змінюєте контакт у {account}. У {others} лишаються свої. Нічого не "
 "записується, доки ви не натиснете «Зберегти»."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
+#: app/src/ui/contacts/mod.rs:227 app/src/ui/contacts/side.rs:193
 msgid "Turn Off Contacts"
 msgstr "Вимкнути контакти"
 
-#: app/src/ui/contacts/mod.rs:288
+#: app/src/ui/contacts/mod.rs:303
 msgid "Turn on Contacts for your Google project"
 msgstr "Увімкніть Контакти для вашого проєкту Google"
 
-#: app/src/ui/contacts/mod.rs:656
+#: app/src/ui/contacts/mod.rs:448
+msgid "Selected"
+msgstr "Вибрано"
+
+#: app/src/ui/contacts/mod.rs:710
 msgid "Could not load contacts: {reason}"
 msgstr "Не вдалося завантажити контакти: {reason}"
 
-#: app/src/ui/contacts/mod.rs:794
+#: app/src/ui/contacts/mod.rs:851
 msgid "Deletes {name} in {account}"
 msgstr "Видаляє {name} у {account}"
 
-#: app/src/ui/contacts/mod.rs:820
+#: app/src/ui/contacts/mod.rs:877
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "Обидва контакти лишаються. Нічого не видаляється."
 
-#: app/src/ui/contacts/mod.rs:853
+#: app/src/ui/contacts/mod.rs:910
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "Трапляється в {count} листі"
 msgstr[1] "Трапляється в {count} листах"
 msgstr[2] "Трапляється в {count} листах"
 
-#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1036 app/src/ui/contacts/mod.rs:1088
 msgid "Contacts are off"
 msgstr "Контакти вимкнені"
 
-#: app/src/ui/contacts/mod.rs:976
+#: app/src/ui/contacts/mod.rs:1040
+msgid ""
+"{account} keeps its address book on this computer. Turn contacts on to show "
+"it here."
+msgstr ""
+"{account} зберігає адресну книгу на цьому комп’ютері. Увімкніть контакти, "
+"щоб показати її тут."
+
+#: app/src/ui/contacts/mod.rs:1044
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8683,19 +8700,19 @@ msgstr ""
 "комп’ютері. Увімкніть контакти, щоб скопіювати її сюди. Якщо пізніше "
 "вимкнути контакти, цю копію буде видалено."
 
-#: app/src/ui/contacts/mod.rs:988
+#: app/src/ui/contacts/mod.rs:1057
 msgid "No Matching Contacts"
 msgstr "Немає відповідних контактів"
 
-#: app/src/ui/contacts/mod.rs:989
+#: app/src/ui/contacts/mod.rs:1058
 msgid "Nothing matches that search."
 msgstr "Нічого не знайдено."
 
-#: app/src/ui/contacts/mod.rs:995
+#: app/src/ui/contacts/mod.rs:1064
 msgid "No shared addresses"
 msgstr "Немає спільних адрес"
 
-#: app/src/ui/contacts/mod.rs:997
+#: app/src/ui/contacts/mod.rs:1066
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8703,56 +8720,60 @@ msgstr ""
 "Немає двох контактів в одному обліковому записі з однією адресою. Нічого "
 "видаляти."
 
-#: app/src/ui/contacts/mod.rs:1002
+#: app/src/ui/contacts/mod.rs:1071
 msgid "No close names"
 msgstr "Немає схожих імен"
 
-#: app/src/ui/contacts/mod.rs:1003
+#: app/src/ui/contacts/mod.rs:1072
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "Немає облікових записів зі схожими іменами, які ще не пов’язані."
 
-#: app/src/ui/contacts/mod.rs:1007
+#: app/src/ui/contacts/mod.rs:1076
 msgid "Everyone is a contact"
 msgstr "Усі вже контакти"
 
-#: app/src/ui/contacts/mod.rs:1008
+#: app/src/ui/contacts/mod.rs:1077
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr "Усі, кого бачила поштова скринька, уже збережені як контакти."
 
-#: app/src/ui/contacts/mod.rs:1012
+#: app/src/ui/contacts/mod.rs:1081
 msgid "No VIPs yet"
 msgstr "VIP поки немає"
 
-#: app/src/ui/contacts/mod.rs:1014
+#: app/src/ui/contacts/mod.rs:1083
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr ""
 "Додайте людину до VIP на її сторінці, щоб відкривати її з цього списку."
 
-#: app/src/ui/contacts/mod.rs:1024
+#: app/src/ui/contacts/mod.rs:1093
 msgid "No contacts yet"
 msgstr "Контактів поки немає"
 
-#: app/src/ui/contacts/mod.rs:1026
+#: app/src/ui/contacts/mod.rs:1095
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "Контакти для цього облікового запису ввімкнені. На цей комп’ютер поки нічого "
 "не скопійовано."
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1120
 msgid "Turn On"
 msgstr "Увімкнути"
 
-#: app/src/ui/contacts/mod.rs:1080
+#: app/src/ui/contacts/mod.rs:1148
+msgid "Contacts are on for {account}."
+msgstr "Контакти для {account} увімкнено."
+
+#: app/src/ui/contacts/mod.rs:1149
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "Контакти для {account} ввімкнені. Книга на цьому комп’ютері порожня."
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1171
 msgid "Turn Off Contacts?"
 msgstr "Вимкнути контакти?"
 
-#: app/src/ui/contacts/mod.rs:1107
+#: app/src/ui/contacts/mod.rs:1174
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8760,7 +8781,7 @@ msgstr ""
 "Вимкнути контакти для {account}? Вони залишаться на цьому комп'ютері й "
 "повернуться, коли ви їх увімкнете."
 
-#: app/src/ui/contacts/mod.rs:1109
+#: app/src/ui/contacts/mod.rs:1176
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8768,206 +8789,221 @@ msgstr ""
 "Вимкнути контакти для {account}? Їх буде видалено з цього комп'ютера; сервер "
 "збереже їх."
 
-#: app/src/ui/contacts/mod.rs:1116
+#: app/src/ui/contacts/mod.rs:1183
 msgid "Turn Off"
 msgstr "Вимкнути"
 
-#: app/src/ui/contacts/mod.rs:1143
+#: app/src/ui/contacts/mod.rs:1210
 msgid "Contacts are off for {account}."
 msgstr "Контакти для {account} вимкнено."
 
-#: app/src/ui/contacts/mod.rs:1196
+#: app/src/ui/contacts/mod.rs:1275
 msgid "Search same address"
 msgstr "Шукати ту саму адресу"
 
-#: app/src/ui/contacts/mod.rs:1197
+#: app/src/ui/contacts/mod.rs:1276
 msgid "Search same person"
 msgstr "Шукати ту саму людину"
 
-#: app/src/ui/contacts/mod.rs:1198
+#: app/src/ui/contacts/mod.rs:1277
 msgid "Search correspondents"
 msgstr "Шукати кореспондентів"
 
-#: app/src/ui/contacts/mod.rs:1199
+#: app/src/ui/contacts/mod.rs:1278
 msgid "Search contacts"
 msgstr "Шукати контакти"
 
-#: app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1287
 msgid "{count} selected"
-msgstr "Вибрано: {count}"
+msgid_plural "{count} selected"
+msgstr[0] "Вибрано: {count}"
+msgstr[1] "Вибрано: {count}"
+msgstr[2] "Вибрано: {count}"
 
-#: app/src/ui/contacts/mod.rs:1220
+#: app/src/ui/contacts/mod.rs:1304
 msgid "Delete {count}"
 msgstr "Видалити: {count}"
 
-#: app/src/ui/contacts/mod.rs:1243
+#: app/src/ui/contacts/mod.rs:1327
 msgid "Select several contacts"
 msgstr "Вибрати кілька контактів"
 
-#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
+#: app/src/ui/contacts/mod.rs:1364 app/src/ui/contacts/mod.rs:1388
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} людина"
 msgstr[1] "{count} людини"
 msgstr[2] "{count} людей"
 
-#: app/src/ui/contacts/mod.rs:1291
+#: app/src/ui/contacts/mod.rs:1375
 msgid "{count} of {total}"
 msgstr "{count} із {total}"
 
-#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1384 app/src/ui/contacts/side.rs:90
 msgid "All contacts"
 msgstr "Усі контакти"
 
-#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1386 app/src/ui/contacts/side.rs:92
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP-контакти"
 
-#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1394 app/src/ui/contacts/side.rs:98
 msgid "From mail"
 msgstr "Із пошти"
 
-#: app/src/ui/contacts/mod.rs:1310
+#: app/src/ui/contacts/mod.rs:1394
 msgid "Not contacts yet"
 msgstr "Поки не контакти"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1396 app/src/ui/contacts/side.rs:104
 msgid "Same address"
 msgstr "Та сама адреса"
 
-#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
+#: app/src/ui/contacts/mod.rs:1401 app/src/ui/contacts/mod.rs:1414
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} пара"
 msgstr[1] "{count} пари"
 msgstr[2] "{count} пар"
 
-#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
-#: app/src/ui/contacts/side.rs:102
+#: app/src/ui/contacts/mod.rs:1409 app/src/ui/contacts/person.rs:919
+#: app/src/ui/contacts/side.rs:110
 msgid "Same person"
 msgstr "Та сама людина"
 
-#: app/src/ui/contacts/mod.rs:1537
+#: app/src/ui/contacts/mod.rs:1624
+msgid "Discard Contact Changes?"
+msgstr "Відкинути зміни контакту?"
+
+#: app/src/ui/contacts/mod.rs:1625
+msgid "Your changes have not been saved to the account."
+msgstr "Ваші зміни не збережено в обліковому записі."
+
+#: app/src/ui/contacts/mod.rs:1628
+msgid "Keep Editing"
+msgstr "Продовжити"
+
+#: app/src/ui/contacts/mod.rs:1692
 msgid "{name} from {account}"
 msgstr "{name} з {account}"
 
-#: app/src/ui/contacts/mod.rs:1546
+#: app/src/ui/contacts/mod.rs:1701
 msgid "Deleted {list}."
 msgstr "Видалено: {list}."
 
-#: app/src/ui/contacts/ops.rs:99
+#: app/src/ui/contacts/ops.rs:105
 msgid "Grant contacts permission in Preferences, then try again."
 msgstr "Надайте доступ до контактів у Параметрах і спробуйте ще раз."
 
-#: app/src/ui/contacts/person.rs:71
+#: app/src/ui/contacts/person.rs:74
 msgid "View Photo"
 msgstr "Переглянути фото"
 
-#: app/src/ui/contacts/person.rs:237
+#: app/src/ui/contacts/person.rs:250
 msgid "{name} is in VIPs. Remove them from that list."
 msgstr "{name} у VIP. Прибрати зі цього списку."
 
-#: app/src/ui/contacts/person.rs:239
+#: app/src/ui/contacts/person.rs:252
 msgid "Add {name} to VIPs"
 msgstr "Додати {name} до VIP"
 
-#: app/src/ui/contacts/person.rs:270 app/src/ui/contacts/person.rs:1085
+#: app/src/ui/contacts/person.rs:283 app/src/ui/contacts/person.rs:1108
 msgid "Every conversation with this person"
 msgstr "Усе листування з цією людиною"
 
-#: app/src/ui/contacts/person.rs:298 app/src/ui/thread_list.rs:305
+#: app/src/ui/contacts/person.rs:311 app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "Нове повідомлення (C)"
 
-#: app/src/ui/contacts/person.rs:330
+#: app/src/ui/contacts/person.rs:343
 msgid "Reach"
 msgstr "Як зв’язатися"
 
-#: app/src/ui/contacts/person.rs:409 app/src/ui/contacts/person.rs:1165
+#: app/src/ui/contacts/person.rs:422 app/src/ui/contacts/person.rs:1188
 msgid "Address"
 msgstr "Адреса"
 
-#: app/src/ui/contacts/person.rs:481
+#: app/src/ui/contacts/person.rs:494
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "Ви писали {date}. Чекаємо на відповідь."
 
-#: app/src/ui/contacts/person.rs:486
+#: app/src/ui/contacts/person.rs:499
 msgid "Last message, {date}"
 msgstr "Останній лист, {date}"
 
-#: app/src/ui/contacts/person.rs:505
+#: app/src/ui/contacts/person.rs:518
 msgid "You last wrote {date}"
 msgstr "Востаннє ви писали {date}"
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:520
 msgid "You have not written to them."
 msgstr "Ви їй ще не писали."
 
-#: app/src/ui/contacts/person.rs:529 app/src/ui/sidebar.rs:494
+#: app/src/ui/contacts/person.rs:542 app/src/ui/sidebar.rs:494
 #: app/src/ui/sidebar.rs:564 app/src/ui/sidebar.rs:1942
 #: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "Пошта"
 
-#: app/src/ui/contacts/person.rs:535 app/src/ui/sidebar.rs:2481
+#: app/src/ui/contacts/person.rs:548 app/src/ui/sidebar.rs:2481
 msgid "On this computer"
 msgstr "На цьому комп'ютері"
 
-#: app/src/ui/contacts/person.rs:580
+#: app/src/ui/contacts/person.rs:593
 msgid "A key for {email} is on this computer."
 msgstr "Ключ для {email} є на цьому комп’ютері."
 
-#: app/src/ui/contacts/person.rs:583
+#: app/src/ui/contacts/person.rs:596
 msgid "A key for these addresses is on this computer."
 msgstr "Ключ для цих адрес є на цьому комп’ютері."
 
-#: app/src/ui/contacts/person.rs:585
+#: app/src/ui/contacts/person.rs:598
 msgid "No key for {email} is on this computer."
 msgstr "Ключа для {email} на цьому комп’ютері немає."
 
-#: app/src/ui/contacts/person.rs:588
+#: app/src/ui/contacts/person.rs:601
 msgid "No key for these addresses is on this computer."
 msgstr "Ключа для цих адрес на цьому комп’ютері немає."
 
-#: app/src/ui/contacts/person.rs:590
+#: app/src/ui/contacts/person.rs:603
 msgid "OpenPGP key"
 msgstr "Ключ OpenPGP"
 
-#: app/src/ui/contacts/person.rs:597
+#: app/src/ui/contacts/person.rs:610
 msgid "Remote images"
 msgstr "Віддалені зображення"
 
-#: app/src/ui/contacts/person.rs:599
+#: app/src/ui/contacts/person.rs:612
 msgid "Allowed for this sender."
 msgstr "Дозволені для цього відправника."
 
-#: app/src/ui/contacts/person.rs:601
+#: app/src/ui/contacts/person.rs:614
 msgid "Blocked until you allow them."
 msgstr "Заблоковані, доки ви їх не дозволите."
 
-#: app/src/ui/contacts/person.rs:604
+#: app/src/ui/contacts/person.rs:617
 msgid "Remote images, allowed for this sender"
 msgstr "Віддалені зображення, дозволені для цього відправника"
 
-#: app/src/ui/contacts/person.rs:606
+#: app/src/ui/contacts/person.rs:619
 msgid "Remote images, blocked until you allow them"
 msgstr "Віддалені зображення, заблоковані, доки ви їх не дозволите"
 
-#: app/src/ui/contacts/person.rs:684
+#: app/src/ui/contacts/person.rs:697
 msgid "Deleted {name} from {account}."
 msgstr "{name} видалено з {account}."
 
-#: app/src/ui/contacts/person.rs:692
+#: app/src/ui/contacts/person.rs:705
 msgid "{base} {other} still has this person."
 msgstr "{base} У {other} ця людина лишається."
 
-#: app/src/ui/contacts/person.rs:743
+#: app/src/ui/contacts/person.rs:759
 msgid "Merge in {account}"
 msgstr "Об’єднати в {account}"
 
-#: app/src/ui/contacts/person.rs:792
+#: app/src/ui/contacts/person.rs:808
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8975,23 +9011,23 @@ msgstr ""
 "Обидва контакти використовують {email}. {account} залишає один контакт і "
 "видаляє інший. Інші облікові записи не змінюються."
 
-#: app/src/ui/contacts/person.rs:795
+#: app/src/ui/contacts/person.rs:811
 msgid "Which contact"
 msgstr "Який контакт"
 
-#: app/src/ui/contacts/person.rs:823
+#: app/src/ui/contacts/person.rs:839
 msgid "{account} keeps"
 msgstr "{account} залишає"
 
-#: app/src/ui/contacts/person.rs:853
+#: app/src/ui/contacts/person.rs:869
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr "{name} видалено з {account}. {kept} — контакт, який залишає {account}."
 
-#: app/src/ui/contacts/person.rs:907
+#: app/src/ui/contacts/person.rs:930
 msgid "Link"
 msgstr "Зв’язати"
 
-#: app/src/ui/contacts/person.rs:929
+#: app/src/ui/contacts/person.rs:952
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8999,36 +9035,36 @@ msgstr ""
 "{a} у {account_a}. {b} у {account_b}. Імена й адреси різні. Під час "
 "зв’язування обидва контакти лишаються. «Усі контакти» показує один рядок."
 
-#: app/src/ui/contacts/person.rs:937
+#: app/src/ui/contacts/person.rs:960
 msgid "The two contacts"
 msgstr "Два контакти"
 
-#: app/src/ui/contacts/person.rs:952
+#: app/src/ui/contacts/person.rs:975
 msgid "Name in All contacts"
 msgstr "Ім’я в «Усі контакти»"
 
-#: app/src/ui/contacts/person.rs:976
+#: app/src/ui/contacts/person.rs:999
 msgid "All contacts will show"
 msgstr "«Усі контакти» покажуть"
 
-#: app/src/ui/contacts/person.rs:988
+#: app/src/ui/contacts/person.rs:1011
 msgid "One row, two accounts"
 msgstr "Один рядок, два облікові записи"
 
-#: app/src/ui/contacts/person.rs:1051
+#: app/src/ui/contacts/person.rs:1074
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr ""
 "«Усі контакти» тепер показують один рядок для {name}. Нічого не видалено."
 
-#: app/src/ui/contacts/person.rs:1097
+#: app/src/ui/contacts/person.rs:1120
 msgid "Save to Contacts"
 msgstr "Зберегти в контакти"
 
-#: app/src/ui/contacts/person.rs:1115
+#: app/src/ui/contacts/person.rs:1138
 msgid "Not a contact"
 msgstr "Не контакт"
 
-#: app/src/ui/contacts/person.rs:1119
+#: app/src/ui/contacts/person.rs:1142
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -9048,31 +9084,31 @@ msgstr[2] ""
 "як контакти. Трапляється в {count} листах. Збереження створює контакт у "
 "вибраному обліковому записі."
 
-#: app/src/ui/contacts/person.rs:1137
+#: app/src/ui/contacts/person.rs:1160
 msgid "Latest message"
 msgstr "Останній лист"
 
-#: app/src/ui/contacts/person.rs:1169
+#: app/src/ui/contacts/person.rs:1192
 msgid "From the messages"
 msgstr "З листів"
 
-#: app/src/ui/contacts/person.rs:1207
+#: app/src/ui/contacts/person.rs:1223
 msgid "Saved {name} to {account}."
 msgstr "{name} збережено в {account}."
 
-#: app/src/ui/contacts/person.rs:1281
+#: app/src/ui/contacts/person.rs:1299
 msgid "No organization, no phone"
 msgstr "Без організації, без телефону"
 
-#: app/src/ui/contacts/person.rs:1283
+#: app/src/ui/contacts/person.rs:1301
 msgid "Organization {value}"
 msgstr "Організація {value}"
 
-#: app/src/ui/contacts/person.rs:1284
+#: app/src/ui/contacts/person.rs:1302
 msgid "Phone {value}"
 msgstr "Телефон {value}"
 
-#: app/src/ui/contacts/person.rs:1364
+#: app/src/ui/contacts/person.rs:1367
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -9080,7 +9116,7 @@ msgstr ""
 "«Усі контакти» використовують ім’я {name}. У {account_a} лишається свій "
 "контакт, а в {account_b} лишається {other}."
 
-#: app/src/ui/contacts/person.rs:1402
+#: app/src/ui/contacts/person.rs:1398
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -9088,7 +9124,7 @@ msgstr ""
 "Мітка — це обліковий запис. У {others} є свій контакт цієї людини, і зміна "
 "тут змінює {account}."
 
-#: app/src/ui/contacts/person.rs:1410
+#: app/src/ui/contacts/person.rs:1406
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -9096,11 +9132,11 @@ msgstr ""
 "VIP — люди, яких ви позначили, щоб відкривати їх із цього списку. {name} "
 "також збережено в {accounts}."
 
-#: app/src/ui/contacts/person.rs:1418
+#: app/src/ui/contacts/person.rs:1414
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr "VIP — люди, яких ви позначили, щоб відкривати їх із цього списку."
 
-#: app/src/ui/contacts/person.rs:1421
+#: app/src/ui/contacts/person.rs:1417
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr ""
 "Одна людина, збережена в {accounts}. Кожен обліковий запис зберігає свій "
@@ -9138,29 +9174,29 @@ msgstr "Використати фото"
 msgid "Contact Photo"
 msgstr "Фото контакту"
 
-#: app/src/ui/contacts/side.rs:80
+#: app/src/ui/contacts/side.rs:88
 msgid "Lists"
 msgstr "Списки"
 
-#: app/src/ui/contacts/side.rs:86
+#: app/src/ui/contacts/side.rs:94
 msgid "People you mark, so you can open them from here"
 msgstr "Люди, яких ви позначили, щоб відкривати їх звідси"
 
-#: app/src/ui/contacts/side.rs:92
+#: app/src/ui/contacts/side.rs:100
 msgid "People found in mail. They are not contacts yet."
 msgstr "Люди, знайдені в пошті. Вони ще не контакти."
 
-#: app/src/ui/contacts/side.rs:98
+#: app/src/ui/contacts/side.rs:106
 msgid "Two contacts in one account share an address. Merging deletes one."
 msgstr ""
 "Два контакти в одному обліковому записі мають одну адресу. Об’єднання "
 "видаляє один."
 
-#: app/src/ui/contacts/side.rs:104
+#: app/src/ui/contacts/side.rs:112
 msgid "A close name in two accounts. Linking deletes nothing."
 msgstr "Схоже ім’я у двох облікових записах. Зв’язування нічого не видаляє."
 
-#: app/src/ui/contacts/side.rs:125 app/src/ui/preferences.rs:476
+#: app/src/ui/contacts/side.rs:133 app/src/ui/preferences.rs:476
 #: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
 #: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
@@ -9276,7 +9312,7 @@ msgid "Export…"
 msgstr "Експортувати…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3823
+#: app/src/ui/window.rs:3831
 msgid "Customize Toolbar…"
 msgstr "Налаштувати панель інструментів…"
 
@@ -9845,7 +9881,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Дозволити «Сховати e-mail»"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4036
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4044
 msgid "Add an account first"
 msgstr "Спершу додайте обліковий запис"
 
@@ -11183,7 +11219,7 @@ msgstr "Перемістити {account} вниз"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3830 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3838 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "Параметри"
 
@@ -11678,7 +11714,7 @@ msgstr[0] "{mailbox}, {count} повідомлення"
 msgstr[1] "{mailbox}, {count} повідомлення"
 msgstr[2] "{mailbox}, {count} повідомлень"
 
-#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3162
+#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3164
 msgid "99+"
 msgstr "99+"
 
@@ -11718,7 +11754,7 @@ msgstr "Автовідповідь…"
 msgid "Rules…"
 msgstr "Правила…"
 
-#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3816
+#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3824
 msgid "Hide My Email…"
 msgstr "Сховати e-mail…"
 
@@ -12353,7 +12389,7 @@ msgstr "Не вдалося завантажити пошту: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Додано {account}. Завантаження пошти…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3176
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3184
 msgid "{account} is signed in again."
 msgstr "Вхід до {account} виконано знову."
 
@@ -12504,71 +12540,71 @@ msgstr[0] "{count} повідомлення переміщено до «Вхід
 msgstr[1] "{count} повідомлення переміщено до «Вхідних»"
 msgstr[2] "{count} повідомлень переміщено до «Вхідних»"
 
-#: app/src/ui/window.rs:989
+#: app/src/ui/window.rs:997
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (демо)"
 
-#: app/src/ui/window.rs:1451
+#: app/src/ui/window.rs:1459
 msgid "Could not read accounts: {reason}"
 msgstr "Не вдалося прочитати облікові записи: {reason}"
 
-#: app/src/ui/window.rs:2210
+#: app/src/ui/window.rs:2218
 msgid "Could not delete the mail: {reason}"
 msgstr "Не вдалося вилучити пошту: {reason}"
 
-#: app/src/ui/window.rs:2317
+#: app/src/ui/window.rs:2325
 msgid "Turn On the {service}"
 msgstr "Увімкніть {service}"
 
-#: app/src/ui/window.rs:2504 app/src/ui/window.rs:2507
+#: app/src/ui/window.rs:2512 app/src/ui/window.rs:2515
 msgid "Move to Inbox"
 msgstr "Перемістити до «Вхідних»"
 
-#: app/src/ui/window.rs:2675 app/src/ui/window.rs:2680
+#: app/src/ui/window.rs:2683 app/src/ui/window.rs:2688
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Шукати моделі"
 
-#: app/src/ui/window.rs:2749
+#: app/src/ui/window.rs:2757
 msgid "Select mail from one account to tag it."
 msgstr "Щоб додати тег, виберіть пошту з одного облікового запису."
 
-#: app/src/ui/window.rs:2761
+#: app/src/ui/window.rs:2769
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Цей обліковий запис ще не має тегів. Створіть тег в Outlook."
 
-#: app/src/ui/window.rs:2854
+#: app/src/ui/window.rs:2862
 msgid "Add an account to reply or forward"
 msgstr "Додайте обліковий запис, щоб відповідати або пересилати"
 
-#: app/src/ui/window.rs:2959
+#: app/src/ui/window.rs:2967
 msgid "Could not include {file}: {reason}"
 msgstr "Не вдалося додати {file}: {reason}"
 
-#: app/src/ui/window.rs:3040
+#: app/src/ui/window.rs:3048
 msgid "The server had already sent this message."
 msgstr "Сервер уже надіслав це повідомлення."
 
-#: app/src/ui/window.rs:3045
+#: app/src/ui/window.rs:3053
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Це повідомлення скасовано в іншій програмі, і його більше немає в "
 "«Чернетках»."
 
-#: app/src/ui/window.rs:3361
+#: app/src/ui/window.rs:3369
 msgid "Continue in your browser"
 msgstr "Продовжте в браузері"
 
-#: app/src/ui/window.rs:3411
+#: app/src/ui/window.rs:3419
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Цю копію Penguin Mail зібрано без входу через Google."
 
-#: app/src/ui/window.rs:3433
+#: app/src/ui/window.rs:3441
 msgid "Get a Release"
 msgstr "Отримати випуск"
 
-#: app/src/ui/window.rs:3556
+#: app/src/ui/window.rs:3564
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12576,86 +12612,86 @@ msgstr ""
 "Не вдалося перевірити, чи сервер зберігає повідомлення для пізнішого "
 "надсилання, тому {account} залишається: {reason}"
 
-#: app/src/ui/window.rs:3567
+#: app/src/ui/window.rs:3575
 msgid "Remove {account}?"
 msgstr "Прибрати {account}?"
 
-#: app/src/ui/window.rs:3586
+#: app/src/ui/window.rs:3594
 msgid "Remove Anyway"
 msgstr "Усе одно прибрати"
 
-#: app/src/ui/window.rs:3599
+#: app/src/ui/window.rs:3607
 msgid "Removed {account}"
 msgstr "{account} прибрано"
 
-#: app/src/ui/window.rs:3601
+#: app/src/ui/window.rs:3609
 msgid "Could not remove {account}: {reason}"
 msgstr "Не вдалося прибрати {account}: {reason}"
 
-#: app/src/ui/window.rs:3793
+#: app/src/ui/window.rs:3801
 msgid "Refresh"
 msgstr "Оновити"
 
-#: app/src/ui/window.rs:3797
+#: app/src/ui/window.rs:3805
 msgid "Show Declined Events"
 msgstr "Показувати відхилені події"
 
-#: app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3822
 msgid "Add Account…"
 msgstr "Додати обліковий запис…"
 
-#: app/src/ui/window.rs:3815
+#: app/src/ui/window.rs:3823
 msgid "New Smart Mailbox…"
 msgstr "Нова розумна скринька…"
 
-#: app/src/ui/window.rs:3827
+#: app/src/ui/window.rs:3835
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Налаштувати панель інструментів…"
 
-#: app/src/ui/window.rs:3831 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3839 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "Комбінації клавіш"
 
-#: app/src/ui/window.rs:3840 app/src/ui/window.rs:3842
+#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3850
 msgid "Main Menu"
 msgstr "Головне меню"
 
-#: app/src/ui/window.rs:3907 app/src/ui/window.rs:3908
+#: app/src/ui/window.rs:3915 app/src/ui/window.rs:3916
 msgid "Dock"
 msgstr "Закріпити"
 
-#: app/src/ui/window.rs:4037
+#: app/src/ui/window.rs:4045
 msgid "Add a mail account first"
 msgstr "Спочатку додайте поштовий обліковий запис"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4303
+#: app/src/ui/window.rs:4311
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Календар і контакти {account} підключено."
 
-#: app/src/ui/window.rs:4419
+#: app/src/ui/window.rs:4427
 msgid "Open a message from the person first"
 msgstr "Спочатку відкрийте повідомлення від цієї людини"
 
-#: app/src/ui/window.rs:4525
+#: app/src/ui/window.rs:4533
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail покаже нову мову після перезапуску"
 
-#: app/src/ui/window.rs:4527 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4535 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Перезапустити"
 
-#: app/src/ui/window.rs:4591
+#: app/src/ui/window.rs:4599
 msgid "Show Rules"
 msgstr "Показати правила"
 
-#: app/src/ui/window.rs:4617
+#: app/src/ui/window.rs:4625
 msgid "Messages That Will Not Download"
 msgstr "Повідомлення, які не завантажуються"
 
-#: app/src/ui/window.rs:4619
+#: app/src/ui/window.rs:4627
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -14464,7 +14500,7 @@ msgstr "Ви не є гостем цієї події."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail не може змінювати список календарів сервера CalDAV."
 
-#: sync/src/services/carddav.rs:356
+#: sync/src/services/carddav.rs:373
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14472,7 +14508,7 @@ msgstr ""
 "Групи контакту змінилися на іншому пристрої. Оновіть контакти і відкрийте "
 "редактор знову."
 
-#: sync/src/services/carddav.rs:363
+#: sync/src/services/carddav.rs:380
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14480,7 +14516,7 @@ msgstr ""
 "Кілька груп мають однакову назву. Перейменуйте їх в обліковому записі, перш "
 "ніж додавати цей контакт."
 
-#: sync/src/services/carddav.rs:581
+#: sync/src/services/carddav.rs:625
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14488,7 +14524,7 @@ msgstr ""
 "Контакт створено, але деякі групи не вдалося зберегти. Спробуйте ще раз у "
 "цьому редакторі, щоб завершити без другого контакту: {reason}"
 
-#: sync/src/services/carddav.rs:640
+#: sync/src/services/carddav.rs:684
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -15243,15 +15279,6 @@ msgstr "Перемістити до {folder}"
 
 #~ msgid "Choose an address book first."
 #~ msgstr "Спершу виберіть адресну книгу."
-
-#~ msgid "Discard Contact Changes?"
-#~ msgstr "Відкинути зміни контакту?"
-
-#~ msgid "Your changes have not been saved to the account."
-#~ msgstr "Ваші зміни не збережено в обліковому записі."
-
-#~ msgid "Keep Editing"
-#~ msgstr "Продовжити"
 
 #~ msgid "All Groups"
 #~ msgstr "Усі групи"

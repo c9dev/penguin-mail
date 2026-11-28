@@ -232,7 +232,7 @@ pub fn go_line(
     button
 }
 
-fn mark_unselectable(widget: &gtk::Widget) {
+pub fn mark_unselectable(widget: &gtk::Widget) {
     if let Some(l) = widget.downcast_ref::<gtk::Label>() {
         l.set_selectable(false);
     }
@@ -418,4 +418,36 @@ pub fn choice(
     row.add_controller(click);
     check.update_property(&[gtk::accessible::Property::Label(&format!("{title}. {sub}"))]);
     (row, check)
+}
+
+/// Where the keyboard focus sits inside `holder`, as child positions, so
+/// a redraw can put it back on the widget that took its place.
+pub fn focus_path(holder: &gtk::Widget) -> Option<Vec<usize>> {
+    let mut at = holder.root()?.focus()?;
+    let mut path = Vec::new();
+    while &at != holder {
+        let parent = at.parent()?;
+        let index = std::iter::successors(parent.first_child(), |c| c.next_sibling())
+            .position(|c| c == at)?;
+        path.push(index);
+        at = parent;
+    }
+    path.reverse();
+    Some(path)
+}
+
+/// Focuses the widget at `path` inside `holder` after a redraw, or the
+/// first one that takes focus when the redraw has none there.
+pub fn refocus(holder: &gtk::Widget, path: Option<Vec<usize>>) {
+    let Some(path) = path else { return };
+    let mut at = holder.clone();
+    for index in path {
+        match std::iter::successors(at.first_child(), |c| c.next_sibling()).nth(index) {
+            Some(child) => at = child,
+            None => break,
+        }
+    }
+    if !at.grab_focus() {
+        holder.child_focus(gtk::DirectionType::TabForward);
+    }
 }

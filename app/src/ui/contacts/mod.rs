@@ -33,6 +33,8 @@ pub struct Hooks {
     pub search_mail: Box<dyn Fn(Vec<String>)>,
     /// Opens a conversation in the Mail space.
     pub open_thread: Box<dyn Fn(AccountId, String)>,
+    /// Tells the calendar that a birthday it shows came, went or changed.
+    pub birthdays_changed: Box<dyn Fn()>,
 }
 
 /// A list the sidebar offers.
@@ -80,7 +82,13 @@ pub(super) enum RowKind {
 /// Everything read from the store.
 #[derive(Default)]
 pub(super) struct Data {
-    pub contacts: Vec<Contact>,
+    /// Shared, so each pane draw takes the book without copying it.
+    pub contacts: Rc<[Contact]>,
+    /// The people, merges and links worked out once per load, not per
+    /// keystroke of a search.
+    pub grouped: Vec<Person>,
+    pub merges: Vec<Merge>,
+    pub pairs: Vec<Pair>,
     pub links: Vec<Link>,
     pub correspondents: Vec<Correspondent>,
     pub seen: HashMap<String, i64>,
@@ -88,6 +96,9 @@ pub(super) struct Data {
     pub accounts: Vec<Account>,
     /// The accounts that hold a contact, which the demo counts as on.
     pub held: HashSet<AccountId>,
+    /// The accounts whose book is kept on this computer alone, also one
+    /// that is not running, such as an IMAP account waiting for its password.
+    pub local: HashSet<AccountId>,
 }
 
 /// What one Undo does.
@@ -120,6 +131,8 @@ pub(super) struct State {
     pub turned_on: HashSet<AccountId>,
     /// Accounts the demo turned off this session.
     pub turned_off: HashSet<AccountId>,
+    /// A digest of the shown birthdays, once the first load is in.
+    pub birthdays: Option<u64>,
 }
 
 pub struct Contacts {
@@ -151,6 +164,8 @@ pub struct Contacts {
     /// A quiet Turn Off Contacts under an account's list.
     pub(super) footer: gtk::Button,
     pub(super) new_message: RefCell<Option<gtk::Button>>,
+    /// Whether the open form holds a change nobody saved.
+    pub(super) form_dirty: Cell<bool>,
 }
 
 fn item_row(item: &glib::Object) -> Option<Row> {
@@ -326,6 +341,7 @@ impl Contacts {
             banner,
             footer,
             new_message: RefCell::new(None),
+            form_dirty: Cell::new(false),
         });
         this.wire(&factory);
         this.reload();
@@ -427,11 +443,21 @@ impl Contacts {
                 .iter()
                 .map(|a| account_label(*a).short)
                 .collect();
-            let said = [row.name.clone(), row.sub.clone(), account_names.join(", ")]
-                .into_iter()
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<_>>()
-                .join(", ");
+            // In Select, a screen reader hears which rows are picked.
+            let picked = match picking && row.checked {
+                true => gettext("Selected"),
+                false => String::new(),
+            };
+            let said = [
+                row.name.clone(),
+                row.sub.clone(),
+                account_names.join(", "),
+                picked,
+            ]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join(", ");
             item.set_accessible_label(&said);
         });
         let weak = Rc::downgrade(self);
@@ -448,9 +474,11 @@ impl Contacts {
             if this.state.borrow().select.is_some() {
                 return;
             }
-            this.state.borrow_mut().selected = id;
-            this.state.borrow_mut().pane = Some(Pane::View);
-            this.show_pane();
+            this.leave_form(move |this| {
+                this.state.borrow_mut().selected = id;
+                this.state.borrow_mut().pane = Some(Pane::View);
+                this.show_pane();
+            });
         });
         let weak = Rc::downgrade(self);
         self.view.connect_activate(move |_, at| {
@@ -634,21 +662,47 @@ impl Contacts {
             match loaded {
                 Ok((mut contacts, links, correspondents, images, seen)) => {
                     let held: HashSet<AccountId> = contacts.iter().map(|c| c.account_id).collect();
+                    let book = app.core.contacts();
+                    let local: HashSet<AccountId> = app
+                        .accounts()
+                        .iter()
+                        .map(|a| a.id)
+                        .filter(|&id| {
+                            book.is_local(id)
+                                || contacts
+                                    .iter()
+                                    .any(|c| c.account_id == id && c.resource.starts_with("local/"))
+                        })
+                        .collect();
                     this.state.borrow_mut().data.held = held.clone();
                     let accounts = this.accounts_with_contacts();
                     contacts.retain(|c| accounts.iter().any(|a| a.id == c.account_id));
+                    let birthdays = birthdays_of(&contacts);
+                    let grouped = people::group(&contacts, &links);
+                    let merges = people::same_address(&contacts);
+                    let pairs = people::same_person(&contacts, &links);
                     let mut state = this.state.borrow_mut();
                     state.data = Data {
-                        contacts,
+                        contacts: contacts.into(),
+                        grouped,
+                        merges,
+                        pairs,
                         links,
                         correspondents,
                         seen,
                         images,
                         accounts: app.accounts(),
                         held,
+                        local,
                     };
                     state.mail.clear();
                     state.keys.clear();
+                    // The calendar redraws only when a birthday changed.
+                    let told = state.birthdays.replace(birthdays);
+                    drop(state);
+                    if told.is_some_and(|t| t != birthdays) {
+                        (this.hooks.birthdays_changed)();
+                    }
                 }
                 Err(err) => {
                     this.tell(
@@ -698,6 +752,10 @@ impl Contacts {
     }
 
     pub fn show_list(self: &Rc<Self>, list: List) {
+        self.leave_form(move |this| this.open_list(list));
+    }
+
+    fn open_list(self: &Rc<Self>, list: List) {
         {
             let mut state = self.state.borrow_mut();
             state.list = Some(list);
@@ -724,9 +782,8 @@ impl Contacts {
             }
             let list = state.list.clone().unwrap_or(List::All);
             let d = &state.data;
-            let grouped = people::group(&d.contacts, &d.links);
-            let merges = people::same_address(&d.contacts);
-            let pairs = people::same_person(&d.contacts, &d.links);
+            let grouped = &d.grouped;
+            let (merges, pairs) = (d.merges.clone(), d.pairs.clone());
             let settings = app.settings();
             let query = state.query.clone();
             let mut rows: Vec<Row> = Vec::new();
@@ -749,7 +806,7 @@ impl Contacts {
             };
             match &list {
                 List::All | List::Vips | List::Group(_) => {
-                    for p in &grouped {
+                    for p in grouped {
                         let keep = match &list {
                             List::Vips => p.emails(contacts).iter().any(|e| settings.is_vip(e)),
                             List::Group(g) => p
@@ -887,7 +944,10 @@ impl Contacts {
             .set_revealed(app.contacts_api_off.borrow().is_some());
         self.draw_side();
         self.draw_list();
-        self.show_pane();
+        // A reload under an open form keeps what the person typed.
+        if matches!(self.state.borrow().pane, Some(Pane::View) | None) {
+            self.show_pane();
+        }
     }
 
     /// Fills the list store from the rows and keeps the selection.
@@ -969,12 +1029,21 @@ impl Contacts {
                 .as_ref()
                 .map(|a| account_label(a.id).short)
                 .unwrap_or_default();
+            let local = account
+                .as_ref()
+                .is_some_and(|a| self.state.borrow().data.local.contains(&a.id));
             (
                 gettext("Contacts are off"),
                 fill(
-                    &gettext(
-                        "{account} can keep an address book. That book is on the server, not on this computer. Turn contacts on to copy it here. Turning contacts off later deletes that copy.",
-                    ),
+                    &if local {
+                        gettext(
+                            "{account} keeps its address book on this computer. Turn contacts on to show it here.",
+                        )
+                    } else {
+                        gettext(
+                            "{account} can keep an address book. That book is on the server, not on this computer. Turn contacts on to copy it here. Turning contacts off later deletes that copy.",
+                        )
+                    },
                     &[("account", &name)],
                 ),
                 account.clone(),
@@ -1075,11 +1144,12 @@ impl Contacts {
         });
         let name = account_label(account.id).short;
         let (email, account_id) = (account.email.clone(), account.id);
+        let words = match self.state.borrow().data.local.contains(&account.id) {
+            true => gettext("Contacts are on for {account}."),
+            false => gettext("Contacts are on for {account}. The book on this computer is empty."),
+        };
         self.tell(
-            &fill(
-                &gettext("Contacts are on for {account}. The book on this computer is empty."),
-                &[("account", &name)],
-            ),
+            &fill(&words, &[("account", &name)]),
             Some(Box::new(move |this| {
                 this.state.borrow_mut().turned_on.remove(&account_id);
                 if let Some(app) = this.app.upgrade() {
@@ -1095,11 +1165,8 @@ impl Contacts {
     /// the same change, which forgets the copy on this computer. Undo turns
     /// them on again.
     pub(super) fn turn_off(self: &Rc<Self>, account: Account) {
-        let Some(app) = self.app.upgrade() else {
-            return;
-        };
         let name = account_label(account.id).short;
-        let local = app.core.contacts().is_local(account.id);
+        let local = self.state.borrow().data.local.contains(&account.id);
         let dialog = adw::AlertDialog::builder()
             .heading(gettext("Turn Off Contacts?"))
             .body(fill(
@@ -1151,7 +1218,21 @@ impl Contacts {
         });
     }
 
-    fn draw_head(self: &Rc<Self>, list: &List, count: usize, picking: Option<usize>, _query: &str) {
+    /// Draws the list head again, keeping the keyboard where it was.
+    fn draw_head(self: &Rc<Self>, list: &List, count: usize, picking: Option<usize>, query: &str) {
+        let holder = self.head.upcast_ref::<gtk::Widget>();
+        let at = parts::focus_path(holder);
+        self.draw_head_now(list, count, picking, query);
+        parts::refocus(holder, at);
+    }
+
+    fn draw_head_now(
+        self: &Rc<Self>,
+        list: &List,
+        count: usize,
+        picking: Option<usize>,
+        query: &str,
+    ) {
         while let Some(child) = self.head.first_child() {
             self.head.remove(&child);
         }
@@ -1170,15 +1251,14 @@ impl Contacts {
         let weak = Rc::downgrade(self);
         // An account with nothing to list shows its address in the head,
         // as the mockup does for an account turned off or newly on.
-        let account_empty = matches!(list, List::Account(_)) && count == 0 && _query.is_empty();
+        let account_empty = matches!(list, List::Account(_)) && count == 0 && query.is_empty();
         if account_off || account_empty {
-            if let List::Account(id) = list {
+            if let List::Account(_) = list {
                 let grey = gtk::Box::builder()
                     .valign(gtk::Align::Start)
                     .margin_top(6)
                     .css_classes(["account-dot", "account-8"])
                     .build();
-                let _ = id;
                 self.head.append(&grey);
                 let heading = gtk::Box::builder()
                     .orientation(gtk::Orientation::Vertical)
@@ -1186,7 +1266,6 @@ impl Contacts {
                 heading.append(&parts::label(&title, &["cts-h2"]));
                 heading.append(&parts::label(&sub, &["cts-count"]));
                 self.head.append(&heading);
-                let _ = sub;
                 self.head.add_css_class("accounthead");
             }
             return;
@@ -1204,7 +1283,12 @@ impl Contacts {
         );
         if let Some(n) = picking {
             self.head.append(&parts::label(
-                &fill(&gettext("{count} selected"), &[("count", &n.to_string())]),
+                &fill_plural(
+                    "{count} selected",
+                    "{count} selected",
+                    n,
+                    &[("count", &n.to_string())],
+                ),
                 &["cts-h2"],
             ));
             let grow = gtk::Box::builder().hexpand(true).build();
@@ -1295,7 +1379,7 @@ impl Contacts {
         };
         let _ = total;
         let state = self.state.borrow();
-        let all = people::group(&state.data.contacts, &state.data.links).len();
+        let all = state.data.grouped.len();
         match list {
             List::All => (gettext("All contacts"), sub_for(count, all)),
             List::Vips => (
@@ -1371,6 +1455,8 @@ impl Contacts {
             }
         }
         self.lane.set_reveal_child(true);
+        self.lane_text
+            .announce(words, gtk::AccessibleAnnouncementPriority::Medium);
         let weak = Rc::downgrade(self);
         let id = glib::timeout_add_local_once(std::time::Duration::from_secs(10), move || {
             if let Some(this) = weak.upgrade() {
@@ -1434,7 +1520,7 @@ impl Contacts {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let (targets, _total): (Vec<Contact>, usize) = {
+        let targets: Vec<Contact> = {
             let state = self.state.borrow();
             let picked = state.select.clone().unwrap_or_default();
             let mut out = Vec::new();
@@ -1442,14 +1528,13 @@ impl Contacts {
                 if let RowKind::Person(i) = row.kind {
                     let person = &state.people[i];
                     // The row's own record: the one whose name it shows.
-                    let c = &state.data.contacts[person.members[0]];
+                    let c = &state.data.contacts[person.shown];
                     if !c.details.read_only {
                         out.push(c.clone());
                     }
                 }
             }
-            let n = out.len();
-            (out, n)
+            out
         };
         if targets.is_empty() {
             self.stop_select();
@@ -1458,13 +1543,14 @@ impl Contacts {
         let words = deleted_words(&targets);
         let weak = Rc::downgrade(self);
         self.state.borrow_mut().select = None;
+        let links = self.state.borrow().data.links.clone();
         glib::spawn_future_local(async move {
             let mut gone = Vec::new();
             let mut failure = None;
             for contact in targets {
-                let photo = ops::photo_of(&app, &contact);
-                match ops::delete(&app, contact.clone()).await {
-                    Ok(()) => gone.push((contact, photo)),
+                let undo = ops::gone(&app, contact.clone(), &links);
+                match ops::delete(&app, contact).await {
+                    Ok(()) => gone.push(undo),
                     Err(err) => {
                         failure = Some(err.to_string());
                         break;
@@ -1474,21 +1560,27 @@ impl Contacts {
             let Some(this) = weak.upgrade() else { return };
             app.contacts_added();
             this.reload();
-            match failure {
-                Some(err) => this.say_error(&err),
-                None => this.tell(&words, Some(Box::new(move |this| this.restore_all(gone)))),
-            }
+            // The ones gone before a failure can still come back.
+            let words = match (failure, gone.is_empty()) {
+                (Some(err), true) => return this.say_error(&err),
+                (Some(err), false) => {
+                    let done: Vec<Contact> = gone.iter().map(|g| g.contact.clone()).collect();
+                    format!("{} {err}", deleted_words(&done))
+                }
+                (None, _) => words,
+            };
+            this.tell(&words, Some(Box::new(move |this| this.restore_all(gone))));
         });
     }
 
-    pub(super) fn restore_all(self: &Rc<Self>, gone: Vec<(Contact, Option<Vec<u8>>)>) {
+    pub(super) fn restore_all(self: &Rc<Self>, gone: Vec<ops::Gone>) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
-            for (contact, photo) in gone {
-                if let Err(err) = ops::restore(&app, contact, photo).await {
+            for one in gone {
+                if let Err(err) = ops::restore(&app, one).await {
                     if let Some(this) = weak.upgrade() {
                         this.say_error(&err);
                     }
@@ -1504,10 +1596,73 @@ impl Contacts {
 
     /// Starts a new contact in the person pane.
     pub(super) fn begin_new(self: &Rc<Self>) {
-        self.state.borrow_mut().pane = Some(Pane::New);
-        self.nav.set_show_content(true);
-        self.show_pane();
+        self.leave_form(|this| {
+            this.state.borrow_mut().pane = Some(Pane::New);
+            this.nav.set_show_content(true);
+            this.show_pane();
+        });
     }
+
+    /// Runs `then` at once, or, when the open form holds unsaved changes,
+    /// once the person agrees to lose them. Cancel puts the list's
+    /// selection back on the form's row.
+    pub(super) fn leave_form(self: &Rc<Self>, then: impl FnOnce(&Rc<Self>) + 'static) {
+        self.leave_form_or(then, |this| this.draw_list());
+    }
+
+    /// [`Contacts::leave_form`], with `stay` run when the person keeps the form.
+    pub(super) fn leave_form_or(
+        self: &Rc<Self>,
+        then: impl FnOnce(&Rc<Self>) + 'static,
+        stay: impl FnOnce(&Rc<Self>) + 'static,
+    ) {
+        let editing = matches!(self.state.borrow().pane, Some(Pane::Edit(_) | Pane::New));
+        if !editing || !self.form_dirty.get() {
+            return then(self);
+        }
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Discard Contact Changes?")),
+            Some(&gettext("Your changes have not been saved to the account.")),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("Keep Editing")),
+            ("discard", &gettext("Discard")),
+        ]);
+        dialog.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+        dialog.set_default_response(Some("cancel"));
+        dialog.set_close_response("cancel");
+        let weak = Rc::downgrade(self);
+        let (then, stay) = (Cell::new(Some(then)), Cell::new(Some(stay)));
+        dialog.connect_response(None, move |_, answer| {
+            let Some(this) = weak.upgrade() else { return };
+            if answer == "discard" {
+                this.form_dirty.set(false);
+                if let Some(then) = then.take() {
+                    then(&this);
+                }
+            } else if let Some(stay) = stay.take() {
+                stay(&this);
+            }
+        });
+        // The dialog gives focus back to where it was on close. A row the
+        // person clicked would select itself again and ask again, so the
+        // focus waits in the form instead.
+        if self.view.has_focus() || self.view.focus_child().is_some() {
+            self.pane.child_focus(gtk::DirectionType::TabForward);
+        }
+        dialog.present(Some(&self.page));
+    }
+}
+
+/// A digest of who has which birthday, to tell when the calendar's
+/// birthdays change.
+fn birthdays_of(contacts: &[Contact]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for c in contacts.iter().filter(|c| !c.details.birthday.is_empty()) {
+        (c.account_id, &c.resource, &c.name, &c.details.birthday).hash(&mut hasher);
+    }
+    hasher.finish()
 }
 
 /// The correspondents that are not contacts, and not automated senders.

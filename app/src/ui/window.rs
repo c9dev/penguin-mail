@@ -746,6 +746,14 @@ impl MainWindow {
                                 win.open_invitation_mail(account_id, thread_id);
                             }
                         }),
+                        birthdays_changed: Box::new({
+                            let calendar = Rc::downgrade(&calendar);
+                            move || {
+                                if let Some(calendar) = calendar.upgrade() {
+                                    calendar.contacts_changed();
+                                }
+                            }
+                        }),
                     },
                 )
             };
@@ -2336,8 +2344,8 @@ impl MainWindow {
     /// Draws the rows and open conversations again once the contact photos
     /// on disk are known, so they show faces instead of initials.
     fn contacts_loaded(self: &Rc<Self>) {
+        // Contacts tells the calendar itself when a birthday changed.
         self.contacts.reload();
-        self.calendar.contacts_changed();
         self.list.photos_changed();
         self.reopen_for_photos();
     }

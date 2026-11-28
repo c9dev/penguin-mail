@@ -23,7 +23,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Contacts is a third mode beside Mail and Calendar: one row per person across your accounts, VIPs and groups, people found only in mail, and duplicates you can merge within an account or link across accounts, with Undo for each change. You can add, edit and delete contacts with their groups, birthdays, addresses, websites, notes, custom fields and photos.
 - Accounts with no contacts server, such as plain IMAP and POP3, keep their contacts on this computer, and a Google account linked through GNOME Online Accounts reads its contacts over Google's CardDAV.
-- Turn Off Contacts for one account from its row or from the foot of its list. The app asks first, names the account, and offers Undo. Google accounts read through CardDAV keep their groups on this computer, and refuse a birthday without a year, because Google deletes it.
+- Turn Off Contacts for one account from its row or from the foot of its list. The app asks first, names the account, and offers Undo. Google accounts read through CardDAV keep their groups on this computer, because Google drops them, and keep a birthday without a year.
 - See your contacts' birthdays in the calendar, with the age they turn when the year is known.
 - Penguin Mail runs on Windows 10 and later: mail pages draw with WebView2, a tray icon keeps it working in the background, toast notifications carry their action buttons, the taskbar button shows the unread count, Preferences can start it at sign-in, and PGP and S/MIME work with Gpg4win installed.
 - On Windows, a per-user installer sets up the app, its Start Menu entry and its mail and calendar file associations, and removes all of it on uninstall.

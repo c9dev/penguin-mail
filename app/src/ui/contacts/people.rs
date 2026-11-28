@@ -24,6 +24,8 @@ pub struct Person {
     pub email: String,
     /// Each account that holds them once, in member order.
     pub accounts: Vec<AccountId>,
+    /// The member whose name and address the row shows.
+    pub shown: usize,
 }
 
 impl Person {
@@ -53,6 +55,7 @@ fn person(contacts: &[Contact], members: Vec<usize>, shown: usize) -> Person {
         email: first.email().unwrap_or_default().to_string(),
         accounts,
         members,
+        shown,
     }
 }
 

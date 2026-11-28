@@ -4208,8 +4208,8 @@ msgstr "Esa cuenta no está conectada."
 msgid "Could not save: {reason}"
 msgstr "No se ha podido guardar: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3061
-#: app/src/ui/window.rs:3084
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3069
+#: app/src/ui/window.rs:3092
 msgid "Could not open the draft: {reason}"
 msgstr "No se ha podido abrir el borrador: {reason}"
 
@@ -4236,7 +4236,7 @@ msgid "Show or hide this message"
 msgstr "Mostrar u ocultar este mensaje"
 
 #: app/src/render.rs:305 app/src/ui/contact_card.rs:43
-#: app/src/ui/contacts/mod.rs:238
+#: app/src/ui/contacts/mod.rs:253
 msgid "Contact"
 msgstr "Contacto"
 
@@ -4282,8 +4282,8 @@ msgstr ""
 "Este mensaje contiene enlaces potencialmente engañosos. Compruebe el destino "
 "antes de abrirlos."
 
-#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:415
-#: app/src/ui/contacts/person.rs:452
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:419
+#: app/src/ui/contacts/person.rs:465
 msgid "Details"
 msgstr "Detalles"
 
@@ -4476,7 +4476,7 @@ msgid "Set up a different project"
 msgstr "Configurar otro proyecto"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3414
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3422
 msgid "Set up your own Google project"
 msgstr "Configurar tu propio proyecto de Google"
 
@@ -4623,13 +4623,13 @@ msgstr "{host} ha rechazado el inicio de sesión: {reason}"
 msgid "Calendar"
 msgstr "Calendario"
 
-#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:176
-#: app/src/ui/contacts/mod.rs:232 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:191
+#: app/src/ui/contacts/mod.rs:247 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:566
 #: app/src/ui/sidebar.rs:918 app/src/ui/sidebar.rs:1944
-#: app/src/ui/window.rs:3813
+#: app/src/ui/window.rs:3821
 msgid "Contacts"
 msgstr "Contactos"
 
@@ -4647,7 +4647,7 @@ msgstr "En el servidor"
 
 #: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
 #: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/contacts/side.rs:161 app/src/ui/preferences.rs:1185
+#: app/src/ui/contacts/side.rs:169 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "Desactivado"
 
@@ -4663,8 +4663,8 @@ msgstr "API de Anthropic"
 msgid "Claude Subscription"
 msgstr "Suscripción a Claude"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3806
-#: app/src/ui/window.rs:3895
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3903
 msgid "Assistant"
 msgstr "Asistente"
 
@@ -5063,13 +5063,13 @@ msgstr "Abrir Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:302 app/src/ui/contacts/person.rs:305
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:310
+#: app/src/ui/contacts/person.rs:315 app/src/ui/contacts/person.rs:318
 #: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "Mensaje nuevo"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3812
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3820
 msgid "Check for Mail"
 msgstr "Comprobar el correo"
 
@@ -5087,7 +5087,7 @@ msgstr "Novedades de la versión {version}"
 msgid "Check for Updates"
 msgstr "Buscar actualizaciones"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3834
+#: app/src/tray.rs:216 app/src/ui/window.rs:3842
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "Salir"
@@ -5109,11 +5109,12 @@ msgid "What's New"
 msgstr "Novedades"
 
 #: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:357
-#: app/src/ui/contacts/person.rs:1251 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/contacts/person.rs:1265 app/src/ui/contacts/person.rs:1275
+#: app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Sitio web"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3833
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3841
 msgid "Donate"
 msgstr "Donar"
 
@@ -5121,7 +5122,7 @@ msgstr "Donar"
 msgid "License"
 msgstr "Licencia"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3832
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3840
 msgid "About Penguin Mail"
 msgstr "Acerca de Penguin Mail"
 
@@ -5172,12 +5173,12 @@ msgid "The update to {version} failed"
 msgstr "Ha fallado la actualización a {version}"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1631
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1639
 msgid "Copy Command"
 msgstr "Copiar la orden"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1636
+#: app/src/ui/window.rs:1644
 msgid "Command copied"
 msgstr "Orden copiada"
 
@@ -5271,9 +5272,9 @@ msgstr "Copiar el enlace"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
-#: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:588
+#: app/src/ui/contacts/mod.rs:1182 app/src/ui/contacts/mod.rs:1296
+#: app/src/ui/contacts/person.rs:764 app/src/ui/contacts/person.rs:921
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5290,7 +5291,7 @@ msgstr "Cancelar"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1575
+#: app/src/ui/window.rs:1583
 msgid "Sign In"
 msgstr "Iniciar sesión"
 
@@ -5414,7 +5415,7 @@ msgstr "Ahora no"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1708
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1716
 msgid "Grant Access"
 msgstr "Conceder acceso"
 
@@ -5563,9 +5564,9 @@ msgstr "Buscando…"
 msgid "Sign In Again"
 msgstr "Volver a iniciar sesión"
 
-#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:289
-#: app/src/ui/contacts/mod.rs:513 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2319
+#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:304
+#: app/src/ui/contacts/mod.rs:541 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2327
 msgid "Open Google Cloud"
 msgstr "Abrir Google Cloud"
 
@@ -5659,14 +5660,14 @@ msgstr "Redacta una respuesta a la conversación abierta"
 msgid "Choose a Model"
 msgstr "Elegir un modelo"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3942
-#: app/src/ui/window.rs:3943
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:3951
 msgid "Detach"
 msgstr "Separar"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4642
+#: app/src/ui/window.rs:4650
 msgid "Close"
 msgstr "Cerrar"
 
@@ -5883,7 +5884,7 @@ msgid "Use {server}"
 msgstr "Usar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:287
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:300
 msgid "Edit"
 msgstr "Editar"
 
@@ -5893,8 +5894,8 @@ msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:742 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3570
+#: app/src/ui/contacts/editor.rs:770 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3578
 msgid "Remove"
 msgstr "Quitar"
 
@@ -5973,7 +5974,7 @@ msgstr "Probar"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:598
+#: app/src/ui/contacts/editor.rs:533 app/src/ui/contacts/editor.rs:609
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6546,8 +6547,8 @@ msgstr "Reuniones"
 msgid "Decline"
 msgstr "Rechazar"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
-#: app/src/ui/contacts/mod.rs:1327
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1398
+#: app/src/ui/contacts/mod.rs:1411
 msgid "None"
 msgstr "Ninguna"
 
@@ -6611,7 +6612,7 @@ msgstr "Cada"
 msgid "Unit"
 msgstr "Unidad"
 
-#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:163
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:171
 msgid "On"
 msgstr "Días"
 
@@ -6684,8 +6685,8 @@ msgid "Remove reminder"
 msgstr "Quitar recordatorio"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:406
-#: app/src/ui/contacts/editor.rs:444 app/src/ui/contacts/person.rs:462
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:410
+#: app/src/ui/contacts/editor.rs:448 app/src/ui/contacts/person.rs:475
 msgid "Notes"
 msgstr "Notas"
 
@@ -7024,7 +7025,7 @@ msgid "Working location"
 msgstr "Lugar de trabajo"
 
 #: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:393
-#: app/src/ui/contacts/editor.rs:442 app/src/ui/contacts/person.rs:424
+#: app/src/ui/contacts/editor.rs:446 app/src/ui/contacts/person.rs:437
 msgid "Birthday"
 msgstr "Cumpleaños"
 
@@ -7287,7 +7288,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "No se ha podido eliminar el evento: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
+#: app/src/ui/contacts/mod.rs:282 app/src/ui/contacts/mod.rs:1449
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8115,7 +8116,7 @@ msgstr "Borrador guardado"
 msgid "Save as Draft?"
 msgstr "¿Guardar como borrador?"
 
-#: app/src/ui/composer/mod.rs:2384
+#: app/src/ui/composer/mod.rs:2384 app/src/ui/contacts/mod.rs:1629
 msgid "Discard"
 msgstr "Descartar"
 
@@ -8350,31 +8351,31 @@ msgid "Ignore"
 msgstr "Ignorar"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:319
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:834
+#: app/src/ui/contacts/person.rs:369 app/src/ui/contacts/person.rs:850
 msgid "Email"
 msgstr "Correo electrónico"
 
 #: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:320
-#: app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:371
 msgid "Other email"
 msgstr "Otro correo electrónico"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:333
-#: app/src/ui/contacts/person.rs:383 app/src/ui/contacts/person.rs:840
+#: app/src/ui/contacts/person.rs:396 app/src/ui/contacts/person.rs:856
 msgid "Phone"
 msgstr "Teléfono"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:229
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:242
 #: app/src/ui/sidebar.rs:1479
 msgid "Remove from VIPs"
 msgstr "Quitar de VIP"
 
-#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:231
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:244
 msgid "Add to VIPs"
 msgstr "Añadir a VIP"
 
-#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:269
-#: app/src/ui/contacts/person.rs:1084
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:282
+#: app/src/ui/contacts/person.rs:1107
 msgid "All Their Mail"
 msgstr "Todo su correo"
 
@@ -8386,8 +8387,8 @@ msgstr "Quitar campo"
 msgid "Full name"
 msgstr "Nombre completo"
 
-#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:345
-#: app/src/ui/contacts/person.rs:837
+#: app/src/ui/contacts/editor.rs:308 app/src/ui/contacts/person.rs:358
+#: app/src/ui/contacts/person.rs:853
 msgid "Organization"
 msgstr "Organización"
 
@@ -8471,28 +8472,32 @@ msgstr "Añadir campo personalizado"
 msgid "Value"
 msgstr "Valor"
 
-#: app/src/ui/contacts/editor.rs:433
+#: app/src/ui/contacts/editor.rs:395
+msgid "YYYY-MM-DD"
+msgstr "AAAA-MM-DD"
+
+#: app/src/ui/contacts/editor.rs:437
 msgid "Postal addresses"
 msgstr "Direcciones postales"
 
-#: app/src/ui/contacts/editor.rs:434
+#: app/src/ui/contacts/editor.rs:438
 msgid "Websites"
 msgstr "Sitios web"
 
-#: app/src/ui/contacts/editor.rs:435 app/src/ui/contacts/person.rs:448
-#: app/src/ui/contacts/side.rs:113
+#: app/src/ui/contacts/editor.rs:439 app/src/ui/contacts/person.rs:461
+#: app/src/ui/contacts/side.rs:121
 msgid "Groups"
 msgstr "Grupos"
 
-#: app/src/ui/contacts/editor.rs:436
+#: app/src/ui/contacts/editor.rs:440
 msgid "Other dates"
 msgstr "Otras fechas"
 
-#: app/src/ui/contacts/editor.rs:437
+#: app/src/ui/contacts/editor.rs:441
 msgid "Custom fields"
 msgstr "Campos personalizados"
 
-#: app/src/ui/contacts/editor.rs:506
+#: app/src/ui/contacts/editor.rs:510
 msgid ""
 "A new contact is saved into one account. The other accounts do not get a "
 "copy. Add a name or an email. Save stays off until one of those is filled in."
@@ -8501,65 +8506,65 @@ msgstr ""
 "una copia. Añade un nombre o un correo. Guardar sigue desactivado hasta que "
 "se rellene uno de los dos."
 
-#: app/src/ui/contacts/editor.rs:526
+#: app/src/ui/contacts/editor.rs:530
 msgid "Unsaved changes"
 msgstr "Cambios sin guardar"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
+#: app/src/ui/contacts/editor.rs:581 app/src/ui/contacts/mod.rs:1340
 msgid "New contact"
 msgstr "Contacto nuevo"
 
-#: app/src/ui/contacts/editor.rs:574
+#: app/src/ui/contacts/editor.rs:583
 msgid "Edit contact"
 msgstr "Editar contacto"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
-#: app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:638 app/src/ui/contacts/mod.rs:1089
+#: app/src/ui/contacts/person.rs:1179
 msgid "Turn contacts on for an account first."
 msgstr "Activa primero los contactos de una cuenta."
 
-#: app/src/ui/contacts/editor.rs:631 app/src/ui/contacts/editor.rs:636
-#: app/src/ui/contacts/person.rs:1153 app/src/ui/contacts/person.rs:1160
+#: app/src/ui/contacts/editor.rs:642 app/src/ui/contacts/editor.rs:647
+#: app/src/ui/contacts/person.rs:1176 app/src/ui/contacts/person.rs:1183
 msgid "Save to"
 msgstr "Guardar en"
 
-#: app/src/ui/contacts/editor.rs:655
+#: app/src/ui/contacts/editor.rs:667
 msgid "Which account"
 msgstr "Qué cuenta"
 
-#: app/src/ui/contacts/editor.rs:678
+#: app/src/ui/contacts/editor.rs:706
 msgid "Replace Photo"
 msgstr "Cambiar foto"
 
-#: app/src/ui/contacts/editor.rs:680
+#: app/src/ui/contacts/editor.rs:708
 msgid "Add Photo"
 msgstr "Añadir foto"
 
-#: app/src/ui/contacts/editor.rs:684
+#: app/src/ui/contacts/editor.rs:712
 msgid "Remove Photo"
 msgstr "Quitar foto"
 
-#: app/src/ui/contacts/editor.rs:745 app/src/ui/contacts/person.rs:759
+#: app/src/ui/contacts/editor.rs:773 app/src/ui/contacts/person.rs:775
 msgid "Delete {name} from {account}"
 msgstr "Eliminar a {name} de {account}"
 
-#: app/src/ui/contacts/editor.rs:801
+#: app/src/ui/contacts/editor.rs:829
 msgid "Enter a name or an email address."
 msgstr "Escribe un nombre o una dirección de correo."
 
-#: app/src/ui/contacts/editor.rs:807
+#: app/src/ui/contacts/editor.rs:835
 msgid "Enter a valid email address."
 msgstr "Escribe una dirección de correo válida."
 
-#: app/src/ui/contacts/editor.rs:810
+#: app/src/ui/contacts/editor.rs:838
 msgid "Contacts access for this account was turned off."
 msgstr "Se ha desactivado el acceso a los contactos de esta cuenta."
 
-#: app/src/ui/contacts/editor.rs:854
+#: app/src/ui/contacts/editor.rs:882
 msgid "Could not save the contact: {reason}"
 msgstr "No se pudo guardar el contacto: {reason}"
 
-#: app/src/ui/contacts/editor.rs:899
+#: app/src/ui/contacts/editor.rs:927
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8569,7 +8574,7 @@ msgstr ""
 "este nombre. {other_account} sigue teniendo a {other} y vincular no cambia "
 "ese registro. No se escribe nada hasta que pulses Guardar."
 
-#: app/src/ui/contacts/editor.rs:910
+#: app/src/ui/contacts/editor.rs:938
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8577,13 +8582,13 @@ msgstr ""
 "Estás editando el contacto de {account} para {name}. {other_account} "
 "conserva a {other}. No se escribe nada hasta que pulses Guardar."
 
-#: app/src/ui/contacts/editor.rs:933
+#: app/src/ui/contacts/editor.rs:961
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "Estás editando el contacto de {account}. No se escribe nada hasta que pulses "
 "Guardar."
 
-#: app/src/ui/contacts/editor.rs:939
+#: app/src/ui/contacts/editor.rs:967
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8597,37 +8602,49 @@ msgstr[1] ""
 "Estás editando el contacto de {account}. {others} conservan los suyos. No se "
 "escribe nada hasta que pulses Guardar."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
+#: app/src/ui/contacts/mod.rs:227 app/src/ui/contacts/side.rs:193
 msgid "Turn Off Contacts"
 msgstr "Desactivar contactos"
 
-#: app/src/ui/contacts/mod.rs:288
+#: app/src/ui/contacts/mod.rs:303
 msgid "Turn on Contacts for your Google project"
 msgstr "Activa Contactos para tu proyecto de Google"
 
-#: app/src/ui/contacts/mod.rs:656
+#: app/src/ui/contacts/mod.rs:448
+msgid "Selected"
+msgstr "Seleccionado"
+
+#: app/src/ui/contacts/mod.rs:710
 msgid "Could not load contacts: {reason}"
 msgstr "No se han podido cargar los contactos: {reason}"
 
-#: app/src/ui/contacts/mod.rs:794
+#: app/src/ui/contacts/mod.rs:851
 msgid "Deletes {name} in {account}"
 msgstr "Elimina a {name} en {account}"
 
-#: app/src/ui/contacts/mod.rs:820
+#: app/src/ui/contacts/mod.rs:877
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "Se conservan los dos contactos. No se elimina nada."
 
-#: app/src/ui/contacts/mod.rs:853
+#: app/src/ui/contacts/mod.rs:910
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "Visto en {count} mensaje"
 msgstr[1] "Visto en {count} mensajes"
 
-#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1036 app/src/ui/contacts/mod.rs:1088
 msgid "Contacts are off"
 msgstr "Los contactos están desactivados"
 
-#: app/src/ui/contacts/mod.rs:976
+#: app/src/ui/contacts/mod.rs:1040
+msgid ""
+"{account} keeps its address book on this computer. Turn contacts on to show "
+"it here."
+msgstr ""
+"{account} guarda su libreta de direcciones en este equipo. Activa los "
+"contactos para verla aquí."
+
+#: app/src/ui/contacts/mod.rs:1044
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8637,19 +8654,19 @@ msgstr ""
 "servidor, no en este equipo. Activa los contactos para copiarla aquí. Si "
 "luego los desactivas, se elimina esa copia."
 
-#: app/src/ui/contacts/mod.rs:988
+#: app/src/ui/contacts/mod.rs:1057
 msgid "No Matching Contacts"
 msgstr "Ningún contacto coincide"
 
-#: app/src/ui/contacts/mod.rs:989
+#: app/src/ui/contacts/mod.rs:1058
 msgid "Nothing matches that search."
 msgstr "Nada coincide con esa búsqueda."
 
-#: app/src/ui/contacts/mod.rs:995
+#: app/src/ui/contacts/mod.rs:1064
 msgid "No shared addresses"
 msgstr "Sin direcciones compartidas"
 
-#: app/src/ui/contacts/mod.rs:997
+#: app/src/ui/contacts/mod.rs:1066
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8657,58 +8674,62 @@ msgstr ""
 "Ningún par de contactos de una cuenta comparte dirección. No hay nada "
 "pendiente de eliminar."
 
-#: app/src/ui/contacts/mod.rs:1002
+#: app/src/ui/contacts/mod.rs:1071
 msgid "No close names"
 msgstr "Sin nombres parecidos"
 
-#: app/src/ui/contacts/mod.rs:1003
+#: app/src/ui/contacts/mod.rs:1072
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "Ninguna cuenta tiene un nombre parecido que no esté ya vinculado."
 
-#: app/src/ui/contacts/mod.rs:1007
+#: app/src/ui/contacts/mod.rs:1076
 msgid "Everyone is a contact"
 msgstr "Todos son contactos"
 
-#: app/src/ui/contacts/mod.rs:1008
+#: app/src/ui/contacts/mod.rs:1077
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr "Todos los que ha visto el buzón ya están guardados como contactos."
 
-#: app/src/ui/contacts/mod.rs:1012
+#: app/src/ui/contacts/mod.rs:1081
 msgid "No VIPs yet"
 msgstr "Aún no hay VIP"
 
-#: app/src/ui/contacts/mod.rs:1014
+#: app/src/ui/contacts/mod.rs:1083
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr ""
 "Añade una persona a los VIP desde su página para abrirla desde esta lista."
 
-#: app/src/ui/contacts/mod.rs:1024
+#: app/src/ui/contacts/mod.rs:1093
 msgid "No contacts yet"
 msgstr "Aún no hay contactos"
 
-#: app/src/ui/contacts/mod.rs:1026
+#: app/src/ui/contacts/mod.rs:1095
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "Los contactos están activados para esta cuenta. Todavía no se ha copiado "
 "nada a este equipo."
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1120
 msgid "Turn On"
 msgstr "Activar"
 
-#: app/src/ui/contacts/mod.rs:1080
+#: app/src/ui/contacts/mod.rs:1148
+msgid "Contacts are on for {account}."
+msgstr "Los contactos de {account} están activados."
+
+#: app/src/ui/contacts/mod.rs:1149
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr ""
 "Los contactos están activados para {account}. La libreta de este equipo está "
 "vacía."
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1171
 msgid "Turn Off Contacts?"
 msgstr "¿Desactivar los contactos?"
 
-#: app/src/ui/contacts/mod.rs:1107
+#: app/src/ui/contacts/mod.rs:1174
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8716,7 +8737,7 @@ msgstr ""
 "¿Desactivar los contactos de {account}? Se quedan guardados en este equipo y "
 "vuelven cuando los actives."
 
-#: app/src/ui/contacts/mod.rs:1109
+#: app/src/ui/contacts/mod.rs:1176
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8724,204 +8745,218 @@ msgstr ""
 "¿Desactivar los contactos de {account}? Se eliminan de este equipo; el "
 "servidor los conserva."
 
-#: app/src/ui/contacts/mod.rs:1116
+#: app/src/ui/contacts/mod.rs:1183
 msgid "Turn Off"
 msgstr "Desactivar"
 
-#: app/src/ui/contacts/mod.rs:1143
+#: app/src/ui/contacts/mod.rs:1210
 msgid "Contacts are off for {account}."
 msgstr "Los contactos de {account} están desactivados."
 
-#: app/src/ui/contacts/mod.rs:1196
+#: app/src/ui/contacts/mod.rs:1275
 msgid "Search same address"
 msgstr "Buscar misma dirección"
 
-#: app/src/ui/contacts/mod.rs:1197
+#: app/src/ui/contacts/mod.rs:1276
 msgid "Search same person"
 msgstr "Buscar misma persona"
 
-#: app/src/ui/contacts/mod.rs:1198
+#: app/src/ui/contacts/mod.rs:1277
 msgid "Search correspondents"
 msgstr "Buscar corresponsales"
 
-#: app/src/ui/contacts/mod.rs:1199
+#: app/src/ui/contacts/mod.rs:1278
 msgid "Search contacts"
 msgstr "Buscar contactos"
 
-#: app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1287
 msgid "{count} selected"
-msgstr "{count} seleccionados"
+msgid_plural "{count} selected"
+msgstr[0] "{count} seleccionado"
+msgstr[1] "{count} seleccionados"
 
-#: app/src/ui/contacts/mod.rs:1220
+#: app/src/ui/contacts/mod.rs:1304
 msgid "Delete {count}"
 msgstr "Eliminar {count}"
 
-#: app/src/ui/contacts/mod.rs:1243
+#: app/src/ui/contacts/mod.rs:1327
 msgid "Select several contacts"
 msgstr "Seleccionar varios contactos"
 
-#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
+#: app/src/ui/contacts/mod.rs:1364 app/src/ui/contacts/mod.rs:1388
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} persona"
 msgstr[1] "{count} personas"
 
-#: app/src/ui/contacts/mod.rs:1291
+#: app/src/ui/contacts/mod.rs:1375
 msgid "{count} of {total}"
 msgstr "{count} de {total}"
 
-#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1384 app/src/ui/contacts/side.rs:90
 msgid "All contacts"
 msgstr "Todos los contactos"
 
-#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1386 app/src/ui/contacts/side.rs:92
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1394 app/src/ui/contacts/side.rs:98
 msgid "From mail"
 msgstr "Del correo"
 
-#: app/src/ui/contacts/mod.rs:1310
+#: app/src/ui/contacts/mod.rs:1394
 msgid "Not contacts yet"
 msgstr "Aún no son contactos"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1396 app/src/ui/contacts/side.rs:104
 msgid "Same address"
 msgstr "Misma dirección"
 
-#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
+#: app/src/ui/contacts/mod.rs:1401 app/src/ui/contacts/mod.rs:1414
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} par"
 msgstr[1] "{count} pares"
 
-#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
-#: app/src/ui/contacts/side.rs:102
+#: app/src/ui/contacts/mod.rs:1409 app/src/ui/contacts/person.rs:919
+#: app/src/ui/contacts/side.rs:110
 msgid "Same person"
 msgstr "Misma persona"
 
-#: app/src/ui/contacts/mod.rs:1537
+#: app/src/ui/contacts/mod.rs:1624
+msgid "Discard Contact Changes?"
+msgstr "¿Descartar los cambios del contacto?"
+
+#: app/src/ui/contacts/mod.rs:1625
+msgid "Your changes have not been saved to the account."
+msgstr "Tus cambios no se han guardado en la cuenta."
+
+#: app/src/ui/contacts/mod.rs:1628
+msgid "Keep Editing"
+msgstr "Seguir editando"
+
+#: app/src/ui/contacts/mod.rs:1692
 msgid "{name} from {account}"
 msgstr "{name} de {account}"
 
-#: app/src/ui/contacts/mod.rs:1546
+#: app/src/ui/contacts/mod.rs:1701
 msgid "Deleted {list}."
 msgstr "Se eliminó {list}."
 
-#: app/src/ui/contacts/ops.rs:99
+#: app/src/ui/contacts/ops.rs:105
 msgid "Grant contacts permission in Preferences, then try again."
 msgstr "Concede el permiso de contactos en Preferencias y vuelve a intentarlo."
 
-#: app/src/ui/contacts/person.rs:71
+#: app/src/ui/contacts/person.rs:74
 msgid "View Photo"
 msgstr "Ver foto"
 
-#: app/src/ui/contacts/person.rs:237
+#: app/src/ui/contacts/person.rs:250
 msgid "{name} is in VIPs. Remove them from that list."
 msgstr "{name} está en los VIP. Quítalo de esa lista."
 
-#: app/src/ui/contacts/person.rs:239
+#: app/src/ui/contacts/person.rs:252
 msgid "Add {name} to VIPs"
 msgstr "Añadir a {name} a los VIP"
 
-#: app/src/ui/contacts/person.rs:270 app/src/ui/contacts/person.rs:1085
+#: app/src/ui/contacts/person.rs:283 app/src/ui/contacts/person.rs:1108
 msgid "Every conversation with this person"
 msgstr "Todas las conversaciones con esta persona"
 
-#: app/src/ui/contacts/person.rs:298 app/src/ui/thread_list.rs:305
+#: app/src/ui/contacts/person.rs:311 app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "Mensaje nuevo (C)"
 
-#: app/src/ui/contacts/person.rs:330
+#: app/src/ui/contacts/person.rs:343
 msgid "Reach"
 msgstr "Contacto"
 
-#: app/src/ui/contacts/person.rs:409 app/src/ui/contacts/person.rs:1165
+#: app/src/ui/contacts/person.rs:422 app/src/ui/contacts/person.rs:1188
 msgid "Address"
 msgstr "Dirección"
 
-#: app/src/ui/contacts/person.rs:481
+#: app/src/ui/contacts/person.rs:494
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "Escribiste el {date}. Esperando respuesta."
 
-#: app/src/ui/contacts/person.rs:486
+#: app/src/ui/contacts/person.rs:499
 msgid "Last message, {date}"
 msgstr "Último mensaje, {date}"
 
-#: app/src/ui/contacts/person.rs:505
+#: app/src/ui/contacts/person.rs:518
 msgid "You last wrote {date}"
 msgstr "Escribiste por última vez el {date}"
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:520
 msgid "You have not written to them."
 msgstr "No le has escrito."
 
-#: app/src/ui/contacts/person.rs:529 app/src/ui/sidebar.rs:494
+#: app/src/ui/contacts/person.rs:542 app/src/ui/sidebar.rs:494
 #: app/src/ui/sidebar.rs:564 app/src/ui/sidebar.rs:1942
 #: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "Correo"
 
-#: app/src/ui/contacts/person.rs:535 app/src/ui/sidebar.rs:2481
+#: app/src/ui/contacts/person.rs:548 app/src/ui/sidebar.rs:2481
 msgid "On this computer"
 msgstr "En este equipo"
 
-#: app/src/ui/contacts/person.rs:580
+#: app/src/ui/contacts/person.rs:593
 msgid "A key for {email} is on this computer."
 msgstr "Hay una clave para {email} en este equipo."
 
-#: app/src/ui/contacts/person.rs:583
+#: app/src/ui/contacts/person.rs:596
 msgid "A key for these addresses is on this computer."
 msgstr "Hay una clave para estas direcciones en este equipo."
 
-#: app/src/ui/contacts/person.rs:585
+#: app/src/ui/contacts/person.rs:598
 msgid "No key for {email} is on this computer."
 msgstr "No hay una clave para {email} en este equipo."
 
-#: app/src/ui/contacts/person.rs:588
+#: app/src/ui/contacts/person.rs:601
 msgid "No key for these addresses is on this computer."
 msgstr "No hay una clave para estas direcciones en este equipo."
 
-#: app/src/ui/contacts/person.rs:590
+#: app/src/ui/contacts/person.rs:603
 msgid "OpenPGP key"
 msgstr "Clave OpenPGP"
 
-#: app/src/ui/contacts/person.rs:597
+#: app/src/ui/contacts/person.rs:610
 msgid "Remote images"
 msgstr "Imágenes remotas"
 
-#: app/src/ui/contacts/person.rs:599
+#: app/src/ui/contacts/person.rs:612
 msgid "Allowed for this sender."
 msgstr "Permitidas para este remitente."
 
-#: app/src/ui/contacts/person.rs:601
+#: app/src/ui/contacts/person.rs:614
 msgid "Blocked until you allow them."
 msgstr "Bloqueadas hasta que las permitas."
 
-#: app/src/ui/contacts/person.rs:604
+#: app/src/ui/contacts/person.rs:617
 msgid "Remote images, allowed for this sender"
 msgstr "Imágenes remotas, permitidas para este remitente"
 
-#: app/src/ui/contacts/person.rs:606
+#: app/src/ui/contacts/person.rs:619
 msgid "Remote images, blocked until you allow them"
 msgstr "Imágenes remotas, bloqueadas hasta que las permitas"
 
-#: app/src/ui/contacts/person.rs:684
+#: app/src/ui/contacts/person.rs:697
 msgid "Deleted {name} from {account}."
 msgstr "Se eliminó a {name} de {account}."
 
-#: app/src/ui/contacts/person.rs:692
+#: app/src/ui/contacts/person.rs:705
 msgid "{base} {other} still has this person."
 msgstr "{base} {other} sigue teniendo a esta persona."
 
-#: app/src/ui/contacts/person.rs:743
+#: app/src/ui/contacts/person.rs:759
 msgid "Merge in {account}"
 msgstr "Combinar en {account}"
 
-#: app/src/ui/contacts/person.rs:792
+#: app/src/ui/contacts/person.rs:808
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8929,25 +8964,25 @@ msgstr ""
 "Los dos contactos usan {email}. {account} conserva uno y elimina el otro. "
 "Las demás cuentas no cambian."
 
-#: app/src/ui/contacts/person.rs:795
+#: app/src/ui/contacts/person.rs:811
 msgid "Which contact"
 msgstr "Qué contacto"
 
-#: app/src/ui/contacts/person.rs:823
+#: app/src/ui/contacts/person.rs:839
 msgid "{account} keeps"
 msgstr "{account} conserva"
 
-#: app/src/ui/contacts/person.rs:853
+#: app/src/ui/contacts/person.rs:869
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr ""
 "Se eliminó a {name} de {account}. {kept} es el contacto que conserva "
 "{account}."
 
-#: app/src/ui/contacts/person.rs:907
+#: app/src/ui/contacts/person.rs:930
 msgid "Link"
 msgstr "Vincular"
 
-#: app/src/ui/contacts/person.rs:929
+#: app/src/ui/contacts/person.rs:952
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8956,36 +8991,36 @@ msgstr ""
 "direcciones son distintos. Vincular conserva los dos contactos. Todos los "
 "contactos muestra una sola fila."
 
-#: app/src/ui/contacts/person.rs:937
+#: app/src/ui/contacts/person.rs:960
 msgid "The two contacts"
 msgstr "Los dos contactos"
 
-#: app/src/ui/contacts/person.rs:952
+#: app/src/ui/contacts/person.rs:975
 msgid "Name in All contacts"
 msgstr "Nombre en Todos los contactos"
 
-#: app/src/ui/contacts/person.rs:976
+#: app/src/ui/contacts/person.rs:999
 msgid "All contacts will show"
 msgstr "Todos los contactos mostrará"
 
-#: app/src/ui/contacts/person.rs:988
+#: app/src/ui/contacts/person.rs:1011
 msgid "One row, two accounts"
 msgstr "Una fila, dos cuentas"
 
-#: app/src/ui/contacts/person.rs:1051
+#: app/src/ui/contacts/person.rs:1074
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr ""
 "Todos los contactos ahora muestra una fila para {name}. No se eliminó nada."
 
-#: app/src/ui/contacts/person.rs:1097
+#: app/src/ui/contacts/person.rs:1120
 msgid "Save to Contacts"
 msgstr "Guardar en Contactos"
 
-#: app/src/ui/contacts/person.rs:1115
+#: app/src/ui/contacts/person.rs:1138
 msgid "Not a contact"
 msgstr "No es un contacto"
 
-#: app/src/ui/contacts/person.rs:1119
+#: app/src/ui/contacts/person.rs:1142
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -9001,31 +9036,31 @@ msgstr[1] ""
 "como contactos. Visto en {count} mensajes. Al guardar se crea un contacto en "
 "la cuenta que elijas."
 
-#: app/src/ui/contacts/person.rs:1137
+#: app/src/ui/contacts/person.rs:1160
 msgid "Latest message"
 msgstr "Último mensaje"
 
-#: app/src/ui/contacts/person.rs:1169
+#: app/src/ui/contacts/person.rs:1192
 msgid "From the messages"
 msgstr "De los mensajes"
 
-#: app/src/ui/contacts/person.rs:1207
+#: app/src/ui/contacts/person.rs:1223
 msgid "Saved {name} to {account}."
 msgstr "Se guardó a {name} en {account}."
 
-#: app/src/ui/contacts/person.rs:1281
+#: app/src/ui/contacts/person.rs:1299
 msgid "No organization, no phone"
 msgstr "Sin organización ni teléfono"
 
-#: app/src/ui/contacts/person.rs:1283
+#: app/src/ui/contacts/person.rs:1301
 msgid "Organization {value}"
 msgstr "Organización {value}"
 
-#: app/src/ui/contacts/person.rs:1284
+#: app/src/ui/contacts/person.rs:1302
 msgid "Phone {value}"
 msgstr "Teléfono {value}"
 
-#: app/src/ui/contacts/person.rs:1364
+#: app/src/ui/contacts/person.rs:1367
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -9033,7 +9068,7 @@ msgstr ""
 "Todos los contactos usa el nombre {name}. {account_a} sigue teniendo su "
 "contacto y {account_b} sigue teniendo a {other}."
 
-#: app/src/ui/contacts/person.rs:1402
+#: app/src/ui/contacts/person.rs:1398
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -9041,7 +9076,7 @@ msgstr ""
 "La etiqueta es la cuenta. {others} tiene su propio contacto de esta persona "
 "y editar aquí cambia {account}."
 
-#: app/src/ui/contacts/person.rs:1410
+#: app/src/ui/contacts/person.rs:1406
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -9049,11 +9084,11 @@ msgstr ""
 "Los VIP son personas que marcas para abrirlas desde esta lista. {name} "
 "también está guardado en {accounts}."
 
-#: app/src/ui/contacts/person.rs:1418
+#: app/src/ui/contacts/person.rs:1414
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr "Los VIP son personas que marcas para abrirlas desde esta lista."
 
-#: app/src/ui/contacts/person.rs:1421
+#: app/src/ui/contacts/person.rs:1417
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr ""
 "Una persona, guardada en {accounts}. Cada cuenta conserva su propio contacto."
@@ -9091,27 +9126,27 @@ msgstr "Usar foto"
 msgid "Contact Photo"
 msgstr "Foto del contacto"
 
-#: app/src/ui/contacts/side.rs:80
+#: app/src/ui/contacts/side.rs:88
 msgid "Lists"
 msgstr "Listas"
 
-#: app/src/ui/contacts/side.rs:86
+#: app/src/ui/contacts/side.rs:94
 msgid "People you mark, so you can open them from here"
 msgstr "Personas que marcas para abrirlas desde aquí"
 
-#: app/src/ui/contacts/side.rs:92
+#: app/src/ui/contacts/side.rs:100
 msgid "People found in mail. They are not contacts yet."
 msgstr "Personas encontradas en el correo. Aún no son contactos."
 
-#: app/src/ui/contacts/side.rs:98
+#: app/src/ui/contacts/side.rs:106
 msgid "Two contacts in one account share an address. Merging deletes one."
 msgstr "Dos contactos de una cuenta comparten dirección. Combinar elimina uno."
 
-#: app/src/ui/contacts/side.rs:104
+#: app/src/ui/contacts/side.rs:112
 msgid "A close name in two accounts. Linking deletes nothing."
 msgstr "Un nombre parecido en dos cuentas. Vincular no elimina nada."
 
-#: app/src/ui/contacts/side.rs:125 app/src/ui/preferences.rs:476
+#: app/src/ui/contacts/side.rs:133 app/src/ui/preferences.rs:476
 #: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
 #: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
@@ -9228,7 +9263,7 @@ msgid "Export…"
 msgstr "Exportar…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3823
+#: app/src/ui/window.rs:3831
 msgid "Customize Toolbar…"
 msgstr "Personalizar barra de herramientas…"
 
@@ -9795,7 +9830,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar mi correo"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4036
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4044
 msgid "Add an account first"
 msgstr "Añade primero una cuenta"
 
@@ -11120,7 +11155,7 @@ msgstr "Mover {account} hacia abajo"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3830 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3838 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "Preferencias"
 
@@ -11617,7 +11652,7 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mensaje"
 msgstr[1] "{mailbox}, {count} mensajes"
 
-#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3162
+#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3164
 msgid "99+"
 msgstr "99+"
 
@@ -11655,7 +11690,7 @@ msgstr "Respuesta automática…"
 msgid "Rules…"
 msgstr "Reglas…"
 
-#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3816
+#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3824
 msgid "Hide My Email…"
 msgstr "Ocultar mi correo…"
 
@@ -12282,7 +12317,7 @@ msgstr "No se ha podido cargar el correo: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Se ha añadido {account}. Descargando el correo…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3176
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3184
 msgid "{account} is signed in again."
 msgstr "{account} ha vuelto a iniciar sesión."
 
@@ -12422,69 +12457,69 @@ msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Se ha movido {count} mensaje a la bandeja de entrada"
 msgstr[1] "Se han movido {count} mensajes a la bandeja de entrada"
 
-#: app/src/ui/window.rs:989
+#: app/src/ui/window.rs:997
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (demostración)"
 
-#: app/src/ui/window.rs:1451
+#: app/src/ui/window.rs:1459
 msgid "Could not read accounts: {reason}"
 msgstr "No se han podido leer las cuentas: {reason}"
 
-#: app/src/ui/window.rs:2210
+#: app/src/ui/window.rs:2218
 msgid "Could not delete the mail: {reason}"
 msgstr "No se ha podido eliminar el correo: {reason}"
 
-#: app/src/ui/window.rs:2317
+#: app/src/ui/window.rs:2325
 msgid "Turn On the {service}"
 msgstr "Activar {service}"
 
-#: app/src/ui/window.rs:2504 app/src/ui/window.rs:2507
+#: app/src/ui/window.rs:2512 app/src/ui/window.rs:2515
 msgid "Move to Inbox"
 msgstr "Mover a la bandeja de entrada"
 
-#: app/src/ui/window.rs:2675 app/src/ui/window.rs:2680
+#: app/src/ui/window.rs:2683 app/src/ui/window.rs:2688
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Buscar modelos"
 
-#: app/src/ui/window.rs:2749
+#: app/src/ui/window.rs:2757
 msgid "Select mail from one account to tag it."
 msgstr "Selecciona correo de una sola cuenta para marcarlo."
 
-#: app/src/ui/window.rs:2761
+#: app/src/ui/window.rs:2769
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Esta cuenta todavía no tiene marcas. Crea una en Outlook."
 
-#: app/src/ui/window.rs:2854
+#: app/src/ui/window.rs:2862
 msgid "Add an account to reply or forward"
 msgstr "Añade una cuenta para responder o reenviar"
 
-#: app/src/ui/window.rs:2959
+#: app/src/ui/window.rs:2967
 msgid "Could not include {file}: {reason}"
 msgstr "No se ha podido incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:3040
+#: app/src/ui/window.rs:3048
 msgid "The server had already sent this message."
 msgstr "El servidor ya había enviado este mensaje."
 
-#: app/src/ui/window.rs:3045
+#: app/src/ui/window.rs:3053
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Este mensaje se canceló en otra aplicación y ya no está en Borradores."
 
-#: app/src/ui/window.rs:3361
+#: app/src/ui/window.rs:3369
 msgid "Continue in your browser"
 msgstr "Continúa en el navegador"
 
-#: app/src/ui/window.rs:3411
+#: app/src/ui/window.rs:3419
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Esta copia de Penguin Mail se compiló sin inicio de sesión de Google."
 
-#: app/src/ui/window.rs:3433
+#: app/src/ui/window.rs:3441
 msgid "Get a Release"
 msgstr "Descargar una versión publicada"
 
-#: app/src/ui/window.rs:3556
+#: app/src/ui/window.rs:3564
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12492,86 +12527,86 @@ msgstr ""
 "No se pudieron comprobar los mensajes que el servidor guarda para enviar más "
 "tarde, así que {account} se queda: {reason}"
 
-#: app/src/ui/window.rs:3567
+#: app/src/ui/window.rs:3575
 msgid "Remove {account}?"
 msgstr "¿Quitar {account}?"
 
-#: app/src/ui/window.rs:3586
+#: app/src/ui/window.rs:3594
 msgid "Remove Anyway"
 msgstr "Quitar de todos modos"
 
-#: app/src/ui/window.rs:3599
+#: app/src/ui/window.rs:3607
 msgid "Removed {account}"
 msgstr "Se ha quitado {account}"
 
-#: app/src/ui/window.rs:3601
+#: app/src/ui/window.rs:3609
 msgid "Could not remove {account}: {reason}"
 msgstr "No se ha podido quitar {account}: {reason}"
 
-#: app/src/ui/window.rs:3793
+#: app/src/ui/window.rs:3801
 msgid "Refresh"
 msgstr "Actualizar"
 
-#: app/src/ui/window.rs:3797
+#: app/src/ui/window.rs:3805
 msgid "Show Declined Events"
 msgstr "Mostrar eventos rechazados"
 
-#: app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3822
 msgid "Add Account…"
 msgstr "Añadir cuenta…"
 
-#: app/src/ui/window.rs:3815
+#: app/src/ui/window.rs:3823
 msgid "New Smart Mailbox…"
 msgstr "Buzón inteligente nuevo…"
 
-#: app/src/ui/window.rs:3827
+#: app/src/ui/window.rs:3835
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Personalizar barra de herramientas…"
 
-#: app/src/ui/window.rs:3831 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3839 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "Atajos de teclado"
 
-#: app/src/ui/window.rs:3840 app/src/ui/window.rs:3842
+#: app/src/ui/window.rs:3848 app/src/ui/window.rs:3850
 msgid "Main Menu"
 msgstr "Menú principal"
 
-#: app/src/ui/window.rs:3907 app/src/ui/window.rs:3908
+#: app/src/ui/window.rs:3915 app/src/ui/window.rs:3916
 msgid "Dock"
 msgstr "Acoplar"
 
-#: app/src/ui/window.rs:4037
+#: app/src/ui/window.rs:4045
 msgid "Add a mail account first"
 msgstr "Añade primero una cuenta de correo"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4303
+#: app/src/ui/window.rs:4311
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Se han conectado el calendario y los contactos de {account}."
 
-#: app/src/ui/window.rs:4419
+#: app/src/ui/window.rs:4427
 msgid "Open a message from the person first"
 msgstr "Abre primero un mensaje de esa persona"
 
-#: app/src/ui/window.rs:4525
+#: app/src/ui/window.rs:4533
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail muestra el idioma nuevo tras reiniciarse"
 
-#: app/src/ui/window.rs:4527 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4535 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:4591
+#: app/src/ui/window.rs:4599
 msgid "Show Rules"
 msgstr "Mostrar reglas"
 
-#: app/src/ui/window.rs:4617
+#: app/src/ui/window.rs:4625
 msgid "Messages That Will Not Download"
 msgstr "Mensajes que no se descargan"
 
-#: app/src/ui/window.rs:4619
+#: app/src/ui/window.rs:4627
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -14353,7 +14388,7 @@ msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "Penguin Mail no puede cambiar la lista de calendarios de un servidor CalDAV."
 
-#: sync/src/services/carddav.rs:356
+#: sync/src/services/carddav.rs:373
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14361,7 +14396,7 @@ msgstr ""
 "Los grupos del contacto han cambiado en otro dispositivo. Actualiza los "
 "contactos y vuelve a abrir el editor."
 
-#: sync/src/services/carddav.rs:363
+#: sync/src/services/carddav.rs:380
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14369,7 +14404,7 @@ msgstr ""
 "Varios grupos tienen el mismo nombre. Cámbiales el nombre en la cuenta antes "
 "de añadir este contacto."
 
-#: sync/src/services/carddav.rs:581
+#: sync/src/services/carddav.rs:625
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14378,7 +14413,7 @@ msgstr ""
 "Vuelve a intentarlo en este editor para terminar sin crear otro contacto: "
 "{reason}"
 
-#: sync/src/services/carddav.rs:640
+#: sync/src/services/carddav.rs:684
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -15192,15 +15227,6 @@ msgstr "Mover a {folder}"
 
 #~ msgid "Choose an address book first."
 #~ msgstr "Elige primero una libreta de direcciones."
-
-#~ msgid "Discard Contact Changes?"
-#~ msgstr "¿Descartar los cambios del contacto?"
-
-#~ msgid "Your changes have not been saved to the account."
-#~ msgstr "Tus cambios no se han guardado en la cuenta."
-
-#~ msgid "Keep Editing"
-#~ msgstr "Seguir editando"
 
 #~ msgid "All Groups"
 #~ msgstr "Todos los grupos"

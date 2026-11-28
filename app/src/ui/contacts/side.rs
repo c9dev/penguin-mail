@@ -5,18 +5,26 @@ use std::rc::Rc;
 use adw::prelude::*;
 use mailrs_domain::translate::gettext;
 
-use super::{Contacts, List, parts, people};
+use super::{Contacts, List, parts};
 use crate::format::account_label;
 
 impl Contacts {
+    /// Draws the sidebar again, keeping the keyboard where it was.
     pub(super) fn draw_side(self: &Rc<Self>) {
+        let holder = self.side_box.upcast_ref::<gtk::Widget>();
+        let at = parts::focus_path(holder);
+        self.draw_side_now();
+        parts::refocus(holder, at);
+    }
+
+    fn draw_side_now(self: &Rc<Self>) {
         while let Some(child) = self.side_box.first_child() {
             self.side_box.remove(&child);
         }
         let (current, counts, groups, accounts) = {
             let state = self.state.borrow();
             let d = &state.data;
-            let grouped = people::group(&d.contacts, &d.links);
+            let grouped = &d.grouped;
             let settings = self.app.upgrade().map(|a| a.settings());
             let vips = grouped
                 .iter()
@@ -27,7 +35,7 @@ impl Contacts {
                 })
                 .count();
             let mut groups: Vec<(String, usize)> = Vec::new();
-            for p in &grouped {
+            for p in grouped {
                 let mut names: Vec<&String> = p
                     .members
                     .iter()
