@@ -8,7 +8,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::contact::{Changes, Details, Field};
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_gmail::ContactFields;
 use mailrs_store::address_book::Contact;
 
@@ -925,10 +925,10 @@ fn edit_hint(
         )
     } else {
         let refs: Vec<&str> = across.iter().map(String::as_str).collect();
-        fill(
-            &gettext(
-                "Editing the {account} contact. {others} keeps its own. Nothing is written until you press Save.",
-            ),
+        fill_plural(
+            "Editing the {account} contact. {others} keeps its own. Nothing is written until you press Save.",
+            "Editing the {account} contact. {others} keep their own. Nothing is written until you press Save.",
+            across.len(),
             &[
                 ("account", account),
                 ("others", &crate::protection::joined(&refs)),
