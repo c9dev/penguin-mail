@@ -4753,7 +4753,7 @@ msgstr "打开 Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:495
+#: app/src/ui/contact_card.rs:168 app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "新建邮件"
 
@@ -6354,8 +6354,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "无法附加 {file}：{reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:468
-#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:356 app/src/ui/thread_list.rs:362
+#: app/src/ui/thread_list.rs:1182
 msgid "More"
 msgstr "更多"
 
@@ -9054,7 +9054,7 @@ msgstr "此账号尚未开始同步"
 msgid "Could not change the subscription: {reason}"
 msgstr "无法更改颜色：{reason}"
 
-#: app/src/ui/mod.rs:558
+#: app/src/ui/mod.rs:559
 msgid "Gray"
 msgstr "灰色"
 
@@ -9839,7 +9839,7 @@ msgstr "上次使用的日历账号"
 msgid "Same as New Messages"
 msgstr "与新邮件相同"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:280
 msgid "All Inboxes"
 msgstr "所有收件箱"
 
@@ -10293,7 +10293,7 @@ msgid "Mailboxes"
 msgstr "邮箱"
 
 #: app/src/ui/sidebar.rs:495 app/src/ui/sidebar.rs:549
-#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:373
+#: app/src/ui/sidebar.rs:1906 app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "邮件"
 
@@ -10637,30 +10637,30 @@ msgstr "正文"
 msgid "New Template"
 msgstr "新建模板"
 
-#: app/src/ui/thread_list.rs:239
+#: app/src/ui/thread_list.rs:243
 msgid "No Mail"
 msgstr "没有邮件"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:257
+#: app/src/ui/thread_list.rs:261
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "搜索邮件，例如 from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
+#: app/src/ui/thread_list.rs:300 app/src/ui/thread_list.rs:320
 msgid "Show Mailboxes"
 msgstr "显示邮箱"
 
-#: app/src/ui/thread_list.rs:301
+#: app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "新建邮件（C）"
 
-#: app/src/ui/thread_list.rs:306
+#: app/src/ui/thread_list.rs:310
 msgid "Search (/)"
 msgstr "搜索（/）"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:319
 msgid "Search mail"
 msgstr "搜索邮件"
 
@@ -11338,19 +11338,19 @@ msgstr "打开"
 msgid "Open in Another Program"
 msgstr "以其他程序打开"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "请先打开此发件人的邮件"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "{sender} 的邮件现在会移至 {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "已将 {sender} 的邮件移至 {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr "已将 {sender} 的邮件移至 {category}，但无法为新邮件分类：{reason}"
