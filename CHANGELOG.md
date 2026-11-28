@@ -63,6 +63,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Closing a draft or scheduling a message no longer crashes on Linux with IBus input methods.
 - On a dark KDE panel, the tray icon is light instead of nearly black.
 - The Mail and Calendar switch stays centered when the sidebar has no window controls on its starting side.
+- The Mail and Calendar icons sit centered in the narrow sidebar switch.
 - Microsoft accounts no longer list the folders Outlook keeps hidden.
 - `nix build` and `nix flake check` build the app again: the Nix package now links the aws-lc and SQLite libraries the bundled Rust crates build against.
 

@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use crate::ui::safe_popover::{may_present, safe_popup_at};
 use adw::prelude::*;
-use gtk::{gdk, gio, glib, pango};
+use gtk::{Align, gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, FlagColor, Folder, Label, MailSet, Provider, Role,
@@ -512,7 +512,7 @@ impl Sidebar {
                 .property("valign", gtk::Align::Center)
                 .property("visible", false)
                 .build();
-            let child = gtk::Box::builder().spacing(6).build();
+            let child = gtk::Box::builder().spacing(6).halign(Align::Center).build();
             child.append(&content);
             child.append(&badge);
             labels.push(content);
