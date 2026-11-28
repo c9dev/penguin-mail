@@ -510,16 +510,19 @@ impl Sidebar {
                 .icon_name(icon)
                 .label(&label)
                 .build();
+            content.set_halign(gtk::Align::Center);
             // Each toggle counts what waits in the other space, in a small
-            // accent pill after its name, while that space is away.
+            // accent pill on the corner of its icon while that space is away,
+            // so the count takes no width from the switch.
             let badge = glib::Object::builder::<CountBadge>()
                 .property("css-classes", ["space-badge"].as_slice())
-                .property("valign", gtk::Align::Center)
+                .property("halign", gtk::Align::End)
+                .property("valign", gtk::Align::Start)
+                .property("can-target", false)
                 .property("visible", false)
                 .build();
-            let child = gtk::Box::builder().spacing(1).build();
-            child.append(&content);
-            child.append(&badge);
+            let child = gtk::Overlay::builder().child(&content).build();
+            child.add_overlay(&badge);
             labels.push(content);
             let toggle = adw::Toggle::builder()
                 .name(name)
@@ -540,14 +543,9 @@ impl Sidebar {
             .show_title(true)
             .centering_policy(adw::CenteringPolicy::Loose)
             .build();
-        // Measure both layouts in this locale, including the largest off-screen badge.
+        // Measure both layouts in this locale.
         switch.set_visible(true);
         title.set_visible(false);
-        // Both idle spaces count what waits in them while a third shows.
-        for badge in [&badges[0].1, &badges[1].1] {
-            badge.set_label(gettext("99+"));
-            badge.set_visible(true);
-        }
         // Only the space on screen shows its name, so the widest layout is
         // the one with the longest name open.
         let mut wide = 0;
@@ -560,8 +558,6 @@ impl Sidebar {
         for label in &labels {
             label.set_label("");
         }
-        badges[0].1.set_visible(false);
-        badges[1].1.set_visible(false);
         switch.add_css_class("compact");
         let compact = titles.measure(gtk::Orientation::Horizontal, -1).0;
         switch.remove_css_class("compact");
@@ -589,37 +585,22 @@ impl Sidebar {
             "css-classes",
             Some(&["round", "space-switch", "compact"].to_value()),
         );
-        // The compact width follows the rooted widgets and the badges actually shown.
+        // The compact width follows the rooted widgets.
         let resize: Rc<dyn Fn()> = {
             let adaptive = adaptive.downgrade();
             let switch = switch.downgrade();
-            let badges = badges.each_ref().map(|(_, badge)| badge.downgrade());
             let icons = Cell::new(compact);
             Rc::new(move || {
                 let (Some(adaptive), Some(switch)) = (adaptive.upgrade(), switch.upgrade()) else {
                     return;
                 };
-                let extra: i32 = badges
-                    .iter()
-                    .filter_map(glib::WeakRef::upgrade)
-                    .filter(|badge| badge.is_visible())
-                    .map(|badge| badge.measure(gtk::Orientation::Horizontal, -1).0 + 6)
-                    .sum();
                 if switch.root().is_some() && switch.is_visible() && switch.has_css_class("compact")
                 {
-                    icons.set(switch.measure(gtk::Orientation::Horizontal, -1).0 - extra);
+                    icons.set(switch.measure(gtk::Orientation::Horizontal, -1).0);
                 }
-                adaptive.set_width_request(icons.get() + extra);
+                adaptive.set_width_request(icons.get());
             })
         };
-        for (_, badge) in &badges {
-            let resize = resize.clone();
-            badge.connect_notify_local(None, move |_, property| {
-                if matches!(property.name(), "label" | "visible") {
-                    resize();
-                }
-            });
-        }
         let resized = resize.clone();
         narrow.connect_apply(move |_| {
             let resize = resized.clone();

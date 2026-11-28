@@ -2206,9 +2206,19 @@ list.own-paste { margin-top: 12px; }
    its name, so three spaces fit the 240 px card. */
 toggle-group.space-switch > toggle:not(:checked) buttoncontent > box { border-spacing: 0; }
 toggle-group.space-switch > toggle:not(:checked) buttoncontent label { font-size: 0; min-width: 0; }
-toggle-group.space-switch > toggle:not(:checked) { padding-left: 0; padding-right: 0; min-width: 14px; }
-toggle-group.space-switch > toggle:checked { padding-left: 3px; padding-right: 3px; }
-toggle-group.space-switch .space-badge { padding: 0 3px; min-width: 4px; font-size: 0.6em; margin-right: 1px; }
+/* The mockup's sizes: an idle space is a 28 px round button, and the open one
+   has 12 px each side and 6 px between its icon and name. */
+toggle-group.space-switch > toggle:not(:checked) { padding-left: 0; padding-right: 0; min-width: 28px; }
+toggle-group.space-switch > toggle:checked { padding-left: 12px; padding-right: 12px; }
+toggle-group.space-switch > toggle:checked buttoncontent > box { border-spacing: 6px; }
+/* The count sits on the idle icon's top corner, solid accent so it reads
+   over the icon; the mockup has no separators between the spaces. */
+toggle-group.space-switch .space-badge {
+  min-height: 14px; min-width: 8px; padding: 0 3px; font-size: 0.6em;
+  background: var(--accent-bg-color); color: var(--accent-fg-color);
+}
+.app-dark toggle-group.space-switch .space-badge { background: var(--accent-bg-color); }
+toggle-group.space-switch > separator { background: none; min-width: 0; }
 
 .cts-side { padding: 0 8px 12px; }
 .cts-kicker { margin: 14px 12px 4px; font-size: 0.82em; font-weight: 700; color: alpha(currentColor, 0.75); }
@@ -2238,7 +2248,7 @@ button.cts-nav.stack { padding-top: 6px; padding-bottom: 6px; }
 .cts-person { background: var(--view-bg-color); border-left: 1px solid #ececef; }
 .app-dark .cts-person { border-left-color: #2c2c31; }
 .cts-listhead { min-height: 52px; padding: 8px 12px 8px 16px; }
-.cts-listhead.accounthead { align-items: flex-start; padding-top: 14px; padding-bottom: 12px; border-bottom: 1px solid #ececef; }
+.cts-listhead.accounthead { padding-top: 14px; padding-bottom: 12px; border-bottom: 1px solid #ececef; }
 .app-dark .cts-listhead.accounthead { border-bottom-color: #2c2c31; }
 .cts-h2 { font-size: 1.02em; font-weight: 800; letter-spacing: -0.015em; }
 .cts-count { font-size: 0.85em; color: alpha(currentColor, 0.75); }
