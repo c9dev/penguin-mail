@@ -54,7 +54,8 @@ pub struct FakeState {
     /// account): a create is stored under a name of the server's own, which
     /// `Location` gives, with the UID rewritten to it; `If-Match` is
     /// ignored; the ETag is a timestamp; FN is rebuilt from N; a birthday
-    /// without a year, and CATEGORIES, are dropped; a URL gets a group and
+    /// without a year, and CATEGORIES, are dropped, but year 1604 is kept as
+    /// Apple's mark for none; a URL gets a group and
     /// a label.
     pub google_quirks: bool,
 }
@@ -86,7 +87,9 @@ fn google_card(body: &str, uid: &str) -> String {
             // dropped
         } else if upper.starts_with("BDAY") {
             let value = line.rsplit(':').next().unwrap_or_default();
-            if !value.starts_with("--") {
+            if value.starts_with("1604") {
+                out.push(format!("BDAY;VALUE=DATE,X-APPLE-OMIT-YEAR=1604:{value}"));
+            } else if !value.starts_with("--") {
                 out.push(format!("BDAY;VALUE=DATE:{value}"));
             }
         } else if upper.starts_with("URL") {

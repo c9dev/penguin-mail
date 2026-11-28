@@ -14013,15 +14013,7 @@ msgstr "あなたはこの予定のゲストではありません。"
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin MailはCalDAVサーバーのカレンダー一覧を変更できません。"
 
-#: sync/src/services/carddav.rs:137
-msgid ""
-"Google keeps a birthday only with its year. Add the year or remove the "
-"birthday."
-msgstr ""
-"Google は年のある誕生日だけを保存します。年を追加するか、誕生日を削除してくだ"
-"さい。"
-
-#: sync/src/services/carddav.rs:357
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14029,7 +14021,7 @@ msgstr ""
 "連絡先のグループが別のデバイスで変更されました。連絡先を更新して、エディター"
 "を開き直してください。"
 
-#: sync/src/services/carddav.rs:364
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14037,7 +14029,7 @@ msgstr ""
 "同じ名前のグループが複数あります。この連絡先を追加する前に、アカウントで名前"
 "を変更してください。"
 
-#: sync/src/services/carddav.rs:582
+#: sync/src/services/carddav.rs:581
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14045,7 +14037,7 @@ msgstr ""
 "連絡先は作成されましたが、一部のグループを保存できませんでした。このエディ"
 "ターでもう一度試すと、連絡先を増やさずに完了できます: {reason}"
 
-#: sync/src/services/carddav.rs:641
+#: sync/src/services/carddav.rs:640
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -14596,6 +14588,13 @@ msgstr "迷惑メールではないとする"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}に移動"
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Google は年のある誕生日だけを保存します。年を追加するか、誕生日を削除して"
+#~ "ください。"
 
 #~ msgid "{date} ({year})"
 #~ msgstr "{date} ({year})"

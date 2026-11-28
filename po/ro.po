@@ -14553,15 +14553,7 @@ msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "Penguin Mail nu poate modifica lista de calendare a unui server CalDAV."
 
-#: sync/src/services/carddav.rs:137
-msgid ""
-"Google keeps a birthday only with its year. Add the year or remove the "
-"birthday."
-msgstr ""
-"Google păstrează o zi de naștere doar cu anul. Adaugă anul sau elimină ziua "
-"de naștere."
-
-#: sync/src/services/carddav.rs:357
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14569,7 +14561,7 @@ msgstr ""
 "Grupurile contactului s-au schimbat pe alt dispozitiv. Reîmprospătează "
 "contactele și redeschide editorul."
 
-#: sync/src/services/carddav.rs:364
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14577,7 +14569,7 @@ msgstr ""
 "Mai multe grupuri au același nume. Redenumește-le în cont înainte să adaugi "
 "acest contact."
 
-#: sync/src/services/carddav.rs:582
+#: sync/src/services/carddav.rs:581
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14585,7 +14577,7 @@ msgstr ""
 "Contactul a fost creat, dar unele grupuri nu au putut fi salvate. Încearcă "
 "din nou în acest editor ca să termini fără să creezi alt contact: {reason}"
 
-#: sync/src/services/carddav.rs:641
+#: sync/src/services/carddav.rs:640
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -15141,6 +15133,13 @@ msgstr "Marchează ca nefiind spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mută în {folder}"
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Google păstrează o zi de naștere doar cu anul. Adaugă anul sau elimină "
+#~ "ziua de naștere."
 
 #~ msgid "{date} ({year})"
 #~ msgstr "{date} ({year})"

@@ -13927,14 +13927,7 @@ msgstr "이 일정의 참석자가 아닙니다."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail은 CalDAV 서버의 캘린더 목록을 변경할 수 없습니다."
 
-#: sync/src/services/carddav.rs:137
-msgid ""
-"Google keeps a birthday only with its year. Add the year or remove the "
-"birthday."
-msgstr ""
-"Google은 연도가 있는 생일만 저장합니다. 연도를 추가하거나 생일을 삭제하세요."
-
-#: sync/src/services/carddav.rs:357
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -13942,7 +13935,7 @@ msgstr ""
 "다른 기기에서 연락처 그룹이 바뀌었습니다. 연락처를 새로 고치고 편집기를 다시 "
 "여세요."
 
-#: sync/src/services/carddav.rs:364
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -13950,7 +13943,7 @@ msgstr ""
 "같은 이름의 그룹이 여러 개 있습니다. 이 연락처를 추가하기 전에 계정에서 이름"
 "을 바꾸세요."
 
-#: sync/src/services/carddav.rs:582
+#: sync/src/services/carddav.rs:581
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -13958,7 +13951,7 @@ msgstr ""
 "연락처는 만들었지만 일부 그룹을 저장할 수 없습니다. 이 편집기에서 다시 시도하"
 "면 연락처를 하나 더 만들지 않고 마칠 수 있습니다: {reason}"
 
-#: sync/src/services/carddav.rs:641
+#: sync/src/services/carddav.rs:640
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -14494,6 +14487,13 @@ msgstr "스팸 아님으로 표시"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}(으)로 이동"
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Google은 연도가 있는 생일만 저장합니다. 연도를 추가하거나 생일을 삭제하세"
+#~ "요."
 
 #~ msgid "{date} ({year})"
 #~ msgstr "{date} ({year})"

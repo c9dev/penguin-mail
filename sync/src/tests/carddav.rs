@@ -551,6 +551,14 @@ mod google {
     }
 
     #[test]
+    fn googles_answer_for_year_1604_reads_as_a_birthday_without_a_year() {
+        // Sent as `BDAY:1604-04-12`, read back on 2026-11-28.
+        let read = include_str!("golden/google_carddav/yearless_birthday.vcf");
+        let card = mailrs_dav::vcard::read_card(read).unwrap();
+        assert_eq!(card.details.birthday, "--04-12");
+    }
+
+    #[test]
     fn the_saved_answers_read_as_the_adapter_expects() {
         let read = include_str!("golden/google_carddav/read.vcf");
         let card = mailrs_dav::vcard::read_card(read).unwrap();
@@ -650,10 +658,10 @@ mod google {
     }
 
     #[tokio::test]
-    async fn a_birthday_without_a_year_is_refused_before_google_deletes_it() {
-        let (_dav, carddav) = google();
+    async fn a_birthday_without_a_year_reaches_google_as_apples_year_1604() {
+        let (dav, carddav) = google();
         let made = carddav.create_contact(&fields()).await.unwrap();
-        let refused = carddav
+        let edited = carddav
             .update_contact(
                 &made.resource,
                 &ContactFields {
@@ -664,13 +672,13 @@ mod google {
                     ..ContactFields::default()
                 },
             )
-            .await;
-        assert!(
-            matches!(refused, Err(BackendError::Invalid(_))),
-            "{refused:?}"
-        );
+            .await
+            .unwrap();
+        let body = dav.body(&edited.resource).unwrap();
+        assert!(body.contains("X-APPLE-OMIT-YEAR=1604:1604-04-12"), "{body}");
         let kept = carddav.connections(None, None).await.unwrap();
-        assert_eq!(kept.people[0].details.birthday, "1990-04-12");
+        let birthday = &kept.people[0].details.birthday;
+        assert_eq!(mailrs_domain::contact::date_for_edit(birthday), "--04-12");
     }
 
     #[tokio::test]

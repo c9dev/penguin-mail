@@ -14451,13 +14451,7 @@ msgstr "Nie jesteś gościem tego wydarzenia."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail nie może zmieniać listy kalendarzy serwera CalDAV."
 
-#: sync/src/services/carddav.rs:137
-msgid ""
-"Google keeps a birthday only with its year. Add the year or remove the "
-"birthday."
-msgstr "Google zapisuje urodziny tylko z rokiem. Dodaj rok albo usuń urodziny."
-
-#: sync/src/services/carddav.rs:357
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14465,7 +14459,7 @@ msgstr ""
 "Grupy kontaktu zmieniły się na innym urządzeniu. Odśwież kontakty i otwórz "
 "edytor ponownie."
 
-#: sync/src/services/carddav.rs:364
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14473,7 +14467,7 @@ msgstr ""
 "Kilka grup ma tę samą nazwę. Zmień ich nazwy na koncie, zanim dodasz ten "
 "kontakt."
 
-#: sync/src/services/carddav.rs:582
+#: sync/src/services/carddav.rs:581
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14482,7 +14476,7 @@ msgstr ""
 "ponownie w tym edytorze, aby dokończyć bez tworzenia drugiego kontaktu: "
 "{reason}"
 
-#: sync/src/services/carddav.rs:641
+#: sync/src/services/carddav.rs:640
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -15025,6 +15019,12 @@ msgstr "Oznacz jako pożądaną pocztę"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Przenieś do {folder}"
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Google zapisuje urodziny tylko z rokiem. Dodaj rok albo usuń urodziny."
 
 #~ msgid "{date} ({year})"
 #~ msgstr "{date} ({year})"

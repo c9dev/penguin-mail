@@ -14492,15 +14492,7 @@ msgstr "Sie sind kein Gast dieses Termins."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail kann die Kalenderliste eines CalDAV-Servers nicht ändern."
 
-#: sync/src/services/carddav.rs:137
-msgid ""
-"Google keeps a birthday only with its year. Add the year or remove the "
-"birthday."
-msgstr ""
-"Google speichert einen Geburtstag nur mit Jahr. Geben Sie das Jahr an oder "
-"entfernen Sie den Geburtstag."
-
-#: sync/src/services/carddav.rs:357
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14508,7 +14500,7 @@ msgstr ""
 "Die Gruppen des Kontakts wurden auf einem anderen Gerät geändert. "
 "Aktualisieren Sie die Kontakte und öffnen Sie den Editor erneut."
 
-#: sync/src/services/carddav.rs:364
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14516,7 +14508,7 @@ msgstr ""
 "Mehrere Gruppen haben denselben Namen. Benennen Sie sie im Konto um, bevor "
 "Sie diesen Kontakt hinzufügen."
 
-#: sync/src/services/carddav.rs:582
+#: sync/src/services/carddav.rs:581
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14525,7 +14517,7 @@ msgstr ""
 "werden. Versuchen Sie es in diesem Editor erneut, dann entsteht kein zweiter "
 "Kontakt: {reason}"
 
-#: sync/src/services/carddav.rs:641
+#: sync/src/services/carddav.rs:640
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -15088,6 +15080,13 @@ msgstr "Als kein Spam markieren"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Nach {folder} verschieben"
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Google speichert einen Geburtstag nur mit Jahr. Geben Sie das Jahr an "
+#~ "oder entfernen Sie den Geburtstag."
 
 #~ msgid "{date} ({year})"
 #~ msgstr "{date} ({year})"

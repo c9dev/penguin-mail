@@ -14474,15 +14474,7 @@ msgstr "Вы не являетесь гостем этого события."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail не может изменить список календарей на сервере CalDAV."
 
-#: sync/src/services/carddav.rs:137
-msgid ""
-"Google keeps a birthday only with its year. Add the year or remove the "
-"birthday."
-msgstr ""
-"Google хранит день рождения только вместе с годом. Укажите год или удалите "
-"день рождения."
-
-#: sync/src/services/carddav.rs:357
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14490,7 +14482,7 @@ msgstr ""
 "Группы контакта изменились на другом устройстве. Обновите контакты и "
 "откройте редактор заново."
 
-#: sync/src/services/carddav.rs:364
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14498,7 +14490,7 @@ msgstr ""
 "Несколько групп называются одинаково. Переименуйте их в учётной записи, "
 "прежде чем добавлять этот контакт."
 
-#: sync/src/services/carddav.rs:582
+#: sync/src/services/carddav.rs:581
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14506,7 +14498,7 @@ msgstr ""
 "Контакт создан, но некоторые группы не удалось сохранить. Повторите попытку "
 "в этом редакторе, чтобы закончить без второго контакта: {reason}"
 
-#: sync/src/services/carddav.rs:641
+#: sync/src/services/carddav.rs:640
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -15056,6 +15048,13 @@ msgstr "Отметить как не спам"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Переместить в {folder}"
+
+#~ msgid ""
+#~ "Google keeps a birthday only with its year. Add the year or remove the "
+#~ "birthday."
+#~ msgstr ""
+#~ "Google хранит день рождения только вместе с годом. Укажите год или "
+#~ "удалите день рождения."
 
 #~ msgid "{date} ({year})"
 #~ msgstr "{date} ({year})"

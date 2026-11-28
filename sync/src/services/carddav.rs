@@ -116,30 +116,29 @@ impl<D: DavApi> CardDav<D> {
     /// - the ETag is a timestamp, and `If-Match` is ignored, so a stale
     ///   edit overwrites with a 204 and there is no 412 to wait for;
     /// - FN is rebuilt from N, so a name is written to both;
-    /// - a birthday without a year is deleted, and CATEGORIES are dropped,
-    ///   so groups stay on this computer.
+    /// - a birthday without a year (`--04-12`) is deleted, while Apple's
+    ///   placeholder year `1604-04-12` is kept and marked
+    ///   `X-APPLE-OMIT-YEAR=1604` (checked live on 2026-11-28);
+    /// - CATEGORIES are dropped, so groups stay on this computer.
     pub fn google(mut self) -> CardDav<D> {
         self.google = true;
         self
     }
 
-    /// What Google's CardDAV would lose, refused or held back before the
+    /// Rewrites or holds back what Google's CardDAV would lose, before the
     /// card is sent.
-    fn google_fields(&self, fields: &mut CardFields) -> Result<(), BackendError> {
+    fn google_fields(&self, fields: &mut CardFields) {
         if !self.google {
-            return Ok(());
+            return;
         }
-        if let Some(birthday) = &fields.details.birthday
-            && mailrs_domain::contact::date_parts(birthday)
-                .is_some_and(|(year, _, _)| year.is_none())
+        // Google deletes `--04-12` and keeps Apple's placeholder year.
+        if let Some(birthday) = &mut fields.details.birthday
+            && let Some((None, month, day)) = mailrs_domain::contact::date_parts(birthday)
         {
-            return Err(BackendError::Invalid(gettext(
-                "Google keeps a birthday only with its year. Add the year or remove the birthday.",
-            )));
+            *birthday = format!("1604-{month:02}-{day:02}");
         }
         // CATEGORIES are dropped, so the groups are kept here.
         fields.details.groups = None;
-        Ok(())
     }
 
     pub fn login_refused(&self) -> Option<String> {
@@ -518,7 +517,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
 
     async fn create_contact(&self, fields_in: &ContactFields) -> Result<Person, BackendError> {
         let mut fields = fields(fields_in);
-        self.google_fields(&mut fields)?;
+        self.google_fields(&mut fields);
         vcard::validate(&fields).map_err(card_error)?;
         let writable: Vec<String> = self
             .books()
@@ -603,7 +602,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
             return Err(self.err(mailrs_dav::DavError::Changed));
         }
         let mut fields = fields(fields_in);
-        self.google_fields(&mut fields)?;
+        self.google_fields(&mut fields);
         // Group cards are read and checked first and written only after
         // the contact, so a contact that changed elsewhere changes nothing.
         let mut cards = None;
