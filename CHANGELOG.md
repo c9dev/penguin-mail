@@ -8,7 +8,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - A recipient chip no longer runs its background past its Remove button when a longer chip sits beside it.
+- Large unread counts are centered and easier to read on the inbox categories and the Mail and Calendar switch.
 - Closing Customize Mailboxes releases its folder lists.
+- An open mail list updates its dates ("Yesterday", the weekday) when the day changes.
 - Smart mailboxes combining Gmail folders over IMAP include selected Trash and Junk messages and keep the newest matches when results are limited.
 - Renaming or moving IMAP folders preserves their Favorites, visibility and custom order, including nested folders.
 
@@ -25,7 +27,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - On Windows, assistant skills run their scripts inside a sandbox that opens only the skill's folder and a scratch folder to them, not your files.
 
 - Notifications can show a message preview with a choice of length, and macOS can show the subject in bold, when enabled in Preferences.
-
+- An open message saves itself to Drafts while you write, so closing the lid loses nothing. Writing preferences can turn this off.
 - Smart mailboxes can hide unread counts, count downloaded messages, or count matching messages on supported servers in the background.
 
 - Choose which mailboxes and accounts appear in the sidebar, reorder them, and name mailboxes in Favorites.

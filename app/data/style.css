@@ -612,6 +612,16 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
 .assistant-input textview,
 .assistant-input textview > text { background: none; }
 
+.category-chips .category-count.inline,
+.space-badge {
+  min-width: 10px;
+  min-height: 18px;
+  padding: 0 4px;
+  border-radius: 99px;
+  font-size: 0.75em;
+  font-weight: 700;
+}
+
 /* Inbox categories as chips that wrap onto up to three lines, 6 px apart
    both ways (strip.rs). The chosen one is a filled accent pill; the
    others are neutral pills in the `pill` surface. Each shows its icon,
@@ -641,35 +651,34 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
    3px off a badge drawn there. Kept inside the pill instead; see the
    report's "known differences". */
 .category-chips .category-count {
+  color: var(--accent-fg-color);
+  background: var(--accent-fill);
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.category-chips .category-count.corner {
   min-width: 14px;
   min-height: 14px;
+  padding: 0 3px;
   margin: 1px 2px 0 0;
   border-radius: 99px;
   font-size: 0.65em;
   font-weight: 800;
-  font-feature-settings: "tnum";
-  color: var(--accent-fg-color);
-  background: var(--accent-fill);
-  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 /* While a chip shows its name the count follows it, "Primary 2"; on the
    chosen chip the badge turns white with the fill's colour in it, which
    holds the same contrast as the white name on the fill. Folded to an
    icon, the chosen chip drops its corner badge, as before. */
-.category-chips .category-count.inline { margin: 0 0 0 6px; }
+.category-chips .category-count.inline { margin-left: 6px; }
 .category-chips > button.category-toggle:checked .category-count.inline {
   color: var(--accent-fill);
   background: var(--accent-fg-color);
 }
 .category-chips > button.category-toggle:checked .category-count.corner { opacity: 0; }
 .category-chips .category-count.no-mail { opacity: 0; }
-/* Focused and Other carry their badge in the row after the name
-   (categories.rs). The 20 px each side of the name match: the start
-   padding on one side, and the badge's 3 px gaps around its 14 px on
-   the other, so a chip whose badge is hidden still reads centred and
-   never changes width when one comes or goes. */
-.category-chips .category-chip.category-tab { padding: 0 0 0 20px; }
-.category-chips .category-tab .category-count { margin: 1px 3px 0 3px; }
+/* The start padding balances the 18 px badge and its two 3 px gaps
+   when Focused or Other has no unread mail. */
+.category-chips .category-chip.category-tab { padding: 0 0 0 24px; }
+.category-chips .category-tab .category-count { margin: 0 3px; }
 
 /* The list header's title, packed at the header's start instead of
    centred: "All Inboxes" leads, the unread count and category sit under
@@ -1008,7 +1017,9 @@ splitbutton.new-event-split > menubutton > button {
 /* The view switch and the sidebar's Mail / Calendar switch: 13 px
    labels, the unchosen ones dimmed at weight 600. */
 toggle-group.view-switch > toggle,
-toggle-group.space-switch > toggle { font-size: 0.89em; font-weight: 600; }
+toggle-group.space-switch > toggle buttoncontent { font-size: 0.89em; }
+toggle-group.view-switch > toggle,
+toggle-group.space-switch > toggle { font-weight: 600; }
 /* The mockup's switch is a 204 x 32 pill of three 64 px toggles. */
 toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-right: 0; }
 toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding: 0 12px; min-height: 28px; }
@@ -1036,13 +1047,6 @@ toggle-group.space-switch > toggle:checked { font-weight: 700; background: var(-
    selected mailbox's accent tint, 18 % light and 28 % dark, with the
    number in the accent, which stays full strength on a dimmed toggle. */
 .space-badge {
-  font-size: 0.72em;
-  font-weight: 700;
-  font-feature-settings: "tnum";
-  min-width: 10px;
-  min-height: 16px;
-  padding: 0 4px;
-  border-radius: 99px;
   background: alpha(var(--accent-bg-color), 0.18);
   color: var(--accent-color);
 }

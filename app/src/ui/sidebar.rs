@@ -18,11 +18,11 @@ use mailrs_domain::{
 };
 use mailrs_sync::Offers;
 
+use super::count_badge::CountBadge;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
-use crate::settings::SidebarLayout;
-use crate::settings::Space;
+use crate::settings::{SidebarLayout, Space};
 use keys::ListKey;
 use sections::{Place, Section};
 use tree::label_rows;
@@ -313,7 +313,7 @@ pub struct Sidebar {
     /// too while no account has mail, and "Calendars" shows in its place.
     pub switch: adw::ToggleGroup,
     /// The badge on the Mail toggle and on the Calendar one.
-    badges: [(Space, gtk::Label); 2],
+    badges: [(Space, CountBadge); 2],
     /// Unread mail in the unified inbox, for the Mail toggle's badge.
     unread: Cell<i64>,
     /// Invitations waiting for an answer, for the Calendar toggle's.
@@ -507,10 +507,10 @@ impl Sidebar {
                 .build();
             // Each toggle counts what waits in the other space, in a small
             // accent pill after its name, while that space is away.
-            let badge = gtk::Label::builder()
-                .css_classes(["space-badge"])
-                .valign(gtk::Align::Center)
-                .visible(false)
+            let badge = glib::Object::builder::<CountBadge>()
+                .property("css-classes", ["space-badge"].as_slice())
+                .property("valign", gtk::Align::Center)
+                .property("visible", false)
                 .build();
             let child = gtk::Box::builder().spacing(6).build();
             child.append(&content);
@@ -535,7 +535,7 @@ impl Sidebar {
         // Measure both layouts in this locale, including the largest off-screen badge.
         switch.set_visible(true);
         title.set_visible(false);
-        badges[1].1.set_label(&gettext("99+"));
+        badges[1].1.set_label(gettext("99+"));
         badges[1].1.set_visible(true);
         let wide = titles.measure(gtk::Orientation::Horizontal, -1).1;
         let height = titles.measure(gtk::Orientation::Vertical, -1).1;
