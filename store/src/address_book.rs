@@ -126,16 +126,14 @@ pub fn forget(conn: &Connection, account_id: AccountId, resources: &[String]) ->
     Ok(())
 }
 
-/// Drops everything stored for an account, for when the owner turns
-/// contacts off.
+/// Drops the copy of the server's book for an account, for when the owner
+/// turns contacts off. Groups the server cannot keep stay: this computer
+/// holds their only copy, and they rejoin their contacts when the book
+/// comes back. Removing the account removes them.
 pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
     conn.execute("DELETE FROM contacts WHERE account_id = ?1", [account_id])?;
     conn.execute(
         "DELETE FROM contact_links WHERE account_a = ?1 OR account_b = ?1",
-        [account_id],
-    )?;
-    conn.execute(
-        "DELETE FROM contact_local_groups WHERE account_id = ?1",
         [account_id],
     )?;
     conn.execute(
@@ -850,6 +848,10 @@ mod tests {
         )
         .unwrap();
         // A refresh replaces the card and leaves the groups.
+        save(&conn, std::slice::from_ref(&card)).unwrap();
+        assert_eq!(list(&conn).unwrap()[0].details.groups, ["Friends", "Work"]);
+        // Turning contacts off and on again brings them back with the card.
+        clear(&conn, id).unwrap();
         save(&conn, &[card]).unwrap();
         assert_eq!(list(&conn).unwrap()[0].details.groups, ["Friends", "Work"]);
         forget(&conn, id, &["/lists/default/g1".to_string()]).unwrap();
