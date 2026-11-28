@@ -78,7 +78,10 @@ fn google_card(body: &str, uid: &str) -> String {
         if upper.starts_with("UID:") {
             out.push(format!("UID:{uid}"));
         } else if upper.starts_with("FN:") {
-            out.push(format!("FN:{}", name.clone().unwrap_or_else(|| line[3..].to_string())));
+            out.push(format!(
+                "FN:{}",
+                name.clone().unwrap_or_else(|| line[3..].to_string())
+            ));
         } else if upper.starts_with("CATEGORIES") {
             // dropped
         } else if upper.starts_with("BDAY") {
@@ -87,13 +90,12 @@ fn google_card(body: &str, uid: &str) -> String {
                 out.push(format!("BDAY;VALUE=DATE:{value}"));
             }
         } else if upper.starts_with("URL") {
-            let value = line.rsplit_once(':').map_or("", |(_, v)| v);
-            let url = line.split_once(':').map_or("", |(_, v)| v).replace(':', "\\:");
-            let _ = value;
+            let url = line
+                .split_once(':')
+                .map_or("", |(_, v)| v)
+                .replace(':', "\\:");
             out.push(format!("item1.URL;TYPE=PREF:{url}"));
             out.push("item1.X-ABLabel:Other".into());
-        } else if upper.starts_with("TEL;") || upper.starts_with("EMAIL;") || upper.starts_with("ADR;") {
-            out.push(line.to_string());
         } else {
             out.push(line.to_string());
         }
@@ -403,7 +405,9 @@ impl DavApi for FakeDav {
         kind: Kind,
         when: Precondition,
     ) -> Result<Option<String>, DavError> {
-        self.put_at(href, body, kind, when).await.map(|(etag, _)| etag)
+        self.put_at(href, body, kind, when)
+            .await
+            .map(|(etag, _)| etag)
     }
 
     async fn put_at(
@@ -421,7 +425,10 @@ impl DavApi for FakeDav {
             let etag = format!("\"2026-11-27T16:58:25.{:03}-08:00\"", s.seq);
             let (target, location) = match when {
                 Precondition::NoneMatch => {
-                    let id = format!("{:016x}", 0x3f93_6966_140b_99d6_u64 + u64::from(s.seq as u32));
+                    let id = format!(
+                        "{:016x}",
+                        0x3f93_6966_140b_99d6_u64 + u64::from(s.seq as u32)
+                    );
                     let target = format!("{}{id}", collection_of(href));
                     (target.clone(), Some(target))
                 }

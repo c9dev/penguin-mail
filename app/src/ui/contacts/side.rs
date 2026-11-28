@@ -67,7 +67,12 @@ impl Contacts {
                 .build();
             row.append(&name);
             if let Some(count) = count {
-                row.append(&gtk::Label::builder().label(count).css_classes(["cts-n"]).build());
+                row.append(
+                    &gtk::Label::builder()
+                        .label(count)
+                        .css_classes(["cts-n"])
+                        .build(),
+                );
             }
             self.nav_button(row, tip, label, list, current)
         };
@@ -137,7 +142,12 @@ impl Contacts {
                 .orientation(gtk::Orientation::Vertical)
                 .hexpand(true)
                 .build();
-            text.append(&gtk::Label::builder().label(account_label(account.id).short).xalign(0.0).build());
+            text.append(
+                &gtk::Label::builder()
+                    .label(account_label(account.id).short)
+                    .xalign(0.0)
+                    .build(),
+            );
             text.append(
                 &gtk::Label::builder()
                     .label(&account.email)
@@ -155,7 +165,13 @@ impl Contacts {
                 None
             };
             if let Some(word) = state_word {
-                row.append(&gtk::Label::builder().label(word).valign(gtk::Align::Start).css_classes(["cts-n"]).build());
+                row.append(
+                    &gtk::Label::builder()
+                        .label(word)
+                        .valign(gtk::Align::Start)
+                        .css_classes(["cts-n"])
+                        .build(),
+                );
             }
             let button = self.nav_button(
                 row,
@@ -165,6 +181,29 @@ impl Contacts {
                 &current,
             );
             button.add_css_class("stack");
+            if on {
+                // A right-click, or the menu key, offers Turn Off Contacts.
+                let popover = gtk::Popover::new();
+                let item = gtk::Button::builder()
+                    .label(gettext("Turn Off Contacts"))
+                    .css_classes(["flat"])
+                    .build();
+                popover.set_child(Some(&item));
+                popover.set_parent(&button);
+                let (weak, owner) = (Rc::downgrade(self), account.clone());
+                let shown = popover.clone();
+                item.connect_clicked(move |_| {
+                    shown.popdown();
+                    if let Some(this) = weak.upgrade() {
+                        this.turn_off(owner.clone());
+                    }
+                });
+                let click = gtk::GestureClick::builder().button(3).build();
+                let shown = popover.clone();
+                click.connect_pressed(move |_, _, _, _| shown.popup());
+                button.add_controller(click);
+                button.connect_destroy(move |_| popover.unparent());
+            }
             self.side_box.append(&button);
         }
     }

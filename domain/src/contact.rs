@@ -93,7 +93,10 @@ pub fn check(changes: &Changes, photo: Option<&[u8]>) -> Result<(), String> {
             "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown.",
         ));
     }
-    if dates.clone().any(|d| d.label.is_empty() || d.value.is_empty()) {
+    if dates
+        .clone()
+        .any(|d| d.label.is_empty() || d.value.is_empty())
+    {
         return Err(gettext("A date needs a label and a value."));
     }
     if photo.is_some_and(|p| {

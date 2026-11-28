@@ -64,10 +64,32 @@ pub(crate) fn person_of(card: &Value) -> Person {
     }
 }
 
+/// The label of the link that holds what JSContact has no home for: other
+/// dates with their labels, and custom fields, as a JSON data URI. Seen
+/// live: Cyrus and Stalwart both refuse a vendor property, so the extras
+/// ride in a standard `links` entry.
+const EXTRAS: &str = "mail.penguin:fields";
 
-/// The vendor property that holds what JSContact has no home for: other
-/// dates with their labels, and custom fields.
-const VENDOR: &str = "mail.penguin:fields";
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+#[serde(default)]
+struct Extras {
+    dates: Vec<mailrs_domain::contact::Field>,
+    custom: Vec<mailrs_domain::contact::Field>,
+}
+
+fn extras_of(card: &Value) -> Extras {
+    use base64::Engine;
+    values(card, "links")
+        .filter(|l| l["label"] == EXTRAS)
+        .find_map(|l| {
+            let data = l["uri"].as_str()?.split_once(";base64,")?.1;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(data)
+                .ok()?;
+            serde_json::from_slice(&bytes).ok()
+        })
+        .unwrap_or_default()
+}
 
 /// A contact date as a JSContact `PartialDate`.
 fn date_json(value: &str) -> Option<Value> {
@@ -103,7 +125,7 @@ const ADDRESS_KINDS: [&str; 7] = [
 ];
 
 fn details_of(card: &Value) -> mailrs_domain::contact::Details {
-    use mailrs_domain::contact::{Details, Field};
+    use mailrs_domain::contact::Details;
     let mut d = Details {
         uid: card["uid"].as_str().unwrap_or_default().to_string(),
         ..Default::default()
@@ -135,10 +157,11 @@ fn details_of(card: &Value) -> mailrs_domain::contact::Details {
         })
         .collect();
     d.urls = values(card, "links")
+        .filter(|l| l["label"] != EXTRAS)
         .filter_map(|l| l["uri"].as_str().map(str::to_string))
         .collect();
     let mut groups: Vec<String> = card
-        .get("categories")
+        .get("keywords")
         .and_then(Value::as_object)
         .into_iter()
         .flat_map(|m| m.iter().filter(|(_, on)| on.as_bool() == Some(true)))
@@ -146,19 +169,16 @@ fn details_of(card: &Value) -> mailrs_domain::contact::Details {
         .collect();
     groups.sort();
     d.groups = groups;
-    let field = |v: &Value| Field {
-        label: v["label"].as_str().unwrap_or_default().to_string(),
-        value: v["value"].as_str().unwrap_or_default().to_string(),
-    };
-    d.dates = values(&card[VENDOR], "dates").map(field).collect();
-    d.custom = values(&card[VENDOR], "custom").map(field).collect();
+    let extras = extras_of(card);
+    d.dates = extras.dates;
+    d.custom = extras.custom;
     d
 }
 
 /// The JSContact properties that carry the detail fields `fields` names,
 /// each as the whole map it replaces. Only a field the person changed is
 /// named, so the rest of a card stays as the server holds it.
-fn details_patch(fields: &ContactFields) -> Map<String, Value> {
+fn details_patch(fields: &ContactFields, held: Option<&Value>) -> Map<String, Value> {
     let c = &fields.details;
     let mut out = Map::new();
     let keyed = |prefix: &str, items: Vec<Value>| -> Value {
@@ -172,7 +192,9 @@ fn details_patch(fields: &ContactFields) -> Map<String, Value> {
     };
     if let Some(birthday) = &c.birthday {
         let value = match date_json(birthday) {
-            Some(date) => json!({ "a1": { "@type": "Anniversary", "kind": "birth", "date": date } }),
+            Some(date) => {
+                json!({ "a1": { "@type": "Anniversary", "kind": "birth", "date": date } })
+            }
             None => Value::Null,
         };
         out.insert("anniversaries".into(), value);
@@ -199,33 +221,39 @@ fn details_patch(fields: &ContactFields) -> Map<String, Value> {
             .collect();
         out.insert("addresses".into(), keyed("a", items));
     }
-    if let Some(urls) = &c.urls {
-        let items = urls
+    if c.urls.is_some() || c.dates.is_some() || c.custom.is_some() {
+        // Websites and the extras share the `links` map, so a change to
+        // either writes both, the other as the card holds it.
+        let before = held.map(details_of).unwrap_or_default();
+        let urls = c.urls.clone().unwrap_or(before.urls);
+        let extras = Extras {
+            dates: c.dates.clone().unwrap_or(before.dates),
+            custom: c.custom.clone().unwrap_or(before.custom),
+        };
+        let mut items: Vec<Value> = urls
             .iter()
             .map(|u| json!({ "@type": "Link", "kind": "generic", "uri": u }))
             .collect();
-        out.insert("links".into(), keyed("l", items));
+        if !extras.dates.is_empty() || !extras.custom.is_empty() {
+            use base64::Engine;
+            let uri = format!(
+                "data:application/json;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(json!(extras).to_string())
+            );
+            items.push(json!({ "@type": "Link", "kind": "other", "label": EXTRAS, "uri": uri }));
+        }
+        out.insert(
+            "links".into(),
+            if items.is_empty() {
+                Value::Null
+            } else {
+                keyed("l", items)
+            },
+        );
     }
     if let Some(groups) = &c.groups {
         let map: Map<String, Value> = groups.iter().map(|g| (g.clone(), json!(true))).collect();
-        out.insert("categories".into(), Value::Object(map));
-    }
-    if c.dates.is_some() || c.custom.is_some() {
-        let list = |fields: &Vec<mailrs_domain::contact::Field>| {
-            keyed(
-                "f",
-                fields
-                    .iter()
-                    .map(|f| json!({ "label": f.label, "value": f.value }))
-                    .collect(),
-            )
-        };
-        if let Some(dates) = &c.dates {
-            out.insert(format!("{VENDOR}/dates"), list(dates));
-        }
-        if let Some(custom) = &c.custom {
-            out.insert(format!("{VENDOR}/custom"), list(custom));
-        }
+        out.insert("keywords".into(), Value::Object(map));
     }
     if let Some(photo) = &fields.photo {
         let value = match photo.is_empty() {
@@ -271,22 +299,10 @@ fn fields_of(fields: &ContactFields) -> Map<String, Value> {
             json!({ "o1": { "name": organization } }),
         );
     }
-    // On a new card the vendor maps nest under one property; a patch names
-    // each by its path.
-    let mut vendor = Map::new();
-    for (key, value) in details_patch(fields) {
-        match key.strip_prefix(&format!("{VENDOR}/")) {
-            Some(part) => {
-                vendor.insert(part.to_string(), value);
-            }
-            None if value.is_null() => {}
-            None => {
-                card.insert(key, value);
-            }
+    for (key, value) in details_patch(fields, None) {
+        if !value.is_null() {
+            card.insert(key, value);
         }
-    }
-    if !vendor.is_empty() {
-        card.insert(VENDOR.into(), Value::Object(vendor));
     }
     card
 }
@@ -409,11 +425,8 @@ fn patch_of(card: &Value, fields: &ContactFields) -> Map<String, Value> {
             }
         }
     }
-    for (key, value) in details_patch(fields) {
-        let held = match key.split_once('/') {
-            Some((a, b)) => &card[a][b],
-            None => &card[key.as_str()],
-        };
+    for (key, value) in details_patch(fields, Some(card)) {
+        let held = &card[key.as_str()];
         if *held != value && !(held.is_null() && value.is_null()) {
             patch.insert(key, value);
         }
@@ -648,7 +661,13 @@ mod tests {
         assert_eq!(d.groups, ["Friends", "Work"]);
         assert_eq!(d.dates[0].label, "Anniversary");
         assert_eq!(d.custom[0].value, "42");
-        assert!(person.photo_url.as_deref().unwrap().starts_with("data:image/png;base64,"));
+        assert!(
+            person
+                .photo_url
+                .as_deref()
+                .unwrap()
+                .starts_with("data:image/png;base64,")
+        );
     }
 
     #[test]
@@ -671,7 +690,7 @@ mod tests {
         };
         let patch = patch_of(&card, &edit);
         assert_eq!(patch["notes"]["n1"]["note"], "Changed");
-        assert_eq!(patch["categories"], json!({ "Friends": true }));
+        assert_eq!(patch["keywords"], json!({ "Friends": true }));
         assert_eq!(patch.len(), 2);
     }
 }

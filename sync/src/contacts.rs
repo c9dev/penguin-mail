@@ -175,6 +175,11 @@ impl<A: Accounts> ContactBook<A> {
         Ok(self.contacts(account_id)?.address_books().await?)
     }
 
+    /// Whether this account keeps its book on this computer alone.
+    pub fn is_local(&self, account_id: AccountId) -> bool {
+        matches!(self.contacts(account_id), Ok(AnyContacts::Local(_)))
+    }
+
     /// Whether this account's server drops the groups of a card, so they
     /// are held on this computer.
     pub fn keeps_groups_here(&self, account_id: AccountId) -> bool {
@@ -242,7 +247,8 @@ impl<A: Accounts> ContactBook<A> {
             return Err(BackendError::Unsupported.into());
         }
         let changed = service.update_contact(resource, fields).await;
-        self.saved(&service, account_id, changed, fields, keep).await
+        self.saved(&service, account_id, changed, fields, keep)
+            .await
     }
 
     /// What a create or an update answered, stored when `keep` says so,
@@ -268,7 +274,9 @@ impl<A: Accounts> ContactBook<A> {
             if let Permitted::Done(contact) = &saved {
                 let (resource, names) = (contact.resource.clone(), groups.clone());
                 self.db
-                    .write(move |c| address_book::set_local_groups(c, account_id, &resource, &names))
+                    .write(move |c| {
+                        address_book::set_local_groups(c, account_id, &resource, &names)
+                    })
                     .await?;
             }
             let _ = self.fetch_photos(service, account_id).await;

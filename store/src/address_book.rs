@@ -191,7 +191,11 @@ fn local_groups(
         "SELECT account_id, resource, name FROM contact_local_groups ORDER BY name",
     )?;
     let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?))
+        Ok((
+            row.get::<_, AccountId>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+        ))
     })?;
     let mut out: std::collections::HashMap<(AccountId, String), Vec<String>> = Default::default();
     for row in rows {
@@ -405,7 +409,11 @@ pub fn link(conn: &Connection, link: &Link) -> Result<()> {
 }
 
 /// Takes a link away, in whichever order it was made.
-pub fn unlink(conn: &Connection, one: &(AccountId, String), other: &(AccountId, String)) -> Result<()> {
+pub fn unlink(
+    conn: &Connection,
+    one: &(AccountId, String),
+    other: &(AccountId, String),
+) -> Result<()> {
     conn.execute(
         "DELETE FROM contact_links WHERE (account_a = ?1 AND resource_a = ?2 AND account_b = ?3 AND resource_b = ?4) \
          OR (account_a = ?3 AND resource_a = ?4 AND account_b = ?1 AND resource_b = ?2)",
@@ -454,7 +462,9 @@ pub fn message_counts(
     let mut stmt = conn.prepare_cached(
         "SELECT lower(from_addr), count(*) FROM messages WHERE from_addr IS NOT NULL GROUP BY 1",
     )?;
-    let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)))?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+    })?;
     let mut out = std::collections::HashMap::new();
     for row in rows {
         let (email, count) = row?;
@@ -787,12 +797,20 @@ mod tests {
         let conn = open_in_memory().unwrap();
         let work = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
         let home = accounts::insert_account(&conn, "dana@fernwood.example", 0).unwrap();
-        save(&conn, &[contact(work, "a", "Owen Mercer", &["o@a.example"])]).unwrap();
+        save(
+            &conn,
+            &[contact(work, "a", "Owen Mercer", &["o@a.example"])],
+        )
+        .unwrap();
         save(&conn, &[contact(home, "b", "Owen M.", &["o@b.example"])]).unwrap();
         let ends = ((work, "a".to_string()), (home, "b".to_string()));
         link(
             &conn,
-            &Link { a: ends.0.clone(), b: ends.1.clone(), shown_a: false },
+            &Link {
+                a: ends.0.clone(),
+                b: ends.1.clone(),
+                shown_a: false,
+            },
         )
         .unwrap();
         let found = links(&conn).unwrap();
@@ -801,7 +819,15 @@ mod tests {
         // Unlinking works in the other order, too.
         unlink(&conn, &ends.1, &ends.0).unwrap();
         assert!(links(&conn).unwrap().is_empty());
-        link(&conn, &Link { a: ends.0.clone(), b: ends.1.clone(), shown_a: true }).unwrap();
+        link(
+            &conn,
+            &Link {
+                a: ends.0.clone(),
+                b: ends.1.clone(),
+                shown_a: true,
+            },
+        )
+        .unwrap();
         forget(&conn, home, &["b".to_string()]).unwrap();
         assert!(links(&conn).unwrap().is_empty());
         let count: i64 = conn
@@ -815,15 +841,22 @@ mod tests {
         let conn = open_in_memory().unwrap();
         let id = accounts::insert_account(&conn, "dana@gmail.example", 0).unwrap();
         let card = contact(id, "/lists/default/g1", "Priya", &["p@x.example"]);
-        save(&conn, &[card.clone()]).unwrap();
-        set_local_groups(&conn, id, "/lists/default/g1", &["Friends".into(), "Work".into()])
-            .unwrap();
+        save(&conn, std::slice::from_ref(&card)).unwrap();
+        set_local_groups(
+            &conn,
+            id,
+            "/lists/default/g1",
+            &["Friends".into(), "Work".into()],
+        )
+        .unwrap();
         // A refresh replaces the card and leaves the groups.
         save(&conn, &[card]).unwrap();
         assert_eq!(list(&conn).unwrap()[0].details.groups, ["Friends", "Work"]);
         forget(&conn, id, &["/lists/default/g1".to_string()]).unwrap();
         let held: i64 = conn
-            .query_row("SELECT count(*) FROM contact_local_groups", [], |r| r.get(0))
+            .query_row("SELECT count(*) FROM contact_local_groups", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(held, 0);
     }
@@ -840,7 +873,11 @@ mod tests {
         save(&conn, &[a.clone(), b.clone()]).unwrap();
         link(
             &conn,
-            &Link { a: (work, "a".into()), b: (home, "b".into()), shown_a: true },
+            &Link {
+                a: (work, "a".into()),
+                b: (home, "b".into()),
+                shown_a: true,
+            },
         )
         .unwrap();
         save(&conn, &[a, b]).unwrap();
@@ -863,7 +900,14 @@ mod tests {
         mail(&conn, me, "t1/1", "ana@x.example", "dana@example.com", 100);
         mail(&conn, me, "t1/2", "dana@example.com", "Ana@X.example", 200);
         mail(&conn, me, "t2/1", "ana@x.example", "dana@example.com", 300);
-        mail(&conn, me, "t3/1", "other@x.example", "dana@example.com", 400);
+        mail(
+            &conn,
+            me,
+            "t3/1",
+            "other@x.example",
+            "dana@example.com",
+            400,
+        );
         let found = mail_with(&conn, &["ana@x.example".into()]).unwrap();
         assert_eq!(found.conversations, 2);
         assert_eq!(found.last.as_ref().map(|l| l.3), Some(300));

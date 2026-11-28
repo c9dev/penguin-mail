@@ -1081,8 +1081,8 @@ mod tests {
 
     use super::{
         Calendar, calendar_link, failing_lines, held_back_line, hides_addresses, kept_here_lines,
-        offers_for, reason, reason_on, remove_account_body, offers_calendar_toggle, still_held_line,
-        withheld_for,
+        offers_calendar_toggle, offers_for, reason, reason_on, remove_account_body,
+        still_held_line, withheld_for,
     };
     use crate::settings::Space;
     use mailrs_domain::MailRoute;
@@ -1439,13 +1439,21 @@ mod tests {
 
     #[test]
     fn the_switch_hides_when_no_started_account_offers_a_calendar() {
-        assert!(!offers_calendar_toggle(&[NO_CALENDAR], false, Space::Calendar));
+        assert!(!offers_calendar_toggle(
+            &[NO_CALENDAR],
+            false,
+            Space::Calendar
+        ));
         assert!(!offers_calendar_toggle(&[], false, Space::Calendar));
     }
 
     #[test]
     fn before_the_accounts_start_the_switch_follows_the_last_space() {
-        assert!(offers_calendar_toggle(&[NO_CALENDAR], true, Space::Calendar));
+        assert!(offers_calendar_toggle(
+            &[NO_CALENDAR],
+            true,
+            Space::Calendar
+        ));
         assert!(!offers_calendar_toggle(&[], true, Space::Mail));
     }
 

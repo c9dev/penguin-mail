@@ -125,11 +125,7 @@ impl ContactsService for LocalContacts {
         _sync_token: Option<&str>,
     ) -> Result<ConnectionsPage, BackendError> {
         let account_id = self.account_id;
-        let held = self
-            .db
-            .read(address_book::list)
-            .await
-            .map_err(stored)?;
+        let held = self.db.read(address_book::list).await.map_err(stored)?;
         Ok(ConnectionsPage {
             people: held
                 .into_iter()
@@ -259,7 +255,10 @@ mod tests {
             .unwrap();
         assert_eq!(edited.name.as_deref(), Some("Owen M."));
         assert!(edited.details.groups.is_empty());
-        assert_eq!(edited.details.birthday, "1990-04-12", "untouched fields stay");
+        assert_eq!(
+            edited.details.birthday, "1990-04-12",
+            "untouched fields stay"
+        );
         let page = book.connections(None, None).await.unwrap();
         assert_eq!(page.people.len(), 1);
         assert_eq!(page.people[0].emails, ["owen@example.com"]);

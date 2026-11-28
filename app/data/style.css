@@ -2349,7 +2349,7 @@ button.cts-addline .cts-icon { color: inherit; }
 button.cts-danger { color: #a51d2d; font-weight: 600; font-size: 0.95em; background: var(--view-bg-color); box-shadow: none; border: none; border-radius: 0; }
 .app-dark button.cts-danger { color: #ff7b86; }
 button.cts-danger:hover { background: alpha(#a51d2d, 0.06); }
-.cts-photo { padding: 4px 0; }
+.cts-photo { padding: 10px 0 4px; }
 .cts-seg { background: #e3e3e7; border-radius: 10px; padding: 3px; margin: 14px 0 0; }
 .app-dark .cts-seg { background: #3a3a40; }
 .cts-seg > button { min-height: 32px; border-radius: 8px; border: none; background: none; box-shadow: none; font-size: 0.89em; font-weight: 600; color: alpha(currentColor, 0.75); }
@@ -2364,3 +2364,19 @@ button.cts-danger:hover { background: alpha(#a51d2d, 0.06); }
 .cts-toast { margin: 8px 16px 16px; padding: 6px 6px 6px 16px; border-radius: 999px; background: #2a2623; color: #fff; font-size: 0.92em; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22); }
 .cts-toast button { color: #fff; font-weight: 700; min-height: 32px; padding: 0 10px; border-radius: 999px; }
 .cts-toast button:hover { background: alpha(white, 0.12); }
+button.cts-quiet { margin: 4px 12px 10px; min-height: 28px; padding: 0 8px; font-size: 0.85em; font-weight: 400; color: alpha(currentColor, 0.75); }
+.app-dark button.cts-quiet { color: alpha(currentColor, 0.64); }
+
+/* Contacts: hover and press answer at once. GTK drops the transition when
+   the user turns animations off. */
+.cts-chip-more { padding: 0 7px; min-height: 20px; font-size: 0.78em; font-weight: 600; color: alpha(currentColor, 0.75); }
+.cts-rows > row { transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1); }
+.cts-rows > row:active { background: alpha(black, 0.09); }
+.app-dark .cts-rows > row:active { background: alpha(white, 0.1); }
+.cts-rows > row:focus-visible { outline: 2px solid @accent_bg_color; outline-offset: -2px; }
+button.cts-btn { transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1); }
+button.cts-btn:active { background: alpha(black, 0.12); }
+button.cts-btn.yes:active { background: #a83a00; }
+/* A two-colour ring: the filled button hides an accent ring, so the gap shows the page. */
+button.cts-btn:focus-visible { outline: 2px solid #1c1c21; outline-offset: 2px; }
+.app-dark button.cts-btn:focus-visible { outline-color: #f2f2f5; }

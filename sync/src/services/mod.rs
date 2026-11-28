@@ -1498,7 +1498,8 @@ pub trait MailBackend: Send + Sync + 'static {
     /// alone where they put it, and its original stays gone rather
     /// than meeting it as a duplicate. Adapters without a cheap read
     /// answer true here and leave the word to their checked destroy.
-    fn still_in(        &self,
+    fn still_in(
+        &self,
         _message: &str,
         _mailbox: &str,
     ) -> impl Future<Output = Result<bool, BackendError>> + Send {

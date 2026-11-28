@@ -161,7 +161,11 @@ pub trait DavApi: Send + Sync + 'static {
         kind: Kind,
         when: Precondition,
     ) -> impl Future<Output = Result<(Option<String>, Option<String>), DavError>> + Send {
-        async move { self.put(href, body, kind, when).await.map(|etag| (etag, None)) }
+        async move {
+            self.put(href, body, kind, when)
+                .await
+                .map(|etag| (etag, None))
+        }
     }
     fn delete(
         &self,
@@ -830,7 +834,9 @@ impl DavApi for DavClient {
         kind: Kind,
         when: Precondition,
     ) -> Result<Option<String>, DavError> {
-        self.put_at(href, body, kind, when).await.map(|(etag, _)| etag)
+        self.put_at(href, body, kind, when)
+            .await
+            .map(|(etag, _)| etag)
     }
 
     async fn put_at(

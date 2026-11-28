@@ -888,6 +888,88 @@ async fn an_api_switched_off_in_the_project_says_which_and_where() {
     }
 }
 
+#[tokio::test]
+async fn a_stale_etag_on_a_contact_change_is_refused_by_google_with_a_412() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c9"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceName": "people/c9", "etag": "%new",
+            "metadata": {"sources": [{"type": "CONTACT", "id": "c9", "etag": "s"}]}
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c9:updateContact"))
+        .respond_with(ResponseTemplate::new(412).set_body_json(json!({"error": {
+            "code": 412, "status": "FAILED_PRECONDITION", "message": "etag mismatch"
+        }})))
+        .mount(&server)
+        .await;
+    let refused = client(&server)
+        .update_contact(
+            "people/c9",
+            &mailrs_gmail::ContactFields {
+                phones: Some(vec!["+351 21 000 0000".into()]),
+                expected_revision: Some("%old".into()),
+                ..Default::default()
+            },
+        )
+        .await;
+    assert!(matches!(refused, Err(GmailError::Changed)), "{refused:?}");
+}
+
+#[tokio::test]
+async fn a_contact_is_deleted_with_its_own_call_and_a_stale_etag_stops_it() {
+    let server = MockServer::start().await;
+    mount_token(&server, 2).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c9"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceName": "people/c9", "etag": "%now"
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("DELETE"))
+        .and(path("/v1/people/c9:deleteContact"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .mount(&server)
+        .await;
+    let stale = client(&server)
+        .delete_contact("people/c9", Some("%old"))
+        .await;
+    assert!(matches!(stale, Err(GmailError::Changed)), "{stale:?}");
+    client(&server)
+        .delete_contact("people/c9", Some("%now"))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn creating_a_contact_in_a_project_without_the_people_api_says_which_page() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/people:createContact"))
+        .respond_with(
+            ResponseTemplate::new(403)
+                .set_body_string(include_str!("golden/people_service_disabled.json")),
+        )
+        .mount(&server)
+        .await;
+    let refused = client(&server)
+        .create_contact(&mailrs_gmail::ContactFields {
+            name: Some("Ann".into()),
+            ..Default::default()
+        })
+        .await;
+    assert!(
+        matches!(refused, Err(GmailError::ApiDisabled { .. })),
+        "{refused:?}"
+    );
+}
+
 /// The body Google sent for a token of GNOME's own project, saved as it came.
 #[tokio::test]
 async fn the_real_service_disabled_answer_names_the_people_api_and_its_page() {
@@ -907,7 +989,10 @@ async fn the_real_service_disabled_answer_names_the_people_api_and_its_page() {
             enable_url,
         }) => {
             assert_eq!(service, "People API");
-            assert!(enable_url.ends_with("overview?project=44438659992"), "{enable_url}");
+            assert!(
+                enable_url.ends_with("overview?project=44438659992"),
+                "{enable_url}"
+            );
         }
         other => panic!("unexpected result: {other:?}"),
     }

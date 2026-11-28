@@ -392,7 +392,10 @@ async fn a_refused_contact_write_leaves_its_groups_alone() {
     let href = "/card/default/demo.vcf";
     dav.put_resource(href, &card("demo", "Demo", "demo@example.org"));
     let group = "/card/default/group.vcf";
-    dav.put_resource(group, &mailrs_dav::vcard::new_group("group", "Friends", "demo"));
+    dav.put_resource(
+        group,
+        &mailrs_dav::vcard::new_group("group", "Friends", "demo"),
+    );
     let before = dav.body(group).unwrap();
     dav.with(|s| s.changed_on_put.push(href.into()));
     let result = carddav
@@ -464,7 +467,11 @@ async fn read_only_books_are_not_offered_and_their_cards_say_so() {
         })
         .await
         .unwrap();
-    assert!(made.resource.starts_with("/card/work/"), "{}", made.resource);
+    assert!(
+        made.resource.starts_with("/card/work/"),
+        "{}",
+        made.resource
+    );
 }
 
 #[tokio::test]
@@ -478,7 +485,10 @@ async fn a_book_with_group_cards_keeps_group_names_out_of_categories() {
             .replace("END:VCARD", "CATEGORIES:Friends,Old\r\nEND:VCARD"),
     );
     let friends = "/card/default/friends.vcf";
-    dav.put_resource(friends, &mailrs_dav::vcard::new_group("friends", "Friends", "demo"));
+    dav.put_resource(
+        friends,
+        &mailrs_dav::vcard::new_group("friends", "Friends", "demo"),
+    );
     carddav
         .update_contact(
             href,
@@ -496,7 +506,10 @@ async fn a_book_with_group_cards_keeps_group_names_out_of_categories() {
     let body = dav.body(href).unwrap();
     assert!(!body.contains("CATEGORIES"), "{body}");
     let members = |text: String| mailrs_dav::vcard::read_card(&text).unwrap().details.members;
-    assert_eq!(members(dav.body(friends).unwrap()), Some(vec!["demo".into()]));
+    assert_eq!(
+        members(dav.body(friends).unwrap()),
+        Some(vec!["demo".into()])
+    );
     let colleagues = dav.with(|s| {
         s.resources
             .values()
@@ -542,13 +555,23 @@ mod google {
         let read = include_str!("golden/google_carddav/read.vcf");
         let card = mailrs_dav::vcard::read_card(read).unwrap();
         assert_eq!(card.name.as_deref(), Some("Live Check"));
-        assert_eq!(card.details.birthday, "1990-04-12", "BDAY;VALUE=DATE reads as a date");
-        assert_eq!(card.details.urls, ["https://example.org"], "the `\\:` is unescaped");
+        assert_eq!(
+            card.details.birthday, "1990-04-12",
+            "BDAY;VALUE=DATE reads as a date"
+        );
+        assert_eq!(
+            card.details.urls,
+            ["https://example.org"],
+            "the `\\:` is unescaped"
+        );
         assert!(card.details.groups.is_empty(), "Google keeps no CATEGORIES");
         assert_eq!(card.details.addresses[0][2], "1 Long Street\nSecond line");
         assert!(card.details.notes.contains("live check"));
         assert!(
-            card.details.custom.iter().any(|f| f.label == "X-CUSTOMER-ID" && f.value == "DEMO-42"),
+            card.details
+                .custom
+                .iter()
+                .any(|f| f.label == "X-CUSTOMER-ID" && f.value == "DEMO-42"),
             "{:?}",
             card.details.custom
         );
@@ -563,7 +586,10 @@ mod google {
         let (dav, carddav) = google();
         let made = carddav.create_contact(&fields()).await.unwrap();
         assert_ne!(made.resource, format!("{BOOK}pm-"), "{}", made.resource);
-        assert!(!made.resource.contains("pm-"), "Google names the card itself");
+        assert!(
+            !made.resource.contains("pm-"),
+            "Google names the card itself"
+        );
         assert_eq!(made.details.uid, made.resource.rsplit('/').next().unwrap());
         assert!(dav.body(&made.resource).is_some());
         // A look-up by the UID that was sent finds nothing.
@@ -578,7 +604,10 @@ mod google {
         let (dav, carddav) = google();
         let made = carddav.create_contact(&fields()).await.unwrap();
         let stale = dav.etag(&made.resource).unwrap();
-        assert!(stale.starts_with("\"2026-"), "the ETag is a timestamp: {stale}");
+        assert!(
+            stale.starts_with("\"2026-"),
+            "the ETag is a timestamp: {stale}"
+        );
         dav.put_resource(&made.resource, &dav.body(&made.resource).unwrap());
         // Google ignores If-Match: the stale ETag still overwrites.
         let api = DavApiHandle(&dav);
@@ -590,7 +619,12 @@ mod google {
         async fn put_stale(&self, href: &str, etag: &str) -> Result<(), DavError> {
             let body = self.0.body(href).unwrap();
             self.0
-                .put(href, &body, Kind::AddressBook, Precondition::Match(etag.into()))
+                .put(
+                    href,
+                    &body,
+                    Kind::AddressBook,
+                    Precondition::Match(etag.into()),
+                )
                 .await
                 .map(drop)
         }
@@ -631,7 +665,10 @@ mod google {
                 },
             )
             .await;
-        assert!(matches!(refused, Err(BackendError::Invalid(_))), "{refused:?}");
+        assert!(
+            matches!(refused, Err(BackendError::Invalid(_))),
+            "{refused:?}"
+        );
         let kept = carddav.connections(None, None).await.unwrap();
         assert_eq!(kept.people[0].details.birthday, "1990-04-12");
     }
@@ -641,6 +678,9 @@ mod google {
         let (dav, carddav) = google();
         let made = carddav.create_contact(&fields()).await.unwrap();
         carddav.delete_contact(&made.resource, None).await.unwrap();
-        assert!(matches!(dav.get(&made.resource).await, Err(DavError::NotFound)));
+        assert!(matches!(
+            dav.get(&made.resource).await,
+            Err(DavError::NotFound)
+        ));
     }
 }

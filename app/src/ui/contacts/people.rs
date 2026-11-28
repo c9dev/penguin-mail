@@ -111,10 +111,12 @@ pub fn group(contacts: &[Contact], links: &[Link]) -> Vec<Person> {
                 .copied()
                 .filter(|s| members.contains(s))
                 .or_else(|| {
-                    members
-                        .iter()
-                        .copied()
-                        .find(|&i| contacts[i].name.as_deref().is_some_and(|n| !n.trim().is_empty()))
+                    members.iter().copied().find(|&i| {
+                        contacts[i]
+                            .name
+                            .as_deref()
+                            .is_some_and(|n| !n.trim().is_empty())
+                    })
                 })
                 .unwrap_or(members[0]);
             person(contacts, members, name_from)
@@ -150,8 +152,12 @@ pub struct Merge {
 }
 
 fn weight(contact: &Contact) -> usize {
-    usize::from(contact.organization.as_deref().is_some_and(|o| !o.is_empty()))
-        + usize::from(contact.phone.is_some() || !contact.details.phones.is_empty())
+    usize::from(
+        contact
+            .organization
+            .as_deref()
+            .is_some_and(|o| !o.is_empty()),
+    ) + usize::from(contact.phone.is_some() || !contact.details.phones.is_empty())
         + contact.emails.len()
         + contact.details.addresses.len()
         + usize::from(!contact.details.notes.is_empty())

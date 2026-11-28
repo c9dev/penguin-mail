@@ -264,9 +264,9 @@ fn google_carddav(
     )
     .map(|client| client.with_bearer(Arc::new(GoaDavTokens(tokens))));
     match client {
-        Ok(client) => Some(AnyContacts::Dav(crate::services::CardDav::new(Arc::new(
-            crate::services::AnyDav::from(client),
-        )).google())),
+        Ok(client) => Some(AnyContacts::Dav(
+            crate::services::CardDav::new(Arc::new(crate::services::AnyDav::from(client))).google(),
+        )),
         Err(err) => {
             tracing::warn!(account = account.id, %err, "could not set up Google's CardDAV");
             None

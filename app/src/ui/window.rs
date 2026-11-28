@@ -947,7 +947,9 @@ impl MainWindow {
                         ),
                         // Contacts folds to its list alone, so it asks for
                         // little and leaves the mailboxes in view.
-                        space: match contacts_on.upgrade().is_some_and(|a| a.contacts_visible.get())
+                        space: match contacts_on
+                            .upgrade()
+                            .is_some_and(|a| a.contacts_visible.get())
                         {
                             true => 340,
                             false => mail.max(calendar),

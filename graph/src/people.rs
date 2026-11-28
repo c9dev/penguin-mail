@@ -120,7 +120,7 @@ impl Graph {
             &format!("me/contacts/{id}"),
             &[("$select", "displayName,homePhones")],
         )
-            .await
+        .await
     }
 
     pub async fn update_contact(&self, id: &str, body: &Value) -> Result<GraphContact, GraphError> {
@@ -155,9 +155,7 @@ impl Graph {
                     ("$select", "id"),
                     (
                         "$expand",
-                        &format!(
-                            "singleValueExtendedProperties($filter=id eq '{EXTRAS_ID}')"
-                        ),
+                        &format!("singleValueExtendedProperties($filter=id eq '{EXTRAS_ID}')"),
                     ),
                 ],
             )

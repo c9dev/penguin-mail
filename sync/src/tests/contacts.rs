@@ -531,16 +531,15 @@ async fn a_full_refresh_forgets_a_group_card_the_server_no_longer_holds() {
     });
     b.book.refresh(h.account_id).await.unwrap();
     let rows = || {
-        h.db.read(|c| {
-            Ok(c.query_row("SELECT count(*) FROM contacts", [], |r| r.get::<_, i64>(0))?)
-        })
+        h.db.read(|c| Ok(c.query_row("SELECT count(*) FROM contacts", [], |r| r.get::<_, i64>(0))?))
     };
     assert_eq!(rows().await.unwrap(), 2);
     let account = h.account_id;
     h.db.write(move |c| address_book::set_book(c, account, None, 0))
         .await
         .unwrap();
-    h.fake.with(|s| s.contacts.retain(|p| p.resource != "people/g1"));
+    h.fake
+        .with(|s| s.contacts.retain(|p| p.resource != "people/g1"));
     b.book.refresh(h.account_id).await.unwrap();
     assert_eq!(rows().await.unwrap(), 1);
 }

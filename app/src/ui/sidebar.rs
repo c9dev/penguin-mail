@@ -1936,7 +1936,11 @@ pub struct SpaceBadges {
 pub fn space_badges(on_screen: Space, unread: i64, waiting: i64) -> SpaceBadges {
     SpaceBadges {
         mail: if on_screen != Space::Mail { unread } else { 0 },
-        calendar: if on_screen != Space::Calendar { waiting } else { 0 },
+        calendar: if on_screen != Space::Calendar {
+            waiting
+        } else {
+            0
+        },
     }
 }
 

@@ -42,7 +42,12 @@ pub(super) fn body_box() -> gtk::Box {
 
 impl Contacts {
     /// A photo avatar for `contact`, with initials until the file reads.
-    pub(super) fn photo_avatar(&self, name: &str, size: i32, contact: Option<&Contact>) -> gtk::Widget {
+    pub(super) fn photo_avatar(
+        &self,
+        name: &str,
+        size: i32,
+        contact: Option<&Contact>,
+    ) -> gtk::Widget {
         let holder = gtk::Box::builder()
             .halign(gtk::Align::Center)
             .valign(gtk::Align::Center)
@@ -132,10 +137,16 @@ impl Contacts {
         chips: Option<gtk::Box>,
         actions: &gtk::Box,
     ) -> gtk::Box {
-        let header = gtk::Box::builder().css_classes(["cts-ident"]).spacing(4).build();
+        let header = gtk::Box::builder()
+            .css_classes(["cts-ident"])
+            .spacing(4)
+            .build();
         let back = parts::icon_button("back", &gettext("Back"), &["back"]);
         back.set_valign(gtk::Align::Start);
-        self.nav.bind_property("collapsed", &back, "visible").sync_create().build();
+        self.nav
+            .bind_property("collapsed", &back, "visible")
+            .sync_create()
+            .build();
         let weak = Rc::downgrade(self);
         back.connect_clicked(move |_| {
             if let Some(this) = weak.upgrade() {
@@ -147,9 +158,16 @@ impl Contacts {
             .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
             .build();
-        let who_row = gtk::Box::builder().spacing(16).css_classes(["cts-who"]).build();
+        let who_row = gtk::Box::builder()
+            .spacing(16)
+            .css_classes(["cts-who"])
+            .build();
         who_row.append(who);
-        let text = gtk::Box::builder().orientation(gtk::Orientation::Vertical).hexpand(true).valign(gtk::Align::Center).build();
+        let text = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .valign(gtk::Align::Center)
+            .build();
         let h2 = parts::label(name, &["cts-who-name"]);
         h2.set_selectable(true);
         text.append(&h2);
@@ -168,7 +186,10 @@ impl Contacts {
     }
 
     fn actions_box() -> gtk::Box {
-        gtk::Box::builder().spacing(8).css_classes(["cts-actions"]).build()
+        gtk::Box::builder()
+            .spacing(8)
+            .css_classes(["cts-actions"])
+            .build()
     }
 
     fn person_pane(self: &Rc<Self>, index: usize, id: &str, list: &List) {
@@ -185,13 +206,20 @@ impl Contacts {
         let emails = person.emails(&contacts);
         let linked = person_link(&person, &contacts, &links);
         let vip = self.is_vip(&person);
-        let read_only = person.members.iter().all(|&i| contacts[i].details.read_only);
+        let read_only = person
+            .members
+            .iter()
+            .all(|&i| contacts[i].details.read_only);
 
         // Actions
         let actions = Self::actions_box();
         let weak = Rc::downgrade(self);
         let vip_button = parts::button(
-            &if vip { gettext("Remove from VIPs") } else { gettext("Add to VIPs") },
+            &if vip {
+                gettext("Remove from VIPs")
+            } else {
+                gettext("Add to VIPs")
+            },
             &[],
         );
         vip_button.set_tooltip_text(Some(&fill(
@@ -212,10 +240,16 @@ impl Contacts {
                     // Remove every address of the person; add the first.
                     if all_emails.iter().any(|e| settings.is_vip(e)) {
                         for e in all_emails.iter().filter(|e| settings.is_vip(e)) {
-                            app.change_settings(Change::ToggleVip { email: e.clone(), name: name.clone() });
+                            app.change_settings(Change::ToggleVip {
+                                email: e.clone(),
+                                name: name.clone(),
+                            });
                         }
                     } else {
-                        app.change_settings(Change::ToggleVip { email: email.clone(), name: name.clone() });
+                        app.change_settings(Change::ToggleVip {
+                            email: email.clone(),
+                            name: name.clone(),
+                        });
                     }
                 }
                 this.rebuild();
@@ -287,14 +321,18 @@ impl Contacts {
         let mut lines: Vec<gtk::Widget> = Vec::new();
         let mut orgs: Vec<String> = Vec::new();
         for &i in &person.members {
-            if let Some(o) = contacts[i].organization.as_deref().filter(|o| !o.is_empty())
+            if let Some(o) = contacts[i]
+                .organization
+                .as_deref()
+                .filter(|o| !o.is_empty())
                 && !orgs.iter().any(|x| x == o)
             {
                 orgs.push(o.to_string());
             }
         }
         for org in orgs {
-            lines.push(parts::line(Some("building"), &org, &gettext("Organization"), None).upcast());
+            lines
+                .push(parts::line(Some("building"), &org, &gettext("Organization"), None).upcast());
         }
         let mut first_email = true;
         for &i in &person.members {
@@ -343,7 +381,12 @@ impl Contacts {
                 }
             }
             for a in &contacts[i].details.addresses {
-                let text = a.iter().filter(|p| !p.is_empty()).map(String::as_str).collect::<Vec<_>>().join("\n");
+                let text = a
+                    .iter()
+                    .filter(|p| !p.is_empty())
+                    .map(String::as_str)
+                    .collect::<Vec<_>>()
+                    .join("\n");
                 if !text.is_empty() && !places.contains(&text) {
                     places.push(text);
                 }
@@ -363,11 +406,15 @@ impl Contacts {
         for &i in &person.members {
             let d = &contacts[i].details;
             if !d.birthday.is_empty() {
-                let words = mailrs_domain::contact::birthday_label(&d.birthday, chrono::Local::now().date_naive());
-                details.push(parts::line(Some("cake"), &words, &gettext("Birthday"), None).upcast());
+                let words = mailrs_domain::contact::birthday_label(
+                    &d.birthday,
+                    chrono::Local::now().date_naive(),
+                );
+                details
+                    .push(parts::line(Some("cake"), &words, &gettext("Birthday"), None).upcast());
             }
             for f in &d.dates {
-                details.push(parts::line(Some("cake"), &f.value, &f.label, None).upcast());
+                details.push(parts::line(Some("star"), &f.value, &f.label, None).upcast());
             }
             for f in &d.custom {
                 details.push(parts::line(Some("note"), &f.value, &f.label, None).upcast());
@@ -382,7 +429,9 @@ impl Contacts {
             }
         }
         if !groups.is_empty() {
-            details.push(parts::line(Some("tag"), &groups.join(", "), &gettext("Groups"), None).upcast());
+            details.push(
+                parts::line(Some("tag"), &groups.join(", "), &gettext("Groups"), None).upcast(),
+            );
         }
         if !details.is_empty() {
             body.append(&parts::sec(&gettext("Details")));
@@ -396,7 +445,13 @@ impl Contacts {
             .collect();
         if !notes.is_empty() {
             body.append(&parts::sec(&gettext("Notes")));
-            body.append(&parts::group(&[parts::line(Some("note"), &notes.join("\n\n"), "", None).upcast()]));
+            body.append(&parts::group(&[parts::line(
+                Some("note"),
+                &notes.join("\n\n"),
+                "",
+                None,
+            )
+            .upcast()]));
         }
 
         // Mail
@@ -407,9 +462,15 @@ impl Contacts {
                 let mut rows: Vec<gtk::Widget> = Vec::new();
                 if let Some((account, thread, subject, date)) = found.last.clone() {
                     let sub = if found.last_mine {
-                        fill(&gettext("You wrote {date}. Waiting on a reply."), &[("date", &date_of(date))])
+                        fill(
+                            &gettext("You wrote {date}. Waiting on a reply."),
+                            &[("date", &date_of(date))],
+                        )
                     } else {
-                        fill(&gettext("Last message, {date}"), &[("date", &date_of(date))])
+                        fill(
+                            &gettext("Last message, {date}"),
+                            &[("date", &date_of(date))],
+                        )
                     };
                     let weak = Rc::downgrade(self);
                     rows.push(
@@ -425,7 +486,9 @@ impl Contacts {
                     let weak = Rc::downgrade(self);
                     let mails = emails.clone();
                     let sub = match found.last_wrote {
-                        Some(at) => fill(&gettext("You last wrote {date}"), &[("date", &date_of(at))]),
+                        Some(at) => {
+                            fill(&gettext("You last wrote {date}"), &[("date", &date_of(at))])
+                        }
                         None => gettext("You have not written to them."),
                     };
                     rows.push(
@@ -460,7 +523,9 @@ impl Contacts {
     }
 
     fn load_mail(self: &Rc<Self>, id: String, emails: Vec<String>) {
-        let Some(app) = self.app.upgrade() else { return };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
             let found = app
@@ -471,7 +536,9 @@ impl Contacts {
             let Some(this) = weak.upgrade() else { return };
             let current = this.state.borrow().selected.clone();
             this.state.borrow_mut().mail.insert(id.clone(), found);
-            if current.as_deref() == Some(&id) && matches!(this.state.borrow().pane, Some(Pane::View) | None) {
+            if current.as_deref() == Some(&id)
+                && matches!(this.state.borrow().pane, Some(Pane::View) | None)
+            {
                 this.show_pane();
             }
         });
@@ -494,17 +561,30 @@ impl Contacts {
             String::new()
         };
         let sub = match (known.unwrap_or(false), emails.len() == 1) {
-            (true, true) => fill(&gettext("A key for {email} is on this computer."), &[("email", &about)]),
+            (true, true) => fill(
+                &gettext("A key for {email} is on this computer."),
+                &[("email", &about)],
+            ),
             (true, false) => gettext("A key for these addresses is on this computer."),
-            (false, true) => fill(&gettext("No key for {email} is on this computer."), &[("email", &about)]),
+            (false, true) => fill(
+                &gettext("No key for {email} is on this computer."),
+                &[("email", &about)],
+            ),
             (false, false) => gettext("No key for these addresses is on this computer."),
         };
         let key = parts::line(Some("key"), &gettext("OpenPGP key"), &sub, None);
-        let allowed = !emails.is_empty() && emails.iter().all(|e| crate::images::allowed(images, Some(e)));
+        let allowed = !emails.is_empty()
+            && emails
+                .iter()
+                .all(|e| crate::images::allowed(images, Some(e)));
         let images_line = parts::switch_line(
             "image",
             &gettext("Remote images"),
-            &if allowed { gettext("Allowed for this sender.") } else { gettext("Blocked until you allow them.") },
+            &if allowed {
+                gettext("Allowed for this sender.")
+            } else {
+                gettext("Blocked until you allow them.")
+            },
             &if allowed {
                 gettext("Remote images, allowed for this sender")
             } else {
@@ -524,12 +604,15 @@ impl Contacts {
     }
 
     fn load_key(self: &Rc<Self>, id: String, emails: Vec<String>) {
-        let Some(app) = self.app.upgrade() else { return };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
             let wanted = emails.clone();
             let held = app.core.gpg(move |pgp| pgp.keys_for(&wanted)).await;
-            let has = held.is_ok_and(|keys| !keys.is_empty() && keys.iter().all(|k| k.key.is_some()));
+            let has =
+                held.is_ok_and(|keys| !keys.is_empty() && keys.iter().all(|k| k.key.is_some()));
             let Some(this) = weak.upgrade() else { return };
             this.state.borrow_mut().keys.insert(id.clone(), has);
             if this.state.borrow().selected.as_deref() == Some(&id)
@@ -541,7 +624,9 @@ impl Contacts {
     }
 
     fn set_images(self: &Rc<Self>, emails: &[String], on: bool) {
-        let Some(app) = self.app.upgrade() else { return };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let emails = emails.to_vec();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
@@ -575,12 +660,17 @@ impl Contacts {
 
     /// Deletes `contact` from its account and offers Undo.
     pub(super) fn delete_contact(self: &Rc<Self>, contact: Contact, still: Option<String>) {
-        let Some(app) = self.app.upgrade() else { return };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let weak = Rc::downgrade(self);
         let words = {
             let base = fill(
                 &gettext("Deleted {name} from {account}."),
-                &[("name", contact.display()), ("account", &short(contact.account_id))],
+                &[
+                    ("name", contact.display()),
+                    ("account", &short(contact.account_id)),
+                ],
             );
             match still {
                 Some(other) => fill(
@@ -606,7 +696,9 @@ impl Contacts {
                     this.reload();
                     this.tell(
                         &words,
-                        Some(Box::new(move |this| this.restore_all(vec![(contact, photo)]))),
+                        Some(Box::new(move |this| {
+                            this.restore_all(vec![(contact, photo)])
+                        })),
                     );
                 }
                 Err(err) => this.say_error(&err),
@@ -628,7 +720,10 @@ impl Contacts {
         };
         let (keep, drop) = (contacts[keep_i].clone(), contacts[drop_i].clone());
         let account = short(merge.account);
-        let phead = gtk::Box::builder().css_classes(["cts-phead"]).spacing(8).build();
+        let phead = gtk::Box::builder()
+            .css_classes(["cts-phead"])
+            .spacing(8)
+            .build();
         phead.append(&parts::label(
             &fill(&gettext("Merge in {account}"), &[("account", &account)]),
             &["cts-h2"],
@@ -663,8 +758,15 @@ impl Contacts {
         phead.append(&delete);
         self.pane.append(&phead);
         let body = body_box();
-        let decide = gtk::Box::builder().spacing(24).css_classes(["cts-decide"]).homogeneous(false).build();
-        let left = gtk::Box::builder().orientation(gtk::Orientation::Vertical).hexpand(true).build();
+        let decide = gtk::Box::builder()
+            .spacing(24)
+            .css_classes(["cts-decide"])
+            .homogeneous(false)
+            .build();
+        let left = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .build();
         let shared = keep
             .emails
             .iter()
@@ -678,8 +780,12 @@ impl Contacts {
         left.append(&parts::sec(&gettext("Which contact")));
         let mut head: Option<gtk::CheckButton> = None;
         let mut rows: Vec<gtk::Widget> = Vec::new();
-        for (c, index) in [(&contacts[merge.keep], merge.keep), (&contacts[merge.drop], merge.drop)] {
-            let (row, check) = parts::choice(head.as_ref(), c.display(), &sub_of(c), index == keep_i);
+        for (c, index) in [
+            (&contacts[merge.keep], merge.keep),
+            (&contacts[merge.drop], merge.drop),
+        ] {
+            let (row, check) =
+                parts::choice(head.as_ref(), c.display(), &sub_of(c), index == keep_i);
             head.get_or_insert(check.clone());
             let (weak, id) = (weak.clone(), id.to_string());
             check.connect_toggled(move |c| {
@@ -694,9 +800,18 @@ impl Contacts {
         }
         left.append(&parts::group(&rows));
         decide.append(&left);
-        let right = gtk::Box::builder().orientation(gtk::Orientation::Vertical).hexpand(true).build();
-        right.append(&parts::sec(&fill(&gettext("{account} keeps"), &[("account", &account)])));
-        let who = gtk::Box::builder().spacing(16).css_classes(["cts-who", "cts-keepwho"]).build();
+        let right = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .build();
+        right.append(&parts::sec(&fill(
+            &gettext("{account} keeps"),
+            &[("account", &account)],
+        )));
+        let who = gtk::Box::builder()
+            .spacing(16)
+            .css_classes(["cts-who", "cts-keepwho"])
+            .build();
         who.append(&self.photo_avatar(keep.display(), 56, Some(&keep)));
         who.append(&parts::label(keep.display(), &["cts-keep-name"]));
         let mut card: Vec<gtk::Widget> = vec![who.upcast()];
@@ -716,7 +831,9 @@ impl Contacts {
     }
 
     fn do_merge(self: &Rc<Self>, keep: Contact, drop: Contact) {
-        let Some(app) = self.app.upgrade() else { return };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let words = fill(
             &gettext("Deleted {name} from {account}. {kept} is the contact {account} keeps."),
             &[
@@ -736,7 +853,10 @@ impl Contacts {
                     this.state.borrow_mut().selected = None;
                     this.state.borrow_mut().list = Some(List::Account(drop.account_id));
                     this.reload();
-                    this.tell(&words, Some(Box::new(move |this| this.restore_all(vec![(drop, photo)]))));
+                    this.tell(
+                        &words,
+                        Some(Box::new(move |this| this.restore_all(vec![(drop, photo)]))),
+                    );
                 }
                 Err(err) => this.say_error(&err),
             }
@@ -754,7 +874,10 @@ impl Contacts {
         let shown_a = self.state.borrow().shown_a.get(id).copied().unwrap_or(true);
         let shown = if shown_a { &a } else { &b };
         let weak = Rc::downgrade(self);
-        let phead = gtk::Box::builder().css_classes(["cts-phead"]).spacing(8).build();
+        let phead = gtk::Box::builder()
+            .css_classes(["cts-phead"])
+            .spacing(8)
+            .build();
         phead.append(&parts::label(&gettext("Same person"), &["cts-h2"]));
         phead.append(&gtk::Box::builder().hexpand(true).build());
         let cancel = parts::button(&gettext("Cancel"), &[]);
@@ -779,8 +902,14 @@ impl Contacts {
         phead.append(&link);
         self.pane.append(&phead);
         let body = body_box();
-        let decide = gtk::Box::builder().spacing(24).css_classes(["cts-decide"]).build();
-        let left = gtk::Box::builder().orientation(gtk::Orientation::Vertical).hexpand(true).build();
+        let decide = gtk::Box::builder()
+            .spacing(24)
+            .css_classes(["cts-decide"])
+            .build();
+        let left = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .build();
         left.append(&parts::hint(&fill(
             &gettext("{a} is in {account_a}. {b} is in {account_b}. The names differ, and the addresses differ. Linking keeps both contacts. All contacts shows one row."),
             &[
@@ -825,13 +954,25 @@ impl Contacts {
         }
         left.append(&parts::group(&rows));
         decide.append(&left);
-        let right = gtk::Box::builder().orientation(gtk::Orientation::Vertical).hexpand(true).build();
+        let right = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .build();
         right.append(&parts::sec(&gettext("All contacts will show")));
-        let who = gtk::Box::builder().spacing(16).css_classes(["cts-who", "cts-keepwho"]).build();
+        let who = gtk::Box::builder()
+            .spacing(16)
+            .css_classes(["cts-who", "cts-keepwho"])
+            .build();
         who.append(&self.photo_avatar(shown.display(), 56, Some(shown)));
-        let text = gtk::Box::builder().orientation(gtk::Orientation::Vertical).valign(gtk::Align::Center).build();
+        let text = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .valign(gtk::Align::Center)
+            .build();
         text.append(&parts::label(shown.display(), &["cts-keep-name"]));
-        text.append(&parts::label(&gettext("One row, two accounts"), &["cts-who-sub"]));
+        text.append(&parts::label(
+            &gettext("One row, two accounts"),
+            &["cts-who-sub"],
+        ));
         let chips = parts::chips(&[a.account_id, b.account_id], 6);
         chips.add_css_class("cts-who-chips");
         text.append(&chips);
@@ -849,9 +990,18 @@ impl Contacts {
     }
 
     fn do_link(self: &Rc<Self>, a: Contact, b: Contact, shown_a: bool) {
-        let Some(app) = self.app.upgrade() else { return };
-        let ends = ((a.account_id, a.resource.clone()), (b.account_id, b.resource.clone()));
-        let link = Link { a: ends.0.clone(), b: ends.1.clone(), shown_a };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let ends = (
+            (a.account_id, a.resource.clone()),
+            (b.account_id, b.resource.clone()),
+        );
+        let link = Link {
+            a: ends.0.clone(),
+            b: ends.1.clone(),
+            shown_a,
+        };
         let name = if shown_a { a.display() } else { b.display() }.to_string();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
@@ -864,11 +1014,16 @@ impl Contacts {
                     this.state.borrow_mut().list = Some(List::All);
                     this.reload();
                     let undo: UndoRun = Box::new(move |this| {
-                        let Some(app) = this.app.upgrade() else { return };
+                        let Some(app) = this.app.upgrade() else {
+                            return;
+                        };
                         let (x, y) = (x, y);
                         let weak = Rc::downgrade(this);
                         glib::spawn_future_local(async move {
-                            let _ = app.core.write(move |c| address_book::unlink(c, &x, &y)).await;
+                            let _ = app
+                                .core
+                                .write(move |c| address_book::unlink(c, &x, &y))
+                                .await;
                             if let Some(this) = weak.upgrade() {
                                 this.state.borrow_mut().list = Some(List::SamePerson);
                                 this.reload();
@@ -877,7 +1032,9 @@ impl Contacts {
                     });
                     this.tell(
                         &fill(
-                            &gettext("All contacts now shows one row for {name}. Nothing was deleted."),
+                            &gettext(
+                                "All contacts now shows one row for {name}. Nothing was deleted.",
+                            ),
                             &[("name", &name)],
                         ),
                         Some(undo),
@@ -894,11 +1051,20 @@ impl Contacts {
         let (c, seen) = {
             let state = self.state.borrow();
             let c = state.data.correspondents[index].clone();
-            let seen = state.data.seen.get(&c.email.to_lowercase()).copied().unwrap_or(1);
+            let seen = state
+                .data
+                .seen
+                .get(&c.email.to_lowercase())
+                .copied()
+                .unwrap_or(1);
             (c, seen)
         };
         let targets = self.accounts_with_contacts();
-        let name = c.name.clone().filter(|n| !n.trim().is_empty()).unwrap_or_else(|| c.email.clone());
+        let name = c
+            .name
+            .clone()
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or_else(|| c.email.clone());
         let actions = Self::actions_box();
         let their = parts::button(&gettext("All Their Mail"), &[]);
         their.set_tooltip_text(Some(&gettext("Every conversation with this person")));
@@ -916,7 +1082,13 @@ impl Contacts {
         let save = parts::button(&gettext("Save to Contacts"), &["yes"]);
         save.set_sensitive(!targets.is_empty());
         {
-            let (weak, name, email, targets, chosen) = (weak.clone(), name.clone(), c.email.clone(), targets.clone(), chosen.clone());
+            let (weak, name, email, targets, chosen) = (
+                weak.clone(),
+                name.clone(),
+                c.email.clone(),
+                targets.clone(),
+                chosen.clone(),
+            );
             save.connect_clicked(move |_| {
                 if let (Some(this), Some(account)) = (weak.upgrade(), targets.get(chosen.get())) {
                     this.save_correspondent(account.clone(), name.clone(), email.clone());
@@ -934,25 +1106,40 @@ impl Contacts {
             seen as usize,
             &[("count", &seen.to_string())],
         )));
-        let mail = self.state.borrow().mail.get(&format!("c:{}", c.email.to_lowercase())).cloned();
+        let mail = self
+            .state
+            .borrow()
+            .mail
+            .get(&format!("c:{}", c.email.to_lowercase()))
+            .cloned();
         match mail {
-            None => self.load_mail(format!("c:{}", c.email.to_lowercase()), vec![c.email.clone()]),
+            None => self.load_mail(
+                format!("c:{}", c.email.to_lowercase()),
+                vec![c.email.clone()],
+            ),
             Some(found) => {
                 if let Some((account, thread, subject, date)) = found.last {
                     body.append(&parts::sec(&gettext("Latest message")));
                     let weak = Rc::downgrade(self);
-                    body.append(&parts::group(&[parts::go_line("mail", &subject, &date_of(date), move || {
-                        if let Some(this) = weak.upgrade() {
-                            (this.hooks.open_thread)(account, thread.clone());
-                        }
-                    })
+                    body.append(&parts::group(&[parts::go_line(
+                        "mail",
+                        &subject,
+                        &date_of(date),
+                        move || {
+                            if let Some(this) = weak.upgrade() {
+                                (this.hooks.open_thread)(account, thread.clone());
+                            }
+                        },
+                    )
                     .upcast()]));
                 }
             }
         }
         body.append(&parts::sec(&gettext("Save to")));
         if targets.is_empty() {
-            body.append(&parts::hint(&gettext("Turn contacts on for an account first.")));
+            body.append(&parts::hint(&gettext(
+                "Turn contacts on for an account first.",
+            )));
         } else {
             let names: Vec<String> = targets.iter().map(|a| short(a.id)).collect();
             body.append(&parts::seg(&gettext("Save to"), &names, 0, {
@@ -961,12 +1148,20 @@ impl Contacts {
             }));
         }
         body.append(&parts::sec(&gettext("Address")));
-        body.append(&parts::group(&[parts::line(Some("mail"), &c.email, &gettext("From the messages"), None).upcast()]));
+        body.append(&parts::group(&[parts::line(
+            Some("mail"),
+            &c.email,
+            &gettext("From the messages"),
+            None,
+        )
+        .upcast()]));
         self.pane.append(&scrolled(&body));
     }
 
     fn save_correspondent(self: &Rc<Self>, account: Account, name: String, email: String) {
-        let Some(app) = self.app.upgrade() else { return };
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let fields = mailrs_gmail::ContactFields {
             name: Some(name.clone()),
             emails: Some(vec![email.clone()]),
@@ -1000,7 +1195,9 @@ impl Contacts {
                     this.reload();
                     // Undo deletes the card the save made.
                     let undo: UndoRun = Box::new(move |this| {
-                        let Some(app) = this.app.upgrade() else { return };
+                        let Some(app) = this.app.upgrade() else {
+                            return;
+                        };
                         let (known, weak) = (known, Rc::downgrade(this));
                         glib::spawn_future_local(async move {
                             let now = app.core.read(address_book::list).await.unwrap_or_default();
@@ -1024,9 +1221,9 @@ impl Contacts {
 }
 
 fn emails_seen(lines: &[gtk::Widget], email: &str) -> bool {
-    lines.iter().any(|l| {
-        l.widget_name() == email.to_lowercase()
-    })
+    lines
+        .iter()
+        .any(|l| l.widget_name() == email.to_lowercase())
 }
 
 fn email_line(email: &str, sub: &str) -> gtk::Widget {
@@ -1055,7 +1252,11 @@ fn website_line(site: &str) -> gtk::Widget {
 }
 
 pub(super) fn phone_of(c: &Contact) -> Option<String> {
-    c.details.phones.first().cloned().or_else(|| c.phone.clone())
+    c.details
+        .phones
+        .first()
+        .cloned()
+        .or_else(|| c.phone.clone())
 }
 
 fn sub_of(c: &Contact) -> String {
@@ -1089,7 +1290,11 @@ fn person_link<'a>(person: &Person, contacts: &[Contact], links: &'a [Link]) -> 
 
 /// The contacts Edit may change: only the shown one of a linked person,
 /// else the first of each account.
-pub(super) fn editable_members(person: &Person, contacts: &[Contact], links: &[Link]) -> Vec<usize> {
+pub(super) fn editable_members(
+    person: &Person,
+    contacts: &[Contact],
+    links: &[Link],
+) -> Vec<usize> {
     if let Some(link) = person_link(person, contacts, links) {
         let key = if link.shown_a { &link.a } else { &link.b };
         return person
@@ -1128,18 +1333,33 @@ fn person_hint(
             .members
             .iter()
             .skip(1)
-            .map(|&i| format!("{} still has {}", short(contacts[i].account_id), contacts[i].display()))
+            .map(|&i| {
+                format!(
+                    "{} still has {}",
+                    short(contacts[i].account_id),
+                    contacts[i].display()
+                )
+            })
             .collect();
         let _ = other;
         let a = &contacts[person.members[0]];
         let b = person.members.get(1).map(|&i| &contacts[i])?;
         return Some(fill(
-            &gettext("All contacts uses the name {name}. {account_a} still has its contact, and {account_b} still has {other}."),
+            &gettext(
+                "All contacts uses the name {name}. {account_a} still has its contact, and {account_b} still has {other}.",
+            ),
             &[
                 ("name", &person.name),
                 ("account_a", &short(a.account_id)),
                 ("account_b", &short(b.account_id)),
-                ("other", if a.display() == person.name { b.display() } else { a.display() }),
+                (
+                    "other",
+                    if a.display() == person.name {
+                        b.display()
+                    } else {
+                        a.display()
+                    },
+                ),
             ],
         ));
     }
@@ -1148,23 +1368,40 @@ fn person_hint(
         List::Account(id) => {
             let others: Vec<AccountId> = contacts
                 .iter()
-                .filter(|c| c.account_id != *id && c.emails.iter().any(|e| person.emails(contacts).iter().any(|p| p.eq_ignore_ascii_case(e))))
+                .filter(|c| {
+                    c.account_id != *id
+                        && c.emails.iter().any(|e| {
+                            person
+                                .emails(contacts)
+                                .iter()
+                                .any(|p| p.eq_ignore_ascii_case(e))
+                        })
+                })
                 .map(|c| c.account_id)
                 .collect();
             if others.is_empty() {
                 None
             } else {
                 Some(fill(
-                    &gettext("The chip is the account. {others} has its own contact for this person, and editing here changes {account}."),
+                    &gettext(
+                        "The chip is the account. {others} has its own contact for this person, and editing here changes {account}.",
+                    ),
                     &[("others", &names(&others)), ("account", &short(*id))],
                 ))
             }
         }
         List::Vips if many => Some(fill(
-            &gettext("VIPs are people you mark, so you can open them from this list. {name} is also stored in {accounts}."),
-            &[("name", &person.name), ("accounts", &names(&person.accounts))],
+            &gettext(
+                "VIPs are people you mark, so you can open them from this list. {name} is also stored in {accounts}.",
+            ),
+            &[
+                ("name", &person.name),
+                ("accounts", &names(&person.accounts)),
+            ],
         )),
-        List::Vips => Some(gettext("VIPs are people you mark, so you can open them from this list.")),
+        List::Vips => Some(gettext(
+            "VIPs are people you mark, so you can open them from this list.",
+        )),
         _ if many => Some(fill(
             &gettext("One person, stored in {accounts}. Each account keeps its own contact."),
             &[("accounts", &names(&person.accounts))],

@@ -4256,7 +4256,7 @@ msgid "Show or hide this message"
 msgstr "Показать или скрыть это сообщение"
 
 #: app/src/render.rs:305 app/src/ui/contact_card.rs:43
-#: app/src/ui/contacts/mod.rs:227
+#: app/src/ui/contacts/mod.rs:238
 msgid "Contact"
 msgstr "Контакт"
 
@@ -4644,8 +4644,8 @@ msgstr "{host} отклонил вход: {reason}"
 msgid "Calendar"
 msgstr "Календарь"
 
-#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:172
-#: app/src/ui/contacts/mod.rs:221 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:176
+#: app/src/ui/contacts/mod.rs:232 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:570
@@ -5291,17 +5291,17 @@ msgstr "Скопировать ссылку"
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:483
-#: app/src/ui/contacts/mod.rs:1066 app/src/ui/contacts/person.rs:638
-#: app/src/ui/contacts/person.rs:760 app/src/ui/rules.rs:535
-#: app/src/ui/rules.rs:724 app/src/ui/sender_prefs.rs:210
-#: app/src/ui/sender_prefs/signature.rs:78 app/src/ui/smart_editor.rs:326
-#: app/src/ui/switch_jmap.rs:174 app/src/ui/switch_jmap.rs:225
-#: app/src/ui/templates.rs:240 app/src/ui/unsubscribe.rs:79
-#: app/src/ui/unsubscribe.rs:142 app/src/ui/vacation.rs:46
-#: app/src/ui/when.rs:52 app/src/ui/window/arrange.rs:169
-#: app/src/ui/window/images.rs:87 app/src/ui/window/images.rs:157
-#: app/src/ui/window/organize.rs:78 app/src/ui/window/organize.rs:127
-#: app/src/ui/window/smart_trash.rs:81
+#: app/src/ui/contacts/mod.rs:1061 app/src/ui/contacts/mod.rs:1155
+#: app/src/ui/contacts/person.rs:638 app/src/ui/contacts/person.rs:760
+#: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
+#: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
+#: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
+#: app/src/ui/switch_jmap.rs:225 app/src/ui/templates.rs:240
+#: app/src/ui/unsubscribe.rs:79 app/src/ui/unsubscribe.rs:142
+#: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
+#: app/src/ui/window/arrange.rs:169 app/src/ui/window/images.rs:87
+#: app/src/ui/window/images.rs:157 app/src/ui/window/organize.rs:78
+#: app/src/ui/window/organize.rs:127 app/src/ui/window/smart_trash.rs:81
 msgid "Cancel"
 msgstr "Отмена"
 
@@ -5582,8 +5582,8 @@ msgstr "Поиск…"
 msgid "Sign In Again"
 msgstr "Войти снова"
 
-#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:277
-#: app/src/ui/contacts/mod.rs:481 app/src/ui/own_project.rs:761
+#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:288
+#: app/src/ui/contacts/mod.rs:502 app/src/ui/own_project.rs:761
 #: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2317
 msgid "Open Google Cloud"
 msgstr "Открыть Google Cloud"
@@ -6560,8 +6560,8 @@ msgstr "Встречи"
 msgid "Decline"
 msgstr "Отклонять"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1160
-#: app/src/ui/contacts/mod.rs:1168
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1249
+#: app/src/ui/contacts/mod.rs:1257
 msgid "None"
 msgstr "Никакие"
 
@@ -7312,7 +7312,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Не удалось удалить событие: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:256 app/src/ui/contacts/mod.rs:1197
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1286
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8546,7 +8546,7 @@ msgstr "Есть несохранённые изменения"
 msgid "Edit contact"
 msgstr "Изменить контакт"
 
-#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1107
+#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1196
 msgid "New contact"
 msgstr "Новый контакт"
 
@@ -8623,34 +8623,38 @@ msgstr ""
 "Вы меняете контакт в {account}. У {others} остаётся свой. Ничего не "
 "записывается, пока вы не нажмёте «Сохранить»."
 
-#: app/src/ui/contacts/mod.rs:276
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:172
+msgid "Turn Off Contacts"
+msgstr "Отключить контакты"
+
+#: app/src/ui/contacts/mod.rs:287
 msgid "Turn on Contacts for your Google project"
 msgstr "Включите Контакты для вашего проекта Google"
 
-#: app/src/ui/contacts/mod.rs:617
+#: app/src/ui/contacts/mod.rs:644
 msgid "Could not load contacts: {reason}"
 msgstr "Не удалось загрузить контакты: {reason}"
 
-#: app/src/ui/contacts/mod.rs:746
+#: app/src/ui/contacts/mod.rs:774
 msgid "Deletes {name} in {account}"
 msgstr "Удаляет {name} в {account}"
 
-#: app/src/ui/contacts/mod.rs:770
+#: app/src/ui/contacts/mod.rs:798
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "Оба контакта остаются. Ничего не удаляется."
 
-#: app/src/ui/contacts/mod.rs:803
+#: app/src/ui/contacts/mod.rs:831
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "Встречается в {count} письме"
 msgstr[1] "Встречается в {count} письмах"
 msgstr[2] "Встречается в {count} письмах"
 
-#: app/src/ui/contacts/mod.rs:898
+#: app/src/ui/contacts/mod.rs:938
 msgid "Contacts are off"
 msgstr "Контакты выключены"
 
-#: app/src/ui/contacts/mod.rs:900
+#: app/src/ui/contacts/mod.rs:940
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8660,148 +8664,176 @@ msgstr ""
 "на этом компьютере. Включите контакты, чтобы скопировать её сюда. Если позже "
 "выключить контакты, эта копия будет удалена."
 
-#: app/src/ui/contacts/mod.rs:911
+#: app/src/ui/contacts/mod.rs:951
 msgid "No Matching Contacts"
 msgstr "Нет подходящих контактов"
 
-#: app/src/ui/contacts/mod.rs:912
+#: app/src/ui/contacts/mod.rs:952
 msgid "Nothing matches that search."
 msgstr "Ничего не найдено."
 
-#: app/src/ui/contacts/mod.rs:918
+#: app/src/ui/contacts/mod.rs:958
 msgid "No shared addresses"
 msgstr "Нет общих адресов"
 
-#: app/src/ui/contacts/mod.rs:919
+#: app/src/ui/contacts/mod.rs:959
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
 msgstr ""
 "Нет двух контактов в одной учётной записи с одним адресом. Нечего удалять."
 
-#: app/src/ui/contacts/mod.rs:923
+#: app/src/ui/contacts/mod.rs:963
 msgid "No close names"
 msgstr "Нет похожих имён"
 
-#: app/src/ui/contacts/mod.rs:924
+#: app/src/ui/contacts/mod.rs:964
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "Нет учётных записей с похожими именами, которые ещё не связаны."
 
-#: app/src/ui/contacts/mod.rs:928
+#: app/src/ui/contacts/mod.rs:968
 msgid "Everyone is a contact"
 msgstr "Все уже контакты"
 
-#: app/src/ui/contacts/mod.rs:929
+#: app/src/ui/contacts/mod.rs:969
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr "Все, кого видел почтовый ящик, уже сохранены как контакты."
 
-#: app/src/ui/contacts/mod.rs:933
+#: app/src/ui/contacts/mod.rs:973
 msgid "No VIPs yet"
 msgstr "VIP пока нет"
 
-#: app/src/ui/contacts/mod.rs:934
+#: app/src/ui/contacts/mod.rs:974
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr ""
 "Добавьте человека в VIP на его странице, чтобы открывать его из этого списка."
 
-#: app/src/ui/contacts/mod.rs:938
+#: app/src/ui/contacts/mod.rs:978
 msgid "No contacts yet"
 msgstr "Контактов пока нет"
 
-#: app/src/ui/contacts/mod.rs:939
+#: app/src/ui/contacts/mod.rs:979
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "Контакты для этой учётной записи включены. На этот компьютер пока ничего не "
 "скопировано."
 
-#: app/src/ui/contacts/mod.rs:962
+#: app/src/ui/contacts/mod.rs:1002
 msgid "Turn On"
 msgstr "Включить"
 
-#: app/src/ui/contacts/mod.rs:988
+#: app/src/ui/contacts/mod.rs:1029
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "Контакты для {account} включены. Книга на этом компьютере пуста."
 
-#: app/src/ui/contacts/mod.rs:1050
+#: app/src/ui/contacts/mod.rs:1051
+msgid "Turn Off Contacts?"
+msgstr "Отключить контакты?"
+
+#: app/src/ui/contacts/mod.rs:1054
+msgid ""
+"Turn off contacts for {account}? Its contacts stay saved on this computer "
+"and come back when you turn them on."
+msgstr ""
+"Отключить контакты для {account}? Они останутся на этом компьютере и "
+"вернутся, когда вы их включите."
+
+#: app/src/ui/contacts/mod.rs:1056
+msgid ""
+"Turn off contacts for {account}? Its contacts are removed from this "
+"computer; the server keeps them."
+msgstr ""
+"Отключить контакты для {account}? Они будут удалены с этого компьютера; "
+"сервер их сохранит."
+
+#: app/src/ui/contacts/mod.rs:1061
+msgid "Turn Off"
+msgstr "Отключить"
+
+#: app/src/ui/contacts/mod.rs:1084
+msgid "Contacts are off for {account}."
+msgstr "Контакты для {account} отключены."
+
+#: app/src/ui/contacts/mod.rs:1139
 msgid "Search same address"
 msgstr "Искать тот же адрес"
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1140
 msgid "Search same person"
 msgstr "Искать того же человека"
 
-#: app/src/ui/contacts/mod.rs:1052
+#: app/src/ui/contacts/mod.rs:1141
 msgid "Search correspondents"
 msgstr "Искать корреспондентов"
 
-#: app/src/ui/contacts/mod.rs:1053
+#: app/src/ui/contacts/mod.rs:1142
 msgid "Search contacts"
 msgstr "Искать контакты"
 
-#: app/src/ui/contacts/mod.rs:1061
+#: app/src/ui/contacts/mod.rs:1150
 msgid "{count} selected"
 msgstr "Выбрано: {count}"
 
-#: app/src/ui/contacts/mod.rs:1074
+#: app/src/ui/contacts/mod.rs:1163
 msgid "Delete {count}"
 msgstr "Удалить: {count}"
 
-#: app/src/ui/contacts/mod.rs:1097
+#: app/src/ui/contacts/mod.rs:1186
 msgid "Select several contacts"
 msgstr "Выбрать несколько контактов"
 
-#: app/src/ui/contacts/mod.rs:1131 app/src/ui/contacts/mod.rs:1154
+#: app/src/ui/contacts/mod.rs:1220 app/src/ui/contacts/mod.rs:1243
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} человек"
 msgstr[1] "{count} человека"
 msgstr[2] "{count} человек"
 
-#: app/src/ui/contacts/mod.rs:1142
+#: app/src/ui/contacts/mod.rs:1231
 msgid "{count} of {total}"
 msgstr "{count} из {total}"
 
-#: app/src/ui/contacts/mod.rs:1151 app/src/ui/contacts/side.rs:77
+#: app/src/ui/contacts/mod.rs:1240 app/src/ui/contacts/side.rs:77
 msgid "All contacts"
 msgstr "Все контакты"
 
-#: app/src/ui/contacts/mod.rs:1153 app/src/ui/contacts/side.rs:79
+#: app/src/ui/contacts/mod.rs:1242 app/src/ui/contacts/side.rs:79
 #: app/src/ui/sidebar.rs:1485 app/src/ui/sidebar.rs:1487
 #: app/src/ui/sidebar.rs:2085 app/src/ui/sidebar.rs:2087
 msgid "VIPs"
 msgstr "VIP-контакты"
 
-#: app/src/ui/contacts/mod.rs:1156 app/src/ui/contacts/side.rs:85
+#: app/src/ui/contacts/mod.rs:1245 app/src/ui/contacts/side.rs:85
 msgid "From mail"
 msgstr "Из почты"
 
-#: app/src/ui/contacts/mod.rs:1156
+#: app/src/ui/contacts/mod.rs:1245
 msgid "Not contacts yet"
 msgstr "Пока не контакты"
 
-#: app/src/ui/contacts/mod.rs:1158 app/src/ui/contacts/side.rs:91
+#: app/src/ui/contacts/mod.rs:1247 app/src/ui/contacts/side.rs:91
 msgid "Same address"
 msgstr "Тот же адрес"
 
-#: app/src/ui/contacts/mod.rs:1162 app/src/ui/contacts/mod.rs:1170
+#: app/src/ui/contacts/mod.rs:1251 app/src/ui/contacts/mod.rs:1259
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} пара"
 msgstr[1] "{count} пары"
 msgstr[2] "{count} пар"
 
-#: app/src/ui/contacts/mod.rs:1166 app/src/ui/contacts/person.rs:758
+#: app/src/ui/contacts/mod.rs:1255 app/src/ui/contacts/person.rs:758
 #: app/src/ui/contacts/side.rs:97
 msgid "Same person"
 msgstr "Тот же человек"
 
-#: app/src/ui/contacts/mod.rs:1367
+#: app/src/ui/contacts/mod.rs:1456
 msgid "{name} from {account}"
 msgstr "{name} из {account}"
 
-#: app/src/ui/contacts/mod.rs:1376
+#: app/src/ui/contacts/mod.rs:1465
 msgid "Deleted {list}."
 msgstr "Удалено: {list}."
 
@@ -14430,7 +14462,15 @@ msgstr "Вы не являетесь гостем этого события."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail не может изменить список календарей на сервере CalDAV."
 
-#: sync/src/services/carddav.rs:319
+#: sync/src/services/carddav.rs:136
+msgid ""
+"Google keeps a birthday only with its year. Add the year or remove the "
+"birthday."
+msgstr ""
+"Google хранит день рождения только вместе с годом. Укажите год или удалите "
+"день рождения."
+
+#: sync/src/services/carddav.rs:356
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -14438,7 +14478,7 @@ msgstr ""
 "Группы контакта изменились на другом устройстве. Обновите контакты и "
 "откройте редактор заново."
 
-#: sync/src/services/carddav.rs:326
+#: sync/src/services/carddav.rs:363
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14446,7 +14486,7 @@ msgstr ""
 "Несколько групп называются одинаково. Переименуйте их в учётной записи, "
 "прежде чем добавлять этот контакт."
 
-#: sync/src/services/carddav.rs:533
+#: sync/src/services/carddav.rs:579
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14454,7 +14494,7 @@ msgstr ""
 "Контакт создан, но некоторые группы не удалось сохранить. Повторите попытку "
 "в этом редакторе, чтобы закончить без второго контакта: {reason}"
 
-#: sync/src/services/carddav.rs:588
+#: sync/src/services/carddav.rs:638
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"

@@ -39,7 +39,8 @@ struct Extras {
 
 impl Extras {
     fn read(text: Option<&str>) -> Extras {
-        text.and_then(|t| serde_json::from_str(t).ok()).unwrap_or_default()
+        text.and_then(|t| serde_json::from_str(t).ok())
+            .unwrap_or_default()
     }
 
     /// Puts what Graph's own properties and these extras hold together.
@@ -231,7 +232,10 @@ fn body_of(fields: &ContactFields, home: &[String]) -> Value {
             match mailrs_domain::contact::date_parts(birthday) {
                 // Graph wants a year; a birthday without one keeps 1604, as Apple writes it.
                 Some((year, month, day)) => {
-                    json!(format!("{:04}-{month:02}-{day:02}T00:00:00Z", year.unwrap_or(1604)))
+                    json!(format!(
+                        "{:04}-{month:02}-{day:02}T00:00:00Z",
+                        year.unwrap_or(1604)
+                    ))
                 }
                 None => Value::Null,
             },
@@ -465,7 +469,13 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
         let mut person = person_of(&changed);
         let held = match extras {
             Some(extras) => extras,
-            None => Extras::read(self.graph.contact_extras(resource).await.map_err(err)?.as_deref()),
+            None => Extras::read(
+                self.graph
+                    .contact_extras(resource)
+                    .await
+                    .map_err(err)?
+                    .as_deref(),
+            ),
         };
         held.join(&mut person.details);
         Ok(person)
@@ -484,7 +494,10 @@ mod tests {
             details: Changes {
                 birthday: Some("1990-04-12".into()),
                 notes: Some("Met in March".into()),
-                urls: Some(vec!["https://example.org".into(), "https://two.example".into()]),
+                urls: Some(vec![
+                    "https://example.org".into(),
+                    "https://two.example".into(),
+                ]),
                 groups: Some(vec!["Friends".into()]),
                 addresses: Some(vec![
                     [

@@ -130,7 +130,8 @@ impl<D: DavApi> CardDav<D> {
             return Ok(());
         }
         if let Some(birthday) = &fields.details.birthday
-            && mailrs_domain::contact::date_parts(birthday).is_some_and(|(year, _, _)| year.is_none())
+            && mailrs_domain::contact::date_parts(birthday)
+                .is_some_and(|(year, _, _)| year.is_none())
         {
             return Err(BackendError::Invalid(gettext(
                 "Google keeps a birthday only with its year. Add the year or remove the birthday.",
@@ -509,8 +510,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
             .ok_or(BackendError::Unsupported)?;
         let href = href.split_once('\n').map_or(href, |(href, _)| href);
         let card = self.api.get(href).await.map_err(|e| self.err(e))?;
-        match vcard::read_card(&card.body).map_err(card_error)?.photo
-        {
+        match vcard::read_card(&card.body).map_err(card_error)?.photo {
             Some(Photo::Inline(bytes)) => Ok(bytes),
             _ => Err(BackendError::NotFound),
         }
@@ -530,7 +530,10 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         let book = match &fields_in.address_book {
             Some(book) if writable.contains(book) => book.clone(),
             Some(_) => return Err(BackendError::NotFound),
-            None => writable.into_iter().next().ok_or(BackendError::Unsupported)?,
+            None => writable
+                .into_iter()
+                .next()
+                .ok_or(BackendError::Unsupported)?,
         };
         let uid = match &fields_in.creation_key {
             Some(key)

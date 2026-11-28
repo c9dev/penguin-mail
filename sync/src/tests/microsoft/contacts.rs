@@ -229,7 +229,10 @@ async fn every_contact_field_goes_to_graph_and_comes_back() {
             details: Changes {
                 birthday: Some("1990-04-12".into()),
                 notes: Some("Met in March".into()),
-                urls: Some(vec!["https://one.example".into(), "https://two.example".into()]),
+                urls: Some(vec![
+                    "https://one.example".into(),
+                    "https://two.example".into(),
+                ]),
                 groups: Some(vec!["Friends".into()]),
                 dates: Some(vec![Field {
                     label: "Anniversary".into(),
@@ -250,7 +253,10 @@ async fn every_contact_field_goes_to_graph_and_comes_back() {
         })
         .await
         .unwrap();
-    assert_eq!(h.fake.with(|s| s.photos.get(&made.resource).cloned()), Some(b"\x89PNG-bytes".to_vec()));
+    assert_eq!(
+        h.fake.with(|s| s.photos.get(&made.resource).cloned()),
+        Some(b"\x89PNG-bytes".to_vec())
+    );
     let (people, _, _) = read_whole(&contacts).await;
     let read = people.iter().find(|p| p.resource == made.resource).unwrap();
     let d = &read.details;
@@ -260,7 +266,11 @@ async fn every_contact_field_goes_to_graph_and_comes_back() {
     assert_eq!(d.groups, ["Friends"]);
     assert_eq!(d.dates[0].value, "2015-06-20");
     assert_eq!(d.custom[0].label, "Badge");
-    assert_eq!(d.addresses.len(), 4, "three in Graph's slots and one in the extras");
+    assert_eq!(
+        d.addresses.len(),
+        4,
+        "three in Graph's slots and one in the extras"
+    );
     assert_eq!(d.addresses[0][0], "Box 7", "the PO box rides in the extras");
     assert_eq!(d.addresses[2][3], "Faro");
     assert_eq!(d.addresses[3][3], "Braga");

@@ -19,7 +19,12 @@ pub fn icon(name: &str) -> gtk::Image {
 
 pub fn label(text: &str, classes: &[&str]) -> gtk::Label {
     // Headings and counts stay on one line; the rest may wrap.
-    let one_line = classes.iter().any(|c| matches!(*c, "cts-h2" | "cts-count" | "cts-kicker" | "cts-keep-name" | "cts-who-name"));
+    let one_line = classes.iter().any(|c| {
+        matches!(
+            *c,
+            "cts-h2" | "cts-count" | "cts-kicker" | "cts-keep-name" | "cts-who-name"
+        )
+    });
     gtk::Label::builder()
         .label(text)
         .xalign(0.0)
@@ -74,6 +79,40 @@ pub fn chips(accounts: &[AccountId], gap: u32) -> gtk::Box {
     let holder = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     holder.append(&row);
     holder
+}
+
+/// The chips of a list row: two at most on one line, then a "+N" chip that
+/// names the rest in its tooltip, so a row never grows a second line.
+pub fn row_chips(accounts: &[AccountId]) -> gtk::Box {
+    let row = gtk::Box::builder()
+        .spacing(4)
+        .halign(gtk::Align::Start)
+        .overflow(gtk::Overflow::Hidden)
+        .build();
+    for account in accounts.iter().take(2) {
+        let chip = chip(*account);
+        if let Some(label) = chip.last_child().and_downcast::<gtk::Label>() {
+            label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+            label.set_max_width_chars(12);
+        }
+        row.append(&chip);
+    }
+    if accounts.len() > 2 {
+        let rest = &accounts[2..];
+        let more = gtk::Label::builder()
+            .label(format!("+{}", rest.len()))
+            .valign(gtk::Align::Center)
+            .css_classes(["cts-chip", "cts-chip-more"])
+            .tooltip_text(
+                rest.iter()
+                    .map(|a| account_label(*a).short)
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )
+            .build();
+        row.append(&more);
+    }
+    row
 }
 
 /// A round avatar: the photo when there is one, else initials on a flat
@@ -133,7 +172,12 @@ pub fn group(lines: &[gtk::Widget]) -> gtk::Box {
 }
 
 /// A line: icon, a title in bold, a dim second line, and anything after.
-pub fn line(icon_name: Option<&str>, title: &str, sub: &str, extra: Option<&gtk::Widget>) -> gtk::Box {
+pub fn line(
+    icon_name: Option<&str>,
+    title: &str,
+    sub: &str,
+    extra: Option<&gtk::Widget>,
+) -> gtk::Box {
     let line = gtk::Box::builder()
         .spacing(12)
         .css_classes(["cts-line"])
@@ -162,7 +206,12 @@ pub fn line(icon_name: Option<&str>, title: &str, sub: &str, extra: Option<&gtk:
 }
 
 /// A line that opens something, with a chevron.
-pub fn go_line(icon_name: &str, title: &str, sub: &str, clicked: impl Fn() + 'static) -> gtk::Button {
+pub fn go_line(
+    icon_name: &str,
+    title: &str,
+    sub: &str,
+    clicked: impl Fn() + 'static,
+) -> gtk::Button {
     let inner = line(Some(icon_name), title, sub, None);
     inner.append(
         &gtk::Image::builder()
@@ -248,7 +297,12 @@ pub fn icon_button(name: &str, spoken: &str, classes: &[&str]) -> gtk::Button {
 
 /// The mockup's segmented choice between a few words. `chosen` runs with
 /// the index picked.
-pub fn seg(spoken: &str, options: &[String], on: usize, chosen: impl Fn(usize) + 'static) -> gtk::Box {
+pub fn seg(
+    spoken: &str,
+    options: &[String],
+    on: usize,
+    chosen: impl Fn(usize) + 'static,
+) -> gtk::Box {
     let holder = gtk::Box::builder()
         .spacing(0)
         .homogeneous(true)

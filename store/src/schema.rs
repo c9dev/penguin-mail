@@ -1148,7 +1148,7 @@ CREATE TABLE IF NOT EXISTS contact_links (
     // contact. Google's CardDAV drops CATEGORIES, so its contacts' groups
     // live here. No foreign key to `contacts`, for the reason of the links.
     r#"
-CREATE TABLE contact_local_groups (
+CREATE TABLE IF NOT EXISTS contact_local_groups (
     account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     resource   TEXT NOT NULL,
     name       TEXT NOT NULL,

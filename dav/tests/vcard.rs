@@ -133,7 +133,16 @@ fn extended_fields_and_photos_round_trip_in_both_versions() {
                 notes: Some("line one\nline two; comma, slash\\".into()),
                 groups: Some(vec!["Work".into(), "Friends, family".into()]),
                 addresses: Some(vec![
-                    ["", "", "1 Demo Street", "Lisbon", "", "1000-001", "Portugal"].map(String::from),
+                    [
+                        "",
+                        "",
+                        "1 Demo Street",
+                        "Lisbon",
+                        "",
+                        "1000-001",
+                        "Portugal",
+                    ]
+                    .map(String::from),
                 ]),
                 urls: Some(vec!["https://example.org/profile".into()]),
                 dates: Some(vec![Field {
@@ -347,8 +356,20 @@ fn editing_another_field_preserves_full_and_yearless_birthdays() {
 fn a_street_with_a_newline_keeps_every_address_part_in_place() {
     use mailrs_domain::contact::Changes;
     let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nADR;TYPE=HOME:;;12 Main St\\nFlat 4;Lisbon;;1000-001;Portugal\r\nEND:VCARD\r\n";
-    let home = ["", "", "12 Main St\nFlat 4", "Lisbon", "", "1000-001", "Portugal"].map(String::from);
-    assert_eq!(read_card(text).unwrap().details.addresses, std::slice::from_ref(&home));
+    let home = [
+        "",
+        "",
+        "12 Main St\nFlat 4",
+        "Lisbon",
+        "",
+        "1000-001",
+        "Portugal",
+    ]
+    .map(String::from);
+    assert_eq!(
+        read_card(text).unwrap().details.addresses,
+        std::slice::from_ref(&home)
+    );
     let work = ["", "", "1 Work Road", "Porto", "", "", "Portugal"].map(String::from);
     let saved = patch_card(
         text,

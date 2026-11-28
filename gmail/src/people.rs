@@ -603,7 +603,8 @@ fn date_value(text: &str) -> serde_json::Value {
 }
 
 pub(crate) fn validate(fields: &ContactFields) -> Result<(), GmailError> {
-    mailrs_domain::contact::check(&fields.details, fields.photo.as_deref()).map_err(GmailError::Invalid)
+    mailrs_domain::contact::check(&fields.details, fields.photo.as_deref())
+        .map_err(GmailError::Invalid)
 }
 
 /// Retain labels and structured names when an edit changes only their values.
@@ -711,6 +712,9 @@ mod address_tests {
             "city":"Lisbon","region":"","postalCode":"","country":""}]});
         preserve_fields(&mut body, &current);
         assert_eq!(body["addresses"][0]["type"], "home");
-        assert!(body["addresses"][0].get("formattedValue").is_none(), "{body}");
+        assert!(
+            body["addresses"][0].get("formattedValue").is_none(),
+            "{body}"
+        );
     }
 }

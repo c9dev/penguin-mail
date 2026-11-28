@@ -251,7 +251,8 @@ impl<'a> Run<'a> {
         self.identities_name_the_account().await;
         self.the_reply_round_trips_where_offered().await;
         self.a_contact_round_trips_where_offered().await;
-        self.a_contact_with_every_field_round_trips_where_offered().await;
+        self.a_contact_with_every_field_round_trips_where_offered()
+            .await;
         self.a_rule_lands_in_sieve_where_offered().await;
         self.the_reply_and_a_rule_run_together_where_sieve_is_offered()
             .await;
@@ -843,13 +844,34 @@ impl<'a> Run<'a> {
             only
         };
         let probes: Vec<(&str, mailrs_gmail::ContactFields)> = vec![
-            ("birthday", one(&|c| c.details.birthday = fields.details.birthday.clone())),
-            ("notes", one(&|c| c.details.notes = fields.details.notes.clone())),
-            ("addresses", one(&|c| c.details.addresses = fields.details.addresses.clone())),
-            ("urls", one(&|c| c.details.urls = fields.details.urls.clone())),
-            ("groups", one(&|c| c.details.groups = fields.details.groups.clone())),
-            ("dates", one(&|c| c.details.dates = fields.details.dates.clone())),
-            ("custom", one(&|c| c.details.custom = fields.details.custom.clone())),
+            (
+                "birthday",
+                one(&|c| c.details.birthday = fields.details.birthday.clone()),
+            ),
+            (
+                "notes",
+                one(&|c| c.details.notes = fields.details.notes.clone()),
+            ),
+            (
+                "addresses",
+                one(&|c| c.details.addresses = fields.details.addresses.clone()),
+            ),
+            (
+                "urls",
+                one(&|c| c.details.urls = fields.details.urls.clone()),
+            ),
+            (
+                "groups",
+                one(&|c| c.details.groups = fields.details.groups.clone()),
+            ),
+            (
+                "dates",
+                one(&|c| c.details.dates = fields.details.dates.clone()),
+            ),
+            (
+                "custom",
+                one(&|c| c.details.custom = fields.details.custom.clone()),
+            ),
             ("photo", one(&|c| c.photo = fields.photo.clone())),
         ];
         for (what, probe) in probes {
