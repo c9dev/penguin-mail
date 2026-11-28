@@ -133,29 +133,36 @@ pub fn date_for_edit(value: &str) -> String {
     }
 }
 
-pub fn birthday_label(value: &str, today: chrono::NaiveDate) -> String {
-    use crate::translate::{date_locale, fill, fill_plural, gettext};
+/// A stored date in the reader's language: "12 April 1990", or "12 April"
+/// when the year is unknown. Text that is no date comes back as it is.
+pub fn date_label(value: &str) -> String {
+    use crate::translate::{date_locale, gettext};
     let Some((date, has_year)) = contact_date(value) else {
         return value.to_string();
     };
-    let day = date
-        .format_localized(&gettext("%-d %B"), date_locale())
-        .to_string();
-    if !has_year {
+    let format = if has_year {
+        gettext("%-d %B %Y")
+    } else {
+        gettext("%-d %B")
+    };
+    date.format_localized(&format, date_locale()).to_string()
+}
+
+/// A birthday as the date, then the age it makes today when the year is known.
+pub fn birthday_label(value: &str, today: chrono::NaiveDate) -> String {
+    use crate::translate::fill_plural;
+    let day = date_label(value);
+    let Some((date, true)) = contact_date(value) else {
         return day;
-    }
-    let year = date.format("%Y").to_string();
+    };
     let Some(age) = today.years_since(date) else {
-        return fill(
-            &gettext("{date} ({year})"),
-            &[("date", &day), ("year", &year)],
-        );
+        return day;
     };
     fill_plural(
-        "{date} ({year}), {age} year old",
-        "{date} ({year}), {age} years old",
+        "{date} · {age} year old",
+        "{date} · {age} years old",
         age as usize,
-        &[("date", &day), ("year", &year), ("age", &age.to_string())],
+        &[("date", &day), ("age", &age.to_string())],
     )
 }
 
@@ -171,23 +178,22 @@ mod tests {
         assert_eq!(date_for_edit("19850423"), "1985-04-23");
         assert_eq!(date_for_edit("--0229"), "--02-29");
         for value in ["19850423", "1985-04-23"] {
-            assert_eq!(
-                birthday_label(value, today),
-                "23 April (1985), 41 years old"
-            );
+            assert_eq!(birthday_label(value, today), "23 April 1985 · 41 years old");
         }
         assert_eq!(
             birthday_label("1985-04-24", today),
-            "24 April (1985), 40 years old"
+            "24 April 1985 · 40 years old"
         );
         assert_eq!(
             birthday_label("2025-04-23", today),
-            "23 April (2025), 1 year old"
+            "23 April 2025 · 1 year old"
         );
         for value in ["--0229", "--02-29"] {
             assert_eq!(birthday_label(value, today), "29 February");
         }
-        assert_eq!(birthday_label("2030-04-23", today), "23 April (2030)");
+        assert_eq!(birthday_label("2030-04-23", today), "23 April 2030");
+        assert_eq!(date_label("2015-06-20"), "20 June 2015");
+        assert_eq!(date_label("--04-12"), "12 April");
         for value in ["", "unknown", "1985-02-29", "--02-30", "éé"] {
             assert_eq!(date_for_edit(value), value);
             assert_eq!(birthday_label(value, today), value);

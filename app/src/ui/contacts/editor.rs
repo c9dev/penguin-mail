@@ -28,6 +28,8 @@ struct Rows {
     /// The add line under the group.
     add: gtk::Button,
     holder: gtk::Box,
+    /// "Add phone": the hint an empty field shows.
+    hint: String,
 }
 
 impl Rows {
@@ -68,6 +70,7 @@ impl Rows {
             dirty,
             add,
             holder,
+            hint: add_label.to_string(),
         });
         let count = values.len().max(at_least);
         for at in 0..count {
@@ -101,7 +104,11 @@ impl Rows {
             .build();
         let mut entries = Vec::new();
         for (i, label) in shown_labels.iter().enumerate() {
-            let (cell, entry) = parts::entry(label, values.get(i).map_or("", String::as_str), "");
+            let (cell, entry) = parts::entry(
+                label,
+                values.get(i).map_or("", String::as_str),
+                if i == 0 { &self.hint } else { "" },
+            );
             let dirty = self.dirty.clone();
             entry.connect_changed(move |_| dirty());
             if i > 0 {
@@ -114,6 +121,20 @@ impl Rows {
         let remove = parts::icon_button("x", &gettext("Remove Field"), &[]);
         remove.set_valign(gtk::Align::Center);
         remove.set_margin_end(8);
+        // An empty field has nothing to remove: the button shows with text.
+        let filled = {
+            let entries = entries.clone();
+            move || entries.iter().any(|e| !e.text().is_empty())
+        };
+        remove.set_visible(filled());
+        for entry in &entries {
+            let (remove, filled) = (remove.downgrade(), filled.clone());
+            entry.connect_changed(move |_| {
+                if let Some(remove) = remove.upgrade() {
+                    remove.set_visible(filled());
+                }
+            });
+        }
         row.append(&remove);
         if at > 0 {
             row.add_css_class("after");
@@ -286,7 +307,7 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
     let (org_cell, organization) = parts::entry(
         &gettext("Organization"),
         original.organization.as_deref().unwrap_or_default(),
-        "",
+        &gettext("Add organization"),
     );
     for e in [&name, &organization] {
         let d = dirty.clone();
@@ -298,7 +319,7 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
         Some(gettext("Email")),
         vec![gettext("Other email")],
         original.emails.iter().map(|e| vec![e.clone()]).collect(),
-        1,
+        usize::from(new),
         dirty.clone(),
     );
     if new {
@@ -311,7 +332,7 @@ fn build(this: &Rc<Contacts>, original: &Contact, dirty: Rc<dyn Fn()>, new: bool
         None,
         vec![gettext("Phone")],
         phones_before.iter().map(|p| vec![p.clone()]).collect(),
-        1,
+        usize::from(new),
         dirty.clone(),
     );
     let addresses = Rows::new(
@@ -504,16 +525,24 @@ impl Contacts {
         ));
         let unsaved = parts::label(&gettext("Unsaved changes"), &["cts-dirty"]);
         unsaved.set_visible(false);
+        unsaved.set_wrap(false);
         let save = parts::button(&gettext("Save"), &["yes"]);
         let error = parts::label("", &["cts-error"]);
         error.set_visible(false);
+        // Save waits for a first change on a saved contact; a new one waits
+        // for a name or address instead, below.
+        save.set_sensitive(new);
         let dirty: Rc<dyn Fn()> = {
             let (unsaved, save) = (unsaved.downgrade(), save.downgrade());
             Rc::new(move || {
                 if let Some(u) = unsaved.upgrade() {
                     u.set_visible(true);
                 }
-                let _ = &save;
+                if let Some(s) = save.upgrade()
+                    && !new
+                {
+                    s.set_sensitive(true);
+                }
             })
         };
         let built = build(self, &original, dirty, new);
@@ -646,6 +675,9 @@ impl Contacts {
         built.photo_box.append(&avatar_holder);
         let replace = parts::button(&gettext("Replace Photo"), &[]);
         let remove = parts::button(&gettext("Remove Photo"), &[]);
+        replace.set_valign(gtk::Align::Center);
+        remove.set_valign(gtk::Align::Center);
+        avatar_holder.set_valign(gtk::Align::Center);
         remove.set_visible(original.photo_file.is_some());
         {
             let (form, holder, remove, dirty_label) = (

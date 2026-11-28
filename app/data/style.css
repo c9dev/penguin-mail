@@ -2206,15 +2206,15 @@ list.own-paste { margin-top: 12px; }
    its name, so three spaces fit the 240 px card. */
 toggle-group.space-switch > toggle:not(:checked) buttoncontent > box { border-spacing: 0; }
 toggle-group.space-switch > toggle:not(:checked) buttoncontent label { font-size: 0; min-width: 0; }
-toggle-group.space-switch > toggle:not(:checked) { padding-left: 1px; padding-right: 1px; min-width: 16px; }
-toggle-group.space-switch > toggle:checked { padding-left: 6px; padding-right: 6px; }
-toggle-group.space-switch .space-badge { padding: 0 2px; min-width: 6px; }
+toggle-group.space-switch > toggle:not(:checked) { padding-left: 0; padding-right: 0; min-width: 14px; }
+toggle-group.space-switch > toggle:checked { padding-left: 3px; padding-right: 3px; }
+toggle-group.space-switch .space-badge { padding: 0 1px; min-width: 4px; }
 
 .cts-side { padding: 0 8px 12px; }
 .cts-kicker { margin: 14px 12px 4px; font-size: 0.82em; font-weight: 700; color: alpha(currentColor, 0.75); }
 .app-dark .cts-kicker { color: alpha(currentColor, 0.64); }
 button.cts-nav {
-  min-height: 34px;
+  min-height: 28px;
   padding: 4px 10px;
   border-radius: 8px;
   background: none;
@@ -2316,13 +2316,13 @@ button.cts-btn .cts-icon { color: inherit; }
 .app-dark .cts-hint { color: alpha(currentColor, 0.64); }
 .cts-group { border: 1px solid #dedee3; border-radius: 12px; }
 .app-dark .cts-group { border-color: #39393f; }
-.cts-line { min-height: 48px; padding: 8px 14px; border-spacing: 12px; background: var(--view-bg-color); }
+.cts-line { min-height: 36px; padding: 8px 14px; border-spacing: 12px; background: var(--view-bg-color); }
 .cts-line.after, .cts-entry.after, .cts-entryrow.after, .cts-choice.after, .cts-go.after, button.cts-line.after { border-top: 1px solid #ececef; border-radius: 0; }
 .app-dark .cts-line.after, .app-dark .cts-entry.after, .app-dark .cts-entryrow.after, .app-dark .cts-choice.after, .app-dark .cts-go.after, .app-dark button.cts-line.after { border-top-color: #2c2c31; }
 .cts-title { font-size: 0.95em; font-weight: 600; letter-spacing: -0.01em; }
 .cts-sub { font-size: 0.85em; color: alpha(currentColor, 0.75); margin-top: 1px; }
 .app-dark .cts-sub { color: alpha(currentColor, 0.64); }
-button.cts-go { padding: 0; background: none; box-shadow: none; border-radius: 0; min-height: 48px; font-weight: normal; }
+button.cts-go { padding: 0; background: none; box-shadow: none; border-radius: 0; min-height: 0; font-weight: normal; }
 button.cts-go:hover { background: alpha(black, 0.04); }
 .app-dark button.cts-go:hover { background: alpha(white, 0.05); }
 .cts-chev { color: alpha(currentColor, 0.75); }
@@ -2353,7 +2353,7 @@ button.cts-addline .cts-icon { color: inherit; }
 button.cts-danger { color: #a51d2d; font-weight: 600; font-size: 0.95em; background: var(--view-bg-color); box-shadow: none; border: none; border-radius: 0; }
 .app-dark button.cts-danger { color: #ff7b86; }
 button.cts-danger:hover { background: alpha(#a51d2d, 0.06); }
-.cts-photo { padding: 10px 0 4px; }
+.cts-photo { padding: 22px 0 0; }
 .cts-seg { background: #e3e3e7; border-radius: 10px; padding: 3px; margin: 14px 0 0; }
 .app-dark .cts-seg { background: #3a3a40; }
 .cts-seg > button { min-height: 32px; border-radius: 8px; border: none; background: none; box-shadow: none; font-size: 0.89em; font-weight: 600; color: alpha(currentColor, 0.75); }
@@ -2384,3 +2384,17 @@ button.cts-btn.yes:active { background: #a83a00; }
 /* A two-colour ring: the filled button hides an accent ring, so the gap shows the page. */
 button.cts-btn:focus-visible { outline: 2px solid #1c1c21; outline-offset: 2px; }
 .app-dark button.cts-btn:focus-visible { outline-color: #f2f2f5; }
+
+/* A pane that changes fades in over 200 ms; the Undo lane slides in its Revealer. */
+@keyframes cts-fade-a { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cts-fade-b { from { opacity: 0; } to { opacity: 1; } }
+.cts-fade-a { animation: cts-fade-a 200ms cubic-bezier(0.2, 0, 0, 1); }
+.cts-fade-b { animation: cts-fade-b 200ms cubic-bezier(0.2, 0, 0, 1); }
+
+/* The selected row is as dark as a chip, so its chips turn lighter to stay pills. */
+.cts-rows > row:selected .cts-chip { background: #ffffff; }
+.app-dark .cts-rows > row:selected .cts-chip { background: #4c4c54; }
+.cts-rows > row:selected .cts-chip-more { background: #ffffff; }
+.app-dark .cts-rows > row:selected .cts-chip-more { background: #4c4c54; }
+button.cts-nav:active { background: alpha(black, 0.12); }
+.app-dark button.cts-nav:active { background: alpha(white, 0.14); }

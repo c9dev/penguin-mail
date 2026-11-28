@@ -517,7 +517,7 @@ impl Sidebar {
                 .property("valign", gtk::Align::Center)
                 .property("visible", false)
                 .build();
-            let child = gtk::Box::builder().spacing(2).build();
+            let child = gtk::Box::builder().spacing(1).build();
             child.append(&content);
             child.append(&badge);
             labels.push(content);

@@ -91,6 +91,16 @@ impl Contacts {
             self.pane.remove(&child);
         }
         *self.new_message.borrow_mut() = None;
+        // A new pane fades in. The two classes name the same fade, so
+        // swapping them starts it again. GTK runs no animation when the
+        // user has turned animations off.
+        let (on, off) = if self.pane.has_css_class("cts-fade-a") {
+            ("cts-fade-b", "cts-fade-a")
+        } else {
+            ("cts-fade-a", "cts-fade-b")
+        };
+        self.pane.remove_css_class(off);
+        self.pane.add_css_class(on);
         let (pane, kind, list) = {
             let state = self.state.borrow();
             let kind = state
@@ -414,10 +424,15 @@ impl Contacts {
                     .push(parts::line(Some("cake"), &words, &gettext("Birthday"), None).upcast());
             }
             for f in &d.dates {
-                details.push(parts::line(Some("star"), &f.value, &f.label, None).upcast());
+                let shown = mailrs_domain::contact::date_label(&f.value);
+                let line = parts::line(Some("star"), &shown, &humane(&f.label), None);
+                line.set_tooltip_text(Some(&f.label));
+                details.push(line.upcast());
             }
             for f in &d.custom {
-                details.push(parts::line(Some("note"), &f.value, &f.label, None).upcast());
+                let line = parts::line(Some("note"), &f.value, &humane(&f.label), None);
+                line.set_tooltip_text(Some(&f.label));
+                details.push(line.upcast());
             }
         }
         let mut groups: Vec<String> = Vec::new();
@@ -1407,5 +1422,58 @@ fn person_hint(
             &[("accounts", &names(&person.accounts))],
         )),
         _ => None,
+    }
+}
+
+/// A card's own field name for people: `X-CUSTOMER-ID` reads "Customer ID".
+/// Short all-capital words such as ID stay capitals; others take sentence case.
+pub(super) fn humane(label: &str) -> String {
+    // Only a raw property name is rewritten; a label someone typed stays.
+    if label.chars().any(|c| c.is_lowercase() || c.is_whitespace()) {
+        return label.to_string();
+    }
+    let name = label
+        .strip_prefix("X-")
+        .or_else(|| label.strip_prefix("x-"))
+        .unwrap_or(label);
+    let words: Vec<String> = name
+        .split(['-', '_'])
+        .filter(|w| !w.is_empty())
+        .enumerate()
+        .map(|(i, w)| {
+            if w.len() <= 2 && w.chars().all(|c| c.is_ascii_uppercase()) {
+                w.to_string()
+            } else if i == 0 {
+                let mut c = w.chars();
+                c.next()
+                    .map(|f| {
+                        f.to_uppercase()
+                            .chain(c.flat_map(char::to_lowercase))
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            } else {
+                w.to_lowercase()
+            }
+        })
+        .collect();
+    if words.is_empty() {
+        label.to_string()
+    } else {
+        words.join(" ")
+    }
+}
+
+#[cfg(test)]
+mod humane_tests {
+    use super::humane;
+
+    #[test]
+    fn raw_property_names_read_as_words_and_typed_labels_stay() {
+        assert_eq!(humane("X-CUSTOMER-ID"), "Customer ID");
+        assert_eq!(humane("X-ANNIVERSARY"), "Anniversary");
+        assert_eq!(humane("SPOUSE_NAME"), "Spouse name");
+        assert_eq!(humane("Customer ID"), "Customer ID");
+        assert_eq!(humane("Badge"), "Badge");
     }
 }

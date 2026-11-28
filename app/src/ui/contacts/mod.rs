@@ -276,6 +276,7 @@ impl Contacts {
         pill.append(&lane_undo);
         let lane = gtk::Revealer::builder()
             .transition_type(gtk::RevealerTransitionType::SlideUp)
+            .transition_duration(200)
             .child(&pill)
             .build();
         let page = gtk::Box::builder()
