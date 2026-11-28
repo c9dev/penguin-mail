@@ -30,7 +30,10 @@ What a machine needs:
   `packaging/windows/gtk4-zero-monitor-popup.patch` added and installs
   it. It stops when the recipe moves off GTK 4.24.2 until the patch is
   checked against the new version. A stock gtk4 builds too, without the
-  patch.
+  patch. MSYS2's own package is still 4.24.1, which leaves a freed IME
+  context in GDK's message filters when a focused text widget's window
+  closes (fixed in 4.24.2 by GTK commit 2a50bd4a), so the tests need the
+  rebuilt package too.
 - **Inno Setup 6**, for the installer step; `--stage-only` skips it.
 - **BusyBox** for the skills sandbox: downloaded to the cache once and
   checked against a pinned SHA-256 (update the pin in `build-windows.sh`
@@ -503,21 +506,13 @@ session, as CI's runner does.
   before tagging, or the release builds the gtk4 package from scratch.
 - Everything under "Checks on a Windows VM" below is run by hand before a
   release that touches Windows.
-- The `richbuffer` GTK checks, run alone, crash in about 6 runs of 10
-  (0xc000041d, inside GDK's window procedure while `present()` creates the
-  next window). The full suite passes. Measured on stock gtk4 4.24.1 in
-  the desktop session: without `closing_releases_the_body` the crash goes
-  away (0 of 10). Without its focus grab, or without
-  `release_content_on_close`, it stays. So closing a presented window and
-  then making another one on the checks' own thread is enough. The app
-  does the same on its main thread (composers, Open in New Window) and has
-  not crashed in live runs; the cause is not identified.
 
 ## What CI checks
 
 `.github/workflows/windows.yml` runs on every pull request:
 
-- `native`: builds the app test binary with MSYS2 UCRT64 and runs its
+- `native`: installs the `installer` job's cached gtk4 package (or builds
+  it on a miss), builds the app test binary with MSYS2 UCRT64 and runs its
   whole suite on one thread, the AppContainer sandbox tests included,
   then clippy. BusyBox is built from a pinned upstream release commit.
   It also compiles a placeholder installer and checks what it installs
