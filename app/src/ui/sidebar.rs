@@ -3215,27 +3215,17 @@ pub(crate) mod checks {
         let titles = sidebar.switch.parent().unwrap();
         for layout in [":close", "close:", ":", ":minimize,maximize,close"] {
             sidebar.header.set_decoration_layout(Some(layout));
-            let centered = layout.starts_with(':');
             for width in [240, 360] {
                 sidebar.header.allocate(width, 48, -1, None);
-                if centered {
-                    assert_eq!(titles.halign(), gtk::Align::Center);
-                    let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
-                    // GTK keeps the menu reachable when the full title cannot fit.
-                    if bounds.width() + 2.0 * (menu.width() + 12) as f32
-                        <= sidebar.header.width() as f32
-                    {
-                        assert!(
-                            (bounds.x() + bounds.width() / 2.0
-                                - sidebar.header.width() as f32 / 2.0)
-                                .abs()
-                                <= 1.0,
-                            "{layout} at {width}: {bounds:?}"
-                        );
-                    }
-                } else {
-                    assert_eq!(titles.halign(), gtk::Align::Fill);
-                }
+                // The switch takes the room up to the menu button, whatever
+                // the window controls, and never runs under the button.
+                assert_eq!(titles.halign(), gtk::Align::Fill, "{layout}");
+                let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
+                let button = menu.compute_bounds(&sidebar.header).unwrap();
+                assert!(
+                    bounds.x() + bounds.width() <= button.x() + 1.0,
+                    "{layout} at {width}: {bounds:?} against {button:?}"
+                );
             }
         }
         window.set_content(gtk::Widget::NONE);
