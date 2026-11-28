@@ -290,7 +290,13 @@ fn flatten(person: Connection) -> Person {
             dates: values(&person.extra, "events")
                 .iter()
                 .map(|v| mailrs_domain::contact::Field {
-                    label: v["type"].as_str().unwrap_or("other").into(),
+                    // Google lowers its own types, so "Anniversary" comes back
+                    // as "anniversary".
+                    label: match v["type"].as_str().unwrap_or("other") {
+                        "anniversary" => "Anniversary".into(),
+                        "other" => "Other".into(),
+                        label => label.into(),
+                    },
                     value: date_text(&v["date"]),
                 })
                 .collect(),

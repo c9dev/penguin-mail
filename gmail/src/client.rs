@@ -795,10 +795,10 @@ impl GmailClient {
             return Ok(result);
         }
         let mut body = fields.body();
-        self.write_groups(&mut body, fields, None).await?;
+        let made_group = self.write_groups(&mut body, fields, None).await?;
         let url = format!("{}/people:createContact", self.people_url);
         let reply = self
-            .send_request(cost::CONTACT_WRITE, || {
+            .write_contact(made_group, || {
                 self.http()
                     .post(&url)
                     .query(&[("personFields", people::PERSON_FIELDS)])
@@ -899,10 +899,10 @@ impl GmailClient {
                 body["metadata"] = json!({"sources":current["metadata"]["sources"]});
             }
             people::preserve_fields(&mut body, &current);
-            self.write_groups(&mut body, fields, Some(&current)).await?;
+            let made_group = self.write_groups(&mut body, fields, Some(&current)).await?;
             let url = format!("{}:updateContact", self.contact_url(resource)?);
             let reply = self
-                .send_request(cost::CONTACT_WRITE, || {
+                .write_contact(made_group, || {
                     self.http()
                         .patch(&url)
                         .query(&[
@@ -1027,15 +1027,18 @@ impl GmailClient {
         Ok(())
     }
 
+    /// Sets the memberships `fields` names in `body`, making the groups
+    /// that do not exist yet. Answers whether it made one.
     async fn write_groups(
         &self,
         body: &mut serde_json::Value,
         fields: &ContactFields,
         current: Option<&serde_json::Value>,
-    ) -> Result<(), GmailError> {
+    ) -> Result<bool, GmailError> {
         let Some(names) = &fields.details.groups else {
-            return Ok(());
+            return Ok(false);
         };
+        let mut made = false;
         let mut groups = self.contact_groups().await?;
         let mut memberships = Vec::new();
         // System memberships, such as Starred, are not editable group labels.
@@ -1075,6 +1078,7 @@ impl GmailClient {
                         serde_json::from_str(&text_of(reply, JSON_LIMIT).await?)
                             .map_err(|e| GmailError::Decode(e.to_string()))?;
                     groups.push(group.clone());
+                    made = true;
                     group
                 }
             };
@@ -1090,7 +1094,28 @@ impl GmailClient {
             memberships.push(json!({"contactGroupMembership":{"contactGroupResourceName":"contactGroups/myContacts"}}));
         }
         body["memberships"] = json!(memberships);
-        Ok(())
+        Ok(made)
+    }
+
+    /// Sends a contact write. Right after a group is made, Google can
+    /// answer 404 to a membership in it for a moment (seen live on
+    /// 2026-11-28), so that answer is tried again a few times.
+    async fn write_contact(
+        &self,
+        made_group: bool,
+        build: impl Fn() -> RequestBuilder,
+    ) -> Result<Response, GmailError> {
+        let mut wait = 1;
+        loop {
+            match self.send_request(cost::CONTACT_WRITE, &build).await {
+                Err(GmailError::NotFound) if made_group && wait <= 4 => {
+                    tracing::debug!(wait, "the new contact group is not there yet");
+                    tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
+                    wait *= 2;
+                }
+                answer => return answer,
+            }
+        }
     }
 
     /// The bytes of one contact photo. Google serves these from a plain

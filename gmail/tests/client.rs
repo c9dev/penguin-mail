@@ -1105,6 +1105,7 @@ async fn expanded_google_contacts_keep_all_fields_and_resolve_group_names() {
     assert_eq!(p.details.phones.len(), 2);
     assert_eq!(p.details.birthday, "--04-23");
     assert_eq!(p.details.dates[0].value, "2020-06-08");
+    assert_eq!(p.details.dates[0].label, "Anniversary");
     assert_eq!(p.details.custom[0].label, "Customer ID");
     assert_eq!(p.details.revision, "v1");
     assert_eq!(p.details.urls, ["https://example.org"]);
@@ -1330,4 +1331,92 @@ async fn deleting_the_first_google_address_keeps_the_second_one_as_google_holds_
         .update_contact("people/c1", &fields)
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn a_membership_in_a_group_just_made_is_tried_again_after_a_404() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"resourceName":"people/c1","etag":"v1"})),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/contactGroups"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({"contactGroups":[
+            {"resourceName":"contactGroups/old","name":"Old","groupType":"USER_CONTACT_GROUP"}]})),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/contactGroups"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(
+            json!({"resourceName":"contactGroups/new","name":"New","groupType":"USER_CONTACT_GROUP"}),
+        ))
+        .mount(&server)
+        .await;
+    // Google does not know the new group for a moment.
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContact"))
+        .respond_with(ResponseTemplate::new(404))
+        .up_to_n_times(1)
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContact"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"resourceName":"people/c1","etag":"v2"})),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = client(&server);
+    let groups = |names: &[&str]| mailrs_gmail::ContactFields {
+        details: mailrs_domain::contact::Changes {
+            groups: Some(names.iter().map(|n| n.to_string()).collect()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    client
+        .update_contact("people/c1", &groups(&["New"]))
+        .await
+        .unwrap();
+
+    // With no group made, a 404 means the contact is gone, and is not tried again.
+    server.reset().await;
+    mount_token(&server, 0).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"resourceName":"people/c1","etag":"v2"})),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/contactGroups"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({"contactGroups":[
+            {"resourceName":"contactGroups/old","name":"Old","groupType":"USER_CONTACT_GROUP"}]})),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c1:updateContact"))
+        .respond_with(ResponseTemplate::new(404))
+        .expect(1)
+        .mount(&server)
+        .await;
+    assert!(matches!(
+        client.update_contact("people/c1", &groups(&["Old"])).await,
+        Err(GmailError::NotFound)
+    ));
 }
