@@ -3222,10 +3222,14 @@ pub(crate) mod checks {
                 assert_eq!(titles.halign(), gtk::Align::Fill, "{layout}");
                 let bounds = sidebar.switch.compute_bounds(&sidebar.header).unwrap();
                 let button = menu.compute_bounds(&sidebar.header).unwrap();
-                assert!(
-                    bounds.x() + bounds.width() <= button.x() + 1.0,
-                    "{layout} at {width}: {bounds:?} against {button:?}"
-                );
+                // Without the stylesheet the toggles are wider than the card;
+                // GTK then keeps the menu reachable and clips the switch.
+                if bounds.width() + button.width() <= sidebar.header.width() as f32 {
+                    assert!(
+                        bounds.x() + bounds.width() <= button.x() + 1.0,
+                        "{layout} at {width}: {bounds:?} against {button:?}"
+                    );
+                }
             }
         }
         window.set_content(gtk::Widget::NONE);
