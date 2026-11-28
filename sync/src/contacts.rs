@@ -146,7 +146,7 @@ impl<A: Accounts> ContactBook<A> {
     pub async fn forget(&self, account_id: AccountId) -> Result<(), SyncError> {
         // A book kept on this computer has no server behind it: forgetting
         // it would delete the only copy.
-        if matches!(self.contacts(account_id), Ok(AnyContacts::Local(_))) {
+        if self.keeps_book_here(account_id).await? {
             return Ok(());
         }
         let files = self
@@ -178,6 +178,19 @@ impl<A: Accounts> ContactBook<A> {
     /// Whether this account keeps its book on this computer alone.
     pub fn is_local(&self, account_id: AccountId) -> bool {
         matches!(self.contacts(account_id), Ok(AnyContacts::Local(_)))
+    }
+
+    /// Whether this account's book lives on this computer alone, also when
+    /// the account is not running (an IMAP account waiting for its
+    /// password has no services, but its local contacts are in the store).
+    pub async fn keeps_book_here(&self, account_id: AccountId) -> Result<bool, SyncError> {
+        if let Some(services) = self.accounts.services(account_id) {
+            return Ok(matches!(services.contacts, Some(AnyContacts::Local(_))));
+        }
+        Ok(self
+            .db
+            .read(move |c| address_book::holds_local(c, account_id))
+            .await?)
     }
 
     /// Whether this account's server drops the groups of a card, so they

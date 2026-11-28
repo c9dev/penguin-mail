@@ -262,6 +262,10 @@ async fn every_contact_field_goes_to_the_server_and_comes_back() {
     assert_eq!(read.details.dates[0].value, "2015-06-20");
     assert_eq!(read.details.custom[0].label, "Badge");
     assert_eq!(read.details.addresses[0][3], "Lisbon");
+    assert!(
+        read.photo_url.as_deref().unwrap().len() < 80,
+        "the database holds a key, not the photo"
+    );
     let photo = contacts
         .contact_photo(read.photo_url.as_deref().unwrap())
         .await
@@ -287,4 +291,32 @@ async fn every_contact_field_goes_to_the_server_and_comes_back() {
     contacts.delete_contact(&made.resource, None).await.unwrap();
     let after = contacts.connections(None, None).await.unwrap();
     assert!(after.people.iter().all(|p| p.resource != made.resource));
+}
+
+#[tokio::test]
+async fn a_change_or_delete_against_an_old_revision_is_refused() {
+    let (h, contacts) = contacts().await;
+    let id = h.fake.add_card("Ada", "ada@example.com");
+    let listed = contacts.connections(None, None).await.unwrap().people;
+    let old = listed[0].details.revision.clone();
+    assert!(!old.is_empty());
+    let edit = |revision: &str| ContactFields {
+        organization: Some("Engines".into()),
+        expected_revision: Some(revision.into()),
+        ..ContactFields::default()
+    };
+    let changed = contacts.update_contact(&id, &edit(&old)).await.unwrap();
+    assert_ne!(changed.details.revision, old);
+    assert!(matches!(
+        contacts.update_contact(&id, &edit(&old)).await,
+        Err(crate::BackendError::Changed)
+    ));
+    assert!(matches!(
+        contacts.delete_contact(&id, Some(&old)).await,
+        Err(crate::BackendError::Changed)
+    ));
+    contacts
+        .delete_contact(&id, Some(&changed.details.revision))
+        .await
+        .unwrap();
 }

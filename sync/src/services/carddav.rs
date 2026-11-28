@@ -28,6 +28,10 @@ pub struct CardDav<D> {
     refused: Arc<Mutex<Option<String>>>,
     pending: Arc<Mutex<Option<Pending>>>,
     serial: Arc<Mutex<u64>>,
+    /// Google's href for each creation key, kept in memory. Google answers
+    /// no 412 to a repeated create, so this is what lets a retry after a
+    /// lost reply update the card instead of making another.
+    created: Arc<Mutex<BTreeMap<String, String>>>,
 }
 
 /// One read of every book: (book, href) to fetch, what went, the tokens
@@ -57,6 +61,10 @@ fn card_error(err: mailrs_dav::DavError) -> BackendError {
     }
 }
 
+fn lock<T>(held: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    held.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 impl<D> Clone for CardDav<D> {
     fn clone(&self) -> Self {
         CardDav {
@@ -65,6 +73,7 @@ impl<D> Clone for CardDav<D> {
             refused: Arc::clone(&self.refused),
             pending: Arc::clone(&self.pending),
             serial: Arc::clone(&self.serial),
+            created: Arc::clone(&self.created),
         }
     }
 }
@@ -106,6 +115,7 @@ impl<D: DavApi> CardDav<D> {
             refused: Arc::default(),
             pending: Arc::default(),
             serial: Arc::default(),
+            created: Arc::default(),
         }
     }
 
@@ -190,7 +200,14 @@ impl<D: DavApi> CardDav<D> {
                 .await
                 .map_err(|e| self.err(e))?;
             for resource in fetched {
-                let card = vcard::read_card(&resource.body).map_err(card_error)?;
+                // One unreadable card must not block every group change.
+                let card = match vcard::read_card(&resource.body) {
+                    Ok(card) => card,
+                    Err(err) => {
+                        tracing::warn!(href = %resource.href, %err, "skipped a vCard Penguin Mail cannot read");
+                        continue;
+                    }
+                };
                 if let Some(members) = card.details.members {
                     cards.push((resource, card.name.unwrap_or_default(), members));
                 }
@@ -555,25 +572,52 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         let body = vcard::new_card(&uid, &fields);
         vcard::read_card(&body).map_err(card_error)?;
         let mut href = href;
-        match self
-            .api
-            .put_at(&href, &body, Kind::AddressBook, Precondition::NoneMatch)
-            .await
-        {
-            // A server that names the card itself says where.
-            Ok((_, Some(placed))) => href = placed,
-            Ok(_) => {}
-            Err(mailrs_dav::DavError::Changed) if fields_in.creation_key.is_some() => {
-                // A stable editor key addresses only this creation, including a retry after a lost reply.
-                let saved = self.api.get(&href).await.map_err(|e| self.err(e))?;
-                let changed = vcard::patch_card(&saved.body, &fields).map_err(card_error)?;
-                let before = vcard::read_card(&saved.body).map_err(card_error)?;
-                let after = vcard::read_card(&changed).map_err(card_error)?;
-                if before != after {
-                    return Err(self.err(mailrs_dav::DavError::Changed));
+        let key = fields_in.creation_key.as_ref().filter(|_| self.google);
+        let earlier = key.and_then(|k| lock(&self.created).get(k).cloned());
+        if let Some(earlier) = earlier {
+            let saved = self.api.get(&earlier).await.map_err(|e| self.err(e))?;
+            let changed = vcard::patch_card(&saved.body, &fields).map_err(card_error)?;
+            self.api
+                .put(
+                    &earlier,
+                    &changed,
+                    Kind::AddressBook,
+                    Precondition::Match(saved.etag),
+                )
+                .await
+                .map_err(|e| self.err(e))?;
+            href = earlier;
+        } else {
+            match self
+                .api
+                .put_at(&href, &body, Kind::AddressBook, Precondition::NoneMatch)
+                .await
+            {
+                // A server that names the card itself says where.
+                Ok((_, Some(placed))) => {
+                    if let Some(key) = key {
+                        let mut created = lock(&self.created);
+                        // shortcut: forget all keys past 64, a retry that late is a new create.
+                        if created.len() >= 64 {
+                            created.clear();
+                        }
+                        created.insert(key.clone(), placed.clone());
+                    }
+                    href = placed;
                 }
+                Ok(_) => {}
+                Err(mailrs_dav::DavError::Changed) if fields_in.creation_key.is_some() => {
+                    // A stable editor key addresses only this creation, including a retry after a lost reply.
+                    let saved = self.api.get(&href).await.map_err(|e| self.err(e))?;
+                    let changed = vcard::patch_card(&saved.body, &fields).map_err(card_error)?;
+                    let before = vcard::read_card(&saved.body).map_err(card_error)?;
+                    let after = vcard::read_card(&changed).map_err(card_error)?;
+                    if before != after {
+                        return Err(self.err(mailrs_dav::DavError::Changed));
+                    }
+                }
+                Err(err) => return Err(self.err(err)),
             }
-            Err(err) => return Err(self.err(err)),
         }
         if let Some((groups, named)) = cards {
             self.write_groups(groups, &uid, &named).await.map_err(|err| {

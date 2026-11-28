@@ -47,6 +47,16 @@ impl Extras {
     fn join(&self, details: &mut mailrs_domain::contact::Details) {
         for (at, address) in details.addresses.iter_mut().enumerate() {
             if let Some([pobox, extended]) = self.parts.get(at) {
+                // `physical` put them at the head of Graph's one street line.
+                let mut street = address[2].as_str();
+                for part in [pobox, extended].into_iter().filter(|p| !p.is_empty()) {
+                    let rest = street.strip_prefix(part.as_str());
+                    if let Some(rest) = rest.filter(|r| r.is_empty() || r.starts_with(['\r', '\n']))
+                    {
+                        street = rest.trim_start_matches(['\r', '\n']);
+                    }
+                }
+                address[2] = street.to_string();
                 address[0] = pobox.clone();
                 address[1] = extended.clone();
             }
@@ -176,6 +186,7 @@ fn details_of(c: &GraphContact) -> mailrs_domain::contact::Details {
         urls: c.business_home_page.iter().cloned().collect(),
         groups: c.categories.clone(),
         addresses: addresses_of(c),
+        revision: c.etag.clone().unwrap_or_default(),
         ..Default::default()
     }
 }
@@ -298,6 +309,19 @@ impl<G: GraphApi> Microsoft<G> {
     }
 }
 
+impl<G: GraphApi> Microsoft<G> {
+    /// The contact's etag as it stands; a photo upload changes it, so the
+    /// person returned after one must carry this one.
+    async fn etag_of(&self, id: &str) -> Result<String, BackendError> {
+        let read = self
+            .graph
+            .contact_name(id)
+            .await
+            .map_err(|e| self.service_error(Service::Contacts, e))?;
+        Ok(read.etag.unwrap_or_default())
+    }
+}
+
 impl<G: GraphApi> ContactsService for Microsoft<G> {
     /// Graph holds a birthday, notes, one website, categories and three
     /// postal addresses. The rest goes in the app's own extended property,
@@ -363,10 +387,15 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
                     let mut person = person_of(contact);
                     // Delta carries no extended properties, so each changed
                     // contact is asked for its own.
-                    match self.graph.contact_extras(&contact.id).await {
-                        Ok(text) => Extras::read(text.as_deref()).join(&mut person.details),
-                        Err(err) => tracing::warn!(%err, "could not read a contact's extras"),
-                    }
+                    // A failed read fails the page: storing the contact
+                    // without its extras would let a later edit overwrite them.
+                    let held = match self.graph.contact_extras(&contact.id).await {
+                        Ok(held) => held,
+                        // Deleted since the delta named it; the next one says so.
+                        Err(mailrs_graph::GraphError::NotFound) => continue,
+                        Err(e) => return Err(self.service_error(Service::Contacts, e)),
+                    };
+                    Extras::read(held.as_deref()).join(&mut person.details);
                     people.push(person);
                 }
             }
@@ -415,10 +444,10 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
     async fn delete_contact(
         &self,
         resource: &str,
-        _revision: Option<&str>,
+        revision: Option<&str>,
     ) -> Result<(), BackendError> {
         self.graph
-            .delete_contact(resource)
+            .delete_contact(resource, revision.filter(|r| !r.is_empty()))
             .await
             .map_err(|e| self.service_error(Service::Contacts, e))
     }
@@ -438,6 +467,9 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
                 .map_err(err)?;
         }
         let mut person = person_of(&made);
+        if fields.photo.as_ref().is_some_and(|p| !p.is_empty()) {
+            person.details.revision = self.etag_of(&made.id).await?;
+        }
         extras.join(&mut person.details);
         Ok(person)
     }
@@ -472,7 +504,14 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
         }
         let changed = self
             .graph
-            .update_contact(resource, &body)
+            .update_contact(
+                resource,
+                &body,
+                fields
+                    .expected_revision
+                    .as_deref()
+                    .filter(|r| !r.is_empty()),
+            )
             .await
             .map_err(|e| self.service_error(Service::Contacts, e))?;
         if let Some(photo) = fields.photo.clone().filter(|p| !p.is_empty()) {
@@ -482,6 +521,9 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
                 .map_err(err)?;
         }
         let mut person = person_of(&changed);
+        if fields.photo.as_ref().is_some_and(|p| !p.is_empty()) {
+            person.details.revision = self.etag_of(resource).await?;
+        }
         let held = match extras {
             Some(extras) => extras,
             None => Extras::read(

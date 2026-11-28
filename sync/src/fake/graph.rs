@@ -149,6 +149,8 @@ pub struct GraphState {
     pub photos: HashMap<String, Vec<u8>>,
     /// What each contact keeps in the app's own extended property.
     pub contact_extras: HashMap<String, String>,
+    /// When set, reading a contact's extended property answers this.
+    pub extras_error: Option<GraphError>,
     pub rules: Vec<MessageRule>,
     pub replies: AutomaticReplies,
     pub reply_writes: ReplyWrites,
@@ -638,12 +640,17 @@ impl GraphApi for FakeGraph {
         self.with(|s| contacts::set_contact_photo(s, id, bytes))
     }
 
-    async fn delete_contact(&self, id: &str) -> Answer<()> {
-        self.with(|s| contacts::delete_contact(s, id))
+    async fn delete_contact(&self, id: &str, etag: Option<&str>) -> Answer<()> {
+        self.with(|s| contacts::delete_contact(s, id, etag))
     }
 
-    async fn update_contact(&self, id: &str, body: &Value) -> Answer<GraphContact> {
-        self.with(|s| contacts::update_contact(s, id, body))
+    async fn update_contact(
+        &self,
+        id: &str,
+        body: &Value,
+        etag: Option<&str>,
+    ) -> Answer<GraphContact> {
+        self.with(|s| contacts::update_contact(s, id, body, etag))
     }
 
     async fn rules(&self) -> Answer<Vec<MessageRule>> {

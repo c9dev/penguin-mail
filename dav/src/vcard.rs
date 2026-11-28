@@ -541,12 +541,10 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
                     let label = label.and_then(first_text)?;
                     first_text(e).map(|value| Field { label, value })
                 }
-                VCardProperty::Other(name) if editable_custom(name) => {
-                    first_text(e).map(|value| Field {
-                        label: name.clone(),
-                        value,
-                    })
-                }
+                VCardProperty::Other(name) if x_name(name) => first_text(e).map(|value| Field {
+                    label: name.clone(),
+                    value,
+                }),
                 _ => None,
             })
             .collect(),

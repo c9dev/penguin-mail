@@ -652,3 +652,42 @@ async fn a_book_on_this_computer_takes_every_edit_the_app_makes() {
             .all(|c| c.resource != made.resource)
     );
 }
+
+#[tokio::test]
+async fn turning_contacts_off_keeps_a_local_book_of_an_account_that_is_not_running() {
+    use mailrs_store::address_book::{self, Contact};
+    let h = imap_harness().await;
+    let book = ContactBook::new(
+        Arc::new(crate::tests::Connected(Default::default())),
+        h.db.clone(),
+        tempfile::tempdir().unwrap().path().to_path_buf(),
+    );
+    let saved = |resource: &str| Contact {
+        account_id: h.account_id,
+        resource: resource.into(),
+        name: Some("Ana".into()),
+        ..Contact::default()
+    };
+    h.db.write({
+        let local = saved("local/0001");
+        move |c| address_book::save(c, &[local])
+    })
+    .await
+    .unwrap();
+    assert!(book.keeps_book_here(h.account_id).await.unwrap());
+    book.forget(h.account_id).await.unwrap();
+    assert_eq!(h.db.read(address_book::list).await.unwrap().len(), 1);
+    // A server's copy of the same account is removed as before.
+    h.db.write({
+        let server = saved("/card/ana.vcf");
+        move |c| {
+            address_book::clear(c, server.account_id)?;
+            address_book::save(c, &[server])
+        }
+    })
+    .await
+    .unwrap();
+    assert!(!book.keeps_book_here(h.account_id).await.unwrap());
+    book.forget(h.account_id).await.unwrap();
+    assert!(h.db.read(address_book::list).await.unwrap().is_empty());
+}

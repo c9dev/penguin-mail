@@ -272,6 +272,26 @@ async fn every_contact_field_goes_to_graph_and_comes_back() {
         "three in Graph's slots and one in the extras"
     );
     assert_eq!(d.addresses[0][0], "Box 7", "the PO box rides in the extras");
+    assert_eq!(d.addresses[0][1], "Floor 2");
+    assert_eq!(
+        d.addresses[0][2], "1 Main Street",
+        "the box is not in the street twice"
+    );
+    // Saving the addresses as read writes the same street line again.
+    let again = contacts
+        .update_contact(
+            &made.resource,
+            &ContactFields {
+                details: Changes {
+                    addresses: Some(d.addresses.clone()),
+                    ..Changes::default()
+                },
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(again.details.addresses[0][2], "1 Main Street");
     assert_eq!(d.addresses[2][3], "Faro");
     assert_eq!(d.addresses[3][3], "Braga");
     // An edit of one field keeps the others, extras included.
@@ -295,4 +315,59 @@ async fn every_contact_field_goes_to_graph_and_comes_back() {
     contacts.delete_contact(&made.resource, None).await.unwrap();
     let (after, _, _) = read_whole(&contacts).await;
     assert!(after.iter().all(|p| p.resource != made.resource));
+}
+
+#[tokio::test]
+async fn a_failed_extras_read_fails_the_page_instead_of_storing_a_partial_contact() {
+    let h = outlook().await;
+    h.fake.put_contact("contacts-1", ann());
+    h.fake
+        .with(|s| s.extras_error = Some(mailrs_graph::GraphError::Throttled { retry_after: None }));
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    assert!(contacts.connections(None, None).await.is_err());
+}
+
+#[tokio::test]
+async fn a_change_against_an_old_etag_is_refused_and_a_photo_keeps_the_new_one() {
+    let h = outlook().await;
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    let made = contacts
+        .create_contact(&ContactFields {
+            name: Some("Cy".into()),
+            photo: Some(b"\x89PNG-bytes".to_vec()),
+            ..ContactFields::default()
+        })
+        .await
+        .unwrap();
+    let held = h
+        .fake
+        .with(|s| s.contacts.get(&made.resource).unwrap().1.etag.clone());
+    assert_eq!(
+        Some(made.details.revision.as_str()),
+        held.as_deref(),
+        "the photo upload moved the etag and the person carries the new one"
+    );
+    let edit = |revision: &str| ContactFields {
+        organization: Some("Fabrikam".into()),
+        expected_revision: Some(revision.into()),
+        ..ContactFields::default()
+    };
+    let stale = contacts
+        .update_contact(&made.resource, &edit("W/\"0\""))
+        .await;
+    assert!(matches!(stale, Err(BackendError::Changed)));
+    let changed = contacts
+        .update_contact(&made.resource, &edit(&made.details.revision))
+        .await
+        .unwrap();
+    assert!(matches!(
+        contacts
+            .delete_contact(&made.resource, Some(&made.details.revision))
+            .await,
+        Err(BackendError::Changed)
+    ));
+    contacts
+        .delete_contact(&made.resource, Some(&changed.details.revision))
+        .await
+        .unwrap();
 }

@@ -231,8 +231,8 @@ either_client! {
         fn contact_name(id: &str) -> Graphed<GraphContact>;
         fn contact_extras(id: &str) -> Graphed<Option<String>>;
         fn set_contact_photo(id: &str, bytes: Vec<u8>) -> Graphed<()>;
-        fn delete_contact(id: &str) -> Graphed<()>;
-        fn update_contact(id: &str, body: &Value) -> Graphed<GraphContact>;
+        fn delete_contact(id: &str, etag: Option<&str>) -> Graphed<()>;
+        fn update_contact(id: &str, body: &Value, etag: Option<&str>) -> Graphed<GraphContact>;
         fn rules() -> Graphed<Vec<MessageRule>>;
         fn create_rule(rule: &MessageRule) -> Graphed<MessageRule>;
         fn delete_rule(id: &str) -> Graphed<()>;

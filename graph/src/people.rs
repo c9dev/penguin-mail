@@ -40,6 +40,8 @@ pub struct GraphContact {
     pub other_address: Option<PhysicalAddress>,
     #[serde(rename = "@removed")]
     pub removed: Option<Removed>,
+    #[serde(rename = "@odata.etag")]
+    pub etag: Option<String>,
 }
 
 /// Graph's postal address: one street line, and the rest by name.
@@ -123,10 +125,23 @@ impl Graph {
         .await
     }
 
-    pub async fn update_contact(&self, id: &str, body: &Value) -> Result<GraphContact, GraphError> {
-        self.send(Method::Patch, &format!("me/contacts/{id}"), Some(body), &[])
-            .await?
-            .ok_or_else(|| GraphError::Decode("no contact in the answer".into()))
+    /// Changes a contact; `etag` makes Graph refuse the change (412) when
+    /// someone else changed the contact since.
+    pub async fn update_contact(
+        &self,
+        id: &str,
+        body: &Value,
+        etag: Option<&str>,
+    ) -> Result<GraphContact, GraphError> {
+        let headers: Vec<(&str, &str)> = etag.map(|e| ("If-Match", e)).into_iter().collect();
+        self.send(
+            Method::Patch,
+            &format!("me/contacts/{id}"),
+            Some(body),
+            &headers,
+        )
+        .await?
+        .ok_or_else(|| GraphError::Decode("no contact in the answer".into()))
     }
 }
 
@@ -178,8 +193,9 @@ impl Graph {
             .await
     }
 
-    pub async fn delete_contact(&self, id: &str) -> Result<(), GraphError> {
-        self.send::<Value>(Method::Delete, &format!("me/contacts/{id}"), None, &[])
+    pub async fn delete_contact(&self, id: &str, etag: Option<&str>) -> Result<(), GraphError> {
+        let headers: Vec<(&str, &str)> = etag.map(|e| ("If-Match", e)).into_iter().collect();
+        self.send::<Value>(Method::Delete, &format!("me/contacts/{id}"), None, &headers)
             .await?;
         Ok(())
     }

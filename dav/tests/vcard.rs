@@ -595,3 +595,35 @@ fn an_anniversary_is_a_labelled_date_in_version_3_and_its_own_line_in_4() {
         "Anniversary"
     );
 }
+
+#[test]
+fn a_custom_property_with_an_unwritable_name_is_left_alone_by_an_edit() {
+    use mailrs_domain::contact::{Changes, Field};
+    let text =
+        "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nX-ABC_DEF:1\r\nX-CUSTOMER-ID:7\r\nEND:VCARD\r\n";
+    let read = read_card(text).unwrap().details.custom;
+    assert_eq!(
+        read,
+        [Field {
+            label: "X-CUSTOMER-ID".into(),
+            value: "7".into()
+        }],
+        "a name an edit could not write back is not shown as a field"
+    );
+    let saved = patch_card(
+        text,
+        &CardFields {
+            details: Changes {
+                custom: Some(vec![Field {
+                    label: "X-CUSTOMER-ID".into(),
+                    value: "8".into(),
+                }]),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(saved.matches("X-ABC_DEF:1").count(), 1, "{saved}");
+    assert!(!saved.contains("X-PENGUIN-FIELD"), "{saved}");
+}

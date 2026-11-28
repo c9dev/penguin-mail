@@ -10,10 +10,11 @@ impl FakeGraph {
     pub fn put_contact(&self, folder: &str, contact: GraphContact) {
         self.with(|s| {
             let id = contact.id.clone();
-            let contact = GraphContact {
+            let mut contact = GraphContact {
                 parent_folder_id: Some(folder.to_string()),
                 ..contact
             };
+            tagged(s, &mut contact);
             s.contacts.insert(id.clone(), (folder.to_string(), contact));
             log(s, folder, &id);
         });
@@ -26,6 +27,22 @@ impl FakeGraph {
                 log(s, &folder, id);
             }
         });
+    }
+}
+
+/// Gives the contact a new etag, as Graph does with every change.
+fn tagged(s: &mut GraphState, contact: &mut GraphContact) {
+    let seq = s.next_seq();
+    contact.etag = Some(format!("W/\"{seq}\""));
+}
+
+/// Refuses a change made against an etag that is no longer the contact's.
+fn check_etag(contact: &GraphContact, etag: Option<&str>) -> Answer<()> {
+    match etag {
+        Some(given) if contact.etag.as_deref() != Some(given) => {
+            Err(GraphError::PreconditionFailed)
+        }
+        _ => Ok(()),
     }
 }
 
@@ -121,6 +138,9 @@ fn extras_in(body: &Value) -> Option<String> {
 
 pub(super) fn contact_extras(s: &mut GraphState, id: &str) -> Answer<Option<String>> {
     s.refuses(Area::Contacts)?;
+    if let Some(err) = &s.extras_error {
+        return Err(err.clone());
+    }
     if !s.contacts.contains_key(id) {
         return Err(GraphError::NotFound);
     }
@@ -133,11 +153,16 @@ pub(super) fn set_contact_photo(s: &mut GraphState, id: &str, bytes: Vec<u8>) ->
         return Err(GraphError::NotFound);
     }
     s.photos.insert(id.to_string(), bytes);
+    // A photo change moves the etag on Graph too.
+    let mut contact = s.contacts[id].1.clone();
+    tagged(s, &mut contact);
+    s.contacts.get_mut(id).expect("checked above").1 = contact;
     Ok(())
 }
 
-pub(super) fn delete_contact(s: &mut GraphState, id: &str) -> Answer<()> {
+pub(super) fn delete_contact(s: &mut GraphState, id: &str, etag: Option<&str>) -> Answer<()> {
     s.refuses(Area::Contacts)?;
+    check_etag(&s.contacts.get(id).ok_or(GraphError::NotFound)?.1, etag)?;
     let (folder, _) = s.contacts.remove(id).ok_or(GraphError::NotFound)?;
     s.contact_extras.remove(id);
     s.photos.remove(id);
@@ -223,6 +248,7 @@ pub(super) fn create_contact(s: &mut GraphState, body: &Value) -> Answer<GraphCo
         ..GraphContact::default()
     };
     read_body(&mut contact, body);
+    tagged(s, &mut contact);
     if let Some(extras) = extras_in(body) {
         s.contact_extras.insert(id.clone(), extras);
     }
@@ -239,16 +265,25 @@ pub(super) fn contact_name(s: &mut GraphState, id: &str) -> Answer<GraphContact>
         id: id.into(),
         display_name: contact.display_name.clone(),
         home_phones: contact.home_phones.clone(),
+        etag: contact.etag.clone(),
         ..GraphContact::default()
     })
 }
 
-pub(super) fn update_contact(s: &mut GraphState, id: &str, body: &Value) -> Answer<GraphContact> {
+pub(super) fn update_contact(
+    s: &mut GraphState,
+    id: &str,
+    body: &Value,
+    etag: Option<&str>,
+) -> Answer<GraphContact> {
     s.refuses(Area::Contacts)?;
+    check_etag(&s.contacts.get(id).ok_or(GraphError::NotFound)?.1, etag)?;
     if let Some(extras) = extras_in(body) {
         s.contact_extras.insert(id.to_string(), extras);
     }
+    let seq = s.next_seq();
     let (folder, contact) = s.contacts.get_mut(id).ok_or(GraphError::NotFound)?;
+    contact.etag = Some(format!("W/\"{seq}\""));
     read_body(contact, body);
     // Outlook.com rebuilds the display name from the name parts, or the
     // company when there are none, on a change that leaves it out. Graph's

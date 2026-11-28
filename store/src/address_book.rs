@@ -143,6 +143,16 @@ pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
     Ok(())
 }
 
+/// Whether the account has a contact kept on this computer alone. The
+/// local book names its contacts `local/...`; no server does.
+pub fn holds_local(conn: &Connection, account_id: AccountId) -> Result<bool> {
+    Ok(conn
+        .prepare_cached(
+            "SELECT 1 FROM contacts WHERE account_id = ?1 AND resource LIKE 'local/%' LIMIT 1",
+        )?
+        .exists([account_id])?)
+}
+
 /// Every contact of every account, by name.
 pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
     let all = read(conn, "1 = 1", [])?;
@@ -455,20 +465,21 @@ pub fn message_counts(
     conn: &Connection,
     emails: &[String],
 ) -> Result<std::collections::HashMap<String, i64>> {
-    let wanted: std::collections::HashSet<String> =
-        emails.iter().map(|e| e.to_lowercase()).collect();
+    let wanted: Vec<String> = emails.iter().map(|e| e.to_lowercase()).collect();
+    // The index on lower(from_addr) serves the lookup, so the query reads
+    // only the senders asked for.
     let mut stmt = conn.prepare_cached(
-        "SELECT lower(from_addr), count(*) FROM messages WHERE from_addr IS NOT NULL GROUP BY 1",
+        "SELECT lower(from_addr), count(*) FROM messages \
+         WHERE lower(from_addr) IN (SELECT value FROM json_each(?1)) GROUP BY 1",
     )?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    })?;
+    let rows = stmt.query_map(
+        [serde_json::to_string(&wanted).unwrap_or_else(|_| "[]".into())],
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
+    )?;
     let mut out = std::collections::HashMap::new();
     for row in rows {
         let (email, count) = row?;
-        if wanted.contains(&email) {
-            out.insert(email, count);
-        }
+        out.insert(email, count);
     }
     Ok(out)
 }
@@ -483,7 +494,11 @@ pub fn mail_with(conn: &Connection, emails: &[String]) -> Result<MailWith> {
         let mut stmt = conn.prepare_cached(
             "SELECT account_id, thread_id, subject, date, \
                     lower(from_addr) IN (SELECT lower(email) FROM accounts) \
-             FROM messages WHERE lower(from_addr) = ?1 OR lower(to_addrs) LIKE ?2 ESCAPE '\\' OR lower(cc_addrs) LIKE ?2 ESCAPE '\\' \
+             FROM messages WHERE lower(from_addr) = ?1 \
+             OR (lower(to_addrs) LIKE ?2 ESCAPE '\\' AND EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(to_addrs) THEN to_addrs ELSE '[]' END) r \
+                 WHERE lower(json_extract(r.value, '$.email')) = ?1)) \
+             OR (lower(cc_addrs) LIKE ?2 ESCAPE '\\' AND EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(cc_addrs) THEN cc_addrs ELSE '[]' END) r \
+                 WHERE lower(json_extract(r.value, '$.email')) = ?1)) \
              ORDER BY date DESC",
         )?;
         let rows = stmt.query_map(params![email, like], |row| {
@@ -889,8 +904,15 @@ mod tests {
     fn mail(conn: &Connection, account: AccountId, id: &str, from: &str, to: &str, date: i64) {
         conn.execute(
             "INSERT INTO messages (account_id, id, thread_id, from_addr, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) \
-             VALUES (?1, ?2, ?3, ?4, ?5, '', 'Re', ?6, '', 1, 0, 0)",
-            params![account, id, id.split('/').next().unwrap(), from, to, date],
+             VALUES (?1, ?2, ?3, ?4, ?5, '[]', 'Re', ?6, '', 1, 0, 0)",
+            params![
+                account,
+                id,
+                id.split('/').next().unwrap(),
+                from,
+                serde_json::json!([{ "name": null, "email": to }]).to_string(),
+                date
+            ],
         )
         .unwrap();
     }
@@ -918,5 +940,22 @@ mod tests {
         let counts = message_counts(&conn, &["ANA@x.example".into()]).unwrap();
         assert_eq!(counts.get("ana@x.example"), Some(&2));
         assert_eq!(counts.get("other@x.example"), None);
+    }
+
+    #[test]
+    fn mail_with_matches_whole_addresses_only() {
+        let conn = open_in_memory().unwrap();
+        let me = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        mail(&conn, me, "t1/1", "dana@example.com", "joann@x.org", 100);
+        assert_eq!(
+            mail_with(&conn, &["ann@x.org".into()])
+                .unwrap()
+                .conversations,
+            0
+        );
+        mail(&conn, me, "t2/1", "dana@example.com", "Ann@x.org", 200);
+        let found = mail_with(&conn, &["ann@x.org".into()]).unwrap();
+        assert_eq!(found.conversations, 1);
+        assert_eq!(found.last.map(|l| l.1), Some("t2".into()));
     }
 }

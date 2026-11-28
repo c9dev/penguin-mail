@@ -608,6 +608,20 @@ mod google {
     }
 
     #[tokio::test]
+    async fn retrying_a_create_updates_the_card_google_already_made() {
+        let (dav, carddav) = google();
+        let mut fields = fields();
+        fields.creation_key = Some("12345678-1234-1234-1234-123456789abc".into());
+        let first = carddav.create_contact(&fields).await.unwrap();
+        fields.name = Some("Live Check Two".into());
+        let second = carddav.create_contact(&fields).await.unwrap();
+        assert_eq!(first.resource, second.resource);
+        assert_eq!(second.name.as_deref(), Some("Live Check Two"));
+        let held = dav.with(|s| s.resources.keys().filter(|k| k.starts_with(BOOK)).count());
+        assert_eq!(held, 1, "no second card");
+    }
+
+    #[tokio::test]
     async fn an_edit_is_not_refused_when_the_etag_is_stale_and_says_so() {
         let (dav, carddav) = google();
         let made = carddav.create_contact(&fields()).await.unwrap();
