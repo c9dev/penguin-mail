@@ -4973,7 +4973,7 @@ msgstr "複製連結"
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1110 app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
 #: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
@@ -6192,8 +6192,8 @@ msgstr "會議"
 msgid "Decline"
 msgstr "婉拒"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1309
-#: app/src/ui/contacts/mod.rs:1322
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
+#: app/src/ui/contacts/mod.rs:1327
 msgid "None"
 msgstr "無"
 
@@ -6913,7 +6913,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "無法刪除活動：{reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1360
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8106,7 +8106,7 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr "有未儲存的變更"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1251
+#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
 msgid "New contact"
 msgstr "新增聯絡人"
 
@@ -8114,7 +8114,8 @@ msgstr "新增聯絡人"
 msgid "Edit contact"
 msgstr "編輯聯絡人"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
+#: app/src/ui/contacts/person.rs:1156
 msgid "Turn contacts on for an account first."
 msgstr "請先為一個帳號開啟聯絡人。"
 
@@ -8192,7 +8193,7 @@ msgstr[0] ""
 "您正在編輯 {account} 中的聯絡人。{others} 保留自己的聯絡人。按下「儲存」之前"
 "不會寫入任何內容。"
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
 msgid "Turn Off Contacts"
 msgstr "關閉聯絡人"
 
@@ -8217,7 +8218,7 @@ msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "在 {count} 封郵件中出現"
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
 msgid "Contacts are off"
 msgstr "聯絡人已關閉"
 
@@ -8273,121 +8274,121 @@ msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr "在某人的頁面把他加入 VIP，即可從此清單開啟。"
 
-#: app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1024
 msgid "No contacts yet"
 msgstr "還沒有聯絡人"
 
-#: app/src/ui/contacts/mod.rs:1021
+#: app/src/ui/contacts/mod.rs:1026
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr "此帳號的聯絡人已開啟。尚未向這台電腦複製任何內容。"
 
-#: app/src/ui/contacts/mod.rs:1046
+#: app/src/ui/contacts/mod.rs:1051
 msgid "Turn On"
 msgstr "開啟"
 
-#: app/src/ui/contacts/mod.rs:1075
+#: app/src/ui/contacts/mod.rs:1080
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "已為 {account} 開啟聯絡人。這台電腦上的通訊錄是空的。"
 
-#: app/src/ui/contacts/mod.rs:1099
+#: app/src/ui/contacts/mod.rs:1104
 msgid "Turn Off Contacts?"
 msgstr "關閉聯絡人？"
 
-#: app/src/ui/contacts/mod.rs:1102
+#: app/src/ui/contacts/mod.rs:1107
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
 msgstr "關閉 {account} 的聯絡人？聯絡人仍保存在這部電腦上，重新開啟後會恢復。"
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1109
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
 msgstr "關閉 {account} 的聯絡人？聯絡人將從這部電腦移除；伺服器會保留它們。"
 
-#: app/src/ui/contacts/mod.rs:1111
+#: app/src/ui/contacts/mod.rs:1116
 msgid "Turn Off"
 msgstr "關閉"
 
-#: app/src/ui/contacts/mod.rs:1138
+#: app/src/ui/contacts/mod.rs:1143
 msgid "Contacts are off for {account}."
 msgstr "已關閉 {account} 的聯絡人。"
 
-#: app/src/ui/contacts/mod.rs:1191
+#: app/src/ui/contacts/mod.rs:1196
 msgid "Search same address"
 msgstr "搜尋相同地址"
 
-#: app/src/ui/contacts/mod.rs:1192
+#: app/src/ui/contacts/mod.rs:1197
 msgid "Search same person"
 msgstr "搜尋同一個人"
 
-#: app/src/ui/contacts/mod.rs:1193
+#: app/src/ui/contacts/mod.rs:1198
 msgid "Search correspondents"
 msgstr "搜尋通信聯絡人"
 
-#: app/src/ui/contacts/mod.rs:1194
+#: app/src/ui/contacts/mod.rs:1199
 msgid "Search contacts"
 msgstr "搜尋聯絡人"
 
-#: app/src/ui/contacts/mod.rs:1202
+#: app/src/ui/contacts/mod.rs:1207
 msgid "{count} selected"
 msgstr "已選取 {count} 項"
 
-#: app/src/ui/contacts/mod.rs:1215
+#: app/src/ui/contacts/mod.rs:1220
 msgid "Delete {count}"
 msgstr "刪除 {count} 項"
 
-#: app/src/ui/contacts/mod.rs:1238
+#: app/src/ui/contacts/mod.rs:1243
 msgid "Select several contacts"
 msgstr "選取多個聯絡人"
 
-#: app/src/ui/contacts/mod.rs:1275 app/src/ui/contacts/mod.rs:1299
+#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} 人"
 
-#: app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:1291
 msgid "{count} of {total}"
 msgstr "{total} 人中的 {count} 人"
 
-#: app/src/ui/contacts/mod.rs:1295 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "所有聯絡人"
 
-#: app/src/ui/contacts/mod.rs:1297 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1305 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "來自郵件"
 
-#: app/src/ui/contacts/mod.rs:1305
+#: app/src/ui/contacts/mod.rs:1310
 msgid "Not contacts yet"
 msgstr "尚未成為聯絡人"
 
-#: app/src/ui/contacts/mod.rs:1307 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "相同地址"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/mod.rs:1325
+#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} 對"
 
-#: app/src/ui/contacts/mod.rs:1320 app/src/ui/contacts/person.rs:896
+#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
 #: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "同一個人"
 
-#: app/src/ui/contacts/mod.rs:1532
+#: app/src/ui/contacts/mod.rs:1537
 msgid "{name} from {account}"
 msgstr "{account} 中的 {name}"
 
-#: app/src/ui/contacts/mod.rs:1541
+#: app/src/ui/contacts/mod.rs:1546
 msgid "Deleted {list}."
 msgstr "已刪除{list}。"
 

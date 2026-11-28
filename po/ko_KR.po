@@ -5076,7 +5076,7 @@ msgstr "링크 복사"
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1110 app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
 #: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
@@ -6321,8 +6321,8 @@ msgstr "회의"
 msgid "Decline"
 msgstr "거절"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1309
-#: app/src/ui/contacts/mod.rs:1322
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
+#: app/src/ui/contacts/mod.rs:1327
 msgid "None"
 msgstr "없음"
 
@@ -7049,7 +7049,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "일정을 삭제할 수 없습니다: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1360
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8251,7 +8251,7 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr "저장하지 않은 변경 사항"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1251
+#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
 msgid "New contact"
 msgstr "새 연락처"
 
@@ -8259,7 +8259,8 @@ msgstr "새 연락처"
 msgid "Edit contact"
 msgstr "연락처 편집"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
+#: app/src/ui/contacts/person.rs:1156
 msgid "Turn contacts on for an account first."
 msgstr "먼저 계정의 연락처를 켜세요."
 
@@ -8339,7 +8340,7 @@ msgstr[0] ""
 "{account}의 연락처를 편집하고 있습니다. {others}에는 자체 연락처가 남습니다. "
 "저장을 누르기 전에는 아무것도 기록되지 않습니다."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
 msgid "Turn Off Contacts"
 msgstr "연락처 끄기"
 
@@ -8364,7 +8365,7 @@ msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "메시지 {count}개에서 발견"
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
 msgid "Contacts are off"
 msgstr "연락처가 꺼져 있습니다"
 
@@ -8423,29 +8424,29 @@ msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr "그 사람의 페이지에서 VIP에 추가하면 이 목록에서 열 수 있습니다."
 
-#: app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1024
 msgid "No contacts yet"
 msgstr "아직 연락처가 없습니다"
 
-#: app/src/ui/contacts/mod.rs:1021
+#: app/src/ui/contacts/mod.rs:1026
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "이 계정의 연락처가 켜져 있습니다. 이 컴퓨터로 복사된 항목이 아직 없습니다."
 
-#: app/src/ui/contacts/mod.rs:1046
+#: app/src/ui/contacts/mod.rs:1051
 msgid "Turn On"
 msgstr "켜기"
 
-#: app/src/ui/contacts/mod.rs:1075
+#: app/src/ui/contacts/mod.rs:1080
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "{account}의 연락처를 켰습니다. 이 컴퓨터의 주소록은 비어 있습니다."
 
-#: app/src/ui/contacts/mod.rs:1099
+#: app/src/ui/contacts/mod.rs:1104
 msgid "Turn Off Contacts?"
 msgstr "연락처를 끌까요?"
 
-#: app/src/ui/contacts/mod.rs:1102
+#: app/src/ui/contacts/mod.rs:1107
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8453,7 +8454,7 @@ msgstr ""
 "{account}의 연락처를 끌까요? 연락처는 이 컴퓨터에 저장된 채로 남고 다시 켜면 "
 "돌아옵니다."
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1109
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8461,88 +8462,88 @@ msgstr ""
 "{account}의 연락처를 끌까요? 연락처는 이 컴퓨터에서 삭제되며 서버에는 그대로 "
 "남습니다."
 
-#: app/src/ui/contacts/mod.rs:1111
+#: app/src/ui/contacts/mod.rs:1116
 msgid "Turn Off"
 msgstr "끄기"
 
-#: app/src/ui/contacts/mod.rs:1138
+#: app/src/ui/contacts/mod.rs:1143
 msgid "Contacts are off for {account}."
 msgstr "{account}의 연락처가 꺼졌습니다."
 
-#: app/src/ui/contacts/mod.rs:1191
+#: app/src/ui/contacts/mod.rs:1196
 msgid "Search same address"
 msgstr "같은 주소 검색"
 
-#: app/src/ui/contacts/mod.rs:1192
+#: app/src/ui/contacts/mod.rs:1197
 msgid "Search same person"
 msgstr "같은 사람 검색"
 
-#: app/src/ui/contacts/mod.rs:1193
+#: app/src/ui/contacts/mod.rs:1198
 msgid "Search correspondents"
 msgstr "주고받은 사람 검색"
 
-#: app/src/ui/contacts/mod.rs:1194
+#: app/src/ui/contacts/mod.rs:1199
 msgid "Search contacts"
 msgstr "연락처 검색"
 
-#: app/src/ui/contacts/mod.rs:1202
+#: app/src/ui/contacts/mod.rs:1207
 msgid "{count} selected"
 msgstr "{count}개 선택됨"
 
-#: app/src/ui/contacts/mod.rs:1215
+#: app/src/ui/contacts/mod.rs:1220
 msgid "Delete {count}"
 msgstr "{count}개 삭제"
 
-#: app/src/ui/contacts/mod.rs:1238
+#: app/src/ui/contacts/mod.rs:1243
 msgid "Select several contacts"
 msgstr "연락처 여러 개 선택"
 
-#: app/src/ui/contacts/mod.rs:1275 app/src/ui/contacts/mod.rs:1299
+#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count}명"
 
-#: app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:1291
 msgid "{count} of {total}"
 msgstr "{total}개 중 {count}개"
 
-#: app/src/ui/contacts/mod.rs:1295 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "모든 연락처"
 
-#: app/src/ui/contacts/mod.rs:1297 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1305 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "메일에서"
 
-#: app/src/ui/contacts/mod.rs:1305
+#: app/src/ui/contacts/mod.rs:1310
 msgid "Not contacts yet"
 msgstr "아직 연락처가 아님"
 
-#: app/src/ui/contacts/mod.rs:1307 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "같은 주소"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/mod.rs:1325
+#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count}쌍"
 
-#: app/src/ui/contacts/mod.rs:1320 app/src/ui/contacts/person.rs:896
+#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
 #: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "같은 사람"
 
-#: app/src/ui/contacts/mod.rs:1532
+#: app/src/ui/contacts/mod.rs:1537
 msgid "{name} from {account}"
 msgstr "{account}의 {name}"
 
-#: app/src/ui/contacts/mod.rs:1541
+#: app/src/ui/contacts/mod.rs:1546
 msgid "Deleted {list}."
 msgstr "{list}을(를) 삭제했습니다."
 

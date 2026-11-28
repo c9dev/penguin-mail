@@ -5241,7 +5241,7 @@ msgstr "Salin Tautan"
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1110 app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
 #: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
@@ -6505,8 +6505,8 @@ msgstr "Rapat"
 msgid "Decline"
 msgstr "Tolak"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1309
-#: app/src/ui/contacts/mod.rs:1322
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
+#: app/src/ui/contacts/mod.rs:1327
 msgid "None"
 msgstr "Tidak Ada"
 
@@ -7248,7 +7248,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Tidak dapat menghapus acara: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1360
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8467,7 +8467,7 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr "Perubahan belum disimpan"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1251
+#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
 msgid "New contact"
 msgstr "Kontak baru"
 
@@ -8475,7 +8475,8 @@ msgstr "Kontak baru"
 msgid "Edit contact"
 msgstr "Ubah kontak"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
+#: app/src/ui/contacts/person.rs:1156
 msgid "Turn contacts on for an account first."
 msgstr "Aktifkan kontak untuk sebuah akun terlebih dahulu."
 
@@ -8558,7 +8559,7 @@ msgstr[1] ""
 "Anda mengubah kontak {account}. {others} menyimpan kontaknya sendiri-"
 "sendiri. Tidak ada yang ditulis sampai Anda menekan Simpan."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
 msgid "Turn Off Contacts"
 msgstr "Matikan Kontak"
 
@@ -8584,7 +8585,7 @@ msgid_plural "Seen in {count} messages"
 msgstr[0] "Terlihat di {count} pesan"
 msgstr[1] "Terlihat di {count} pesan"
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
 msgid "Contacts are off"
 msgstr "Kontak nonaktif"
 
@@ -8645,28 +8646,28 @@ msgid ""
 msgstr ""
 "Tambahkan seseorang ke VIP dari halamannya agar dapat dibuka dari daftar ini."
 
-#: app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1024
 msgid "No contacts yet"
 msgstr "Belum ada kontak"
 
-#: app/src/ui/contacts/mod.rs:1021
+#: app/src/ui/contacts/mod.rs:1026
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr "Kontak aktif untuk akun ini. Belum ada yang disalin ke komputer ini."
 
-#: app/src/ui/contacts/mod.rs:1046
+#: app/src/ui/contacts/mod.rs:1051
 msgid "Turn On"
 msgstr "Aktifkan"
 
-#: app/src/ui/contacts/mod.rs:1075
+#: app/src/ui/contacts/mod.rs:1080
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "Kontak aktif untuk {account}. Buku di komputer ini masih kosong."
 
-#: app/src/ui/contacts/mod.rs:1099
+#: app/src/ui/contacts/mod.rs:1104
 msgid "Turn Off Contacts?"
 msgstr "Matikan kontak?"
 
-#: app/src/ui/contacts/mod.rs:1102
+#: app/src/ui/contacts/mod.rs:1107
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8674,7 +8675,7 @@ msgstr ""
 "Matikan kontak untuk {account}? Kontaknya tetap tersimpan di komputer ini "
 "dan kembali saat Anda menyalakannya."
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1109
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8682,90 +8683,90 @@ msgstr ""
 "Matikan kontak untuk {account}? Kontaknya dihapus dari komputer ini; server "
 "tetap menyimpannya."
 
-#: app/src/ui/contacts/mod.rs:1111
+#: app/src/ui/contacts/mod.rs:1116
 msgid "Turn Off"
 msgstr "Matikan"
 
-#: app/src/ui/contacts/mod.rs:1138
+#: app/src/ui/contacts/mod.rs:1143
 msgid "Contacts are off for {account}."
 msgstr "Kontak untuk {account} dimatikan."
 
-#: app/src/ui/contacts/mod.rs:1191
+#: app/src/ui/contacts/mod.rs:1196
 msgid "Search same address"
 msgstr "Cari alamat yang sama"
 
-#: app/src/ui/contacts/mod.rs:1192
+#: app/src/ui/contacts/mod.rs:1197
 msgid "Search same person"
 msgstr "Cari orang yang sama"
 
-#: app/src/ui/contacts/mod.rs:1193
+#: app/src/ui/contacts/mod.rs:1198
 msgid "Search correspondents"
 msgstr "Cari korespondensi"
 
-#: app/src/ui/contacts/mod.rs:1194
+#: app/src/ui/contacts/mod.rs:1199
 msgid "Search contacts"
 msgstr "Cari kontak"
 
-#: app/src/ui/contacts/mod.rs:1202
+#: app/src/ui/contacts/mod.rs:1207
 msgid "{count} selected"
 msgstr "{count} dipilih"
 
-#: app/src/ui/contacts/mod.rs:1215
+#: app/src/ui/contacts/mod.rs:1220
 msgid "Delete {count}"
 msgstr "Hapus {count}"
 
-#: app/src/ui/contacts/mod.rs:1238
+#: app/src/ui/contacts/mod.rs:1243
 msgid "Select several contacts"
 msgstr "Pilih beberapa kontak"
 
-#: app/src/ui/contacts/mod.rs:1275 app/src/ui/contacts/mod.rs:1299
+#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} orang"
 msgstr[1] "{count} orang"
 
-#: app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:1291
 msgid "{count} of {total}"
 msgstr "{count} dari {total}"
 
-#: app/src/ui/contacts/mod.rs:1295 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "Semua kontak"
 
-#: app/src/ui/contacts/mod.rs:1297 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1305 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "Dari surat"
 
-#: app/src/ui/contacts/mod.rs:1305
+#: app/src/ui/contacts/mod.rs:1310
 msgid "Not contacts yet"
 msgstr "Belum menjadi kontak"
 
-#: app/src/ui/contacts/mod.rs:1307 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "Alamat yang sama"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/mod.rs:1325
+#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} pasang"
 msgstr[1] "{count} pasang"
 
-#: app/src/ui/contacts/mod.rs:1320 app/src/ui/contacts/person.rs:896
+#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
 #: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "Orang yang sama"
 
-#: app/src/ui/contacts/mod.rs:1532
+#: app/src/ui/contacts/mod.rs:1537
 msgid "{name} from {account}"
 msgstr "{name} dari {account}"
 
-#: app/src/ui/contacts/mod.rs:1541
+#: app/src/ui/contacts/mod.rs:1546
 msgid "Deleted {list}."
 msgstr "{list} dihapus."
 

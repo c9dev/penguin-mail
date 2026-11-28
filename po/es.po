@@ -5272,7 +5272,7 @@ msgstr "Copiar el enlace"
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
-#: app/src/ui/contacts/mod.rs:1110 app/src/ui/contacts/mod.rs:1207
+#: app/src/ui/contacts/mod.rs:1115 app/src/ui/contacts/mod.rs:1212
 #: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
@@ -6546,8 +6546,8 @@ msgstr "Reuniones"
 msgid "Decline"
 msgstr "Rechazar"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1309
-#: app/src/ui/contacts/mod.rs:1322
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1314
+#: app/src/ui/contacts/mod.rs:1327
 msgid "None"
 msgstr "Ninguna"
 
@@ -7287,7 +7287,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "No se ha podido eliminar el evento: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1360
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1365
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -8505,7 +8505,7 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr "Cambios sin guardar"
 
-#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1251
+#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1256
 msgid "New contact"
 msgstr "Contacto nuevo"
 
@@ -8513,7 +8513,8 @@ msgstr "Contacto nuevo"
 msgid "Edit contact"
 msgstr "Editar contacto"
 
-#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/mod.rs:1020
+#: app/src/ui/contacts/person.rs:1156
 msgid "Turn contacts on for an account first."
 msgstr "Activa primero los contactos de una cuenta."
 
@@ -8596,7 +8597,7 @@ msgstr[1] ""
 "Estás editando el contacto de {account}. {others} conservan los suyos. No se "
 "escribe nada hasta que pulses Guardar."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:185
 msgid "Turn Off Contacts"
 msgstr "Desactivar contactos"
 
@@ -8622,7 +8623,7 @@ msgid_plural "Seen in {count} messages"
 msgstr[0] "Visto en {count} mensaje"
 msgstr[1] "Visto en {count} mensajes"
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:973 app/src/ui/contacts/mod.rs:1019
 msgid "Contacts are off"
 msgstr "Los contactos están desactivados"
 
@@ -8682,32 +8683,32 @@ msgid ""
 msgstr ""
 "Añade una persona a los VIP desde su página para abrirla desde esta lista."
 
-#: app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1024
 msgid "No contacts yet"
 msgstr "Aún no hay contactos"
 
-#: app/src/ui/contacts/mod.rs:1021
+#: app/src/ui/contacts/mod.rs:1026
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "Los contactos están activados para esta cuenta. Todavía no se ha copiado "
 "nada a este equipo."
 
-#: app/src/ui/contacts/mod.rs:1046
+#: app/src/ui/contacts/mod.rs:1051
 msgid "Turn On"
 msgstr "Activar"
 
-#: app/src/ui/contacts/mod.rs:1075
+#: app/src/ui/contacts/mod.rs:1080
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr ""
 "Los contactos están activados para {account}. La libreta de este equipo está "
 "vacía."
 
-#: app/src/ui/contacts/mod.rs:1099
+#: app/src/ui/contacts/mod.rs:1104
 msgid "Turn Off Contacts?"
 msgstr "¿Desactivar los contactos?"
 
-#: app/src/ui/contacts/mod.rs:1102
+#: app/src/ui/contacts/mod.rs:1107
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8715,7 +8716,7 @@ msgstr ""
 "¿Desactivar los contactos de {account}? Se quedan guardados en este equipo y "
 "vuelven cuando los actives."
 
-#: app/src/ui/contacts/mod.rs:1104
+#: app/src/ui/contacts/mod.rs:1109
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8723,90 +8724,90 @@ msgstr ""
 "¿Desactivar los contactos de {account}? Se eliminan de este equipo; el "
 "servidor los conserva."
 
-#: app/src/ui/contacts/mod.rs:1111
+#: app/src/ui/contacts/mod.rs:1116
 msgid "Turn Off"
 msgstr "Desactivar"
 
-#: app/src/ui/contacts/mod.rs:1138
+#: app/src/ui/contacts/mod.rs:1143
 msgid "Contacts are off for {account}."
 msgstr "Los contactos de {account} están desactivados."
 
-#: app/src/ui/contacts/mod.rs:1191
+#: app/src/ui/contacts/mod.rs:1196
 msgid "Search same address"
 msgstr "Buscar misma dirección"
 
-#: app/src/ui/contacts/mod.rs:1192
+#: app/src/ui/contacts/mod.rs:1197
 msgid "Search same person"
 msgstr "Buscar misma persona"
 
-#: app/src/ui/contacts/mod.rs:1193
+#: app/src/ui/contacts/mod.rs:1198
 msgid "Search correspondents"
 msgstr "Buscar corresponsales"
 
-#: app/src/ui/contacts/mod.rs:1194
+#: app/src/ui/contacts/mod.rs:1199
 msgid "Search contacts"
 msgstr "Buscar contactos"
 
-#: app/src/ui/contacts/mod.rs:1202
+#: app/src/ui/contacts/mod.rs:1207
 msgid "{count} selected"
 msgstr "{count} seleccionados"
 
-#: app/src/ui/contacts/mod.rs:1215
+#: app/src/ui/contacts/mod.rs:1220
 msgid "Delete {count}"
 msgstr "Eliminar {count}"
 
-#: app/src/ui/contacts/mod.rs:1238
+#: app/src/ui/contacts/mod.rs:1243
 msgid "Select several contacts"
 msgstr "Seleccionar varios contactos"
 
-#: app/src/ui/contacts/mod.rs:1275 app/src/ui/contacts/mod.rs:1299
+#: app/src/ui/contacts/mod.rs:1280 app/src/ui/contacts/mod.rs:1304
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} persona"
 msgstr[1] "{count} personas"
 
-#: app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:1291
 msgid "{count} of {total}"
 msgstr "{count} de {total}"
 
-#: app/src/ui/contacts/mod.rs:1295 app/src/ui/contacts/side.rs:82
+#: app/src/ui/contacts/mod.rs:1300 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "Todos los contactos"
 
-#: app/src/ui/contacts/mod.rs:1297 app/src/ui/contacts/side.rs:84
+#: app/src/ui/contacts/mod.rs:1302 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
 #: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1305 app/src/ui/contacts/side.rs:90
+#: app/src/ui/contacts/mod.rs:1310 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "Del correo"
 
-#: app/src/ui/contacts/mod.rs:1305
+#: app/src/ui/contacts/mod.rs:1310
 msgid "Not contacts yet"
 msgstr "Aún no son contactos"
 
-#: app/src/ui/contacts/mod.rs:1307 app/src/ui/contacts/side.rs:96
+#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "Misma dirección"
 
-#: app/src/ui/contacts/mod.rs:1312 app/src/ui/contacts/mod.rs:1325
+#: app/src/ui/contacts/mod.rs:1317 app/src/ui/contacts/mod.rs:1330
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} par"
 msgstr[1] "{count} pares"
 
-#: app/src/ui/contacts/mod.rs:1320 app/src/ui/contacts/person.rs:896
+#: app/src/ui/contacts/mod.rs:1325 app/src/ui/contacts/person.rs:896
 #: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "Misma persona"
 
-#: app/src/ui/contacts/mod.rs:1532
+#: app/src/ui/contacts/mod.rs:1537
 msgid "{name} from {account}"
 msgstr "{name} de {account}"
 
-#: app/src/ui/contacts/mod.rs:1541
+#: app/src/ui/contacts/mod.rs:1546
 msgid "Deleted {list}."
 msgstr "Se eliminó {list}."
 
