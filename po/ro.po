@@ -1076,11 +1076,11 @@ msgstr "{provider} se conectează prin navigator"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "„Continuă” deschide pagina de conectare {provider} în navigator."
 
-#: app/src/app.rs:444
+#: app/src/app.rs:452
 msgid "Could not mark all mail as read: {reason}"
 msgstr "Nu s-a putut marca toată corespondența ca citită: {reason}"
 
-#: app/src/app.rs:491
+#: app/src/app.rs:499
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -4262,8 +4262,8 @@ msgstr "Acel cont nu este conectat."
 msgid "Could not save: {reason}"
 msgstr "Nu s-a putut salva: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3052
-#: app/src/ui/window.rs:3075
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3059
+#: app/src/ui/window.rs:3082
 msgid "Could not open the draft: {reason}"
 msgstr "Nu s-a putut deschide ciorna: {reason}"
 
@@ -4291,7 +4291,7 @@ msgid "Show or hide this message"
 msgstr "Afișează sau ascunde acest mesaj"
 
 #: app/src/render.rs:305 app/src/ui/contact_card.rs:43
-#: app/src/ui/contacts/mod.rs:225
+#: app/src/ui/contacts/mod.rs:227
 msgid "Contact"
 msgstr "Contact"
 
@@ -4338,7 +4338,7 @@ msgstr ""
 "înainte de a le deschide."
 
 #: app/src/render.rs:503 app/src/ui/contacts/editor.rs:351
-#: app/src/ui/contacts/person.rs:385
+#: app/src/ui/contacts/person.rs:388
 msgid "Details"
 msgstr "Detalii"
 
@@ -4534,7 +4534,7 @@ msgid "Set up a different project"
 msgstr "Configurați un alt proiect"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3405
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3412
 msgid "Set up your own Google project"
 msgstr "Configurați propriul proiect Google"
 
@@ -4676,18 +4676,18 @@ msgstr "{host} a refuzat autentificarea: {reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:502 app/src/ui/sidebar.rs:566
-#: app/src/ui/sidebar.rs:1955 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:569
+#: app/src/ui/sidebar.rs:1958 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Calendar"
 
-#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:170
-#: app/src/ui/contacts/mod.rs:219 app/src/ui/contacts_prefs.rs:256
+#: app/src/servers.rs:64 app/src/ui/contacts/mod.rs:172
+#: app/src/ui/contacts/mod.rs:221 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
-#: app/src/ui/sidebar.rs:508 app/src/ui/sidebar.rs:567
-#: app/src/ui/sidebar.rs:934 app/src/ui/sidebar.rs:1956
-#: app/src/ui/window.rs:3804
+#: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:570
+#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1959
+#: app/src/ui/window.rs:3811
 msgid "Contacts"
 msgstr "Contacte"
 
@@ -4721,8 +4721,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Abonament Claude"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3797
-#: app/src/ui/window.rs:3886
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3804
+#: app/src/ui/window.rs:3893
 msgid "Assistant"
 msgstr "Asistent"
 
@@ -5110,7 +5110,7 @@ msgstr ""
 msgid "No unread mail"
 msgstr "Nicio corespondență necitită"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1980
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1983
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} mesaj necitit"
@@ -5133,7 +5133,7 @@ msgstr "Deschide Penguin Mail"
 msgid "New Message"
 msgstr "Mesaj nou"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2573 app/src/ui/window.rs:3803
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2576 app/src/ui/window.rs:3810
 msgid "Check for Mail"
 msgstr "Verifică corespondența"
 
@@ -5151,7 +5151,7 @@ msgstr "Noutăți în {version}"
 msgid "Check for Updates"
 msgstr "Caută actualizări"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3825
+#: app/src/tray.rs:216 app/src/ui/window.rs:3832
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "Ieșire"
@@ -5175,11 +5175,11 @@ msgid "What's New"
 msgstr "Noutăți"
 
 #: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:314
-#: app/src/ui/contacts/person.rs:1036 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/contacts/person.rs:1039 app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Site web"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3824
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3831
 msgid "Donate"
 msgstr "Donează"
 
@@ -5187,7 +5187,7 @@ msgstr "Donează"
 msgid "License"
 msgstr "Licență"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3823
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3830
 msgid "About Penguin Mail"
 msgstr "Despre Penguin Mail"
 
@@ -5237,12 +5237,12 @@ msgid "The update to {version} failed"
 msgstr "Actualizarea la {version} a eșuat"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1622
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1629
 msgid "Copy Command"
 msgstr "Copiază comanda"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1627
+#: app/src/ui/window.rs:1634
 msgid "Command copied"
 msgstr "Comandă copiată"
 
@@ -5337,8 +5337,8 @@ msgstr "Copiază legătura"
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
 #: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:483
-#: app/src/ui/contacts/mod.rs:1034 app/src/ui/contacts/person.rs:635
-#: app/src/ui/contacts/person.rs:757 app/src/ui/rules.rs:535
+#: app/src/ui/contacts/mod.rs:1066 app/src/ui/contacts/person.rs:638
+#: app/src/ui/contacts/person.rs:760 app/src/ui/rules.rs:535
 #: app/src/ui/rules.rs:724 app/src/ui/sender_prefs.rs:210
 #: app/src/ui/sender_prefs/signature.rs:78 app/src/ui/smart_editor.rs:326
 #: app/src/ui/switch_jmap.rs:174 app/src/ui/switch_jmap.rs:225
@@ -5355,7 +5355,7 @@ msgstr "Anulează"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1566
+#: app/src/ui/window.rs:1573
 msgid "Sign In"
 msgstr "Conectare"
 
@@ -5479,7 +5479,7 @@ msgstr "Nu acum"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1699
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1706
 msgid "Grant Access"
 msgstr "Acordă acces"
 
@@ -5631,8 +5631,9 @@ msgstr "Se caută…"
 msgid "Sign In Again"
 msgstr "Conectare din nou"
 
-#: app/src/ui/add_account.rs:3898 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2310
+#: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:277
+#: app/src/ui/contacts/mod.rs:481 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2317
 msgid "Open Google Cloud"
 msgstr "Deschide Google Cloud"
 
@@ -5723,14 +5724,14 @@ msgstr "Scrie o ciornă de răspuns la conversația deschisă"
 msgid "Choose a Model"
 msgstr "Alege un model"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3933
-#: app/src/ui/window.rs:3934
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3940
+#: app/src/ui/window.rs:3941
 msgid "Detach"
 msgstr "Detașează"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4633
+#: app/src/ui/window.rs:4640
 msgid "Close"
 msgstr "Închide"
 
@@ -5957,7 +5958,7 @@ msgstr "Editează {server}"
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
 #: app/src/ui/contacts/editor.rs:595 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3561
+#: app/src/ui/window.rs:3568
 msgid "Remove"
 msgstr "Elimină"
 
@@ -6609,8 +6610,8 @@ msgstr "Întâlniri"
 msgid "Decline"
 msgstr "Refuză"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1128
-#: app/src/ui/contacts/mod.rs:1136
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1160
+#: app/src/ui/contacts/mod.rs:1168
 msgid "None"
 msgstr "Niciuna"
 
@@ -6749,7 +6750,7 @@ msgstr "Elimină mementoul"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
 #: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:345
-#: app/src/ui/contacts/editor.rs:380 app/src/ui/contacts/person.rs:395
+#: app/src/ui/contacts/editor.rs:380 app/src/ui/contacts/person.rs:398
 msgid "Notes"
 msgstr "Note"
 
@@ -6820,8 +6821,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Doar persoanele care pot modifica acest calendar văd detaliile"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
-#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2290
-#: app/src/ui/sidebar.rs:2591
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2293
+#: app/src/ui/sidebar.rs:2594
 msgid "Color"
 msgstr "Culoare"
 
@@ -7357,7 +7358,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Nu s-a putut șterge evenimentul: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:254 app/src/ui/contacts/mod.rs:1165
+#: app/src/ui/contacts/mod.rs:256 app/src/ui/contacts/mod.rs:1197
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7703,19 +7704,19 @@ msgstr "Acordați acces pentru {account}"
 msgid "Sign in again to {account}"
 msgstr "Conectați-vă din nou la {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2596
+#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2599
 msgid "Sign In Again…"
 msgstr "Conectare din nou…"
 
-#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2604
+#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2607
 msgid "Remove Account…"
 msgstr "Elimină contul…"
 
-#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2611
+#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2614
 msgid "Account options"
 msgstr "Opțiunile contului"
 
-#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2616
+#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2619
 msgid "Options for {account}"
 msgstr "Opțiuni pentru {account}"
 
@@ -7743,13 +7744,13 @@ msgstr "Ascunde din listă"
 msgid "Original Color"
 msgstr "Culoarea originală"
 
-#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2278
-#: app/src/ui/sidebar.rs:2581
+#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2281
+#: app/src/ui/sidebar.rs:2584
 msgid "Rename…"
 msgstr "Redenumește…"
 
-#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2179
-#: app/src/ui/sidebar.rs:2306
+#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2182
+#: app/src/ui/sidebar.rs:2309
 msgid "Delete…"
 msgstr "Șterge…"
 
@@ -7877,7 +7878,7 @@ msgstr "{date}, are evenimente"
 msgid "Offline, last updated {time}"
 msgstr "Deconectat, actualizat ultima dată la {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2676
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2679
 msgid "Offline"
 msgstr "Deconectat"
 
@@ -8014,7 +8015,7 @@ msgid "Choose a Time…"
 msgstr "Alegeți o oră…"
 
 #: app/src/ui/composer/mod.rs:444 app/src/ui/composer/mod.rs:2178
-#: app/src/ui/sidebar.rs:1532 app/src/ui/sidebar.rs:2059
+#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2062
 msgid "Send Later"
 msgstr "Trimite mai târziu"
 
@@ -8432,7 +8433,7 @@ msgid "Ignore"
 msgstr "Ignoră"
 
 #: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:279
-#: app/src/ui/contacts/person.rs:308 app/src/ui/contacts/person.rs:701
+#: app/src/ui/contacts/person.rs:308 app/src/ui/contacts/person.rs:704
 msgid "Email"
 msgstr "E-mail"
 
@@ -8442,12 +8443,12 @@ msgid "Other email"
 msgstr "Alt e-mail"
 
 #: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:293
-#: app/src/ui/contacts/person.rs:335 app/src/ui/contacts/person.rs:707
+#: app/src/ui/contacts/person.rs:335 app/src/ui/contacts/person.rs:710
 msgid "Phone"
 msgstr "Telefon"
 
 #: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:194
-#: app/src/ui/sidebar.rs:1495
+#: app/src/ui/sidebar.rs:1498
 msgid "Remove from VIPs"
 msgstr "Elimină din contactele VIP"
 
@@ -8456,7 +8457,7 @@ msgid "Add to VIPs"
 msgstr "Adaugă la contactele VIP"
 
 #: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:225
-#: app/src/ui/contacts/person.rs:900
+#: app/src/ui/contacts/person.rs:903
 msgid "All Their Mail"
 msgstr "Toată corespondența lor"
 
@@ -8469,7 +8470,7 @@ msgid "Full name"
 msgstr "Nume complet"
 
 #: app/src/ui/contacts/editor.rs:268 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:704
+#: app/src/ui/contacts/person.rs:707
 msgid "Organization"
 msgstr "Organizație"
 
@@ -8557,7 +8558,7 @@ msgstr "Adrese poștale"
 msgid "Websites"
 msgstr "Site-uri web"
 
-#: app/src/ui/contacts/editor.rs:371 app/src/ui/contacts/person.rs:382
+#: app/src/ui/contacts/editor.rs:371 app/src/ui/contacts/person.rs:385
 #: app/src/ui/contacts/side.rs:108
 msgid "Groups"
 msgstr "Grupuri"
@@ -8587,16 +8588,16 @@ msgstr "Modificări nesalvate"
 msgid "Edit contact"
 msgstr "Editează contactul"
 
-#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1075
+#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1107
 msgid "New contact"
 msgstr "Contact nou"
 
-#: app/src/ui/contacts/editor.rs:526 app/src/ui/contacts/person.rs:952
+#: app/src/ui/contacts/editor.rs:526 app/src/ui/contacts/person.rs:955
 msgid "Turn contacts on for an account first."
 msgstr "Activează mai întâi contactele pentru un cont."
 
 #: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:532
-#: app/src/ui/contacts/person.rs:950 app/src/ui/contacts/person.rs:955
+#: app/src/ui/contacts/person.rs:953 app/src/ui/contacts/person.rs:958
 msgid "Save to"
 msgstr "Salvează în"
 
@@ -8612,7 +8613,7 @@ msgstr "Înlocuiește fotografia"
 msgid "Remove Photo"
 msgstr "Elimină fotografia"
 
-#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:646
+#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:649
 msgid "Delete {name} from {account}"
 msgstr "Șterge {name} din {account}"
 
@@ -8663,30 +8664,34 @@ msgstr ""
 "Editezi contactul din {account}. {others} păstrează contactul propriu. Nu se "
 "scrie nimic până nu apeși Salvează."
 
-#: app/src/ui/contacts/mod.rs:587
+#: app/src/ui/contacts/mod.rs:276
+msgid "Turn on Contacts for your Google project"
+msgstr "Activează Contactele pentru proiectul tău Google"
+
+#: app/src/ui/contacts/mod.rs:617
 msgid "Could not load contacts: {reason}"
 msgstr "Contactele nu au putut fi încărcate: {reason}"
 
-#: app/src/ui/contacts/mod.rs:716
+#: app/src/ui/contacts/mod.rs:746
 msgid "Deletes {name} in {account}"
 msgstr "Șterge {name} din {account}"
 
-#: app/src/ui/contacts/mod.rs:740
+#: app/src/ui/contacts/mod.rs:770
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "Păstrează ambele contacte. Nu se șterge nimic."
 
-#: app/src/ui/contacts/mod.rs:773
+#: app/src/ui/contacts/mod.rs:803
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "Văzut într-un mesaj"
 msgstr[1] "Văzut în {count} mesaje"
 msgstr[2] "Văzut în {count} de mesaje"
 
-#: app/src/ui/contacts/mod.rs:866
+#: app/src/ui/contacts/mod.rs:898
 msgid "Contacts are off"
 msgstr "Contactele sunt dezactivate"
 
-#: app/src/ui/contacts/mod.rs:868
+#: app/src/ui/contacts/mod.rs:900
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8696,19 +8701,19 @@ msgstr ""
 "pe acest computer. Activează contactele ca să o copiezi aici. Dacă le "
 "dezactivezi mai târziu, copia se șterge."
 
-#: app/src/ui/contacts/mod.rs:879
+#: app/src/ui/contacts/mod.rs:911
 msgid "No Matching Contacts"
 msgstr "Niciun contact potrivit"
 
-#: app/src/ui/contacts/mod.rs:880
+#: app/src/ui/contacts/mod.rs:912
 msgid "Nothing matches that search."
 msgstr "Nimic nu se potrivește cu această căutare."
 
-#: app/src/ui/contacts/mod.rs:886
+#: app/src/ui/contacts/mod.rs:918
 msgid "No shared addresses"
 msgstr "Nicio adresă comună"
 
-#: app/src/ui/contacts/mod.rs:887
+#: app/src/ui/contacts/mod.rs:919
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8716,133 +8721,133 @@ msgstr ""
 "Niciun contact dintr-un cont nu are aceeași adresă cu altul. Nimic nu "
 "așteaptă să fie șters."
 
-#: app/src/ui/contacts/mod.rs:891
+#: app/src/ui/contacts/mod.rs:923
 msgid "No close names"
 msgstr "Niciun nume apropiat"
 
-#: app/src/ui/contacts/mod.rs:892
+#: app/src/ui/contacts/mod.rs:924
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "Niciun cont nu conține un nume apropiat care să nu fie deja legat."
 
-#: app/src/ui/contacts/mod.rs:896
+#: app/src/ui/contacts/mod.rs:928
 msgid "Everyone is a contact"
 msgstr "Toți sunt contacte"
 
-#: app/src/ui/contacts/mod.rs:897
+#: app/src/ui/contacts/mod.rs:929
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr ""
 "Toți cei pe care i-a văzut căsuța poștală sunt deja salvați ca persoane de "
 "contact."
 
-#: app/src/ui/contacts/mod.rs:901
+#: app/src/ui/contacts/mod.rs:933
 msgid "No VIPs yet"
 msgstr "Încă niciun VIP"
 
-#: app/src/ui/contacts/mod.rs:902
+#: app/src/ui/contacts/mod.rs:934
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr ""
 "Adaugă o persoană la VIP din pagina ei, ca s-o deschizi din această listă."
 
-#: app/src/ui/contacts/mod.rs:906
+#: app/src/ui/contacts/mod.rs:938
 msgid "No contacts yet"
 msgstr "Încă niciun contact"
 
-#: app/src/ui/contacts/mod.rs:907
+#: app/src/ui/contacts/mod.rs:939
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "Contactele sunt activate pentru acest cont. Încă nu s-a copiat nimic pe "
 "acest computer."
 
-#: app/src/ui/contacts/mod.rs:930
+#: app/src/ui/contacts/mod.rs:962
 msgid "Turn On"
 msgstr "Activează"
 
-#: app/src/ui/contacts/mod.rs:956
+#: app/src/ui/contacts/mod.rs:988
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr ""
 "Contactele sunt activate pentru {account}. Cartea de pe acest computer este "
 "goală."
 
-#: app/src/ui/contacts/mod.rs:1018
+#: app/src/ui/contacts/mod.rs:1050
 msgid "Search same address"
 msgstr "Caută aceeași adresă"
 
-#: app/src/ui/contacts/mod.rs:1019
+#: app/src/ui/contacts/mod.rs:1051
 msgid "Search same person"
 msgstr "Caută aceeași persoană"
 
-#: app/src/ui/contacts/mod.rs:1020
+#: app/src/ui/contacts/mod.rs:1052
 msgid "Search correspondents"
 msgstr "Caută corespondenți"
 
-#: app/src/ui/contacts/mod.rs:1021
+#: app/src/ui/contacts/mod.rs:1053
 msgid "Search contacts"
 msgstr "Caută contacte"
 
-#: app/src/ui/contacts/mod.rs:1029
+#: app/src/ui/contacts/mod.rs:1061
 msgid "{count} selected"
 msgstr "{count} selectate"
 
-#: app/src/ui/contacts/mod.rs:1042
+#: app/src/ui/contacts/mod.rs:1074
 msgid "Delete {count}"
 msgstr "Șterge {count}"
 
-#: app/src/ui/contacts/mod.rs:1065
+#: app/src/ui/contacts/mod.rs:1097
 msgid "Select several contacts"
 msgstr "Selectează mai multe contacte"
 
-#: app/src/ui/contacts/mod.rs:1099 app/src/ui/contacts/mod.rs:1122
+#: app/src/ui/contacts/mod.rs:1131 app/src/ui/contacts/mod.rs:1154
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} persoană"
 msgstr[1] "{count} persoane"
 msgstr[2] "{count} de persoane"
 
-#: app/src/ui/contacts/mod.rs:1110
+#: app/src/ui/contacts/mod.rs:1142
 msgid "{count} of {total}"
 msgstr "{count} din {total}"
 
-#: app/src/ui/contacts/mod.rs:1119 app/src/ui/contacts/side.rs:77
+#: app/src/ui/contacts/mod.rs:1151 app/src/ui/contacts/side.rs:77
 msgid "All contacts"
 msgstr "Toate contactele"
 
-#: app/src/ui/contacts/mod.rs:1121 app/src/ui/contacts/side.rs:79
-#: app/src/ui/sidebar.rs:1482 app/src/ui/sidebar.rs:1484
-#: app/src/ui/sidebar.rs:2082 app/src/ui/sidebar.rs:2084
+#: app/src/ui/contacts/mod.rs:1153 app/src/ui/contacts/side.rs:79
+#: app/src/ui/sidebar.rs:1485 app/src/ui/sidebar.rs:1487
+#: app/src/ui/sidebar.rs:2085 app/src/ui/sidebar.rs:2087
 msgid "VIPs"
 msgstr "Contacte VIP"
 
-#: app/src/ui/contacts/mod.rs:1124 app/src/ui/contacts/side.rs:85
+#: app/src/ui/contacts/mod.rs:1156 app/src/ui/contacts/side.rs:85
 msgid "From mail"
 msgstr "Din e-mailuri"
 
-#: app/src/ui/contacts/mod.rs:1124
+#: app/src/ui/contacts/mod.rs:1156
 msgid "Not contacts yet"
 msgstr "Încă nu sunt contacte"
 
-#: app/src/ui/contacts/mod.rs:1126 app/src/ui/contacts/side.rs:91
+#: app/src/ui/contacts/mod.rs:1158 app/src/ui/contacts/side.rs:91
 msgid "Same address"
 msgstr "Aceeași adresă"
 
-#: app/src/ui/contacts/mod.rs:1130 app/src/ui/contacts/mod.rs:1138
+#: app/src/ui/contacts/mod.rs:1162 app/src/ui/contacts/mod.rs:1170
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} pereche"
 msgstr[1] "{count} perechi"
 msgstr[2] "{count} de perechi"
 
-#: app/src/ui/contacts/mod.rs:1134 app/src/ui/contacts/person.rs:755
+#: app/src/ui/contacts/mod.rs:1166 app/src/ui/contacts/person.rs:758
 #: app/src/ui/contacts/side.rs:97
 msgid "Same person"
 msgstr "Aceeași persoană"
 
-#: app/src/ui/contacts/mod.rs:1335
+#: app/src/ui/contacts/mod.rs:1367
 msgid "{name} from {account}"
 msgstr "{name} din {account}"
 
-#: app/src/ui/contacts/mod.rs:1344
+#: app/src/ui/contacts/mod.rs:1376
 msgid "Deleted {list}."
 msgstr "S-a șters: {list}."
 
@@ -8863,7 +8868,7 @@ msgstr "{name} este în VIP. Scoate-o din acea listă."
 msgid "Add {name} to VIPs"
 msgstr "Adaugă {name} la VIP"
 
-#: app/src/ui/contacts/person.rs:226 app/src/ui/contacts/person.rs:901
+#: app/src/ui/contacts/person.rs:226 app/src/ui/contacts/person.rs:904
 msgid "Every conversation with this person"
 msgstr "Fiecare conversație cu această persoană"
 
@@ -8875,89 +8880,89 @@ msgstr "Mesaj nou (C)"
 msgid "Reach"
 msgstr "Date de contact"
 
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:960
+#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:963
 msgid "Address"
 msgstr "Adresă"
 
-#: app/src/ui/contacts/person.rs:407
+#: app/src/ui/contacts/person.rs:410
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "Ai scris pe {date}. Se așteaptă un răspuns."
 
-#: app/src/ui/contacts/person.rs:409
+#: app/src/ui/contacts/person.rs:412
 msgid "Last message, {date}"
 msgstr "Ultimul mesaj, {date}"
 
-#: app/src/ui/contacts/person.rs:425
+#: app/src/ui/contacts/person.rs:428
 msgid "You last wrote {date}"
 msgstr "Ultima dată ai scris pe {date}"
 
-#: app/src/ui/contacts/person.rs:426
+#: app/src/ui/contacts/person.rs:429
 msgid "You have not written to them."
 msgstr "Nu ai scris încă acestei persoane."
 
-#: app/src/ui/contacts/person.rs:448 app/src/ui/sidebar.rs:498
-#: app/src/ui/sidebar.rs:565 app/src/ui/sidebar.rs:1954
+#: app/src/ui/contacts/person.rs:451 app/src/ui/sidebar.rs:494
+#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1957
 #: app/src/ui/thread_list.rs:373
 msgid "Mail"
 msgstr "Corespondență"
 
-#: app/src/ui/contacts/person.rs:454 app/src/ui/sidebar.rs:2493
+#: app/src/ui/contacts/person.rs:457 app/src/ui/sidebar.rs:2496
 msgid "On this computer"
 msgstr "Pe acest calculator"
 
-#: app/src/ui/contacts/person.rs:494
+#: app/src/ui/contacts/person.rs:497
 msgid "A key for {email} is on this computer."
 msgstr "Pe acest computer există o cheie pentru {email}."
 
-#: app/src/ui/contacts/person.rs:495
+#: app/src/ui/contacts/person.rs:498
 msgid "A key for these addresses is on this computer."
 msgstr "Pe acest computer există o cheie pentru aceste adrese."
 
-#: app/src/ui/contacts/person.rs:496
+#: app/src/ui/contacts/person.rs:499
 msgid "No key for {email} is on this computer."
 msgstr "Pe acest computer nu există o cheie pentru {email}."
 
-#: app/src/ui/contacts/person.rs:497
+#: app/src/ui/contacts/person.rs:500
 msgid "No key for these addresses is on this computer."
 msgstr "Pe acest computer nu există o cheie pentru aceste adrese."
 
-#: app/src/ui/contacts/person.rs:499
+#: app/src/ui/contacts/person.rs:502
 msgid "OpenPGP key"
 msgstr "Cheie OpenPGP"
 
-#: app/src/ui/contacts/person.rs:503
+#: app/src/ui/contacts/person.rs:506
 msgid "Remote images"
 msgstr "Imagini la distanță"
 
-#: app/src/ui/contacts/person.rs:504
+#: app/src/ui/contacts/person.rs:507
 msgid "Allowed for this sender."
 msgstr "Permise pentru acest expeditor."
 
-#: app/src/ui/contacts/person.rs:504
+#: app/src/ui/contacts/person.rs:507
 msgid "Blocked until you allow them."
 msgstr "Blocate până când le permiți."
 
-#: app/src/ui/contacts/person.rs:506
+#: app/src/ui/contacts/person.rs:509
 msgid "Remote images, allowed for this sender"
 msgstr "Imagini la distanță, permise pentru acest expeditor"
 
-#: app/src/ui/contacts/person.rs:508
+#: app/src/ui/contacts/person.rs:511
 msgid "Remote images, blocked until you allow them"
 msgstr "Imagini la distanță, blocate până când le permiți"
 
-#: app/src/ui/contacts/person.rs:579
+#: app/src/ui/contacts/person.rs:582
 msgid "Deleted {name} from {account}."
 msgstr "{name} a fost șters din {account}."
 
-#: app/src/ui/contacts/person.rs:584
+#: app/src/ui/contacts/person.rs:587
 msgid "{base} {other} still has this person."
 msgstr "{base} {other} are în continuare această persoană."
 
-#: app/src/ui/contacts/person.rs:630
+#: app/src/ui/contacts/person.rs:633
 msgid "Merge in {account}"
 msgstr "Îmbină în {account}"
 
-#: app/src/ui/contacts/person.rs:672
+#: app/src/ui/contacts/person.rs:675
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8965,25 +8970,25 @@ msgstr ""
 "Ambele contacte folosesc {email}. {account} păstrează un contact și îl "
 "șterge pe celălalt. Celelalte conturi nu se schimbă."
 
-#: app/src/ui/contacts/person.rs:675
+#: app/src/ui/contacts/person.rs:678
 msgid "Which contact"
 msgstr "Care contact"
 
-#: app/src/ui/contacts/person.rs:695
+#: app/src/ui/contacts/person.rs:698
 msgid "{account} keeps"
 msgstr "{account} păstrează"
 
-#: app/src/ui/contacts/person.rs:718
+#: app/src/ui/contacts/person.rs:721
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr ""
 "{name} a fost șters din {account}. {kept} este contactul pe care îl "
 "păstrează {account}."
 
-#: app/src/ui/contacts/person.rs:766
+#: app/src/ui/contacts/person.rs:769
 msgid "Link"
 msgstr "Leagă"
 
-#: app/src/ui/contacts/person.rs:782
+#: app/src/ui/contacts/person.rs:785
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8991,36 +8996,36 @@ msgstr ""
 "{a} este în {account_a}. {b} este în {account_b}. Numele și adresele diferă. "
 "Legarea păstrează ambele contacte. Toate contactele arată un singur rând."
 
-#: app/src/ui/contacts/person.rs:790
+#: app/src/ui/contacts/person.rs:793
 msgid "The two contacts"
 msgstr "Cele două contacte"
 
-#: app/src/ui/contacts/person.rs:805
+#: app/src/ui/contacts/person.rs:808
 msgid "Name in All contacts"
 msgstr "Numele în Toate contactele"
 
-#: app/src/ui/contacts/person.rs:826
+#: app/src/ui/contacts/person.rs:829
 msgid "All contacts will show"
 msgstr "Toate contactele vor arăta"
 
-#: app/src/ui/contacts/person.rs:831
+#: app/src/ui/contacts/person.rs:834
 msgid "One row, two accounts"
 msgstr "Un rând, două conturi"
 
-#: app/src/ui/contacts/person.rs:877
+#: app/src/ui/contacts/person.rs:880
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr ""
 "Toate contactele arată acum un singur rând pentru {name}. Nu s-a șters nimic."
 
-#: app/src/ui/contacts/person.rs:913
+#: app/src/ui/contacts/person.rs:916
 msgid "Save to Contacts"
 msgstr "Salvează în Contacte"
 
-#: app/src/ui/contacts/person.rs:925
+#: app/src/ui/contacts/person.rs:928
 msgid "Not a contact"
 msgstr "Nu este un contact"
 
-#: app/src/ui/contacts/person.rs:929
+#: app/src/ui/contacts/person.rs:932
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -9040,31 +9045,31 @@ msgstr[2] ""
 "nu sunt salvate ca contacte. Văzut în {count} de mesaje. Salvarea creează un "
 "contact în contul pe care îl alegi."
 
-#: app/src/ui/contacts/person.rs:939
+#: app/src/ui/contacts/person.rs:942
 msgid "Latest message"
 msgstr "Cel mai recent mesaj"
 
-#: app/src/ui/contacts/person.rs:961
+#: app/src/ui/contacts/person.rs:964
 msgid "From the messages"
 msgstr "Din mesaje"
 
-#: app/src/ui/contacts/person.rs:994
+#: app/src/ui/contacts/person.rs:997
 msgid "Saved {name} to {account}."
 msgstr "{name} a fost salvat în {account}."
 
-#: app/src/ui/contacts/person.rs:1062
+#: app/src/ui/contacts/person.rs:1065
 msgid "No organization, no phone"
 msgstr "Fără organizație, fără telefon"
 
-#: app/src/ui/contacts/person.rs:1064
+#: app/src/ui/contacts/person.rs:1067
 msgid "Organization {value}"
 msgstr "Organizație {value}"
 
-#: app/src/ui/contacts/person.rs:1065
+#: app/src/ui/contacts/person.rs:1068
 msgid "Phone {value}"
 msgstr "Telefon {value}"
 
-#: app/src/ui/contacts/person.rs:1134
+#: app/src/ui/contacts/person.rs:1137
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -9072,7 +9077,7 @@ msgstr ""
 "Toate contactele folosesc numele {name}. {account_a} are în continuare "
 "contactul său, iar {account_b} are în continuare {other}."
 
-#: app/src/ui/contacts/person.rs:1155
+#: app/src/ui/contacts/person.rs:1158
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -9080,7 +9085,7 @@ msgstr ""
 "Eticheta este contul. {others} are un contact propriu pentru această "
 "persoană, iar editarea aici schimbă {account}."
 
-#: app/src/ui/contacts/person.rs:1161
+#: app/src/ui/contacts/person.rs:1164
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -9088,12 +9093,12 @@ msgstr ""
 "VIP sunt persoanele pe care le marchezi, ca să le deschizi din această "
 "listă. {name} este salvat și în {accounts}."
 
-#: app/src/ui/contacts/person.rs:1164
+#: app/src/ui/contacts/person.rs:1167
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr ""
 "VIP sunt persoanele pe care le marchezi, ca să le deschizi din această listă."
 
-#: app/src/ui/contacts/person.rs:1166
+#: app/src/ui/contacts/person.rs:1169
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr ""
 "O persoană, salvată în {accounts}. Fiecare cont păstrează propriul contact."
@@ -9182,7 +9187,7 @@ msgid "Find Again"
 msgstr "Caută din nou"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2173
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2176
 msgid "Edit…"
 msgstr "Editează…"
 
@@ -9267,7 +9272,7 @@ msgid "Export…"
 msgstr "Exportă…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3821
 msgid "Customize Toolbar…"
 msgstr "Personalizează bara de instrumente…"
 
@@ -9382,8 +9387,8 @@ msgstr "Marchează ca citit sau necitit"
 msgid "Tags…"
 msgstr "Etichete…"
 
-#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1540
-#: app/src/ui/sidebar.rs:2065 app/src/ui/window/reminders.rs:25
+#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1543
+#: app/src/ui/sidebar.rs:2068 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Amintește-mi"
@@ -9841,7 +9846,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Permite Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4027
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4034
 msgid "Add an account first"
 msgstr "Adăugați mai întâi un cont"
 
@@ -11187,7 +11192,7 @@ msgstr "Mută {account} în jos"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3821 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3828 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "Preferințe"
 
@@ -11569,7 +11574,7 @@ msgstr "Adaugă o adresă"
 msgid "Default sender"
 msgstr "Expeditor implicit"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2482
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2485
 msgid "Signature…"
 msgstr "Semnătură…"
 
@@ -11633,146 +11638,145 @@ msgstr ""
 msgid "Stop the message from going out"
 msgstr "Opriți plecarea mesajului"
 
-#: app/src/ui/sidebar.rs:486 app/src/ui/sidebar.rs:960
+#: app/src/ui/sidebar.rs:480 app/src/ui/sidebar.rs:963
 #: app/src/ui/sidebar/sections.rs:26
 #: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "Poșta"
 
-#: app/src/ui/sidebar.rs:547 app/src/ui/sidebar.rs:1945
-#: app/src/ui/sidebar.rs:3174
-msgid "99+"
-msgstr "99+"
-
-#: app/src/ui/sidebar.rs:950
+#: app/src/ui/sidebar.rs:953
 msgid "Calendars"
 msgstr "Calendare"
 
-#: app/src/ui/sidebar.rs:1524 app/src/ui/sidebar.rs:2053
+#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2056
 msgid "Outbox"
 msgstr "De trimis"
 
-#: app/src/ui/sidebar.rs:1587
+#: app/src/ui/sidebar.rs:1590
 msgid "Holds folders, not mail"
 msgstr "Conține dosare, nu mesaje"
 
-#: app/src/ui/sidebar.rs:1816
+#: app/src/ui/sidebar.rs:1819
 msgid "Approximate unread message count from downloaded mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1819
+#: app/src/ui/sidebar.rs:1822
 #, fuzzy
 #| msgid "The message is larger than the server sends."
 msgid "Unread messages counted on the server"
 msgstr "Mesajul este mai mare decât acceptă serverul pentru trimitere."
 
-#: app/src/ui/sidebar.rs:1822
+#: app/src/ui/sidebar.rs:1825
 #, fuzzy
 #| msgid "{count} unread message"
 #| msgid_plural "{count} unread messages"
 msgid "Counting unread messages on the server…"
 msgstr "{count} mesaj necitit"
 
-#: app/src/ui/sidebar.rs:1825
+#: app/src/ui/sidebar.rs:1828
 msgid ""
 "Unread count unavailable. The account may be offline or the server may not "
 "support these conditions."
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1908
+#: app/src/ui/sidebar.rs:1911
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} mesaj necitit"
 msgstr[1] "{mailbox}, {count} mesaje necitite"
 msgstr[2] "{mailbox}, {count} de mesaje necitite"
 
-#: app/src/ui/sidebar.rs:1914
+#: app/src/ui/sidebar.rs:1917
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mesaj"
 msgstr[1] "{mailbox}, {count} mesaje"
 msgstr[2] "{mailbox}, {count} de mesaje"
 
-#: app/src/ui/sidebar.rs:1958
+#: app/src/ui/sidebar.rs:1948 app/src/ui/sidebar.rs:3177
+msgid "99+"
+msgstr "99+"
+
+#: app/src/ui/sidebar.rs:1961
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Corespondență, {count} necitit"
 msgstr[1] "Corespondență, {count} necitite"
 msgstr[2] "Corespondență, {count} de necitite"
 
-#: app/src/ui/sidebar.rs:1964
+#: app/src/ui/sidebar.rs:1967
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Calendar, {count} așteaptă răspunsul dumneavoastră"
 msgstr[1] "Calendar, {count} așteaptă răspunsul dumneavoastră"
 msgstr[2] "Calendar, {count} așteaptă răspunsul dumneavoastră"
 
-#: app/src/ui/sidebar.rs:2175 app/src/ui/sidebar.rs:2297
-#: app/src/ui/sidebar.rs:2592
+#: app/src/ui/sidebar.rs:2178 app/src/ui/sidebar.rs:2300
+#: app/src/ui/sidebar.rs:2595
 msgid "Move Up"
 msgstr "Mută în sus"
 
-#: app/src/ui/sidebar.rs:2176 app/src/ui/sidebar.rs:2300
-#: app/src/ui/sidebar.rs:2593
+#: app/src/ui/sidebar.rs:2179 app/src/ui/sidebar.rs:2303
+#: app/src/ui/sidebar.rs:2596
 msgid "Move Down"
 msgstr "Mută în jos"
 
-#: app/src/ui/sidebar.rs:2328
+#: app/src/ui/sidebar.rs:2331
 msgid "Empty Trash…"
 msgstr "Golește coșul de gunoi…"
 
-#: app/src/ui/sidebar.rs:2481
+#: app/src/ui/sidebar.rs:2484
 msgid "Automatic Reply…"
 msgstr "Răspuns automat…"
 
-#: app/src/ui/sidebar.rs:2483
+#: app/src/ui/sidebar.rs:2486
 msgid "Rules…"
 msgstr "Reguli…"
 
-#: app/src/ui/sidebar.rs:2484 app/src/ui/window.rs:3807
+#: app/src/ui/sidebar.rs:2487 app/src/ui/window.rs:3814
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
-#: app/src/ui/sidebar.rs:2501
+#: app/src/ui/sidebar.rs:2504
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr ""
 "Pe acest calculator. Afișează sau ascunde căsuțele poștale ale acestui cont"
 
-#: app/src/ui/sidebar.rs:2502
+#: app/src/ui/sidebar.rs:2505
 msgid "Show or hide this account's mailboxes"
 msgstr "Afișează sau ascunde căsuțele poștale ale acestui cont"
 
-#: app/src/ui/sidebar.rs:2578
+#: app/src/ui/sidebar.rs:2581
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Dosar nou…"
 
-#: app/src/ui/sidebar.rs:2597
+#: app/src/ui/sidebar.rs:2600
 msgid "Switch to JMAP…"
 msgstr "Comută la JMAP…"
 
-#: app/src/ui/sidebar.rs:2599
+#: app/src/ui/sidebar.rs:2602
 msgid "Messages That Will Not Download…"
 msgstr "Mesaje care nu se descarcă…"
 
-#: app/src/ui/sidebar.rs:2674
+#: app/src/ui/sidebar.rs:2677
 msgid "Sign in again to keep syncing"
 msgstr "Conectați-vă din nou pentru a continua sincronizarea"
 
-#: app/src/ui/sidebar.rs:2680
+#: app/src/ui/sidebar.rs:2683
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} nu răspunde; se reîncearcă"
 
-#: app/src/ui/sidebar.rs:2691
+#: app/src/ui/sidebar.rs:2694
 msgid "The keyring is not responding; retrying"
 msgstr "Inelul de chei nu răspunde; se reîncearcă"
 
-#: app/src/ui/sidebar.rs:2694
+#: app/src/ui/sidebar.rs:2697
 msgid "Downloading mail"
 msgstr "Se descarcă mesajele"
 
-#: app/src/ui/sidebar.rs:2698
+#: app/src/ui/sidebar.rs:2701
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Sincronizarea s-a oprit după o eroare; reporniți Penguin Mail pentru a "
@@ -11780,7 +11784,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2705
+#: app/src/ui/sidebar.rs:2708
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -12362,7 +12366,7 @@ msgstr "Corespondența nu a putut fi încărcată: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "S-a adăugat {account}. Se descarcă corespondența…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3167
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3174
 msgid "{account} is signed in again."
 msgstr "{account} este din nou conectat."
 
@@ -12514,69 +12518,69 @@ msgstr[0] "{count} mesaj mutat în Mesaje primite"
 msgstr[1] "{count} mesaje mutate în Mesaje primite"
 msgstr[2] "{count} de mesaje mutate în Mesaje primite"
 
-#: app/src/ui/window.rs:980
+#: app/src/ui/window.rs:987
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (demonstrație)"
 
-#: app/src/ui/window.rs:1442
+#: app/src/ui/window.rs:1449
 msgid "Could not read accounts: {reason}"
 msgstr "Conturile nu au putut fi citite: {reason}"
 
-#: app/src/ui/window.rs:2201
+#: app/src/ui/window.rs:2208
 msgid "Could not delete the mail: {reason}"
 msgstr "Corespondența nu a putut fi ștearsă: {reason}"
 
-#: app/src/ui/window.rs:2308
+#: app/src/ui/window.rs:2315
 msgid "Turn On the {service}"
 msgstr "Activați {service}"
 
-#: app/src/ui/window.rs:2495 app/src/ui/window.rs:2498
+#: app/src/ui/window.rs:2502 app/src/ui/window.rs:2505
 msgid "Move to Inbox"
 msgstr "Mută în Mesaje primite"
 
-#: app/src/ui/window.rs:2666 app/src/ui/window.rs:2671
+#: app/src/ui/window.rs:2673 app/src/ui/window.rs:2678
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Caută modele"
 
-#: app/src/ui/window.rs:2740
+#: app/src/ui/window.rs:2747
 msgid "Select mail from one account to tag it."
 msgstr "Selectați mesaje dintr-un singur cont pentru a le eticheta."
 
-#: app/src/ui/window.rs:2752
+#: app/src/ui/window.rs:2759
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Acest cont nu are încă etichete. Creați una în Outlook."
 
-#: app/src/ui/window.rs:2845
+#: app/src/ui/window.rs:2852
 msgid "Add an account to reply or forward"
 msgstr "Adăugați un cont pentru a răspunde sau a redirecționa"
 
-#: app/src/ui/window.rs:2950
+#: app/src/ui/window.rs:2957
 msgid "Could not include {file}: {reason}"
 msgstr "{file} nu a putut fi inclus: {reason}"
 
-#: app/src/ui/window.rs:3031
+#: app/src/ui/window.rs:3038
 msgid "The server had already sent this message."
 msgstr "Serverul trimisese deja acest mesaj."
 
-#: app/src/ui/window.rs:3036
+#: app/src/ui/window.rs:3043
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Acest mesaj a fost anulat în altă aplicație și nu mai este în Ciorne."
 
-#: app/src/ui/window.rs:3352
+#: app/src/ui/window.rs:3359
 msgid "Continue in your browser"
 msgstr "Continuați în navigator"
 
-#: app/src/ui/window.rs:3402
+#: app/src/ui/window.rs:3409
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Această copie a Penguin Mail a fost compilată fără conectare Google."
 
-#: app/src/ui/window.rs:3424
+#: app/src/ui/window.rs:3431
 msgid "Get a Release"
 msgstr "Obține o versiune oficială"
 
-#: app/src/ui/window.rs:3547
+#: app/src/ui/window.rs:3554
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12584,86 +12588,86 @@ msgstr ""
 "Nu s-a putut verifica dacă serverul păstrează mesaje de trimis mai târziu, "
 "așa că {account} rămâne: {reason}"
 
-#: app/src/ui/window.rs:3558
+#: app/src/ui/window.rs:3565
 msgid "Remove {account}?"
 msgstr "Eliminați {account}?"
 
-#: app/src/ui/window.rs:3577
+#: app/src/ui/window.rs:3584
 msgid "Remove Anyway"
 msgstr "Elimină oricum"
 
-#: app/src/ui/window.rs:3590
+#: app/src/ui/window.rs:3597
 msgid "Removed {account}"
 msgstr "{account} a fost eliminat"
 
-#: app/src/ui/window.rs:3592
+#: app/src/ui/window.rs:3599
 msgid "Could not remove {account}: {reason}"
 msgstr "{account} nu a putut fi eliminat: {reason}"
 
-#: app/src/ui/window.rs:3784
+#: app/src/ui/window.rs:3791
 msgid "Refresh"
 msgstr "Reîmprospătează"
 
-#: app/src/ui/window.rs:3788
+#: app/src/ui/window.rs:3795
 msgid "Show Declined Events"
 msgstr "Arată evenimentele refuzate"
 
-#: app/src/ui/window.rs:3805
+#: app/src/ui/window.rs:3812
 msgid "Add Account…"
 msgstr "Adaugă un cont…"
 
-#: app/src/ui/window.rs:3806
+#: app/src/ui/window.rs:3813
 msgid "New Smart Mailbox…"
 msgstr "Căsuță inteligentă nouă…"
 
-#: app/src/ui/window.rs:3818
+#: app/src/ui/window.rs:3825
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Personalizează bara de instrumente…"
 
-#: app/src/ui/window.rs:3822 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3829 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "Scurtături de tastatură"
 
-#: app/src/ui/window.rs:3831 app/src/ui/window.rs:3833
+#: app/src/ui/window.rs:3838 app/src/ui/window.rs:3840
 msgid "Main Menu"
 msgstr "Meniu principal"
 
-#: app/src/ui/window.rs:3898 app/src/ui/window.rs:3899
+#: app/src/ui/window.rs:3905 app/src/ui/window.rs:3906
 msgid "Dock"
 msgstr "Andochează"
 
-#: app/src/ui/window.rs:4028
+#: app/src/ui/window.rs:4035
 msgid "Add a mail account first"
 msgstr "Adăugați mai întâi un cont de e-mail"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4294
+#: app/src/ui/window.rs:4301
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Calendarul și contactele pentru {account} sunt conectate."
 
-#: app/src/ui/window.rs:4410
+#: app/src/ui/window.rs:4417
 msgid "Open a message from the person first"
 msgstr "Deschideți mai întâi un mesaj de la persoana respectivă"
 
-#: app/src/ui/window.rs:4516
+#: app/src/ui/window.rs:4523
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail afișează noua limbă după o repornire"
 
-#: app/src/ui/window.rs:4518 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4525 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Repornește"
 
-#: app/src/ui/window.rs:4582
+#: app/src/ui/window.rs:4589
 msgid "Show Rules"
 msgstr "Arată regulile"
 
-#: app/src/ui/window.rs:4608
+#: app/src/ui/window.rs:4615
 msgid "Messages That Will Not Download"
 msgstr "Mesaje care nu se descarcă"
 
-#: app/src/ui/window.rs:4610
+#: app/src/ui/window.rs:4617
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -13618,7 +13622,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Modificarea dumneavoastră la „{title}” nu a fost salvată: {reason}"
 
-#: app/src/ui/window/spaces.rs:300
+#: app/src/ui/window/spaces.rs:307
 msgid "Show Event"
 msgstr "Afișează evenimentul"
 
@@ -15125,7 +15129,6 @@ msgstr "Mută în {folder}"
 #~ msgstr "Mai târziu"
 
 #, fuzzy
-#~| msgid "Mailboxes"
 #~ msgid "Mailbox"
 #~ msgstr "Poșta"
 
