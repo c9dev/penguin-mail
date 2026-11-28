@@ -4034,8 +4034,8 @@ msgstr "해당 계정이 연결되어 있지 않습니다."
 msgid "Could not save: {reason}"
 msgstr "저장할 수 없습니다: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3059
-#: app/src/ui/window.rs:3082
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3061
+#: app/src/ui/window.rs:3084
 msgid "Could not open the draft: {reason}"
 msgstr "임시보관 메일을 열 수 없습니다: {reason}"
 
@@ -4106,8 +4106,8 @@ msgid ""
 msgstr ""
 "이 메시지에 속임수로 의심되는 링크가 있습니다. 열기 전에 목적지를 확인하세요."
 
-#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:351
-#: app/src/ui/contacts/person.rs:388
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:394
+#: app/src/ui/contacts/person.rs:437
 msgid "Details"
 msgstr "세부 정보"
 
@@ -4297,7 +4297,7 @@ msgid "Set up a different project"
 msgstr "다른 프로젝트 설정"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3412
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3414
 msgid "Set up your own Google project"
 msgstr "나만의 Google 프로젝트 설정"
 
@@ -4437,7 +4437,7 @@ msgstr "{host}에서 로그인을 거부했습니다: {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:569
-#: app/src/ui/sidebar.rs:1958 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1962 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "캘린더"
 
@@ -4446,8 +4446,8 @@ msgstr "캘린더"
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:570
-#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1959
-#: app/src/ui/window.rs:3811
+#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1963
+#: app/src/ui/window.rs:3813
 msgid "Contacts"
 msgstr "연락처"
 
@@ -4465,7 +4465,7 @@ msgstr "서버에서"
 
 #: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
 #: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/contacts/side.rs:151 app/src/ui/preferences.rs:1185
+#: app/src/ui/contacts/side.rs:161 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "끄기"
 
@@ -4481,8 +4481,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude 구독"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3804
-#: app/src/ui/window.rs:3893
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3806
+#: app/src/ui/window.rs:3895
 msgid "Assistant"
 msgstr "도우미"
 
@@ -4854,7 +4854,7 @@ msgstr "구독을 통해 Claude가 읽도록 메시지를 Anthropic에 보냅니
 msgid "No unread mail"
 msgstr "읽지 않은 메일 없음"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1983
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1987
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, 읽지 않은 메시지 {count}개"
@@ -4869,13 +4869,13 @@ msgstr "Penguin Mail 열기"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:253
-#: app/src/ui/contacts/person.rs:258 app/src/ui/contacts/person.rs:261
-#: app/src/ui/thread_list.rs:495
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:287
+#: app/src/ui/contacts/person.rs:292 app/src/ui/contacts/person.rs:295
+#: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "새 메시지"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2576 app/src/ui/window.rs:3810
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2580 app/src/ui/window.rs:3812
 msgid "Check for Mail"
 msgstr "메일 확인"
 
@@ -4893,7 +4893,7 @@ msgstr "{version}의 새로운 기능"
 msgid "Check for Updates"
 msgstr "업데이트 확인"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3832
+#: app/src/tray.rs:216 app/src/ui/window.rs:3834
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "종료"
@@ -4914,12 +4914,12 @@ msgstr "{os}용 메일과 캘린더. 메일을 내 컴퓨터에 보관합니다.
 msgid "What's New"
 msgstr "새로운 기능"
 
-#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:314
-#: app/src/ui/contacts/person.rs:1039 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:336
+#: app/src/ui/contacts/person.rs:1236 app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "웹사이트"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3831
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3833
 msgid "Donate"
 msgstr "기부"
 
@@ -4927,7 +4927,7 @@ msgstr "기부"
 msgid "License"
 msgstr "라이선스"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3830
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3832
 msgid "About Penguin Mail"
 msgstr "Penguin Mail 정보"
 
@@ -4976,12 +4976,12 @@ msgid "The update to {version} failed"
 msgstr "{version} 업데이트 실패"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1629
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1631
 msgid "Copy Command"
 msgstr "명령 복사"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1634
+#: app/src/ui/window.rs:1636
 msgid "Command copied"
 msgstr "명령을 복사했습니다"
 
@@ -5075,9 +5075,9 @@ msgstr "링크 복사"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:483
-#: app/src/ui/contacts/mod.rs:1061 app/src/ui/contacts/mod.rs:1155
-#: app/src/ui/contacts/person.rs:638 app/src/ui/contacts/person.rs:760
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:550
+#: app/src/ui/contacts/mod.rs:1109 app/src/ui/contacts/mod.rs:1206
+#: app/src/ui/contacts/person.rs:733 app/src/ui/contacts/person.rs:883
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5094,7 +5094,7 @@ msgstr "취소"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1573
+#: app/src/ui/window.rs:1575
 msgid "Sign In"
 msgstr "로그인"
 
@@ -5217,7 +5217,7 @@ msgstr "나중에"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1706
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1708
 msgid "Grant Access"
 msgstr "접근 권한 부여"
 
@@ -5366,8 +5366,8 @@ msgid "Sign In Again"
 msgstr "다시 로그인"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:288
-#: app/src/ui/contacts/mod.rs:502 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2317
+#: app/src/ui/contacts/mod.rs:512 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2319
 msgid "Open Google Cloud"
 msgstr "Google Cloud 열기"
 
@@ -5455,14 +5455,14 @@ msgstr "열린 대화에 답장 초안 작성"
 msgid "Choose a Model"
 msgstr "모델 선택"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3940
-#: app/src/ui/window.rs:3941
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3942
+#: app/src/ui/window.rs:3943
 msgid "Detach"
 msgstr "분리"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4640
+#: app/src/ui/window.rs:4642
 msgid "Close"
 msgstr "닫기"
 
@@ -5673,7 +5673,7 @@ msgid "Use {server}"
 msgstr "{server} 사용"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:243
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:277
 msgid "Edit"
 msgstr "편집"
 
@@ -5683,8 +5683,8 @@ msgstr "{server} 편집"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:595 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3568
+#: app/src/ui/contacts/editor.rs:700 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3570
 msgid "Remove"
 msgstr "제거"
 
@@ -5724,7 +5724,7 @@ msgstr ""
 "NAME=value로 지정하세요. URL은 HTTP를 통해 서버에 연결합니다."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:407
-#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:263
+#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:278
 #: app/src/ui/smart_editor.rs:41 app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "이름"
@@ -5761,7 +5761,7 @@ msgstr "테스트"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:450 app/src/ui/contacts/editor.rs:502
+#: app/src/ui/contacts/editor.rs:507 app/src/ui/contacts/editor.rs:569
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6321,8 +6321,8 @@ msgstr "회의"
 msgid "Decline"
 msgstr "거절"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1249
-#: app/src/ui/contacts/mod.rs:1257
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1308
+#: app/src/ui/contacts/mod.rs:1321
 msgid "None"
 msgstr "없음"
 
@@ -6386,7 +6386,7 @@ msgstr "반복 간격"
 msgid "Unit"
 msgstr "단위"
 
-#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:153
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:163
 msgid "On"
 msgstr "반복 요일"
 
@@ -6458,8 +6458,8 @@ msgid "Remove reminder"
 msgstr "알림 제거"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:345
-#: app/src/ui/contacts/editor.rs:380 app/src/ui/contacts/person.rs:398
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:385
+#: app/src/ui/contacts/editor.rs:423 app/src/ui/contacts/person.rs:447
 msgid "Notes"
 msgstr "메모"
 
@@ -6508,8 +6508,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "{file}을(를) 첨부할 수 없습니다: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:468
-#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:356 app/src/ui/thread_list.rs:362
+#: app/src/ui/thread_list.rs:1182
 msgid "More"
 msgstr "더 보기"
 
@@ -6530,8 +6530,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "이 캘린더를 변경할 수 있는 사람만 세부 정보를 봅니다"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
-#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2293
-#: app/src/ui/sidebar.rs:2594
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2297
+#: app/src/ui/sidebar.rs:2598
 msgid "Color"
 msgstr "색"
 
@@ -6793,8 +6793,8 @@ msgstr "베트남"
 msgid "Working location"
 msgstr "근무 장소"
 
-#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:332
-#: app/src/ui/contacts/editor.rs:378 app/src/ui/contacts/person.rs:367
+#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:372
+#: app/src/ui/contacts/editor.rs:421 app/src/ui/contacts/person.rs:414
 msgid "Birthday"
 msgstr "생일"
 
@@ -7049,7 +7049,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "일정을 삭제할 수 없습니다: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1359
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7392,19 +7392,19 @@ msgstr "{account}에 접근 권한 부여"
 msgid "Sign in again to {account}"
 msgstr "{account}에 다시 로그인"
 
-#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2599
+#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2603
 msgid "Sign In Again…"
 msgstr "다시 로그인…"
 
-#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2607
+#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2611
 msgid "Remove Account…"
 msgstr "계정 제거…"
 
-#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2614
+#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2618
 msgid "Account options"
 msgstr "계정 옵션"
 
-#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2619
+#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2623
 msgid "Options for {account}"
 msgstr "{account} 옵션"
 
@@ -7432,13 +7432,13 @@ msgstr "목록에서 숨기기"
 msgid "Original Color"
 msgstr "원래 색"
 
-#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2281
-#: app/src/ui/sidebar.rs:2584
+#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2285
+#: app/src/ui/sidebar.rs:2588
 msgid "Rename…"
 msgstr "이름 변경…"
 
-#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2182
-#: app/src/ui/sidebar.rs:2309
+#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2186
+#: app/src/ui/sidebar.rs:2313
 msgid "Delete…"
 msgstr "삭제…"
 
@@ -7554,7 +7554,7 @@ msgstr "{date}, 일정 있음"
 msgid "Offline, last updated {time}"
 msgstr "오프라인, 마지막 업데이트 {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2679
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2683
 msgid "Offline"
 msgstr "오프라인"
 
@@ -7683,7 +7683,7 @@ msgid "Choose a Time…"
 msgstr "시간 선택…"
 
 #: app/src/ui/composer/mod.rs:444 app/src/ui/composer/mod.rs:2178
-#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2062
+#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2066
 msgid "Send Later"
 msgstr "예약 발송"
 
@@ -8096,146 +8096,146 @@ msgstr "사전에 추가"
 msgid "Ignore"
 msgstr "무시"
 
-#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:279
-#: app/src/ui/contacts/person.rs:308 app/src/ui/contacts/person.rs:704
+#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:298
+#: app/src/ui/contacts/person.rs:346 app/src/ui/contacts/person.rs:819
 msgid "Email"
 msgstr "이메일"
 
-#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:280
-#: app/src/ui/contacts/person.rs:310
+#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:299
+#: app/src/ui/contacts/person.rs:348
 msgid "Other email"
 msgstr "다른 이메일"
 
-#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:293
-#: app/src/ui/contacts/person.rs:335 app/src/ui/contacts/person.rs:710
+#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:312
+#: app/src/ui/contacts/person.rs:373 app/src/ui/contacts/person.rs:825
 msgid "Phone"
 msgstr "전화"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:194
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:219
 #: app/src/ui/sidebar.rs:1498
 msgid "Remove from VIPs"
 msgstr "VIP에서 제거"
 
-#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:194
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:221
 msgid "Add to VIPs"
 msgstr "VIP에 추가"
 
-#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:225
-#: app/src/ui/contacts/person.rs:903
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:259
+#: app/src/ui/contacts/person.rs:1069
 msgid "All Their Mail"
 msgstr "이 사람이 보낸 모든 메일"
 
-#: app/src/ui/contacts/editor.rs:112
+#: app/src/ui/contacts/editor.rs:114
 msgid "Remove Field"
 msgstr "항목 제거"
 
-#: app/src/ui/contacts/editor.rs:265
+#: app/src/ui/contacts/editor.rs:281
 msgid "Full name"
 msgstr "전체 이름"
 
-#: app/src/ui/contacts/editor.rs:268 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:707
+#: app/src/ui/contacts/editor.rs:287 app/src/ui/contacts/person.rs:335
+#: app/src/ui/contacts/person.rs:822
 msgid "Organization"
 msgstr "조직"
 
-#: app/src/ui/contacts/editor.rs:278
+#: app/src/ui/contacts/editor.rs:297
 msgid "Add email"
 msgstr "이메일 추가"
 
-#: app/src/ui/contacts/editor.rs:287
+#: app/src/ui/contacts/editor.rs:306
 msgid "name@example.com"
 msgstr "name@example.com"
 
-#: app/src/ui/contacts/editor.rs:291
+#: app/src/ui/contacts/editor.rs:310
 msgid "Add phone"
 msgstr "전화번호 추가"
 
-#: app/src/ui/contacts/editor.rs:299
+#: app/src/ui/contacts/editor.rs:318
 msgid "Add postal address"
 msgstr "우편 주소 추가"
 
-#: app/src/ui/contacts/editor.rs:302
+#: app/src/ui/contacts/editor.rs:321
 msgid "PO box"
 msgstr "사서함"
 
-#: app/src/ui/contacts/editor.rs:303
+#: app/src/ui/contacts/editor.rs:322
 msgid "Extended address"
 msgstr "추가 주소"
 
-#: app/src/ui/contacts/editor.rs:304
+#: app/src/ui/contacts/editor.rs:323
 msgid "Street"
 msgstr "도로명"
 
-#: app/src/ui/contacts/editor.rs:305
+#: app/src/ui/contacts/editor.rs:324
 msgid "City"
 msgstr "시/군/구"
 
-#: app/src/ui/contacts/editor.rs:306
+#: app/src/ui/contacts/editor.rs:325
 msgid "Region"
 msgstr "시/도"
 
-#: app/src/ui/contacts/editor.rs:307
+#: app/src/ui/contacts/editor.rs:326
 msgid "Postal code"
 msgstr "우편번호"
 
-#: app/src/ui/contacts/editor.rs:308
+#: app/src/ui/contacts/editor.rs:327
 msgid "Country"
 msgstr "국가"
 
-#: app/src/ui/contacts/editor.rs:314
+#: app/src/ui/contacts/editor.rs:334
 msgid "Add website"
 msgstr "웹사이트 추가"
 
-#: app/src/ui/contacts/editor.rs:315
+#: app/src/ui/contacts/editor.rs:342
 msgid "Add group"
 msgstr "그룹 추가"
 
-#: app/src/ui/contacts/editor.rs:315
+#: app/src/ui/contacts/editor.rs:344
 msgid "Group"
 msgstr "그룹"
 
-#: app/src/ui/contacts/editor.rs:317
+#: app/src/ui/contacts/editor.rs:350
 msgid "Add date"
 msgstr "날짜 추가"
 
-#: app/src/ui/contacts/editor.rs:319
+#: app/src/ui/contacts/editor.rs:352
 msgid "Date"
 msgstr "날짜"
 
-#: app/src/ui/contacts/editor.rs:319 app/src/ui/contacts/editor.rs:327
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/editor.rs:363
 msgid "Label"
 msgstr "라벨"
 
-#: app/src/ui/contacts/editor.rs:325
+#: app/src/ui/contacts/editor.rs:361
 msgid "Add custom field"
 msgstr "사용자 지정 필드 추가"
 
-#: app/src/ui/contacts/editor.rs:327
+#: app/src/ui/contacts/editor.rs:363
 msgid "Value"
 msgstr "값"
 
-#: app/src/ui/contacts/editor.rs:369
+#: app/src/ui/contacts/editor.rs:412
 msgid "Postal addresses"
 msgstr "우편 주소"
 
-#: app/src/ui/contacts/editor.rs:370
+#: app/src/ui/contacts/editor.rs:413
 msgid "Websites"
 msgstr "웹사이트"
 
-#: app/src/ui/contacts/editor.rs:371 app/src/ui/contacts/person.rs:385
-#: app/src/ui/contacts/side.rs:108
+#: app/src/ui/contacts/editor.rs:414 app/src/ui/contacts/person.rs:433
+#: app/src/ui/contacts/side.rs:113
 msgid "Groups"
 msgstr "그룹"
 
-#: app/src/ui/contacts/editor.rs:372
+#: app/src/ui/contacts/editor.rs:415
 msgid "Other dates"
 msgstr "기타 날짜"
 
-#: app/src/ui/contacts/editor.rs:373
+#: app/src/ui/contacts/editor.rs:416
 msgid "Custom fields"
 msgstr "사용자 지정 필드"
 
-#: app/src/ui/contacts/editor.rs:430
+#: app/src/ui/contacts/editor.rs:485
 msgid ""
 "A new contact is saved into one account. The other accounts do not get a "
 "copy. Add a name or an email. Save stays off until one of those is filled in."
@@ -8243,60 +8243,60 @@ msgstr ""
 "새 연락처는 계정 하나에 저장됩니다. 다른 계정에는 복사되지 않습니다. 이름이"
 "나 이메일을 입력하세요. 둘 중 하나를 입력하기 전까지 저장은 꺼져 있습니다."
 
-#: app/src/ui/contacts/editor.rs:448
+#: app/src/ui/contacts/editor.rs:505
 msgid "Unsaved changes"
 msgstr "저장하지 않은 변경 사항"
 
-#: app/src/ui/contacts/editor.rs:479
-msgid "Edit contact"
-msgstr "연락처 편집"
-
-#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1196
+#: app/src/ui/contacts/editor.rs:543 app/src/ui/contacts/mod.rs:1250
 msgid "New contact"
 msgstr "새 연락처"
 
-#: app/src/ui/contacts/editor.rs:526 app/src/ui/contacts/person.rs:955
+#: app/src/ui/contacts/editor.rs:545
+msgid "Edit contact"
+msgstr "연락처 편집"
+
+#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:1141
 msgid "Turn contacts on for an account first."
 msgstr "먼저 계정의 연락처를 켜세요."
 
-#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:532
-#: app/src/ui/contacts/person.rs:953 app/src/ui/contacts/person.rs:958
+#: app/src/ui/contacts/editor.rs:602 app/src/ui/contacts/editor.rs:607
+#: app/src/ui/contacts/person.rs:1138 app/src/ui/contacts/person.rs:1145
 msgid "Save to"
 msgstr "저장할 계정"
 
-#: app/src/ui/contacts/editor.rs:541
+#: app/src/ui/contacts/editor.rs:626
 msgid "Which account"
 msgstr "어느 계정"
 
-#: app/src/ui/contacts/editor.rs:558
+#: app/src/ui/contacts/editor.rs:647
 msgid "Replace Photo"
 msgstr "사진 바꾸기"
 
-#: app/src/ui/contacts/editor.rs:559
+#: app/src/ui/contacts/editor.rs:648
 msgid "Remove Photo"
 msgstr "사진 제거"
 
-#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:649
+#: app/src/ui/contacts/editor.rs:703 app/src/ui/contacts/person.rs:744
 msgid "Delete {name} from {account}"
 msgstr "{account}에서 {name} 삭제"
 
-#: app/src/ui/contacts/editor.rs:639
+#: app/src/ui/contacts/editor.rs:759
 msgid "Enter a name or an email address."
 msgstr "이름이나 이메일 주소를 입력하세요."
 
-#: app/src/ui/contacts/editor.rs:642
+#: app/src/ui/contacts/editor.rs:765
 msgid "Enter a valid email address."
 msgstr "올바른 이메일 주소를 입력하세요."
 
-#: app/src/ui/contacts/editor.rs:645
+#: app/src/ui/contacts/editor.rs:768
 msgid "Contacts access for this account was turned off."
 msgstr "이 계정의 연락처 접근이 꺼졌습니다."
 
-#: app/src/ui/contacts/editor.rs:689
+#: app/src/ui/contacts/editor.rs:812
 msgid "Could not save the contact: {reason}"
 msgstr "연락처를 저장하지 못했습니다: {reason}"
 
-#: app/src/ui/contacts/editor.rs:729
+#: app/src/ui/contacts/editor.rs:857
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8306,7 +8306,7 @@ msgstr ""
 "{other_account}에는 {other}이(가) 그대로 있으며, 연결해도 그 기록은 바뀌지 않"
 "습니다. 저장을 누르기 전에는 아무것도 기록되지 않습니다."
 
-#: app/src/ui/contacts/editor.rs:734
+#: app/src/ui/contacts/editor.rs:868
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8314,13 +8314,13 @@ msgstr ""
 "{name}의 {account} 연락처를 편집하고 있습니다. {other_account}에는 {other}이"
 "(가) 남습니다. 저장을 누르기 전에는 아무것도 기록되지 않습니다."
 
-#: app/src/ui/contacts/editor.rs:756
+#: app/src/ui/contacts/editor.rs:891
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "{account}의 연락처를 편집하고 있습니다. 저장을 누르기 전에는 아무것도 기록되"
 "지 않습니다."
 
-#: app/src/ui/contacts/editor.rs:762
+#: app/src/ui/contacts/editor.rs:898
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8328,7 +8328,7 @@ msgstr ""
 "{account}의 연락처를 편집하고 있습니다. {others}에는 자체 연락처가 남습니다. "
 "저장을 누르기 전에는 아무것도 기록되지 않습니다."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:172
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
 msgid "Turn Off Contacts"
 msgstr "연락처 끄기"
 
@@ -8336,28 +8336,28 @@ msgstr "연락처 끄기"
 msgid "Turn on Contacts for your Google project"
 msgstr "Google 프로젝트에서 연락처를 켜세요"
 
-#: app/src/ui/contacts/mod.rs:644
+#: app/src/ui/contacts/mod.rs:655
 msgid "Could not load contacts: {reason}"
 msgstr "연락처를 불러올 수 없습니다: {reason}"
 
-#: app/src/ui/contacts/mod.rs:774
+#: app/src/ui/contacts/mod.rs:793
 msgid "Deletes {name} in {account}"
 msgstr "{account}에서 {name}을(를) 삭제합니다"
 
-#: app/src/ui/contacts/mod.rs:798
+#: app/src/ui/contacts/mod.rs:819
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "두 연락처를 모두 유지합니다. 아무것도 삭제되지 않습니다."
 
-#: app/src/ui/contacts/mod.rs:831
+#: app/src/ui/contacts/mod.rs:852
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "메시지 {count}개에서 발견"
 
-#: app/src/ui/contacts/mod.rs:938
+#: app/src/ui/contacts/mod.rs:972
 msgid "Contacts are off"
 msgstr "연락처가 꺼져 있습니다"
 
-#: app/src/ui/contacts/mod.rs:940
+#: app/src/ui/contacts/mod.rs:975
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8367,19 +8367,19 @@ msgstr ""
 "서버에 있습니다. 연락처를 켜면 여기로 복사합니다. 나중에 끄면 그 복사본이 삭"
 "제됩니다."
 
-#: app/src/ui/contacts/mod.rs:951
+#: app/src/ui/contacts/mod.rs:987
 msgid "No Matching Contacts"
 msgstr "일치하는 연락처 없음"
 
-#: app/src/ui/contacts/mod.rs:952
+#: app/src/ui/contacts/mod.rs:988
 msgid "Nothing matches that search."
 msgstr "검색과 일치하는 항목이 없습니다."
 
-#: app/src/ui/contacts/mod.rs:958
+#: app/src/ui/contacts/mod.rs:994
 msgid "No shared addresses"
 msgstr "공유하는 주소 없음"
 
-#: app/src/ui/contacts/mod.rs:959
+#: app/src/ui/contacts/mod.rs:996
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8387,54 +8387,54 @@ msgstr ""
 "한 계정에서 주소를 공유하는 연락처가 없습니다. 삭제를 기다리는 항목이 없습니"
 "다."
 
-#: app/src/ui/contacts/mod.rs:963
+#: app/src/ui/contacts/mod.rs:1001
 msgid "No close names"
 msgstr "비슷한 이름 없음"
 
-#: app/src/ui/contacts/mod.rs:964
+#: app/src/ui/contacts/mod.rs:1002
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "아직 연결되지 않은 비슷한 이름이 있는 계정이 없습니다."
 
-#: app/src/ui/contacts/mod.rs:968
+#: app/src/ui/contacts/mod.rs:1006
 msgid "Everyone is a contact"
 msgstr "모두 연락처입니다"
 
-#: app/src/ui/contacts/mod.rs:969
+#: app/src/ui/contacts/mod.rs:1007
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr "받은편지함에서 본 사람은 모두 이미 연락처로 저장되어 있습니다."
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:1011
 msgid "No VIPs yet"
 msgstr "아직 VIP가 없습니다"
 
-#: app/src/ui/contacts/mod.rs:974
+#: app/src/ui/contacts/mod.rs:1013
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr "그 사람의 페이지에서 VIP에 추가하면 이 목록에서 열 수 있습니다."
 
-#: app/src/ui/contacts/mod.rs:978
+#: app/src/ui/contacts/mod.rs:1018
 msgid "No contacts yet"
 msgstr "아직 연락처가 없습니다"
 
-#: app/src/ui/contacts/mod.rs:979
+#: app/src/ui/contacts/mod.rs:1020
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "이 계정의 연락처가 켜져 있습니다. 이 컴퓨터로 복사된 항목이 아직 없습니다."
 
-#: app/src/ui/contacts/mod.rs:1002
+#: app/src/ui/contacts/mod.rs:1045
 msgid "Turn On"
 msgstr "켜기"
 
-#: app/src/ui/contacts/mod.rs:1029
+#: app/src/ui/contacts/mod.rs:1074
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "{account}의 연락처를 켰습니다. 이 컴퓨터의 주소록은 비어 있습니다."
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1098
 msgid "Turn Off Contacts?"
 msgstr "연락처를 끌까요?"
 
-#: app/src/ui/contacts/mod.rs:1054
+#: app/src/ui/contacts/mod.rs:1101
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8442,7 +8442,7 @@ msgstr ""
 "{account}의 연락처를 끌까요? 연락처는 이 컴퓨터에 저장된 채로 남고 다시 켜면 "
 "돌아옵니다."
 
-#: app/src/ui/contacts/mod.rs:1056
+#: app/src/ui/contacts/mod.rs:1103
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8450,88 +8450,88 @@ msgstr ""
 "{account}의 연락처를 끌까요? 연락처는 이 컴퓨터에서 삭제되며 서버에는 그대로 "
 "남습니다."
 
-#: app/src/ui/contacts/mod.rs:1061
+#: app/src/ui/contacts/mod.rs:1110
 msgid "Turn Off"
 msgstr "끄기"
 
-#: app/src/ui/contacts/mod.rs:1084
+#: app/src/ui/contacts/mod.rs:1137
 msgid "Contacts are off for {account}."
 msgstr "{account}의 연락처가 꺼졌습니다."
 
-#: app/src/ui/contacts/mod.rs:1139
+#: app/src/ui/contacts/mod.rs:1190
 msgid "Search same address"
 msgstr "같은 주소 검색"
 
-#: app/src/ui/contacts/mod.rs:1140
+#: app/src/ui/contacts/mod.rs:1191
 msgid "Search same person"
 msgstr "같은 사람 검색"
 
-#: app/src/ui/contacts/mod.rs:1141
+#: app/src/ui/contacts/mod.rs:1192
 msgid "Search correspondents"
 msgstr "주고받은 사람 검색"
 
-#: app/src/ui/contacts/mod.rs:1142
+#: app/src/ui/contacts/mod.rs:1193
 msgid "Search contacts"
 msgstr "연락처 검색"
 
-#: app/src/ui/contacts/mod.rs:1150
+#: app/src/ui/contacts/mod.rs:1201
 msgid "{count} selected"
 msgstr "{count}개 선택됨"
 
-#: app/src/ui/contacts/mod.rs:1163
+#: app/src/ui/contacts/mod.rs:1214
 msgid "Delete {count}"
 msgstr "{count}개 삭제"
 
-#: app/src/ui/contacts/mod.rs:1186
+#: app/src/ui/contacts/mod.rs:1237
 msgid "Select several contacts"
 msgstr "연락처 여러 개 선택"
 
-#: app/src/ui/contacts/mod.rs:1220 app/src/ui/contacts/mod.rs:1243
+#: app/src/ui/contacts/mod.rs:1274 app/src/ui/contacts/mod.rs:1298
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count}명"
 
-#: app/src/ui/contacts/mod.rs:1231
+#: app/src/ui/contacts/mod.rs:1285
 msgid "{count} of {total}"
 msgstr "{total}개 중 {count}개"
 
-#: app/src/ui/contacts/mod.rs:1240 app/src/ui/contacts/side.rs:77
+#: app/src/ui/contacts/mod.rs:1294 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "모든 연락처"
 
-#: app/src/ui/contacts/mod.rs:1242 app/src/ui/contacts/side.rs:79
+#: app/src/ui/contacts/mod.rs:1296 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1485 app/src/ui/sidebar.rs:1487
-#: app/src/ui/sidebar.rs:2085 app/src/ui/sidebar.rs:2087
+#: app/src/ui/sidebar.rs:2089 app/src/ui/sidebar.rs:2091
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1245 app/src/ui/contacts/side.rs:85
+#: app/src/ui/contacts/mod.rs:1304 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "메일에서"
 
-#: app/src/ui/contacts/mod.rs:1245
+#: app/src/ui/contacts/mod.rs:1304
 msgid "Not contacts yet"
 msgstr "아직 연락처가 아님"
 
-#: app/src/ui/contacts/mod.rs:1247 app/src/ui/contacts/side.rs:91
+#: app/src/ui/contacts/mod.rs:1306 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "같은 주소"
 
-#: app/src/ui/contacts/mod.rs:1251 app/src/ui/contacts/mod.rs:1259
+#: app/src/ui/contacts/mod.rs:1311 app/src/ui/contacts/mod.rs:1324
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count}쌍"
 
-#: app/src/ui/contacts/mod.rs:1255 app/src/ui/contacts/person.rs:758
-#: app/src/ui/contacts/side.rs:97
+#: app/src/ui/contacts/mod.rs:1319 app/src/ui/contacts/person.rs:881
+#: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "같은 사람"
 
-#: app/src/ui/contacts/mod.rs:1456
+#: app/src/ui/contacts/mod.rs:1531
 msgid "{name} from {account}"
 msgstr "{account}의 {name}"
 
-#: app/src/ui/contacts/mod.rs:1465
+#: app/src/ui/contacts/mod.rs:1540
 msgid "Deleted {list}."
 msgstr "{list}을(를) 삭제했습니다."
 
@@ -8539,113 +8539,113 @@ msgstr "{list}을(를) 삭제했습니다."
 msgid "Grant contacts permission in Preferences, then try again."
 msgstr "환경설정에서 연락처 권한을 허용한 다음 다시 시도하세요."
 
-#: app/src/ui/contacts/person.rs:66
+#: app/src/ui/contacts/person.rs:71
 msgid "View Photo"
 msgstr "사진 보기"
 
-#: app/src/ui/contacts/person.rs:199
+#: app/src/ui/contacts/person.rs:227
 msgid "{name} is in VIPs. Remove them from that list."
 msgstr "{name}은(는) VIP입니다. 그 목록에서 제거합니다."
 
-#: app/src/ui/contacts/person.rs:201
+#: app/src/ui/contacts/person.rs:229
 msgid "Add {name} to VIPs"
 msgstr "{name}을(를) VIP에 추가"
 
-#: app/src/ui/contacts/person.rs:226 app/src/ui/contacts/person.rs:904
+#: app/src/ui/contacts/person.rs:260 app/src/ui/contacts/person.rs:1070
 msgid "Every conversation with this person"
 msgstr "이 사람과의 모든 대화"
 
-#: app/src/ui/contacts/person.rs:254 app/src/ui/thread_list.rs:301
+#: app/src/ui/contacts/person.rs:288 app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "새 메시지 (C)"
 
-#: app/src/ui/contacts/person.rs:286
+#: app/src/ui/contacts/person.rs:320
 msgid "Reach"
 msgstr "연락처 정보"
 
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:963
+#: app/src/ui/contacts/person.rs:399 app/src/ui/contacts/person.rs:1150
 msgid "Address"
 msgstr "주소"
 
-#: app/src/ui/contacts/person.rs:410
+#: app/src/ui/contacts/person.rs:466
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "{date}에 보냈습니다. 답장을 기다리는 중입니다."
 
-#: app/src/ui/contacts/person.rs:412
+#: app/src/ui/contacts/person.rs:471
 msgid "Last message, {date}"
 msgstr "마지막 메시지, {date}"
 
-#: app/src/ui/contacts/person.rs:428
+#: app/src/ui/contacts/person.rs:490
 msgid "You last wrote {date}"
 msgstr "마지막으로 보낸 날짜: {date}"
 
-#: app/src/ui/contacts/person.rs:429
+#: app/src/ui/contacts/person.rs:492
 msgid "You have not written to them."
 msgstr "아직 보낸 적이 없습니다."
 
-#: app/src/ui/contacts/person.rs:451 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1957
-#: app/src/ui/thread_list.rs:373
+#: app/src/ui/contacts/person.rs:514 app/src/ui/sidebar.rs:494
+#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1961
+#: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "메일"
 
-#: app/src/ui/contacts/person.rs:457 app/src/ui/sidebar.rs:2496
+#: app/src/ui/contacts/person.rs:520 app/src/ui/sidebar.rs:2500
 msgid "On this computer"
 msgstr "이 컴퓨터에 있음"
 
-#: app/src/ui/contacts/person.rs:497
+#: app/src/ui/contacts/person.rs:565
 msgid "A key for {email} is on this computer."
 msgstr "이 컴퓨터에 {email}의 키가 있습니다."
 
-#: app/src/ui/contacts/person.rs:498
+#: app/src/ui/contacts/person.rs:568
 msgid "A key for these addresses is on this computer."
 msgstr "이 컴퓨터에 이 주소들의 키가 있습니다."
 
-#: app/src/ui/contacts/person.rs:499
+#: app/src/ui/contacts/person.rs:570
 msgid "No key for {email} is on this computer."
 msgstr "이 컴퓨터에 {email}의 키가 없습니다."
 
-#: app/src/ui/contacts/person.rs:500
+#: app/src/ui/contacts/person.rs:573
 msgid "No key for these addresses is on this computer."
 msgstr "이 컴퓨터에 이 주소들의 키가 없습니다."
 
-#: app/src/ui/contacts/person.rs:502
+#: app/src/ui/contacts/person.rs:575
 msgid "OpenPGP key"
 msgstr "OpenPGP 키"
 
-#: app/src/ui/contacts/person.rs:506
+#: app/src/ui/contacts/person.rs:582
 msgid "Remote images"
 msgstr "원격 이미지"
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:584
 msgid "Allowed for this sender."
 msgstr "이 보낸 사람에게 허용됨."
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:586
 msgid "Blocked until you allow them."
 msgstr "허용하기 전까지 차단됩니다."
 
-#: app/src/ui/contacts/person.rs:509
+#: app/src/ui/contacts/person.rs:589
 msgid "Remote images, allowed for this sender"
 msgstr "원격 이미지, 이 보낸 사람에게 허용됨"
 
-#: app/src/ui/contacts/person.rs:511
+#: app/src/ui/contacts/person.rs:591
 msgid "Remote images, blocked until you allow them"
 msgstr "원격 이미지, 허용하기 전까지 차단됨"
 
-#: app/src/ui/contacts/person.rs:582
+#: app/src/ui/contacts/person.rs:669
 msgid "Deleted {name} from {account}."
 msgstr "{account}에서 {name}을(를) 삭제했습니다."
 
-#: app/src/ui/contacts/person.rs:587
+#: app/src/ui/contacts/person.rs:677
 msgid "{base} {other} still has this person."
 msgstr "{base} {other}에는 이 사람이 남아 있습니다."
 
-#: app/src/ui/contacts/person.rs:633
+#: app/src/ui/contacts/person.rs:728
 msgid "Merge in {account}"
 msgstr "{account}에서 병합"
 
-#: app/src/ui/contacts/person.rs:675
+#: app/src/ui/contacts/person.rs:777
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8653,25 +8653,25 @@ msgstr ""
 "두 연락처가 {email}을(를) 씁니다. {account}은(는) 하나를 유지하고 다른 하나"
 "를 삭제합니다. 다른 계정은 바뀌지 않습니다."
 
-#: app/src/ui/contacts/person.rs:678
+#: app/src/ui/contacts/person.rs:780
 msgid "Which contact"
 msgstr "어느 연락처"
 
-#: app/src/ui/contacts/person.rs:698
+#: app/src/ui/contacts/person.rs:808
 msgid "{account} keeps"
 msgstr "{account}이(가) 유지할 연락처"
 
-#: app/src/ui/contacts/person.rs:721
+#: app/src/ui/contacts/person.rs:838
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr ""
 "{account}에서 {name}을(를) 삭제했습니다. {account}이(가) 유지하는 연락처는 "
 "{kept}입니다."
 
-#: app/src/ui/contacts/person.rs:769
+#: app/src/ui/contacts/person.rs:892
 msgid "Link"
 msgstr "연결"
 
-#: app/src/ui/contacts/person.rs:785
+#: app/src/ui/contacts/person.rs:914
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8680,37 +8680,37 @@ msgstr ""
 "소도 다릅니다. 연결해도 두 연락처가 모두 유지되며, 모든 연락처에는 한 행으로 "
 "표시됩니다."
 
-#: app/src/ui/contacts/person.rs:793
+#: app/src/ui/contacts/person.rs:922
 msgid "The two contacts"
 msgstr "두 연락처"
 
-#: app/src/ui/contacts/person.rs:808
+#: app/src/ui/contacts/person.rs:937
 msgid "Name in All contacts"
 msgstr "모든 연락처에서의 이름"
 
-#: app/src/ui/contacts/person.rs:829
+#: app/src/ui/contacts/person.rs:961
 msgid "All contacts will show"
 msgstr "모든 연락처에 표시될 내용"
 
-#: app/src/ui/contacts/person.rs:834
+#: app/src/ui/contacts/person.rs:973
 msgid "One row, two accounts"
 msgstr "한 행, 계정 두 개"
 
-#: app/src/ui/contacts/person.rs:880
+#: app/src/ui/contacts/person.rs:1036
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr ""
 "모든 연락처에서 {name}을(를) 한 행으로 표시합니다. 아무것도 삭제되지 않았습니"
 "다."
 
-#: app/src/ui/contacts/person.rs:916
+#: app/src/ui/contacts/person.rs:1082
 msgid "Save to Contacts"
 msgstr "연락처에 저장"
 
-#: app/src/ui/contacts/person.rs:928
+#: app/src/ui/contacts/person.rs:1100
 msgid "Not a contact"
 msgstr "연락처가 아님"
 
-#: app/src/ui/contacts/person.rs:932
+#: app/src/ui/contacts/person.rs:1104
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -8721,31 +8721,31 @@ msgstr[0] ""
 "메일에서에는 받은편지함에서 본 사람 중 연락처로 저장되지 않은 사람이 나열됩니"
 "다. 메시지 {count}개에서 발견. 저장하면 선택한 계정에 연락처가 만들어집니다."
 
-#: app/src/ui/contacts/person.rs:942
+#: app/src/ui/contacts/person.rs:1122
 msgid "Latest message"
 msgstr "최근 메시지"
 
-#: app/src/ui/contacts/person.rs:964
+#: app/src/ui/contacts/person.rs:1154
 msgid "From the messages"
 msgstr "메시지에서"
 
-#: app/src/ui/contacts/person.rs:997
+#: app/src/ui/contacts/person.rs:1192
 msgid "Saved {name} to {account}."
 msgstr "{name}을(를) {account}에 저장했습니다."
 
-#: app/src/ui/contacts/person.rs:1065
+#: app/src/ui/contacts/person.rs:1266
 msgid "No organization, no phone"
 msgstr "조직 없음, 전화 없음"
 
-#: app/src/ui/contacts/person.rs:1067
+#: app/src/ui/contacts/person.rs:1268
 msgid "Organization {value}"
 msgstr "조직 {value}"
 
-#: app/src/ui/contacts/person.rs:1068
+#: app/src/ui/contacts/person.rs:1269
 msgid "Phone {value}"
 msgstr "전화 {value}"
 
-#: app/src/ui/contacts/person.rs:1137
+#: app/src/ui/contacts/person.rs:1349
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -8753,7 +8753,7 @@ msgstr ""
 "모든 연락처는 {name} 이름을 씁니다. {account_a}에는 연락처가 그대로 있고 "
 "{account_b}에는 {other}이(가) 그대로 있습니다."
 
-#: app/src/ui/contacts/person.rs:1158
+#: app/src/ui/contacts/person.rs:1387
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -8761,7 +8761,7 @@ msgstr ""
 "칩은 계정입니다. {others}에는 이 사람의 별도 연락처가 있으며, 여기서 편집하"
 "면 {account}이(가) 바뀝니다."
 
-#: app/src/ui/contacts/person.rs:1164
+#: app/src/ui/contacts/person.rs:1395
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -8769,11 +8769,11 @@ msgstr ""
 "VIP는 이 목록에서 열 수 있도록 표시한 사람입니다. {name}은(는) {accounts}에"
 "도 저장되어 있습니다."
 
-#: app/src/ui/contacts/person.rs:1167
+#: app/src/ui/contacts/person.rs:1403
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr "VIP는 이 목록에서 열 수 있도록 표시한 사람입니다."
 
-#: app/src/ui/contacts/person.rs:1169
+#: app/src/ui/contacts/person.rs:1406
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr "한 사람, {accounts}에 저장됨. 각 계정은 자체 연락처를 유지합니다."
 
@@ -8809,28 +8809,28 @@ msgstr "사진 사용"
 msgid "Contact Photo"
 msgstr "연락처 사진"
 
-#: app/src/ui/contacts/side.rs:75
+#: app/src/ui/contacts/side.rs:80
 msgid "Lists"
 msgstr "목록"
 
-#: app/src/ui/contacts/side.rs:81
+#: app/src/ui/contacts/side.rs:86
 msgid "People you mark, so you can open them from here"
 msgstr "여기서 열 수 있도록 표시한 사람"
 
-#: app/src/ui/contacts/side.rs:87
+#: app/src/ui/contacts/side.rs:92
 msgid "People found in mail. They are not contacts yet."
 msgstr "메일에서 발견한 사람. 아직 연락처가 아닙니다."
 
-#: app/src/ui/contacts/side.rs:93
+#: app/src/ui/contacts/side.rs:98
 msgid "Two contacts in one account share an address. Merging deletes one."
 msgstr ""
 "한 계정의 연락처 두 개가 주소를 공유합니다. 병합하면 하나가 삭제됩니다."
 
-#: app/src/ui/contacts/side.rs:99
+#: app/src/ui/contacts/side.rs:104
 msgid "A close name in two accounts. Linking deletes nothing."
 msgstr "두 계정에 있는 비슷한 이름. 연결해도 아무것도 삭제되지 않습니다."
 
-#: app/src/ui/contacts/side.rs:120 app/src/ui/preferences.rs:476
+#: app/src/ui/contacts/side.rs:125 app/src/ui/preferences.rs:476
 #: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
 #: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
@@ -8861,7 +8861,7 @@ msgid "Find Again"
 msgstr "다시 찾기"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2176
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2180
 msgid "Edit…"
 msgstr "편집…"
 
@@ -8943,7 +8943,7 @@ msgid "Export…"
 msgstr "내보내기…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3821
+#: app/src/ui/window.rs:3823
 msgid "Customize Toolbar…"
 msgstr "도구 모음 사용자 지정…"
 
@@ -9058,7 +9058,7 @@ msgid "Tags…"
 msgstr "태그…"
 
 #: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1543
-#: app/src/ui/sidebar.rs:2068 app/src/ui/window/reminders.rs:25
+#: app/src/ui/sidebar.rs:2072 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "나중에 알림"
@@ -9502,7 +9502,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "이메일 가리기 허용"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4034
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4036
 msgid "Add an account first"
 msgstr "먼저 계정을 추가하세요"
 
@@ -9967,7 +9967,7 @@ msgstr "이 계정은 아직 동기화 중이 아닙니다"
 msgid "Could not change the subscription: {reason}"
 msgstr "색을 변경할 수 없습니다: {reason}"
 
-#: app/src/ui/mod.rs:559
+#: app/src/ui/mod.rs:560
 msgid "Gray"
 msgstr "회색"
 
@@ -10754,7 +10754,7 @@ msgstr "마지막으로 사용한 캘린더 계정"
 msgid "Same as New Messages"
 msgstr "새 메시지와 동일"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:280
 msgid "All Inboxes"
 msgstr "모든 받은편지함"
 
@@ -10773,7 +10773,7 @@ msgstr "{account} 아래로 이동"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3828 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3830 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "환경설정"
 
@@ -11146,7 +11146,7 @@ msgstr "주소 추가"
 msgid "Default sender"
 msgstr "기본 발신자"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2485
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2489
 msgid "Signature…"
 msgstr "서명…"
 
@@ -11215,11 +11215,16 @@ msgstr "메시지 전송 중지"
 msgid "Mailboxes"
 msgstr "메일함"
 
+#: app/src/ui/sidebar.rs:548 app/src/ui/sidebar.rs:1952
+#: app/src/ui/sidebar.rs:3181
+msgid "99+"
+msgstr "99+"
+
 #: app/src/ui/sidebar.rs:953
 msgid "Calendars"
 msgstr "캘린더"
 
-#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2056
+#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2060
 msgid "Outbox"
 msgstr "보낼편지함"
 
@@ -11260,92 +11265,88 @@ msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, 메시지 {count}개"
 
-#: app/src/ui/sidebar.rs:1948 app/src/ui/sidebar.rs:3177
-msgid "99+"
-msgstr "99+"
-
-#: app/src/ui/sidebar.rs:1961
+#: app/src/ui/sidebar.rs:1965
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "메일, 읽지 않음 {count}개"
 
-#: app/src/ui/sidebar.rs:1967
+#: app/src/ui/sidebar.rs:1971
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "캘린더, 응답 대기 {count}개"
 
-#: app/src/ui/sidebar.rs:2178 app/src/ui/sidebar.rs:2300
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:2182 app/src/ui/sidebar.rs:2304
+#: app/src/ui/sidebar.rs:2599
 msgid "Move Up"
 msgstr "위로 이동"
 
-#: app/src/ui/sidebar.rs:2179 app/src/ui/sidebar.rs:2303
-#: app/src/ui/sidebar.rs:2596
+#: app/src/ui/sidebar.rs:2183 app/src/ui/sidebar.rs:2307
+#: app/src/ui/sidebar.rs:2600
 msgid "Move Down"
 msgstr "아래로 이동"
 
-#: app/src/ui/sidebar.rs:2331
+#: app/src/ui/sidebar.rs:2335
 msgid "Empty Trash…"
 msgstr "휴지통 비우기…"
 
-#: app/src/ui/sidebar.rs:2484
+#: app/src/ui/sidebar.rs:2488
 msgid "Automatic Reply…"
 msgstr "자동 회신…"
 
-#: app/src/ui/sidebar.rs:2486
+#: app/src/ui/sidebar.rs:2490
 msgid "Rules…"
 msgstr "규칙…"
 
-#: app/src/ui/sidebar.rs:2487 app/src/ui/window.rs:3814
+#: app/src/ui/sidebar.rs:2491 app/src/ui/window.rs:3816
 msgid "Hide My Email…"
 msgstr "이메일 가리기…"
 
-#: app/src/ui/sidebar.rs:2504
+#: app/src/ui/sidebar.rs:2508
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "이 컴퓨터에 있습니다. 이 계정의 메일함 표시 또는 숨기기"
 
-#: app/src/ui/sidebar.rs:2505
+#: app/src/ui/sidebar.rs:2509
 msgid "Show or hide this account's mailboxes"
 msgstr "이 계정의 메일함 표시 또는 숨기기"
 
-#: app/src/ui/sidebar.rs:2581
+#: app/src/ui/sidebar.rs:2585
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "새 폴더…"
 
-#: app/src/ui/sidebar.rs:2600
+#: app/src/ui/sidebar.rs:2604
 msgid "Switch to JMAP…"
 msgstr "JMAP으로 전환…"
 
-#: app/src/ui/sidebar.rs:2602
+#: app/src/ui/sidebar.rs:2606
 msgid "Messages That Will Not Download…"
 msgstr "다운로드할 수 없는 메시지…"
 
-#: app/src/ui/sidebar.rs:2677
+#: app/src/ui/sidebar.rs:2681
 msgid "Sign in again to keep syncing"
 msgstr "동기화를 계속하려면 다시 로그인하세요"
 
-#: app/src/ui/sidebar.rs:2683
+#: app/src/ui/sidebar.rs:2687
 msgid "{provider} is not responding; retrying"
 msgstr "{provider}이(가) 응답하지 않아 다시 시도 중"
 
-#: app/src/ui/sidebar.rs:2694
+#: app/src/ui/sidebar.rs:2698
 msgid "The keyring is not responding; retrying"
 msgstr "키 모음이 응답하지 않아 다시 시도 중"
 
-#: app/src/ui/sidebar.rs:2697
+#: app/src/ui/sidebar.rs:2701
 msgid "Downloading mail"
 msgstr "메일 다운로드 중"
 
-#: app/src/ui/sidebar.rs:2701
+#: app/src/ui/sidebar.rs:2705
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "오류로 동기화를 중지했습니다. 다시 시도하려면 Penguin Mail을 다시 시작하세요"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2708
+#: app/src/ui/sidebar.rs:2712
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11551,26 +11552,26 @@ msgstr "본문"
 msgid "New Template"
 msgstr "새 템플릿"
 
-#: app/src/ui/thread_list.rs:239
+#: app/src/ui/thread_list.rs:243
 msgid "No Mail"
 msgstr "메일 없음"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:257
+#: app/src/ui/thread_list.rs:261
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "메일 검색, 예: from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
+#: app/src/ui/thread_list.rs:300 app/src/ui/thread_list.rs:320
 msgid "Show Mailboxes"
 msgstr "메일함 표시"
 
-#: app/src/ui/thread_list.rs:306
+#: app/src/ui/thread_list.rs:310
 msgid "Search (/)"
 msgstr "검색 (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:319
 msgid "Search mail"
 msgstr "메일 검색"
 
@@ -11913,7 +11914,7 @@ msgstr "메일을 불러올 수 없습니다: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account}을(를) 추가했습니다. 메일 다운로드 중…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3174
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3176
 msgid "{account} is signed in again."
 msgstr "{account}에 다시 로그인했습니다."
 
@@ -12038,69 +12039,69 @@ msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "메시지 {count}개를 받은편지함으로 이동했습니다"
 
-#: app/src/ui/window.rs:987
+#: app/src/ui/window.rs:989
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (데모)"
 
-#: app/src/ui/window.rs:1449
+#: app/src/ui/window.rs:1451
 msgid "Could not read accounts: {reason}"
 msgstr "계정을 읽을 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2208
+#: app/src/ui/window.rs:2210
 msgid "Could not delete the mail: {reason}"
 msgstr "메일을 삭제할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:2315
+#: app/src/ui/window.rs:2317
 msgid "Turn On the {service}"
 msgstr "{service} 켜기"
 
-#: app/src/ui/window.rs:2502 app/src/ui/window.rs:2505
+#: app/src/ui/window.rs:2504 app/src/ui/window.rs:2507
 msgid "Move to Inbox"
 msgstr "받은편지함으로 이동"
 
-#: app/src/ui/window.rs:2673 app/src/ui/window.rs:2678
+#: app/src/ui/window.rs:2675 app/src/ui/window.rs:2680
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "모델 검색"
 
-#: app/src/ui/window.rs:2747
+#: app/src/ui/window.rs:2749
 msgid "Select mail from one account to tag it."
 msgstr "태그를 지정하려면 한 계정의 메일을 선택하세요."
 
-#: app/src/ui/window.rs:2759
+#: app/src/ui/window.rs:2761
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "이 계정에는 아직 태그가 없습니다. Outlook에서 만드세요."
 
-#: app/src/ui/window.rs:2852
+#: app/src/ui/window.rs:2854
 msgid "Add an account to reply or forward"
 msgstr "답장하거나 전달하려면 계정을 추가하세요"
 
-#: app/src/ui/window.rs:2957
+#: app/src/ui/window.rs:2959
 msgid "Could not include {file}: {reason}"
 msgstr "{file}을(를) 포함할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:3038
+#: app/src/ui/window.rs:3040
 msgid "The server had already sent this message."
 msgstr "서버가 이미 이 메시지를 보냈습니다."
 
-#: app/src/ui/window.rs:3043
+#: app/src/ui/window.rs:3045
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "다른 앱에서 이 메시지를 취소하여 더 이상 임시보관함에 없습니다."
 
-#: app/src/ui/window.rs:3359
+#: app/src/ui/window.rs:3361
 msgid "Continue in your browser"
 msgstr "브라우저에서 계속"
 
-#: app/src/ui/window.rs:3409
+#: app/src/ui/window.rs:3411
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "이 Penguin Mail 빌드에는 Google 로그인 기능이 없습니다."
 
-#: app/src/ui/window.rs:3431
+#: app/src/ui/window.rs:3433
 msgid "Get a Release"
 msgstr "출시 버전 받기"
 
-#: app/src/ui/window.rs:3554
+#: app/src/ui/window.rs:3556
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12108,86 +12109,86 @@ msgstr ""
 "서버가 나중에 보내려고 보관 중인 메시지를 확인할 수 없어 {account} 계정을 유"
 "지합니다: {reason}"
 
-#: app/src/ui/window.rs:3565
+#: app/src/ui/window.rs:3567
 msgid "Remove {account}?"
 msgstr "{account}을(를) 제거할까요?"
 
-#: app/src/ui/window.rs:3584
+#: app/src/ui/window.rs:3586
 msgid "Remove Anyway"
 msgstr "제거 진행"
 
-#: app/src/ui/window.rs:3597
+#: app/src/ui/window.rs:3599
 msgid "Removed {account}"
 msgstr "{account}을(를) 제거했습니다"
 
-#: app/src/ui/window.rs:3599
+#: app/src/ui/window.rs:3601
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}을(를) 제거할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:3791
+#: app/src/ui/window.rs:3793
 msgid "Refresh"
 msgstr "새로 고침"
 
-#: app/src/ui/window.rs:3795
+#: app/src/ui/window.rs:3797
 msgid "Show Declined Events"
 msgstr "거절한 일정 표시"
 
-#: app/src/ui/window.rs:3812
+#: app/src/ui/window.rs:3814
 msgid "Add Account…"
 msgstr "계정 추가…"
 
-#: app/src/ui/window.rs:3813
+#: app/src/ui/window.rs:3815
 msgid "New Smart Mailbox…"
 msgstr "새 스마트 메일함…"
 
-#: app/src/ui/window.rs:3825
+#: app/src/ui/window.rs:3827
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "도구 모음 사용자 지정…"
 
-#: app/src/ui/window.rs:3829 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3831 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "키보드 단축키"
 
-#: app/src/ui/window.rs:3838 app/src/ui/window.rs:3840
+#: app/src/ui/window.rs:3840 app/src/ui/window.rs:3842
 msgid "Main Menu"
 msgstr "기본 메뉴"
 
-#: app/src/ui/window.rs:3905 app/src/ui/window.rs:3906
+#: app/src/ui/window.rs:3907 app/src/ui/window.rs:3908
 msgid "Dock"
 msgstr "독"
 
-#: app/src/ui/window.rs:4035
+#: app/src/ui/window.rs:4037
 msgid "Add a mail account first"
 msgstr "먼저 메일 계정을 추가하세요"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4301
+#: app/src/ui/window.rs:4303
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account}의 캘린더와 연락처가 연결되었습니다."
 
-#: app/src/ui/window.rs:4417
+#: app/src/ui/window.rs:4419
 msgid "Open a message from the person first"
 msgstr "먼저 해당 사람의 메시지를 여세요"
 
-#: app/src/ui/window.rs:4523
+#: app/src/ui/window.rs:4525
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/window.rs:4525 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4527 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "다시 시작"
 
-#: app/src/ui/window.rs:4589
+#: app/src/ui/window.rs:4591
 msgid "Show Rules"
 msgstr "규칙 표시"
 
-#: app/src/ui/window.rs:4615
+#: app/src/ui/window.rs:4617
 msgid "Messages That Will Not Download"
 msgstr "다운로드할 수 없는 메시지"
 
-#: app/src/ui/window.rs:4617
+#: app/src/ui/window.rs:4619
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12254,19 +12255,19 @@ msgstr "열기"
 msgid "Open in Another Program"
 msgstr "다른 프로그램에서 열기"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "먼저 해당 발신자의 메시지를 여세요"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "앞으로 {sender}의 메일을 {category}(으)로 분류합니다"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "{sender}의 메일을 {category}(으)로 이동했습니다"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
@@ -13260,23 +13261,23 @@ msgstr "기타"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "날짜는 YYYY-MM-DD 형식으로, 연도를 모르면 --MM-DD 형식으로 입력하세요."
 
-#: domain/src/contact.rs:97
+#: domain/src/contact.rs:100
 msgid "A date needs a label and a value."
 msgstr "날짜에는 라벨과 값이 필요합니다."
 
-#: domain/src/contact.rs:103
+#: domain/src/contact.rs:106
 msgid "Contact photos must be PNG images no larger than 512 KB."
 msgstr "연락처 사진은 512KB 이하의 PNG 이미지여야 합니다."
 
-#: domain/src/contact.rs:139
+#: domain/src/contact.rs:142
 msgid "%-d %B"
 msgstr "%B %-d일"
 
-#: domain/src/contact.rs:147
+#: domain/src/contact.rs:150
 msgid "{date} ({year})"
 msgstr "{date} ({year})"
 
-#: domain/src/contact.rs:152
+#: domain/src/contact.rs:155
 msgid "{date} ({year}), {age} year old"
 msgid_plural "{date} ({year}), {age} years old"
 msgstr[0] "{date} ({year}), {age}세"
@@ -13921,14 +13922,14 @@ msgstr "이 일정의 참석자가 아닙니다."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail은 CalDAV 서버의 캘린더 목록을 변경할 수 없습니다."
 
-#: sync/src/services/carddav.rs:136
+#: sync/src/services/carddav.rs:137
 msgid ""
 "Google keeps a birthday only with its year. Add the year or remove the "
 "birthday."
 msgstr ""
 "Google은 연도가 있는 생일만 저장합니다. 연도를 추가하거나 생일을 삭제하세요."
 
-#: sync/src/services/carddav.rs:356
+#: sync/src/services/carddav.rs:357
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -13936,7 +13937,7 @@ msgstr ""
 "다른 기기에서 연락처 그룹이 바뀌었습니다. 연락처를 새로 고치고 편집기를 다시 "
 "여세요."
 
-#: sync/src/services/carddav.rs:363
+#: sync/src/services/carddav.rs:364
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -13944,7 +13945,7 @@ msgstr ""
 "같은 이름의 그룹이 여러 개 있습니다. 이 연락처를 추가하기 전에 계정에서 이름"
 "을 바꾸세요."
 
-#: sync/src/services/carddav.rs:579
+#: sync/src/services/carddav.rs:582
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -13952,7 +13953,7 @@ msgstr ""
 "연락처는 만들었지만 일부 그룹을 저장할 수 없습니다. 이 편집기에서 다시 시도하"
 "면 연락처를 하나 더 만들지 않고 마칠 수 있습니다: {reason}"
 
-#: sync/src/services/carddav.rs:638
+#: sync/src/services/carddav.rs:641
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -14534,6 +14535,7 @@ msgstr "{folder}(으)로 이동"
 #~ msgstr "나중에"
 
 #, fuzzy
+#~| msgid "Mailboxes"
 #~ msgid "Mailbox"
 #~ msgstr "메일함"
 

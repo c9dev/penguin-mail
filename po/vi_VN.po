@@ -4048,8 +4048,8 @@ msgstr "Tài khoản đó chưa kết nối."
 msgid "Could not save: {reason}"
 msgstr "Không thể lưu: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3059
-#: app/src/ui/window.rs:3082
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3061
+#: app/src/ui/window.rs:3084
 msgid "Could not open the draft: {reason}"
 msgstr "Không thể mở thư nháp: {reason}"
 
@@ -4121,8 +4121,8 @@ msgstr ""
 "Thư này chứa các liên kết có thể gây hiểu nhầm. Hãy kiểm tra địa chỉ đích "
 "trước khi mở."
 
-#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:351
-#: app/src/ui/contacts/person.rs:388
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:394
+#: app/src/ui/contacts/person.rs:437
 msgid "Details"
 msgstr "Chi tiết"
 
@@ -4311,7 +4311,7 @@ msgid "Set up a different project"
 msgstr "Thiết lập một dự án khác"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3412
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3414
 msgid "Set up your own Google project"
 msgstr "Thiết lập dự án Google của riêng bạn"
 
@@ -4450,7 +4450,7 @@ msgstr "{host} từ chối đăng nhập: {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:569
-#: app/src/ui/sidebar.rs:1958 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1962 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Lịch"
 
@@ -4459,8 +4459,8 @@ msgstr "Lịch"
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:570
-#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1959
-#: app/src/ui/window.rs:3811
+#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1963
+#: app/src/ui/window.rs:3813
 msgid "Contacts"
 msgstr "Danh bạ"
 
@@ -4478,7 +4478,7 @@ msgstr "Trên máy chủ"
 
 #: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
 #: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/contacts/side.rs:151 app/src/ui/preferences.rs:1185
+#: app/src/ui/contacts/side.rs:161 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "Tắt"
 
@@ -4494,8 +4494,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Gói đăng ký Claude"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3804
-#: app/src/ui/window.rs:3893
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3806
+#: app/src/ui/window.rs:3895
 msgid "Assistant"
 msgstr "Trợ lý"
 
@@ -4865,7 +4865,7 @@ msgstr "Thư được gửi tới Anthropic để Claude đọc qua gói đăng 
 msgid "No unread mail"
 msgstr "Không có thư chưa đọc"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1983
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1987
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} thư chưa đọc"
@@ -4880,13 +4880,13 @@ msgstr "Mở Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:253
-#: app/src/ui/contacts/person.rs:258 app/src/ui/contacts/person.rs:261
-#: app/src/ui/thread_list.rs:495
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:287
+#: app/src/ui/contacts/person.rs:292 app/src/ui/contacts/person.rs:295
+#: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "Thư mới"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2576 app/src/ui/window.rs:3810
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2580 app/src/ui/window.rs:3812
 msgid "Check for Mail"
 msgstr "Kiểm tra thư"
 
@@ -4904,7 +4904,7 @@ msgstr "Điểm mới trong {version}"
 msgid "Check for Updates"
 msgstr "Kiểm tra bản cập nhật"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3832
+#: app/src/tray.rs:216 app/src/ui/window.rs:3834
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "Thoát"
@@ -4925,12 +4925,12 @@ msgstr "Thư và lịch cho {os}. Thư của bạn được giữ trên máy tí
 msgid "What's New"
 msgstr "Điểm mới"
 
-#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:314
-#: app/src/ui/contacts/person.rs:1039 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:336
+#: app/src/ui/contacts/person.rs:1236 app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Trang web"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3831
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3833
 msgid "Donate"
 msgstr "Quyên góp"
 
@@ -4938,7 +4938,7 @@ msgstr "Quyên góp"
 msgid "License"
 msgstr "Giấy phép"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3830
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3832
 msgid "About Penguin Mail"
 msgstr "Giới thiệu Penguin Mail"
 
@@ -4987,12 +4987,12 @@ msgid "The update to {version} failed"
 msgstr "Cập nhật lên {version} thất bại"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1629
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1631
 msgid "Copy Command"
 msgstr "Sao chép lệnh"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1634
+#: app/src/ui/window.rs:1636
 msgid "Command copied"
 msgstr "Đã sao chép lệnh"
 
@@ -5086,9 +5086,9 @@ msgstr "Sao chép liên kết"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:483
-#: app/src/ui/contacts/mod.rs:1061 app/src/ui/contacts/mod.rs:1155
-#: app/src/ui/contacts/person.rs:638 app/src/ui/contacts/person.rs:760
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:550
+#: app/src/ui/contacts/mod.rs:1109 app/src/ui/contacts/mod.rs:1206
+#: app/src/ui/contacts/person.rs:733 app/src/ui/contacts/person.rs:883
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5105,7 +5105,7 @@ msgstr "Hủy"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1573
+#: app/src/ui/window.rs:1575
 msgid "Sign In"
 msgstr "Đăng nhập"
 
@@ -5229,7 +5229,7 @@ msgstr "Để sau"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1706
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1708
 msgid "Grant Access"
 msgstr "Cấp quyền"
 
@@ -5378,8 +5378,8 @@ msgid "Sign In Again"
 msgstr "Đăng nhập lại"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:288
-#: app/src/ui/contacts/mod.rs:502 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2317
+#: app/src/ui/contacts/mod.rs:512 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2319
 msgid "Open Google Cloud"
 msgstr "Mở Google Cloud"
 
@@ -5469,14 +5469,14 @@ msgstr "Soạn thư trả lời cho cuộc hội thoại đang mở"
 msgid "Choose a Model"
 msgstr "Chọn mô hình"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3940
-#: app/src/ui/window.rs:3941
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3942
+#: app/src/ui/window.rs:3943
 msgid "Detach"
 msgstr "Tách cửa sổ"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4640
+#: app/src/ui/window.rs:4642
 msgid "Close"
 msgstr "Đóng"
 
@@ -5687,7 +5687,7 @@ msgid "Use {server}"
 msgstr "Dùng {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:243
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:277
 msgid "Edit"
 msgstr "Sửa"
 
@@ -5697,8 +5697,8 @@ msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:595 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3568
+#: app/src/ui/contacts/editor.rs:700 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3570
 msgid "Remove"
 msgstr "Xóa"
 
@@ -5738,7 +5738,7 @@ msgstr ""
 "thiết lập môi trường. URL kết nối tới máy chủ qua HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:407
-#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:263
+#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:278
 #: app/src/ui/smart_editor.rs:41 app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Tên"
@@ -5775,7 +5775,7 @@ msgstr "Thử"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:450 app/src/ui/contacts/editor.rs:502
+#: app/src/ui/contacts/editor.rs:507 app/src/ui/contacts/editor.rs:569
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6337,8 +6337,8 @@ msgstr "Cuộc họp"
 msgid "Decline"
 msgstr "Từ chối"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1249
-#: app/src/ui/contacts/mod.rs:1257
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1308
+#: app/src/ui/contacts/mod.rs:1321
 msgid "None"
 msgstr "Không có"
 
@@ -6402,7 +6402,7 @@ msgstr "Mỗi"
 msgid "Unit"
 msgstr "Đơn vị"
 
-#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:153
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:163
 msgid "On"
 msgstr "Vào"
 
@@ -6474,8 +6474,8 @@ msgid "Remove reminder"
 msgstr "Xóa lời nhắc"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:345
-#: app/src/ui/contacts/editor.rs:380 app/src/ui/contacts/person.rs:398
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:385
+#: app/src/ui/contacts/editor.rs:423 app/src/ui/contacts/person.rs:447
 msgid "Notes"
 msgstr "Ghi chú"
 
@@ -6524,8 +6524,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Không thể đính kèm {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:468
-#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:356 app/src/ui/thread_list.rs:362
+#: app/src/ui/thread_list.rs:1182
 msgid "More"
 msgstr "Thêm"
 
@@ -6546,8 +6546,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Chỉ người có quyền sửa lịch này mới thấy chi tiết"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
-#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2293
-#: app/src/ui/sidebar.rs:2594
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2297
+#: app/src/ui/sidebar.rs:2598
 msgid "Color"
 msgstr "Màu"
 
@@ -6809,8 +6809,8 @@ msgstr "Việt Nam"
 msgid "Working location"
 msgstr "Nơi làm việc"
 
-#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:332
-#: app/src/ui/contacts/editor.rs:378 app/src/ui/contacts/person.rs:367
+#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:372
+#: app/src/ui/contacts/editor.rs:421 app/src/ui/contacts/person.rs:414
 msgid "Birthday"
 msgstr "Sinh nhật"
 
@@ -7063,7 +7063,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Không thể xóa sự kiện: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1359
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7408,19 +7408,19 @@ msgstr "Cấp quyền cho {account}"
 msgid "Sign in again to {account}"
 msgstr "Đăng nhập lại vào {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2599
+#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2603
 msgid "Sign In Again…"
 msgstr "Đăng nhập lại…"
 
-#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2607
+#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2611
 msgid "Remove Account…"
 msgstr "Xóa tài khoản…"
 
-#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2614
+#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2618
 msgid "Account options"
 msgstr "Tùy chọn tài khoản"
 
-#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2619
+#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2623
 msgid "Options for {account}"
 msgstr "Tùy chọn cho {account}"
 
@@ -7448,13 +7448,13 @@ msgstr "Ẩn khỏi danh sách"
 msgid "Original Color"
 msgstr "Màu ban đầu"
 
-#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2281
-#: app/src/ui/sidebar.rs:2584
+#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2285
+#: app/src/ui/sidebar.rs:2588
 msgid "Rename…"
 msgstr "Đổi tên…"
 
-#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2182
-#: app/src/ui/sidebar.rs:2309
+#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2186
+#: app/src/ui/sidebar.rs:2313
 msgid "Delete…"
 msgstr "Xóa…"
 
@@ -7570,7 +7570,7 @@ msgstr "{date}, có sự kiện"
 msgid "Offline, last updated {time}"
 msgstr "Ngoại tuyến, cập nhật lần cuối {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2679
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2683
 msgid "Offline"
 msgstr "Ngoại tuyến"
 
@@ -7699,7 +7699,7 @@ msgid "Choose a Time…"
 msgstr "Chọn thời gian…"
 
 #: app/src/ui/composer/mod.rs:444 app/src/ui/composer/mod.rs:2178
-#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2062
+#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2066
 msgid "Send Later"
 msgstr "Gửi sau"
 
@@ -8113,146 +8113,146 @@ msgstr "Thêm vào từ điển"
 msgid "Ignore"
 msgstr "Bỏ qua"
 
-#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:279
-#: app/src/ui/contacts/person.rs:308 app/src/ui/contacts/person.rs:704
+#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:298
+#: app/src/ui/contacts/person.rs:346 app/src/ui/contacts/person.rs:819
 msgid "Email"
 msgstr "Email"
 
-#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:280
-#: app/src/ui/contacts/person.rs:310
+#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:299
+#: app/src/ui/contacts/person.rs:348
 msgid "Other email"
 msgstr "Email khác"
 
-#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:293
-#: app/src/ui/contacts/person.rs:335 app/src/ui/contacts/person.rs:710
+#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:312
+#: app/src/ui/contacts/person.rs:373 app/src/ui/contacts/person.rs:825
 msgid "Phone"
 msgstr "Điện thoại"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:194
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:219
 #: app/src/ui/sidebar.rs:1498
 msgid "Remove from VIPs"
 msgstr "Xóa khỏi người quan trọng"
 
-#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:194
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:221
 msgid "Add to VIPs"
 msgstr "Thêm vào người quan trọng"
 
-#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:225
-#: app/src/ui/contacts/person.rs:903
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:259
+#: app/src/ui/contacts/person.rs:1069
 msgid "All Their Mail"
 msgstr "Mọi thư của họ"
 
-#: app/src/ui/contacts/editor.rs:112
+#: app/src/ui/contacts/editor.rs:114
 msgid "Remove Field"
 msgstr "Bỏ trường"
 
-#: app/src/ui/contacts/editor.rs:265
+#: app/src/ui/contacts/editor.rs:281
 msgid "Full name"
 msgstr "Họ và tên"
 
-#: app/src/ui/contacts/editor.rs:268 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:707
+#: app/src/ui/contacts/editor.rs:287 app/src/ui/contacts/person.rs:335
+#: app/src/ui/contacts/person.rs:822
 msgid "Organization"
 msgstr "Tổ chức"
 
-#: app/src/ui/contacts/editor.rs:278
+#: app/src/ui/contacts/editor.rs:297
 msgid "Add email"
 msgstr "Thêm email"
 
-#: app/src/ui/contacts/editor.rs:287
+#: app/src/ui/contacts/editor.rs:306
 msgid "name@example.com"
 msgstr "ten@vidu.com"
 
-#: app/src/ui/contacts/editor.rs:291
+#: app/src/ui/contacts/editor.rs:310
 msgid "Add phone"
 msgstr "Thêm số điện thoại"
 
-#: app/src/ui/contacts/editor.rs:299
+#: app/src/ui/contacts/editor.rs:318
 msgid "Add postal address"
 msgstr "Thêm địa chỉ bưu điện"
 
-#: app/src/ui/contacts/editor.rs:302
+#: app/src/ui/contacts/editor.rs:321
 msgid "PO box"
 msgstr "Hộp thư bưu điện"
 
-#: app/src/ui/contacts/editor.rs:303
+#: app/src/ui/contacts/editor.rs:322
 msgid "Extended address"
 msgstr "Địa chỉ bổ sung"
 
-#: app/src/ui/contacts/editor.rs:304
+#: app/src/ui/contacts/editor.rs:323
 msgid "Street"
 msgstr "Đường"
 
-#: app/src/ui/contacts/editor.rs:305
+#: app/src/ui/contacts/editor.rs:324
 msgid "City"
 msgstr "Thành phố"
 
-#: app/src/ui/contacts/editor.rs:306
+#: app/src/ui/contacts/editor.rs:325
 msgid "Region"
 msgstr "Vùng"
 
-#: app/src/ui/contacts/editor.rs:307
+#: app/src/ui/contacts/editor.rs:326
 msgid "Postal code"
 msgstr "Mã bưu chính"
 
-#: app/src/ui/contacts/editor.rs:308
+#: app/src/ui/contacts/editor.rs:327
 msgid "Country"
 msgstr "Quốc gia"
 
-#: app/src/ui/contacts/editor.rs:314
+#: app/src/ui/contacts/editor.rs:334
 msgid "Add website"
 msgstr "Thêm trang web"
 
-#: app/src/ui/contacts/editor.rs:315
+#: app/src/ui/contacts/editor.rs:342
 msgid "Add group"
 msgstr "Thêm nhóm"
 
-#: app/src/ui/contacts/editor.rs:315
+#: app/src/ui/contacts/editor.rs:344
 msgid "Group"
 msgstr "Nhóm"
 
-#: app/src/ui/contacts/editor.rs:317
+#: app/src/ui/contacts/editor.rs:350
 msgid "Add date"
 msgstr "Thêm ngày"
 
-#: app/src/ui/contacts/editor.rs:319
+#: app/src/ui/contacts/editor.rs:352
 msgid "Date"
 msgstr "Ngày"
 
-#: app/src/ui/contacts/editor.rs:319 app/src/ui/contacts/editor.rs:327
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/editor.rs:363
 msgid "Label"
 msgstr "Nhãn"
 
-#: app/src/ui/contacts/editor.rs:325
+#: app/src/ui/contacts/editor.rs:361
 msgid "Add custom field"
 msgstr "Thêm trường tùy chỉnh"
 
-#: app/src/ui/contacts/editor.rs:327
+#: app/src/ui/contacts/editor.rs:363
 msgid "Value"
 msgstr "Giá trị"
 
-#: app/src/ui/contacts/editor.rs:369
+#: app/src/ui/contacts/editor.rs:412
 msgid "Postal addresses"
 msgstr "Địa chỉ bưu điện"
 
-#: app/src/ui/contacts/editor.rs:370
+#: app/src/ui/contacts/editor.rs:413
 msgid "Websites"
 msgstr "Trang web"
 
-#: app/src/ui/contacts/editor.rs:371 app/src/ui/contacts/person.rs:385
-#: app/src/ui/contacts/side.rs:108
+#: app/src/ui/contacts/editor.rs:414 app/src/ui/contacts/person.rs:433
+#: app/src/ui/contacts/side.rs:113
 msgid "Groups"
 msgstr "Nhóm"
 
-#: app/src/ui/contacts/editor.rs:372
+#: app/src/ui/contacts/editor.rs:415
 msgid "Other dates"
 msgstr "Các ngày khác"
 
-#: app/src/ui/contacts/editor.rs:373
+#: app/src/ui/contacts/editor.rs:416
 msgid "Custom fields"
 msgstr "Trường tùy chỉnh"
 
-#: app/src/ui/contacts/editor.rs:430
+#: app/src/ui/contacts/editor.rs:485
 msgid ""
 "A new contact is saved into one account. The other accounts do not get a "
 "copy. Add a name or an email. Save stays off until one of those is filled in."
@@ -8261,60 +8261,60 @@ msgstr ""
 "sao. Hãy thêm tên hoặc email. Nút Lưu vẫn tắt cho đến khi một trong hai được "
 "điền."
 
-#: app/src/ui/contacts/editor.rs:448
+#: app/src/ui/contacts/editor.rs:505
 msgid "Unsaved changes"
 msgstr "Thay đổi chưa lưu"
 
-#: app/src/ui/contacts/editor.rs:479
-msgid "Edit contact"
-msgstr "Sửa liên hệ"
-
-#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1196
+#: app/src/ui/contacts/editor.rs:543 app/src/ui/contacts/mod.rs:1250
 msgid "New contact"
 msgstr "Liên hệ mới"
 
-#: app/src/ui/contacts/editor.rs:526 app/src/ui/contacts/person.rs:955
+#: app/src/ui/contacts/editor.rs:545
+msgid "Edit contact"
+msgstr "Sửa liên hệ"
+
+#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:1141
 msgid "Turn contacts on for an account first."
 msgstr "Hãy bật danh bạ cho một tài khoản trước."
 
-#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:532
-#: app/src/ui/contacts/person.rs:953 app/src/ui/contacts/person.rs:958
+#: app/src/ui/contacts/editor.rs:602 app/src/ui/contacts/editor.rs:607
+#: app/src/ui/contacts/person.rs:1138 app/src/ui/contacts/person.rs:1145
 msgid "Save to"
 msgstr "Lưu vào"
 
-#: app/src/ui/contacts/editor.rs:541
+#: app/src/ui/contacts/editor.rs:626
 msgid "Which account"
 msgstr "Tài khoản nào"
 
-#: app/src/ui/contacts/editor.rs:558
+#: app/src/ui/contacts/editor.rs:647
 msgid "Replace Photo"
 msgstr "Thay ảnh"
 
-#: app/src/ui/contacts/editor.rs:559
+#: app/src/ui/contacts/editor.rs:648
 msgid "Remove Photo"
 msgstr "Bỏ ảnh"
 
-#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:649
+#: app/src/ui/contacts/editor.rs:703 app/src/ui/contacts/person.rs:744
 msgid "Delete {name} from {account}"
 msgstr "Xóa {name} khỏi {account}"
 
-#: app/src/ui/contacts/editor.rs:639
+#: app/src/ui/contacts/editor.rs:759
 msgid "Enter a name or an email address."
 msgstr "Hãy nhập tên hoặc địa chỉ email."
 
-#: app/src/ui/contacts/editor.rs:642
+#: app/src/ui/contacts/editor.rs:765
 msgid "Enter a valid email address."
 msgstr "Hãy nhập một địa chỉ email hợp lệ."
 
-#: app/src/ui/contacts/editor.rs:645
+#: app/src/ui/contacts/editor.rs:768
 msgid "Contacts access for this account was turned off."
 msgstr "Quyền truy cập danh bạ của tài khoản này đã bị tắt."
 
-#: app/src/ui/contacts/editor.rs:689
+#: app/src/ui/contacts/editor.rs:812
 msgid "Could not save the contact: {reason}"
 msgstr "Không thể lưu liên hệ: {reason}"
 
-#: app/src/ui/contacts/editor.rs:729
+#: app/src/ui/contacts/editor.rs:857
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8324,7 +8324,7 @@ msgstr ""
 "này. {other_account} vẫn có {other}, và việc liên kết không thay đổi bản ghi "
 "đó. Không có gì được ghi cho đến khi bạn nhấn Lưu."
 
-#: app/src/ui/contacts/editor.rs:734
+#: app/src/ui/contacts/editor.rs:868
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8332,13 +8332,13 @@ msgstr ""
 "Bạn đang sửa liên hệ trong {account} cho {name}. {other_account} giữ "
 "{other}. Không có gì được ghi cho đến khi bạn nhấn Lưu."
 
-#: app/src/ui/contacts/editor.rs:756
+#: app/src/ui/contacts/editor.rs:891
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "Bạn đang sửa liên hệ trong {account}. Không có gì được ghi cho đến khi bạn "
 "nhấn Lưu."
 
-#: app/src/ui/contacts/editor.rs:762
+#: app/src/ui/contacts/editor.rs:898
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8346,7 +8346,7 @@ msgstr ""
 "Bạn đang sửa liên hệ trong {account}. {others} giữ liên hệ riêng của mình. "
 "Không có gì được ghi cho đến khi bạn nhấn Lưu."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:172
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
 msgid "Turn Off Contacts"
 msgstr "Tắt danh bạ"
 
@@ -8354,28 +8354,28 @@ msgstr "Tắt danh bạ"
 msgid "Turn on Contacts for your Google project"
 msgstr "Bật Danh bạ cho dự án Google của bạn"
 
-#: app/src/ui/contacts/mod.rs:644
+#: app/src/ui/contacts/mod.rs:655
 msgid "Could not load contacts: {reason}"
 msgstr "Không thể tải danh bạ: {reason}"
 
-#: app/src/ui/contacts/mod.rs:774
+#: app/src/ui/contacts/mod.rs:793
 msgid "Deletes {name} in {account}"
 msgstr "Xóa {name} trong {account}"
 
-#: app/src/ui/contacts/mod.rs:798
+#: app/src/ui/contacts/mod.rs:819
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "Giữ cả hai liên hệ. Không có gì bị xóa."
 
-#: app/src/ui/contacts/mod.rs:831
+#: app/src/ui/contacts/mod.rs:852
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "Xuất hiện trong {count} thư"
 
-#: app/src/ui/contacts/mod.rs:938
+#: app/src/ui/contacts/mod.rs:972
 msgid "Contacts are off"
 msgstr "Danh bạ đang tắt"
 
-#: app/src/ui/contacts/mod.rs:940
+#: app/src/ui/contacts/mod.rs:975
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8385,19 +8385,19 @@ msgstr ""
 "máy tính này. Hãy bật danh bạ để sao chép nó về đây. Nếu sau này tắt danh "
 "bạ, bản sao đó sẽ bị xóa."
 
-#: app/src/ui/contacts/mod.rs:951
+#: app/src/ui/contacts/mod.rs:987
 msgid "No Matching Contacts"
 msgstr "Không có liên hệ phù hợp"
 
-#: app/src/ui/contacts/mod.rs:952
+#: app/src/ui/contacts/mod.rs:988
 msgid "Nothing matches that search."
 msgstr "Không có gì khớp với tìm kiếm này."
 
-#: app/src/ui/contacts/mod.rs:958
+#: app/src/ui/contacts/mod.rs:994
 msgid "No shared addresses"
 msgstr "Không có địa chỉ trùng"
 
-#: app/src/ui/contacts/mod.rs:959
+#: app/src/ui/contacts/mod.rs:996
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8405,54 +8405,54 @@ msgstr ""
 "Không có hai liên hệ nào trong một tài khoản dùng chung địa chỉ. Không có gì "
 "chờ bị xóa."
 
-#: app/src/ui/contacts/mod.rs:963
+#: app/src/ui/contacts/mod.rs:1001
 msgid "No close names"
 msgstr "Không có tên gần giống"
 
-#: app/src/ui/contacts/mod.rs:964
+#: app/src/ui/contacts/mod.rs:1002
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "Không có tài khoản nào có tên gần giống mà chưa được liên kết."
 
-#: app/src/ui/contacts/mod.rs:968
+#: app/src/ui/contacts/mod.rs:1006
 msgid "Everyone is a contact"
 msgstr "Mọi người đều là liên hệ"
 
-#: app/src/ui/contacts/mod.rs:969
+#: app/src/ui/contacts/mod.rs:1007
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr "Mọi người mà hộp thư đã thấy đều đã được lưu thành liên hệ."
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:1011
 msgid "No VIPs yet"
 msgstr "Chưa có VIP"
 
-#: app/src/ui/contacts/mod.rs:974
+#: app/src/ui/contacts/mod.rs:1013
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr "Thêm một người vào VIP từ trang của họ để mở họ từ danh sách này."
 
-#: app/src/ui/contacts/mod.rs:978
+#: app/src/ui/contacts/mod.rs:1018
 msgid "No contacts yet"
 msgstr "Chưa có liên hệ"
 
-#: app/src/ui/contacts/mod.rs:979
+#: app/src/ui/contacts/mod.rs:1020
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr ""
 "Danh bạ đã bật cho tài khoản này. Chưa có gì được sao chép vào máy tính này."
 
-#: app/src/ui/contacts/mod.rs:1002
+#: app/src/ui/contacts/mod.rs:1045
 msgid "Turn On"
 msgstr "Bật"
 
-#: app/src/ui/contacts/mod.rs:1029
+#: app/src/ui/contacts/mod.rs:1074
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "Danh bạ đã bật cho {account}. Sổ trên máy tính này đang trống."
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1098
 msgid "Turn Off Contacts?"
 msgstr "Tắt danh bạ?"
 
-#: app/src/ui/contacts/mod.rs:1054
+#: app/src/ui/contacts/mod.rs:1101
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8460,7 +8460,7 @@ msgstr ""
 "Tắt danh bạ của {account}? Danh bạ vẫn được lưu trên máy tính này và trở lại "
 "khi bạn bật."
 
-#: app/src/ui/contacts/mod.rs:1056
+#: app/src/ui/contacts/mod.rs:1103
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8468,88 +8468,88 @@ msgstr ""
 "Tắt danh bạ của {account}? Danh bạ sẽ bị xóa khỏi máy tính này; máy chủ vẫn "
 "giữ chúng."
 
-#: app/src/ui/contacts/mod.rs:1061
+#: app/src/ui/contacts/mod.rs:1110
 msgid "Turn Off"
 msgstr "Tắt"
 
-#: app/src/ui/contacts/mod.rs:1084
+#: app/src/ui/contacts/mod.rs:1137
 msgid "Contacts are off for {account}."
 msgstr "Danh bạ của {account} đã tắt."
 
-#: app/src/ui/contacts/mod.rs:1139
+#: app/src/ui/contacts/mod.rs:1190
 msgid "Search same address"
 msgstr "Tìm cùng địa chỉ"
 
-#: app/src/ui/contacts/mod.rs:1140
+#: app/src/ui/contacts/mod.rs:1191
 msgid "Search same person"
 msgstr "Tìm cùng một người"
 
-#: app/src/ui/contacts/mod.rs:1141
+#: app/src/ui/contacts/mod.rs:1192
 msgid "Search correspondents"
 msgstr "Tìm người đã trao đổi thư"
 
-#: app/src/ui/contacts/mod.rs:1142
+#: app/src/ui/contacts/mod.rs:1193
 msgid "Search contacts"
 msgstr "Tìm liên hệ"
 
-#: app/src/ui/contacts/mod.rs:1150
+#: app/src/ui/contacts/mod.rs:1201
 msgid "{count} selected"
 msgstr "Đã chọn {count}"
 
-#: app/src/ui/contacts/mod.rs:1163
+#: app/src/ui/contacts/mod.rs:1214
 msgid "Delete {count}"
 msgstr "Xóa {count}"
 
-#: app/src/ui/contacts/mod.rs:1186
+#: app/src/ui/contacts/mod.rs:1237
 msgid "Select several contacts"
 msgstr "Chọn nhiều liên hệ"
 
-#: app/src/ui/contacts/mod.rs:1220 app/src/ui/contacts/mod.rs:1243
+#: app/src/ui/contacts/mod.rs:1274 app/src/ui/contacts/mod.rs:1298
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} người"
 
-#: app/src/ui/contacts/mod.rs:1231
+#: app/src/ui/contacts/mod.rs:1285
 msgid "{count} of {total}"
 msgstr "{count} trên {total}"
 
-#: app/src/ui/contacts/mod.rs:1240 app/src/ui/contacts/side.rs:77
+#: app/src/ui/contacts/mod.rs:1294 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "Tất cả liên hệ"
 
-#: app/src/ui/contacts/mod.rs:1242 app/src/ui/contacts/side.rs:79
+#: app/src/ui/contacts/mod.rs:1296 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1485 app/src/ui/sidebar.rs:1487
-#: app/src/ui/sidebar.rs:2085 app/src/ui/sidebar.rs:2087
+#: app/src/ui/sidebar.rs:2089 app/src/ui/sidebar.rs:2091
 msgid "VIPs"
 msgstr "Người quan trọng"
 
-#: app/src/ui/contacts/mod.rs:1245 app/src/ui/contacts/side.rs:85
+#: app/src/ui/contacts/mod.rs:1304 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "Từ thư"
 
-#: app/src/ui/contacts/mod.rs:1245
+#: app/src/ui/contacts/mod.rs:1304
 msgid "Not contacts yet"
 msgstr "Chưa là liên hệ"
 
-#: app/src/ui/contacts/mod.rs:1247 app/src/ui/contacts/side.rs:91
+#: app/src/ui/contacts/mod.rs:1306 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "Cùng địa chỉ"
 
-#: app/src/ui/contacts/mod.rs:1251 app/src/ui/contacts/mod.rs:1259
+#: app/src/ui/contacts/mod.rs:1311 app/src/ui/contacts/mod.rs:1324
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} cặp"
 
-#: app/src/ui/contacts/mod.rs:1255 app/src/ui/contacts/person.rs:758
-#: app/src/ui/contacts/side.rs:97
+#: app/src/ui/contacts/mod.rs:1319 app/src/ui/contacts/person.rs:881
+#: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "Cùng một người"
 
-#: app/src/ui/contacts/mod.rs:1456
+#: app/src/ui/contacts/mod.rs:1531
 msgid "{name} from {account}"
 msgstr "{name} từ {account}"
 
-#: app/src/ui/contacts/mod.rs:1465
+#: app/src/ui/contacts/mod.rs:1540
 msgid "Deleted {list}."
 msgstr "Đã xóa {list}."
 
@@ -8557,113 +8557,113 @@ msgstr "Đã xóa {list}."
 msgid "Grant contacts permission in Preferences, then try again."
 msgstr "Hãy cấp quyền danh bạ trong Tùy chọn rồi thử lại."
 
-#: app/src/ui/contacts/person.rs:66
+#: app/src/ui/contacts/person.rs:71
 msgid "View Photo"
 msgstr "Xem ảnh"
 
-#: app/src/ui/contacts/person.rs:199
+#: app/src/ui/contacts/person.rs:227
 msgid "{name} is in VIPs. Remove them from that list."
 msgstr "{name} đang ở trong VIP. Gỡ họ khỏi danh sách đó."
 
-#: app/src/ui/contacts/person.rs:201
+#: app/src/ui/contacts/person.rs:229
 msgid "Add {name} to VIPs"
 msgstr "Thêm {name} vào VIP"
 
-#: app/src/ui/contacts/person.rs:226 app/src/ui/contacts/person.rs:904
+#: app/src/ui/contacts/person.rs:260 app/src/ui/contacts/person.rs:1070
 msgid "Every conversation with this person"
 msgstr "Mọi cuộc trò chuyện với người này"
 
-#: app/src/ui/contacts/person.rs:254 app/src/ui/thread_list.rs:301
+#: app/src/ui/contacts/person.rs:288 app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "Thư mới (C)"
 
-#: app/src/ui/contacts/person.rs:286
+#: app/src/ui/contacts/person.rs:320
 msgid "Reach"
 msgstr "Liên lạc"
 
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:963
+#: app/src/ui/contacts/person.rs:399 app/src/ui/contacts/person.rs:1150
 msgid "Address"
 msgstr "Địa chỉ"
 
-#: app/src/ui/contacts/person.rs:410
+#: app/src/ui/contacts/person.rs:466
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "Bạn đã viết vào {date}. Đang chờ trả lời."
 
-#: app/src/ui/contacts/person.rs:412
+#: app/src/ui/contacts/person.rs:471
 msgid "Last message, {date}"
 msgstr "Thư gần nhất, {date}"
 
-#: app/src/ui/contacts/person.rs:428
+#: app/src/ui/contacts/person.rs:490
 msgid "You last wrote {date}"
 msgstr "Lần viết gần nhất: {date}"
 
-#: app/src/ui/contacts/person.rs:429
+#: app/src/ui/contacts/person.rs:492
 msgid "You have not written to them."
 msgstr "Bạn chưa viết cho họ."
 
-#: app/src/ui/contacts/person.rs:451 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1957
-#: app/src/ui/thread_list.rs:373
+#: app/src/ui/contacts/person.rs:514 app/src/ui/sidebar.rs:494
+#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1961
+#: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "Thư"
 
-#: app/src/ui/contacts/person.rs:457 app/src/ui/sidebar.rs:2496
+#: app/src/ui/contacts/person.rs:520 app/src/ui/sidebar.rs:2500
 msgid "On this computer"
 msgstr "Trên máy tính này"
 
-#: app/src/ui/contacts/person.rs:497
+#: app/src/ui/contacts/person.rs:565
 msgid "A key for {email} is on this computer."
 msgstr "Máy tính này có khóa cho {email}."
 
-#: app/src/ui/contacts/person.rs:498
+#: app/src/ui/contacts/person.rs:568
 msgid "A key for these addresses is on this computer."
 msgstr "Máy tính này có khóa cho các địa chỉ này."
 
-#: app/src/ui/contacts/person.rs:499
+#: app/src/ui/contacts/person.rs:570
 msgid "No key for {email} is on this computer."
 msgstr "Máy tính này không có khóa cho {email}."
 
-#: app/src/ui/contacts/person.rs:500
+#: app/src/ui/contacts/person.rs:573
 msgid "No key for these addresses is on this computer."
 msgstr "Máy tính này không có khóa cho các địa chỉ này."
 
-#: app/src/ui/contacts/person.rs:502
+#: app/src/ui/contacts/person.rs:575
 msgid "OpenPGP key"
 msgstr "Khóa OpenPGP"
 
-#: app/src/ui/contacts/person.rs:506
+#: app/src/ui/contacts/person.rs:582
 msgid "Remote images"
 msgstr "Ảnh từ xa"
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:584
 msgid "Allowed for this sender."
 msgstr "Được cho phép với người gửi này."
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:586
 msgid "Blocked until you allow them."
 msgstr "Bị chặn cho đến khi bạn cho phép."
 
-#: app/src/ui/contacts/person.rs:509
+#: app/src/ui/contacts/person.rs:589
 msgid "Remote images, allowed for this sender"
 msgstr "Ảnh từ xa, được cho phép với người gửi này"
 
-#: app/src/ui/contacts/person.rs:511
+#: app/src/ui/contacts/person.rs:591
 msgid "Remote images, blocked until you allow them"
 msgstr "Ảnh từ xa, bị chặn cho đến khi bạn cho phép"
 
-#: app/src/ui/contacts/person.rs:582
+#: app/src/ui/contacts/person.rs:669
 msgid "Deleted {name} from {account}."
 msgstr "Đã xóa {name} khỏi {account}."
 
-#: app/src/ui/contacts/person.rs:587
+#: app/src/ui/contacts/person.rs:677
 msgid "{base} {other} still has this person."
 msgstr "{base} {other} vẫn còn người này."
 
-#: app/src/ui/contacts/person.rs:633
+#: app/src/ui/contacts/person.rs:728
 msgid "Merge in {account}"
 msgstr "Gộp trong {account}"
 
-#: app/src/ui/contacts/person.rs:675
+#: app/src/ui/contacts/person.rs:777
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8671,23 +8671,23 @@ msgstr ""
 "Cả hai liên hệ dùng {email}. {account} giữ một liên hệ và xóa liên hệ kia. "
 "Các tài khoản khác không thay đổi."
 
-#: app/src/ui/contacts/person.rs:678
+#: app/src/ui/contacts/person.rs:780
 msgid "Which contact"
 msgstr "Liên hệ nào"
 
-#: app/src/ui/contacts/person.rs:698
+#: app/src/ui/contacts/person.rs:808
 msgid "{account} keeps"
 msgstr "{account} giữ"
 
-#: app/src/ui/contacts/person.rs:721
+#: app/src/ui/contacts/person.rs:838
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr "Đã xóa {name} khỏi {account}. {kept} là liên hệ mà {account} giữ."
 
-#: app/src/ui/contacts/person.rs:769
+#: app/src/ui/contacts/person.rs:892
 msgid "Link"
 msgstr "Liên kết"
 
-#: app/src/ui/contacts/person.rs:785
+#: app/src/ui/contacts/person.rs:914
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8695,35 +8695,35 @@ msgstr ""
 "{a} ở {account_a}. {b} ở {account_b}. Tên và địa chỉ đều khác nhau. Liên kết "
 "giữ cả hai liên hệ. Tất cả liên hệ hiển thị một hàng."
 
-#: app/src/ui/contacts/person.rs:793
+#: app/src/ui/contacts/person.rs:922
 msgid "The two contacts"
 msgstr "Hai liên hệ"
 
-#: app/src/ui/contacts/person.rs:808
+#: app/src/ui/contacts/person.rs:937
 msgid "Name in All contacts"
 msgstr "Tên trong Tất cả liên hệ"
 
-#: app/src/ui/contacts/person.rs:829
+#: app/src/ui/contacts/person.rs:961
 msgid "All contacts will show"
 msgstr "Tất cả liên hệ sẽ hiển thị"
 
-#: app/src/ui/contacts/person.rs:834
+#: app/src/ui/contacts/person.rs:973
 msgid "One row, two accounts"
 msgstr "Một hàng, hai tài khoản"
 
-#: app/src/ui/contacts/person.rs:880
+#: app/src/ui/contacts/person.rs:1036
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr "Tất cả liên hệ giờ hiển thị một hàng cho {name}. Không có gì bị xóa."
 
-#: app/src/ui/contacts/person.rs:916
+#: app/src/ui/contacts/person.rs:1082
 msgid "Save to Contacts"
 msgstr "Lưu vào Danh bạ"
 
-#: app/src/ui/contacts/person.rs:928
+#: app/src/ui/contacts/person.rs:1100
 msgid "Not a contact"
 msgstr "Không phải liên hệ"
 
-#: app/src/ui/contacts/person.rs:932
+#: app/src/ui/contacts/person.rs:1104
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -8734,31 +8734,31 @@ msgstr[0] ""
 "Từ thư liệt kê những người hộp thư đã thấy mà chưa được lưu thành liên hệ. "
 "Xuất hiện trong {count} thư. Lưu sẽ tạo một liên hệ trong tài khoản bạn chọn."
 
-#: app/src/ui/contacts/person.rs:942
+#: app/src/ui/contacts/person.rs:1122
 msgid "Latest message"
 msgstr "Thư mới nhất"
 
-#: app/src/ui/contacts/person.rs:964
+#: app/src/ui/contacts/person.rs:1154
 msgid "From the messages"
 msgstr "Từ các thư"
 
-#: app/src/ui/contacts/person.rs:997
+#: app/src/ui/contacts/person.rs:1192
 msgid "Saved {name} to {account}."
 msgstr "Đã lưu {name} vào {account}."
 
-#: app/src/ui/contacts/person.rs:1065
+#: app/src/ui/contacts/person.rs:1266
 msgid "No organization, no phone"
 msgstr "Không có tổ chức, không có điện thoại"
 
-#: app/src/ui/contacts/person.rs:1067
+#: app/src/ui/contacts/person.rs:1268
 msgid "Organization {value}"
 msgstr "Tổ chức {value}"
 
-#: app/src/ui/contacts/person.rs:1068
+#: app/src/ui/contacts/person.rs:1269
 msgid "Phone {value}"
 msgstr "Điện thoại {value}"
 
-#: app/src/ui/contacts/person.rs:1137
+#: app/src/ui/contacts/person.rs:1349
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -8766,7 +8766,7 @@ msgstr ""
 "Tất cả liên hệ dùng tên {name}. {account_a} vẫn có liên hệ của nó, và "
 "{account_b} vẫn có {other}."
 
-#: app/src/ui/contacts/person.rs:1158
+#: app/src/ui/contacts/person.rs:1387
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -8774,7 +8774,7 @@ msgstr ""
 "Nhãn là tài khoản. {others} có liên hệ riêng cho người này, và sửa ở đây sẽ "
 "thay đổi {account}."
 
-#: app/src/ui/contacts/person.rs:1164
+#: app/src/ui/contacts/person.rs:1395
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -8782,11 +8782,11 @@ msgstr ""
 "VIP là những người bạn đánh dấu để mở họ từ danh sách này. {name} cũng được "
 "lưu trong {accounts}."
 
-#: app/src/ui/contacts/person.rs:1167
+#: app/src/ui/contacts/person.rs:1403
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr "VIP là những người bạn đánh dấu để mở họ từ danh sách này."
 
-#: app/src/ui/contacts/person.rs:1169
+#: app/src/ui/contacts/person.rs:1406
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr ""
 "Một người, được lưu trong {accounts}. Mỗi tài khoản giữ liên hệ riêng của "
@@ -8824,28 +8824,28 @@ msgstr "Dùng ảnh"
 msgid "Contact Photo"
 msgstr "Ảnh liên hệ"
 
-#: app/src/ui/contacts/side.rs:75
+#: app/src/ui/contacts/side.rs:80
 msgid "Lists"
 msgstr "Danh sách"
 
-#: app/src/ui/contacts/side.rs:81
+#: app/src/ui/contacts/side.rs:86
 msgid "People you mark, so you can open them from here"
 msgstr "Những người bạn đánh dấu để mở từ đây"
 
-#: app/src/ui/contacts/side.rs:87
+#: app/src/ui/contacts/side.rs:92
 msgid "People found in mail. They are not contacts yet."
 msgstr "Những người tìm thấy trong thư. Họ chưa là liên hệ."
 
-#: app/src/ui/contacts/side.rs:93
+#: app/src/ui/contacts/side.rs:98
 msgid "Two contacts in one account share an address. Merging deletes one."
 msgstr ""
 "Hai liên hệ trong một tài khoản dùng chung địa chỉ. Gộp sẽ xóa một liên hệ."
 
-#: app/src/ui/contacts/side.rs:99
+#: app/src/ui/contacts/side.rs:104
 msgid "A close name in two accounts. Linking deletes nothing."
 msgstr "Một tên gần giống trong hai tài khoản. Liên kết không xóa gì."
 
-#: app/src/ui/contacts/side.rs:120 app/src/ui/preferences.rs:476
+#: app/src/ui/contacts/side.rs:125 app/src/ui/preferences.rs:476
 #: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
 #: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
@@ -8876,7 +8876,7 @@ msgid "Find Again"
 msgstr "Tìm lại"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2176
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2180
 msgid "Edit…"
 msgstr "Sửa…"
 
@@ -8960,7 +8960,7 @@ msgid "Export…"
 msgstr "Xuất…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3821
+#: app/src/ui/window.rs:3823
 msgid "Customize Toolbar…"
 msgstr "Tùy chỉnh thanh công cụ…"
 
@@ -9074,7 +9074,7 @@ msgid "Tags…"
 msgstr "Thẻ…"
 
 #: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1543
-#: app/src/ui/sidebar.rs:2068 app/src/ui/window/reminders.rs:25
+#: app/src/ui/sidebar.rs:2072 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Nhắc tôi"
@@ -9521,7 +9521,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Cho phép Ẩn email của tôi"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4034
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4036
 msgid "Add an account first"
 msgstr "Thêm tài khoản trước"
 
@@ -9990,7 +9990,7 @@ msgstr "Tài khoản này chưa đồng bộ"
 msgid "Could not change the subscription: {reason}"
 msgstr "Không thể đổi màu: {reason}"
 
-#: app/src/ui/mod.rs:559
+#: app/src/ui/mod.rs:560
 msgid "Gray"
 msgstr "Xám"
 
@@ -10781,7 +10781,7 @@ msgstr "Tài khoản lịch dùng gần nhất"
 msgid "Same as New Messages"
 msgstr "Giống như thư mới"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:280
 msgid "All Inboxes"
 msgstr "Mọi hộp thư đến"
 
@@ -10800,7 +10800,7 @@ msgstr "Di chuyển {account} xuống"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3828 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3830 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "Tùy chọn"
 
@@ -11172,7 +11172,7 @@ msgstr "Thêm địa chỉ"
 msgid "Default sender"
 msgstr "Người gửi mặc định"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2485
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2489
 msgid "Signature…"
 msgstr "Chữ ký…"
 
@@ -11242,11 +11242,16 @@ msgstr "Ngăn gửi thư"
 msgid "Mailboxes"
 msgstr "Hộp thư"
 
+#: app/src/ui/sidebar.rs:548 app/src/ui/sidebar.rs:1952
+#: app/src/ui/sidebar.rs:3181
+msgid "99+"
+msgstr "99+"
+
 #: app/src/ui/sidebar.rs:953
 msgid "Calendars"
 msgstr "Lịch"
 
-#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2056
+#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2060
 msgid "Outbox"
 msgstr "Hộp thư đi"
 
@@ -11287,91 +11292,87 @@ msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} thư"
 
-#: app/src/ui/sidebar.rs:1948 app/src/ui/sidebar.rs:3177
-msgid "99+"
-msgstr "99+"
-
-#: app/src/ui/sidebar.rs:1961
+#: app/src/ui/sidebar.rs:1965
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Thư, {count} chưa đọc"
 
-#: app/src/ui/sidebar.rs:1967
+#: app/src/ui/sidebar.rs:1971
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Lịch, {count} đang chờ bạn trả lời"
 
-#: app/src/ui/sidebar.rs:2178 app/src/ui/sidebar.rs:2300
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:2182 app/src/ui/sidebar.rs:2304
+#: app/src/ui/sidebar.rs:2599
 msgid "Move Up"
 msgstr "Chuyển lên"
 
-#: app/src/ui/sidebar.rs:2179 app/src/ui/sidebar.rs:2303
-#: app/src/ui/sidebar.rs:2596
+#: app/src/ui/sidebar.rs:2183 app/src/ui/sidebar.rs:2307
+#: app/src/ui/sidebar.rs:2600
 msgid "Move Down"
 msgstr "Chuyển xuống"
 
-#: app/src/ui/sidebar.rs:2331
+#: app/src/ui/sidebar.rs:2335
 msgid "Empty Trash…"
 msgstr "Dọn thùng rác…"
 
-#: app/src/ui/sidebar.rs:2484
+#: app/src/ui/sidebar.rs:2488
 msgid "Automatic Reply…"
 msgstr "Trả lời tự động…"
 
-#: app/src/ui/sidebar.rs:2486
+#: app/src/ui/sidebar.rs:2490
 msgid "Rules…"
 msgstr "Quy tắc…"
 
-#: app/src/ui/sidebar.rs:2487 app/src/ui/window.rs:3814
+#: app/src/ui/sidebar.rs:2491 app/src/ui/window.rs:3816
 msgid "Hide My Email…"
 msgstr "Ẩn email của tôi…"
 
-#: app/src/ui/sidebar.rs:2504
+#: app/src/ui/sidebar.rs:2508
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "Trên máy tính này. Hiện hoặc ẩn hộp thư của tài khoản"
 
-#: app/src/ui/sidebar.rs:2505
+#: app/src/ui/sidebar.rs:2509
 msgid "Show or hide this account's mailboxes"
 msgstr "Hiện hoặc ẩn hộp thư của tài khoản này"
 
-#: app/src/ui/sidebar.rs:2581
+#: app/src/ui/sidebar.rs:2585
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Thư mục mới…"
 
-#: app/src/ui/sidebar.rs:2600
+#: app/src/ui/sidebar.rs:2604
 msgid "Switch to JMAP…"
 msgstr "Chuyển sang JMAP…"
 
-#: app/src/ui/sidebar.rs:2602
+#: app/src/ui/sidebar.rs:2606
 msgid "Messages That Will Not Download…"
 msgstr "Thư không thể tải…"
 
-#: app/src/ui/sidebar.rs:2677
+#: app/src/ui/sidebar.rs:2681
 msgid "Sign in again to keep syncing"
 msgstr "Đăng nhập lại để tiếp tục đồng bộ"
 
-#: app/src/ui/sidebar.rs:2683
+#: app/src/ui/sidebar.rs:2687
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} chưa phản hồi; đang thử lại"
 
-#: app/src/ui/sidebar.rs:2694
+#: app/src/ui/sidebar.rs:2698
 msgid "The keyring is not responding; retrying"
 msgstr "Kho khóa chưa phản hồi; đang thử lại"
 
-#: app/src/ui/sidebar.rs:2697
+#: app/src/ui/sidebar.rs:2701
 msgid "Downloading mail"
 msgstr "Đang tải thư"
 
-#: app/src/ui/sidebar.rs:2701
+#: app/src/ui/sidebar.rs:2705
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "Đồng bộ dừng sau lỗi; khởi động lại Penguin Mail để thử lại"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2708
+#: app/src/ui/sidebar.rs:2712
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11575,26 +11576,26 @@ msgstr "Nội dung"
 msgid "New Template"
 msgstr "Mẫu thư mới"
 
-#: app/src/ui/thread_list.rs:239
+#: app/src/ui/thread_list.rs:243
 msgid "No Mail"
 msgstr "Không có thư"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:257
+#: app/src/ui/thread_list.rs:261
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Tìm thư, ví dụ: from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
+#: app/src/ui/thread_list.rs:300 app/src/ui/thread_list.rs:320
 msgid "Show Mailboxes"
 msgstr "Hiện hộp thư"
 
-#: app/src/ui/thread_list.rs:306
+#: app/src/ui/thread_list.rs:310
 msgid "Search (/)"
 msgstr "Tìm kiếm (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:319
 msgid "Search mail"
 msgstr "Tìm thư"
 
@@ -11937,7 +11938,7 @@ msgstr "Không thể tải thư: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Đã thêm {account}. Đang tải thư…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3174
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3176
 msgid "{account} is signed in again."
 msgstr "{account} đã đăng nhập lại."
 
@@ -12062,70 +12063,70 @@ msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Đã chuyển {count} thư vào Hộp thư đến"
 
-#: app/src/ui/window.rs:987
+#: app/src/ui/window.rs:989
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Minh họa)"
 
-#: app/src/ui/window.rs:1449
+#: app/src/ui/window.rs:1451
 msgid "Could not read accounts: {reason}"
 msgstr "Không thể đọc tài khoản: {reason}"
 
-#: app/src/ui/window.rs:2208
+#: app/src/ui/window.rs:2210
 msgid "Could not delete the mail: {reason}"
 msgstr "Không thể xóa thư: {reason}"
 
-#: app/src/ui/window.rs:2315
+#: app/src/ui/window.rs:2317
 msgid "Turn On the {service}"
 msgstr "Bật {service}"
 
-#: app/src/ui/window.rs:2502 app/src/ui/window.rs:2505
+#: app/src/ui/window.rs:2504 app/src/ui/window.rs:2507
 msgid "Move to Inbox"
 msgstr "Chuyển vào Hộp thư đến"
 
-#: app/src/ui/window.rs:2673 app/src/ui/window.rs:2678
+#: app/src/ui/window.rs:2675 app/src/ui/window.rs:2680
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Tìm mô hình"
 
-#: app/src/ui/window.rs:2747
+#: app/src/ui/window.rs:2749
 msgid "Select mail from one account to tag it."
 msgstr "Chọn thư từ một tài khoản để gắn thẻ."
 
-#: app/src/ui/window.rs:2759
+#: app/src/ui/window.rs:2761
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Tài khoản này chưa có thẻ. Tạo thẻ trong Outlook."
 
-#: app/src/ui/window.rs:2852
+#: app/src/ui/window.rs:2854
 msgid "Add an account to reply or forward"
 msgstr "Thêm tài khoản để trả lời hoặc chuyển tiếp"
 
-#: app/src/ui/window.rs:2957
+#: app/src/ui/window.rs:2959
 msgid "Could not include {file}: {reason}"
 msgstr "Không thể thêm {file}: {reason}"
 
-#: app/src/ui/window.rs:3038
+#: app/src/ui/window.rs:3040
 msgid "The server had already sent this message."
 msgstr "Máy chủ đã gửi thư này."
 
-#: app/src/ui/window.rs:3043
+#: app/src/ui/window.rs:3045
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Thư này bị hủy trong ứng dụng khác và không còn trong Thư nháp."
 
-#: app/src/ui/window.rs:3359
+#: app/src/ui/window.rs:3361
 msgid "Continue in your browser"
 msgstr "Tiếp tục trong trình duyệt"
 
-#: app/src/ui/window.rs:3409
+#: app/src/ui/window.rs:3411
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google."
 
-#: app/src/ui/window.rs:3431
+#: app/src/ui/window.rs:3433
 msgid "Get a Release"
 msgstr "Tải bản phát hành"
 
-#: app/src/ui/window.rs:3554
+#: app/src/ui/window.rs:3556
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12133,86 +12134,86 @@ msgstr ""
 "Không thể kiểm tra các thư máy chủ đang giữ để gửi sau, nên tài khoản "
 "{account} được giữ lại: {reason}"
 
-#: app/src/ui/window.rs:3565
+#: app/src/ui/window.rs:3567
 msgid "Remove {account}?"
 msgstr "Xóa {account}?"
 
-#: app/src/ui/window.rs:3584
+#: app/src/ui/window.rs:3586
 msgid "Remove Anyway"
 msgstr "Vẫn xóa"
 
-#: app/src/ui/window.rs:3597
+#: app/src/ui/window.rs:3599
 msgid "Removed {account}"
 msgstr "Đã xóa {account}"
 
-#: app/src/ui/window.rs:3599
+#: app/src/ui/window.rs:3601
 msgid "Could not remove {account}: {reason}"
 msgstr "Không thể xóa {account}: {reason}"
 
-#: app/src/ui/window.rs:3791
+#: app/src/ui/window.rs:3793
 msgid "Refresh"
 msgstr "Làm mới"
 
-#: app/src/ui/window.rs:3795
+#: app/src/ui/window.rs:3797
 msgid "Show Declined Events"
 msgstr "Hiện sự kiện đã từ chối"
 
-#: app/src/ui/window.rs:3812
+#: app/src/ui/window.rs:3814
 msgid "Add Account…"
 msgstr "Thêm tài khoản…"
 
-#: app/src/ui/window.rs:3813
+#: app/src/ui/window.rs:3815
 msgid "New Smart Mailbox…"
 msgstr "Hộp thư thông minh mới…"
 
-#: app/src/ui/window.rs:3825
+#: app/src/ui/window.rs:3827
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Tùy chỉnh thanh công cụ…"
 
-#: app/src/ui/window.rs:3829 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3831 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "Phím tắt"
 
-#: app/src/ui/window.rs:3838 app/src/ui/window.rs:3840
+#: app/src/ui/window.rs:3840 app/src/ui/window.rs:3842
 msgid "Main Menu"
 msgstr "Trình đơn chính"
 
-#: app/src/ui/window.rs:3905 app/src/ui/window.rs:3906
+#: app/src/ui/window.rs:3907 app/src/ui/window.rs:3908
 msgid "Dock"
 msgstr "Gắn lại"
 
-#: app/src/ui/window.rs:4035
+#: app/src/ui/window.rs:4037
 msgid "Add a mail account first"
 msgstr "Thêm tài khoản thư trước"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4301
+#: app/src/ui/window.rs:4303
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Lịch và danh bạ của {account} đã được kết nối."
 
-#: app/src/ui/window.rs:4417
+#: app/src/ui/window.rs:4419
 msgid "Open a message from the person first"
 msgstr "Mở thư từ người đó trước"
 
-#: app/src/ui/window.rs:4523
+#: app/src/ui/window.rs:4525
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail hiển thị ngôn ngữ mới sau khi khởi động lại"
 
-#: app/src/ui/window.rs:4525 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4527 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Khởi động lại"
 
-#: app/src/ui/window.rs:4589
+#: app/src/ui/window.rs:4591
 msgid "Show Rules"
 msgstr "Hiện quy tắc"
 
-#: app/src/ui/window.rs:4615
+#: app/src/ui/window.rs:4617
 msgid "Messages That Will Not Download"
 msgstr "Thư không thể tải"
 
-#: app/src/ui/window.rs:4617
+#: app/src/ui/window.rs:4619
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12278,19 +12279,19 @@ msgstr "Mở"
 msgid "Open in Another Program"
 msgstr "Mở bằng chương trình khác"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Mở thư từ người gửi trước"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Thư từ {sender} hiện vào {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Đã chuyển thư từ {sender} vào {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
@@ -13284,23 +13285,23 @@ msgstr "Khác"
 msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr "Nhập ngày theo dạng YYYY-MM-DD, hoặc --MM-DD khi không biết năm."
 
-#: domain/src/contact.rs:97
+#: domain/src/contact.rs:100
 msgid "A date needs a label and a value."
 msgstr "Một ngày cần có nhãn và giá trị."
 
-#: domain/src/contact.rs:103
+#: domain/src/contact.rs:106
 msgid "Contact photos must be PNG images no larger than 512 KB."
 msgstr "Ảnh liên hệ phải là ảnh PNG không quá 512 KB."
 
-#: domain/src/contact.rs:139
+#: domain/src/contact.rs:142
 msgid "%-d %B"
 msgstr "%-d/%-m"
 
-#: domain/src/contact.rs:147
+#: domain/src/contact.rs:150
 msgid "{date} ({year})"
 msgstr "{date} ({year})"
 
-#: domain/src/contact.rs:152
+#: domain/src/contact.rs:155
 msgid "{date} ({year}), {age} year old"
 msgid_plural "{date} ({year}), {age} years old"
 msgstr[0] "{date} ({year}), {age} tuổi"
@@ -13936,13 +13937,13 @@ msgstr "Bạn không phải khách của sự kiện này."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail không thể đổi danh sách lịch của máy chủ CalDAV."
 
-#: sync/src/services/carddav.rs:136
+#: sync/src/services/carddav.rs:137
 msgid ""
 "Google keeps a birthday only with its year. Add the year or remove the "
 "birthday."
 msgstr "Google chỉ lưu sinh nhật khi có năm. Hãy thêm năm hoặc xóa sinh nhật."
 
-#: sync/src/services/carddav.rs:356
+#: sync/src/services/carddav.rs:357
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
@@ -13950,7 +13951,7 @@ msgstr ""
 "Nhóm của liên hệ đã thay đổi trên thiết bị khác. Hãy làm mới danh bạ và mở "
 "lại trình sửa."
 
-#: sync/src/services/carddav.rs:363
+#: sync/src/services/carddav.rs:364
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -13958,7 +13959,7 @@ msgstr ""
 "Có nhiều nhóm cùng tên. Hãy đổi tên chúng trong tài khoản trước khi thêm "
 "liên hệ này."
 
-#: sync/src/services/carddav.rs:579
+#: sync/src/services/carddav.rs:582
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -13966,7 +13967,7 @@ msgstr ""
 "Đã tạo liên hệ nhưng không thể lưu một số nhóm. Hãy thử lại trong trình sửa "
 "này để hoàn tất mà không tạo thêm liên hệ: {reason}"
 
-#: sync/src/services/carddav.rs:638
+#: sync/src/services/carddav.rs:641
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -14564,6 +14565,7 @@ msgstr "Chuyển vào {folder}"
 #~ msgstr "Để sau"
 
 #, fuzzy
+#~| msgid "Mailboxes"
 #~ msgid "Mailbox"
 #~ msgstr "Hộp thư"
 

@@ -4177,8 +4177,8 @@ msgstr "Akun tersebut tidak terhubung."
 msgid "Could not save: {reason}"
 msgstr "Tidak dapat menyimpan: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3059
-#: app/src/ui/window.rs:3082
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:3061
+#: app/src/ui/window.rs:3084
 msgid "Could not open the draft: {reason}"
 msgstr "Tidak dapat membuka draf: {reason}"
 
@@ -4251,8 +4251,8 @@ msgstr ""
 "Pesan ini mengandung tautan yang mungkin menipu. Periksa tujuan sebelum "
 "membukanya."
 
-#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:351
-#: app/src/ui/contacts/person.rs:388
+#: app/src/render.rs:503 app/src/ui/contacts/editor.rs:394
+#: app/src/ui/contacts/person.rs:437
 msgid "Details"
 msgstr "Detail"
 
@@ -4445,7 +4445,7 @@ msgid "Set up a different project"
 msgstr "Siapkan proyek lain"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:175 app/src/ui/window.rs:3412
+#: app/src/route_choice.rs:175 app/src/ui/window.rs:3414
 msgid "Set up your own Google project"
 msgstr "Siapkan proyek Google Anda sendiri"
 
@@ -4587,7 +4587,7 @@ msgstr "{host} menolak masuk: {reason}"
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
 #: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:569
-#: app/src/ui/sidebar.rs:1958 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:1962 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Kalender"
 
@@ -4596,8 +4596,8 @@ msgstr "Kalender"
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
 #: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:570
-#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1959
-#: app/src/ui/window.rs:3811
+#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1963
+#: app/src/ui/window.rs:3813
 msgid "Contacts"
 msgstr "Kontak"
 
@@ -4615,7 +4615,7 @@ msgstr "Di server"
 
 #: app/src/settings/mod.rs:234 app/src/settings/mod.rs:443
 #: app/src/settings/mod.rs:879 app/src/ui/assistant_mcp_prefs.rs:202
-#: app/src/ui/contacts/side.rs:151 app/src/ui/preferences.rs:1185
+#: app/src/ui/contacts/side.rs:161 app/src/ui/preferences.rs:1185
 msgid "Off"
 msgstr "Nonaktif"
 
@@ -4631,8 +4631,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Langganan Claude"
 
-#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3804
-#: app/src/ui/window.rs:3893
+#: app/src/settings/mod.rs:262 app/src/ui/window.rs:3806
+#: app/src/ui/window.rs:3895
 msgid "Assistant"
 msgstr "Asisten"
 
@@ -5018,7 +5018,7 @@ msgstr ""
 msgid "No unread mail"
 msgstr "Tidak ada email belum dibaca"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1983
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1987
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} pesan belum dibaca"
@@ -5034,13 +5034,13 @@ msgstr "Buka Penguin Mail"
 
 #: app/src/tray.rs:194 app/src/ui/composer/mod.rs:424
 #: app/src/ui/composer/mod.rs:754 app/src/ui/composer/mod.rs:1667
-#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:253
-#: app/src/ui/contacts/person.rs:258 app/src/ui/contacts/person.rs:261
-#: app/src/ui/thread_list.rs:495
+#: app/src/ui/contact_card.rs:168 app/src/ui/contacts/person.rs:287
+#: app/src/ui/contacts/person.rs:292 app/src/ui/contacts/person.rs:295
+#: app/src/ui/thread_list.rs:513
 msgid "New Message"
 msgstr "Pesan Baru"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2576 app/src/ui/window.rs:3810
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2580 app/src/ui/window.rs:3812
 msgid "Check for Mail"
 msgstr "Periksa Email"
 
@@ -5058,7 +5058,7 @@ msgstr "Yang Baru di {version}"
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
-#: app/src/tray.rs:216 app/src/ui/window.rs:3832
+#: app/src/tray.rs:216 app/src/ui/window.rs:3834
 #: app/src/ui/window/shortcuts.rs:649
 msgid "Quit"
 msgstr "Keluar"
@@ -5079,12 +5079,12 @@ msgstr "Email dan kalender untuk {os}. Email Anda tetap di komputer Anda."
 msgid "What's New"
 msgstr "Yang Baru"
 
-#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:314
-#: app/src/ui/contacts/person.rs:1039 app/src/ui/hide_my_email.rs:668
+#: app/src/ui/about.rs:189 app/src/ui/contacts/editor.rs:336
+#: app/src/ui/contacts/person.rs:1236 app/src/ui/hide_my_email.rs:668
 msgid "Website"
 msgstr "Situs Web"
 
-#: app/src/ui/about.rs:190 app/src/ui/window.rs:3831
+#: app/src/ui/about.rs:190 app/src/ui/window.rs:3833
 msgid "Donate"
 msgstr "Donasi"
 
@@ -5092,7 +5092,7 @@ msgstr "Donasi"
 msgid "License"
 msgstr "Lisensi"
 
-#: app/src/ui/about.rs:214 app/src/ui/window.rs:3830
+#: app/src/ui/about.rs:214 app/src/ui/window.rs:3832
 msgid "About Penguin Mail"
 msgstr "Tentang Penguin Mail"
 
@@ -5141,12 +5141,12 @@ msgid "The update to {version} failed"
 msgstr "Pembaruan ke {version} gagal"
 
 #: app/src/ui/add_account.rs:514 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1629
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1631
 msgid "Copy Command"
 msgstr "Salin Perintah"
 
 #: app/src/ui/add_account.rs:524 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1634
+#: app/src/ui/window.rs:1636
 msgid "Command copied"
 msgstr "Perintah disalin"
 
@@ -5240,9 +5240,9 @@ msgstr "Salin Tautan"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:483
-#: app/src/ui/contacts/mod.rs:1061 app/src/ui/contacts/mod.rs:1155
-#: app/src/ui/contacts/person.rs:638 app/src/ui/contacts/person.rs:760
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:550
+#: app/src/ui/contacts/mod.rs:1109 app/src/ui/contacts/mod.rs:1206
+#: app/src/ui/contacts/person.rs:733 app/src/ui/contacts/person.rs:883
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:326 app/src/ui/switch_jmap.rs:174
@@ -5259,7 +5259,7 @@ msgstr "Batal"
 #: app/src/ui/add_account.rs:3164 app/src/ui/add_account.rs:3254
 #: app/src/ui/add_account.rs:3711 app/src/ui/gmail_password_page.rs:128
 #: app/src/ui/gmail_password_page.rs:133 app/src/ui/gmail_password_page.rs:262
-#: app/src/ui/window.rs:1573
+#: app/src/ui/window.rs:1575
 msgid "Sign In"
 msgstr "Masuk"
 
@@ -5382,7 +5382,7 @@ msgstr "Nanti Saja"
 #: app/src/ui/add_account.rs:1435 app/src/ui/calendar/editor.rs:1684
 #: app/src/ui/calendar/sidebar.rs:1033 app/src/ui/contacts_prefs.rs:496
 #: app/src/ui/invitation.rs:493 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1706
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1708
 msgid "Grant Access"
 msgstr "Berikan Akses"
 
@@ -5531,8 +5531,8 @@ msgid "Sign In Again"
 msgstr "Masuk Lagi"
 
 #: app/src/ui/add_account.rs:3898 app/src/ui/contacts/mod.rs:288
-#: app/src/ui/contacts/mod.rs:502 app/src/ui/own_project.rs:761
-#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2317
+#: app/src/ui/contacts/mod.rs:512 app/src/ui/own_project.rs:761
+#: app/src/ui/preferences/google_route.rs:259 app/src/ui/window.rs:2319
 msgid "Open Google Cloud"
 msgstr "Buka Google Cloud"
 
@@ -5622,14 +5622,14 @@ msgstr "Buat draf balasan untuk percakapan yang terbuka"
 msgid "Choose a Model"
 msgstr "Pilih Model"
 
-#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3940
-#: app/src/ui/window.rs:3941
+#: app/src/ui/assistant.rs:127 app/src/ui/window.rs:3942
+#: app/src/ui/window.rs:3943
 msgid "Detach"
 msgstr "Pisahkan"
 
 #: app/src/ui/assistant.rs:128 app/src/ui/contacts/photo.rs:77
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:4640
+#: app/src/ui/window.rs:4642
 msgid "Close"
 msgstr "Tutup"
 
@@ -5846,7 +5846,7 @@ msgid "Use {server}"
 msgstr "Gunakan {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:127 app/src/ui/calendar/popover.rs:210
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:243
+#: app/src/ui/calendar/popover.rs:212 app/src/ui/contacts/person.rs:277
 msgid "Edit"
 msgstr "Edit"
 
@@ -5856,8 +5856,8 @@ msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:595 app/src/ui/sender_prefs.rs:215
-#: app/src/ui/window.rs:3568
+#: app/src/ui/contacts/editor.rs:700 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/window.rs:3570
 msgid "Remove"
 msgstr "Hapus"
 
@@ -5899,7 +5899,7 @@ msgstr ""
 "mengakses server melalui HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/calendar/manage.rs:407
-#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:263
+#: app/src/ui/composer/mod.rs:3167 app/src/ui/contacts/editor.rs:278
 #: app/src/ui/smart_editor.rs:41 app/src/ui/templates.rs:191
 msgid "Name"
 msgstr "Nama"
@@ -5936,7 +5936,7 @@ msgstr "Uji"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:450 app/src/ui/contacts/editor.rs:502
+#: app/src/ui/contacts/editor.rs:507 app/src/ui/contacts/editor.rs:569
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -6505,8 +6505,8 @@ msgstr "Rapat"
 msgid "Decline"
 msgstr "Tolak"
 
-#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1249
-#: app/src/ui/contacts/mod.rs:1257
+#: app/src/ui/calendar/editor.rs:627 app/src/ui/contacts/mod.rs:1308
+#: app/src/ui/contacts/mod.rs:1321
 msgid "None"
 msgstr "Tidak Ada"
 
@@ -6570,7 +6570,7 @@ msgstr "Setiap"
 msgid "Unit"
 msgstr "Satuan"
 
-#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:153
+#: app/src/ui/calendar/editor.rs:1009 app/src/ui/contacts/side.rs:163
 msgid "On"
 msgstr "Pada"
 
@@ -6643,8 +6643,8 @@ msgid "Remove reminder"
 msgstr "Hapus pengingat"
 
 #: app/src/ui/calendar/editor.rs:1601 app/src/ui/calendar/editor.rs:1612
-#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:345
-#: app/src/ui/contacts/editor.rs:380 app/src/ui/contacts/person.rs:398
+#: app/src/ui/calendar/popover.rs:273 app/src/ui/contacts/editor.rs:385
+#: app/src/ui/contacts/editor.rs:423 app/src/ui/contacts/person.rs:447
 msgid "Notes"
 msgstr "Catatan"
 
@@ -6694,8 +6694,8 @@ msgid "Could not attach {file}: {reason}"
 msgstr "Tidak dapat melampirkan {file}: {reason}"
 
 #: app/src/ui/calendar/editor.rs:1950 app/src/ui/composer/mod.rs:468
-#: app/src/ui/thread_list.rs:352 app/src/ui/thread_list.rs:358
-#: app/src/ui/thread_list.rs:1153
+#: app/src/ui/thread_list.rs:356 app/src/ui/thread_list.rs:362
+#: app/src/ui/thread_list.rs:1182
 msgid "More"
 msgstr "Lainnya"
 
@@ -6717,8 +6717,8 @@ msgstr ""
 "Hanya orang yang dapat mengubah kalender ini yang dapat melihat detailnya"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
-#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2293
-#: app/src/ui/sidebar.rs:2594
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2297
+#: app/src/ui/sidebar.rs:2598
 msgid "Color"
 msgstr "Warna"
 
@@ -6984,8 +6984,8 @@ msgstr "Vietnam"
 msgid "Working location"
 msgstr "Lokasi kerja"
 
-#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:332
-#: app/src/ui/contacts/editor.rs:378 app/src/ui/contacts/person.rs:367
+#: app/src/ui/calendar/kinds.rs:62 app/src/ui/contacts/editor.rs:372
+#: app/src/ui/contacts/editor.rs:421 app/src/ui/contacts/person.rs:414
 msgid "Birthday"
 msgstr "Ulang tahun"
 
@@ -7248,7 +7248,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Tidak dapat menghapus acara: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2213 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1286
+#: app/src/ui/contacts/mod.rs:267 app/src/ui/contacts/mod.rs:1359
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
@@ -7593,19 +7593,19 @@ msgstr "Berikan Akses untuk {account}"
 msgid "Sign in again to {account}"
 msgstr "Masuk kembali ke {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2599
+#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2603
 msgid "Sign In Again…"
 msgstr "Masuk Lagi…"
 
-#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2607
+#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2611
 msgid "Remove Account…"
 msgstr "Hapus Akun…"
 
-#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2614
+#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2618
 msgid "Account options"
 msgstr "Opsi akun"
 
-#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2619
+#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2623
 msgid "Options for {account}"
 msgstr "Opsi untuk {account}"
 
@@ -7633,13 +7633,13 @@ msgstr "Sembunyikan dari Daftar"
 msgid "Original Color"
 msgstr "Warna Asli"
 
-#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2281
-#: app/src/ui/sidebar.rs:2584
+#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2285
+#: app/src/ui/sidebar.rs:2588
 msgid "Rename…"
 msgstr "Ganti Nama…"
 
-#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2182
-#: app/src/ui/sidebar.rs:2309
+#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2186
+#: app/src/ui/sidebar.rs:2313
 msgid "Delete…"
 msgstr "Hapus…"
 
@@ -7761,7 +7761,7 @@ msgstr "{date}, memiliki acara"
 msgid "Offline, last updated {time}"
 msgstr "Luring, terakhir diperbarui {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2679
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2683
 msgid "Offline"
 msgstr "Luring"
 
@@ -7894,7 +7894,7 @@ msgid "Choose a Time…"
 msgstr "Pilih Waktu…"
 
 #: app/src/ui/composer/mod.rs:444 app/src/ui/composer/mod.rs:2178
-#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2062
+#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2066
 msgid "Send Later"
 msgstr "Kirim Nanti"
 
@@ -8312,146 +8312,146 @@ msgstr "Tambahkan ke Kamus"
 msgid "Ignore"
 msgstr "Abaikan"
 
-#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:279
-#: app/src/ui/contacts/person.rs:308 app/src/ui/contacts/person.rs:704
+#: app/src/ui/contact_card.rs:115 app/src/ui/contacts/editor.rs:298
+#: app/src/ui/contacts/person.rs:346 app/src/ui/contacts/person.rs:819
 msgid "Email"
 msgstr "Email"
 
-#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:280
-#: app/src/ui/contacts/person.rs:310
+#: app/src/ui/contact_card.rs:117 app/src/ui/contacts/editor.rs:299
+#: app/src/ui/contacts/person.rs:348
 msgid "Other email"
 msgstr "Email lain"
 
-#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:293
-#: app/src/ui/contacts/person.rs:335 app/src/ui/contacts/person.rs:710
+#: app/src/ui/contact_card.rs:138 app/src/ui/contacts/editor.rs:312
+#: app/src/ui/contacts/person.rs:373 app/src/ui/contacts/person.rs:825
 msgid "Phone"
 msgstr "Telepon"
 
-#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:194
+#: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:219
 #: app/src/ui/sidebar.rs:1498
 msgid "Remove from VIPs"
 msgstr "Hapus dari VIP"
 
-#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:194
+#: app/src/ui/contact_card.rs:180 app/src/ui/contacts/person.rs:221
 msgid "Add to VIPs"
 msgstr "Tambahkan ke VIP"
 
-#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:225
-#: app/src/ui/contacts/person.rs:903
+#: app/src/ui/contact_card.rs:191 app/src/ui/contacts/person.rs:259
+#: app/src/ui/contacts/person.rs:1069
 msgid "All Their Mail"
 msgstr "Semua Email Mereka"
 
-#: app/src/ui/contacts/editor.rs:112
+#: app/src/ui/contacts/editor.rs:114
 msgid "Remove Field"
 msgstr "Hapus Kolom"
 
-#: app/src/ui/contacts/editor.rs:265
+#: app/src/ui/contacts/editor.rs:281
 msgid "Full name"
 msgstr "Nama lengkap"
 
-#: app/src/ui/contacts/editor.rs:268 app/src/ui/contacts/person.rs:297
-#: app/src/ui/contacts/person.rs:707
+#: app/src/ui/contacts/editor.rs:287 app/src/ui/contacts/person.rs:335
+#: app/src/ui/contacts/person.rs:822
 msgid "Organization"
 msgstr "Organisasi"
 
-#: app/src/ui/contacts/editor.rs:278
+#: app/src/ui/contacts/editor.rs:297
 msgid "Add email"
 msgstr "Tambah email"
 
-#: app/src/ui/contacts/editor.rs:287
+#: app/src/ui/contacts/editor.rs:306
 msgid "name@example.com"
 msgstr "nama@contoh.com"
 
-#: app/src/ui/contacts/editor.rs:291
+#: app/src/ui/contacts/editor.rs:310
 msgid "Add phone"
 msgstr "Tambah telepon"
 
-#: app/src/ui/contacts/editor.rs:299
+#: app/src/ui/contacts/editor.rs:318
 msgid "Add postal address"
 msgstr "Tambah alamat pos"
 
-#: app/src/ui/contacts/editor.rs:302
+#: app/src/ui/contacts/editor.rs:321
 msgid "PO box"
 msgstr "Kotak pos"
 
-#: app/src/ui/contacts/editor.rs:303
+#: app/src/ui/contacts/editor.rs:322
 msgid "Extended address"
 msgstr "Alamat tambahan"
 
-#: app/src/ui/contacts/editor.rs:304
+#: app/src/ui/contacts/editor.rs:323
 msgid "Street"
 msgstr "Jalan"
 
-#: app/src/ui/contacts/editor.rs:305
+#: app/src/ui/contacts/editor.rs:324
 msgid "City"
 msgstr "Kota"
 
-#: app/src/ui/contacts/editor.rs:306
+#: app/src/ui/contacts/editor.rs:325
 msgid "Region"
 msgstr "Wilayah"
 
-#: app/src/ui/contacts/editor.rs:307
+#: app/src/ui/contacts/editor.rs:326
 msgid "Postal code"
 msgstr "Kode pos"
 
-#: app/src/ui/contacts/editor.rs:308
+#: app/src/ui/contacts/editor.rs:327
 msgid "Country"
 msgstr "Negara"
 
-#: app/src/ui/contacts/editor.rs:314
+#: app/src/ui/contacts/editor.rs:334
 msgid "Add website"
 msgstr "Tambah situs web"
 
-#: app/src/ui/contacts/editor.rs:315
+#: app/src/ui/contacts/editor.rs:342
 msgid "Add group"
 msgstr "Tambah grup"
 
-#: app/src/ui/contacts/editor.rs:315
+#: app/src/ui/contacts/editor.rs:344
 msgid "Group"
 msgstr "Grup"
 
-#: app/src/ui/contacts/editor.rs:317
+#: app/src/ui/contacts/editor.rs:350
 msgid "Add date"
 msgstr "Tambah tanggal"
 
-#: app/src/ui/contacts/editor.rs:319
+#: app/src/ui/contacts/editor.rs:352
 msgid "Date"
 msgstr "Tanggal"
 
-#: app/src/ui/contacts/editor.rs:319 app/src/ui/contacts/editor.rs:327
+#: app/src/ui/contacts/editor.rs:352 app/src/ui/contacts/editor.rs:363
 msgid "Label"
 msgstr "Label"
 
-#: app/src/ui/contacts/editor.rs:325
+#: app/src/ui/contacts/editor.rs:361
 msgid "Add custom field"
 msgstr "Tambah kolom khusus"
 
-#: app/src/ui/contacts/editor.rs:327
+#: app/src/ui/contacts/editor.rs:363
 msgid "Value"
 msgstr "Nilai"
 
-#: app/src/ui/contacts/editor.rs:369
+#: app/src/ui/contacts/editor.rs:412
 msgid "Postal addresses"
 msgstr "Alamat pos"
 
-#: app/src/ui/contacts/editor.rs:370
+#: app/src/ui/contacts/editor.rs:413
 msgid "Websites"
 msgstr "Situs Web"
 
-#: app/src/ui/contacts/editor.rs:371 app/src/ui/contacts/person.rs:385
-#: app/src/ui/contacts/side.rs:108
+#: app/src/ui/contacts/editor.rs:414 app/src/ui/contacts/person.rs:433
+#: app/src/ui/contacts/side.rs:113
 msgid "Groups"
 msgstr "Grup"
 
-#: app/src/ui/contacts/editor.rs:372
+#: app/src/ui/contacts/editor.rs:415
 msgid "Other dates"
 msgstr "Tanggal lainnya"
 
-#: app/src/ui/contacts/editor.rs:373
+#: app/src/ui/contacts/editor.rs:416
 msgid "Custom fields"
 msgstr "Kolom khusus"
 
-#: app/src/ui/contacts/editor.rs:430
+#: app/src/ui/contacts/editor.rs:485
 msgid ""
 "A new contact is saved into one account. The other accounts do not get a "
 "copy. Add a name or an email. Save stays off until one of those is filled in."
@@ -8459,60 +8459,60 @@ msgstr ""
 "Kontak baru disimpan ke satu akun. Akun lain tidak mendapat salinan. "
 "Tambahkan nama atau email. Simpan tetap nonaktif sampai salah satunya diisi."
 
-#: app/src/ui/contacts/editor.rs:448
+#: app/src/ui/contacts/editor.rs:505
 msgid "Unsaved changes"
 msgstr "Perubahan belum disimpan"
 
-#: app/src/ui/contacts/editor.rs:479
-msgid "Edit contact"
-msgstr "Ubah kontak"
-
-#: app/src/ui/contacts/editor.rs:479 app/src/ui/contacts/mod.rs:1196
+#: app/src/ui/contacts/editor.rs:543 app/src/ui/contacts/mod.rs:1250
 msgid "New contact"
 msgstr "Kontak baru"
 
-#: app/src/ui/contacts/editor.rs:526 app/src/ui/contacts/person.rs:955
+#: app/src/ui/contacts/editor.rs:545
+msgid "Edit contact"
+msgstr "Ubah kontak"
+
+#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:1141
 msgid "Turn contacts on for an account first."
 msgstr "Aktifkan kontak untuk sebuah akun terlebih dahulu."
 
-#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:532
-#: app/src/ui/contacts/person.rs:953 app/src/ui/contacts/person.rs:958
+#: app/src/ui/contacts/editor.rs:602 app/src/ui/contacts/editor.rs:607
+#: app/src/ui/contacts/person.rs:1138 app/src/ui/contacts/person.rs:1145
 msgid "Save to"
 msgstr "Simpan ke"
 
-#: app/src/ui/contacts/editor.rs:541
+#: app/src/ui/contacts/editor.rs:626
 msgid "Which account"
 msgstr "Akun mana"
 
-#: app/src/ui/contacts/editor.rs:558
+#: app/src/ui/contacts/editor.rs:647
 msgid "Replace Photo"
 msgstr "Ganti foto"
 
-#: app/src/ui/contacts/editor.rs:559
+#: app/src/ui/contacts/editor.rs:648
 msgid "Remove Photo"
 msgstr "Hapus Foto"
 
-#: app/src/ui/contacts/editor.rs:598 app/src/ui/contacts/person.rs:649
+#: app/src/ui/contacts/editor.rs:703 app/src/ui/contacts/person.rs:744
 msgid "Delete {name} from {account}"
 msgstr "Hapus {name} dari {account}"
 
-#: app/src/ui/contacts/editor.rs:639
+#: app/src/ui/contacts/editor.rs:759
 msgid "Enter a name or an email address."
 msgstr "Masukkan nama atau alamat email."
 
-#: app/src/ui/contacts/editor.rs:642
+#: app/src/ui/contacts/editor.rs:765
 msgid "Enter a valid email address."
 msgstr "Masukkan alamat email yang valid."
 
-#: app/src/ui/contacts/editor.rs:645
+#: app/src/ui/contacts/editor.rs:768
 msgid "Contacts access for this account was turned off."
 msgstr "Akses kontak untuk akun ini telah dimatikan."
 
-#: app/src/ui/contacts/editor.rs:689
+#: app/src/ui/contacts/editor.rs:812
 msgid "Could not save the contact: {reason}"
 msgstr "Kontak tidak dapat disimpan: {reason}"
 
-#: app/src/ui/contacts/editor.rs:729
+#: app/src/ui/contacts/editor.rs:857
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8522,7 +8522,7 @@ msgstr ""
 "{other_account} masih memiliki {other}, dan menautkan tidak mengubah data "
 "itu. Tidak ada yang ditulis sampai Anda menekan Simpan."
 
-#: app/src/ui/contacts/editor.rs:734
+#: app/src/ui/contacts/editor.rs:868
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8530,13 +8530,13 @@ msgstr ""
 "Anda mengubah kontak {account} untuk {name}. {other_account} tetap memiliki "
 "{other}. Tidak ada yang ditulis sampai Anda menekan Simpan."
 
-#: app/src/ui/contacts/editor.rs:756
+#: app/src/ui/contacts/editor.rs:891
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "Anda mengubah kontak {account}. Tidak ada yang ditulis sampai Anda menekan "
 "Simpan."
 
-#: app/src/ui/contacts/editor.rs:762
+#: app/src/ui/contacts/editor.rs:898
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8544,7 +8544,7 @@ msgstr ""
 "Anda mengubah kontak {account}. {others} menyimpan kontaknya sendiri. Tidak "
 "ada yang ditulis sampai Anda menekan Simpan."
 
-#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:172
+#: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
 msgid "Turn Off Contacts"
 msgstr "Matikan Kontak"
 
@@ -8552,29 +8552,29 @@ msgstr "Matikan Kontak"
 msgid "Turn on Contacts for your Google project"
 msgstr "Aktifkan Kontak untuk proyek Google Anda"
 
-#: app/src/ui/contacts/mod.rs:644
+#: app/src/ui/contacts/mod.rs:655
 msgid "Could not load contacts: {reason}"
 msgstr "Tidak dapat memuat kontak: {reason}"
 
-#: app/src/ui/contacts/mod.rs:774
+#: app/src/ui/contacts/mod.rs:793
 msgid "Deletes {name} in {account}"
 msgstr "Menghapus {name} di {account}"
 
-#: app/src/ui/contacts/mod.rs:798
+#: app/src/ui/contacts/mod.rs:819
 msgid "Keeps both contacts. Nothing is deleted."
 msgstr "Kedua kontak tetap ada. Tidak ada yang dihapus."
 
-#: app/src/ui/contacts/mod.rs:831
+#: app/src/ui/contacts/mod.rs:852
 msgid "Seen in {count} message"
 msgid_plural "Seen in {count} messages"
 msgstr[0] "Terlihat di {count} pesan"
 msgstr[1] "Terlihat di {count} pesan"
 
-#: app/src/ui/contacts/mod.rs:938
+#: app/src/ui/contacts/mod.rs:972
 msgid "Contacts are off"
 msgstr "Kontak nonaktif"
 
-#: app/src/ui/contacts/mod.rs:940
+#: app/src/ui/contacts/mod.rs:975
 msgid ""
 "{account} can keep an address book. That book is on the server, not on this "
 "computer. Turn contacts on to copy it here. Turning contacts off later "
@@ -8584,19 +8584,19 @@ msgstr ""
 "komputer ini. Aktifkan kontak untuk menyalinnya ke sini. Menonaktifkan "
 "kontak nanti akan menghapus salinan itu."
 
-#: app/src/ui/contacts/mod.rs:951
+#: app/src/ui/contacts/mod.rs:987
 msgid "No Matching Contacts"
 msgstr "Tidak Ada Kontak yang Cocok"
 
-#: app/src/ui/contacts/mod.rs:952
+#: app/src/ui/contacts/mod.rs:988
 msgid "Nothing matches that search."
 msgstr "Tidak ada yang cocok dengan pencarian itu."
 
-#: app/src/ui/contacts/mod.rs:958
+#: app/src/ui/contacts/mod.rs:994
 msgid "No shared addresses"
 msgstr "Tidak ada alamat yang sama"
 
-#: app/src/ui/contacts/mod.rs:959
+#: app/src/ui/contacts/mod.rs:996
 msgid ""
 "No two contacts in one account share an address. Nothing is waiting to be "
 "deleted."
@@ -8604,55 +8604,55 @@ msgstr ""
 "Tidak ada dua kontak dalam satu akun yang memakai alamat yang sama. Tidak "
 "ada yang menunggu untuk dihapus."
 
-#: app/src/ui/contacts/mod.rs:963
+#: app/src/ui/contacts/mod.rs:1001
 msgid "No close names"
 msgstr "Tidak ada nama yang mirip"
 
-#: app/src/ui/contacts/mod.rs:964
+#: app/src/ui/contacts/mod.rs:1002
 msgid "No two accounts hold a close name that is not linked yet."
 msgstr "Tidak ada dua akun yang memiliki nama mirip yang belum ditautkan."
 
-#: app/src/ui/contacts/mod.rs:968
+#: app/src/ui/contacts/mod.rs:1006
 msgid "Everyone is a contact"
 msgstr "Semua orang adalah kontak"
 
-#: app/src/ui/contacts/mod.rs:969
+#: app/src/ui/contacts/mod.rs:1007
 msgid "Everyone the mailbox has seen is saved as a contact already."
 msgstr ""
 "Semua orang yang pernah dilihat kotak surat sudah tersimpan sebagai kontak."
 
-#: app/src/ui/contacts/mod.rs:973
+#: app/src/ui/contacts/mod.rs:1011
 msgid "No VIPs yet"
 msgstr "Belum ada VIP"
 
-#: app/src/ui/contacts/mod.rs:974
+#: app/src/ui/contacts/mod.rs:1013
 msgid ""
 "Add a person to VIPs from their page, so you can open them from this list."
 msgstr ""
 "Tambahkan seseorang ke VIP dari halamannya agar dapat dibuka dari daftar ini."
 
-#: app/src/ui/contacts/mod.rs:978
+#: app/src/ui/contacts/mod.rs:1018
 msgid "No contacts yet"
 msgstr "Belum ada kontak"
 
-#: app/src/ui/contacts/mod.rs:979
+#: app/src/ui/contacts/mod.rs:1020
 msgid ""
 "Contacts are on for this account. Nothing has been copied onto this computer."
 msgstr "Kontak aktif untuk akun ini. Belum ada yang disalin ke komputer ini."
 
-#: app/src/ui/contacts/mod.rs:1002
+#: app/src/ui/contacts/mod.rs:1045
 msgid "Turn On"
 msgstr "Aktifkan"
 
-#: app/src/ui/contacts/mod.rs:1029
+#: app/src/ui/contacts/mod.rs:1074
 msgid "Contacts are on for {account}. The book on this computer is empty."
 msgstr "Kontak aktif untuk {account}. Buku di komputer ini masih kosong."
 
-#: app/src/ui/contacts/mod.rs:1051
+#: app/src/ui/contacts/mod.rs:1098
 msgid "Turn Off Contacts?"
 msgstr "Matikan kontak?"
 
-#: app/src/ui/contacts/mod.rs:1054
+#: app/src/ui/contacts/mod.rs:1101
 msgid ""
 "Turn off contacts for {account}? Its contacts stay saved on this computer "
 "and come back when you turn them on."
@@ -8660,7 +8660,7 @@ msgstr ""
 "Matikan kontak untuk {account}? Kontaknya tetap tersimpan di komputer ini "
 "dan kembali saat Anda menyalakannya."
 
-#: app/src/ui/contacts/mod.rs:1056
+#: app/src/ui/contacts/mod.rs:1103
 msgid ""
 "Turn off contacts for {account}? Its contacts are removed from this "
 "computer; the server keeps them."
@@ -8668,90 +8668,90 @@ msgstr ""
 "Matikan kontak untuk {account}? Kontaknya dihapus dari komputer ini; server "
 "tetap menyimpannya."
 
-#: app/src/ui/contacts/mod.rs:1061
+#: app/src/ui/contacts/mod.rs:1110
 msgid "Turn Off"
 msgstr "Matikan"
 
-#: app/src/ui/contacts/mod.rs:1084
+#: app/src/ui/contacts/mod.rs:1137
 msgid "Contacts are off for {account}."
 msgstr "Kontak untuk {account} dimatikan."
 
-#: app/src/ui/contacts/mod.rs:1139
+#: app/src/ui/contacts/mod.rs:1190
 msgid "Search same address"
 msgstr "Cari alamat yang sama"
 
-#: app/src/ui/contacts/mod.rs:1140
+#: app/src/ui/contacts/mod.rs:1191
 msgid "Search same person"
 msgstr "Cari orang yang sama"
 
-#: app/src/ui/contacts/mod.rs:1141
+#: app/src/ui/contacts/mod.rs:1192
 msgid "Search correspondents"
 msgstr "Cari korespondensi"
 
-#: app/src/ui/contacts/mod.rs:1142
+#: app/src/ui/contacts/mod.rs:1193
 msgid "Search contacts"
 msgstr "Cari kontak"
 
-#: app/src/ui/contacts/mod.rs:1150
+#: app/src/ui/contacts/mod.rs:1201
 msgid "{count} selected"
 msgstr "{count} dipilih"
 
-#: app/src/ui/contacts/mod.rs:1163
+#: app/src/ui/contacts/mod.rs:1214
 msgid "Delete {count}"
 msgstr "Hapus {count}"
 
-#: app/src/ui/contacts/mod.rs:1186
+#: app/src/ui/contacts/mod.rs:1237
 msgid "Select several contacts"
 msgstr "Pilih beberapa kontak"
 
-#: app/src/ui/contacts/mod.rs:1220 app/src/ui/contacts/mod.rs:1243
+#: app/src/ui/contacts/mod.rs:1274 app/src/ui/contacts/mod.rs:1298
 msgid "{count} person"
 msgid_plural "{count} people"
 msgstr[0] "{count} orang"
 msgstr[1] "{count} orang"
 
-#: app/src/ui/contacts/mod.rs:1231
+#: app/src/ui/contacts/mod.rs:1285
 msgid "{count} of {total}"
 msgstr "{count} dari {total}"
 
-#: app/src/ui/contacts/mod.rs:1240 app/src/ui/contacts/side.rs:77
+#: app/src/ui/contacts/mod.rs:1294 app/src/ui/contacts/side.rs:82
 msgid "All contacts"
 msgstr "Semua kontak"
 
-#: app/src/ui/contacts/mod.rs:1242 app/src/ui/contacts/side.rs:79
+#: app/src/ui/contacts/mod.rs:1296 app/src/ui/contacts/side.rs:84
 #: app/src/ui/sidebar.rs:1485 app/src/ui/sidebar.rs:1487
-#: app/src/ui/sidebar.rs:2085 app/src/ui/sidebar.rs:2087
+#: app/src/ui/sidebar.rs:2089 app/src/ui/sidebar.rs:2091
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/contacts/mod.rs:1245 app/src/ui/contacts/side.rs:85
+#: app/src/ui/contacts/mod.rs:1304 app/src/ui/contacts/side.rs:90
 msgid "From mail"
 msgstr "Dari surat"
 
-#: app/src/ui/contacts/mod.rs:1245
+#: app/src/ui/contacts/mod.rs:1304
 msgid "Not contacts yet"
 msgstr "Belum menjadi kontak"
 
-#: app/src/ui/contacts/mod.rs:1247 app/src/ui/contacts/side.rs:91
+#: app/src/ui/contacts/mod.rs:1306 app/src/ui/contacts/side.rs:96
 msgid "Same address"
 msgstr "Alamat yang sama"
 
-#: app/src/ui/contacts/mod.rs:1251 app/src/ui/contacts/mod.rs:1259
+#: app/src/ui/contacts/mod.rs:1311 app/src/ui/contacts/mod.rs:1324
 msgid "{count} pair"
 msgid_plural "{count} pairs"
 msgstr[0] "{count} pasang"
 msgstr[1] "{count} pasang"
 
-#: app/src/ui/contacts/mod.rs:1255 app/src/ui/contacts/person.rs:758
-#: app/src/ui/contacts/side.rs:97
+#: app/src/ui/contacts/mod.rs:1319 app/src/ui/contacts/person.rs:881
+#: app/src/ui/contacts/side.rs:102
 msgid "Same person"
 msgstr "Orang yang sama"
 
-#: app/src/ui/contacts/mod.rs:1456
+#: app/src/ui/contacts/mod.rs:1531
 msgid "{name} from {account}"
 msgstr "{name} dari {account}"
 
-#: app/src/ui/contacts/mod.rs:1465
+#: app/src/ui/contacts/mod.rs:1540
 msgid "Deleted {list}."
 msgstr "{list} dihapus."
 
@@ -8759,113 +8759,113 @@ msgstr "{list} dihapus."
 msgid "Grant contacts permission in Preferences, then try again."
 msgstr "Berikan izin kontak di Preferensi, lalu coba lagi."
 
-#: app/src/ui/contacts/person.rs:66
+#: app/src/ui/contacts/person.rs:71
 msgid "View Photo"
 msgstr "Lihat Foto"
 
-#: app/src/ui/contacts/person.rs:199
+#: app/src/ui/contacts/person.rs:227
 msgid "{name} is in VIPs. Remove them from that list."
 msgstr "{name} ada di VIP. Keluarkan dari daftar itu."
 
-#: app/src/ui/contacts/person.rs:201
+#: app/src/ui/contacts/person.rs:229
 msgid "Add {name} to VIPs"
 msgstr "Tambahkan {name} ke VIP"
 
-#: app/src/ui/contacts/person.rs:226 app/src/ui/contacts/person.rs:904
+#: app/src/ui/contacts/person.rs:260 app/src/ui/contacts/person.rs:1070
 msgid "Every conversation with this person"
 msgstr "Semua percakapan dengan orang ini"
 
-#: app/src/ui/contacts/person.rs:254 app/src/ui/thread_list.rs:301
+#: app/src/ui/contacts/person.rs:288 app/src/ui/thread_list.rs:305
 msgid "New Message (C)"
 msgstr "Pesan Baru (C)"
 
-#: app/src/ui/contacts/person.rs:286
+#: app/src/ui/contacts/person.rs:320
 msgid "Reach"
 msgstr "Kontak"
 
-#: app/src/ui/contacts/person.rs:356 app/src/ui/contacts/person.rs:963
+#: app/src/ui/contacts/person.rs:399 app/src/ui/contacts/person.rs:1150
 msgid "Address"
 msgstr "Alamat"
 
-#: app/src/ui/contacts/person.rs:410
+#: app/src/ui/contacts/person.rs:466
 msgid "You wrote {date}. Waiting on a reply."
 msgstr "Anda menulis pada {date}. Menunggu balasan."
 
-#: app/src/ui/contacts/person.rs:412
+#: app/src/ui/contacts/person.rs:471
 msgid "Last message, {date}"
 msgstr "Pesan terakhir, {date}"
 
-#: app/src/ui/contacts/person.rs:428
+#: app/src/ui/contacts/person.rs:490
 msgid "You last wrote {date}"
 msgstr "Anda terakhir menulis pada {date}"
 
-#: app/src/ui/contacts/person.rs:429
+#: app/src/ui/contacts/person.rs:492
 msgid "You have not written to them."
 msgstr "Anda belum menulis kepadanya."
 
-#: app/src/ui/contacts/person.rs:451 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1957
-#: app/src/ui/thread_list.rs:373
+#: app/src/ui/contacts/person.rs:514 app/src/ui/sidebar.rs:494
+#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1961
+#: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "Email"
 
-#: app/src/ui/contacts/person.rs:457 app/src/ui/sidebar.rs:2496
+#: app/src/ui/contacts/person.rs:520 app/src/ui/sidebar.rs:2500
 msgid "On this computer"
 msgstr "Di komputer ini"
 
-#: app/src/ui/contacts/person.rs:497
+#: app/src/ui/contacts/person.rs:565
 msgid "A key for {email} is on this computer."
 msgstr "Ada kunci untuk {email} di komputer ini."
 
-#: app/src/ui/contacts/person.rs:498
+#: app/src/ui/contacts/person.rs:568
 msgid "A key for these addresses is on this computer."
 msgstr "Ada kunci untuk alamat-alamat ini di komputer ini."
 
-#: app/src/ui/contacts/person.rs:499
+#: app/src/ui/contacts/person.rs:570
 msgid "No key for {email} is on this computer."
 msgstr "Tidak ada kunci untuk {email} di komputer ini."
 
-#: app/src/ui/contacts/person.rs:500
+#: app/src/ui/contacts/person.rs:573
 msgid "No key for these addresses is on this computer."
 msgstr "Tidak ada kunci untuk alamat-alamat ini di komputer ini."
 
-#: app/src/ui/contacts/person.rs:502
+#: app/src/ui/contacts/person.rs:575
 msgid "OpenPGP key"
 msgstr "Kunci OpenPGP"
 
-#: app/src/ui/contacts/person.rs:506
+#: app/src/ui/contacts/person.rs:582
 msgid "Remote images"
 msgstr "Gambar jarak jauh"
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:584
 msgid "Allowed for this sender."
 msgstr "Diizinkan untuk pengirim ini."
 
-#: app/src/ui/contacts/person.rs:507
+#: app/src/ui/contacts/person.rs:586
 msgid "Blocked until you allow them."
 msgstr "Diblokir sampai Anda mengizinkannya."
 
-#: app/src/ui/contacts/person.rs:509
+#: app/src/ui/contacts/person.rs:589
 msgid "Remote images, allowed for this sender"
 msgstr "Gambar jarak jauh, diizinkan untuk pengirim ini"
 
-#: app/src/ui/contacts/person.rs:511
+#: app/src/ui/contacts/person.rs:591
 msgid "Remote images, blocked until you allow them"
 msgstr "Gambar jarak jauh, diblokir sampai Anda mengizinkannya"
 
-#: app/src/ui/contacts/person.rs:582
+#: app/src/ui/contacts/person.rs:669
 msgid "Deleted {name} from {account}."
 msgstr "{name} dihapus dari {account}."
 
-#: app/src/ui/contacts/person.rs:587
+#: app/src/ui/contacts/person.rs:677
 msgid "{base} {other} still has this person."
 msgstr "{base} {other} masih memiliki orang ini."
 
-#: app/src/ui/contacts/person.rs:633
+#: app/src/ui/contacts/person.rs:728
 msgid "Merge in {account}"
 msgstr "Gabungkan di {account}"
 
-#: app/src/ui/contacts/person.rs:675
+#: app/src/ui/contacts/person.rs:777
 msgid ""
 "Both contacts use {email}. {account} keeps one contact and deletes the "
 "other. Other accounts are not changed."
@@ -8873,24 +8873,24 @@ msgstr ""
 "Kedua kontak memakai {email}. {account} menyimpan satu kontak dan menghapus "
 "yang lain. Akun lain tidak berubah."
 
-#: app/src/ui/contacts/person.rs:678
+#: app/src/ui/contacts/person.rs:780
 msgid "Which contact"
 msgstr "Kontak mana"
 
-#: app/src/ui/contacts/person.rs:698
+#: app/src/ui/contacts/person.rs:808
 msgid "{account} keeps"
 msgstr "{account} menyimpan"
 
-#: app/src/ui/contacts/person.rs:721
+#: app/src/ui/contacts/person.rs:838
 msgid "Deleted {name} from {account}. {kept} is the contact {account} keeps."
 msgstr ""
 "{name} dihapus dari {account}. {kept} adalah kontak yang disimpan {account}."
 
-#: app/src/ui/contacts/person.rs:769
+#: app/src/ui/contacts/person.rs:892
 msgid "Link"
 msgstr "Tautkan"
 
-#: app/src/ui/contacts/person.rs:785
+#: app/src/ui/contacts/person.rs:914
 msgid ""
 "{a} is in {account_a}. {b} is in {account_b}. The names differ, and the "
 "addresses differ. Linking keeps both contacts. All contacts shows one row."
@@ -8898,37 +8898,37 @@ msgstr ""
 "{a} ada di {account_a}. {b} ada di {account_b}. Nama dan alamatnya berbeda. "
 "Menautkan menyimpan kedua kontak. Semua kontak menampilkan satu baris."
 
-#: app/src/ui/contacts/person.rs:793
+#: app/src/ui/contacts/person.rs:922
 msgid "The two contacts"
 msgstr "Kedua kontak"
 
-#: app/src/ui/contacts/person.rs:808
+#: app/src/ui/contacts/person.rs:937
 msgid "Name in All contacts"
 msgstr "Nama di Semua kontak"
 
-#: app/src/ui/contacts/person.rs:829
+#: app/src/ui/contacts/person.rs:961
 msgid "All contacts will show"
 msgstr "Semua kontak akan menampilkan"
 
-#: app/src/ui/contacts/person.rs:834
+#: app/src/ui/contacts/person.rs:973
 msgid "One row, two accounts"
 msgstr "Satu baris, dua akun"
 
-#: app/src/ui/contacts/person.rs:880
+#: app/src/ui/contacts/person.rs:1036
 msgid "All contacts now shows one row for {name}. Nothing was deleted."
 msgstr ""
 "Semua kontak kini menampilkan satu baris untuk {name}. Tidak ada yang "
 "dihapus."
 
-#: app/src/ui/contacts/person.rs:916
+#: app/src/ui/contacts/person.rs:1082
 msgid "Save to Contacts"
 msgstr "Simpan ke Kontak"
 
-#: app/src/ui/contacts/person.rs:928
+#: app/src/ui/contacts/person.rs:1100
 msgid "Not a contact"
 msgstr "Bukan kontak"
 
-#: app/src/ui/contacts/person.rs:932
+#: app/src/ui/contacts/person.rs:1104
 msgid ""
 "From mail lists people the mailbox has seen who are not saved as contacts. "
 "Seen in {count} message. Saving writes a contact into the account you pick."
@@ -8944,31 +8944,31 @@ msgstr[1] ""
 "tersimpan sebagai kontak. Terlihat di {count} pesan. Menyimpan membuat "
 "kontak di akun yang Anda pilih."
 
-#: app/src/ui/contacts/person.rs:942
+#: app/src/ui/contacts/person.rs:1122
 msgid "Latest message"
 msgstr "Pesan terbaru"
 
-#: app/src/ui/contacts/person.rs:964
+#: app/src/ui/contacts/person.rs:1154
 msgid "From the messages"
 msgstr "Dari pesan"
 
-#: app/src/ui/contacts/person.rs:997
+#: app/src/ui/contacts/person.rs:1192
 msgid "Saved {name} to {account}."
 msgstr "{name} disimpan ke {account}."
 
-#: app/src/ui/contacts/person.rs:1065
+#: app/src/ui/contacts/person.rs:1266
 msgid "No organization, no phone"
 msgstr "Tanpa organisasi, tanpa telepon"
 
-#: app/src/ui/contacts/person.rs:1067
+#: app/src/ui/contacts/person.rs:1268
 msgid "Organization {value}"
 msgstr "Organisasi {value}"
 
-#: app/src/ui/contacts/person.rs:1068
+#: app/src/ui/contacts/person.rs:1269
 msgid "Phone {value}"
 msgstr "Telepon {value}"
 
-#: app/src/ui/contacts/person.rs:1137
+#: app/src/ui/contacts/person.rs:1349
 msgid ""
 "All contacts uses the name {name}. {account_a} still has its contact, and "
 "{account_b} still has {other}."
@@ -8976,7 +8976,7 @@ msgstr ""
 "Semua kontak memakai nama {name}. {account_a} masih memiliki kontaknya, dan "
 "{account_b} masih memiliki {other}."
 
-#: app/src/ui/contacts/person.rs:1158
+#: app/src/ui/contacts/person.rs:1387
 msgid ""
 "The chip is the account. {others} has its own contact for this person, and "
 "editing here changes {account}."
@@ -8984,7 +8984,7 @@ msgstr ""
 "Label itu adalah akunnya. {others} memiliki kontak sendiri untuk orang ini, "
 "dan mengubah di sini mengubah {account}."
 
-#: app/src/ui/contacts/person.rs:1164
+#: app/src/ui/contacts/person.rs:1395
 msgid ""
 "VIPs are people you mark, so you can open them from this list. {name} is "
 "also stored in {accounts}."
@@ -8992,11 +8992,11 @@ msgstr ""
 "VIP adalah orang yang Anda tandai agar dapat dibuka dari daftar ini. {name} "
 "juga tersimpan di {accounts}."
 
-#: app/src/ui/contacts/person.rs:1167
+#: app/src/ui/contacts/person.rs:1403
 msgid "VIPs are people you mark, so you can open them from this list."
 msgstr "VIP adalah orang yang Anda tandai agar dapat dibuka dari daftar ini."
 
-#: app/src/ui/contacts/person.rs:1169
+#: app/src/ui/contacts/person.rs:1406
 msgid "One person, stored in {accounts}. Each account keeps its own contact."
 msgstr ""
 "Satu orang, tersimpan di {accounts}. Setiap akun menyimpan kontaknya sendiri."
@@ -9033,29 +9033,29 @@ msgstr "Gunakan Foto"
 msgid "Contact Photo"
 msgstr "Foto Kontak"
 
-#: app/src/ui/contacts/side.rs:75
+#: app/src/ui/contacts/side.rs:80
 msgid "Lists"
 msgstr "Daftar"
 
-#: app/src/ui/contacts/side.rs:81
+#: app/src/ui/contacts/side.rs:86
 msgid "People you mark, so you can open them from here"
 msgstr "Orang yang Anda tandai agar dapat dibuka dari sini"
 
-#: app/src/ui/contacts/side.rs:87
+#: app/src/ui/contacts/side.rs:92
 msgid "People found in mail. They are not contacts yet."
 msgstr "Orang yang ditemukan di surat. Mereka belum menjadi kontak."
 
-#: app/src/ui/contacts/side.rs:93
+#: app/src/ui/contacts/side.rs:98
 msgid "Two contacts in one account share an address. Merging deletes one."
 msgstr ""
 "Dua kontak dalam satu akun memakai alamat yang sama. Menggabungkan menghapus "
 "salah satunya."
 
-#: app/src/ui/contacts/side.rs:99
+#: app/src/ui/contacts/side.rs:104
 msgid "A close name in two accounts. Linking deletes nothing."
 msgstr "Nama mirip di dua akun. Menautkan tidak menghapus apa pun."
 
-#: app/src/ui/contacts/side.rs:120 app/src/ui/preferences.rs:476
+#: app/src/ui/contacts/side.rs:125 app/src/ui/preferences.rs:476
 #: app/src/ui/preferences.rs:483 app/src/ui/sidebar/sections.rs:28
 #: app/src/ui/smart_editor.rs:47 app/src/ui/window/customize_mailboxes.rs:638
 msgid "Accounts"
@@ -9086,7 +9086,7 @@ msgid "Find Again"
 msgstr "Cari Lagi"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2176
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2180
 msgid "Edit…"
 msgstr "Edit…"
 
@@ -9171,7 +9171,7 @@ msgid "Export…"
 msgstr "Ekspor…"
 
 #: app/src/ui/conversation.rs:280 app/src/ui/conversation.rs:657
-#: app/src/ui/window.rs:3821
+#: app/src/ui/window.rs:3823
 msgid "Customize Toolbar…"
 msgstr "Sesuaikan Bilah Alat…"
 
@@ -9285,7 +9285,7 @@ msgid "Tags…"
 msgstr "Tag…"
 
 #: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1543
-#: app/src/ui/sidebar.rs:2068 app/src/ui/window/reminders.rs:25
+#: app/src/ui/sidebar.rs:2072 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Ingatkan Saya"
@@ -9736,7 +9736,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Izinkan Sembunyikan Email Saya"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4034
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:4036
 msgid "Add an account first"
 msgstr "Tambahkan akun terlebih dahulu"
 
@@ -10226,7 +10226,7 @@ msgstr "Akun ini belum menyinkronkan"
 msgid "Could not change the subscription: {reason}"
 msgstr "Tidak dapat mengubah warna: {reason}"
 
-#: app/src/ui/mod.rs:559
+#: app/src/ui/mod.rs:560
 msgid "Gray"
 msgstr "Abu-Abu"
 
@@ -11033,7 +11033,7 @@ msgstr "Akun Kalender Terakhir Digunakan"
 msgid "Same as New Messages"
 msgstr "Sama dengan Pesan Baru"
 
-#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:276
+#: app/src/ui/preferences/accounts.rs:204 app/src/ui/thread_list.rs:280
 msgid "All Inboxes"
 msgstr "Semua Kotak Masuk"
 
@@ -11052,7 +11052,7 @@ msgstr "Pindahkan {account} ke Bawah"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3828 app/src/ui/window/shortcuts.rs:621
+#: app/src/ui/window.rs:3830 app/src/ui/window/shortcuts.rs:621
 msgid "Preferences"
 msgstr "Preferensi"
 
@@ -11430,7 +11430,7 @@ msgstr "Tambahkan Alamat"
 msgid "Default sender"
 msgstr "Pengirim bawaan"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2485
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2489
 msgid "Signature…"
 msgstr "Tanda Tangan…"
 
@@ -11500,11 +11500,16 @@ msgstr "Hentikan pengiriman pesan"
 msgid "Mailboxes"
 msgstr "Kotak Surat"
 
+#: app/src/ui/sidebar.rs:548 app/src/ui/sidebar.rs:1952
+#: app/src/ui/sidebar.rs:3181
+msgid "99+"
+msgstr "99+"
+
 #: app/src/ui/sidebar.rs:953
 msgid "Calendars"
 msgstr "Kalender"
 
-#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2056
+#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2060
 msgid "Outbox"
 msgstr "Kotak Keluar"
 
@@ -11547,87 +11552,83 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} pesan"
 msgstr[1] "{mailbox}, {count} pesan"
 
-#: app/src/ui/sidebar.rs:1948 app/src/ui/sidebar.rs:3177
-msgid "99+"
-msgstr "99+"
-
-#: app/src/ui/sidebar.rs:1961
+#: app/src/ui/sidebar.rs:1965
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "Email, {count} belum dibaca"
 msgstr[1] "Email, {count} belum dibaca"
 
-#: app/src/ui/sidebar.rs:1967
+#: app/src/ui/sidebar.rs:1971
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "Kalender, {count} menunggu jawaban Anda"
 msgstr[1] "Kalender, {count} menunggu jawaban Anda"
 
-#: app/src/ui/sidebar.rs:2178 app/src/ui/sidebar.rs:2300
-#: app/src/ui/sidebar.rs:2595
+#: app/src/ui/sidebar.rs:2182 app/src/ui/sidebar.rs:2304
+#: app/src/ui/sidebar.rs:2599
 msgid "Move Up"
 msgstr "Pindahkan ke Atas"
 
-#: app/src/ui/sidebar.rs:2179 app/src/ui/sidebar.rs:2303
-#: app/src/ui/sidebar.rs:2596
+#: app/src/ui/sidebar.rs:2183 app/src/ui/sidebar.rs:2307
+#: app/src/ui/sidebar.rs:2600
 msgid "Move Down"
 msgstr "Pindahkan ke Bawah"
 
-#: app/src/ui/sidebar.rs:2331
+#: app/src/ui/sidebar.rs:2335
 msgid "Empty Trash…"
 msgstr "Kosongkan Sampah…"
 
-#: app/src/ui/sidebar.rs:2484
+#: app/src/ui/sidebar.rs:2488
 msgid "Automatic Reply…"
 msgstr "Balasan Otomatis…"
 
-#: app/src/ui/sidebar.rs:2486
+#: app/src/ui/sidebar.rs:2490
 msgid "Rules…"
 msgstr "Aturan…"
 
-#: app/src/ui/sidebar.rs:2487 app/src/ui/window.rs:3814
+#: app/src/ui/sidebar.rs:2491 app/src/ui/window.rs:3816
 msgid "Hide My Email…"
 msgstr "Sembunyikan Email Saya…"
 
-#: app/src/ui/sidebar.rs:2504
+#: app/src/ui/sidebar.rs:2508
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "Di komputer ini. Tampilkan atau sembunyikan kotak surat akun ini"
 
-#: app/src/ui/sidebar.rs:2505
+#: app/src/ui/sidebar.rs:2509
 msgid "Show or hide this account's mailboxes"
 msgstr "Tampilkan atau sembunyikan kotak surat akun ini"
 
-#: app/src/ui/sidebar.rs:2581
+#: app/src/ui/sidebar.rs:2585
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "Folder Baru…"
 
-#: app/src/ui/sidebar.rs:2600
+#: app/src/ui/sidebar.rs:2604
 msgid "Switch to JMAP…"
 msgstr "Beralih ke JMAP…"
 
-#: app/src/ui/sidebar.rs:2602
+#: app/src/ui/sidebar.rs:2606
 msgid "Messages That Will Not Download…"
 msgstr "Pesan yang Tidak Dapat Diunduh…"
 
-#: app/src/ui/sidebar.rs:2677
+#: app/src/ui/sidebar.rs:2681
 msgid "Sign in again to keep syncing"
 msgstr "Masuk kembali untuk melanjutkan sinkronisasi"
 
-#: app/src/ui/sidebar.rs:2683
+#: app/src/ui/sidebar.rs:2687
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} tidak merespons; mencoba lagi"
 
-#: app/src/ui/sidebar.rs:2694
+#: app/src/ui/sidebar.rs:2698
 msgid "The keyring is not responding; retrying"
 msgstr "Gantungan kunci tidak merespons; mencoba lagi"
 
-#: app/src/ui/sidebar.rs:2697
+#: app/src/ui/sidebar.rs:2701
 msgid "Downloading mail"
 msgstr "Mengunduh email"
 
-#: app/src/ui/sidebar.rs:2701
+#: app/src/ui/sidebar.rs:2705
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Sinkronisasi terhenti setelah terjadi kesalahan; mulai ulang Penguin Mail "
@@ -11635,7 +11636,7 @@ msgstr ""
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2708
+#: app/src/ui/sidebar.rs:2712
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
@@ -11841,26 +11842,26 @@ msgstr "Isi"
 msgid "New Template"
 msgstr "Templat Baru"
 
-#: app/src/ui/thread_list.rs:239
+#: app/src/ui/thread_list.rs:243
 msgid "No Mail"
 msgstr "Tidak Ada Email"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:257
+#: app/src/ui/thread_list.rs:261
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Cari email, misalnya from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:296 app/src/ui/thread_list.rs:316
+#: app/src/ui/thread_list.rs:300 app/src/ui/thread_list.rs:320
 msgid "Show Mailboxes"
 msgstr "Tampilkan Kotak Surat"
 
-#: app/src/ui/thread_list.rs:306
+#: app/src/ui/thread_list.rs:310
 msgid "Search (/)"
 msgstr "Cari (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:315
+#: app/src/ui/thread_list.rs:319
 msgid "Search mail"
 msgstr "Cari email"
 
@@ -12210,7 +12211,7 @@ msgstr "Tidak dapat memuat email: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} ditambahkan. Mengunduh email…"
 
-#: app/src/ui/window.rs:368 app/src/ui/window.rs:3174
+#: app/src/ui/window.rs:368 app/src/ui/window.rs:3176
 msgid "{account} is signed in again."
 msgstr "{account} sudah masuk kembali."
 
@@ -12349,69 +12350,69 @@ msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "{count} pesan dipindahkan ke Kotak Masuk"
 msgstr[1] "{count} pesan dipindahkan ke Kotak Masuk"
 
-#: app/src/ui/window.rs:987
+#: app/src/ui/window.rs:989
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:1449
+#: app/src/ui/window.rs:1451
 msgid "Could not read accounts: {reason}"
 msgstr "Tidak dapat membaca akun: {reason}"
 
-#: app/src/ui/window.rs:2208
+#: app/src/ui/window.rs:2210
 msgid "Could not delete the mail: {reason}"
 msgstr "Tidak dapat menghapus email: {reason}"
 
-#: app/src/ui/window.rs:2315
+#: app/src/ui/window.rs:2317
 msgid "Turn On the {service}"
 msgstr "Aktifkan {service}"
 
-#: app/src/ui/window.rs:2502 app/src/ui/window.rs:2505
+#: app/src/ui/window.rs:2504 app/src/ui/window.rs:2507
 msgid "Move to Inbox"
 msgstr "Pindahkan ke Kotak Masuk"
 
-#: app/src/ui/window.rs:2673 app/src/ui/window.rs:2678
+#: app/src/ui/window.rs:2675 app/src/ui/window.rs:2680
 #, fuzzy
 #| msgid "Search models"
 msgid "Search all folders"
 msgstr "Cari model"
 
-#: app/src/ui/window.rs:2747
+#: app/src/ui/window.rs:2749
 msgid "Select mail from one account to tag it."
 msgstr "Pilih email dari satu akun untuk memberinya tag."
 
-#: app/src/ui/window.rs:2759
+#: app/src/ui/window.rs:2761
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Akun ini belum memiliki tag. Buat tag di Outlook."
 
-#: app/src/ui/window.rs:2852
+#: app/src/ui/window.rs:2854
 msgid "Add an account to reply or forward"
 msgstr "Tambahkan akun untuk membalas atau meneruskan"
 
-#: app/src/ui/window.rs:2957
+#: app/src/ui/window.rs:2959
 msgid "Could not include {file}: {reason}"
 msgstr "Tidak dapat menyertakan {file}: {reason}"
 
-#: app/src/ui/window.rs:3038
+#: app/src/ui/window.rs:3040
 msgid "The server had already sent this message."
 msgstr "Server sudah mengirim pesan ini."
 
-#: app/src/ui/window.rs:3043
+#: app/src/ui/window.rs:3045
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Pesan ini dibatalkan di aplikasi lain dan tidak lagi berada di Draf."
 
-#: app/src/ui/window.rs:3359
+#: app/src/ui/window.rs:3361
 msgid "Continue in your browser"
 msgstr "Lanjutkan di peramban Anda"
 
-#: app/src/ui/window.rs:3409
+#: app/src/ui/window.rs:3411
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Salinan Penguin Mail ini dibuat tanpa dukungan masuk Google."
 
-#: app/src/ui/window.rs:3431
+#: app/src/ui/window.rs:3433
 msgid "Get a Release"
 msgstr "Dapatkan Rilis"
 
-#: app/src/ui/window.rs:3554
+#: app/src/ui/window.rs:3556
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -12419,86 +12420,86 @@ msgstr ""
 "Tidak dapat memeriksa pesan yang ditahan server untuk dikirim nanti, "
 "sehingga {account} tetap ada: {reason}"
 
-#: app/src/ui/window.rs:3565
+#: app/src/ui/window.rs:3567
 msgid "Remove {account}?"
 msgstr "Hapus {account}?"
 
-#: app/src/ui/window.rs:3584
+#: app/src/ui/window.rs:3586
 msgid "Remove Anyway"
 msgstr "Tetap Hapus"
 
-#: app/src/ui/window.rs:3597
+#: app/src/ui/window.rs:3599
 msgid "Removed {account}"
 msgstr "{account} dihapus"
 
-#: app/src/ui/window.rs:3599
+#: app/src/ui/window.rs:3601
 msgid "Could not remove {account}: {reason}"
 msgstr "Tidak dapat menghapus {account}: {reason}"
 
-#: app/src/ui/window.rs:3791
+#: app/src/ui/window.rs:3793
 msgid "Refresh"
 msgstr "Segarkan"
 
-#: app/src/ui/window.rs:3795
+#: app/src/ui/window.rs:3797
 msgid "Show Declined Events"
 msgstr "Tampilkan Acara yang Ditolak"
 
-#: app/src/ui/window.rs:3812
+#: app/src/ui/window.rs:3814
 msgid "Add Account…"
 msgstr "Tambahkan Akun…"
 
-#: app/src/ui/window.rs:3813
+#: app/src/ui/window.rs:3815
 msgid "New Smart Mailbox…"
 msgstr "Kotak Surat Cerdas Baru…"
 
-#: app/src/ui/window.rs:3825
+#: app/src/ui/window.rs:3827
 #, fuzzy
 #| msgid "Customize Toolbar…"
 msgid "Customize Mailboxes…"
 msgstr "Sesuaikan Bilah Alat…"
 
-#: app/src/ui/window.rs:3829 app/src/ui/window/shortcuts.rs:833
+#: app/src/ui/window.rs:3831 app/src/ui/window/shortcuts.rs:833
 msgid "Keyboard Shortcuts"
 msgstr "Pintasan Papan Ketik"
 
-#: app/src/ui/window.rs:3838 app/src/ui/window.rs:3840
+#: app/src/ui/window.rs:3840 app/src/ui/window.rs:3842
 msgid "Main Menu"
 msgstr "Menu Utama"
 
-#: app/src/ui/window.rs:3905 app/src/ui/window.rs:3906
+#: app/src/ui/window.rs:3907 app/src/ui/window.rs:3908
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:4035
+#: app/src/ui/window.rs:4037
 msgid "Add a mail account first"
 msgstr "Tambahkan akun email terlebih dahulu"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4301
+#: app/src/ui/window.rs:4303
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Kalender dan kontak {account} telah terhubung."
 
-#: app/src/ui/window.rs:4417
+#: app/src/ui/window.rs:4419
 msgid "Open a message from the person first"
 msgstr "Buka pesan dari orang tersebut terlebih dahulu"
 
-#: app/src/ui/window.rs:4523
+#: app/src/ui/window.rs:4525
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/window.rs:4525 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4527 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Mulai Ulang"
 
-#: app/src/ui/window.rs:4589
+#: app/src/ui/window.rs:4591
 msgid "Show Rules"
 msgstr "Tampilkan Aturan"
 
-#: app/src/ui/window.rs:4615
+#: app/src/ui/window.rs:4617
 msgid "Messages That Will Not Download"
 msgstr "Pesan yang Tidak Dapat Diunduh"
 
-#: app/src/ui/window.rs:4617
+#: app/src/ui/window.rs:4619
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12571,19 +12572,19 @@ msgstr "Buka"
 msgid "Open in Another Program"
 msgstr "Buka di Program Lain"
 
-#: app/src/ui/window/categories.rs:345
+#: app/src/ui/window/categories.rs:342
 msgid "Open a message from the sender first"
 msgstr "Buka pesan dari pengirim terlebih dahulu"
 
-#: app/src/ui/window/categories.rs:389
+#: app/src/ui/window/categories.rs:386
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Email dari {sender} kini masuk ke {category}"
 
-#: app/src/ui/window/categories.rs:394
+#: app/src/ui/window/categories.rs:391
 msgid "Moved mail from {sender} to {category}"
 msgstr "Email dari {sender} dipindahkan ke {category}"
 
-#: app/src/ui/window/categories.rs:401
+#: app/src/ui/window/categories.rs:398
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
@@ -13614,23 +13615,23 @@ msgid "Use YYYY-MM-DD for dates, or --MM-DD when the year is unknown."
 msgstr ""
 "Tulis tanggal sebagai YYYY-MM-DD, atau --MM-DD jika tahunnya tidak diketahui."
 
-#: domain/src/contact.rs:97
+#: domain/src/contact.rs:100
 msgid "A date needs a label and a value."
 msgstr "Tanggal memerlukan label dan nilai."
 
-#: domain/src/contact.rs:103
+#: domain/src/contact.rs:106
 msgid "Contact photos must be PNG images no larger than 512 KB."
 msgstr "Foto kontak harus berupa gambar PNG paling besar 512 KB."
 
-#: domain/src/contact.rs:139
+#: domain/src/contact.rs:142
 msgid "%-d %B"
 msgstr "%-d %B"
 
-#: domain/src/contact.rs:147
+#: domain/src/contact.rs:150
 msgid "{date} ({year})"
 msgstr "{date} ({year})"
 
-#: domain/src/contact.rs:152
+#: domain/src/contact.rs:155
 msgid "{date} ({year}), {age} year old"
 msgid_plural "{date} ({year}), {age} years old"
 msgstr[0] "{date} ({year}), berusia {age} tahun"
@@ -14295,7 +14296,7 @@ msgstr "Anda bukan tamu acara ini."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail tidak dapat mengubah daftar kalender server CalDAV."
 
-#: sync/src/services/carddav.rs:136
+#: sync/src/services/carddav.rs:137
 msgid ""
 "Google keeps a birthday only with its year. Add the year or remove the "
 "birthday."
@@ -14303,14 +14304,14 @@ msgstr ""
 "Google hanya menyimpan ulang tahun beserta tahunnya. Tambahkan tahun atau "
 "hapus ulang tahunnya."
 
-#: sync/src/services/carddav.rs:356
+#: sync/src/services/carddav.rs:357
 msgid ""
 "Contact groups changed on another device. Refresh contacts and reopen the "
 "editor."
 msgstr ""
 "Grup kontak berubah di perangkat lain. Segarkan kontak dan buka editor lagi."
 
-#: sync/src/services/carddav.rs:363
+#: sync/src/services/carddav.rs:364
 msgid ""
 "Several groups have the same name. Rename them in the account before adding "
 "this contact."
@@ -14318,7 +14319,7 @@ msgstr ""
 "Beberapa grup memiliki nama yang sama. Ganti namanya di akun sebelum "
 "menambahkan kontak ini."
 
-#: sync/src/services/carddav.rs:579
+#: sync/src/services/carddav.rs:582
 msgid ""
 "The contact was created, but some groups could not be saved. Retry in this "
 "editor to finish without creating another contact: {reason}"
@@ -14326,7 +14327,7 @@ msgstr ""
 "Kontak sudah dibuat, tetapi beberapa grup tidak dapat disimpan. Coba lagi di "
 "editor ini agar selesai tanpa membuat kontak lain: {reason}"
 
-#: sync/src/services/carddav.rs:638
+#: sync/src/services/carddav.rs:641
 msgid ""
 "Some group changes could not be saved. Refresh contacts before trying again: "
 "{reason}"
@@ -14916,6 +14917,7 @@ msgstr "Pindahkan ke {folder}"
 #~ msgstr "Nanti"
 
 #, fuzzy
+#~| msgid "Mailboxes"
 #~ msgid "Mailbox"
 #~ msgstr "Kotak Surat"
 

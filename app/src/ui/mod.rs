@@ -19,6 +19,7 @@ mod contacts;
 pub mod contacts_prefs;
 pub mod conversation;
 pub mod copied;
+mod count_badge;
 pub mod dav_edit;
 pub mod disclosure;
 pub mod eml_file;

@@ -18,11 +18,11 @@ use mailrs_domain::{
 };
 use mailrs_sync::Offers;
 
+use super::count_badge::CountBadge;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
-use crate::settings::SidebarLayout;
-use crate::settings::Space;
+use crate::settings::{SidebarLayout, Space};
 use keys::ListKey;
 use sections::{Place, Section};
 use tree::label_rows;
@@ -316,7 +316,7 @@ pub struct Sidebar {
     /// too while no account has mail, and "Calendars" shows in its place.
     pub switch: adw::ToggleGroup,
     /// The badge on the Mail toggle and on the Calendar one.
-    badges: [(Space, gtk::Label); 3],
+    badges: [(Space, CountBadge); 3],
     /// Unread mail in the unified inbox, for the Mail toggle's badge.
     unread: Cell<i64>,
     /// Invitations waiting for an answer, for the Calendar toggle's.
@@ -512,10 +512,10 @@ impl Sidebar {
                 .build();
             // Each toggle counts what waits in the other space, in a small
             // accent pill after its name, while that space is away.
-            let badge = gtk::Label::builder()
-                .css_classes(["space-badge"])
-                .valign(gtk::Align::Center)
-                .visible(false)
+            let badge = glib::Object::builder::<CountBadge>()
+                .property("css-classes", ["space-badge"].as_slice())
+                .property("valign", gtk::Align::Center)
+                .property("visible", false)
                 .build();
             let child = gtk::Box::builder().spacing(2).build();
             child.append(&content);
@@ -545,7 +545,7 @@ impl Sidebar {
         title.set_visible(false);
         // Both idle spaces count what waits in them while a third shows.
         for badge in [&badges[0].1, &badges[1].1] {
-            badge.set_label("99");
+            badge.set_label(gettext("99+"));
             badge.set_visible(true);
         }
         // Only the space on screen shows its name, so the widest layout is
