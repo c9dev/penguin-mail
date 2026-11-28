@@ -88,9 +88,11 @@ jobs:
           key: gtk4-msys2-${{ env.MINGW_PACKAGES_SHA }}-${{ hashFiles('packaging/windows/gtk4-zero-monitor-popup.patch', 'scripts/build-gtk4-msys2.sh') }}
       - name: Install the patched gtk4
         shell: msys2 {0}
+        env:
+          GTK_CACHE_HIT: ${{ steps.gtk-cache.outputs.cache-hit }}
         run: |
           set -euo pipefail
-          if [ '${{ steps.gtk-cache.outputs.cache-hit }}' != 'true' ]; then
+          if [ "$GTK_CACHE_HIT" != 'true' ]; then
             pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
           fi
           scripts/build-gtk4-msys2.sh .ci-mingw-packages "$GTK4_PACKAGE"
