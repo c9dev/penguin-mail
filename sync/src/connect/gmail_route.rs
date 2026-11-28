@@ -262,7 +262,11 @@ fn google_carddav(
         mailrs_dav::Kind::AddressBook,
         mailrs_dav::Login::new(account.email.clone(), String::new()),
     )
-    .map(|client| client.with_bearer(Arc::new(GoaDavTokens(tokens))));
+    .map(|client| {
+        client
+            .with_bearer(Arc::new(GoaDavTokens(tokens)))
+            .with_sync_depth_one()
+    });
     match client {
         Ok(client) => Some(AnyContacts::Dav(
             crate::services::CardDav::new(Arc::new(crate::services::AnyDav::from(client))).google(),

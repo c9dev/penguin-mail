@@ -277,6 +277,8 @@ pub struct DavClient {
     login: Login,
     /// Set for an OAuth account: the token goes where the password would.
     bearer: Option<Arc<dyn TokenSource>>,
+    /// See [`DavClient::with_sync_depth_one`].
+    sync_depth_one: bool,
     http: reqwest::Client,
 }
 
@@ -318,6 +320,7 @@ impl DavClient {
             kind,
             login,
             bearer: None,
+            sync_depth_one: false,
             http: http_client(true)?,
         })
     }
@@ -332,8 +335,17 @@ impl DavClient {
             kind,
             login,
             bearer: None,
+            sync_depth_one: false,
             http: http_client(false)?,
         })
+    }
+
+    /// Sends `sync-collection` with `Depth: 1`. Google's CardDAV answers a
+    /// request without it with a new token and no changes (seen live on
+    /// 2026-11-28), while sabre/dav servers refuse any depth but 0.
+    pub fn with_sync_depth_one(mut self) -> DavClient {
+        self.sync_depth_one = true;
+        self
     }
 
     /// Signs in with tokens from `source` in place of the password.
@@ -709,7 +721,7 @@ impl DavApi for DavClient {
             .send(
                 "REPORT",
                 collection,
-                None,
+                self.sync_depth_one.then_some("1"),
                 Some(body::sync_collection(token)),
                 &[],
             )
