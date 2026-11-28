@@ -519,3 +519,79 @@ fn removing_a_custom_field_with_a_reserved_label_keeps_the_dates() {
     assert_eq!(read.dates.len(), 1, "the date stays: {removed}");
     assert_eq!(read.dates[0].label, "Met", "{removed}");
 }
+
+#[test]
+fn google_s_loose_labels_pair_in_order_and_go_with_their_values() {
+    use mailrs_domain::contact::{Changes, Field};
+    // Google's answer (2026-11-28) to two grouped labelled fields: the
+    // groups are gone and each label sits before its value.
+    let text = fixture("google-loose-labels.vcf");
+    let field = |label: &str, value: &str| Field {
+        label: label.into(),
+        value: value.into(),
+    };
+    assert_eq!(
+        read_card(&text).unwrap().details.custom,
+        [field("One", "1"), field("Two", "2")]
+    );
+    let saved = patch_card(
+        &text,
+        &CardFields {
+            details: Changes {
+                custom: Some(vec![field("Two", "2")]),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        read_card(&saved).unwrap().details.custom,
+        [field("Two", "2")],
+        "{saved}"
+    );
+    assert_eq!(
+        saved.to_uppercase().matches("X-ABLABEL").count(),
+        1,
+        "{saved}"
+    );
+}
+
+#[test]
+fn an_anniversary_is_a_labelled_date_in_version_3_and_its_own_line_in_4() {
+    use mailrs_domain::contact::{Changes, Field};
+    let anniversary = CardFields {
+        details: Changes {
+            dates: Some(vec![Field {
+                label: "Anniversary".into(),
+                value: "2015-06-20".into(),
+            }]),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let v3 = new_card("id", &anniversary);
+    assert!(
+        !v3.contains("ANNIVERSARY:"),
+        "Google drops it from version 3: {v3}"
+    );
+    assert_eq!(
+        read_card(&v3).unwrap().details.dates[0].label,
+        "Anniversary"
+    );
+    let v4 = patch_card(&fixture("card-v4.vcf"), &anniversary).unwrap();
+    assert!(v4.contains("ANNIVERSARY:"), "{v4}");
+    assert_eq!(read_card(&v4).unwrap().details.dates[0].value, "2015-06-20");
+    // Google keeps Apple's form and answers with its own group and spelling.
+    let google = read_card(&fixture("google-abdate.vcf"))
+        .unwrap()
+        .details
+        .dates;
+    assert_eq!(google[0].label, "Anniversary");
+    assert_eq!(google[0].value, "2015-06-20");
+    let apple = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:A\r\nitem1.X-ABDATE:2015-06-20\r\nitem1.X-ABLABEL:_$!<Anniversary>!$_\r\nEND:VCARD\r\n";
+    assert_eq!(
+        read_card(apple).unwrap().details.dates[0].label,
+        "Anniversary"
+    );
+}

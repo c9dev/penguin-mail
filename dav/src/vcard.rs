@@ -323,13 +323,21 @@ pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavErro
         let groups: Vec<_> = of(&card, labelled.clone())
             .filter_map(|e| e.group.clone())
             .collect();
+        // Labels Google stripped of their group go with their values.
+        let loose = of(&card, labelled.clone()).any(|e| e.group.is_none());
         card.entries.retain(|e| {
             e.name != labelled
                 && !(e.name == VCardProperty::Other("X-ABLABEL".into())
-                    && e.group.as_ref().is_some_and(|g| groups.contains(g)))
+                    && match &e.group {
+                        Some(g) => groups.contains(g),
+                        None => loose,
+                    })
         });
     }
     for (property, mut lines) in lines_for(fields) {
+        if let (VCardProperty::Anniversary, Some(dates)) = (&property, &fields.details.dates) {
+            lines = date_lines(dates, v4);
+        }
         if v4 && property == VCardProperty::Photo {
             lines = fields
                 .photo
@@ -494,6 +502,11 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
                         })
                         .and_then(first_text)
                         .unwrap_or_default();
+                    // Apple's own name for the anniversary.
+                    let label = match label.as_str() {
+                        "_$!<Anniversary>!$_" => "Anniversary".into(),
+                        _ => label,
+                    };
                     Some(Field {
                         label,
                         value: first_text(e).unwrap_or_default(),
@@ -508,14 +521,24 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
             .iter()
             .filter_map(|e| match &e.name {
                 VCardProperty::Other(name) if name == LABELLED => {
-                    let label = card
+                    let labels = card
                         .entries
                         .iter()
-                        .find(|label| {
-                            label.name == VCardProperty::Other("X-ABLABEL".into())
-                                && label.group == e.group
-                        })
-                        .and_then(first_text)?;
+                        .filter(|label| label.name == VCardProperty::Other("X-ABLABEL".into()));
+                    let label = match &e.group {
+                        Some(_) => labels.clone().find(|label| label.group == e.group),
+                        // Google strips the group and keeps each label beside
+                        // its value, so the nth loose value has the nth loose label.
+                        None => {
+                            let at = card
+                                .entries
+                                .iter()
+                                .filter(|f| f.name == e.name && f.group.is_none())
+                                .position(|f| std::ptr::eq(f, e))?;
+                            labels.filter(|label| label.group.is_none()).nth(at)
+                        }
+                    };
+                    let label = label.and_then(first_text)?;
                     first_text(e).map(|value| Field { label, value })
                 }
                 VCardProperty::Other(name) if editable_custom(name) => {
@@ -528,6 +551,26 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
             })
             .collect(),
     }
+}
+
+/// The lines of other dates. ANNIVERSARY is a version 4 property, which
+/// Google drops from a version 3 card, so there it is Apple's labelled
+/// date like the rest.
+fn date_lines(values: &[mailrs_domain::contact::Field], v4: bool) -> Vec<String> {
+    values
+        .iter()
+        .enumerate()
+        .flat_map(|(i, s)| {
+            if v4 && s.label == "Anniversary" {
+                vec![format!("ANNIVERSARY:{}", escape(&s.value))]
+            } else {
+                vec![
+                    format!("pmdate{i}.X-ABDATE:{}", escape(&s.value)),
+                    format!("pmdate{i}.X-ABLABEL:{}", escape(&s.label)),
+                ]
+            }
+        })
+        .collect()
 }
 
 fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>) {
@@ -581,23 +624,8 @@ fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>)
         ));
     }
     if let Some(values) = &d.dates {
-        out.push((
-            VCardProperty::Anniversary,
-            values
-                .iter()
-                .enumerate()
-                .flat_map(|(i, s)| {
-                    if s.label == "Anniversary" {
-                        vec![format!("ANNIVERSARY:{}", escape(&s.value))]
-                    } else {
-                        vec![
-                            format!("pmdate{i}.X-ABDATE:{}", escape(&s.value)),
-                            format!("pmdate{i}.X-ABLABEL:{}", escape(&s.label)),
-                        ]
-                    }
-                })
-                .collect(),
-        ));
+        // A new card is version 3; `patch_card` writes them again for 4.
+        out.push((VCardProperty::Anniversary, date_lines(values, false)));
     }
     if let Some(values) = &d.custom {
         // One entry per name, since each entry replaces every line of its

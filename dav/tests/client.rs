@@ -774,3 +774,28 @@ async fn a_principal_on_another_host_of_the_site_is_asked_there() {
         vec![format!("http://127.0.0.1:{port}/dav/calendars/user/me/")]
     );
 }
+
+#[tokio::test]
+async fn a_create_s_location_reads_like_a_listed_href() {
+    // Google answers a create with a path and lists the same card as a whole URL.
+    let server = MockServer::start().await;
+    Mock::given(method("PUT"))
+        .and(path("/book/new.vcf"))
+        .respond_with(
+            ResponseTemplate::new(201)
+                .insert_header("ETag", "\"1\"")
+                .insert_header("Location", "/book/abc123"),
+        )
+        .mount(&server)
+        .await;
+    let (_, location) = client(&server)
+        .put_at(
+            "/book/new.vcf",
+            "BEGIN:VCARD\r\nEND:VCARD\r\n",
+            Kind::AddressBook,
+            Precondition::NoneMatch,
+        )
+        .await
+        .unwrap();
+    assert_eq!(location, Some(format!("{}/book/abc123", server.uri())));
+}

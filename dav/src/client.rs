@@ -897,14 +897,14 @@ impl DavApi for DavClient {
             .get("ETag")
             .and_then(|e| e.to_str().ok())
             .map(str::to_string);
-        // Where the server put it, as a path on its own site.
+        // Where the server put it, in the form a listing gives its hrefs.
         let location = response
             .headers()
             .get("Location")
             .and_then(|l| l.to_str().ok())
             .and_then(|l| url.join(l).ok())
             .filter(|l| l.host_str() == url.host_str())
-            .map(|l| l.path().to_string());
+            .map(|l| canonical_href(l.as_str()));
         // The body of a success is never read, and what explains a failure
         // is a few lines at the start.
         let text = if status.is_success() {
