@@ -12993,14 +12993,6 @@ msgid ""
 "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr "验证发行版本签名需要 gpgv 或 gpg，但两者都未安装。"
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"自定义字段名必须以 X- 开头，且只能使用大写字母、数字和连字符；X-AB 和 X-"
-"ADDRESSBOOKSERVER 开头的名称为保留名称。"
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14186,6 +14178,13 @@ msgstr "标记为非垃圾邮件"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "自定义字段名必须以 X- 开头，且只能使用大写字母、数字和连字符；X-AB 和 X-"
+#~ "ADDRESSBOOKSERVER 开头的名称为保留名称。"
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

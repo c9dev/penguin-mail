@@ -7,7 +7,6 @@
 
 use base64::Engine;
 use calcard::vcard::{VCard, VCardEntry, VCardProperty, VCardValue};
-use mailrs_domain::translate::gettext;
 
 use crate::{DavError, MOST_RESOURCE_BYTES};
 
@@ -311,12 +310,19 @@ pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavErro
                 .any(|name| e.name == VCardProperty::Other(name.clone()))
         });
     }
-    if fields.details.dates.is_some() {
-        let groups: Vec<_> = of(&card, VCardProperty::Other("X-ABDATE".into()))
+    for (touched, labelled) in [
+        (fields.details.dates.is_some(), "X-ABDATE"),
+        (fields.details.custom.is_some(), LABELLED),
+    ] {
+        if !touched {
+            continue;
+        }
+        let labelled = VCardProperty::Other(labelled.into());
+        let groups: Vec<_> = of(&card, labelled.clone())
             .filter_map(|e| e.group.clone())
             .collect();
         card.entries.retain(|e| {
-            e.name != VCardProperty::Other("X-ABDATE".into())
+            e.name != labelled
                 && !(e.name == VCardProperty::Other("X-ABLABEL".into())
                     && e.group.as_ref().is_some_and(|g| groups.contains(g)))
         });
@@ -342,7 +348,7 @@ pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavErro
         let mut renamed = std::collections::HashMap::new();
         for entry in &mut new {
             if let Some(group) = &entry.group
-                && group.starts_with("pmdate")
+                && (group.starts_with("pmdate") || group.starts_with("pmfield"))
             {
                 let replacement = renamed.entry(group.clone()).or_insert_with(|| {
                     let mut name = group.clone();
@@ -499,6 +505,17 @@ fn details(card: &VCard) -> mailrs_domain::contact::Details {
             .entries
             .iter()
             .filter_map(|e| match &e.name {
+                VCardProperty::Other(name) if name == LABELLED => {
+                    let label = card
+                        .entries
+                        .iter()
+                        .find(|label| {
+                            label.name == VCardProperty::Other("X-ABLABEL".into())
+                                && label.group == e.group
+                        })
+                        .and_then(first_text)?;
+                    first_text(e).map(|value| Field { label, value })
+                }
                 VCardProperty::Other(name) if editable_custom(name) => {
                     first_text(e).map(|value| Field {
                         label: name.clone(),
@@ -584,7 +601,17 @@ fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>)
         // One entry per name, since each entry replaces every line of its
         // property: a card may carry two X-SOCIALPROFILE lines.
         let mut by_name: Vec<(&str, Vec<String>)> = Vec::new();
-        for field in values {
+        // A label a person typed ("Badge") is no property name, so it goes
+        // in Apple's labelled form, as dates do.
+        let mut labelled = Vec::new();
+        for (i, field) in values.iter().enumerate() {
+            if !x_name(&field.label) {
+                if !field.value.is_empty() {
+                    labelled.push(format!("pmfield{i}.{LABELLED}:{}", escape(&field.value)));
+                    labelled.push(format!("pmfield{i}.X-ABLABEL:{}", escape(&field.label)));
+                }
+                continue;
+            }
             let line = (!field.value.is_empty())
                 .then(|| format!("{}:{}", field.label, escape(&field.value)));
             match by_name.iter_mut().find(|(name, _)| *name == field.label) {
@@ -595,6 +622,7 @@ fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>)
         for (name, lines) in by_name {
             out.push((VCardProperty::Other(name.to_string()), lines));
         }
+        out.push((VCardProperty::Other(LABELLED.into()), labelled));
     }
     if let Some(bytes) = &fields.photo {
         out.push((
@@ -611,32 +639,29 @@ fn extra_lines(fields: &CardFields, out: &mut Vec<(VCardProperty, Vec<String>)>)
     }
 }
 
+/// The property that holds a custom field under a label a person typed.
+const LABELLED: &str = "X-PENGUIN-FIELD";
+
 fn editable_custom(name: &str) -> bool {
-    name.starts_with("X-") && !name.starts_with("X-AB") && !name.starts_with("X-ADDRESSBOOKSERVER-")
+    name.starts_with("X-")
+        && name != LABELLED
+        && !name.starts_with("X-AB")
+        && !name.starts_with("X-ADDRESSBOOKSERVER-")
+}
+
+/// Whether a custom field's label can be its own property name.
+fn x_name(name: &str) -> bool {
+    editable_custom(name)
+        && name.len() >= 3
+        && name
+            .bytes()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'-')
 }
 
 /// Reject property-name injection and malformed dates before a network write.
 pub fn validate(fields: &CardFields) -> Result<(), DavError> {
     mailrs_domain::contact::check(&fields.details, fields.photo.as_deref())
         .map_err(DavError::Invalid)?;
-    let bad_name = |name: &str| {
-        !editable_custom(name)
-            || name.len() < 3
-            || !name
-                .bytes()
-                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'-')
-    };
-    if fields
-        .details
-        .custom
-        .iter()
-        .flatten()
-        .any(|field| bad_name(&field.label))
-    {
-        return Err(DavError::Invalid(gettext(
-            "Custom field names must be uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved.",
-        )));
-    }
     Ok(())
 }
 

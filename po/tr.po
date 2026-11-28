@@ -13519,14 +13519,6 @@ msgstr ""
 "Sürümün imzasını doğrulamak için gpgv veya gpg gerekiyor, ancak ikisi de "
 "kurulu değil."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"Özel alan adları X- ile başlar ve yalnızca büyük harf, rakam ve kısa çizgi "
-"içerir; X-AB ve X-ADDRESSBOOKSERVER adları ayrılmıştır."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14797,6 +14789,13 @@ msgstr "Gereksiz değil işaretle"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder} klasörüne taşı"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Özel alan adları X- ile başlar ve yalnızca büyük harf, rakam ve kısa "
+#~ "çizgi içerir; X-AB ve X-ADDRESSBOOKSERVER adları ayrılmıştır."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

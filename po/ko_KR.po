@@ -13237,14 +13237,6 @@ msgstr ""
 "버전의 서명을 확인하려면 gpgv 또는 gpg가 필요하지만 둘 다 설치되어 있지 않습"
 "니다."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"사용자 지정 항목 이름은 X-로 시작하고 영문 대문자, 숫자, 하이픈만 써야 합니"
-"다. X-AB와 X-ADDRESSBOOKSERVER 이름은 예약되어 있습니다."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14488,6 +14480,13 @@ msgstr "스팸 아님으로 표시"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}(으)로 이동"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "사용자 지정 항목 이름은 X-로 시작하고 영문 대문자, 숫자, 하이픈만 써야 합"
+#~ "니다. X-AB와 X-ADDRESSBOOKSERVER 이름은 예약되어 있습니다."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

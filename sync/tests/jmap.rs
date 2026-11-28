@@ -923,6 +923,43 @@ impl<'a> Run<'a> {
         assert_eq!(edited.details.notes, "Changed", "{kind:?}");
         assert_eq!(edited.details.groups.len(), 2, "{kind:?}");
         assert_eq!(edited.details.birthday, "1990-04-12", "{kind:?}");
+        // Clearing fields removes them, and a birthday may lose its year.
+        let cleared = contacts
+            .update_contact(
+                &made.resource,
+                &mailrs_gmail::ContactFields {
+                    organization: Some(String::new()),
+                    details: Changes {
+                        birthday: Some("--04-12".into()),
+                        addresses: Some(Vec::new()),
+                        urls: Some(Vec::new()),
+                        dates: Some(Vec::new()),
+                        custom: Some(Vec::new()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap_or_else(|err| panic!("{kind:?} refused an edit that clears: {err}"));
+        eprintln!("{kind:?} cleared: {:?}", cleared.details);
+        let page = contacts.connections(None, None).await.expect("the cards");
+        let read = page
+            .people
+            .iter()
+            .find(|p| p.resource == made.resource)
+            .unwrap_or_else(|| panic!("{kind:?} still lists the card"));
+        let d = &read.details;
+        assert_eq!(d.birthday, "--04-12", "{kind:?}");
+        assert!(d.addresses.is_empty(), "{kind:?}: {d:?}");
+        assert!(d.urls.is_empty(), "{kind:?}: {d:?}");
+        assert!(d.dates.is_empty(), "{kind:?}: {d:?}");
+        assert!(d.custom.is_empty(), "{kind:?}: {d:?}");
+        assert!(
+            read.organization.as_deref().unwrap_or_default().is_empty(),
+            "{kind:?}: {read:?}"
+        );
+        assert_eq!(d.notes, "Changed", "{kind:?}");
         contacts
             .delete_contact(&made.resource, None)
             .await

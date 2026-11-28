@@ -13261,14 +13261,6 @@ msgstr ""
 "Kiểm tra chữ ký bản phát hành cần gpgv hoặc gpg nhưng chưa cài chương trình "
 "nào."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"Tên trường tùy chỉnh bắt đầu bằng X- và chỉ gồm chữ in hoa, chữ số và dấu "
-"gạch nối; các tên X-AB và X-ADDRESSBOOKSERVER đã được dành riêng."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14504,6 +14496,13 @@ msgstr "Đánh dấu không phải thư rác"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Chuyển vào {folder}"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Tên trường tùy chỉnh bắt đầu bằng X- và chỉ gồm chữ in hoa, chữ số và dấu "
+#~ "gạch nối; các tên X-AB và X-ADDRESSBOOKSERVER đã được dành riêng."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

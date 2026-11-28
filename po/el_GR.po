@@ -13851,15 +13851,6 @@ msgstr ""
 "Ο έλεγχος της υπογραφής της έκδοσης χρειάζεται το gpgv ή το gpg, και κανένα "
 "από τα δύο δεν είναι εγκατεστημένο."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"Τα ονόματα των προσαρμοσμένων πεδίων αρχίζουν με X- και έχουν μόνο κεφαλαία "
-"γράμματα, αριθμούς και παύλες· τα ονόματα X-AB και X-ADDRESSBOOKSERVER είναι "
-"δεσμευμένα."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -15189,6 +15180,14 @@ msgstr "Σήμανση ως μη ανεπιθύμητο"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Μετακίνηση σε {folder}"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Τα ονόματα των προσαρμοσμένων πεδίων αρχίζουν με X- και έχουν μόνο "
+#~ "κεφαλαία γράμματα, αριθμούς και παύλες· τα ονόματα X-AB και X-"
+#~ "ADDRESSBOOKSERVER είναι δεσμευμένα."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

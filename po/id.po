@@ -13593,14 +13593,6 @@ msgstr ""
 "Pemeriksaan tanda tangan rilis memerlukan gpgv atau gpg, dan keduanya belum "
 "terpasang."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"Nama kolom khusus harus diawali X- dan hanya memakai huruf besar, angka, dan "
-"tanda hubung; nama X-AB dan X-ADDRESSBOOKSERVER sudah dipakai sistem."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14871,6 +14863,13 @@ msgstr "Tandai bukan spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Pindahkan ke {folder}"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Nama kolom khusus harus diawali X- dan hanya memakai huruf besar, angka, "
+#~ "dan tanda hubung; nama X-AB dan X-ADDRESSBOOKSERVER sudah dipakai sistem."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

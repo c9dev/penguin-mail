@@ -13743,14 +13743,6 @@ msgstr ""
 "Для перевірки підпису випуску потрібна програма gpgv або gpg, але жодної з "
 "них не встановлено."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"Назви власних полів починаються з X- і містять лише великі латинські літери, "
-"цифри та дефіси; назви X-AB і X-ADDRESSBOOKSERVER зарезервовано."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -15043,6 +15035,13 @@ msgstr "Позначити як не спам"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Перемістити до {folder}"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Назви власних полів починаються з X- і містять лише великі латинські "
+#~ "літери, цифри та дефіси; назви X-AB і X-ADDRESSBOOKSERVER зарезервовано."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

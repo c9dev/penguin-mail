@@ -204,15 +204,18 @@ fn extended_fields_and_photos_round_trip_in_both_versions() {
 }
 
 #[test]
-fn invalid_properties_dates_and_photos_are_rejected_before_writing() {
+fn invalid_dates_and_photos_are_rejected_and_labels_stay_text() {
     use mailrs_domain::contact::{Changes, Field};
     let original = new_card("id", &CardFields::default());
+    // A label that is no safe property name is written as a label's text,
+    // so it can neither add a line nor become a property.
     for label in [
         "X-FOO\r\nFN",
         "FN",
         "X-ABDATE",
         "X-ADDRESSBOOKSERVER-MEMBER",
         "X-FOO:bar",
+        "Badge",
     ] {
         let fields = CardFields {
             details: Changes {
@@ -224,7 +227,22 @@ fn invalid_properties_dates_and_photos_are_rejected_before_writing() {
             },
             ..Default::default()
         };
-        assert!(patch_card(&original, &fields).is_err());
+        let saved = patch_card(&original, &fields).unwrap();
+        let names: Vec<_> = saved
+            .lines()
+            .map(|line| line.split([':', ';']).next().unwrap_or_default())
+            .collect();
+        for forbidden in ["X-FOO", "X-ABDATE", "X-ADDRESSBOOKSERVER-MEMBER", "Badge"] {
+            assert!(!names.contains(&forbidden), "{saved}");
+        }
+        assert_eq!(
+            saved.matches("\nFN").count(),
+            original.matches("\nFN").count(),
+            "{saved}"
+        );
+        let read = read_card(&saved).unwrap().details.custom;
+        assert_eq!(read.len(), 1, "{saved}");
+        assert_eq!(read[0].value, "bad");
     }
     for date in ["2025-02-29", "2024-13-01", "--éé", "x\r\nFN:bad"] {
         assert!(
@@ -426,4 +444,47 @@ fn custom_fields_save_on_a_card_with_two_social_profiles() {
     .unwrap();
     assert_eq!(read_card(&saved).unwrap().details.custom, custom);
     assert!(saved.contains("TYPE=twitter"), "{saved}");
+}
+
+#[test]
+fn a_custom_field_under_a_typed_label_saves_edits_and_goes() {
+    use mailrs_domain::contact::{Changes, Field};
+    let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nX-SOCIALPROFILE:demo\r\nitem1.X-ABDATE:2015-06-20\r\nitem1.X-ABLABEL:Met\r\nEND:VCARD\r\n";
+    let field = |label: &str, value: &str| Field {
+        label: label.into(),
+        value: value.into(),
+    };
+    let with = |custom: Vec<Field>| CardFields {
+        details: Changes {
+            custom: Some(custom),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let social = field("X-SOCIALPROFILE", "demo");
+    let added = patch_card(text, &with(vec![social.clone(), field("Badge", "42")])).unwrap();
+    let read = read_card(&added).unwrap().details;
+    assert_eq!(
+        read.custom,
+        [social.clone(), field("Badge", "42")],
+        "{added}"
+    );
+    assert_eq!(read.dates, [field("Met", "2015-06-20")], "{added}");
+
+    let edited = patch_card(&added, &with(vec![social.clone(), field("Badge", "43")])).unwrap();
+    assert_eq!(
+        read_card(&edited).unwrap().details.custom,
+        [social.clone(), field("Badge", "43")],
+        "{edited}"
+    );
+
+    let removed = patch_card(&edited, &with(vec![social.clone()])).unwrap();
+    let read = read_card(&removed).unwrap().details;
+    assert_eq!(read.custom, [social], "{removed}");
+    assert_eq!(
+        read.dates,
+        [field("Met", "2015-06-20")],
+        "the date keeps its label: {removed}"
+    );
+    assert_eq!(removed.matches("X-ABLABEL").count(), 1, "{removed}");
 }

@@ -12270,10 +12270,6 @@ msgstr "This release is not signed with Penguin Mail's key, so Penguin Mail will
 msgid "Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr "Checking the release's signature needs gpgv or gpg, and neither is installed."
 
-#: dav/src/vcard.rs:637
-msgid "Custom field names must be uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr "Custom field names must be uppercase X- names using letters, numbers, and hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-
 #. A leading zero on the hour would read "03:05 PM" where ever"
 #. 12-hour clock on the desktop reads "3:05 PM""
 #: domain/src/calendar/clock.rs:29

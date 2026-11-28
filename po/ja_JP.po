@@ -13319,14 +13319,6 @@ msgstr ""
 "リリースの署名の検証にはgpgvまたはgpgが必要ですが、どちらもインストールされて"
 "いません。"
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"カスタム項目の名前は X- で始まり、英大文字、数字、ハイフンだけを使ってくださ"
-"い。X-AB と X-ADDRESSBOOKSERVER で始まる名前は予約されています。"
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14589,6 +14581,13 @@ msgstr "迷惑メールではないとする"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "{folder}に移動"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "カスタム項目の名前は X- で始まり、英大文字、数字、ハイフンだけを使ってくだ"
+#~ "さい。X-AB と X-ADDRESSBOOKSERVER で始まる名前は予約されています。"
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "

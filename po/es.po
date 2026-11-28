@@ -13648,15 +13648,6 @@ msgstr ""
 "Comprobar la firma de la versión necesita gpgv o gpg, y no está instalado "
 "ninguno."
 
-#: dav/src/vcard.rs:637
-msgid ""
-"Custom field names must be uppercase X- names using letters, numbers, and "
-"hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
-msgstr ""
-"Los nombres de los campos personalizados deben empezar por X- y usar "
-"mayúsculas, números y guiones; los nombres X-AB y X-ADDRESSBOOKSERVER están "
-"reservados."
-
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
 #: domain/src/calendar/clock.rs:29
@@ -14939,6 +14930,14 @@ msgstr "Marcar como correo deseado"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover a {folder}"
+
+#~ msgid ""
+#~ "Custom field names must be uppercase X- names using letters, numbers, and "
+#~ "hyphens; X-AB and X-ADDRESSBOOKSERVER names are reserved."
+#~ msgstr ""
+#~ "Los nombres de los campos personalizados deben empezar por X- y usar "
+#~ "mayúsculas, números y guiones; los nombres X-AB y X-ADDRESSBOOKSERVER "
+#~ "están reservados."
 
 #~ msgid ""
 #~ "Google keeps a birthday only with its year. Add the year or remove the "
