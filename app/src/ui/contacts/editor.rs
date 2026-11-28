@@ -545,7 +545,7 @@ impl Contacts {
                 }
             })
         };
-        let built = build(self, &original, dirty, new);
+        let built = build(self, &original, dirty.clone(), new);
         let form = built.form.clone();
         // Header
         let phead = gtk::Box::builder()
@@ -597,11 +597,11 @@ impl Contacts {
             save.set_sensitive(false);
             super::super::name(&save, &gettext("Save"));
             save.update_property(&[gtk::accessible::Property::Description(&hint)]);
-            let (save, f) = (save.downgrade(), form.clone());
+            let (save, f, can) = (save.downgrade(), form.clone(), !targets.is_empty());
             let update = move || {
                 if let Some(save) = save.upgrade() {
                     save.set_sensitive(
-                        !f.name.text().trim().is_empty() || !f.emails.strings().is_empty(),
+                        can && (!f.name.text().trim().is_empty() || !f.emails.strings().is_empty()),
                     );
                 }
             };
@@ -687,20 +687,20 @@ impl Contacts {
         avatar_holder.set_valign(gtk::Align::Center);
         remove.set_visible(original.photo_file.is_some());
         {
-            let (form, holder, remove, dirty_label) = (
+            let (form, holder, remove, dirty) = (
                 form.clone(),
                 avatar_holder.clone(),
                 remove.clone(),
-                unsaved.clone(),
+                dirty.clone(),
             );
             let name = original.name.clone().unwrap_or_default();
             replace.connect_clicked(move |b| {
                 let button = b.clone();
-                let (form, holder, remove, dirty_label, name) = (
+                let (form, holder, remove, dirty, name) = (
                     form.clone(),
                     holder.clone(),
                     remove.clone(),
-                    dirty_label.clone(),
+                    dirty.clone(),
                     name.clone(),
                 );
                 super::photo::choose(b.upcast_ref(), move |bytes, texture| {
@@ -711,16 +711,16 @@ impl Contacts {
                     holder.append(&parts::avatar(&name, 56, Some(&texture)));
                     button.set_label(&photo_label(true));
                     remove.set_visible(true);
-                    dirty_label.set_visible(true);
+                    dirty();
                 });
             });
         }
         {
-            let (form, holder, replace, dirty_label) = (
+            let (form, holder, replace, dirty) = (
                 form.clone(),
                 avatar_holder.clone(),
                 replace.clone(),
-                unsaved.clone(),
+                dirty.clone(),
             );
             let name = original.name.clone().unwrap_or_default();
             remove.connect_clicked(move |b| {
@@ -731,7 +731,7 @@ impl Contacts {
                 }
                 holder.append(&parts::avatar(&name, 56, None));
                 b.set_visible(false);
-                dirty_label.set_visible(true);
+                dirty();
             });
         }
         built.photo_box.append(&replace);

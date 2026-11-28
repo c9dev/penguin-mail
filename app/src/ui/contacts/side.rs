@@ -164,7 +164,10 @@ impl Contacts {
             } else {
                 None
             };
+            let mut spoken = format!("{}, {}", account_label(account.id).short, account.email);
             if let Some(word) = state_word {
+                // A screen reader hears the state the row shows.
+                spoken = format!("{spoken}, {word}");
                 row.append(
                     &gtk::Label::builder()
                         .label(word)
@@ -173,13 +176,7 @@ impl Contacts {
                         .build(),
                 );
             }
-            let button = self.nav_button(
-                row,
-                "",
-                &format!("{}, {}", account_label(account.id).short, account.email),
-                List::Account(account.id),
-                &current,
-            );
+            let button = self.nav_button(row, "", &spoken, List::Account(account.id), &current);
             button.add_css_class("stack");
             if on {
                 // A right-click, or the menu key, offers Turn Off Contacts.

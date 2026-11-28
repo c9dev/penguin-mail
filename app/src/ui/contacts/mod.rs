@@ -1015,6 +1015,11 @@ impl Contacts {
                     ),
                     None,
                 ),
+                List::All if self.accounts_with_contacts().is_empty() => (
+                    gettext("Contacts are off"),
+                    gettext("Turn contacts on for an account first."),
+                    None,
+                ),
                 _ => (
                     gettext("No contacts yet"),
                     gettext(
