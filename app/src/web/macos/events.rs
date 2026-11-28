@@ -15,6 +15,7 @@
 //! AppKit's local event monitors cannot do this: they run later, from
 //! `sendEvent:`, and see nothing GDK took.
 //!
+//! Cmd+C invokes the page's native Copy action before GTK can take it.
 //! Every other key reaches GTK first, so the window's shortcuts work while
 //! reading, and goes on to the page when GTK leaves it, as it does around
 //! WebKitGTK on Linux.
@@ -137,16 +138,34 @@ fn takes_scroll(inner: &Inner, event: &NSEvent) -> bool {
 }
 
 /// Whether a key is one the page takes first: it has the focus, and the
-/// key moves or presses something without a modifier that makes it a
-/// shortcut.
+/// key navigates the page or copies its selection.
 fn takes_key(inner: &Inner, event: &NSEvent) -> bool {
     let shortcut = NSEventModifierFlags::Command
         | NSEventModifierFlags::Control
         | NSEventModifierFlags::Option;
     inner.float.focused.get()
         && !inner.float.frozen.get()
-        && !event.modifierFlags().intersects(shortcut)
-        && PAGE_KEYS.contains(&event.keyCode())
+        && !inner.clip.isHidden()
+        && (copies(event)
+            || (!event.modifierFlags().intersects(shortcut)
+                && PAGE_KEYS.contains(&event.keyCode())))
+}
+
+fn copies(event: &NSEvent) -> bool {
+    matches!(event.r#type(), NSEventType::KeyDown | NSEventType::KeyUp)
+        // Command can select a Latin key map even with a Cyrillic input source.
+        && event
+            .characters()
+            .is_some_and(|text| copy_key(event.modifierFlags(), &text.to_string()))
+}
+
+fn copy_key(modifiers: NSEventModifierFlags, text: &str) -> bool {
+    let shortcuts = NSEventModifierFlags::Command
+        | NSEventModifierFlags::Control
+        | NSEventModifierFlags::Option
+        | NSEventModifierFlags::Shift;
+    modifiers.intersection(shortcuts) == NSEventModifierFlags::Command
+        && text.eq_ignore_ascii_case("c")
 }
 
 define_class!(
@@ -180,7 +199,12 @@ define_class!(
                 return std::ptr::null_mut();
             };
             if dequeue && let Some(page) = owner(&event) {
-                if let Some(window) = page.float.window.borrow().as_ref() {
+                if copies(&event) {
+                    if event.r#type() == NSEventType::KeyDown {
+                        // GTK's menu has no native Copy action for WebKit to resolve.
+                        unsafe { self.sendAction_to_from(sel!(copy:), Some(&page.view), None) };
+                    }
+                } else if let Some(window) = page.float.window.borrow().as_ref() {
                     window.sendEvent(&event);
                 }
                 return std::ptr::null_mut();
@@ -193,6 +217,23 @@ define_class!(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_command_c_copies() {
+        let command = NSEventModifierFlags::Command;
+        assert!(copy_key(command, "c"));
+        assert!(copy_key(command | NSEventModifierFlags::CapsLock, "C"));
+        assert!(!copy_key(NSEventModifierFlags::empty(), "c"));
+        assert!(!copy_key(NSEventModifierFlags::Control, "c"));
+        assert!(!copy_key(command, "a"));
+        for extra in [
+            NSEventModifierFlags::Shift,
+            NSEventModifierFlags::Control,
+            NSEventModifierFlags::Option,
+        ] {
+            assert!(!copy_key(command | extra, "c"));
+        }
+    }
 
     #[test]
     fn tab_and_shift_tab_stay_with_gtk() {

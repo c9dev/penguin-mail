@@ -76,6 +76,9 @@ message text; sender names remain visible and announced.
 
 ## The message
 
+Selected message text copies with Ctrl+C on Linux and Windows and Command+C on macOS.
+The macOS message menu shows Command+C beside Copy.
+
 Message Details includes a selectable delivered-to row for delivery addresses
 absent from To/Cc. These are transport header values, not verified identities.
 

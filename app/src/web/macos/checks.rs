@@ -36,6 +36,8 @@ pub async fn check_macos(url: &str) {
     finder.count("", false);
     assert_eq!(count.get(), Some(0));
 
+    copy_selected_text("c").await;
+    copy_selected_text("с").await;
     resize_with_a_cover().await;
 
     let hidden = crate::unsubscribe_page::PageBrowser::new();
@@ -148,4 +150,98 @@ fn above_gtk_tiles(page: &WebView) {
             );
         }
     }
+}
+
+async fn copy_selected_text(unmodified: &str) {
+    use objc2_app_kit::{
+        NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSPasteboard, NSPasteboardItem,
+        NSPasteboardTypeString, NSPasteboardWriting,
+    };
+    use objc2_foundation::{NSArray, NSPoint};
+
+    let page = WebView::reading("mailrs-copy-check", |_| {});
+    let loaded = Rc::new(Cell::new(false));
+    let ready = Rc::clone(&loaded);
+    page.on_loaded(move || ready.set(true));
+    page.load_html("<p id='text'>Copy this message text</p>");
+    let window = adw::Window::builder().content(&page.widget()).build();
+    window.present();
+    for _ in 0..100 {
+        glib::timeout_future(Duration::from_millis(50)).await;
+        if loaded.get() && page.0.float.window.borrow().is_some() {
+            break;
+        }
+    }
+    assert!(loaded.get(), "the copy fixture loaded");
+    assert!(page.widget().grab_focus());
+    let selected = Rc::new(Cell::new(false));
+    let ready = Rc::clone(&selected);
+    page.eval(
+        "getSelection().selectAllChildren(document.getElementById('text'))",
+        move |answer| {
+            answer.unwrap();
+            ready.set(true);
+        },
+    );
+    for _ in 0..100 {
+        glib::timeout_future(Duration::from_millis(50)).await;
+        if selected.get() {
+            break;
+        }
+    }
+    assert!(selected.get());
+
+    // Keep every clipboard format, and restore it whenever the key changed it, before asserting.
+    let clipboard = NSPasteboard::generalPasteboard();
+    let saved: Vec<Retained<ProtocolObject<dyn NSPasteboardWriting>>> = clipboard
+        .pasteboardItems()
+        .iter()
+        .flat_map(|items| items.iter())
+        .map(|item| {
+            let saved = NSPasteboardItem::new();
+            for kind in item.types() {
+                if let Some(data) = item.dataForType(&kind) {
+                    assert!(saved.setData_forType(&data, &kind));
+                }
+            }
+            ProtocolObject::from_retained(saved)
+        })
+        .collect();
+    let before = clipboard.changeCount();
+    let native = page.0.float.window.borrow().clone().unwrap();
+    let app = NSApplication::sharedApplication(main_thread());
+    for kind in [NSEventType::KeyDown, NSEventType::KeyUp] {
+        let event = NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
+            kind, NSPoint::new(0.0, 0.0), NSEventModifierFlags::Command, 0.0,
+            native.windowNumber(), None, ns_string!("c"), &NSString::from_str(unmodified), false, 8,
+        ).unwrap();
+        app.postEvent_atStart(&event, false);
+    }
+    let copied = || {
+        clipboard.changeCount() != before
+            && clipboard
+                .stringForType(unsafe { NSPasteboardTypeString })
+                .is_some_and(|text| text.to_string() == "Copy this message text")
+    };
+    // WebKit clears the clipboard at once and writes the text a moment later.
+    for _ in 0..100 {
+        glib::timeout_future(Duration::from_millis(50)).await;
+        if copied() {
+            break;
+        }
+    }
+    let copied = copied();
+    let held = clipboard
+        .stringForType(unsafe { NSPasteboardTypeString })
+        .map(|text| text.to_string());
+    if clipboard.changeCount() != before {
+        clipboard.clearContents();
+        assert!(clipboard.writeObjects(&NSArray::from_retained_slice(&saved)));
+    }
+    window.close();
+    assert!(
+        copied,
+        "Cmd+C copies the selected message text; the clipboard held {held:?}"
+    );
+    eprintln!("drive: Cmd+C copied the selected message text");
 }
