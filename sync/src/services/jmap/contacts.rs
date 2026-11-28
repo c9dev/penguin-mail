@@ -109,10 +109,11 @@ fn details_of(card: &Value) -> mailrs_domain::contact::Details {
         ..Default::default()
     };
     for a in values(card, "anniversaries") {
-        if let Some(text) = date_text(&a["date"]) {
-            if a["kind"] == "birth" && d.birthday.is_empty() {
-                d.birthday = text;
-            }
+        if a["kind"] == "birth"
+            && d.birthday.is_empty()
+            && let Some(text) = date_text(&a["date"])
+        {
+            d.birthday = text;
         }
     }
     d.notes = values(card, "notes")
@@ -169,10 +170,6 @@ fn details_patch(fields: &ContactFields) -> Map<String, Value> {
                 .collect(),
         )
     };
-    if c.birthday.is_some() || c.dates.is_some() {
-        // A card's birth date and its other dates share one property
-        // only when read; the other dates live in the vendor map.
-    }
     if let Some(birthday) = &c.birthday {
         let value = match date_json(birthday) {
             Some(date) => json!({ "a1": { "@type": "Anniversary", "kind": "birth", "date": date } }),
