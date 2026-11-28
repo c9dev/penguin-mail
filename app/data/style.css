@@ -2202,9 +2202,9 @@ list.own-paste { margin-top: 12px; }
    its name, so three spaces fit the 240 px card. */
 toggle-group.space-switch > toggle:not(:checked) buttoncontent > box { border-spacing: 0; }
 toggle-group.space-switch > toggle:not(:checked) buttoncontent label { font-size: 0; min-width: 0; }
-toggle-group.space-switch > toggle:not(:checked) { padding-left: 3px; padding-right: 3px; min-width: 16px; }
-toggle-group.space-switch > toggle:checked { padding-left: 8px; padding-right: 8px; }
-toggle-group.space-switch .space-badge { padding: 0 3px; min-width: 8px; }
+toggle-group.space-switch > toggle:not(:checked) { padding-left: 1px; padding-right: 1px; min-width: 16px; }
+toggle-group.space-switch > toggle:checked { padding-left: 6px; padding-right: 6px; }
+toggle-group.space-switch .space-badge { padding: 0 2px; min-width: 6px; }
 
 .cts-side { padding: 0 8px 12px; }
 .cts-kicker { margin: 14px 12px 4px; font-size: 0.82em; font-weight: 700; color: alpha(currentColor, 0.75); }

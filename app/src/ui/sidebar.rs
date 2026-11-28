@@ -448,17 +448,11 @@ fn align_header_title(header: &adw::HeaderBar, titles: &gtk::Box) {
             let (Some(header), Some(titles)) = (header.upgrade(), titles.upgrade()) else {
                 return;
             };
-            let center = controls.is_empty() || !controls.get_visible();
-            titles.set_halign(if center {
-                gtk::Align::Center
-            } else {
-                gtk::Align::Fill
-            });
-            header.set_centering_policy(if center {
-                adw::CenteringPolicy::Strict
-            } else {
-                adw::CenteringPolicy::Loose
-            });
+            // The switch takes the room up to the menu button, and sits in
+            // the middle of it, so the active space keeps its name.
+            let _ = controls;
+            titles.set_halign(gtk::Align::Fill);
+            header.set_centering_policy(adw::CenteringPolicy::Loose);
         });
         update(&controls);
         let changed = update.clone();
@@ -491,6 +485,8 @@ impl Sidebar {
             .css_classes(["round", "space-switch"])
             .homogeneous(false)
             .valign(gtk::Align::Center)
+            .halign(gtk::Align::Center)
+            .hexpand(true)
             .visible(false)
             .build();
         let mut labels = Vec::new();
@@ -521,7 +517,7 @@ impl Sidebar {
                 .valign(gtk::Align::Center)
                 .visible(false)
                 .build();
-            let child = gtk::Box::builder().spacing(3).build();
+            let child = gtk::Box::builder().spacing(2).build();
             child.append(&content);
             child.append(&badge);
             labels.push(content);
@@ -537,9 +533,12 @@ impl Sidebar {
         let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         titles.append(&title);
         titles.append(&switch);
+        // Loose centring lets the switch use the room up to the menu button,
+        // enough for the active space's name beside the badges.
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
             .show_title(true)
+            .centering_policy(adw::CenteringPolicy::Loose)
             .build();
         // Measure both layouts in this locale, including the largest off-screen badge.
         switch.set_visible(true);
