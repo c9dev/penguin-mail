@@ -673,7 +673,14 @@ impl Contacts {
             contact.as_ref(),
         ));
         built.photo_box.append(&avatar_holder);
-        let replace = parts::button(&gettext("Replace Photo"), &[]);
+        let photo_label = |has: bool| {
+            if has {
+                gettext("Replace Photo")
+            } else {
+                gettext("Add Photo")
+            }
+        };
+        let replace = parts::button(&photo_label(original.photo_file.is_some()), &[]);
         let remove = parts::button(&gettext("Remove Photo"), &[]);
         replace.set_valign(gtk::Align::Center);
         remove.set_valign(gtk::Align::Center);
@@ -688,6 +695,7 @@ impl Contacts {
             );
             let name = original.name.clone().unwrap_or_default();
             replace.connect_clicked(move |b| {
+                let button = b.clone();
                 let (form, holder, remove, dirty_label, name) = (
                     form.clone(),
                     holder.clone(),
@@ -701,20 +709,22 @@ impl Contacts {
                         holder.remove(&c);
                     }
                     holder.append(&parts::avatar(&name, 56, Some(&texture)));
+                    button.set_label(&photo_label(true));
                     remove.set_visible(true);
                     dirty_label.set_visible(true);
                 });
             });
         }
         {
-            let (form, holder, remove, dirty_label) = (
+            let (form, holder, replace, dirty_label) = (
                 form.clone(),
                 avatar_holder.clone(),
-                remove.clone(),
+                replace.clone(),
                 unsaved.clone(),
             );
             let name = original.name.clone().unwrap_or_default();
             remove.connect_clicked(move |b| {
+                replace.set_label(&photo_label(false));
                 *form.photo.borrow_mut() = Some(Vec::new());
                 while let Some(c) = holder.first_child() {
                     holder.remove(&c);

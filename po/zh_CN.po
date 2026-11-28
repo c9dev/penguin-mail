@@ -4331,8 +4331,8 @@ msgstr "{host} 拒绝登录：{reason}"
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1221
 #: app/src/ui/calendar/editor.rs:1297 app/src/ui/contacts_prefs.rs:28
 #: app/src/ui/contacts_prefs.rs:361 app/src/ui/preferences/google_route.rs:279
-#: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:569
-#: app/src/ui/sidebar.rs:1962 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/sidebar.rs:498 app/src/ui/sidebar.rs:565
+#: app/src/ui/sidebar.rs:1943 app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "日历"
 
@@ -4340,8 +4340,8 @@ msgstr "日历"
 #: app/src/ui/contacts/mod.rs:232 app/src/ui/contacts_prefs.rs:256
 #: app/src/ui/contacts_prefs.rs:271 app/src/ui/contacts_prefs.rs:276
 #: app/src/ui/contacts_prefs.rs:285 app/src/ui/preferences/google_route.rs:283
-#: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:570
-#: app/src/ui/sidebar.rs:937 app/src/ui/sidebar.rs:1963
+#: app/src/ui/sidebar.rs:504 app/src/ui/sidebar.rs:566
+#: app/src/ui/sidebar.rs:918 app/src/ui/sidebar.rs:1944
 #: app/src/ui/window.rs:3813
 msgid "Contacts"
 msgstr "联系人"
@@ -4744,7 +4744,7 @@ msgstr "邮件会发送至 Anthropic，通过 Claude 订阅供 Claude 读取。"
 msgid "No unread mail"
 msgstr "没有未读邮件"
 
-#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1987
+#: app/src/tray.rs:42 app/src/ui/sidebar.rs:1968
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}，{count} 封未读邮件"
@@ -4765,7 +4765,7 @@ msgstr "打开 Penguin Mail"
 msgid "New Message"
 msgstr "新建邮件"
 
-#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2580 app/src/ui/window.rs:3812
+#: app/src/tray.rs:195 app/src/ui/sidebar.rs:2561 app/src/ui/window.rs:3812
 msgid "Check for Mail"
 msgstr "检查邮件"
 
@@ -5563,7 +5563,7 @@ msgstr "编辑 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:732 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/contacts/editor.rs:742 app/src/ui/sender_prefs.rs:215
 #: app/src/ui/window.rs:3570
 msgid "Remove"
 msgstr "移除"
@@ -6394,8 +6394,8 @@ msgid "Only people who can change this calendar see the details"
 msgstr "仅有可更改此日历的人能查看详细数据"
 
 #: app/src/ui/calendar/editor.rs:2028 app/src/ui/calendar/manage.rs:415
-#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2297
-#: app/src/ui/sidebar.rs:2598
+#: app/src/ui/calendar/sidebar.rs:1544 app/src/ui/sidebar.rs:2278
+#: app/src/ui/sidebar.rs:2579
 msgid "Color"
 msgstr "颜色"
 
@@ -7248,19 +7248,19 @@ msgstr "授予 {account} 访问权限"
 msgid "Sign in again to {account}"
 msgstr "重新登录 {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2603
+#: app/src/ui/calendar/sidebar.rs:1334 app/src/ui/sidebar.rs:2584
 msgid "Sign In Again…"
 msgstr "重新登录…"
 
-#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2611
+#: app/src/ui/calendar/sidebar.rs:1335 app/src/ui/sidebar.rs:2592
 msgid "Remove Account…"
 msgstr "移除账号…"
 
-#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2618
+#: app/src/ui/calendar/sidebar.rs:1349 app/src/ui/sidebar.rs:2599
 msgid "Account options"
 msgstr "账号选项"
 
-#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2623
+#: app/src/ui/calendar/sidebar.rs:1354 app/src/ui/sidebar.rs:2604
 msgid "Options for {account}"
 msgstr "{account} 的选项"
 
@@ -7288,13 +7288,13 @@ msgstr "从列表隐藏"
 msgid "Original Color"
 msgstr "原始颜色"
 
-#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2285
-#: app/src/ui/sidebar.rs:2588
+#: app/src/ui/calendar/sidebar.rs:1548 app/src/ui/sidebar.rs:2266
+#: app/src/ui/sidebar.rs:2569
 msgid "Rename…"
 msgstr "重命名…"
 
-#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2186
-#: app/src/ui/sidebar.rs:2313
+#: app/src/ui/calendar/sidebar.rs:1549 app/src/ui/sidebar.rs:2167
+#: app/src/ui/sidebar.rs:2294
 msgid "Delete…"
 msgstr "删除…"
 
@@ -7410,7 +7410,7 @@ msgstr "{date}，有活动"
 msgid "Offline, last updated {time}"
 msgstr "离线，上次更新于 {time}"
 
-#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2683
+#: app/src/ui/calendar/words.rs:396 app/src/ui/sidebar.rs:2664
 msgid "Offline"
 msgstr "离线"
 
@@ -7537,7 +7537,7 @@ msgid "Choose a Time…"
 msgstr "选择时间…"
 
 #: app/src/ui/composer/mod.rs:444 app/src/ui/composer/mod.rs:2178
-#: app/src/ui/sidebar.rs:1535 app/src/ui/sidebar.rs:2066
+#: app/src/ui/sidebar.rs:1516 app/src/ui/sidebar.rs:2047
 msgid "Send Later"
 msgstr "定时发送"
 
@@ -7960,7 +7960,7 @@ msgid "Phone"
 msgstr "电话"
 
 #: app/src/ui/contact_card.rs:178 app/src/ui/contacts/person.rs:229
-#: app/src/ui/sidebar.rs:1498
+#: app/src/ui/sidebar.rs:1479
 msgid "Remove from VIPs"
 msgstr "从 VIP 移除"
 
@@ -7987,10 +7987,8 @@ msgid "Organization"
 msgstr "组织"
 
 #: app/src/ui/contacts/editor.rs:310
-#, fuzzy
-#| msgid "Organization"
 msgid "Add organization"
-msgstr "组织"
+msgstr "添加组织"
 
 #: app/src/ui/contacts/editor.rs:318
 msgid "Add email"
@@ -8122,35 +8120,39 @@ msgstr "保存到"
 msgid "Which account"
 msgstr "哪个账户"
 
-#: app/src/ui/contacts/editor.rs:676
+#: app/src/ui/contacts/editor.rs:678
 msgid "Replace Photo"
 msgstr "更换照片"
 
-#: app/src/ui/contacts/editor.rs:677
+#: app/src/ui/contacts/editor.rs:680
+msgid "Add Photo"
+msgstr "添加照片"
+
+#: app/src/ui/contacts/editor.rs:684
 msgid "Remove Photo"
 msgstr "移除照片"
 
-#: app/src/ui/contacts/editor.rs:735 app/src/ui/contacts/person.rs:759
+#: app/src/ui/contacts/editor.rs:745 app/src/ui/contacts/person.rs:759
 msgid "Delete {name} from {account}"
 msgstr "从 {account} 删除 {name}"
 
-#: app/src/ui/contacts/editor.rs:791
+#: app/src/ui/contacts/editor.rs:801
 msgid "Enter a name or an email address."
 msgstr "请输入姓名或电子邮件地址。"
 
-#: app/src/ui/contacts/editor.rs:797
+#: app/src/ui/contacts/editor.rs:807
 msgid "Enter a valid email address."
 msgstr "请输入有效的电子邮件地址。"
 
-#: app/src/ui/contacts/editor.rs:800
+#: app/src/ui/contacts/editor.rs:810
 msgid "Contacts access for this account was turned off."
 msgstr "此账号的联系人访问已关闭。"
 
-#: app/src/ui/contacts/editor.rs:844
+#: app/src/ui/contacts/editor.rs:854
 msgid "Could not save the contact: {reason}"
 msgstr "无法保存联系人：{reason}"
 
-#: app/src/ui/contacts/editor.rs:889
+#: app/src/ui/contacts/editor.rs:899
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8160,7 +8162,7 @@ msgstr ""
 "{other_account} 仍有 {other}，关联不会更改那条记录。点按“保存”之前不会写入任"
 "何内容。"
 
-#: app/src/ui/contacts/editor.rs:900
+#: app/src/ui/contacts/editor.rs:910
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8168,11 +8170,11 @@ msgstr ""
 "正在编辑 {account} 中 {name} 的联系人。{other_account} 保留 {other}。点按“保"
 "存”之前不会写入任何内容。"
 
-#: app/src/ui/contacts/editor.rs:923
+#: app/src/ui/contacts/editor.rs:933
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr "正在编辑 {account} 中的联系人。点按“保存”之前不会写入任何内容。"
 
-#: app/src/ui/contacts/editor.rs:929
+#: app/src/ui/contacts/editor.rs:939
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -8347,8 +8349,8 @@ msgid "All contacts"
 msgstr "所有联系人"
 
 #: app/src/ui/contacts/mod.rs:1297 app/src/ui/contacts/side.rs:84
-#: app/src/ui/sidebar.rs:1485 app/src/ui/sidebar.rs:1487
-#: app/src/ui/sidebar.rs:2089 app/src/ui/sidebar.rs:2091
+#: app/src/ui/sidebar.rs:1466 app/src/ui/sidebar.rs:1468
+#: app/src/ui/sidebar.rs:2070 app/src/ui/sidebar.rs:2072
 msgid "VIPs"
 msgstr "VIP"
 
@@ -8431,12 +8433,12 @@ msgid "You have not written to them."
 msgstr "您还没有给他写过信。"
 
 #: app/src/ui/contacts/person.rs:529 app/src/ui/sidebar.rs:494
-#: app/src/ui/sidebar.rs:568 app/src/ui/sidebar.rs:1961
+#: app/src/ui/sidebar.rs:564 app/src/ui/sidebar.rs:1942
 #: app/src/ui/thread_list.rs:377
 msgid "Mail"
 msgstr "邮件"
 
-#: app/src/ui/contacts/person.rs:535 app/src/ui/sidebar.rs:2500
+#: app/src/ui/contacts/person.rs:535 app/src/ui/sidebar.rs:2481
 msgid "On this computer"
 msgstr "在此电脑上"
 
@@ -8697,7 +8699,7 @@ msgid "Find Again"
 msgstr "再次寻找"
 
 #: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:610
-#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2180
+#: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:2161
 msgid "Edit…"
 msgstr "编辑…"
 
@@ -8889,8 +8891,8 @@ msgstr "标记为已读或未读"
 msgid "Tags…"
 msgstr "类别…"
 
-#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1543
-#: app/src/ui/sidebar.rs:2072 app/src/ui/window/reminders.rs:25
+#: app/src/ui/conversation.rs:645 app/src/ui/sidebar.rs:1524
+#: app/src/ui/sidebar.rs:2053 app/src/ui/window/reminders.rs:25
 #: app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "提醒我"
@@ -10951,7 +10953,7 @@ msgstr "添加地址"
 msgid "Default sender"
 msgstr "默认发件人"
 
-#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2489
+#: app/src/ui/sender_prefs.rs:121 app/src/ui/sidebar.rs:2470
 msgid "Signature…"
 msgstr "签名…"
 
@@ -11012,143 +11014,142 @@ msgstr ""
 msgid "Stop the message from going out"
 msgstr "停止发送邮件"
 
-#: app/src/ui/sidebar.rs:480 app/src/ui/sidebar.rs:963
+#: app/src/ui/sidebar.rs:480 app/src/ui/sidebar.rs:944
 #: app/src/ui/sidebar/sections.rs:26
 #: app/src/ui/window/customize_mailboxes.rs:516
 msgid "Mailboxes"
 msgstr "邮箱"
 
-#: app/src/ui/sidebar.rs:548 app/src/ui/sidebar.rs:1952
-#: app/src/ui/sidebar.rs:3181
-msgid "99+"
-msgstr "99+"
-
-#: app/src/ui/sidebar.rs:953
+#: app/src/ui/sidebar.rs:934
 msgid "Calendars"
 msgstr "日历"
 
-#: app/src/ui/sidebar.rs:1527 app/src/ui/sidebar.rs:2060
+#: app/src/ui/sidebar.rs:1508 app/src/ui/sidebar.rs:2041
 msgid "Outbox"
 msgstr "发件箱"
 
-#: app/src/ui/sidebar.rs:1590
+#: app/src/ui/sidebar.rs:1571
 msgid "Holds folders, not mail"
 msgstr "存放文件夹，不存放邮件"
 
-#: app/src/ui/sidebar.rs:1819
+#: app/src/ui/sidebar.rs:1800
 msgid "Approximate unread message count from downloaded mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1822
+#: app/src/ui/sidebar.rs:1803
 #, fuzzy
 #| msgid "The message is larger than the server sends."
 msgid "Unread messages counted on the server"
 msgstr "邮件超过服务器的寄送大小上限。"
 
-#: app/src/ui/sidebar.rs:1825
+#: app/src/ui/sidebar.rs:1806
 #, fuzzy
 #| msgid "{count} unread message"
 #| msgid_plural "{count} unread messages"
 msgid "Counting unread messages on the server…"
 msgstr "{count} 封未读邮件"
 
-#: app/src/ui/sidebar.rs:1828
+#: app/src/ui/sidebar.rs:1809
 msgid ""
 "Unread count unavailable. The account may be offline or the server may not "
 "support these conditions."
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1911
+#: app/src/ui/sidebar.rs:1892
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}，{count} 封未读邮件"
 
-#: app/src/ui/sidebar.rs:1917
+#: app/src/ui/sidebar.rs:1898
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}，{count} 封邮件"
 
-#: app/src/ui/sidebar.rs:1965
+#: app/src/ui/sidebar.rs:1933 app/src/ui/sidebar.rs:3162
+msgid "99+"
+msgstr "99+"
+
+#: app/src/ui/sidebar.rs:1946
 msgid "Mail, {count} unread"
 msgid_plural "Mail, {count} unread"
 msgstr[0] "邮件，{count} 封未读"
 
-#: app/src/ui/sidebar.rs:1971
+#: app/src/ui/sidebar.rs:1952
 msgid "Calendar, {count} waiting for your answer"
 msgid_plural "Calendar, {count} waiting for your answer"
 msgstr[0] "日历，{count} 个邀请等待回复"
 
-#: app/src/ui/sidebar.rs:2182 app/src/ui/sidebar.rs:2304
-#: app/src/ui/sidebar.rs:2599
+#: app/src/ui/sidebar.rs:2163 app/src/ui/sidebar.rs:2285
+#: app/src/ui/sidebar.rs:2580
 msgid "Move Up"
 msgstr "上移"
 
-#: app/src/ui/sidebar.rs:2183 app/src/ui/sidebar.rs:2307
-#: app/src/ui/sidebar.rs:2600
+#: app/src/ui/sidebar.rs:2164 app/src/ui/sidebar.rs:2288
+#: app/src/ui/sidebar.rs:2581
 msgid "Move Down"
 msgstr "下移"
 
-#: app/src/ui/sidebar.rs:2335
+#: app/src/ui/sidebar.rs:2316
 msgid "Empty Trash…"
 msgstr "清空回收站…"
 
-#: app/src/ui/sidebar.rs:2488
+#: app/src/ui/sidebar.rs:2469
 msgid "Automatic Reply…"
 msgstr "自动回复…"
 
-#: app/src/ui/sidebar.rs:2490
+#: app/src/ui/sidebar.rs:2471
 msgid "Rules…"
 msgstr "规则…"
 
-#: app/src/ui/sidebar.rs:2491 app/src/ui/window.rs:3816
+#: app/src/ui/sidebar.rs:2472 app/src/ui/window.rs:3816
 msgid "Hide My Email…"
 msgstr "隐藏电子邮件地址…"
 
-#: app/src/ui/sidebar.rs:2508
+#: app/src/ui/sidebar.rs:2489
 msgid "On this computer. Show or hide this account's mailboxes"
 msgstr "在此电脑上。显示或隐藏此账号的邮箱"
 
-#: app/src/ui/sidebar.rs:2509
+#: app/src/ui/sidebar.rs:2490
 msgid "Show or hide this account's mailboxes"
 msgstr "显示或隐藏此账号的邮箱"
 
-#: app/src/ui/sidebar.rs:2585
+#: app/src/ui/sidebar.rs:2566
 #, fuzzy
 #| msgid "New Folder…"
 msgid "Manage Folders…"
 msgstr "添加文件夹…"
 
-#: app/src/ui/sidebar.rs:2604
+#: app/src/ui/sidebar.rs:2585
 msgid "Switch to JMAP…"
 msgstr "切换至 JMAP…"
 
-#: app/src/ui/sidebar.rs:2606
+#: app/src/ui/sidebar.rs:2587
 msgid "Messages That Will Not Download…"
 msgstr "无法下载的邮件…"
 
-#: app/src/ui/sidebar.rs:2681
+#: app/src/ui/sidebar.rs:2662
 msgid "Sign in again to keep syncing"
 msgstr "请重新登录以继续同步"
 
-#: app/src/ui/sidebar.rs:2687
+#: app/src/ui/sidebar.rs:2668
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} 未响应，正在重试"
 
-#: app/src/ui/sidebar.rs:2698
+#: app/src/ui/sidebar.rs:2679
 msgid "The keyring is not responding; retrying"
 msgstr "密钥环未响应，正在重试"
 
-#: app/src/ui/sidebar.rs:2701
+#: app/src/ui/sidebar.rs:2682
 msgid "Downloading mail"
 msgstr "正在下载邮件"
 
-#: app/src/ui/sidebar.rs:2705
+#: app/src/ui/sidebar.rs:2686
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "因错误而停止同步；请重新启动 Penguin Mail 以重试"
 
 #. Translators: the line beside a Gmail account when Gmail
 #. stopped handing out mail for the day.
-#: app/src/ui/sidebar.rs:2712
+#: app/src/ui/sidebar.rs:2693
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
