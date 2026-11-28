@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- On macOS, Command+C copies selected message text, and the Copy menu item shows its shortcut.
 - A recipient chip no longer runs its background past its Remove button when a longer chip sits beside it.
 - Large unread counts are centered and easier to read on the inbox categories and the Mail and Calendar switch.
 - Closing Customize Mailboxes releases its folder lists.
