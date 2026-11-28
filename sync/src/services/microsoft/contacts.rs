@@ -51,6 +51,10 @@ impl Extras {
                 address[1] = extended.clone();
             }
         }
+        if !self.addresses.is_empty() {
+            // The fourth address on stays after Graph's three slots.
+            details.addresses.resize_with(3, Default::default);
+        }
         details.addresses.extend(self.addresses.iter().cloned());
         details.urls.extend(self.urls.iter().cloned());
         details.dates = self.dates.clone();
@@ -120,8 +124,22 @@ fn address_of(a: &PhysicalAddress) -> mailrs_domain::contact::Address {
     ]
 }
 
+/// The three slots in order, so each address goes back to its own slot.
+/// Graph answers an unused slot as `{}`; the empty ones at the end are left
+/// out, so a contact with no address shows none.
+fn addresses_of(c: &GraphContact) -> Vec<mailrs_domain::contact::Address> {
+    let mut all: Vec<_> = [&c.home_address, &c.business_address, &c.other_address]
+        .into_iter()
+        .map(|a| a.as_ref().map(address_of).unwrap_or_default())
+        .collect();
+    while all.last().is_some_and(|a| a.iter().all(String::is_empty)) {
+        all.pop();
+    }
+    all
+}
+
+/// An address as Graph's body; an empty part is sent as "" so it clears.
 fn physical(a: &mailrs_domain::contact::Address) -> Value {
-    let part = |s: &String| (!s.is_empty()).then(|| s.clone());
     // Graph has one street line, so a PO box and an extended address join it.
     let street: Vec<&str> = [&a[0], &a[1], &a[2]]
         .into_iter()
@@ -129,11 +147,11 @@ fn physical(a: &mailrs_domain::contact::Address) -> Value {
         .map(String::as_str)
         .collect();
     json!({
-        "street": (!street.is_empty()).then(|| street.join("\n")),
-        "city": part(&a[3]),
-        "state": part(&a[4]),
-        "postalCode": part(&a[5]),
-        "countryOrRegion": part(&a[6]),
+        "street": street.join("\n"),
+        "city": a[3],
+        "state": a[4],
+        "postalCode": a[5],
+        "countryOrRegion": a[6],
     })
 }
 
@@ -157,11 +175,7 @@ fn details_of(c: &GraphContact) -> mailrs_domain::contact::Details {
         notes: c.personal_notes.clone().unwrap_or_default(),
         urls: c.business_home_page.iter().cloned().collect(),
         groups: c.categories.clone(),
-        addresses: [&c.home_address, &c.business_address, &c.other_address]
-            .into_iter()
-            .flatten()
-            .map(address_of)
-            .collect(),
+        addresses: addresses_of(c),
         ..Default::default()
     }
 }
@@ -255,7 +269,8 @@ fn body_of(fields: &ContactFields, home: &[String]) -> Value {
             .into_iter()
             .enumerate()
         {
-            body.insert(key.into(), addresses.get(at).map_or(Value::Null, physical));
+            let address = addresses.get(at).cloned().unwrap_or_default();
+            body.insert(key.into(), physical(&address));
         }
     }
     Value::Object(body)
@@ -519,7 +534,8 @@ mod tests {
         assert_eq!(body["birthday"], "1990-04-12T00:00:00Z");
         assert_eq!(body["businessHomePage"], "https://example.org");
         assert_eq!(body["homeAddress"]["city"], "Lisbon");
-        assert_eq!(body["otherAddress"], Value::Null);
+        assert_eq!(body["businessAddress"]["city"], "", "an empty slot clears");
+        assert_eq!(body["otherAddress"]["street"], "");
         let read: GraphContact = serde_json::from_value(json!({
             "id": "c1",
             "birthday": "1990-04-12T00:00:00Z",
@@ -535,5 +551,25 @@ mod tests {
         assert_eq!(d.groups, ["Friends"]);
         assert_eq!(d.addresses[0][3], "Lisbon");
         assert_eq!(d.addresses[0][6], "Portugal");
+    }
+
+    #[test]
+    fn graphs_empty_address_slots_read_as_no_address() {
+        // Outlook.com answers each unused slot as `{}` (seen live 2026-11-28).
+        let read: GraphContact = serde_json::from_value(json!({
+            "id": "c1",
+            "homeAddress": {},
+            "businessAddress": { "city": "Porto" },
+            "otherAddress": {},
+        }))
+        .unwrap();
+        let addresses = person_of(&read).details.addresses;
+        assert_eq!(addresses.len(), 2, "the empty home slot keeps its place");
+        assert_eq!(addresses[1][3], "Porto");
+        let none: GraphContact = serde_json::from_value(
+            json!({ "id": "c2", "homeAddress": {}, "businessAddress": {}, "otherAddress": {} }),
+        )
+        .unwrap();
+        assert!(person_of(&none).details.addresses.is_empty());
     }
 }
