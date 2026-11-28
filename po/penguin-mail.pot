@@ -4851,7 +4851,7 @@ msgstr ""
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:578
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
 #: app/src/ui/contacts/mod.rs:1110 app/src/ui/contacts/mod.rs:1207
 #: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
@@ -5435,7 +5435,7 @@ msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:731 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/contacts/editor.rs:732 app/src/ui/sender_prefs.rs:215
 #: app/src/ui/window.rs:3570
 msgid "Remove"
 msgstr ""
@@ -5511,7 +5511,7 @@ msgstr ""
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:528 app/src/ui/contacts/editor.rs:597
+#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:598
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -7964,73 +7964,73 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:571 app/src/ui/contacts/mod.rs:1251
+#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1251
 msgid "New contact"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:573
+#: app/src/ui/contacts/editor.rs:574
 msgid "Edit contact"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:626 app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/person.rs:1156
 msgid "Turn contacts on for an account first."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:630 app/src/ui/contacts/editor.rs:635
+#: app/src/ui/contacts/editor.rs:631 app/src/ui/contacts/editor.rs:636
 #: app/src/ui/contacts/person.rs:1153 app/src/ui/contacts/person.rs:1160
 msgid "Save to"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:654
+#: app/src/ui/contacts/editor.rs:655
 msgid "Which account"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:675
+#: app/src/ui/contacts/editor.rs:676
 msgid "Replace Photo"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:676
+#: app/src/ui/contacts/editor.rs:677
 msgid "Remove Photo"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:734 app/src/ui/contacts/person.rs:759
+#: app/src/ui/contacts/editor.rs:735 app/src/ui/contacts/person.rs:759
 msgid "Delete {name} from {account}"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:790
+#: app/src/ui/contacts/editor.rs:791
 msgid "Enter a name or an email address."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:796
+#: app/src/ui/contacts/editor.rs:797
 msgid "Enter a valid email address."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:799
+#: app/src/ui/contacts/editor.rs:800
 msgid "Contacts access for this account was turned off."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:843
+#: app/src/ui/contacts/editor.rs:844
 msgid "Could not save the contact: {reason}"
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:888
+#: app/src/ui/contacts/editor.rs:889
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
 "Nothing is written until you press Save."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:899
+#: app/src/ui/contacts/editor.rs:900
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:922
+#: app/src/ui/contacts/editor.rs:923
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 
-#: app/src/ui/contacts/editor.rs:929
+#: app/src/ui/contacts/editor.rs:930
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -12791,11 +12791,11 @@ msgstr ""
 msgid "Contact photos must be PNG images no larger than 512 KB."
 msgstr ""
 
-#: domain/src/contact.rs:143
+#: domain/src/contact.rs:146
 msgid "%-d %B"
 msgstr ""
 
-#: domain/src/contact.rs:158
+#: domain/src/contact.rs:162
 msgid "{date} · {age} year old"
 msgid_plural "{date} · {age} years old"
 msgstr[0] ""

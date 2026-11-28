@@ -4965,7 +4965,7 @@ msgstr "复制链接"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:345
 #: app/src/ui/composer/mod.rs:2162 app/src/ui/composer/mod.rs:2385
 #: app/src/ui/composer/mod.rs:2750 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:578
+#: app/src/ui/confirm.rs:29 app/src/ui/contacts/editor.rs:579
 #: app/src/ui/contacts/mod.rs:1110 app/src/ui/contacts/mod.rs:1207
 #: app/src/ui/contacts/person.rs:748 app/src/ui/contacts/person.rs:898
 #: app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
@@ -5563,7 +5563,7 @@ msgstr "编辑 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1729
 #: app/src/ui/composer/mod.rs:2525 app/src/ui/composer/recipients.rs:591
-#: app/src/ui/contacts/editor.rs:731 app/src/ui/sender_prefs.rs:215
+#: app/src/ui/contacts/editor.rs:732 app/src/ui/sender_prefs.rs:215
 #: app/src/ui/window.rs:3570
 msgid "Remove"
 msgstr "移除"
@@ -5641,7 +5641,7 @@ msgstr "测试"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:184
 #: app/src/ui/calendar/quick.rs:226 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:345 app/src/ui/composer/mod.rs:3172
-#: app/src/ui/contacts/editor.rs:528 app/src/ui/contacts/editor.rs:597
+#: app/src/ui/contacts/editor.rs:529 app/src/ui/contacts/editor.rs:598
 #: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
 #: app/src/ui/sender_prefs.rs:210 app/src/ui/sender_prefs/signature.rs:78
 #: app/src/ui/smart_editor.rs:320 app/src/ui/templates.rs:234
@@ -8101,56 +8101,56 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr "有未保存的更改"
 
-#: app/src/ui/contacts/editor.rs:571 app/src/ui/contacts/mod.rs:1251
+#: app/src/ui/contacts/editor.rs:572 app/src/ui/contacts/mod.rs:1251
 msgid "New contact"
 msgstr "新建联系人"
 
-#: app/src/ui/contacts/editor.rs:573
+#: app/src/ui/contacts/editor.rs:574
 msgid "Edit contact"
 msgstr "编辑联系人"
 
-#: app/src/ui/contacts/editor.rs:626 app/src/ui/contacts/person.rs:1156
+#: app/src/ui/contacts/editor.rs:627 app/src/ui/contacts/person.rs:1156
 msgid "Turn contacts on for an account first."
 msgstr "请先为一个账户开启联系人。"
 
-#: app/src/ui/contacts/editor.rs:630 app/src/ui/contacts/editor.rs:635
+#: app/src/ui/contacts/editor.rs:631 app/src/ui/contacts/editor.rs:636
 #: app/src/ui/contacts/person.rs:1153 app/src/ui/contacts/person.rs:1160
 msgid "Save to"
 msgstr "保存到"
 
-#: app/src/ui/contacts/editor.rs:654
+#: app/src/ui/contacts/editor.rs:655
 msgid "Which account"
 msgstr "哪个账户"
 
-#: app/src/ui/contacts/editor.rs:675
+#: app/src/ui/contacts/editor.rs:676
 msgid "Replace Photo"
 msgstr "更换照片"
 
-#: app/src/ui/contacts/editor.rs:676
+#: app/src/ui/contacts/editor.rs:677
 msgid "Remove Photo"
 msgstr "移除照片"
 
-#: app/src/ui/contacts/editor.rs:734 app/src/ui/contacts/person.rs:759
+#: app/src/ui/contacts/editor.rs:735 app/src/ui/contacts/person.rs:759
 msgid "Delete {name} from {account}"
 msgstr "从 {account} 删除 {name}"
 
-#: app/src/ui/contacts/editor.rs:790
+#: app/src/ui/contacts/editor.rs:791
 msgid "Enter a name or an email address."
 msgstr "请输入姓名或电子邮件地址。"
 
-#: app/src/ui/contacts/editor.rs:796
+#: app/src/ui/contacts/editor.rs:797
 msgid "Enter a valid email address."
 msgstr "请输入有效的电子邮件地址。"
 
-#: app/src/ui/contacts/editor.rs:799
+#: app/src/ui/contacts/editor.rs:800
 msgid "Contacts access for this account was turned off."
 msgstr "此账号的联系人访问已关闭。"
 
-#: app/src/ui/contacts/editor.rs:843
+#: app/src/ui/contacts/editor.rs:844
 msgid "Could not save the contact: {reason}"
 msgstr "无法保存联系人：{reason}"
 
-#: app/src/ui/contacts/editor.rs:888
+#: app/src/ui/contacts/editor.rs:889
 msgid ""
 "Editing the {account} contact. The All contacts row uses this name. "
 "{other_account} still has {other}, and linking does not change that record. "
@@ -8160,7 +8160,7 @@ msgstr ""
 "{other_account} 仍有 {other}，关联不会更改那条记录。点按“保存”之前不会写入任"
 "何内容。"
 
-#: app/src/ui/contacts/editor.rs:899
+#: app/src/ui/contacts/editor.rs:900
 msgid ""
 "Editing the {account} contact for {name}. {other_account} keeps {other}. "
 "Nothing is written until you press Save."
@@ -8168,11 +8168,11 @@ msgstr ""
 "正在编辑 {account} 中 {name} 的联系人。{other_account} 保留 {other}。点按“保"
 "存”之前不会写入任何内容。"
 
-#: app/src/ui/contacts/editor.rs:922
+#: app/src/ui/contacts/editor.rs:923
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr "正在编辑 {account} 中的联系人。点按“保存”之前不会写入任何内容。"
 
-#: app/src/ui/contacts/editor.rs:929
+#: app/src/ui/contacts/editor.rs:930
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
@@ -13031,11 +13031,11 @@ msgstr "日期需要标签和值。"
 msgid "Contact photos must be PNG images no larger than 512 KB."
 msgstr "联系人照片必须是不超过 512 KB 的 PNG 图片。"
 
-#: domain/src/contact.rs:143
+#: domain/src/contact.rs:146
 msgid "%-d %B"
 msgstr "%B %-d 日"
 
-#: domain/src/contact.rs:158
+#: domain/src/contact.rs:162
 msgid "{date} · {age} year old"
 msgid_plural "{date} · {age} years old"
 msgstr[0] "{date} · {age} 岁"
