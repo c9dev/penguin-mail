@@ -301,7 +301,9 @@ pub fn patch_card(existing: &str, fields: &CardFields) -> Result<String, DavErro
             .details
             .custom
             .iter()
-            .filter(|old| !custom.iter().any(|new| new.label == old.label))
+            // A label that is no property name lives in the labelled form,
+            // dropped below; "X-ABDATE" there must not take the dates along.
+            .filter(|old| x_name(&old.label) && !custom.iter().any(|new| new.label == old.label))
             .map(|old| old.label.clone())
             .collect();
         card.entries.retain(|e| {

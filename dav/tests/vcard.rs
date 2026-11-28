@@ -488,3 +488,34 @@ fn a_custom_field_under_a_typed_label_saves_edits_and_goes() {
     );
     assert_eq!(removed.matches("X-ABLABEL").count(), 1, "{removed}");
 }
+
+#[test]
+fn removing_a_custom_field_with_a_reserved_label_keeps_the_dates() {
+    use mailrs_domain::contact::{Changes, Field};
+    let text = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Demo\r\nitem1.X-ABDATE:2015-06-20\r\nitem1.X-ABLABEL:Met\r\nEND:VCARD\r\n";
+    let with = |custom: Vec<Field>| CardFields {
+        details: Changes {
+            custom: Some(custom),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let added = patch_card(
+        text,
+        &with(vec![Field {
+            label: "X-ABDATE".into(),
+            value: "odd".into(),
+        }]),
+    )
+    .unwrap();
+    assert_eq!(
+        read_card(&added).unwrap().details.custom.len(),
+        1,
+        "{added}"
+    );
+    let removed = patch_card(&added, &with(Vec::new())).unwrap();
+    let read = read_card(&removed).unwrap().details;
+    assert!(read.custom.is_empty(), "{removed}");
+    assert_eq!(read.dates.len(), 1, "the date stays: {removed}");
+    assert_eq!(read.dates[0].label, "Met", "{removed}");
+}
