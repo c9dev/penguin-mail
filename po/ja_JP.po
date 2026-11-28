@@ -8378,11 +8378,14 @@ msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr ""
 "{account} の連絡先を編集しています。「保存」を押すまで何も書き込まれません。"
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "{account} の連絡先を編集しています。{others} は自分の連絡先を保持します。「保"
 "存」を押すまで何も書き込まれません。"
 

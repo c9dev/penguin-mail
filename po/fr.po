@@ -8630,13 +8630,19 @@ msgstr ""
 "Vous modifiez le contact de {account}. Rien n’est écrit tant que vous "
 "n’appuyez pas sur Enregistrer."
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "Vous modifiez le contact de {account}. {others} garde le sien. Rien n’est "
 "écrit tant que vous n’appuyez pas sur Enregistrer."
+msgstr[1] ""
+"Vous modifiez le contact de {account}. {others} gardent les leurs. Rien "
+"n’est écrit tant que vous n’appuyez pas sur Enregistrer."
 
 #: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188
 msgid "Turn Off Contacts"

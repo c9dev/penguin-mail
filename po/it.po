@@ -8578,12 +8578,18 @@ msgstr ""
 "Stai modificando il contatto di {account}. Non viene scritto nulla finché "
 "non premi Salva."
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "Stai modificando il contatto di {account}. {others} mantiene il proprio. Non "
+"viene scritto nulla finché non premi Salva."
+msgstr[1] ""
+"Stai modificando il contatto di {account}. {others} mantengono i propri. Non "
 "viene scritto nulla finché non premi Salva."
 
 #: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188

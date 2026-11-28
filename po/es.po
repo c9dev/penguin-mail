@@ -8580,12 +8580,18 @@ msgstr ""
 "Estás editando el contacto de {account}. No se escribe nada hasta que pulses "
 "Guardar."
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "Estás editando el contacto de {account}. {others} conserva el suyo. No se "
+"escribe nada hasta que pulses Guardar."
+msgstr[1] ""
+"Estás editando el contacto de {account}. {others} conservan los suyos. No se "
 "escribe nada hasta que pulses Guardar."
 
 #: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188

@@ -8326,11 +8326,14 @@ msgstr ""
 "{account}의 연락처를 편집하고 있습니다. 저장을 누르기 전에는 아무것도 기록되"
 "지 않습니다."
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "{account}의 연락처를 편집하고 있습니다. {others}에는 자체 연락처가 남습니다. "
 "저장을 누르기 전에는 아무것도 기록되지 않습니다."
 

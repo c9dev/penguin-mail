@@ -8621,12 +8621,21 @@ msgstr ""
 "Вы меняете контакт в {account}. Ничего не записывается, пока вы не нажмёте "
 "«Сохранить»."
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "Вы меняете контакт в {account}. У {others} остаётся свой. Ничего не "
+"записывается, пока вы не нажмёте «Сохранить»."
+msgstr[1] ""
+"Вы меняете контакт в {account}. У {others} остаются свои. Ничего не "
+"записывается, пока вы не нажмёте «Сохранить»."
+msgstr[2] ""
+"Вы меняете контакт в {account}. У {others} остаются свои. Ничего не "
 "записывается, пока вы не нажмёте «Сохранить»."
 
 #: app/src/ui/contacts/mod.rs:212 app/src/ui/contacts/side.rs:188

@@ -8179,11 +8179,14 @@ msgstr ""
 msgid "Editing the {account} contact. Nothing is written until you press Save."
 msgstr "您正在編輯 {account} 中的聯絡人。按下「儲存」之前不會寫入任何內容。"
 
-#: app/src/ui/contacts/editor.rs:930
+#: app/src/ui/contacts/editor.rs:929
 msgid ""
 "Editing the {account} contact. {others} keeps its own. Nothing is written "
 "until you press Save."
-msgstr ""
+msgid_plural ""
+"Editing the {account} contact. {others} keep their own. Nothing is written "
+"until you press Save."
+msgstr[0] ""
 "您正在編輯 {account} 中的聯絡人。{others} 保留自己的聯絡人。按下「儲存」之前"
 "不會寫入任何內容。"
 

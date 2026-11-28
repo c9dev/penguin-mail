@@ -2208,7 +2208,7 @@ toggle-group.space-switch > toggle:not(:checked) buttoncontent > box { border-sp
 toggle-group.space-switch > toggle:not(:checked) buttoncontent label { font-size: 0; min-width: 0; }
 toggle-group.space-switch > toggle:not(:checked) { padding-left: 0; padding-right: 0; min-width: 14px; }
 toggle-group.space-switch > toggle:checked { padding-left: 3px; padding-right: 3px; }
-toggle-group.space-switch .space-badge { padding: 0 3px; min-width: 4px; font-size: 0.68em; }
+toggle-group.space-switch .space-badge { padding: 0 3px; min-width: 4px; font-size: 0.6em; margin-right: 1px; }
 
 .cts-side { padding: 0 8px 12px; }
 .cts-kicker { margin: 14px 12px 4px; font-size: 0.82em; font-weight: 700; color: alpha(currentColor, 0.75); }
