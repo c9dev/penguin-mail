@@ -3150,7 +3150,9 @@ pub(crate) mod checks {
         let without_badge = bin.width_request();
         sidebar.set_waiting(100);
         let least = bin.width_request();
-        assert!(least > without_badge);
+        // The badge sits over the icon's corner, as in the mockup, so the
+        // switch keeps its width.
+        assert_eq!(least, without_badge);
         sidebar.set_waiting(0);
         assert_eq!(bin.width_request(), without_badge);
         sidebar.set_waiting(100);

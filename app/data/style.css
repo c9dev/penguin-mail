@@ -2215,9 +2215,8 @@ toggle-group.space-switch > toggle:checked buttoncontent > box { border-spacing:
    over the icon; the mockup has no separators between the spaces. */
 toggle-group.space-switch .space-badge {
   min-height: 14px; min-width: 8px; padding: 0 3px; font-size: 0.6em;
-  background: var(--accent-bg-color); color: var(--accent-fg-color);
+  background: var(--accent-fill); color: var(--accent-fg-color);
 }
-.app-dark toggle-group.space-switch .space-badge { background: var(--accent-bg-color); }
 toggle-group.space-switch > separator { background: none; min-width: 0; }
 
 .cts-side { padding: 0 8px 12px; }
