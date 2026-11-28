@@ -46,6 +46,7 @@ pub enum Method {
     Get,
     Post,
     Patch,
+    Put,
     Delete,
 }
 
@@ -55,6 +56,7 @@ impl Method {
             Method::Get => "GET",
             Method::Post => "POST",
             Method::Patch => "PATCH",
+            Method::Put => "PUT",
             Method::Delete => "DELETE",
         }
     }
@@ -64,6 +66,7 @@ impl Method {
             Method::Get => reqwest::Method::GET,
             Method::Post => reqwest::Method::POST,
             Method::Patch => reqwest::Method::PATCH,
+            Method::Put => reqwest::Method::PUT,
             Method::Delete => reqwest::Method::DELETE,
         }
     }
@@ -164,6 +167,7 @@ struct Call {
 enum Body {
     Json(Value),
     Text(String),
+    Bytes(Vec<u8>, String),
 }
 
 /// The Graph client for one signed-in account. Clones share the session.
@@ -379,6 +383,24 @@ impl Graph {
         read_capped(response, limit).await
     }
 
+    /// Puts raw bytes, a contact's photo for one, where Graph takes them.
+    pub async fn put_bytes(
+        &self,
+        path: &str,
+        bytes: Vec<u8>,
+        content_type: &str,
+    ) -> Result<(), GraphError> {
+        let url = self.url(path, &[])?;
+        let call = Call {
+            method: Method::Put,
+            url,
+            body: Some(Body::Bytes(bytes, content_type.to_string())),
+            headers: Vec::new(),
+        };
+        self.execute(call).await?;
+        Ok(())
+    }
+
     /// A next or delta link Graph handed back, followed only on the base's
     /// own scheme, host and port.
     pub async fn follow<T: DeserializeOwned>(
@@ -561,6 +583,9 @@ impl Graph {
             request = match &call.body {
                 Some(Body::Json(value)) => request.json(value),
                 Some(Body::Text(text)) => request.body(text.clone()),
+                Some(Body::Bytes(bytes, kind)) => request
+                    .header("Content-Type", kind.as_str())
+                    .body(bytes.clone()),
                 None => request,
             };
             let response = request.send().await.map_err(network)?;

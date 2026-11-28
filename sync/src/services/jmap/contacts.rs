@@ -539,6 +539,20 @@ impl<J: JmapApi> ContactsService for Jmap<J> {
         true
     }
 
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        _revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        self.api()
+            .set_card(&CardWrite::Destroy {
+                id: resource.to_string(),
+            })
+            .await
+            .map_err(backend)?;
+        Ok(())
+    }
+
     async fn create_contact(&self, fields: &ContactFields) -> Result<Person, BackendError> {
         let books = self.api().address_books().await.map_err(backend)?;
         let book = books

@@ -147,6 +147,8 @@ pub struct GraphState {
     pub contacts: BTreeMap<String, (String, GraphContact)>,
     pub contact_log: Vec<Logged>,
     pub photos: HashMap<String, Vec<u8>>,
+    /// What each contact keeps in the app's own extended property.
+    pub contact_extras: HashMap<String, String>,
     pub rules: Vec<MessageRule>,
     pub replies: AutomaticReplies,
     pub reply_writes: ReplyWrites,
@@ -626,6 +628,18 @@ impl GraphApi for FakeGraph {
 
     async fn contact_name(&self, id: &str) -> Answer<GraphContact> {
         self.with(|s| contacts::contact_name(s, id))
+    }
+
+    async fn contact_extras(&self, id: &str) -> Answer<Option<String>> {
+        self.with(|s| contacts::contact_extras(s, id))
+    }
+
+    async fn set_contact_photo(&self, id: &str, bytes: Vec<u8>) -> Answer<()> {
+        self.with(|s| contacts::set_contact_photo(s, id, bytes))
+    }
+
+    async fn delete_contact(&self, id: &str) -> Answer<()> {
+        self.with(|s| contacts::delete_contact(s, id))
     }
 
     async fn update_contact(&self, id: &str, body: &Value) -> Answer<GraphContact> {

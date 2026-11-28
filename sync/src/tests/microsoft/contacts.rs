@@ -204,3 +204,85 @@ async fn editing_the_numbers_keeps_a_home_number_at_home() {
     assert_eq!(held.business_phones, ["+351 220 000 000"]);
     assert_eq!(changed.details.phones.len(), 3);
 }
+
+#[tokio::test]
+async fn every_contact_field_goes_to_graph_and_comes_back() {
+    use mailrs_domain::contact::{Changes, Field};
+    let h = outlook().await;
+    let contacts = h.sync.services().contacts.clone().unwrap();
+    let address = |street: &str, city: &str| -> [String; 7] {
+        [
+            "Box 7".into(),
+            "Floor 2".into(),
+            street.into(),
+            city.into(),
+            "LX".into(),
+            "1000-001".into(),
+            "Portugal".into(),
+        ]
+    };
+    let made = contacts
+        .create_contact(&ContactFields {
+            name: Some("Priya Raman".into()),
+            emails: Some(vec!["priya@fernwood.example".into()]),
+            photo: Some(b"\x89PNG-bytes".to_vec()),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                urls: Some(vec!["https://one.example".into(), "https://two.example".into()]),
+                groups: Some(vec!["Friends".into()]),
+                dates: Some(vec![Field {
+                    label: "Anniversary".into(),
+                    value: "2015-06-20".into(),
+                }]),
+                custom: Some(vec![Field {
+                    label: "Badge".into(),
+                    value: "42".into(),
+                }]),
+                addresses: Some(vec![
+                    address("1 Main Street", "Lisbon"),
+                    address("2 Side Street", "Porto"),
+                    address("3 Back Street", "Faro"),
+                    address("4 Far Street", "Braga"),
+                ]),
+            },
+            ..ContactFields::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(h.fake.with(|s| s.photos.get(&made.resource).cloned()), Some(b"\x89PNG-bytes".to_vec()));
+    let (people, _, _) = read_whole(&contacts).await;
+    let read = people.iter().find(|p| p.resource == made.resource).unwrap();
+    let d = &read.details;
+    assert_eq!(d.birthday, "1990-04-12");
+    assert_eq!(d.notes, "Met in March");
+    assert_eq!(d.urls, ["https://one.example", "https://two.example"]);
+    assert_eq!(d.groups, ["Friends"]);
+    assert_eq!(d.dates[0].value, "2015-06-20");
+    assert_eq!(d.custom[0].label, "Badge");
+    assert_eq!(d.addresses.len(), 4, "three in Graph's slots and one in the extras");
+    assert_eq!(d.addresses[0][0], "Box 7", "the PO box rides in the extras");
+    assert_eq!(d.addresses[2][3], "Faro");
+    assert_eq!(d.addresses[3][3], "Braga");
+    // An edit of one field keeps the others, extras included.
+    let edited = contacts
+        .update_contact(
+            &made.resource,
+            &ContactFields {
+                details: Changes {
+                    custom: Some(vec![]),
+                    ..Changes::default()
+                },
+                ..ContactFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(edited.details.custom.is_empty());
+    assert_eq!(edited.details.dates[0].label, "Anniversary");
+    assert_eq!(edited.details.urls.len(), 2);
+    assert_eq!(edited.details.addresses.len(), 4);
+    contacts.delete_contact(&made.resource, None).await.unwrap();
+    let (after, _, _) = read_whole(&contacts).await;
+    assert!(after.iter().all(|p| p.resource != made.resource));
+}

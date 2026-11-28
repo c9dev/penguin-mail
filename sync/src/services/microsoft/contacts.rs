@@ -23,6 +23,71 @@ const PHOTO_LIMIT: usize = 4 * 1024 * 1024;
 /// The name `Person::photo_url` carries; only this adapter reads it.
 const PHOTO_PREFIX: &str = "graph:contact/";
 
+/// What Graph has no property for, kept as one JSON text in the app's own
+/// extended property on the contact: other dates, custom fields, websites
+/// after the first, addresses after the third, and the PO box and
+/// extended-address parts of the first three.
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[serde(default)]
+struct Extras {
+    dates: Vec<mailrs_domain::contact::Field>,
+    custom: Vec<mailrs_domain::contact::Field>,
+    urls: Vec<String>,
+    addresses: Vec<mailrs_domain::contact::Address>,
+    parts: Vec<[String; 2]>,
+}
+
+impl Extras {
+    fn read(text: Option<&str>) -> Extras {
+        text.and_then(|t| serde_json::from_str(t).ok()).unwrap_or_default()
+    }
+
+    /// Puts what Graph's own properties and these extras hold together.
+    fn join(&self, details: &mut mailrs_domain::contact::Details) {
+        for (at, address) in details.addresses.iter_mut().enumerate() {
+            if let Some([pobox, extended]) = self.parts.get(at) {
+                address[0] = pobox.clone();
+                address[1] = extended.clone();
+            }
+        }
+        details.addresses.extend(self.addresses.iter().cloned());
+        details.urls.extend(self.urls.iter().cloned());
+        details.dates = self.dates.clone();
+        details.custom = self.custom.clone();
+    }
+
+    /// `self` with the fields `changes` names replaced.
+    fn changed(&self, changes: &mailrs_domain::contact::Changes) -> Extras {
+        let mut out = self.clone();
+        if let Some(addresses) = &changes.addresses {
+            out.parts = addresses
+                .iter()
+                .take(3)
+                .map(|a| [a[0].clone(), a[1].clone()])
+                .collect();
+            out.addresses = addresses.iter().skip(3).cloned().collect();
+        }
+        if let Some(urls) = &changes.urls {
+            out.urls = urls.iter().skip(1).cloned().collect();
+        }
+        if let Some(dates) = &changes.dates {
+            out.dates = dates.clone();
+        }
+        if let Some(custom) = &changes.custom {
+            out.custom = custom.clone();
+        }
+        out
+    }
+}
+
+/// Whether `changes` names a field the extras hold.
+fn touches_extras(changes: &mailrs_domain::contact::Changes) -> bool {
+    changes.addresses.is_some()
+        || changes.urls.is_some()
+        || changes.dates.is_some()
+        || changes.custom.is_some()
+}
+
 #[derive(Serialize, Deserialize, Default)]
 struct SyncState {
     folders: BTreeMap<String, String>,
@@ -98,6 +163,11 @@ fn details_of(c: &GraphContact) -> mailrs_domain::contact::Details {
             .collect(),
         ..Default::default()
     }
+}
+
+/// The body entry that writes `extras` to the app's extended property.
+fn extras_property(extras: &Extras) -> Value {
+    json!([{ "id": mailrs_graph::EXTRAS_ID, "value": json!(extras).to_string() }])
 }
 
 fn person_of(c: &GraphContact) -> Person {
@@ -211,8 +281,9 @@ impl<G: GraphApi> Microsoft<G> {
 
 impl<G: GraphApi> ContactsService for Microsoft<G> {
     /// Graph holds a birthday, notes, one website, categories and three
-    /// postal addresses. Other dates, custom fields, further websites and
-    /// addresses, and a photo have no home there.
+    /// postal addresses. The rest goes in the app's own extended property,
+    /// and a photo through the photo endpoint. A photo cannot be removed
+    /// there, so removing one leaves it.
     fn edits_details(&self) -> bool {
         true
     }
@@ -269,7 +340,16 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
         for contact in &page.value {
             match contact.removed {
                 Some(_) => deleted.push(contact.id.clone()),
-                None => people.push(person_of(contact)),
+                None => {
+                    let mut person = person_of(contact);
+                    // Delta carries no extended properties, so each changed
+                    // contact is asked for its own.
+                    match self.graph.contact_extras(&contact.id).await {
+                        Ok(text) => Extras::read(text.as_deref()).join(&mut person.details),
+                        Err(err) => tracing::warn!(%err, "could not read a contact's extras"),
+                    }
+                    people.push(person);
+                }
             }
         }
         let (mut next_page_token, mut next_sync_token) = (None, None);
@@ -313,13 +393,34 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
         Ok(photo.unwrap_or_default())
     }
 
-    async fn create_contact(&self, fields: &ContactFields) -> Result<Person, BackendError> {
-        let made = self
-            .graph
-            .create_contact(&body_of(fields, &[]))
+    async fn delete_contact(
+        &self,
+        resource: &str,
+        _revision: Option<&str>,
+    ) -> Result<(), BackendError> {
+        self.graph
+            .delete_contact(resource)
             .await
-            .map_err(|e| self.service_error(Service::Contacts, e))?;
-        Ok(person_of(&made))
+            .map_err(|e| self.service_error(Service::Contacts, e))
+    }
+
+    async fn create_contact(&self, fields: &ContactFields) -> Result<Person, BackendError> {
+        let err = |e| self.service_error(Service::Contacts, e);
+        let mut body = body_of(fields, &[]);
+        let extras = Extras::default().changed(&fields.details);
+        if touches_extras(&fields.details) {
+            body["singleValueExtendedProperties"] = extras_property(&extras);
+        }
+        let made = self.graph.create_contact(&body).await.map_err(err)?;
+        if let Some(photo) = fields.photo.clone().filter(|p| !p.is_empty()) {
+            self.graph
+                .set_contact_photo(&made.id, photo)
+                .await
+                .map_err(err)?;
+        }
+        let mut person = person_of(&made);
+        extras.join(&mut person.details);
+        Ok(person)
     }
 
     async fn update_contact(
@@ -338,6 +439,13 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
         };
         let home = current.as_ref().map_or(&[][..], |c| &c.home_phones[..]);
         let mut body = body_of(fields, home);
+        let mut extras = None;
+        if touches_extras(&fields.details) {
+            let held = self.graph.contact_extras(resource).await.map_err(err)?;
+            let next = Extras::read(held.as_deref()).changed(&fields.details);
+            body["singleValueExtendedProperties"] = extras_property(&next);
+            extras = Some(next);
+        }
         if fields.name.is_none()
             && let Some(name) = current.and_then(|c| c.display_name)
         {
@@ -348,7 +456,19 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
             .update_contact(resource, &body)
             .await
             .map_err(|e| self.service_error(Service::Contacts, e))?;
-        Ok(person_of(&changed))
+        if let Some(photo) = fields.photo.clone().filter(|p| !p.is_empty()) {
+            self.graph
+                .set_contact_photo(resource, photo)
+                .await
+                .map_err(err)?;
+        }
+        let mut person = person_of(&changed);
+        let held = match extras {
+            Some(extras) => extras,
+            None => Extras::read(self.graph.contact_extras(resource).await.map_err(err)?.as_deref()),
+        };
+        held.join(&mut person.details);
+        Ok(person)
     }
 }
 

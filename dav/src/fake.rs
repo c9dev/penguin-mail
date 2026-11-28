@@ -50,6 +50,57 @@ pub struct FakeState {
     pub homes: usize,
     /// PUTs to these hrefs answer 412, as when another device saved first.
     pub changed_on_put: Vec<String>,
+    /// Behave as Google's CardDAV was seen to (2026-11-27, the test
+    /// account): a create is stored under a name of the server's own, which
+    /// `Location` gives, with the UID rewritten to it; `If-Match` is
+    /// ignored; the ETag is a timestamp; FN is rebuilt from N; a birthday
+    /// without a year, and CATEGORIES, are dropped; a URL gets a group and
+    /// a label.
+    pub google_quirks: bool,
+}
+
+/// What Google's CardDAV makes of a card it was sent.
+fn google_card(body: &str, uid: &str) -> String {
+    let unfolded = body.replace("\r\n ", "");
+    let mut name = None;
+    let lines: Vec<&str> = unfolded.lines().collect();
+    for line in &lines {
+        if let Some(n) = line.strip_prefix("N:") {
+            let mut parts = n.split(';');
+            let family = parts.next().unwrap_or_default();
+            let given = parts.next().unwrap_or_default();
+            name = Some(format!("{given} {family}").trim().to_string());
+        }
+    }
+    let mut out = Vec::new();
+    for line in lines {
+        let upper = line.to_ascii_uppercase();
+        if upper.starts_with("UID:") {
+            out.push(format!("UID:{uid}"));
+        } else if upper.starts_with("FN:") {
+            out.push(format!("FN:{}", name.clone().unwrap_or_else(|| line[3..].to_string())));
+        } else if upper.starts_with("CATEGORIES") {
+            // dropped
+        } else if upper.starts_with("BDAY") {
+            let value = line.rsplit(':').next().unwrap_or_default();
+            if !value.starts_with("--") {
+                out.push(format!("BDAY;VALUE=DATE:{value}"));
+            }
+        } else if upper.starts_with("URL") {
+            let value = line.rsplit_once(':').map_or("", |(_, v)| v);
+            let url = line.split_once(':').map_or("", |(_, v)| v).replace(':', "\\:");
+            let _ = value;
+            out.push(format!("item1.URL;TYPE=PREF:{url}"));
+            out.push("item1.X-ABLabel:Other".into());
+        } else if upper.starts_with("TEL;") || upper.starts_with("EMAIL;") || upper.starts_with("ADR;") {
+            out.push(line.to_string());
+        } else {
+            out.push(line.to_string());
+        }
+    }
+    let mut text = out.join("\r\n");
+    text.push_str("\r\n");
+    text
 }
 
 #[derive(Default)]
@@ -349,11 +400,46 @@ impl DavApi for FakeDav {
         &self,
         href: &str,
         body: &str,
-        _kind: Kind,
+        kind: Kind,
         when: Precondition,
     ) -> Result<Option<String>, DavError> {
+        self.put_at(href, body, kind, when).await.map(|(etag, _)| etag)
+    }
+
+    async fn put_at(
+        &self,
+        href: &str,
+        body: &str,
+        _kind: Kind,
+        when: Precondition,
+    ) -> Result<(Option<String>, Option<String>), DavError> {
         let href = &canonical_href(href);
         let mut s = self.open()?;
+        if s.google_quirks {
+            s.puts += 1;
+            s.seq += 1;
+            let etag = format!("\"2026-11-27T16:58:25.{:03}-08:00\"", s.seq);
+            let (target, location) = match when {
+                Precondition::NoneMatch => {
+                    let id = format!("{:016x}", 0x3f93_6966_140b_99d6_u64 + u64::from(s.seq as u32));
+                    let target = format!("{}{id}", collection_of(href));
+                    (target.clone(), Some(target))
+                }
+                // If-Match is ignored: a stale one overwrites, with a 204.
+                Precondition::Match(_) => {
+                    if !s.resources.contains_key(href) {
+                        return Err(DavError::NotFound);
+                    }
+                    (href.clone(), Some(href.clone()))
+                }
+            };
+            let uid = target.rsplit('/').next().unwrap_or_default().to_string();
+            s.resources
+                .insert(target.clone(), (etag.clone(), google_card(body, &uid)));
+            let seq = s.seq;
+            s.log.push((seq, target, false));
+            return Ok((Some(etag), location));
+        }
         if s.changed_on_put.contains(href) {
             return Err(DavError::Changed);
         }
@@ -372,7 +458,7 @@ impl DavApi for FakeDav {
         s.resources.insert(href.into(), (etag.clone(), body.into()));
         let seq = s.seq;
         s.log.push((seq, href.into(), false));
-        Ok(Some(etag))
+        Ok((Some(etag), None))
     }
 
     async fn delete(&self, href: &str, etag: Option<&str>) -> Result<(), DavError> {

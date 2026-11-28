@@ -118,6 +118,10 @@ pub fn forget(conn: &Connection, account_id: AccountId, resources: &[String]) ->
             "DELETE FROM contact_links WHERE (account_a = ?1 AND resource_a = ?2) OR (account_b = ?1 AND resource_b = ?2)",
             params![account_id, resource],
         )?;
+        conn.execute(
+            "DELETE FROM contact_local_groups WHERE account_id = ?1 AND resource = ?2",
+            params![account_id, resource],
+        )?;
     }
     Ok(())
 }
@@ -131,6 +135,10 @@ pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
         [account_id],
     )?;
     conn.execute(
+        "DELETE FROM contact_local_groups WHERE account_id = ?1",
+        [account_id],
+    )?;
+    conn.execute(
         "DELETE FROM contact_books WHERE account_id = ?1",
         [account_id],
     )?;
@@ -140,6 +148,7 @@ pub fn clear(conn: &Connection, account_id: AccountId) -> Result<()> {
 /// Every contact of every account, by name.
 pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
     let all = read(conn, "1 = 1", [])?;
+    let local = local_groups(conn)?;
     let groups: Vec<_> = all.iter().filter(|c| c.details.members.is_some()).collect();
     Ok(all
         .iter()
@@ -162,9 +171,54 @@ pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
                     }
                 }
             }
+            if let Some(names) = local.get(&(contact.account_id, contact.resource.clone())) {
+                for name in names {
+                    if !contact.details.groups.contains(name) {
+                        contact.details.groups.push(name.clone());
+                    }
+                }
+            }
             contact
         })
         .collect())
+}
+
+/// The groups held on this computer for contacts whose server keeps none.
+fn local_groups(
+    conn: &Connection,
+) -> Result<std::collections::HashMap<(AccountId, String), Vec<String>>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT account_id, resource, name FROM contact_local_groups ORDER BY name",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?))
+    })?;
+    let mut out: std::collections::HashMap<(AccountId, String), Vec<String>> = Default::default();
+    for row in rows {
+        let (account, resource, name) = row?;
+        out.entry((account, resource)).or_default().push(name);
+    }
+    Ok(out)
+}
+
+/// Replaces the groups kept on this computer for one contact.
+pub fn set_local_groups(
+    conn: &Connection,
+    account_id: AccountId,
+    resource: &str,
+    names: &[String],
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM contact_local_groups WHERE account_id = ?1 AND resource = ?2",
+        params![account_id, resource],
+    )?;
+    for name in names {
+        conn.execute(
+            "INSERT OR IGNORE INTO contact_local_groups (account_id, resource, name) VALUES (?1, ?2, ?3)",
+            params![account_id, resource, name],
+        )?;
+    }
+    Ok(())
 }
 
 /// The people who have a birthday, for the birthdays calendar, without
@@ -754,6 +808,24 @@ mod tests {
             .query_row("SELECT count(*) FROM contact_links", [], |r| r.get(0))
             .unwrap();
         assert_eq!(count, 0, "deleting a contact takes its link");
+    }
+
+    #[test]
+    fn groups_a_server_cannot_keep_stay_with_the_contact() {
+        let conn = open_in_memory().unwrap();
+        let id = accounts::insert_account(&conn, "dana@gmail.example", 0).unwrap();
+        let card = contact(id, "/lists/default/g1", "Priya", &["p@x.example"]);
+        save(&conn, &[card.clone()]).unwrap();
+        set_local_groups(&conn, id, "/lists/default/g1", &["Friends".into(), "Work".into()])
+            .unwrap();
+        // A refresh replaces the card and leaves the groups.
+        save(&conn, &[card]).unwrap();
+        assert_eq!(list(&conn).unwrap()[0].details.groups, ["Friends", "Work"]);
+        forget(&conn, id, &["/lists/default/g1".to_string()]).unwrap();
+        let held: i64 = conn
+            .query_row("SELECT count(*) FROM contact_local_groups", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(held, 0);
     }
 
     #[test]

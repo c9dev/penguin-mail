@@ -284,4 +284,7 @@ async fn every_contact_field_goes_to_the_server_and_comes_back() {
     assert_eq!(edited.details.notes, "");
     assert!(edited.details.groups.is_empty());
     assert_eq!(edited.details.birthday, "1990-04-12", "the rest stays");
+    contacts.delete_contact(&made.resource, None).await.unwrap();
+    let after = contacts.connections(None, None).await.unwrap();
+    assert!(after.people.iter().all(|p| p.resource != made.resource));
 }

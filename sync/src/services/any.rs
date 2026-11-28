@@ -686,6 +686,12 @@ impl ContactsService for AnyContacts {
             Self::Local(adapter) => adapter.edits_details(),
         }
     }
+    fn keeps_groups_here(&self) -> bool {
+        match self {
+            Self::Dav(adapter) => adapter.keeps_groups_here(),
+            _ => false,
+        }
+    }
     async fn delete_contact(
         &self,
         resource: &str,

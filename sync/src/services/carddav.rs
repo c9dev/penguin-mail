@@ -22,6 +22,9 @@ const PHOTO_SCHEME: &str = "carddav-photo:";
 
 pub struct CardDav<D> {
     api: Arc<D>,
+    /// Google's CardDAV, which answers differently from the standard in the
+    /// ways `google_fields` and `create_contact` name.
+    google: bool,
     refused: Arc<Mutex<Option<String>>>,
     pending: Arc<Mutex<Option<Pending>>>,
     serial: Arc<Mutex<u64>>,
@@ -58,6 +61,7 @@ impl<D> Clone for CardDav<D> {
     fn clone(&self) -> Self {
         CardDav {
             api: Arc::clone(&self.api),
+            google: self.google,
             refused: Arc::clone(&self.refused),
             pending: Arc::clone(&self.pending),
             serial: Arc::clone(&self.serial),
@@ -98,10 +102,43 @@ impl<D: DavApi> CardDav<D> {
     pub fn new(api: Arc<D>) -> CardDav<D> {
         CardDav {
             api,
+            google: false,
             refused: Arc::default(),
             pending: Arc::default(),
             serial: Arc::default(),
         }
+    }
+
+    /// This server is Google's CardDAV. Seen live on 2026-11-27:
+    /// - a create is stored under Google's own name, given in `Location`,
+    ///   with the UID rewritten to it, so the card is never looked up by
+    ///   the UID that was sent;
+    /// - the ETag is a timestamp, and `If-Match` is ignored, so a stale
+    ///   edit overwrites with a 204 and there is no 412 to wait for;
+    /// - FN is rebuilt from N, so a name is written to both;
+    /// - a birthday without a year is deleted, and CATEGORIES are dropped,
+    ///   so groups stay on this computer.
+    pub fn google(mut self) -> CardDav<D> {
+        self.google = true;
+        self
+    }
+
+    /// What Google's CardDAV would lose, refused or held back before the
+    /// card is sent.
+    fn google_fields(&self, fields: &mut CardFields) -> Result<(), BackendError> {
+        if !self.google {
+            return Ok(());
+        }
+        if let Some(birthday) = &fields.details.birthday
+            && mailrs_domain::contact::date_parts(birthday).is_some_and(|(year, _, _)| year.is_none())
+        {
+            return Err(BackendError::Invalid(gettext(
+                "Google keeps a birthday only with its year. Add the year or remove the birthday.",
+            )));
+        }
+        // CATEGORIES are dropped, so the groups are kept here.
+        fields.details.groups = None;
+        Ok(())
     }
 
     pub fn login_refused(&self) -> Option<String> {
@@ -366,6 +403,11 @@ impl<D: DavApi> ContactsService for CardDav<D> {
     fn edits_details(&self) -> bool {
         true
     }
+
+    fn keeps_groups_here(&self) -> bool {
+        self.google
+    }
+
     async fn delete_contact(
         &self,
         resource: &str,
@@ -476,6 +518,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
 
     async fn create_contact(&self, fields_in: &ContactFields) -> Result<Person, BackendError> {
         let mut fields = fields(fields_in);
+        self.google_fields(&mut fields)?;
         vcard::validate(&fields).map_err(card_error)?;
         let writable: Vec<String> = self
             .books()
@@ -500,7 +543,7 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         };
         let href = join(&book, &format!("{uid}.vcf"));
         let mut cards = None;
-        if let Some(wanted) = &fields_in.details.groups {
+        if let Some(wanted) = fields_in.details.groups.as_ref().filter(|_| !self.google) {
             let groups = self.group_cards(&href).await?;
             check_groups(&groups, &uid, wanted, None, &[])?;
             let (categories, named) = split_groups(&groups, wanted, &[]);
@@ -509,11 +552,14 @@ impl<D: DavApi> ContactsService for CardDav<D> {
         }
         let body = vcard::new_card(&uid, &fields);
         vcard::read_card(&body).map_err(card_error)?;
+        let mut href = href;
         match self
             .api
-            .put(&href, &body, Kind::AddressBook, Precondition::NoneMatch)
+            .put_at(&href, &body, Kind::AddressBook, Precondition::NoneMatch)
             .await
         {
+            // A server that names the card itself says where.
+            Ok((_, Some(placed))) => href = placed,
             Ok(_) => {}
             Err(mailrs_dav::DavError::Changed) if fields_in.creation_key.is_some() => {
                 // A stable editor key addresses only this creation, including a retry after a lost reply.
@@ -554,10 +600,11 @@ impl<D: DavApi> ContactsService for CardDav<D> {
             return Err(self.err(mailrs_dav::DavError::Changed));
         }
         let mut fields = fields(fields_in);
+        self.google_fields(&mut fields)?;
         // Group cards are read and checked first and written only after
         // the contact, so a contact that changed elsewhere changes nothing.
         let mut cards = None;
-        if let Some(wanted) = &fields_in.details.groups {
+        if let Some(wanted) = fields_in.details.groups.as_ref().filter(|_| !self.google) {
             let card = vcard::read_card(&current.body).map_err(card_error)?;
             let uid = card.uid.ok_or(BackendError::Unsupported)?;
             let groups = self.group_cards(resource).await?;
@@ -573,6 +620,9 @@ impl<D: DavApi> ContactsService for CardDav<D> {
             cards = groups.native.then_some((groups, uid, named));
         }
         let body = vcard::patch_card(&current.body, &fields).map_err(card_error)?;
+        // Google ignores If-Match, so the ETag read above is the whole check
+        // and a save between that read and this PUT is overwritten: the
+        // check is not atomic there.
         self.api
             .put(
                 resource,

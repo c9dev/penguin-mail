@@ -505,3 +505,142 @@ async fn a_book_with_group_cards_keeps_group_names_out_of_categories() {
     });
     assert_eq!(members(colleagues.unwrap()), Some(vec!["demo".into()]));
 }
+
+/// What Google's CardDAV did to a card, from the live check of 2026-11-27
+/// on the test account: the files under `golden/google_carddav/`.
+mod google {
+    use mailrs_dav::{DavApi, DavError, Precondition};
+    use mailrs_domain::contact::Changes;
+
+    use super::*;
+
+    const BOOK: &str = "/card/lists/default/";
+
+    fn google() -> (Arc<FakeDav>, CardDav<FakeDav>) {
+        let dav = Arc::new(FakeDav::new());
+        dav.add_collection(BOOK, Kind::AddressBook, "Address Book", None);
+        dav.with(|s| s.google_quirks = true);
+        (Arc::clone(&dav), CardDav::new(dav).google())
+    }
+
+    fn fields() -> ContactFields {
+        ContactFields {
+            name: Some("Live Check".into()),
+            emails: Some(vec!["live.check@example.org".into()]),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                urls: Some(vec!["https://example.org".into()]),
+                groups: Some(vec!["Friends".into()]),
+                ..Changes::default()
+            },
+            ..ContactFields::default()
+        }
+    }
+
+    #[test]
+    fn the_saved_answers_read_as_the_adapter_expects() {
+        let read = include_str!("golden/google_carddav/read.vcf");
+        let card = mailrs_dav::vcard::read_card(read).unwrap();
+        assert_eq!(card.name.as_deref(), Some("Live Check"));
+        assert_eq!(card.details.birthday, "1990-04-12", "BDAY;VALUE=DATE reads as a date");
+        assert_eq!(card.details.urls, ["https://example.org"], "the `\\:` is unescaped");
+        assert!(card.details.groups.is_empty(), "Google keeps no CATEGORIES");
+        assert_eq!(card.details.addresses[0][2], "1 Long Street\nSecond line");
+        assert!(card.details.notes.contains("live check"));
+        assert!(
+            card.details.custom.iter().any(|f| f.label == "X-CUSTOMER-ID" && f.value == "DEMO-42"),
+            "{:?}",
+            card.details.custom
+        );
+        assert!(card.photo.is_some(), "the photo comes back as ENCODING=B");
+        assert!(include_str!("golden/google_carddav/create.h").contains("location:"));
+        assert!(include_str!("golden/google_carddav/edit.h").starts_with("HTTP/2 204"));
+        assert!(include_str!("golden/google_carddav/gone.body").contains("NOT_FOUND"));
+    }
+
+    #[tokio::test]
+    async fn a_new_contact_is_found_at_the_href_google_gave_it() {
+        let (dav, carddav) = google();
+        let made = carddav.create_contact(&fields()).await.unwrap();
+        assert_ne!(made.resource, format!("{BOOK}pm-"), "{}", made.resource);
+        assert!(!made.resource.contains("pm-"), "Google names the card itself");
+        assert_eq!(made.details.uid, made.resource.rsplit('/').next().unwrap());
+        assert!(dav.body(&made.resource).is_some());
+        // A look-up by the UID that was sent finds nothing.
+        let sent = dav.body(&made.resource).unwrap();
+        assert!(!sent.contains("pm-"));
+        assert!(carddav.keeps_groups_here());
+        assert!(!sent.contains("CATEGORIES"), "groups stay on this computer");
+    }
+
+    #[tokio::test]
+    async fn an_edit_is_not_refused_when_the_etag_is_stale_and_says_so() {
+        let (dav, carddav) = google();
+        let made = carddav.create_contact(&fields()).await.unwrap();
+        let stale = dav.etag(&made.resource).unwrap();
+        assert!(stale.starts_with("\"2026-"), "the ETag is a timestamp: {stale}");
+        dav.put_resource(&made.resource, &dav.body(&made.resource).unwrap());
+        // Google ignores If-Match: the stale ETag still overwrites.
+        let api = DavApiHandle(&dav);
+        assert!(api.put_stale(&made.resource, &stale).await.is_ok());
+    }
+
+    struct DavApiHandle<'a>(&'a Arc<FakeDav>);
+    impl DavApiHandle<'_> {
+        async fn put_stale(&self, href: &str, etag: &str) -> Result<(), DavError> {
+            let body = self.0.body(href).unwrap();
+            self.0
+                .put(href, &body, Kind::AddressBook, Precondition::Match(etag.into()))
+                .await
+                .map(drop)
+        }
+    }
+
+    #[tokio::test]
+    async fn a_name_edit_is_written_to_n_and_fn() {
+        let (dav, carddav) = google();
+        let made = carddav.create_contact(&fields()).await.unwrap();
+        let edited = carddav
+            .update_contact(
+                &made.resource,
+                &ContactFields {
+                    name: Some("Live Check Edited".into()),
+                    ..ContactFields::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(edited.name.as_deref(), Some("Live Check Edited"));
+        let body = dav.body(&made.resource).unwrap();
+        assert!(body.contains("N:Edited;Live Check"), "{body}");
+    }
+
+    #[tokio::test]
+    async fn a_birthday_without_a_year_is_refused_before_google_deletes_it() {
+        let (_dav, carddav) = google();
+        let made = carddav.create_contact(&fields()).await.unwrap();
+        let refused = carddav
+            .update_contact(
+                &made.resource,
+                &ContactFields {
+                    details: Changes {
+                        birthday: Some("--04-12".into()),
+                        ..Changes::default()
+                    },
+                    ..ContactFields::default()
+                },
+            )
+            .await;
+        assert!(matches!(refused, Err(BackendError::Invalid(_))), "{refused:?}");
+        let kept = carddav.connections(None, None).await.unwrap();
+        assert_eq!(kept.people[0].details.birthday, "1990-04-12");
+    }
+
+    #[tokio::test]
+    async fn a_delete_leaves_nothing_to_read() {
+        let (dav, carddav) = google();
+        let made = carddav.create_contact(&fields()).await.unwrap();
+        carddav.delete_contact(&made.resource, None).await.unwrap();
+        assert!(matches!(dav.get(&made.resource).await, Err(DavError::NotFound)));
+    }
+}

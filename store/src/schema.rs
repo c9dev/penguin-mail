@@ -1144,6 +1144,17 @@ CREATE TABLE IF NOT EXISTS contact_links (
     PRIMARY KEY (account_a, resource_a, account_b, resource_b)
 );
 "#,
+    // Groups a server cannot keep, held on this computer beside the
+    // contact. Google's CardDAV drops CATEGORIES, so its contacts' groups
+    // live here. No foreign key to `contacts`, for the reason of the links.
+    r#"
+CREATE TABLE contact_local_groups (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource   TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    PRIMARY KEY (account_id, resource, name)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

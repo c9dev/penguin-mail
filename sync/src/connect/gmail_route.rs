@@ -266,7 +266,7 @@ fn google_carddav(
     match client {
         Ok(client) => Some(AnyContacts::Dav(crate::services::CardDav::new(Arc::new(
             crate::services::AnyDav::from(client),
-        )))),
+        )).google())),
         Err(err) => {
             tracing::warn!(account = account.id, %err, "could not set up Google's CardDAV");
             None

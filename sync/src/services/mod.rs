@@ -1746,6 +1746,12 @@ pub trait ContactsService: Send + Sync + 'static {
         false
     }
 
+    /// Whether the server drops the groups of a card, so a contact's groups
+    /// are held on this computer beside it instead.
+    fn keeps_groups_here(&self) -> bool {
+        false
+    }
+
     fn delete_contact(
         &self,
         resource: &str,

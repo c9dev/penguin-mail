@@ -151,6 +151,18 @@ pub trait DavApi: Send + Sync + 'static {
         kind: Kind,
         when: Precondition,
     ) -> impl Future<Output = Result<Option<String>, DavError>> + Send;
+    /// As `put`, and the `Location` the server answered a create with. A
+    /// server that stores the resource under a name of its own, as Google's
+    /// CardDAV does, says where in it.
+    fn put_at(
+        &self,
+        href: &str,
+        body: &str,
+        kind: Kind,
+        when: Precondition,
+    ) -> impl Future<Output = Result<(Option<String>, Option<String>), DavError>> + Send {
+        async move { self.put(href, body, kind, when).await.map(|etag| (etag, None)) }
+    }
     fn delete(
         &self,
         href: &str,
@@ -818,6 +830,16 @@ impl DavApi for DavClient {
         kind: Kind,
         when: Precondition,
     ) -> Result<Option<String>, DavError> {
+        self.put_at(href, body, kind, when).await.map(|(etag, _)| etag)
+    }
+
+    async fn put_at(
+        &self,
+        href: &str,
+        body: &str,
+        kind: Kind,
+        when: Precondition,
+    ) -> Result<(Option<String>, Option<String>), DavError> {
         if body.len() > MOST_RESOURCE_BYTES {
             return Err(DavError::TooLarge(MOST_RESOURCE_BYTES));
         }
@@ -869,6 +891,14 @@ impl DavApi for DavClient {
             .get("ETag")
             .and_then(|e| e.to_str().ok())
             .map(str::to_string);
+        // Where the server put it, as a path on its own site.
+        let location = response
+            .headers()
+            .get("Location")
+            .and_then(|l| l.to_str().ok())
+            .and_then(|l| url.join(l).ok())
+            .filter(|l| l.host_str() == url.host_str())
+            .map(|l| l.path().to_string());
         // The body of a success is never read, and what explains a failure
         // is a few lines at the start.
         let text = if status.is_success() {
@@ -884,7 +914,7 @@ impl DavApi for DavClient {
             dav: None,
             body: text,
         })?;
-        Ok(etag)
+        Ok((etag, location))
     }
 
     async fn delete(&self, href: &str, etag: Option<&str>) -> Result<(), DavError> {

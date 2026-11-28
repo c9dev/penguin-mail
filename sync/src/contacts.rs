@@ -175,6 +175,13 @@ impl<A: Accounts> ContactBook<A> {
         Ok(self.contacts(account_id)?.address_books().await?)
     }
 
+    /// Whether this account's server drops the groups of a card, so they
+    /// are held on this computer.
+    pub fn keeps_groups_here(&self, account_id: AccountId) -> bool {
+        self.contacts(account_id)
+            .is_ok_and(|service| service.keeps_groups_here())
+    }
+
     /// Whether this service can edit the full vCard, including its photo.
     pub fn edits_details(&self, account_id: AccountId) -> bool {
         self.contacts(account_id)
@@ -256,6 +263,17 @@ impl<A: Accounts> ContactBook<A> {
             let _ = self.fetch_photos(service, account_id).await;
             return Ok(saved);
         };
+        // A server that drops groups keeps them here, beside the contact.
+        if service.keeps_groups_here() {
+            if let Permitted::Done(contact) = &saved {
+                let (resource, names) = (contact.resource.clone(), groups.clone());
+                self.db
+                    .write(move |c| address_book::set_local_groups(c, account_id, &resource, &names))
+                    .await?;
+            }
+            let _ = self.fetch_photos(service, account_id).await;
+            return Ok(saved);
+        }
         if let Permitted::Done(contact) = &saved {
             let (contact, groups) = (contact.clone(), groups.clone());
             self.db

@@ -40,6 +40,9 @@ pub enum CardWrite {
         id: String,
         patch: Map<String, Value>,
     },
+    Destroy {
+        id: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -162,6 +165,20 @@ impl JmapClient {
     /// Makes or changes a card, and answers it as the server now holds it.
     pub async fn set_card(&self, write: &CardWrite) -> Result<Value, JmapError> {
         let (account, _) = self.contacts_account(1).await?;
+        if let CardWrite::Destroy { id } = write {
+            let mut request = Request::new();
+            let set = request.call(
+                CONTACTS,
+                "ContactCard/set",
+                json!({ "accountId": account, "destroy": [id] }),
+            );
+            let mut answer = self.send(&request).await?;
+            let written: SetResponse = answer.take(&set, "ContactCard/set")?;
+            if let Some(refused) = written.refusal(id) {
+                return Err(refused.error());
+            }
+            return Ok(Value::Null);
+        }
         let (args, key, read) = match write {
             CardWrite::Create(card) => (
                 json!({ "accountId": account, "create": { "k": card } }),
@@ -173,6 +190,7 @@ impl JmapClient {
                 id.clone(),
                 id.clone(),
             ),
+            CardWrite::Destroy { .. } => unreachable!("a destroy returned above"),
         };
         let mut request = Request::new();
         let set = request.call(CONTACTS, "ContactCard/set", args);

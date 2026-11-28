@@ -129,3 +129,60 @@ impl Graph {
             .ok_or_else(|| GraphError::Decode("no contact in the answer".into()))
     }
 }
+
+/// Our own named property set on a contact, where the fields Graph has no
+/// property for are kept as one JSON text.
+pub const EXTRAS_ID: &str = "String {b6e33f5e-7c5a-4d1e-9a3c-5c6f1d2e8a40} Name penguin.fields";
+
+impl Graph {
+    /// The JSON text kept in [`EXTRAS_ID`] on a contact, if it holds one.
+    pub async fn contact_extras(&self, id: &str) -> Result<Option<String>, GraphError> {
+        #[derive(Deserialize, Default)]
+        #[serde(rename_all = "camelCase", default)]
+        struct Held {
+            single_value_extended_properties: Vec<Property>,
+        }
+        #[derive(Deserialize, Default)]
+        #[serde(default)]
+        struct Property {
+            id: String,
+            value: String,
+        }
+        let held: Held = self
+            .get(
+                &format!("me/contacts/{id}"),
+                &[
+                    ("$select", "id"),
+                    (
+                        "$expand",
+                        &format!(
+                            "singleValueExtendedProperties($filter=id eq '{EXTRAS_ID}')"
+                        ),
+                    ),
+                ],
+            )
+            .await?;
+        Ok(held
+            .single_value_extended_properties
+            .into_iter()
+            .find(|p| p.id.eq_ignore_ascii_case(EXTRAS_ID))
+            .map(|p| p.value))
+    }
+
+    /// Replaces the contact's photo with `bytes`, a PNG or a JPEG.
+    pub async fn set_contact_photo(&self, id: &str, bytes: Vec<u8>) -> Result<(), GraphError> {
+        let kind = if bytes.starts_with(b"\x89PNG") {
+            "image/png"
+        } else {
+            "image/jpeg"
+        };
+        self.put_bytes(&format!("me/contacts/{id}/photo/$value"), bytes, kind)
+            .await
+    }
+
+    pub async fn delete_contact(&self, id: &str) -> Result<(), GraphError> {
+        self.send::<Value>(Method::Delete, &format!("me/contacts/{id}"), None, &[])
+            .await?;
+        Ok(())
+    }
+}

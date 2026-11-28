@@ -251,6 +251,7 @@ impl<'a> Run<'a> {
         self.identities_name_the_account().await;
         self.the_reply_round_trips_where_offered().await;
         self.a_contact_round_trips_where_offered().await;
+        self.a_contact_with_every_field_round_trips_where_offered().await;
         self.a_rule_lands_in_sieve_where_offered().await;
         self.the_reply_and_a_rule_run_together_where_sieve_is_offered()
             .await;
@@ -791,6 +792,124 @@ impl<'a> Run<'a> {
             self.kind()
         );
         assert_eq!(edited.emails.len(), 2, "{:?}: {edited:?}", self.kind());
+    }
+
+    /// Create, read, edit and delete a card carrying every field the editor
+    /// has, and print what the server answered.
+    async fn a_contact_with_every_field_round_trips_where_offered(&self) {
+        use mailrs_domain::contact::{Changes, Field};
+        let Some(contacts) = self.sync.services().contacts.clone() else {
+            return;
+        };
+        let kind = self.kind();
+        let fields = mailrs_gmail::ContactFields {
+            name: Some("Priya Raman".into()),
+            emails: Some(vec!["priya@fernwood.example".into()]),
+            phones: Some(vec!["+351 910 000 000".into()]),
+            organization: Some("Fernwood".into()),
+            photo: Some(vec![0x89, b'P', b'N', b'G', 13, 10, 26, 10]),
+            details: Changes {
+                birthday: Some("1990-04-12".into()),
+                notes: Some("Met in March".into()),
+                addresses: Some(vec![[
+                    String::new(),
+                    String::new(),
+                    "1 Main Street".into(),
+                    "Lisbon".into(),
+                    "LX".into(),
+                    "1000-001".into(),
+                    "Portugal".into(),
+                ]]),
+                urls: Some(vec!["https://example.org".into()]),
+                groups: Some(vec!["Friends".into()]),
+                dates: Some(vec![Field {
+                    label: "Anniversary".into(),
+                    value: "2015-06-20".into(),
+                }]),
+                custom: Some(vec![Field {
+                    label: "Badge".into(),
+                    value: "42".into(),
+                }]),
+            },
+            ..Default::default()
+        };
+        // Which field a server refuses, one at a time, for the log.
+        let one = |f: &dyn Fn(&mut mailrs_gmail::ContactFields)| {
+            let mut only = mailrs_gmail::ContactFields {
+                name: Some("Probe".into()),
+                ..Default::default()
+            };
+            f(&mut only);
+            only
+        };
+        let probes: Vec<(&str, mailrs_gmail::ContactFields)> = vec![
+            ("birthday", one(&|c| c.details.birthday = fields.details.birthday.clone())),
+            ("notes", one(&|c| c.details.notes = fields.details.notes.clone())),
+            ("addresses", one(&|c| c.details.addresses = fields.details.addresses.clone())),
+            ("urls", one(&|c| c.details.urls = fields.details.urls.clone())),
+            ("groups", one(&|c| c.details.groups = fields.details.groups.clone())),
+            ("dates", one(&|c| c.details.dates = fields.details.dates.clone())),
+            ("custom", one(&|c| c.details.custom = fields.details.custom.clone())),
+            ("photo", one(&|c| c.photo = fields.photo.clone())),
+        ];
+        for (what, probe) in probes {
+            match contacts.create_contact(&probe).await {
+                Ok(made) => {
+                    eprintln!("{kind:?} takes {what}");
+                    let _ = contacts.delete_contact(&made.resource, None).await;
+                }
+                Err(err) => eprintln!("{kind:?} REFUSES {what}: {err}"),
+            }
+        }
+        let made = match contacts.create_contact(&fields).await {
+            Ok(made) => made,
+            Err(err) => {
+                eprintln!("{kind:?} refused a card with every field: {err}");
+                return;
+            }
+        };
+        eprintln!("{kind:?} created: {:?}", made.details);
+        let page = contacts.connections(None, None).await.expect("the cards");
+        let read = page
+            .people
+            .iter()
+            .find(|p| p.resource == made.resource)
+            .unwrap_or_else(|| panic!("{kind:?} lists the card"));
+        eprintln!("{kind:?} read back: {:?}", read.details);
+        let d = &read.details;
+        assert_eq!(d.birthday, "1990-04-12", "{kind:?}");
+        assert_eq!(d.notes, "Met in March", "{kind:?}");
+        assert_eq!(d.urls, ["https://example.org"], "{kind:?}");
+        assert_eq!(d.groups, ["Friends"], "{kind:?}");
+        assert_eq!(d.addresses[0][3], "Lisbon", "{kind:?}");
+        assert_eq!(d.dates[0].value, "2015-06-20", "{kind:?}");
+        assert_eq!(d.custom[0].value, "42", "{kind:?}");
+        let edited = contacts
+            .update_contact(
+                &made.resource,
+                &mailrs_gmail::ContactFields {
+                    details: Changes {
+                        notes: Some("Changed".into()),
+                        groups: Some(vec!["Friends".into(), "Work".into()]),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap_or_else(|err| panic!("{kind:?} refused an edit: {err}"));
+        assert_eq!(edited.details.notes, "Changed", "{kind:?}");
+        assert_eq!(edited.details.groups.len(), 2, "{kind:?}");
+        assert_eq!(edited.details.birthday, "1990-04-12", "{kind:?}");
+        contacts
+            .delete_contact(&made.resource, None)
+            .await
+            .unwrap_or_else(|err| panic!("{kind:?} refused a delete: {err}"));
+        let after = contacts.connections(None, None).await.expect("the cards");
+        assert!(
+            after.people.iter().all(|p| p.resource != made.resource),
+            "{kind:?}"
+        );
     }
 
     async fn a_rule_lands_in_sieve_where_offered(&self) {

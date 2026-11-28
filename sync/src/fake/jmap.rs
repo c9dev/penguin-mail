@@ -1857,6 +1857,11 @@ impl JmapApi for FakeJmap {
                 s.record("ContactCard", id, Op::Updated);
                 Ok(card)
             }
+            CardWrite::Destroy { id } => {
+                s.cards.remove(id).ok_or(JmapError::NotFound)?;
+                s.record("ContactCard", id, Op::Destroyed);
+                Ok(Value::Null)
+            }
         })
     }
 

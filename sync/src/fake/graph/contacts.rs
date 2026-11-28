@@ -43,7 +43,8 @@ fn default_folder(s: &GraphState) -> Option<&ContactFolder> {
     s.contact_folders.first()
 }
 
-/// Writes the fields a create or update body sets onto `contact`.
+/// Writes the fields a create or update body sets onto `contact`, and the
+/// app's extended property onto `extras`.
 fn read_body(contact: &mut GraphContact, body: &Value) {
     if let Some(name) = body["displayName"].as_str() {
         contact.display_name = Some(name.into());
@@ -77,6 +78,71 @@ fn read_body(contact: &mut GraphContact, body: &Value) {
     if let Some(company) = body["companyName"].as_str() {
         contact.company_name = Some(company.into());
     }
+    // A key sent as null clears the field, as Graph does.
+    let text = |key: &str| body.get(key).map(|v| v.as_str().map(str::to_string));
+    if let Some(v) = text("birthday") {
+        contact.birthday = v;
+    }
+    if let Some(v) = text("personalNotes") {
+        contact.personal_notes = v;
+    }
+    if let Some(v) = text("businessHomePage") {
+        contact.business_home_page = v;
+    }
+    if let Some(v) = body
+        .get("categories")
+        .and_then(|v| serde_json::from_value::<Vec<String>>(v.clone()).ok())
+    {
+        contact.categories = v;
+    }
+    for (key, slot) in [
+        ("homeAddress", &mut contact.home_address),
+        ("businessAddress", &mut contact.business_address),
+        ("otherAddress", &mut contact.other_address),
+    ] {
+        if let Some(v) = body.get(key) {
+            *slot = serde_json::from_value(v.clone()).ok();
+        }
+    }
+}
+
+/// The value of the app's extended property in a body, if it names one.
+fn extras_in(body: &Value) -> Option<String> {
+    body.get("singleValueExtendedProperties")?
+        .as_array()?
+        .iter()
+        .find(|p| {
+            p["id"]
+                .as_str()
+                .is_some_and(|id| id.eq_ignore_ascii_case(mailrs_graph::EXTRAS_ID))
+        })
+        .and_then(|p| p["value"].as_str().map(str::to_string))
+}
+
+pub(super) fn contact_extras(s: &mut GraphState, id: &str) -> Answer<Option<String>> {
+    s.refuses(Area::Contacts)?;
+    if !s.contacts.contains_key(id) {
+        return Err(GraphError::NotFound);
+    }
+    Ok(s.contact_extras.get(id).cloned())
+}
+
+pub(super) fn set_contact_photo(s: &mut GraphState, id: &str, bytes: Vec<u8>) -> Answer<()> {
+    s.refuses(Area::Contacts)?;
+    if !s.contacts.contains_key(id) {
+        return Err(GraphError::NotFound);
+    }
+    s.photos.insert(id.to_string(), bytes);
+    Ok(())
+}
+
+pub(super) fn delete_contact(s: &mut GraphState, id: &str) -> Answer<()> {
+    s.refuses(Area::Contacts)?;
+    let (folder, _) = s.contacts.remove(id).ok_or(GraphError::NotFound)?;
+    s.contact_extras.remove(id);
+    s.photos.remove(id);
+    log(s, &folder, id);
+    Ok(())
 }
 
 pub(super) fn contact_folders(s: &mut GraphState) -> Answer<Vec<ContactFolder>> {
@@ -157,6 +223,9 @@ pub(super) fn create_contact(s: &mut GraphState, body: &Value) -> Answer<GraphCo
         ..GraphContact::default()
     };
     read_body(&mut contact, body);
+    if let Some(extras) = extras_in(body) {
+        s.contact_extras.insert(id.clone(), extras);
+    }
     s.contacts
         .insert(id.clone(), (folder.clone(), contact.clone()));
     log(s, &folder, &id);
@@ -176,6 +245,9 @@ pub(super) fn contact_name(s: &mut GraphState, id: &str) -> Answer<GraphContact>
 
 pub(super) fn update_contact(s: &mut GraphState, id: &str, body: &Value) -> Answer<GraphContact> {
     s.refuses(Area::Contacts)?;
+    if let Some(extras) = extras_in(body) {
+        s.contact_extras.insert(id.to_string(), extras);
+    }
     let (folder, contact) = s.contacts.get_mut(id).ok_or(GraphError::NotFound)?;
     read_body(contact, body);
     // Outlook.com rebuilds the display name from the name parts, or the

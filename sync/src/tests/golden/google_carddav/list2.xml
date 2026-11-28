@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:card="urn:ietf:params:xml:ns:carddav" xmlns:cs="http://calendarserver.org/ns/" xmlns:d="DAV:" xmlns:ical="http://apple.com/ns/ical/">
+ <d:response>
+  <d:href>/carddav/v1/principals/penguin.mail.gh@gmail.com/lists/default/3f936966140b99d6</d:href>
+  <d:propstat>
+   <d:status>HTTP/1.1 200 OK</d:status>
+   <d:prop>
+    <d:getetag>"2026-11-27T16:59:12.328-08:00"</d:getetag>
+   </d:prop>
+  </d:propstat>
+ </d:response>
+</d:multistatus>
